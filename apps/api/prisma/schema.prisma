@@ -1319,10 +1319,13 @@ model StoreSourceVersion {
   snapshot     Json
   restoredFrom Int?
   createdAt    DateTime           @default(now())
+  /// dnaFingerprint of the chosen design concept (sub-project 4 cross-store memory); null when the revision has no DNA.
+  designFingerprint String?
 
   checkResults SourceCheckResult[]
 
   @@id([storeId, revision])
+  @@index([createdAt, designFingerprint])
 }
 
 model SourceRuntimeBundle {

@@ -7,6 +7,8 @@ import { ConflictException, NotFoundException } from "@nestjs/common";
 import { SourceProjectsService } from "./source-projects.service";
 import { sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
 import { validateLegacySources } from "./source-legacy";
+import { dnaFingerprint } from "./source-dna";
+import { validDna } from "./fixtures/dna";
 
 const input = () => ({ revision: 0, label: "First", brief: { businessType: "Café", audience: "Neighbors", primaryAction: "Pickup", visualDirection: "Menu" }, files: [
   { path: "package.json", content: '{"name":"cafe","scripts":{"build":"node build.mjs"}}' },
@@ -167,5 +169,34 @@ describe('React source revisions', () => {
     expect(archive.buffer.toString()).toContain('pages/index.tsx');
     expect(archive.buffer.toString()).toContain('public/commerce.js');
     expect(archive.buffer.toString()).not.toContain('_compiled/home.js');
+  });
+});
+
+describe('design fingerprint memory', () => {
+  const designFile = (dna?: unknown) => ({ path: 'design-direction.json', content: JSON.stringify({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
+    name, premise: 'Handmade ceramics', opening: `${name} opening`, flow: `${name} flow`, typography: 'Fraunces / Instrument Sans', imagery: 'None', mobile: 'Stack',
+    ...(dna ? { dna } : {}),
+  })) }) });
+
+  it("saves the chosen concept's DNA fingerprint with the revision, and null without one", async () => {
+    const { service, prisma } = setup();
+    const dna = { ...validDna(), buttons: { form: 'tag', hover: 'fill', press: 'sink' } };
+    await service.save('m1', 's1', { ...input(), files: [...input().files, designFile(dna)] });
+    expect(prisma.storeSourceVersion.create.mock.calls[0][0].data.designFingerprint).toBe(dnaFingerprint(dna as any));
+    await service.save('m1', 's1', { ...input(), revision: 1, files: [...input().files, designFile()] });
+    expect(prisma.storeSourceVersion.create.mock.calls[1][0].data.designFingerprint).toBeNull();
+    await service.save('m1', 's1', { ...input(), revision: 2 });
+    expect(prisma.storeSourceVersion.create.mock.calls[2][0].data.designFingerprint).toBeNull();
+  });
+
+  it("reads the last 40 fingerprints of other stores from the last 60 days, without loading snapshots", async () => {
+    const { service, prisma } = setup();
+    prisma.storeSourceVersion.findMany = jest.fn().mockResolvedValue([{ designFingerprint: 'a' }, { designFingerprint: 'b' }, { designFingerprint: 'a' }]);
+    const now = new Date('2026-09-24T12:00:00Z');
+    expect(await service.recentDesignFingerprints('s1', now)).toEqual(['a', 'b']);
+    expect(prisma.storeSourceVersion.findMany).toHaveBeenCalledWith({
+      where: { storeId: { not: 's1' }, designFingerprint: { not: null }, createdAt: { gte: new Date('2026-07-26T12:00:00Z') } },
+      orderBy: { createdAt: 'desc' }, take: 40, select: { designFingerprint: true },
+    });
   });
 });

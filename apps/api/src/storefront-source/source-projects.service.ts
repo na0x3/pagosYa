@@ -11,6 +11,8 @@ import { publicationState } from './source-publishing.service';
 import { withSourceMotionSettings, type SourceMotionMode, type SourceScrollFeel } from './source-motion';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { withSourceFonts } from './source-fonts';
+import { savedSourceDesign } from './source-design';
+import { dnaFingerprint } from './source-dna';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { PaymentLinkStatus, Prisma, type PaymentLink } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -25,6 +27,16 @@ import type { SourceVisualEditDto } from './dto/source-visual-edit.dto';
 
 type GenerationSave = { id: string; enablePayments?: boolean; products?: SourceProduct[]; productOperations?: SourceProductOperation[]; data: Prisma.StoreSourceGenerationUpdateManyMutationInput };
 const summarySelect = { revision: true, label: true, digest: true, restoredFrom: true, createdAt: true } as const;
+/** Cross-store memory window (sub-project 4): recent enough to matter, small enough to stay one cheap indexed read. */
+const RECENT_DESIGN_DAYS = 60;
+const RECENT_DESIGN_LIMIT = 40;
+
+/** The chosen concept's DNA fingerprint, or null when the revision carries no design with a DNA. */
+function snapshotDesignFingerprint(files: SourceProjectSnapshot['files']): string | null {
+  const design = savedSourceDesign(files);
+  const dna = design?.concepts[design.selected]?.dna;
+  return dna ? dnaFingerprint(dna) : null;
+}
 
 @Injectable()
 export class SourceProjectsService {
@@ -34,6 +46,15 @@ export class SourceProjectsService {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, slug: true } });
     if (!store) throw new NotFoundException("Store not found");
     return store;
+  }
+
+  /** Fingerprints other stores used recently, newest first and distinct. Selects only the fingerprint column. */
+  async recentDesignFingerprints(storeId: string, now = new Date()): Promise<string[]> {
+    const rows = await this.prisma.storeSourceVersion.findMany({
+      where: { storeId: { not: storeId }, designFingerprint: { not: null }, createdAt: { gte: new Date(now.getTime() - RECENT_DESIGN_DAYS * 86_400_000) } },
+      orderBy: { createdAt: 'desc' }, take: RECENT_DESIGN_LIMIT, select: { designFingerprint: true },
+    });
+    return [...new Set(rows.flatMap(row => row.designFingerprint ? [row.designFingerprint] : []))];
   }
 
   async current(merchantId: string, storeId: string) {
@@ -251,7 +272,7 @@ export class SourceProjectsService {
         }
         const saved = await tx.storeSourceVersion.create({ data: {
           storeId, revision: revision + 1, label: label.trim(), digest: sourceProjectDigest(snapshot),
-          snapshot: snapshot as unknown as Prisma.InputJsonValue, restoredFrom,
+          snapshot: snapshot as unknown as Prisma.InputJsonValue, restoredFrom, designFingerprint: snapshotDesignFingerprint(snapshot.files),
         }, select: summarySelect });
         return { ...saved, createdProducts: createdProducts.map(p => ({ id: p.id, name: p.name })), updatedProducts, deletedProducts, ...(optionChanges.length ? { optionChanges } : {}) };
       }, fence ? { isolationLevel: Prisma.TransactionIsolationLevel.Serializable } : undefined);
