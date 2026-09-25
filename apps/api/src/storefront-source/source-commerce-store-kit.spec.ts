@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { chromium, type Browser, type Page } from 'playwright';
 import { kitPath } from '@pagosya/storefront-kit';
 import { validateStoreKitCss } from './source-kit-css';
+import { contrastRatio } from './source-scorecard';
 
 /** Sub-project 7: the store kit CSS in a real browser (jsdom drops @layer sheets). The served file is linked the way
  * the platform links it: after the store's stylesheet, marked data-pagosya-kit="store". */
@@ -69,6 +70,75 @@ describe('cascade: kit defaults < DNA < store kit CSS < the store\'s own unlayer
     try {
       await page.waitForSelector('.menu-add');
       expect(await computed(page, '.cart-drawer', ['right', 'position'])).toEqual({ right: '0px', position: 'fixed' });
+    } finally { await page.close(); }
+  });
+});
+
+/** Contrast as the scorecard measures it: text composited over the ancestors' background colours (white below). */
+async function contrastOf(page: Page, selector: string) {
+  const [text, back] = await page.evaluate(sel => {
+    const rgba = (value: string) => { const n = (value.match(/[\d.]+/g) || []).map(Number); return [n[0], n[1], n[2], n.length > 3 ? n[3] : 1]; };
+    const over = (top: number[], base: number[]) => [0, 1, 2].map(i => top[i] * top[3] + base[i] * (1 - top[3]));
+    const el = document.querySelector(sel)!;
+    const layers: number[][] = [];
+    for (let node: Element | null = el; node; node = node.parentElement) { const c = rgba(getComputedStyle(node).backgroundColor); if (c[3] > 0) layers.push(c); if (c[3] >= 0.99) break; }
+    const bg = layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]);
+    return [over(rgba(getComputedStyle(el).color), bg), bg];
+  }, selector);
+  return contrastRatio(text, back);
+}
+const guarded = (page: Page, selector: string) => page.waitForFunction(sel => document.querySelector(sel)?.hasAttribute('data-pagosya-contrast-guard'), selector, { timeout: 3000 });
+const CART = [{ id: 'taza', quantity: 1 }];
+
+describe('runtime contrast guard: pay and buy buttons and totals read at 4.5:1', () => {
+  it('fixes a mid-tone pay button that no near-black or white reaches, and warns once', async () => {
+    const page = await open({ css: '.cart-drawer .checkout-button{background:#797979;color:#fff}', cart: CART });
+    const warnings: string[] = [];
+    page.on('console', message => { if (message.type() === 'warning') warnings.push(message.text()); });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.click('[data-cart-open]');
+      await page.waitForSelector('dialog.cart-drawer[open] .checkout-button');
+      await guarded(page, 'dialog.cart-drawer .checkout-button');
+      expect(await contrastOf(page, 'dialog.cart-drawer .checkout-button')).toBeGreaterThanOrEqual(4.5);
+      expect(await computed(page, 'dialog.cart-drawer .checkout-button', ['background-color'])).toEqual({ 'background-color': 'rgb(121, 121, 121)' });
+      expect(warnings.filter(text => /contraste/i.test(text))).toHaveLength(1);
+    } finally { await page.close(); }
+  });
+
+  it('neutralises a store kit CSS colour and a store\'s own !important colour on the add button', async () => {
+    for (const options of [{ kit: '.menu-add{background:#777;color:#888}' }, { css: '.menu-add{color:#eee!important;background:#fff}' }]) {
+      const page = await open(options);
+      try {
+        await page.waitForSelector('.menu-add');
+        await guarded(page, '.menu-add');
+        expect(await contrastOf(page, '.menu-add')).toBeGreaterThanOrEqual(4.5);
+      } finally { await page.close(); }
+    }
+  });
+
+  it('leaves a readable button alone', async () => {
+    const page = await open({ css: '.menu-add{background:#fff;color:#111}' });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.waitForTimeout(500);
+      expect(await page.evaluate(() => document.querySelectorAll('[data-pagosya-contrast-guard]').length)).toBe(0);
+      expect(await computed(page, '.menu-add', ['color'])).toEqual({ color: 'rgb(17, 17, 17)' });
+    } finally { await page.close(); }
+  });
+
+  it('fixes the total in the open cart (the store\'s !important colour defeats the text fix) and keeps it fixed after a re-render', async () => {
+    const page = await open({ css: '.cart-drawer{background:#797979}.cart-drawer .order-total{color:#999!important}', cart: CART });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.click('[data-cart-open]');
+      await page.waitForSelector('dialog.cart-drawer[open] .order-total');
+      await guarded(page, 'dialog.cart-drawer .order-total');
+      expect(await contrastOf(page, 'dialog.cart-drawer .order-total strong')).toBeGreaterThanOrEqual(4.5);
+      await page.click('dialog.cart-drawer [data-add]');
+      await page.waitForFunction(() => document.querySelector('dialog.cart-drawer [data-cart-count], [data-cart-count]')?.textContent === '2');
+      await guarded(page, 'dialog.cart-drawer .order-total');
+      expect(await contrastOf(page, 'dialog.cart-drawer .order-total strong')).toBeGreaterThanOrEqual(4.5);
     } finally { await page.close(); }
   });
 });

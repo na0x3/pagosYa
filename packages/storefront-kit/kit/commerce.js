@@ -1595,12 +1595,86 @@
     }
     probe.remove();
   }
+  /* Sub-project 7: pay and buy buttons and totals read at 4.5:1 whatever sets their colours (the store's CSS, its kit
+   * CSS, the DNA). Measured as the scorecard measures: text composited over the ancestors' background colours. A failing
+   * control takes the first readable colour among the store's ink, paper and on-accent, else pure black or white (one of
+   * the two always reaches 4.5:1), inline and !important so no stylesheet undoes it. Text over an image, a gradient or a
+   * colour syntax the page cannot compare is left alone. */
+  const CONTRAST_GUARDED = '.checkout-button,.menu-add,.product-detail__sticky button,[data-pay],[data-checkout],.order-total,.product-detail__subtotal';
+  const contrastWarned = typeof WeakSet === 'function' ? new WeakSet() : null;
+  function resetContrastGuard() {
+    document.querySelectorAll('[data-pagosya-contrast-guard]').forEach(el => {
+      el.style.removeProperty('color'); el.style.removeProperty('-webkit-text-fill-color'); el.removeAttribute('data-pagosya-contrast-guard');
+    });
+  }
+  function guardContrast() {
+    const targets = document.querySelectorAll(CONTRAST_GUARDED);
+    if (!targets.length || !document.body) return;
+    const parse = value => {
+      const text = String(value), n = (text.match(/-?[\d.]+/g) || []).map(Number);
+      if (!/^(?:rgba?\(|color\(srgb)/i.test(text) || n.length < 3) return null;
+      const scale = /^color\(srgb/i.test(text) ? 255 : 1;
+      return [n[0] * scale, n[1] * scale, n[2] * scale, n.length > 3 ? n[3] : 1];
+    };
+    const over = (top, base) => [0, 1, 2].map(i => top[i] * top[3] + base[i] * (1 - top[3])).concat(1);
+    const luminance = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+    const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+    const backdrop = element => {
+      const layers = [];
+      for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+        const color = parse(style.backgroundColor);
+        if (!color) return null;
+        if (color[3] > 0) layers.push(color);
+        if (color[3] >= .99) break;
+      }
+      return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255, 1]);
+    };
+    const probe = document.createElement('span'); probe.hidden = true; document.body.append(probe);
+    const resolve = value => { probe.style.color = ''; probe.style.color = value; return parse(getComputedStyle(probe).color); };
+    const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', 'var(--store-accent-foreground, var(--brand-accent-foreground, #ffffff))', '#000000', '#ffffff'].map(resolve).filter(c => c && c[3] >= .99);
+    probe.remove();
+    targets.forEach(target => {
+      // A disabled control is exempt (WCAG 1.4.3); renderCart measures again once it is enabled.
+      if (target.closest('[data-pagosya-contrast="skip"]') || target.matches(':disabled,[aria-disabled="true"]')) return;
+      const texts = [target, ...target.querySelectorAll('*')].filter(node => [...node.childNodes].some(child => child.nodeType === 3 && child.textContent.trim()));
+      // An icon-only button (the card's + icon) is read through its own colour, which the icon strokes with.
+      const nodes = texts.length ? texts : target.querySelector('svg') ? [target] : [];
+      const measured = [];
+      for (const node of nodes) {
+        const background = backdrop(node), text = parse(getComputedStyle(node).color);
+        if (!background || !text) return;
+        measured.push({ node, background, ratio: contrast(over(text, background), background) });
+      }
+      if (!measured.length || measured.every(entry => entry.ratio >= 4.5)) return;
+      const worst = color => Math.min(...measured.map(entry => contrast(color, entry.background)));
+      const chosen = candidates.find(color => worst(color) >= 4.5) || candidates.reduce((best, color) => worst(color) > worst(best) ? color : best, candidates[0]);
+      if (!chosen) return;
+      const value = `rgb(${chosen.slice(0, 3).map(Math.round).join(',')})`;
+      for (const node of new Set([target, ...measured.map(entry => entry.node)])) {
+        node.style.setProperty('color', value, 'important');
+        node.style.setProperty('-webkit-text-fill-color', value, 'important');
+        node.setAttribute('data-pagosya-contrast-guard', node === target ? 'fixed' : 'text');
+      }
+      if (contrastWarned && !contrastWarned.has(target)) {
+        contrastWarned.add(target);
+        console.warn(`pagosYa: contraste ${Math.min(...measured.map(entry => entry.ratio)).toFixed(2)}:1 en un botón de compra o un total; se usó ${value} para que se lea (mínimo 4.5:1).`, target);
+      }
+    });
+  }
   let contrastQueued = false;
   function queueReadableText() {
     if (contrastQueued) return;
     contrastQueued = true;
-    setTimeout(() => { contrastQueued = false; document.querySelectorAll(CONTRAST_SLOTS).forEach(readableText); }, 120);
+    setTimeout(() => {
+      contrastQueued = false;
+      try { resetContrastGuard(); } catch { /* Guards never break the store. */ }
+      document.querySelectorAll(CONTRAST_SLOTS).forEach(readableText);
+      try { guardContrast(); } catch { /* Guards never break the store. */ }
+    }, 120);
   }
+  window.addEventListener('load', queueReadableText);
   if (typeof MutationObserver === 'function') {
     const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) queueReadableText(); }).observe(document.body, { childList: true, subtree: true });
     if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
@@ -1807,6 +1881,8 @@
     updateOptions();
     updateBox();
     updateQuantity();
+    // Totals and pay buttons were just re-rendered (and add buttons re-enabled): measure them again.
+    queueReadableText();
     document.dispatchEvent(new CustomEvent("pagosya:cart-updated"));
   }
   function renderContact() {
