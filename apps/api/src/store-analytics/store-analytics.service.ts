@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
-import { addDays, boliviaDay, boliviaDayStart } from './store-analytics-days';
+import { addDays, boliviaDay, boliviaDayStart, daysBetween } from './store-analytics-days';
+import { buildAnalyticsReport } from './store-analytics-report';
 import { ANALYTICS_RETENTION_MONTHS } from './store-analytics.constants';
 
 export type IngestContext = { userAgent?: string; gpc?: boolean };
 const PRUNE_BATCH = 5000;
+const MAX_REPORT_DAYS = 400;
 
 /** G1: consented storefront events in, daily rollups out. The funnel (StoreFunnelService) stays as it is. */
 @Injectable()
@@ -69,6 +71,29 @@ export class StoreAnalyticsService {
         SELECT gen_random_uuid()::text, "storeId", day, "type", "productId", "target", count, sessions, (now() AT TIME ZONE 'UTC') FROM r`;
       return { rolled: true, rows };
     }, { timeout: 120_000 });
+  }
+
+  /**
+   * The merchant read API (G2 draws it). Bolivia days, both included; default the last 30; at most 400. Rollups only,
+   * so the numbers lag at most one worker tick (15 minutes).
+   */
+  async report(merchantId: string, storeId: string, query: { from?: string; to?: string } = {}) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } });
+    if (!store) throw new NotFoundException('Tienda no encontrada');
+    const valid = (day?: string) => { if (!day) return true; const at = Date.parse(`${day}T00:00:00Z`); return !Number.isNaN(at) && new Date(at).toISOString().slice(0, 10) === day; };
+    if (!valid(query.from) || !valid(query.to)) throw new BadRequestException('Usa fechas reales con el formato AAAA-MM-DD');
+    const to = query.to || boliviaDay(new Date());
+    const from = query.from || addDays(to, -29);
+    if (from > to) throw new BadRequestException('La fecha inicial debe ser anterior a la final');
+    if (daysBetween(from, to).length > MAX_REPORT_DAYS) throw new BadRequestException(`Elige un rango de hasta ${MAX_REPORT_DAYS} días`);
+    const rows = await this.prisma.storeAnalyticsDaily.findMany({
+      where: { storeId, day: { gte: new Date(`${from}T00:00:00Z`), lte: new Date(`${to}T00:00:00Z`) } },
+      select: { day: true, type: true, productId: true, target: true, count: true, uniqueSessions: true },
+    });
+    const rollup = rows.map(row => ({ ...row, day: row.day.toISOString().slice(0, 10) }));
+    const ids = [...new Set(rollup.filter(row => row.productId).map(row => row.productId))];
+    const names = new Map(ids.length ? (await this.prisma.paymentLink.findMany({ where: { storeId, id: { in: ids } }, select: { id: true, name: true } })).map(product => [product.id, product.name]) : []);
+    return buildAnalyticsReport(rollup, names, from, to);
   }
 
   /** Removes raw events older than 13 calendar months, 5 000 at a time. Rollups are kept (no personal data). */

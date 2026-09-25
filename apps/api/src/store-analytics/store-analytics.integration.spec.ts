@@ -71,6 +71,18 @@ harness.describeDb('store analytics rollup and retention (real Postgres)', () =>
       await service.rollup({ now: new Date('2026-09-01T20:00:00Z'), days: 2 });
       expect(await rows()).toEqual(expected);
     });
+
+    it('serves the owner a report read from those rollups', async () => {
+      const merchant = await db.merchant.create({ data: { name: 'Comercio', email: `m-${harness.databaseName}@test.test` } });
+      await db.store.create({ data: { id: 's1', merchantId: merchant.id, name: 'Tienda', slug: `tienda-${harness.databaseName}` } });
+      const report = await service.report(merchant.id, 's1', { from: '2026-08-31', to: '2026-09-01' });
+      expect(report.totals.page_view).toEqual({ count: 3, sessions: 3 });
+      expect(report.series.product_view).toEqual([{ day: '2026-08-31', count: 0, sessions: 0 }, { day: '2026-09-01', count: 3, sessions: 2 }]);
+      expect(report.topProducts).toEqual([{ productId: 'lamp', name: 'Producto eliminado', impressions: 0, cardClicks: 0, views: 3, adds: 1, addRate: 50 }]);
+      expect(report.devices).toEqual([{ device: 'mobile', pageViews: 2, sessions: 2 }, { device: 'desktop', pageViews: 1, sessions: 1 }]);
+      expect(report.referrers).toEqual([{ host: 'direct', sessions: 2 }, { host: 'instagram.com', sessions: 1 }]);
+      await expect(service.report('someone-else', 's1')).rejects.toThrow('Tienda no encontrada');
+    });
   });
 
   describe('retention', () => {

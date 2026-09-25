@@ -1,7 +1,9 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ExecutionContext, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request = require('supertest');
-import { StoreAnalyticsPublicController } from './store-analytics.controller';
+import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
+import { StoreAnalyticsController, StoreAnalyticsPublicController } from './store-analytics.controller';
 import { StoreAnalyticsService } from './store-analytics.service';
 
 const SESSION = '3b241101-e2bb-4255-8caf-4136c566a962';
@@ -29,5 +31,53 @@ describe('POST v1/stores/public/:slug/events', () => {
     const limits = Reflect.getMetadata('THROTTLER:LIMITdefault', StoreAnalyticsPublicController.prototype.record);
     const ttl = Reflect.getMetadata('THROTTLER:TTLdefault', StoreAnalyticsPublicController.prototype.record);
     expect([limits, ttl]).toEqual([30, 60000]);
+  });
+});
+
+describe('GET v1/stores/:storeId/analytics', () => {
+  let app: INestApplication;
+  const findFirst = jest.fn();
+  const findMany = jest.fn().mockResolvedValue([]);
+  beforeAll(async () => {
+    const prisma = { store: { findFirst }, storeAnalyticsDaily: { findMany }, paymentLink: { findMany: jest.fn().mockResolvedValue([]) } };
+    const moduleRef = await Test.createTestingModule({ controllers: [StoreAnalyticsController], providers: [StoreAnalyticsService, { provide: PrismaService, useValue: prisma }] })
+      .overrideGuard(MerchantAuthGuard).useValue({ canActivate: (context: ExecutionContext) => { context.switchToHttp().getRequest().merchant = { id: 'm1' }; return true; } })
+      .compile();
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true, transform: true }));
+    await app.init();
+  });
+  afterAll(() => app.close());
+  beforeEach(() => { findFirst.mockReset().mockResolvedValue({ id: 's1' }); findMany.mockClear(); });
+
+  it('answers the owner with a report over the requested Bolivia days', async () => {
+    const { body } = await request(app.getHttpServer()).get('/v1/stores/s1/analytics?from=2026-09-01&to=2026-09-03&granularity=day').expect(200);
+    expect(findFirst).toHaveBeenCalledWith({ where: { id: 's1', merchantId: 'm1' }, select: { id: true } });
+    expect(findMany).toHaveBeenCalledWith({ where: { storeId: 's1', day: { gte: new Date('2026-09-01T00:00:00Z'), lte: new Date('2026-09-03T00:00:00Z') } }, select: { day: true, type: true, productId: true, target: true, count: true, uniqueSessions: true } });
+    expect(body.series.page_view).toHaveLength(3);
+  });
+
+  it('defaults to the last 30 days', async () => {
+    const { body } = await request(app.getHttpServer()).get('/v1/stores/s1/analytics').expect(200);
+    expect(body.series.page_view).toHaveLength(30);
+    expect(body.to).toBe(new Date(Date.now() - 4 * 3_600_000).toISOString().slice(0, 10));
+  });
+
+  it.each([
+    ['from after to', '?from=2026-09-05&to=2026-09-01'],
+    ['more than 400 days', '?from=2025-01-01&to=2026-09-01'],
+    ['an impossible date', '?from=2026-02-30&to=2026-03-01'],
+    ['a malformed date', '?from=yesterday'],
+    ['an hourly granularity', '?granularity=hour'],
+    ['an unknown parameter', '?limit=5'],
+  ])('refuses %s', async (_name, query) => {
+    await request(app.getHttpServer()).get(`/v1/stores/s1/analytics${query}`).expect(400);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 for a store the merchant does not own', async () => {
+    findFirst.mockResolvedValue(null);
+    await request(app.getHttpServer()).get('/v1/stores/other/analytics').expect(404);
+    expect(findMany).not.toHaveBeenCalled();
   });
 });

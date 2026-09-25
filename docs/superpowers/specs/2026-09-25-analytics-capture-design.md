@@ -92,13 +92,14 @@ is a ruling the owner may overturn. G1 only captures and serves the data; G2 dra
    - `totals`: per event type `{ count, sessions }`;
    - `series`: per event type, one `{ day, count, sessions }` per day in the range (zeros included);
    - `topProducts` (10, by views): `{ productId, name, impressions, cardClicks, views, adds, addRate }` with
-     `addRate = adds sessions / views sessions` (0–100, one decimal; `null` without views); a deleted product is
-     named "Producto eliminado";
+     `addRate = adds sessions / views sessions` in percent, one decimal (`null` without views; it can pass 100 when
+     shoppers add from the card without opening the product); a deleted product is named "Producto eliminado";
    - `topCtas`: `{ target, clicks, sessions }`;
-   - `devices`: `{ device, pageViews, sessions }`; `referrers` (10): `{ host, pageViews, sessions }`;
+   - `devices`: `{ device, pageViews, sessions }`; `referrers` (10): `{ host, sessions }` — landing sessions per
+     referrer host, `direct` when the session arrived without one;
    - `checkoutSteps`: `cart_open`, `review`, `delivery` (optional), `pay_click`, `contact`, `payment`, each
-     `{ step, sessions, dropOff }`, where `dropOff` is the percentage lost from the previous required step
-     (`null` when that step had none). `delivery` is optional because digital-only and pickup-less stores skip it.
+     `{ step, optional, sessions, dropOff }`, where `dropOff` is the percentage lost from the previous required step
+     (`null` when that step had none, never below 0). `delivery` is optional because digital-only and pickup-less stores skip it.
    "sessions" over a range is the sum of each day's unique sessions (a session crossing midnight counts twice).
 10. **Generation prompt.** One line in `SOURCE_SHOPPING_FLOW`: mark primary calls to action with `data-track`,
     using only the allow-listed labels. Untagged elements still produce every kit event; the labels only name
