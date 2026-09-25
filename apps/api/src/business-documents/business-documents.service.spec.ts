@@ -53,7 +53,7 @@ class FakePrisma {
   businessDocument = {
     create: async ({ data }: Row) => {
       const { items, events, ...fields } = data;
-      const doc = { id: id("doc"), number: null, status: "DRAFT", currency: "BOB", currentVersion: 0, sentAt: null, viewedAt: null, voidedAt: null, createdAt: new Date(), updatedAt: new Date(), content: [], ...fields };
+      const doc = { id: id("doc"), number: null, status: "DRAFT", currency: "BOB", currentVersion: 0, sentAt: null, viewedAt: null, voidedAt: null, paidAt: null, paymentIntentId: null, autoReminders: true, createdAt: new Date(), updatedAt: new Date(), content: [], ...fields };
       this.documents.push(doc);
       (items?.create ?? []).forEach((item: Row) => this.items.push({ id: id("item"), documentId: doc.id, paymentLinkId: null, ...item }));
       (events?.create ?? []).forEach((event: Row) => this.events.push({ id: id("evt"), documentId: doc.id, at: new Date(), dedupeKey: null, ...event }));
@@ -110,8 +110,17 @@ class FakePrisma {
     },
     count: async ({ where }: Row) => this.events.filter((event) =>
       (where.type === undefined || event.type === where.type)
+      && (!where.data?.path || (event.data ?? {})[where.data.path[0]] === where.data.equals)
       && (!where.at?.gte || event.at >= where.at.gte)
       && (!where.document?.storeId || this.documents.find((doc) => doc.id === event.documentId)?.storeId === where.document.storeId)).length,
+  };
+  paymentIntents: Row[] = [];
+  paymentIntent = {
+    updateMany: async ({ where, data }: Row) => {
+      const rows = this.paymentIntents.filter((row) => matches(row, where));
+      rows.forEach((row) => Object.assign(row, data));
+      return { count: rows.length };
+    },
   };
   $transaction = async (fn: (tx: this) => Promise<unknown>) => fn(this);
 }
@@ -121,7 +130,7 @@ const SECRET = "test-document-link-secret-with-at-least-32-chars";
 function setup(config: Record<string, unknown> = {}) {
   const prisma = new FakePrisma();
   prisma.stores.push(
-    { id: "store_1", merchantId: "m_1", name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png", contactEmail: "hola@illimani.bo" },
+    { id: "store_1", merchantId: "m_1", name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png", contactEmail: "hola@illimani.bo", contactPhone: "+591 70000001" },
     { id: "store_2", merchantId: "m_2", name: "Otra tienda", logoUrl: null, contactEmail: null },
   );
   prisma.customers.push({ id: "cust_1", storeId: "store_1", name: "Ana Quispe", email: "ana@example.com", phone: "+591 7000000", document: "4567890" });
@@ -506,12 +515,17 @@ describe("BusinessDocumentsService — public link", () => {
       sha256: prisma.versions[0].sha256,
       sentAt: expect.any(Date),
       updatedAfterFirstSend: false,
-      store: { name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png" },
+      // The store's public contact, as on its storefront and order tracking page.
+      store: { name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png", contactEmail: "hola@illimani.bo", contactPhone: "+591 70000001" },
       document: prisma.versions[0].content,
+      dueAt: null,
+      paidAt: null,
+      payable: true,
+      preview: false,
     });
     expect(view.document?.title).toBe("Diseño de logo");
     const serialized = JSON.stringify(view);
-    for (const internal of ["store_1", "m_1", id, "pl_", "cust_", "hola@illimani.bo"]) expect(serialized).not.toContain(internal);
+    for (const internal of ["store_1", "m_1", id, "pl_", "cust_"]) expect(serialized).not.toContain(internal);
   });
 
   it("records viewed once per version, with the viewer's IP and user agent", async () => {
@@ -587,5 +601,100 @@ describe("BusinessDocumentsService — public link", () => {
     expect(pdf.filename).toBe("COB-0001.pdf");
     expect(pdf.buffer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(prisma.events.some((event) => event.type === "viewed")).toBe(false);
+  });
+});
+
+describe("BusinessDocumentsService — cobros (D1)", () => {
+  const context = { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0" };
+  async function sent(service: BusinessDocumentsService, extra: Record<string, unknown> = {}) {
+    const created = await service.create("m_1", "store_1", { ...invoice, ...extra });
+    const result = await service.send("m_1", "store_1", created.id, { email: false });
+    return { id: created.id, token: result.publicUrl.split("/d/")[1] };
+  }
+
+  it("gives the merchant a preview link that records no view", async () => {
+    const { service, prisma } = setup();
+    const { id, token } = await sent(service);
+    const detail = await service.get("m_1", "store_1", id);
+    expect(detail.previewUrl).toMatch(new RegExp(`^https://pay\\.example/d/${token.replace(/[.]/g, "\\.")}\\?preview=`));
+    const preview = new URL(detail.previewUrl!).searchParams.get("preview")!;
+    const view = await service.publicView(token, context, preview);
+    expect(view).toEqual(expect.objectContaining({ preview: true, status: "SENT" }));
+    expect(prisma.events.some((event) => event.type === "viewed")).toBe(false);
+    expect(prisma.documents[0].status).toBe("SENT");
+  });
+
+  it("ignores a preview token for another document, and records the view", async () => {
+    const { service, prisma } = setup();
+    const first = await sent(service);
+    const second = await sent(service);
+    const foreignPreview = new URL((await service.get("m_1", "store_1", second.id)).previewUrl!).searchParams.get("preview")!;
+    const view = await service.publicView(first.token, context, foreignPreview);
+    expect(view).toEqual(expect.objectContaining({ preview: false, status: "VIEWED" }));
+    expect(prisma.events.filter((event) => event.type === "viewed")).toHaveLength(1);
+  });
+
+  it("has no preview for a draft", async () => {
+    const { service } = setup();
+    const draft = await service.create("m_1", "store_1", invoice);
+    expect((await service.get("m_1", "store_1", draft.id)).previewUrl).toBeNull();
+  });
+
+  it("tells the customer's page the due date, the payment date and whether it can still be paid", async () => {
+    const { service, prisma } = setup();
+    const dueAt = "2026-10-02T03:59:59.000Z";
+    const { token } = await sent(service, { dueAt });
+    expect(await service.publicView(token, context)).toEqual(expect.objectContaining({ dueAt: new Date(dueAt), paidAt: null, payable: true }));
+    prisma.documents[0].status = "OVERDUE";
+    expect((await service.publicView(token, context)).payable).toBe(true);
+    const paidAt = new Date("2026-10-01T15:00:00Z");
+    Object.assign(prisma.documents[0], { status: "PAID", paidAt });
+    expect(await service.publicView(token, context)).toEqual(expect.objectContaining({ status: "PAID", paidAt, payable: false }));
+  });
+
+  it("never offers payment for a proposal", async () => {
+    const { service } = setup();
+    const created = await service.create("m_1", "store_1", { kind: "PROPOSAL", title: "Propuesta", items: invoice.items });
+    const { publicUrl } = await service.send("m_1", "store_1", created.id, { email: false });
+    expect((await service.publicView(publicUrl.split("/d/")[1], context)).payable).toBe(false);
+  });
+
+  it("shows the merchant the payment fields and the reminders flag", async () => {
+    const { service } = setup();
+    const doc = await service.create("m_1", "store_1", { ...invoice, autoReminders: false });
+    expect(doc).toEqual(expect.objectContaining({ paidAt: null, paymentIntentId: null, autoReminders: false }));
+    const updated = await service.update("m_1", "store_1", doc.id, { autoReminders: true });
+    expect(updated.autoReminders).toBe(true);
+  });
+
+  it("counts reminder emails against the store's daily email cap", async () => {
+    const { service, prisma, email } = setup({ "app.documentEmailsPerDay": 2 });
+    const { id } = await sent(service);
+    prisma.events.push({ id: "r1", documentId: id, type: "reminded", at: new Date(), data: { channel: "email" } });
+    prisma.events.push({ id: "r2", documentId: id, type: "reminded", at: new Date(), data: { channel: "whatsapp" } });
+    const second = await service.create("m_1", "store_1", invoice);
+    await service.send("m_1", "store_1", second.id, {});
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const third = await service.create("m_1", "store_1", invoice);
+    const refused = await service.send("m_1", "store_1", third.id, {}).catch((error: unknown) => error);
+    expect((refused as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
+  });
+
+  it("cancels a checkout the customer has not started when the cobro is voided", async () => {
+    const { service, prisma } = setup();
+    const { id } = await sent(service);
+    prisma.documents[0].paymentIntentId = "pi_open";
+    prisma.paymentIntents.push({ id: "pi_open", status: "REQUIRES_PAYMENT_METHOD" }, { id: "pi_other", status: "REQUIRES_PAYMENT_METHOD" });
+    await service.void("m_1", "store_1", id, {});
+    expect(prisma.paymentIntents).toEqual([{ id: "pi_open", status: "CANCELED" }, { id: "pi_other", status: "REQUIRES_PAYMENT_METHOD" }]);
+  });
+
+  it("leaves a checkout already in progress alone when voiding", async () => {
+    const { service, prisma } = setup();
+    const { id } = await sent(service);
+    prisma.documents[0].paymentIntentId = "pi_qr";
+    prisma.paymentIntents.push({ id: "pi_qr", status: "REQUIRES_ACTION" });
+    await service.void("m_1", "store_1", id, {});
+    expect(prisma.paymentIntents[0].status).toBe("REQUIRES_ACTION");
   });
 });

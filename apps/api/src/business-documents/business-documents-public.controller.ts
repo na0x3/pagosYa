@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Param, Req, StreamableFile } from "@nestjs/common";
+import { Controller, Get, Header, Param, Query, Req, StreamableFile } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { requestContext, type RequestWithContext } from "../legal/request-context";
@@ -16,8 +16,9 @@ export class BusinessDocumentsPublicController {
   @Get(":token")
   @Header("Cache-Control", "no-store")
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
-  view(@Param("token") token: string, @Req() req: RequestWithContext) {
-    return this.documents.publicView(token, requestContext(req));
+  view(@Param("token") token: string, @Req() req: RequestWithContext, @Query("preview") preview?: string) {
+    // `preview` is the merchant's signed preview token: the page opens without recording a view.
+    return this.documents.publicView(token, requestContext(req), typeof preview === "string" ? preview.slice(0, 300) : undefined);
   }
 
   @Get(":token/pdf")

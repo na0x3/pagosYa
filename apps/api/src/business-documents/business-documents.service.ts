@@ -9,7 +9,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { BusinessDocumentStatus, Prisma } from "@prisma/client";
+import { BusinessDocumentStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
@@ -23,7 +23,13 @@ import {
   snapshotSha256,
   type DocumentSnapshot,
 } from "./business-document-snapshot";
-import { createDocumentLinkToken, DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./document-link-token";
+import {
+  createDocumentLinkToken,
+  createDocumentPreviewToken,
+  DEVELOPMENT_DOCUMENT_LINK_SECRET,
+  readDocumentLinkToken,
+  readDocumentPreviewToken,
+} from "./document-link-token";
 import type { AcceptanceContext } from "../legal/terms-acceptance.service";
 import type {
   BusinessDocumentItemDto,
@@ -56,6 +62,12 @@ const revokedSnapshot = (snapshot: DocumentSnapshot): DocumentSnapshot => ({
 });
 
 const DEFAULT_DOCUMENT_EMAILS_PER_DAY = 200;
+
+/** A merchant preview link stays valid this long (it only suppresses the view record). */
+const PREVIEW_TTL_MS = 2 * 60 * 60 * 1000;
+
+/** A cobro the customer can still pay: sent and not closed. Overdue stays payable. */
+const PAYABLE: BusinessDocumentStatus[] = [S.SENT, S.VIEWED, S.OVERDUE];
 
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
@@ -97,6 +109,7 @@ export class BusinessDocumentsService {
         content: (dto.content ?? []) as unknown as Prisma.InputJsonValue,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
+        autoReminders: dto.autoReminders ?? true,
         items: { create: totals.items.map((item, position) => ({ position, ...item })) },
         events: { create: [{ type: "created" }] },
       },
@@ -128,6 +141,10 @@ export class BusinessDocumentsService {
     if (!doc) throw new NotFoundException("Documento no encontrado");
     return {
       ...this.view(doc),
+      // The merchant's "ver como cliente": the same page, without recording a view.
+      previewUrl: doc.currentVersion > 0
+        ? `${this.publicUrl(doc.id)}?preview=${createDocumentPreviewToken(doc.id, this.secret(), new Date(Date.now() + PREVIEW_TTL_MS))}`
+        : null,
       versions: doc.versions,
       events: doc.events.map(({ id: eventId, type, version, at, data }) => ({ id: eventId, type, version, at, data })),
     };
@@ -158,6 +175,7 @@ export class BusinessDocumentsService {
           ...(dto.content !== undefined && { content: dto.content as unknown as Prisma.InputJsonValue }),
           ...(dto.dueAt !== undefined && { dueAt: dto.dueAt ? new Date(dto.dueAt) : null }),
           ...(dto.validUntil !== undefined && { validUntil: dto.validUntil ? new Date(dto.validUntil) : null }),
+          ...(dto.autoReminders !== undefined && { autoReminders: dto.autoReminders }),
         },
       });
       if (!count) throw new ConflictException("Este documento ya no se puede editar");
@@ -281,6 +299,14 @@ export class BusinessDocumentsService {
         data: { status: S.VOIDED, voidedAt: now },
       });
       if (!count) throw new ConflictException("Este documento ya no se puede anular");
+      // A checkout the customer has not started is closed with it; one already in progress
+      // (a QR on screen) is left to finish, and a payment then lands as payment_after_close.
+      if (doc.paymentIntentId) {
+        await tx.paymentIntent.updateMany({
+          where: { id: doc.paymentIntentId, status: PaymentIntentStatus.REQUIRES_PAYMENT_METHOD },
+          data: { status: PaymentIntentStatus.CANCELED },
+        });
+      }
       await tx.businessDocumentEvent.create({
         data: { documentId: id, type: "voided", version: doc.currentVersion || null, ...(dto.reason && { data: { reason: dto.reason } }) },
       });
@@ -296,14 +322,26 @@ export class BusinessDocumentsService {
    * Voiding revokes the content: a voided link keeps only the store, number,
    * title, status and void date — no customer data, items or blocks.
    */
-  async publicView(token: string, context: AcceptanceContext) {
+  async publicView(token: string, context: AcceptanceContext, previewToken?: string) {
     const { doc, version, snapshot } = await this.publicVersion(token);
-    const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, logoUrl: true } });
-    const storeView = { name: store?.name ?? "", logoUrl: store?.logoUrl ?? null };
+    const store = await this.prisma.store.findUnique({
+      where: { id: doc.storeId },
+      select: { name: true, logoUrl: true, contactEmail: true, contactPhone: true },
+    });
     if (doc.status === S.VOIDED) {
+      const storeView = { name: store?.name ?? "", logoUrl: store?.logoUrl ?? null };
       return { kind: doc.kind, numberLabel: snapshot.numberLabel, title: snapshot.title, status: doc.status, voidedAt: doc.voidedAt, store: storeView };
     }
-    const status = (await this.recordView(doc.id, version.version, context)) && doc.status === S.SENT ? S.VIEWED : doc.status;
+    const storeView = {
+      name: store?.name ?? "",
+      logoUrl: store?.logoUrl ?? null,
+      contactEmail: store?.contactEmail ?? null,
+      contactPhone: store?.contactPhone ?? null,
+    };
+    // The merchant looking at their own document is not the customer opening it.
+    const preview = Boolean(previewToken) && readDocumentPreviewToken(previewToken!, this.secret()) === doc.id;
+    const viewed = !preview && (await this.recordView(doc.id, version.version, context));
+    const status = viewed && doc.status === S.SENT ? S.VIEWED : doc.status;
     return {
       kind: doc.kind,
       numberLabel: snapshot.numberLabel,
@@ -314,6 +352,10 @@ export class BusinessDocumentsService {
       updatedAfterFirstSend: version.version > 1,
       store: storeView,
       document: snapshot,
+      dueAt: doc.dueAt,
+      paidAt: doc.paidAt,
+      payable: doc.kind === "INVOICE" && PAYABLE.includes(status),
+      preview,
     };
   }
 
@@ -339,7 +381,7 @@ export class BusinessDocumentsService {
     if (!id) throw notFound();
     const doc = await this.prisma.businessDocument.findUnique({
       where: { id },
-      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true, voidedAt: true },
+      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true, voidedAt: true, dueAt: true, paidAt: true },
     });
     // A never-sent draft answers exactly like a bad token.
     if (!doc || doc.currentVersion < 1) throw notFound();
@@ -373,10 +415,13 @@ export class BusinessDocumentsService {
    * `emailed` events, so a compromised or careless account cannot spam from
    * the platform sender. Soft under concurrency: two sends at the edge may both pass.
    */
-  private async assertEmailQuota(tx: Prisma.TransactionClient, storeId: string) {
+  async assertEmailQuota(tx: Prisma.TransactionClient, storeId: string) {
     const limit = this.config.get<number>("app.documentEmailsPerDay") ?? DEFAULT_DOCUMENT_EMAILS_PER_DAY;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const sent = await tx.businessDocumentEvent.count({ where: { type: "emailed", at: { gte: since }, document: { storeId } } });
+    // Reminder emails leave from the same sender, so they count too; a WhatsApp reminder does not.
+    const sent =
+      (await tx.businessDocumentEvent.count({ where: { type: "emailed", at: { gte: since }, document: { storeId } } }))
+      + (await tx.businessDocumentEvent.count({ where: { type: "reminded", data: { path: ["channel"], equals: "email" }, at: { gte: since }, document: { storeId } } }));
     if (sent >= limit) {
       throw new HttpException(
         `Alcanzaste el límite de ${limit} correos de documentos por día para esta tienda. Comparte el enlace por WhatsApp o cópialo, o vuelve a enviarlo por correo mañana.`,
@@ -468,6 +513,9 @@ export class BusinessDocumentsService {
       sentAt: doc.sentAt,
       viewedAt: doc.viewedAt,
       voidedAt: doc.voidedAt,
+      paidAt: doc.paidAt,
+      paymentIntentId: doc.paymentIntentId,
+      autoReminders: doc.autoReminders,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       publicUrl: doc.currentVersion > 0 ? this.publicUrl(doc.id) : null,

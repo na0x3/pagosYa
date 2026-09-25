@@ -105,6 +105,10 @@ export class CreateBusinessDocumentDto {
   @ApiPropertyOptional({ type: [BusinessDocumentItemDto] })
   @IsOptional() @IsArray() @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => BusinessDocumentItemDto)
   items?: BusinessDocumentItemDto[];
+
+  @ApiPropertyOptional({ default: true, description: "Cobros: email the customer on the due date and 3 days after it." })
+  @IsOptional() @IsBoolean()
+  autoReminders?: boolean;
 }
 
 export class UpdateBusinessDocumentDto extends PartialType(OmitType(CreateBusinessDocumentDto, ["kind"] as const)) {}

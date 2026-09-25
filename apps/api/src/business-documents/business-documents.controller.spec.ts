@@ -23,7 +23,14 @@ describe("business document controllers", () => {
     const documents = { publicView: jest.fn().mockResolvedValue({}), publicPdf: jest.fn() };
     const controller = new BusinessDocumentsPublicController(documents as any);
     await controller.view("tok", { ip: "190.0.0.1", headers: { "user-agent": "Mozilla/5.0" } });
-    expect(documents.publicView).toHaveBeenCalledWith("tok", { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0" });
+    expect(documents.publicView).toHaveBeenCalledWith("tok", { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0" }, undefined);
+  });
+
+  it("hands the merchant's preview token to the public view", async () => {
+    const documents = { publicView: jest.fn().mockResolvedValue({}) };
+    const controller = new BusinessDocumentsPublicController(documents as any);
+    await controller.view("tok", { ip: "190.0.0.1", headers: {} }, "prev");
+    expect(documents.publicView).toHaveBeenCalledWith("tok", expect.any(Object), "prev");
   });
 
   it("serves the public PDF inline with its number as the file name", async () => {
