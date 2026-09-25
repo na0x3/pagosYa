@@ -64,7 +64,7 @@ export const SOURCE_DNA_SCHEMA = {
   },
 };
 
-export const SOURCE_DNA_DIRECTION = `For each concept also commit to dna, the store's design DNA: form, behaviour and placement, never colours (colours stay in the CSS tokens). Choose values that express this concept, not safe defaults. type.display and type.text name the self-hosted fonts; buttons.form, hover and press set how every button looks and reacts; surfaces choose the cart (drawer, sheet, page or overlay), the added-to-cart moment, the product page (it overrides layout.productPage, so keep both equal), the checkout review and how catalog cards respond. motifs: up to ${MAX_MOTIFS} small illustrated elements tied to the store, a category or a product (target names it), each with its meaning, behavior, trigger and placement; use none when nothing in the brief earns one. signature: the store's one memorable moment in at most ${MAX_SIGNATURE} characters. Make the three concepts differ in their DNA, above all in buttons.form, surfaces.cart, surfaces.added and the type pairing.`;
+export const SOURCE_DNA_DIRECTION = `For each concept also commit to dna, the store's design DNA: form, behaviour and placement, never colours (colours stay in the CSS tokens). Choose values that express this concept, not safe defaults. type.display and type.text name the self-hosted fonts; buttons.form, hover and press set how every button looks and reacts; surfaces choose the cart (drawer, sheet, page or overlay), the added-to-cart moment, the product page (it overrides layout.productPage, so keep both equal), the checkout review and how catalog cards respond. motifs: up to ${MAX_MOTIFS} small illustrated elements tied to the store, a category or a product (target names it), each with its meaning, behavior, trigger and placement; use none when nothing in the brief earns one. signature: the store's one memorable moment in at most ${MAX_SIGNATURE} characters. Make the three concepts differ in their DNA, above all in buttons.form, surfaces.cart, surfaces.added and the type pairing. The context's avoidRecent lists fingerprints other stores used recently, written buttons.form|surfaces.cart|surfaces.added|type.display+type.text: those combinations are taken, so no concept may repeat one.`;
 
 /** FNV-1a into mulberry32: tiny, deterministic, and good enough to spread stores across the enums. */
 function seededRandom(seed: string) {
@@ -124,6 +124,41 @@ export function normalizeDna(raw: unknown, seed: string): { dna: SourceDesignDna
 /** What sub-project 4 compares across stores: the choices a shopper notices first. */
 export function dnaFingerprint(dna: SourceDesignDna): string {
   return `${dna.buttons.form}|${dna.surfaces.cart}|${dna.surfaces.added}|${dna.type.display}+${dna.type.text}`;
+}
+
+// The type pairing is never mutated: the concept's typography prose names its fonts.
+const MUTABLE_FINGERPRINT_FIELDS = [['buttons', 'form'], ['surfaces', 'cart'], ['surfaces', 'added']] as const;
+/** Offsets by distance, nearest first: +1, -1, +2, -2 … (indices wrap). */
+const nearestOffsets = (size: number) => Array.from({ length: size - 1 }, (_, i) => (i % 2 ? -1 : 1) * (Math.floor(i / 2) + 1));
+
+/** Cross-store memory, applied after planning: when the chosen DNA repeats a recent store's fingerprint, move two
+ * of button form, cart and added (a seeded pair order) to the nearest values whose fingerprint is free. Deterministic
+ * for a seed; no paid call. A free fingerprint returns the same object. */
+export function avoidTakenFingerprint(dna: SourceDesignDna, taken: readonly string[], seed: string): { dna: SourceDesignDna; repair?: string } {
+  const takenSet = new Set(taken);
+  const original = dnaFingerprint(dna);
+  if (!takenSet.has(original)) return { dna };
+  const random = seededRandom(seed);
+  const order = MUTABLE_FINGERPRINT_FIELDS.map(field => ({ field, rank: random() })).sort((a, b) => a.rank - b.rank).map(entry => entry.field);
+  const valuesOf = ([group, key]: typeof order[number]) => (SOURCE_DNA_ENUMS[group] as Record<string, readonly string[]>)[key];
+  const valueOf = (value: SourceDesignDna, [group, key]: typeof order[number]) => (value[group] as Record<string, string>)[key];
+  for (const [first, second] of [[order[0], order[1]], [order[0], order[2]], [order[1], order[2]]]) {
+    const firstValues = valuesOf(first), secondValues = valuesOf(second);
+    const moves = nearestOffsets(firstValues.length).flatMap(a => nearestOffsets(secondValues.length).map(b => ({ a, b })))
+      .sort((x, y) => Math.abs(x.a) + Math.abs(x.b) - (Math.abs(y.a) + Math.abs(y.b)));
+    for (const { a, b } of moves) {
+      const next = structuredClone(dna);
+      const move = (field: typeof order[number], values: readonly string[], offset: number) => {
+        (next[field[0]] as Record<string, string>)[field[1]] = values[(((values.indexOf(valueOf(dna, field)) + offset) % values.length) + values.length) % values.length];
+      };
+      move(first, firstValues, a);
+      move(second, secondValues, b);
+      if (takenSet.has(dnaFingerprint(next))) continue;
+      const changes = [first, second].map(field => `${field.join('.')} ${valueOf(dna, field)}→${valueOf(next, field)}`).join(', ');
+      return { dna: next, repair: `dna: fingerprint ${original} was used by a recent store; ${changes}` };
+    }
+  }
+  return { dna };
 }
 
 /** The config.js form: enums only, flat, no motifs or signature prose. */

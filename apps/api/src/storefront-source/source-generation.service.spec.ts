@@ -13,7 +13,7 @@ import { SOURCE_CONVERSATION_INSTRUCTIONS } from './source-conversation.service'
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { samplePhotoColours } from './source-photo-sampler';
-import { dnaRuntimeConfig, sourceRuntimeDna } from './source-dna';
+import { dnaFingerprint, dnaRuntimeConfig, sourceRuntimeDna } from './source-dna';
 import { validDna } from './fixtures/dna';
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -102,6 +102,32 @@ describe('Independent source generation',()=>{
     const build = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text;
     expect(build).toContain('OWNED COMPOSITION RECIPE (brutalist-raw/');
     expect(build).not.toContain('OWNED COMPOSITION RECIPE (cafe-expressive/');
+  });
+  it('steers planning away from recent fingerprints and repairs a colliding chosen DNA in code', async () => {
+    const { service, projects } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna();
+    const taken = dnaFingerprint(validDna());
+    projects.recentDesignFingerprints = jest.fn().mockResolvedValue([taken, 'pill|drawer|toast|oswald+instrument']);
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    const result = await service.generate('m', 's', input);
+    expect(projects.recentDesignFingerprints).toHaveBeenCalledWith('s');
+    expect(JSON.parse(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].context).avoidRecent).toEqual([taken, 'pill|drawer|toast|oswald+instrument']);
+    const saved = projects.save.mock.calls[0][2];
+    const savedDna = JSON.parse(saved.files.find((f: any) => f.path === 'design-direction.json').content).concepts[0].dna;
+    expect(dnaFingerprint(savedDna)).not.toBe(taken);
+    // product follows the page the kit renders (productPageStyle); every other enum is the repaired DNA.
+    expect(configOf(saved).dna).toEqual({ ...dnaRuntimeConfig(savedDna), product: configOf(saved).productPageStyle });
+    expect(result.generation.autoRepairs.some((repair: string) => repair.startsWith(`dna: fingerprint ${taken} was used by a recent store`))).toBe(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).toContain(JSON.stringify(savedDna.buttons));
+  });
+  it('plans without memory when the fingerprint lookup fails', async () => {
+    const { service, projects } = setup('next');
+    projects.recentDesignFingerprints = jest.fn().mockRejectedValue(new Error('db down'));
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    expect(JSON.parse(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].context).avoidRecent).toEqual([]);
+    expect(projects.save).toHaveBeenCalledTimes(1);
   });
   it('gives an edited store whose saved design has no DNA the same seeded DNA', async () => {
     const { service, projects } = setup();

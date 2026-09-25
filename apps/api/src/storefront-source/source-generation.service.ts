@@ -14,7 +14,7 @@ import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
-import { sourceRuntimeDna } from './source-dna';
+import { avoidTakenFingerprint, sourceRuntimeDna } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, sourceProviderBody, isDeepSeek } from './source-provider';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
@@ -487,15 +487,22 @@ export class SourceGenerationService {
       if (exploration) {
         await progress?.('design');
         const implementationFloor = budget.reserve(model, estimate.estimatedInputTokens, 2000, 2000);
+        // Cross-store memory is best-effort: a failed lookup plans without it rather than failing the run.
+        const avoidRecent = await Promise.resolve().then(() => this.projects.recentDesignFingerprints(storeId)).catch(() => [] as string[]);
         try {
           committedDesign = await this.designPlanner.explore({ model, provider, apiKey, selected: exploration.selected, sitePurpose, narrative: narrativePlanning, dnaSeed: storeId, repairs: autoRepairs,
-            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: sourceAssetInventory(previousFiles), confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
+            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: sourceAssetInventory(previousFiles), confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
             images, budget, signal, attempts, record: async (body, attempt) => this.metering?.record(storeId, 'source-design', model, body, attempt.durationMs, attempt.status),
           });
         } finally { implementationFloor.settle({ input_tokens: 0, output_tokens: 0 }); }
         visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), committedDesign);
         taskPrompt += `\nUpdated visual system after concept selection. This newer manifest is authoritative:\n${sourceVisualSystemContext(visualSystem)}`;
         const chosen = committedDesign.concepts[committedDesign.selected];
+        if (chosen.dna) {
+          const avoided = avoidTakenFingerprint(chosen.dna, avoidRecent, `${storeId}:${dto.revision}`);
+          chosen.dna = avoided.dna;
+          if (avoided.repair) autoRepairs.push(avoided.repair);
+        }
         // The recipe was picked before the concept existed; prefer families that serve the grammar it committed to.
         const grammar = chosen.dna?.layout.grammar;
         const regrammed = uiComposition && grammar ? this.composeUi({ ...compositionInput, grammar })[0] : undefined;

@@ -1,5 +1,5 @@
 import { validDna } from './fixtures/dna';
-import { defaultDna, withSeededDna, dnaFingerprint, dnaRuntimeConfig, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
+import { avoidTakenFingerprint, defaultDna, withSeededDna, dnaFingerprint, dnaRuntimeConfig, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
 
 describe('design DNA', () => {
   it('accepts a full valid DNA unchanged', () => {
@@ -90,5 +90,54 @@ describe('design DNA', () => {
     expect(withSeededDna(own, 'store-7')[1]).toBe(own[1]);
     const unreadable = [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {', encoding: 'utf8' as const }];
     expect(withSeededDna(unreadable, 'store-7')[0]).toBe(unreadable[0]);
+  });
+});
+
+describe('avoidTakenFingerprint', () => {
+  const fields = [['buttons', 'form'], ['surfaces', 'cart'], ['surfaces', 'added']] as const;
+  const index = (dna: any, [group, key]: readonly [string, string]) => (SOURCE_DNA_ENUMS as any)[group][key].indexOf(dna[group][key]);
+
+  it('returns the same DNA with no repair when its fingerprint is free', () => {
+    const dna = validDna();
+    const result = avoidTakenFingerprint(dna, ['pill|drawer|toast|oswald+instrument'], 'store-1:0');
+    expect(result.dna).toBe(dna);
+    expect(result.repair).toBeUndefined();
+  });
+
+  it('moves exactly two of button form, cart and added to the nearest unused values, deterministically', () => {
+    const dna = validDna();
+    const taken = [dnaFingerprint(dna)];
+    const result = avoidTakenFingerprint(dna, taken, 'store-1:0');
+    expect(taken).not.toContain(dnaFingerprint(result.dna));
+    const changed = fields.filter(field => index(result.dna, field) !== index(dna, field));
+    expect(changed).toHaveLength(2);
+    for (const field of changed) {
+      const size = (SOURCE_DNA_ENUMS as any)[field[0]][field[1]].length;
+      const distance = Math.abs(index(result.dna, field) - index(dna, field));
+      expect(Math.min(distance, size - distance)).toBe(1);
+    }
+    expect(result.dna.type).toEqual(dna.type);
+    expect(dna).toEqual(validDna());
+    expect(avoidTakenFingerprint(validDna(), taken, 'store-1:0')).toEqual(result);
+    expect(result.repair).toMatch(/^dna: fingerprint stamp\|sheet\|ribbon\|fraunces\+instrument was used by a recent store; /);
+  });
+
+  it('keeps looking past taken neighbours and never lands on a taken fingerprint', () => {
+    const dna = validDna();
+    const taken = new Set([dnaFingerprint(dna)]);
+    // Block every single-step neighbour pair.
+    for (const [a, b] of [[0, 1], [0, 2], [1, 2]]) for (const da of [-1, 1]) for (const db of [-1, 1]) {
+      const copy: any = structuredClone(dna);
+      for (const [field, delta] of [[fields[a], da], [fields[b], db]] as const) {
+        const values = (SOURCE_DNA_ENUMS as any)[field[0]][field[1]];
+        copy[field[0]][field[1]] = values[(index(dna, field) + delta + values.length) % values.length];
+      }
+      taken.add(dnaFingerprint(copy));
+    }
+    for (const seed of ['a', 'b', 'c', 'd']) {
+      const result = avoidTakenFingerprint(dna, [...taken], seed);
+      expect(taken.has(dnaFingerprint(result.dna))).toBe(false);
+      expect(fields.filter(field => index(result.dna, field) !== index(dna, field))).toHaveLength(2);
+    }
   });
 });
