@@ -136,6 +136,10 @@ describe('added-to-cart placement', () => {
     const notice = addOne('bubble', { cart: rect(900, 16, 96, 40) });
     expect([notice.style.getPropertyValue('--added-top'), notice.style.getPropertyValue('--added-right')]).toEqual(['66px', '28px']);
   });
+  it('hangs the bubble from a cart button on the left, arrow pointing at it', () => {
+    const notice = addOne('bubble', { cart: rect(60, 8, 90, 30), notice: rect(60, 48, 300, 70) });
+    expect([notice.style.getPropertyValue('--added-left'), notice.style.getPropertyValue('--added-right'), notice.style.getPropertyValue('--added-arrow')]).toEqual(['60px', '', '39px']);
+  });
   it('anchors the inline confirmation under the pressed add button', () => {
     const notice = addOne('inline', { add: rect(300, 500, 44, 44) });
     expect([notice.style.getPropertyValue('--added-top'), notice.style.getPropertyValue('--added-left')]).toEqual(['552px', '300px']);
