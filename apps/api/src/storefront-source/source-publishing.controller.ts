@@ -1,5 +1,6 @@
 import { SourceCheckResultDto } from './source-check-results';
-import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query, UseGuards, Headers, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength, Max, Matches } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
@@ -79,4 +80,23 @@ export class SourceSiteController {
   @Header('Cache-Control', 'private, no-store')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   get(@Param('slug') slug: string, @Query() query: VisitDto) { return this.publishing.publicSite(slug, query.visitorId); }
+
+  /** Public media of a visible revision. Content-addressed by revision and digest, so it may be cached forever. */
+  @Get('assets/:version/*path')
+  @Throttle({ default: { limit: 600, ttl: 60000 } })
+  async asset(@Param('slug') slug: string, @Param('version') version: string, @Param('path') path: string[] | string, @Res({ passthrough: true }) res: Response, @Headers('if-none-match') ifNoneMatch?: string) {
+    const file = await this.publishing.publicAsset(slug, version, Array.isArray(path) ? path.join('/') : path);
+    res.set({
+      'Content-Type': file.contentType,
+      'X-Content-Type-Options': 'nosniff',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      // The storefront sandbox has an opaque origin; fonts are fetched in CORS mode and need this.
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      ETag: file.etag,
+    });
+    if (ifNoneMatch?.split(',').some(value => value.trim().replace(/^W\//, '') === file.etag)) { res.status(304); return undefined; }
+    res.set({ 'Content-Length': String(file.bytes.length) });
+    return new StreamableFile(file.bytes);
+  }
 }
