@@ -8,6 +8,7 @@ import { API_BASE_URL, assetUrl } from "../api";
 import { markPrivateStorePage } from "../store-seo";
 import { app } from "../ui/app";
 import { ICON_CHECK, ICON_CLOCK, ICON_LOCK, ICON_WHATSAPP, ICON_X } from "../ui/icons";
+import { renderProposalView, type ProposalView } from "./proposal-page";
 
 type Snapshot = {
   kind: string;
@@ -197,16 +198,21 @@ function bindPay(token: string): void {
 }
 
 export async function renderCobroPage(token: string): Promise<void> {
-  document.body.classList.remove("store-page", "product-detail-page", "payment-page", "payment-success-page", "debt-collection-page", "order-tracking-page");
+  document.body.classList.remove("store-page", "product-detail-page", "payment-page", "payment-success-page", "debt-collection-page", "order-tracking-page", "proposal-document-page");
   document.body.classList.add("cobro-document-page");
   document.title = "Cobro — pagosYa";
   markPrivateStorePage();
-  app.innerHTML = `<main class="cobro-shell cobro-loading" data-cobro-loading aria-busy="true"><span>Abriendo tu cobro…</span></main>`;
+  app.innerHTML = `<main class="cobro-shell cobro-loading" data-cobro-loading aria-busy="true"><span>Abriendo tu documento…</span></main>`;
   const preview = new URLSearchParams(window.location.search).get("preview");
   try {
     const response = await fetch(`${API_BASE_URL}/documents/public/${encodeURIComponent(token)}${preview ? `?preview=${encodeURIComponent(preview)}` : ""}`, { cache: "no-store", credentials: "omit" });
     const body = await readJson(response);
     if (!response.ok) throw new Error(typeof body.message === "string" ? body.message : "No pudimos abrir este cobro.");
+    // The same link serves every document kind: a proposal (D2) has its own page.
+    if (body.kind === "PROPOSAL") {
+      renderProposalView(body as unknown as ProposalView, token);
+      return;
+    }
     const view = body as unknown as CobroView;
     document.title = `${view.numberLabel} · ${view.store.name}`;
     app.innerHTML = cobroPageHtml(view, token);
