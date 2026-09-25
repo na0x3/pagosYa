@@ -24,7 +24,7 @@ export type BusinessDocumentPdfInput = {
   snapshot: DocumentSnapshot;
 };
 
-function dateOnly(value: string | null): string {
+export function documentDate(value: string | null): string {
   if (!value) return "";
   return new Intl.DateTimeFormat("es-BO", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/La_Paz" }).format(new Date(value));
 }
@@ -69,8 +69,8 @@ export async function renderBusinessDocumentPdf(input: BusinessDocumentPdfInput)
   doc.y = MARGIN + 76;
   doc.fillColor(INK).font("Helvetica-Bold").fontSize(15).text(snapshot.title, { width });
   const dates = [
-    snapshot.dueAt ? `Vence: ${dateOnly(snapshot.dueAt)}` : "",
-    snapshot.validUntil ? `Válido hasta: ${dateOnly(snapshot.validUntil)}` : "",
+    snapshot.dueAt ? `Vence: ${documentDate(snapshot.dueAt)}` : "",
+    snapshot.validUntil ? `Válido hasta: ${documentDate(snapshot.validUntil)}` : "",
   ].filter(Boolean);
   if (dates.length) doc.moveDown(0.2).fillColor(MUTED).font("Helvetica").fontSize(9).text(dates.join("   ·   "), { width });
 
