@@ -96,4 +96,20 @@ describe('cascade: kit defaults < DNA < authored store CSS', () => {
       expect(await computed(page, '.menu-add', ['outline-style', 'outline-color'])).toEqual({ 'outline-style': 'dashed', 'outline-color': 'rgb(200, 0, 0)' });
     } finally { await page.close(); }
   });
+
+  it.each(DNA_VALUES.button)('the %s form keeps the pay and checkout buttons full size and filled', async button => {
+    const cart = await open({ dna: { ...DNA, button }, cart: [{ id: 'taza', quantity: 1 }] });
+    try {
+      await cart.emulateMedia({ reducedMotion: 'reduce' });
+      await cart.waitForSelector('.menu-add');
+      await cart.click('header [data-cart-open]');
+      await cart.waitForSelector('.cart-drawer .checkout-button');
+      expect(await computed(cart, '.cart-drawer .checkout-button', ['min-height', 'padding-top', 'padding-left', 'background-color'])).toEqual({ 'min-height': '52px', 'padding-top': '16px', 'padding-left': '20px', 'background-color': 'rgb(32, 33, 29)' });
+    } finally { await cart.close(); }
+    const review = await open({ dna: { ...DNA, button }, body: '<main><div data-pagosya-checkout-page></div></main><p data-pagosya-status></p>', cart: [{ id: 'taza', quantity: 1 }] });
+    try {
+      await review.waitForSelector('[data-pagosya-checkout] .checkout-button');
+      expect(await computed(review, '[data-pagosya-checkout] .checkout-button', ['min-height', 'padding-top', 'background-color'])).toEqual({ 'min-height': '48px', 'padding-top': '12px', 'background-color': 'rgb(32, 33, 29)' });
+    } finally { await review.close(); }
+  });
 });

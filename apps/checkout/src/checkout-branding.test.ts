@@ -32,6 +32,14 @@ describe("confirmation DNA styles", () => {
     expect(css).toMatch(/\[data-dna-button\] #app \.payment-success-panel \.receipt-action\{/);
     expect(css).not.toMatch(/data-dna-[^{]*payment-printer/);
   });
+  it("keep the pay button filled and full size in the open forms", () => {
+    const fill = css.match(/body\.store-branded-checkout:is\(([^)]*)\) #app button\.primary\{([^}]*)\}/);
+    for (const form of ["underline", "ghost", "outline", "stamp"]) expect(fill?.[1]).toContain(`[data-dna-button=${form}]`);
+    expect(fill?.[2]).toContain("--checkout-dna-btn-bg:var(--checkout-accent)");
+    expect(fill?.[2]).toContain("--checkout-dna-btn-fg:var(--checkout-accent-foreground)");
+    const dna = css.match(/body\.store-branded-checkout\[data-dna-button\] #app button\.primary\{([^}]*)\}/)?.[1] ?? "";
+    expect(dna).not.toMatch(/min-height|(^|;)height|padding/);
+  });
   it("keep a visible, unclipped focus ring on every DNA button: foreground ring on a background halo", () => {
     const ring = css.match(/body\.store-branded-checkout\[data-dna-button\] #app :is\(button\.primary,\.payment-success-panel \.receipt-action\):focus-visible\{([^}]*)\}/)?.[1] ?? "";
     expect(ring).toContain("clip-path:none");

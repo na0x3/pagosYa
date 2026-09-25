@@ -39,7 +39,30 @@ const DNA = { version: 1 as unknown as string, button: 'pill', hover: 'lift', pr
 const dnaCss = (doc: any) => doc.querySelector('style[data-pagosya-kit="dna"]')?.textContent ?? '';
 /** Innermost rule blocks: selector and declarations (at-rule wrappers are skipped). */
 const rules = (css: string) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ selector: m[1].trim(), body: m[2] }));
-const PROTECTED = /price|total|__buy|checkout-button|data-pay|finish-demo|polic|privacy|order-note|sold-out|legal|receipt/;
+const PROTECTED = /price|total|__buy|checkout-button|menu-add|data-pay|finish-demo|polic|privacy|order-note|sold-out|legal|receipt/;
+/** The element a selector styles: its last compound, split at top-level combinators. */
+function subject(selector: string) {
+  let depth = 0, start = 0;
+  for (let i = 0; i < selector.length; i++) {
+    const c = selector[i];
+    if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth--;
+    else if (depth === 0 && /[\s>+~]/.test(c)) start = i + 1;
+  }
+  return selector.slice(start);
+}
+/** Does this selector style a primary pay/checkout button (the cart's checkout, the checkout's pay, the product buy)? */
+function topLevel(list: string) {
+  const parts: string[] = []; let depth = 0, start = 0;
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth--;
+    else if (c === ',' && depth === 0) { parts.push(list.slice(start, i)); start = i + 1; }
+  }
+  return [...parts, list.slice(start)].map(part => part.trim());
+}
+const reachesPay = (selector: string) => topLevel(selector).some(part => /checkout-button|__buy(?!-)/.test(subject(part)) && !/:not\(\.checkout-button\)/.test(subject(part)));
 
 describe('DNA tokens and buttons', () => {
   it('adds the DNA style only for a store with DNA and leaves every other kit style unchanged', () => {
@@ -61,6 +84,24 @@ describe('DNA tokens and buttons', () => {
     }
   });
 
+  it('never shrinks a primary pay or checkout button, nor leaves it transparent, in any form', () => {
+    const css = dnaCss(boot(DNA).doc);
+    const all = rules(css);
+    const pay = all.filter(rule => reachesPay(rule.selector));
+    expect(pay.length).toBeGreaterThan(0);
+    for (const { selector, body } of pay) {
+      const declarations = body.replace(/\s+/g, '');
+      expect({ selector, shrink: declarations.match(/(?:^|;)(?:min-height|height|padding(?:-top|-bottom|-block)?):[^;]*/g) ?? [] }).toEqual({ selector, shrink: [] });
+      expect({ selector, transparent: /(?:^|;)background(?:-color)?:(?:transparent|none)/.test(declarations) }).toEqual({ selector, transparent: false });
+    }
+    // The effective fill of the pay button in each form: the form's token, unless a pay-button rule refills it.
+    for (const form of DNA_VALUES.button) {
+      const token = (text: string) => text.match(/--kit-btn-bg:([^;]+)/)?.[1];
+      let bg = token(all.find(rule => rule.selector === `:root[data-dna-button=${form}]`)?.body ?? '');
+      for (const rule of pay) if (rule.selector.includes(`[data-dna-button=${form}]`) && token(rule.body)) bg = token(rule.body);
+      expect({ form, bg }).toEqual({ form, bg: expect.not.stringMatching(/transparent/) });
+    }
+  });
   it('has a rule for every button form, hover and press, keyed on the root DNA attribute', () => {
     const css = dnaCss(boot(DNA).doc);
     for (const [field, name] of [['button', 'button'], ['hover', 'hover'], ['press', 'press'], ['radius', 'radius'], ['border', 'border'], ['frame', 'frame']] as const) {
@@ -85,7 +126,9 @@ describe('DNA tokens and buttons', () => {
     const button = rules(css).find(rule => rule.selector.includes('.menu-add') && rule.body.includes('var(--kit-btn-radius)'));
     expect(button?.selector).toEqual(expect.stringContaining('.checkout-button'));
     for (const hook of ['.product-detail__buy', '.product-detail__sticky button', '.cart-added button', '[data-pagosya-contact] form>button[type=submit]']) expect(button?.selector).toContain(hook);
-    for (const token of ['--kit-btn-border', '--kit-btn-bg', '--kit-btn-fg', '--kit-btn-case', '--kit-btn-tracking', '--kit-btn-pad']) expect(button?.body).toContain(`var(${token})`);
+    for (const token of ['--kit-btn-border', '--kit-btn-bg', '--kit-btn-fg', '--kit-btn-case', '--kit-btn-tracking']) expect(button?.body).toContain(`var(${token})`);
+    // The form's padding reaches every button but the primary pay/checkout/buy ones, which keep their full size.
+    expect(rules(css).find(rule => rule.selector === `${button?.selector}:not(.checkout-button)`)?.body).toContain('padding:var(--kit-btn-pad)');
     expect(rules(css).some(rule => rule.selector.includes(':focus-visible') && /outline:\s*3px solid/.test(rule.body))).toBe(true);
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });
