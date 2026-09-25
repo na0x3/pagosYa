@@ -1839,7 +1839,8 @@
     `:root[data-dna-button] ${steppers}{border-radius:var(--kit-radius);border-width:max(var(--kit-border),1px)}`,
     /* Hover (and keyboard focus): never the only focus indicator. */
     dnaHover(buttons, 'lift', 'transform:translateY(-2px);box-shadow:var(--kit-btn-shadow),0 8px 18px -8px color-mix(in srgb,currentColor 60%,transparent)'),
-    dnaHover(buttons, 'fill', 'background-image:linear-gradient(color-mix(in srgb,currentColor 16%,transparent),color-mix(in srgb,currentColor 16%,transparent))'),
+    /* Fill: the button's edge fills in with its own text colour. The background never changes, so the text keeps its contrast. */
+    dnaHover(buttons, 'fill', 'box-shadow:var(--kit-btn-shadow),inset 0 0 0 .2em currentColor'),
     `:root[data-dna-hover=underline-grow] ${buttons}{background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:50% calc(100% - .35em);background-size:0 1.5px}`,
     dnaHover(buttons, 'underline-grow', 'background-size:calc(100% - 2em) 1.5px'),
     dnaHover(buttons, 'tilt', 'transform:rotate(-2deg)'),

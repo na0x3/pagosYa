@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { chromium, type Browser, type Page } from 'playwright';
 import { kitPath } from '@pagosya/storefront-kit';
+import sharp from 'sharp';
+import { contrastRatio } from './source-scorecard';
 
 /** Sub-project 5 review: the cascade order is kit defaults < store DNA < the store's own CSS. jsdom has no
  * cascade layers, so these run in Chromium: the authored rule must win over every DNA form, and the DNA must
@@ -111,5 +113,23 @@ describe('cascade: kit defaults < DNA < authored store CSS', () => {
       await review.waitForSelector('[data-pagosya-checkout] .checkout-button');
       expect(await computed(review, '[data-pagosya-checkout] .checkout-button', ['min-height', 'padding-top', 'background-color'])).toEqual({ 'min-height': '48px', 'padding-top': '12px', 'background-color': 'rgb(32, 33, 29)' });
     } finally { await review.close(); }
+  });
+
+  it.each(['hover', 'focus'])('the fill hover keeps white text on a #b4441f accent at 4.5:1 or more (%s)', async state => {
+    const page = await open({ dna: { ...DNA, button: 'pill', hover: 'fill' }, css: ':root{--store-accent:#b4441f;--store-accent-foreground:#ffffff;--store-background:#ffffff}' });
+    try {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForSelector('.menu-add');
+      if (state === 'hover') await page.hover('.menu-add');
+      else { await page.keyboard.press('Tab'); await page.evaluate(() => (document.querySelector('.menu-add') as HTMLElement).focus()); }
+      const button = page.locator('.menu-add').first();
+      const box = (await button.boundingBox())!;
+      const { data, info } = await sharp(await button.screenshot()).raw().toBuffer({ resolveWithObject: true });
+      // A point inside the button's fill, clear of its edge and of the centred icon.
+      const x = Math.round(info.width * 0.25), y = Math.round(info.height / 2), at = (y * info.width + x) * info.channels;
+      const fill = [data[at], data[at + 1], data[at + 2]];
+      expect(box.width).toBeGreaterThan(20);
+      expect({ fill, contrast: contrastRatio([255, 255, 255], fill) >= 4.5 }).toEqual({ fill, contrast: true });
+    } finally { await page.close(); }
   });
 });
