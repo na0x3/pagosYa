@@ -1,0 +1,66 @@
+{
+  "id": "bread",
+  "version": 1,
+  "name": "Pan y trigo",
+  "topics": {
+    "es": [
+      "pan",
+      "panadería",
+      "trigo",
+      "masa madre",
+      "horno",
+      "bollería",
+      "baguette"
+    ],
+    "en": [
+      "bread",
+      "bakery",
+      "wheat",
+      "sourdough",
+      "loaf",
+      "oven"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "cups",
+  "version": 1,
+  "name": "Tazas y té",
+  "topics": {
+    "es": [
+      "té",
+      "infusión",
+      "infusiones",
+      "taza",
+      "tazas",
+      "tetera",
+      "mate"
+    ],
+    "en": [
+      "tea",
+      "cup",
+      "mug",
+      "infusion",
+      "teapot"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "steam"
+    }
+  ]
+}
