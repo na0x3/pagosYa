@@ -2,8 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
+import { addDays, boliviaDay, boliviaDayStart } from './store-analytics-days';
+import { ANALYTICS_RETENTION_MONTHS } from './store-analytics.constants';
 
 export type IngestContext = { userAgent?: string; gpc?: boolean };
+const PRUNE_BATCH = 5000;
 
 /** G1: consented storefront events in, daily rollups out. The funnel (StoreFunnelService) stays as it is. */
 @Injectable()
@@ -30,5 +33,55 @@ export class StoreAnalyticsService {
     if (!data.length) return { accepted: 0 };
     await this.prisma.storeAnalyticsEvent.createMany({ data });
     return { accepted: data.length };
+  }
+
+  /**
+   * Rebuilds the rollup of the last `days` Bolivia days (today included) from the raw rows: remove those days, insert
+   * fresh ones, in one transaction under an advisory lock (a second instance skips). Running it again gives the same
+   * rows. Derived rows from page_view: `_device` (target = device) and `_referrer` (target = the session's referrer
+   * host, or `direct`; count = sessions). createdAt is UTC wall time, so the Bolivia day is createdAt − 4 h; the
+   * bounds are cast explicitly because the server's TimeZone setting is not UTC everywhere.
+   */
+  async rollup({ now = new Date(), days = 2 }: { now?: Date; days?: number } = {}): Promise<{ rolled: boolean; rows: number }> {
+    const firstDay = addDays(boliviaDay(now), -(Math.max(1, days) - 1));
+    const since = boliviaDayStart(firstDay).toISOString();
+    return this.prisma.$transaction(async tx => {
+      const [lock] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(hashtext('store-analytics-rollup')) AS locked`;
+      if (!lock?.locked) return { rolled: false, rows: 0 };
+      await tx.$executeRaw`DELETE FROM "StoreAnalyticsDaily" WHERE "day" >= ${firstDay}::date`;
+      const rows = await tx.$executeRaw`
+        WITH e AS (
+          SELECT "storeId", ("createdAt" - interval '4 hours')::date AS day, "type", COALESCE("productId", '') AS "productId",
+                 COALESCE("target", '') AS "target", "device", "referrerHost", "sessionHash"
+          FROM "StoreAnalyticsEvent" WHERE "createdAt" >= (${since}::timestamptz AT TIME ZONE 'UTC')
+        ), r AS (
+          SELECT "storeId", day, "type", "productId", "target", COUNT(*)::int AS count, COUNT(DISTINCT "sessionHash")::int AS sessions
+          FROM e GROUP BY "storeId", day, "type", "productId", "target"
+          UNION ALL
+          SELECT "storeId", day, '_device', '', "device", COUNT(*)::int, COUNT(DISTINCT "sessionHash")::int
+          FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "device"
+          UNION ALL
+          SELECT "storeId", day, '_referrer', '', COALESCE(ref, 'direct'), COUNT(*)::int, COUNT(*)::int
+          FROM (SELECT "storeId", day, "sessionHash", MAX("referrerHost") AS ref FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "sessionHash") s
+          GROUP BY "storeId", day, COALESCE(ref, 'direct')
+        )
+        INSERT INTO "StoreAnalyticsDaily" ("id", "storeId", "day", "type", "productId", "target", "count", "uniqueSessions", "updatedAt")
+        SELECT gen_random_uuid()::text, "storeId", day, "type", "productId", "target", count, sessions, (now() AT TIME ZONE 'UTC') FROM r`;
+      return { rolled: true, rows };
+    }, { timeout: 120_000 });
+  }
+
+  /** Removes raw events older than 13 calendar months, 5 000 at a time. Rollups are kept (no personal data). */
+  async prune(now = new Date()): Promise<number> {
+    const cutoff = new Date(now);
+    cutoff.setUTCMonth(cutoff.getUTCMonth() - ANALYTICS_RETENTION_MONTHS);
+    const before = cutoff.toISOString();
+    let removed = 0;
+    for (let round = 0; round < 200; round++) {
+      const deleted = await this.prisma.$executeRaw`DELETE FROM "StoreAnalyticsEvent" WHERE "id" IN (SELECT "id" FROM "StoreAnalyticsEvent" WHERE "createdAt" < (${before}::timestamptz AT TIME ZONE 'UTC') LIMIT ${PRUNE_BATCH})`;
+      removed += deleted;
+      if (deleted < PRUNE_BATCH) break;
+    }
+    return removed;
   }
 }
