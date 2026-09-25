@@ -77,3 +77,37 @@ describe('DNA tokens and buttons', () => {
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });
 });
+
+describe('cart placement', () => {
+  const drawerRule = (css: string, cart: string) => rules(css).find(rule => rule.selector.split(',').some(part => part.trim() === `:root[data-dna-cart=${cart}] .cart-drawer`));
+  it('gives the sheet a grab handle, and adds nothing without DNA', () => {
+    expect(boot({ ...DNA, cart: 'sheet' }).doc.querySelector('.cart-drawer .cart-drawer__grip[aria-hidden="true"]')).not.toBeNull();
+    expect(boot(undefined).doc.querySelector('.cart-drawer__grip')).toBeNull();
+  });
+  it.each(['drawer', 'sheet', 'page', 'overlay'])('opens %s as a native modal dialog that closes back to its trigger', cart => {
+    const { w, doc } = boot({ ...DNA, cart });
+    const trigger = doc.querySelector('[data-cart-open]'), drawer = doc.querySelector('dialog.cart-drawer');
+    trigger.click();
+    expect(w.__modal).toEqual([drawer]);
+    expect(w.__shown).toBeUndefined();
+    drawer.close(); // what Escape does to a modal dialog
+    expect(drawer.hasAttribute('open')).toBe(false);
+    expect(doc.activeElement).toBe(trigger);
+  });
+  it('defines placement, entry and phone behaviour for every cart value', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const cart of DNA_VALUES.cart) {
+      expect({ cart, rule: !!drawerRule(css, cart) }).toEqual({ cart, rule: true });
+      expect(css).toContain(`:root[data-dna-cart=${cart}] .cart-drawer:not([open])`);
+      expect(css).toMatch(new RegExp(`@starting-style\\{[^}]*:root\\[data-dna-cart=${cart}\\] \\.cart-drawer\\[open\\]`));
+    }
+    const phone = css.match(/@media\(max-width:700px\)\{([\s\S]*?)\}\}/)?.[1] ?? '';
+    for (const cart of ['sheet', 'page']) expect(phone).toMatch(new RegExp(`:root\\[data-dna-cart=${cart}\\] \\.cart-drawer[^{]*\\{[^}]*width:100vw`));
+    expect(drawerRule(css, 'sheet')?.body).toMatch(/bottom|inset:auto 0 0/);
+    expect(drawerRule(css, 'overlay')?.body).toContain('margin:auto');
+  });
+  it('frames cart photos and shapes the quantity buttons from the DNA', () => {
+    const css = dnaCss(boot(DNA).doc);
+    expect(rules(css).find(rule => rule.selector.includes('.order-item__photo'))?.body).toContain('var(--kit-photo-radius)');
+  });
+});
