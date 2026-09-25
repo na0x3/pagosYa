@@ -264,6 +264,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
     const checkoutError = dialog.querySelector<HTMLElement>(".cart-checkout-error")!;
     checkoutError.hidden = true;
     checkoutError.textContent = "";
+    state.activeStoreAnalytics?.record({ type: 'pay_click' });
     if (fulfillment.locations.length && (!fulfillment.selectedLocation || !fulfillment.method)) {
       checkoutError.textContent = "Elige una ubicación con stock para continuar.";
       checkoutError.hidden = false;
@@ -284,6 +285,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
         ? ["", `${fulfillment.method === "delivery" ? "Entrega desde" : "Retiro en"}: ${fulfillment.selectedLocation.name}`]
         : [];
       const message = [`Hola, quiero hacer este pedido${destination}:`, "", ...messageLines, ...fulfillmentLines, "", `Total: ${formatAmount(cartTotal(store.items), currency)}`].join("\n");
+      state.activeStoreAnalytics?.record({ type: 'whatsapp_click' }); state.activeStoreAnalytics?.flush();
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
       return;
     }
@@ -299,7 +301,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
       const selectedFulfillment = quotedFulfillment ? quotedFulfillment() : fulfillment.selectedLocation && fulfillment.method
         ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method }
         : undefined;
-      if (selectedFulfillment?.fulfillmentMethod) state.activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod);
+      if (selectedFulfillment?.fulfillmentMethod) { state.activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod); state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'delivery' }); }
       const result = await checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token());
       customerContact.deliveryRequested = result.fulfillmentMethod === "delivery";
       state.activeOrderTrackingToken = result.trackingToken;
@@ -307,6 +309,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
       cart.clear();
       saveCart(store);
       dialog.close();
+      state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'payment' }); state.activeStoreAnalytics?.flush();
       await enterPaymentFlow(result.clientSecret);
     } catch (err) {
       confirmButton.disabled = false;
@@ -320,7 +323,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
 
 export function openCartReview(slug: string, store: Store, options: { preview?: boolean; allowEmpty?: boolean } = {}): void {
   if (cartCount() === 0 && !options.allowEmpty) return;
-  if (!options.preview) state.activeStoreFunnel?.track('checkout_started');
+  if (!options.preview) { state.activeStoreFunnel?.track('checkout_started'); state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'review' }); }
   document.querySelector(".cart-review-dialog")?.remove();
   const dialog = document.createElement("dialog");
   dialog.className = "cart-review-dialog";

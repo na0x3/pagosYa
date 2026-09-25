@@ -6,6 +6,7 @@
 import { PaymentMethodType } from "@pagosya/shared-types";
 import type { InternationalMethods, Store } from "./api";
 import type { createStoreFunnel } from "./store-funnel";
+import type { createStoreAnalytics } from "./store-analytics";
 import { storeEditorMode, type StorePreviewEditorSelection } from "./preview-mode";
 
 export interface LinkHeader {
@@ -20,6 +21,9 @@ export type DomesticMethodType = Exclude<PaymentMethodType, PaymentMethodType.LO
 export const state = {
   activeStoreFunnel: null as ReturnType<typeof createStoreFunnel> | null,
   funnelCartCount: 0 as number,
+  /** G1 analytics for a published store shown by the legacy catalog, sharing the funnel session. */
+  activeStoreAnalytics: null as ReturnType<typeof createStoreAnalytics> | null,
+  analyticsCartQuantities: new Map<string, number>(),
   selectedType: PaymentMethodType.CARD as DomesticMethodType,
   internationalMode: false as boolean,
   internationalCountry: "" as string,

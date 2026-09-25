@@ -1,6 +1,8 @@
 import { mountVerificationPage } from './verification';
 import { sourceCanConfigureProduct } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
+import { createStoreAnalytics, productQuantities } from './store-analytics';
+import { parseCartItemKey } from './cart-state';
 import { markPrivateStorePage } from './store-seo';
 import '@pagosya/storefront-kit/kit/retention.js';
 import {
@@ -23,7 +25,7 @@ import { renderCobroPage } from "./documents/cobro-page";
 import { renderDebtCollection } from "./checkout/debt-collection";
 import { suppressStoreViewForMerchant } from "./storefront/merchant-views";
 import { standaloneStorePreviewPatch } from "./preview-editor/patch";
-import { loadCart, cartCount } from "./cart/cart";
+import { loadCart, cartCount, cart } from "./cart/cart";
 import { renderStoreRoute, restoreCatalogScroll, restoreCatalogPosition, catalogScrollByStore } from "./storefront/navigation";
 import { ICON_X } from "./ui/icons";
 import { bindStoreEditorCanvas, listenForStoreEditorMessages } from "./preview-editor/bridge";
@@ -166,8 +168,12 @@ async function main() {
       }
       state.activeStoreFunnel = renderedStore.publishedSourceRevision ? createStoreFunnel(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug)) : null;
       state.activeStoreFunnel?.track('visit');
+      const funnel = state.activeStoreFunnel;
+      state.activeStoreAnalytics = funnel ? createStoreAnalytics(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug), () => funnel.sessionId()) : null;
+      state.activeStoreAnalytics?.record({ type: 'page_view', path: routedProduct ? 'product.html' : 'index.html' });
       loadCart(renderedStore);
       state.funnelCartCount = cartCount();
+      state.analyticsCartQuantities = productQuantities(cart, key => parseCartItemKey(key).paymentLinkId);
       renderStoreRoute(linkSlug, renderedStore);
       restoreCatalogScroll(0);
       observeResize(app);

@@ -108,3 +108,12 @@ it('keeps the host label list equal to the kit', () => {
   const list = /const ANALYTICS_LABELS = (\[[^\]]*\]);/.exec(readFileSync(kitPath('commerce.js'), 'utf8'))?.[1];
   expect(list && JSON.parse(list.replace(/'/g, '"'))).toEqual([...ANALYTICS_TRACK_LABELS]);
 });
+
+it('names the products whose quantity grew, for the legacy storefront\'s add events', async () => {
+  const { productQuantities, addedProducts } = await import('../src/store-analytics');
+  const before = productQuantities([['lamp', 1], [JSON.stringify(['desk', 'oak']), 1]].map(([key, quantity]) => [String(key), Number(quantity)] as [string, number]), key => key.startsWith('[') ? JSON.parse(key)[0] : key);
+  const after = productQuantities([['lamp', 1], [JSON.stringify(['desk', 'oak']), 1], [JSON.stringify(['desk', 'pine']), 2], ['cup', 1]], key => key.startsWith('[') ? JSON.parse(key)[0] : key);
+  expect([...before]).toEqual([['lamp', 1], ['desk', 1]]);
+  expect(addedProducts(before, after)).toEqual(['desk', 'cup']);
+  expect(addedProducts(after, before)).toEqual([]);
+});

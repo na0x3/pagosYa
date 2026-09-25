@@ -26,6 +26,8 @@ import { renderProductCard } from "./product-card";
 import { bindTimedDiscountSchedule, bindInternalStoreLinks, navigateWithinStore } from "./navigation";
 import { bindCartCheckout } from "../cart/cart-review-dialog";
 import { updateCartBar } from "../cart/cart-bar";
+/** Debounces the legacy catalog search analytics event (G1). */
+let searchAnalyticsTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function bindStoreContactWidget(): void {
   const widget = app.querySelector<HTMLElement>("[data-store-contact-widget]");
@@ -2354,6 +2356,9 @@ export function renderStore(slug: string, store: Store, options: { focusPromotio
   searchInput?.addEventListener("input", () => {
     state.searchQuery = searchInput.value;
     renderStoreGrid(slug, store, currency, activeCatalogProductIds);
+    // G1: one search event once the shopper pauses; the words never leave the page.
+    clearTimeout(searchAnalyticsTimer);
+    searchAnalyticsTimer = setTimeout(() => { if (searchInput.value.trim().length >= 2) state.activeStoreAnalytics?.record({ type: "search" }); }, 1500);
   });
 
   const sortSelect = app.querySelector<HTMLSelectElement>("#store-sort");

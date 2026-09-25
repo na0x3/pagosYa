@@ -93,3 +93,13 @@ export function createStoreAnalytics(slug: string, preview: boolean, session: ()
     dispose() { flush(); window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', hidden); window.removeEventListener('pagosya:privacy-change', consent); },
   };
 }
+
+/** Units per product across cart lines (variants and extras of one product add up). */
+export function productQuantities(lines: Iterable<[string, number]>, productOf: (key: string) => string): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const [key, quantity] of lines) { const id = productOf(key); totals.set(id, (totals.get(id) || 0) + quantity); }
+  return totals;
+}
+/** The products that gained units between two carts: the legacy storefront's add_to_cart events. */
+export const addedProducts = (before: Map<string, number>, after: Map<string, number>): string[] =>
+  [...after].filter(([id, quantity]) => quantity > (before.get(id) || 0)).map(([id]) => id);
