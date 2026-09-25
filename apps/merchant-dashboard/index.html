@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/src/dashboard.css">
 <link rel="stylesheet" href="/src/workspace-design.css">
 <link rel="stylesheet" href="/src/cobros.css">
+<link rel="stylesheet" href="/src/growth.css">
 <link rel="stylesheet" href="/src/proposals.css">
 </head>
 <body>
@@ -166,6 +167,7 @@
         <label class="sidebar-store-picker" for="sidebarStorePicker">Tienda activa<select id="sidebarStorePicker" aria-label="Tienda activa"><option value="">Selecciona una tienda</option></select></label>
         <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
           <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
+          <a class="dashboard-nav-button" href="#dashboard-growth" data-dashboard-view="growth"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/><path d="M3 21h18"/></svg></span>Crecimiento</a>
           <details class="dashboard-nav-group" data-nav-group="tienda">
             <summary class="dashboard-nav-button dashboard-nav-summary" title="Tu tienda"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/></svg></span>Tu tienda<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
             <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Mi tienda</a>
@@ -471,6 +473,7 @@
     </section>
 
     <section class="cobros-view" id="cobrosSection" data-dashboard-page="cobros" aria-label="Cobros" hidden><div id="cobrosRoot"></div></section>
+    <section class="growth-view" id="growthSection" data-dashboard-page="growth" aria-label="Crecimiento" hidden><div id="growthRoot"></div></section>
     <section class="proposals-view" id="proposalsSection" data-dashboard-page="proposals" aria-label="Propuestas" hidden><div id="proposalsRoot"></div></section>
     <section class="block charge-links-workspace" id="chargeLinksSection" data-dashboard-page="charge-links">
       <header class="charge-links-banner" aria-labelledby="chargeLinksBannerTitle">

@@ -3,6 +3,7 @@ import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/
 import { escapeHtml as esc } from "/src/html.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
+import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 
   (() => {
@@ -430,6 +431,36 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
       cobros.open(id, options);
     },
   });
+  // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
+  const growth = mountGrowthPanel({
+    api,
+    storeId: () => currentStoreId,
+    store: () => lastStores.find((candidate) => candidate.id === currentStoreId) || null,
+    signedIn: () => !!sessionToken,
+    publicUrl: (store) => (store?.slug ? publicStoreUrl(store) : ""),
+    openView: (view) => {
+      history.pushState(null, "", `#dashboard-${view}`);
+      setDashboardView(view);
+      document.querySelector(".workspace-header")?.scrollIntoView({ block: "start" });
+    },
+    composeYapi: (text) => {
+      pendingStudioAction = { action: "compose", origin: "growth", text, storeId: currentStoreId };
+      history.pushState(null, "", "#dashboard-workspace");
+      setDashboardView("workspace");
+      deliverStudioAction();
+    },
+    editProduct: async (productId, step) => {
+      let link = lastPaymentLinks.find((candidate) => candidate.id === productId);
+      if (!link && currentStoreId) {
+        try { link = (await api(`/stores/${currentStoreId}/payment_links`)).find((candidate) => candidate.id === productId); } catch { link = null; }
+      }
+      if (!link) return false;
+      history.pushState(null, "", "#dashboard-products");
+      setDashboardView("products");
+      beginPaymentLinkEdit(link, step);
+      return true;
+    },
+  });
   let luckWheelModalShownThisLoad = false;
   let lastTotalFinances = null;
   let lastBalances = null;
@@ -683,6 +714,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
   const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
   const DASHBOARD_VIEW_COPY = {
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
+    growth: ["Crecimiento", "Qué pasa en tu tienda y qué hacer ahora para vender más."],
     progress: ["Progreso", "Convierte la actividad real de tu tienda en niveles, estrellas y nuevos compañeros."],
     stores: ["Mi tienda", "Tus tiendas, sus diseños y sus catálogos. Todo desde un mismo perfil."],
     discounts: ["Correos y marketing", "Cuida a tus clientes y haz que vuelvan."],
@@ -735,7 +767,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
   function syncStoreResourceViews(view) {
     for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
       const frame = document.getElementById(id);
-      if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; }
+      if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
       frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && document.getElementById("marketingTabs").dataset.tab === "promotions";
       const empty = document.querySelector(`[data-resource-empty="${kind}"]`); if (empty) empty.hidden = Boolean(currentStoreId && sessionToken);
@@ -764,7 +796,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
     if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(4000, Math.max(340, event.data.height))}px`;
     if (event.data.type === "pagosya:product-guide-ready") {
       frame.dataset.ready = "true";
-      if (frame.dataset.pendingProduct) { frame.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId:currentStoreId, product:JSON.parse(frame.dataset.pendingProduct)}, location.origin); delete frame.dataset.pendingProduct; }
+      if (frame.dataset.pendingProduct) { frame.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId:currentStoreId, product:JSON.parse(frame.dataset.pendingProduct), ...(frame.dataset.pendingStep ? { step: frame.dataset.pendingStep } : {})}, location.origin); delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
     }
     if (event.data.type === "pagosya:product-saved") {
       for (const id of ["storeMediaFrame"]) document.getElementById(id).removeAttribute("src");
@@ -804,7 +836,8 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
     }
     if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; deliverStudioAction(); return; }
     if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
-      if (pendingStudioAction?.action === "compose") document.getElementById("workspaceYapiDraft").value = "";
+      // The dashboard's own YAPI box is emptied once its text is handed over; a Crecimiento suggestion leaves it alone.
+      if (pendingStudioAction?.action === "compose" && pendingStudioAction.origin !== "growth") document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
@@ -845,6 +878,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
     if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     syncMerchantStoreWorkspace(nextView);
     if (nextView === "cobros") cobros.show();
+    if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
@@ -1640,6 +1674,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
       resetInventoryImportState();
       rewards.reset();
       cobros.reset();
+      growth.reset();
       proposals.reset();
       rewards.load().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
@@ -3610,12 +3645,16 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
     }
   });
 
-  function beginPaymentLinkEdit(link) {
+  /** `step` (Crecimiento): open the guide at description, price, photos or stock instead of the first question. */
+  function beginPaymentLinkEdit(link, step = null) {
     if (!link) return;
     syncStoreResourceViews("products");
     const guide = document.getElementById("productGuideFrame");
-    if (guide.dataset.ready === "true") guide.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId: currentStoreId, product: link}, location.origin);
-    else guide.dataset.pendingProduct = JSON.stringify(link);
+    if (guide.dataset.ready === "true") guide.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId: currentStoreId, product: link, ...(step ? { step } : {})}, location.origin);
+    else {
+      guide.dataset.pendingProduct = JSON.stringify(link);
+      if (step) guide.dataset.pendingStep = step; else delete guide.dataset.pendingStep;
+    }
     guide.scrollIntoView({block:"center",behavior:"smooth"});
   }
   function renderPaymentLinkRows(links) {
