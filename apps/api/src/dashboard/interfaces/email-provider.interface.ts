@@ -5,13 +5,25 @@
  * PaymentRailAdapter/InvoicingProvider/PayoutProvider: swap MockEmailProvider
  * for a real sender (SES, Postmark, etc.) without touching either caller.
  */
+/** A file sent with the message, e.g. a cobro's PDF. */
+export interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  /** Base64-encoded bytes. */
+  content: string;
+}
+
 export interface SendEmailRequest {
   /** Internal, verified store sender. Never accept this directly from a customer. */
   from?: string;
   idempotencyKey?: string;
   to: string;
   subject: string;
+  /** Plain-text body; always sent, and the fallback for clients without HTML. */
   body: string;
+  /** Optional HTML alternative. Callers must escape anything a merchant or customer typed. */
+  html?: string;
+  attachments?: EmailAttachment[];
   /** Address that should receive a human reply to the delivered message. */
   replyTo?: string;
   /**
