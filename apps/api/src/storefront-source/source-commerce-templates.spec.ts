@@ -206,6 +206,60 @@ async function openReview(shop: ReturnType<typeof boot>) {
   await shop.tick();
 }
 
+const PAGE = `<template data-pagosya-product-page-template><article class="mi-ficha"><div class="foto" data-product-slot="gallery"></div><div class="texto"><p data-product-slot="category"></p><div data-product-slot="title">Título falso</div><div data-product-slot="pricing">Bs 1</div><div data-product-slot="description"></div><div data-product-slot="buy"></div></div></article></template>`;
+
+async function openLamp(shop: ReturnType<typeof boot>) {
+  (shop.$('[data-pagosya-catalog] [data-product="lamp"]') || shop.$('[data-pagosya-catalog] .menu-item__details')).click();
+  await shop.tick();
+}
+
+describe('product page template', () => {
+  it('places the kit pieces in the authored layout; purchase terms still show when info and delivery are omitted', async () => {
+    const shop = boot(PAGE);
+    await shop.tick();
+    await openLamp(shop);
+    const page = shop.$('[data-pagosya-product] .mi-ficha')!;
+    expect(page.querySelector('[data-product-slot="gallery"] .product-detail__gallery')).not.toBeNull();
+    expect(page.querySelector('[data-product-slot="title"] #pagosya-product-title').textContent).toBe('Lámpara Luna');
+    expect(page.querySelector('[data-product-slot="pricing"]').textContent).not.toContain('Bs 1');
+    expect(page.querySelector('[data-product-slot="pricing"] .product-detail__pricing')).not.toBeNull();
+    expect(page.querySelector('[data-product-slot="description"]').textContent).toContain('Luz cálida');
+    expect(page.querySelector('[data-product-slot="buy"] [data-add="lamp"]')).not.toBeNull();
+    const followers = [];
+    for (let next = page.querySelector('[data-product-slot="buy"]').nextElementSibling; next; next = next.nextElementSibling) followers.push(next);
+    expect(followers.some((node: any) => node.matches('.product-detail__assurances,.product-tabs,[role=tabpanel],.product-detail__facts,.product-delivery-list'))).toBe(true);
+    expect(shop.$('[data-pagosya-product] .product-detail__layout')).toBeNull();
+    expect(shop.$('[data-pagosya-product] [data-product-close]')).not.toBeNull();
+  });
+
+  it('adds to the cart from the templated buy slot', async () => {
+    const shop = boot(PAGE);
+    await shop.tick();
+    await openLamp(shop);
+    shop.$('[data-pagosya-product] [data-product-slot="buy"] [data-add="lamp"]').click();
+    expect(shop.$('[data-cart-count]').textContent).toBe('1');
+  });
+
+  it('keeps the kit page without a buy slot and flags it', async () => {
+    const shop = boot(PAGE.replace('<div data-product-slot="buy"></div>', ''));
+    await shop.tick();
+    await openLamp(shop);
+    expect(shop.$('[data-pagosya-product] .product-detail__layout')).not.toBeNull();
+    expect(shop.flag('productPageTemplateInvalid')).toBe('true');
+  });
+
+  it('lays out the full page without photos: the split copy is replaced by the authored layout', async () => {
+    const shop = boot(PAGE, {
+      body: '<main data-pagosya-product-page></main>',
+      beforeKit: (w: any) => { w.PAGOSYA_PREVIEW_QUERY = 'id=desk'; },
+    });
+    await shop.tick();
+    expect(shop.$('[data-pagosya-product] .mi-ficha')).not.toBeNull();
+    expect(shop.$('[data-pagosya-product] [data-split]')).toBeNull();
+    expect(shop.$('[data-pagosya-product] [data-product-slot="title"] h1')).not.toBeNull();
+  });
+});
+
 describe('checkout review template', () => {
   it('puts lines and totals in the summary slot and every field plus the pay action in the fields slot', async () => {
     const shop = boot(REVIEW, { cart: [{ id: 'lamp', quantity: 1 }] });
