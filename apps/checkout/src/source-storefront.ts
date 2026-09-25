@@ -85,6 +85,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (routedProduct && (!sourceCanConfigureProduct(routedProduct) || routedProduct.variants?.length && !site.snapshot?.files?.some((file: { path: string; content: string }) => file.path === 'commerce.js' && file.content.includes(SOURCE_PRODUCT_OPTIONS_MARKER)))) return false;
   rememberSourceVisit(slug, site.visitToken);
   const snapshot: SourceSnapshot = site.snapshot;
+  // Published media arrives as named files; the API serves their bytes from this revision's directory.
+  const assetSource = typeof site.assetPath === 'string' ? new URL(`${API_BASE_URL}${site.assetPath}`, location.href).href : null;
+  if (assetSource) for (const file of snapshot.files) if (file.encoding === 'url') file.content = assetSource + file.path.split('/').map(encodeURIComponent).join('/');
   const config = snapshot.files.find(f => f.path === 'config.js');
   if (!config) throw new Error('No se pudo cargar la configuración de esta tienda.');
   const match = config.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
@@ -111,7 +114,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
   const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug === slug) funnel.track('visit'); };
