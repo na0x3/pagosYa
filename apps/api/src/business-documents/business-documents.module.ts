@@ -13,12 +13,15 @@ import { AiModule } from "../ai/ai.module";
 import { ProposalsController } from "./proposals.controller";
 import { ProposalsService } from "./proposals.service";
 import { ProposalsWorker } from "./proposals.worker";
+import { ContractsController } from "./contracts.controller";
+import { ContractsService } from "./contracts.service";
+import { ContractsWorker } from "./contracts.worker";
 
-/** D0, D1 (cobros) and D2 (proposals) of docs/superpowers/specs/2026-09-25-business-documents-and-guided-growth-design.md. */
+/** D0, D1 (cobros), D2 (proposals) and D3 (contracts) of docs/superpowers/specs/2026-09-25-business-documents-and-guided-growth-design.md. */
 @Module({
   imports: [AuthModule, DashboardModule, PaymentIntentsModule, UploadsModule, AiModule],
-  controllers: [BusinessDocumentsController, BusinessDocumentsPublicController, CobrosController, ProposalsController],
-  providers: [BusinessDocumentsService, CobrosService, CobrosWorker, ProposalsService, ProposalsWorker],
+  controllers: [BusinessDocumentsController, BusinessDocumentsPublicController, CobrosController, ProposalsController, ContractsController],
+  providers: [BusinessDocumentsService, CobrosService, CobrosWorker, ProposalsService, ProposalsWorker, ContractsService, ContractsWorker],
   exports: [BusinessDocumentsService],
 })
 export class BusinessDocumentsModule {}

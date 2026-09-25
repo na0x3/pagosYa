@@ -5,7 +5,8 @@ import { requestContext, type RequestWithContext } from "../legal/request-contex
 import { BusinessDocumentsService } from "./business-documents.service";
 import { CobrosService } from "./cobros.service";
 import { ProposalsService } from "./proposals.service";
-import { AcceptProposalDto, RequestProposalChangesDto } from "./dto/business-document.dto";
+import { ContractsService } from "./contracts.service";
+import { AcceptProposalDto, ContractCodeRequestDto, ContractCodeVerifyDto, PublicSignContractDto, RequestProposalChangesDto } from "./dto/business-document.dto";
 
 /**
  * The customer's side of a signed document link (rendered by the checkout app
@@ -18,6 +19,7 @@ export class BusinessDocumentsPublicController {
     private readonly documents: BusinessDocumentsService,
     private readonly cobros: CobrosService,
     private readonly proposals: ProposalsService,
+    private readonly contracts: ContractsService,
   ) {}
 
   @Get(":token")
@@ -55,11 +57,38 @@ export class BusinessDocumentsPublicController {
     return this.proposals.requestChanges(token, dto, requestContext(req));
   }
 
+  /** Contracts: "Enviar código" — 6 digits to the contract's customer email (1/min, 5/day, the store's cap). */
+  @Post(":token/sign/code")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  signCode(@Param("token") token: string, @Body() dto: ContractCodeRequestDto, @Req() req: RequestWithContext) {
+    return this.contracts.requestCode(token, dto, requestContext(req));
+  }
+
+  /** Contracts: the code (5 tries per code, 10 minutes). */
+  @Post(":token/sign/verify")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  verifyCode(@Param("token") token: string, @Body() dto: ContractCodeVerifyDto, @Req() req: RequestWithContext) {
+    return this.contracts.verifyCode(token, dto, requestContext(req));
+  }
+
+  /** Contracts: "Firmar contrato" — name (and drawing) on the version read, after a verified code. */
+  @Post(":token/sign")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  sign(@Param("token") token: string, @Body() dto: PublicSignContractDto, @Req() req: RequestWithContext) {
+    return this.contracts.sign(token, dto, requestContext(req));
+  }
+
   @Get(":token/pdf")
   @Header("Cache-Control", "no-store")
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  async pdf(@Param("token") token: string) {
+  async pdf(@Param("token") token: string, @Query("download") download?: string) {
     const { buffer, filename } = await this.documents.publicPdf(token);
-    return new StreamableFile(buffer, { type: "application/pdf", disposition: `inline; filename="${filename}"`, length: buffer.length });
+    return new StreamableFile(buffer, { type: "application/pdf", disposition: `${download ? "attachment" : "inline"}; filename="${filename}"`, length: buffer.length });
   }
 }

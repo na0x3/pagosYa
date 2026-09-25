@@ -21,28 +21,28 @@ describe("business document controllers", () => {
 
   it("passes the viewer's IP and user agent to the public view", async () => {
     const documents = { publicView: jest.fn().mockResolvedValue({}), publicPdf: jest.fn() };
-    const controller = new BusinessDocumentsPublicController(documents as any, {} as any, {} as any);
+    const controller = new BusinessDocumentsPublicController(documents as any, {} as any, {} as any, {} as any);
     await controller.view("tok", { ip: "190.0.0.1", headers: { "user-agent": "Mozilla/5.0" } });
     expect(documents.publicView).toHaveBeenCalledWith("tok", { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0" }, undefined);
   });
 
   it("hands the merchant's preview token to the public view", async () => {
     const documents = { publicView: jest.fn().mockResolvedValue({}) };
-    const controller = new BusinessDocumentsPublicController(documents as any, {} as any, {} as any);
+    const controller = new BusinessDocumentsPublicController(documents as any, {} as any, {} as any, {} as any);
     await controller.view("tok", { ip: "190.0.0.1", headers: {} }, "prev");
     expect(documents.publicView).toHaveBeenCalledWith("tok", expect.any(Object), "prev");
   });
 
   it("hands the customer's Pagar to the cobro checkout", async () => {
     const cobros = { pay: jest.fn().mockResolvedValue({ checkoutUrl: "https://pay.example/#client_secret=x" }) };
-    const controller = new BusinessDocumentsPublicController({} as any, cobros as any, {} as any);
+    const controller = new BusinessDocumentsPublicController({} as any, cobros as any, {} as any, {} as any);
     await expect(controller.pay("tok")).resolves.toEqual({ checkoutUrl: "https://pay.example/#client_secret=x" });
     expect(cobros.pay).toHaveBeenCalledWith("tok");
   });
 
   it("serves the public PDF inline with its number as the file name", async () => {
     const documents = { publicPdf: jest.fn().mockResolvedValue({ buffer: Buffer.from("%PDF-1.3"), filename: "COB-0001.pdf" }) };
-    const file = await new BusinessDocumentsPublicController(documents as any, {} as any, {} as any).pdf("tok");
+    const file = await new BusinessDocumentsPublicController(documents as any, {} as any, {} as any, {} as any).pdf("tok");
     expect(file).toBeInstanceOf(StreamableFile);
     expect(file.getHeaders()).toEqual(expect.objectContaining({ type: "application/pdf", disposition: 'inline; filename="COB-0001.pdf"' }));
   });

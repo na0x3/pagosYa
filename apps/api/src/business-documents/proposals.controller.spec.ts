@@ -17,7 +17,7 @@ describe("proposal routes", () => {
 
   it("hands the customer's Aceptar and Pedir cambios to the proposals service with who and from where", async () => {
     const proposals = { accept: jest.fn().mockResolvedValue({ status: "ACCEPTED" }), requestChanges: jest.fn().mockResolvedValue({ status: "CHANGES_REQUESTED" }) };
-    const controller = new BusinessDocumentsPublicController({} as any, {} as any, proposals as any);
+    const controller = new BusinessDocumentsPublicController({} as any, {} as any, proposals as any, {} as any);
     const req = { ip: "190.0.0.1", headers: { "user-agent": "Mozilla/5.0" } };
     await expect(controller.accept("tok", { name: "Ana", email: "ana@example.com", version: 1 }, req)).resolves.toEqual({ status: "ACCEPTED" });
     expect(proposals.accept).toHaveBeenCalledWith("tok", { name: "Ana", email: "ana@example.com", version: 1 }, { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0" });
