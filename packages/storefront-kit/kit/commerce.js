@@ -2,6 +2,20 @@
   "use strict";
   // pagosya-product-options:v1 — bounded variant IDs, prices, stock and galleries.
   const config = window.PAGOSYA_CONFIG || {};
+  // Design DNA: each enum becomes data-dna-<name> on <html>, so variant CSS and motion can key on it.
+  // Same values as SOURCE_DNA_RUNTIME_ENUMS in the API (a test pins them); anything else is ignored.
+  const DNA_VALUES = {
+    display: ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald'], text: ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald'],
+    case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'],
+    radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid'],
+    button: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split'], hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
+    motion: ['calm', 'snappy', 'playful', 'cinematic'], grammar: ['editorial', 'grid', 'collage', 'index', 'poster', 'magazine', 'brutalist'], density: ['airy', 'balanced', 'dense'],
+    cart: ['drawer', 'sheet', 'page', 'overlay'], added: ['toast', 'ribbon', 'bubble', 'inline', 'stamp'], product: ['editorial', 'dense', 'image-led', 'story-led'],
+    review: ['split', 'stacked', 'ticket', 'notebook'], card: ['still', 'second-photo', 'swatch-swap', 'zoom', 'quick-look', 'tilt'],
+  };
+  if (config.dna && typeof config.dna === 'object') {
+    for (const name of Object.keys(DNA_VALUES)) if (DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+  }
   const hosted = window.PAGOSYA_HOSTED === true;
   // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
   // and the merchant's measurement tags. Those tags exist only after the shopper accepted

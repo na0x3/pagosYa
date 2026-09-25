@@ -403,28 +403,29 @@ function boot(dna: unknown) {
   w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, dna };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
   w.eval(commerce);
-  return w.document.documentElement;
+  const attributes: Record<string, string> = Object.fromEntries([...w.document.documentElement.attributes].filter((a: any) => a.name.startsWith('data-dna-')).map((a: any) => [a.name.slice(9), a.value]));
+  // The runtime starts timers; a window left open keeps jest alive.
+  w.close();
+  return attributes;
 }
-const dnaAttributes = (root: any) => Object.fromEntries([...root.attributes].filter((a: any) => a.name.startsWith('data-dna-')).map((a: any) => [a.name.slice(9), a.value]));
 
 describe('design DNA in the storefront runtime', () => {
   it('writes each DNA enum onto <html> as a data-dna-* attribute', () => {
     const { version: _version, ...enums } = dnaRuntimeConfig(validDna());
-    expect(dnaAttributes(boot(dnaRuntimeConfig(validDna())))).toEqual(enums);
+    expect(boot(dnaRuntimeConfig(validDna()))).toEqual(enums);
   });
   it('accepts every value the API can send', () => {
     const longest = Math.max(...Object.values(SOURCE_DNA_RUNTIME_ENUMS).map(values => values.length));
     for (let i = 0; i < longest; i++) {
       const dna = Object.fromEntries(Object.entries(SOURCE_DNA_RUNTIME_ENUMS).map(([name, values]) => [name, values[i % values.length]]));
-      expect(dnaAttributes(boot(dna))).toEqual(dna);
+      expect(boot(dna)).toEqual(dna);
     }
   });
   it('ignores unknown values, unknown keys and a missing DNA', () => {
-    expect(dnaAttributes(boot({ ...dnaRuntimeConfig(validDna()), button: 'sparkle', cart: '"><script>', evil: 'pill' }))).not.toHaveProperty('button');
-    const root = boot({ button: 'sparkle', evil: 'pill', cart: 'sheet' });
-    expect(dnaAttributes(root)).toEqual({ cart: 'sheet' });
-    expect(dnaAttributes(boot(undefined))).toEqual({});
-    expect(dnaAttributes(boot('pill'))).toEqual({});
+    expect(boot({ ...dnaRuntimeConfig(validDna()), button: 'sparkle', cart: '"><script>', evil: 'pill' })).not.toHaveProperty('button');
+    expect(boot({ button: 'sparkle', evil: 'pill', cart: 'sheet' })).toEqual({ cart: 'sheet' });
+    expect(boot(undefined)).toEqual({});
+    expect(boot('pill')).toEqual({});
   });
 });
 ```
