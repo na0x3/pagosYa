@@ -6,6 +6,8 @@ import { formatMoney, shortDate } from "./cobros.mjs";
 const LA_PAZ_OFFSET_MS = 4 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const PRICE_MARKER = "{{precio}}";
+/** A price YAPI read from the merchant's own words: shown, but the send waits for a confirm tap. */
+export const CONFIRM_MARKER = "{{confirmar precio}}";
 const PLACEHOLDER = /\{\{[^{}]{1,80}\}\}/g;
 
 /** The three example prompts of the first-run guide. */
@@ -73,7 +75,7 @@ export function validityLine(doc, now = new Date()) {
   return `Válida hasta el ${shortDate(doc.validUntil)} · ${days === 1 ? "queda 1 día" : `quedan ${days} días`}`;
 }
 
-const stripMarker = (text) => String(text || "").replace(/\s*\{\{precio\}\}\s*/g, " ").trim();
+const stripMarker = (text) => String(text || "").replace(/\s*\{\{(?:precio|confirmar precio)\}\}\s*/g, " ").trim();
 const priceText = (amount) => formatMoney(amount).replace(/^Bs\s/, "");
 
 /**
@@ -90,13 +92,17 @@ export function editorItems(items) {
       priceText: needsPrice ? "" : priceText(item.unitAmount),
       paymentLinkId: item.paymentLinkId ?? null,
       needsPrice,
+      needsConfirm: !needsPrice && String(item.description).includes(CONFIRM_MARKER),
     };
   });
 }
 
-/** @typedef {{ description: string, quantity: number, unitAmount: number | null, priceText?: string, paymentLinkId?: string | null, needsPrice?: boolean }} EditorItem */
+/** @typedef {{ description: string, quantity: number, unitAmount: number | null, priceText?: string, paymentLinkId?: string | null, needsPrice?: boolean, needsConfirm?: boolean }} EditorItem */
 
-/** A line with a description and no price is sent with the {{precio}} marker, which blocks the send. @param {EditorItem[]} items */
+/**
+ * A line with a description and no price is sent with the {{precio}} marker, and a price taken from
+ * the merchant's words keeps {{confirmar precio}} until confirmed: both block the send. @param {EditorItem[]} items
+ */
 export function proposalItemsPayload(items) {
   return items
     .filter((item) => item.description.trim() || (item.unitAmount ?? 0) > 0)
@@ -104,7 +110,7 @@ export function proposalItemsPayload(items) {
       const priced = (item.unitAmount ?? 0) > 0;
       const description = stripMarker(item.description) || "Ítem";
       return {
-        description: priced ? description : `${description} ${PRICE_MARKER}`,
+        description: !priced ? `${description} ${PRICE_MARKER}` : item.needsConfirm ? `${description} ${CONFIRM_MARKER}` : description,
         quantity: Math.min(100000, Math.max(1, Math.round(item.quantity || 1))),
         unitAmount: priced ? /** @type {number} */ (item.unitAmount) : 0,
         ...(item.paymentLinkId ? { paymentLinkId: item.paymentLinkId } : {}),
@@ -134,6 +140,7 @@ export function pendingData(draft) {
   draft.items.forEach((item, index) => {
     const name = stripMarker(item.description);
     if (name && !((item.unitAmount ?? 0) > 0)) add(`item:${index}`, `Precio de «${name}»`, PRICE_MARKER);
+    else if (item.needsConfirm) add(`item:${index}`, `Confirma el precio de «${name || "Ítem"}»`, CONFIRM_MARKER);
     tokens(stripMarker(item.description)).forEach((token) => add(`item:${index}`, `«${name}»`, token));
   });
   draft.blocks.forEach((block, index) => {

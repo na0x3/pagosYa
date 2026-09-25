@@ -91,7 +91,11 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
       if (aiDown) return json({ statusCode: 503, message: "La asistencia con IA no está configurada. Agrega OPENAI_API_KEY en el servidor." }, 503);
       const doc = create({
         kind: "PROPOSAL", title: "Identidad visual para tu cafetería", customerName: body.customerName, content: AI_BLOCKS, validUntil: inDays(15),
-        items: [{ description: "Diseño de logo", quantity: 1, unitAmount: 150000, paymentLinkId: "pl_logo" }, { description: "Fotografía de producto {{precio}}", quantity: 1, unitAmount: 0 }],
+        items: [
+          { description: "Diseño de logo", quantity: 1, unitAmount: 150000, paymentLinkId: "pl_logo" },
+          { description: "Fotografía de producto {{precio}}", quantity: 1, unitAmount: 0 },
+          { description: "Letrero {{confirmar precio}}", quantity: 1, unitAmount: 80000 },
+        ],
       });
       doc.events.push({ id: "e2", type: "ai_drafted", at: new Date().toISOString(), data: { tone: body.tone } });
       return json({ ...doc, ai: { model: "gpt-5.6-luna" } });
@@ -196,10 +200,21 @@ for (const width of [390, 1280]) {
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/dashboard-draft-${width}.png` });
       if (SHOTS) { await editor.getByLabel("Precio de la línea 2").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${SHOTS}/dashboard-items-${width}.png` }); }
 
-      // Typing the missing price clears it; the total follows.
+      // A price read from the merchant's words is shown, flagged, and waits for a confirm tap.
+      await expect(editor.locator("[data-proposal-pending]")).toContainText("Confirma el precio de «Letrero»");
+      const letrero = editor.locator('[data-proposal-line="2"]');
+      await expect(letrero.locator("[data-proposal-line-flag]")).toContainText("Precio tomado de tu descripción — confírmalo");
+      await expect(letrero.getByLabel("Precio de la línea 3", { exact: true })).toHaveValue("800,00");
+
+      // Typing the missing price clears it; the total follows; the send still waits for the confirmation.
       await editor.getByLabel("Precio de la línea 2").fill("200");
+      await expect(page.locator("[data-proposal-total]")).toHaveText("Bs 2.500,00");
+      await expect(editor.locator("[data-proposal-pending]")).not.toContainText("Fotografía");
+      await expect(send).toBeDisabled();
+      if (SHOTS) { await letrero.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${SHOTS}/dashboard-confirm-${width}.png` }); }
+      await letrero.getByRole("button", { name: "Confirmar precio de la línea 3" }).click();
+      await expect(letrero.locator("[data-proposal-line-flag]")).toHaveCount(0);
       await expect(editor.locator("[data-proposal-pending]")).toBeHidden();
-      await expect(page.locator("[data-proposal-total]")).toHaveText("Bs 1.700,00");
       await expect(send).toBeEnabled();
 
       // Edit a block, regenerate it with AI, move one down.
@@ -212,6 +227,7 @@ for (const width of [390, 1280]) {
       await expect(page.locator("[data-proposal-save-state]")).toHaveText("Guardado");
       const patch = api.requests.filter((request) => request.method === "PATCH").pop();
       expect(patch.body.items[1]).toEqual({ description: "Fotografía de producto", quantity: 1, unitAmount: 20000 });
+      expect(patch.body.items[2]).toEqual({ description: "Letrero", quantity: 1, unitAmount: 80000 });
       expect(patch.body.content[1]).toEqual({ type: "paragraph", title: "Introducción", text: "Una introducción nueva, más breve y cálida." });
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/dashboard-edit-${width}.png` });
 

@@ -168,6 +168,11 @@ body.proposal-sheet-open { overflow: hidden; }
 .proposal-line.needs-price { border-color: #c2410c; background: #fff8f1; }
 .proposal-sheet .proposal-line.needs-price .proposal-line-price input { border-color: #c2410c; background: #fff; }
 .proposal-line-flag { grid-area: flag; display: flex; align-items: center; gap: 6px; margin: 0; color: #9a3412; font-size: 13px; font-weight: 700; }
+.proposal-line.needs-confirm { border-color: #b45309; background: #fffbeb; }
+.proposal-sheet .proposal-line.needs-confirm .proposal-line-price input { border-color: #b45309; background: #fff; }
+.proposal-line-flag.is-confirm { flex-wrap: wrap; color: #854d0e; }
+.proposal-line-flag.is-confirm span { flex: 1 1 180px; }
+.proposal-line-flag .proposal-secondary { min-height: 44px; }
 .proposal-item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .proposal-catalog { display: grid; gap: 8px; padding: 10px; border-radius: 10px; background: #fff; border: 2px solid var(--pg-border, #d8d9ce); }
 .proposal-catalog[hidden] { display: none; }

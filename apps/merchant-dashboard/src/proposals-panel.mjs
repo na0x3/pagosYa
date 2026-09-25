@@ -554,19 +554,30 @@ export function mountProposalsPanel(deps) {
   function itemsHtml() {
     if (!editor.items.length) return `<p class="proposal-hint">Sin ítems todavía. Agrega lo que vas a cobrar.</p>`;
     return editor.items.map((item, index) => {
-      const missing = item.description.trim() && !((item.unitAmount ?? 0) > 0);
-      return `<div class="proposal-line${missing ? " needs-price" : ""}" data-proposal-line="${index}">
-        <input class="proposal-line-desc" data-line-field="description" maxlength="480" value="${esc(item.description)}" placeholder="Producto o servicio" aria-label="Descripción de la línea ${index + 1}">
+      const missing = lineMissing(item);
+      const confirm = !missing && Boolean(item.needsConfirm);
+      return `<div class="proposal-line${missing ? " needs-price" : ""}${confirm ? " needs-confirm" : ""}" data-proposal-line="${index}">
+        <input class="proposal-line-desc" data-line-field="description" maxlength="470" value="${esc(item.description)}" placeholder="Producto o servicio" aria-label="Descripción de la línea ${index + 1}">
         <div class="proposal-line-qty" role="group" aria-label="Cantidad de la línea ${index + 1}">
           <button type="button" data-proposal-qty="-1" aria-label="Menos">−</button>
           <input data-line-field="quantity" inputmode="numeric" value="${esc(item.quantity)}" aria-label="Cantidad de la línea ${index + 1}">
           <button type="button" data-proposal-qty="1" aria-label="Más">+</button>
         </div>
-        <div class="proposal-line-price"><span aria-hidden="true">Bs</span><input data-line-field="price" inputmode="decimal" value="${esc(item.priceText)}" placeholder="0,00" aria-label="Precio de la línea ${index + 1}"${missing ? ' aria-invalid="true"' : ""}></div>
+        <div class="proposal-line-price"><span aria-hidden="true">Bs</span><input data-line-field="price" inputmode="decimal" value="${esc(item.priceText)}" placeholder="0,00" aria-label="Precio de la línea ${index + 1}"${missing || confirm ? ' aria-invalid="true"' : ""}></div>
         <button type="button" class="proposal-icon-button is-small" data-proposal-remove-line aria-label="Quitar la línea ${index + 1}">${ICON.close}</button>
-        ${missing ? `<p class="proposal-line-flag" data-proposal-line-flag>${ICON.alert}Falta el precio — YAPI no lo inventa. Escríbelo aquí.</p>` : ""}
+        ${lineFlagHtml(item, index)}
       </div>`;
     }).join("");
+  }
+
+  const lineMissing = (item) => Boolean(item.description.trim()) && !((item.unitAmount ?? 0) > 0);
+  function lineFlagHtml(item, index) {
+    if (lineMissing(item)) return `<p class="proposal-line-flag" data-proposal-line-flag>${ICON.alert}Falta el precio — YAPI no lo inventa. Escríbelo aquí.</p>`;
+    if (item.needsConfirm) {
+      return `<p class="proposal-line-flag is-confirm" data-proposal-line-flag>${ICON.alert}<span>Precio tomado de tu descripción — confírmalo</span>
+        <button type="button" class="proposal-secondary is-small" data-proposal-confirm-line aria-label="Confirmar precio de la línea ${index + 1}">${ICON.check}Confirmar</button></p>`;
+    }
+    return "";
   }
 
   async function loadCatalog() {
@@ -616,13 +627,17 @@ export function mountProposalsPanel(deps) {
     const line = panel.querySelector(`[data-proposal-line="${index}"]`);
     const item = editor?.items[index];
     if (!line || !item) return;
-    const missing = Boolean(item.description.trim()) && !((item.unitAmount ?? 0) > 0);
+    const missing = lineMissing(item);
+    const confirm = !missing && Boolean(item.needsConfirm);
     line.classList.toggle("needs-price", missing);
+    line.classList.toggle("needs-confirm", confirm);
     const price = line.querySelector('[data-line-field="price"]');
-    if (missing) price.setAttribute("aria-invalid", "true"); else price.removeAttribute("aria-invalid");
+    if (missing || confirm) price.setAttribute("aria-invalid", "true"); else price.removeAttribute("aria-invalid");
     const flag = line.querySelector("[data-proposal-line-flag]");
-    if (!missing) flag?.remove();
-    else if (!flag) line.insertAdjacentHTML("beforeend", `<p class="proposal-line-flag" data-proposal-line-flag>${ICON.alert}Falta el precio — YAPI no lo inventa. Escríbelo aquí.</p>`);
+    const html = lineFlagHtml(item, index);
+    if (flag && flag.outerHTML.replace(/\s+/g, " ") === html.replace(/\s+/g, " ")) return;
+    flag?.remove();
+    if (html) line.insertAdjacentHTML("beforeend", html);
   }
 
   function rerenderItems() {
@@ -998,7 +1013,8 @@ export function mountProposalsPanel(deps) {
       const item = editor.items[index];
       if (target.dataset.lineField === "description") item.description = target.value;
       if (target.dataset.lineField === "quantity") item.quantity = Math.min(100000, Math.max(1, parseInt(target.value, 10) || 1));
-      if (target.dataset.lineField === "price") { item.priceText = target.value; item.unitAmount = parseMoney(target.value); }
+      // Typing a price is the merchant's own price: nothing left to confirm.
+      if (target.dataset.lineField === "price") { item.priceText = target.value; item.unitAmount = parseMoney(target.value); item.needsConfirm = false; }
       refreshLine(index);
       refreshEditor();
       markDirty();
@@ -1099,6 +1115,17 @@ export function mountProposalsPanel(deps) {
         markDirty();
         return;
       }
+      const confirmLine = target.closest("[data-proposal-confirm-line]");
+      if (confirmLine) {
+        const lineIndex = Number(confirmLine.closest("[data-proposal-line]").dataset.proposalLine);
+        editor.items[lineIndex].needsConfirm = false;
+        refreshLine(lineIndex);
+        refreshEditor();
+        markDirty();
+        panel.querySelector(`[data-proposal-line="${lineIndex}"] [data-line-field="price"]`)?.focus({ preventScroll: true });
+        notify("Precio confirmado.");
+        return;
+      }
       const qty = target.closest("[data-proposal-qty]");
       if (qty) {
         const lineIndex = Number(qty.closest("[data-proposal-line]").dataset.proposalLine);
@@ -1138,7 +1165,8 @@ export function mountProposalsPanel(deps) {
           : kind === "customer" ? "#proposalEditName"
             : kind === "item" ? `[data-proposal-line="${at}"] [data-line-field="price"]`
               : `[data-proposal-block="${at}"] [data-block-field]:not([data-block-field="title"])`;
-        const field = panel.querySelector(selector);
+        // A price to confirm goes to its Confirmar button; a missing one to the price field.
+        const field = (kind === "item" && panel.querySelector(`[data-proposal-line="${at}"] [data-proposal-confirm-line]`)) || panel.querySelector(selector);
         field?.scrollIntoView({ block: "center", behavior: "smooth" });
         field?.focus({ preventScroll: true });
         return;

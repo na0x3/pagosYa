@@ -103,6 +103,84 @@ describe("ProposalsService — draft with AI", () => {
   });
 });
 
+describe("ProposalsService — a merchant price only from the merchant's own money words", () => {
+  type Item = ProposalDraftOutput["items"][number] & { merchantQuote?: string | null };
+  const merchant = (description: string, amount: number, quote: string | null, quantity = 1): Item => ({ description, quantity, source: "merchant", catalogId: null, merchantAmount: amount, merchantQuote: quote });
+  async function draftWith(text: string, items: Item[], budgetHint?: string) {
+    const ctx = setupProposals();
+    ctx.ai.structuredCompletion.mockResolvedValueOnce({ data: aiOutput({ items }), model: "gpt-5.6-luna", responseId: "r", durationMs: 1 });
+    const doc = await ctx.proposals.draft("m_1", "store_1", { brief: text, tone: "formal", ...(budgetHint && { budgetHint }) });
+    return { ...ctx, doc, lines: doc.items.map(({ description, unitAmount }) => ({ description, unitAmount })) };
+  }
+
+  it("never prices a line with a count, a date, a year or a phone number from the brief", async () => {
+    const text = "Catering para 50 personas el 15 de octubre de 2026, 3 cocineros, llamar al 70012345";
+    const { lines } = await draftWith(text, [
+      merchant("Menú por persona", 50, "50 personas", 50),
+      merchant("Servicio del día", 15, "el 15 de octubre"),
+      merchant("Evento", 2026, "de 2026"),
+      merchant("Cocineros", 3, "3 cocineros"),
+      merchant("Coordinación", 70012345, "llamar al 70012345"),
+    ]);
+    expect(lines).toEqual([
+      { description: "Menú por persona {{precio}}", unitAmount: 0 },
+      { description: "Servicio del día {{precio}}", unitAmount: 0 },
+      { description: "Evento {{precio}}", unitAmount: 0 },
+      { description: "Cocineros {{precio}}", unitAmount: 0 },
+      { description: "Coordinación {{precio}}", unitAmount: 0 },
+    ]);
+  });
+
+  it("never splits a stated total across several lines", async () => {
+    const text = "presupuesto total Bs 3.000 para logo, tarjetas y plantillas";
+    const { lines } = await draftWith(text, [
+      merchant("Logo", 3000, "presupuesto total Bs 3.000"),
+      merchant("Tarjetas", 3000, "Bs 3.000"),
+      { description: "Plantillas", quantity: 1, source: "unknown", catalogId: null, merchantAmount: null, merchantQuote: null },
+    ]);
+    expect(lines.map((line) => line.unitAmount)).toEqual([0, 0, 0]);
+  });
+
+  it("takes a stated total for a single line, kept for the merchant to confirm", async () => {
+    const { lines } = await draftWith("presupuesto total Bs 3.000 para logo, tarjetas y plantillas", [merchant("Identidad completa", 3000, "presupuesto total Bs 3.000")]);
+    expect(lines).toEqual([{ description: "Identidad completa {{confirmar precio}}", unitAmount: 300000 }]);
+  });
+
+  it("needs the exact words of the brief that hold the amount", async () => {
+    const text = "Necesito un letrero, cuesta Bs 800. Y un banner.";
+    const { lines } = await draftWith(text, [merchant("Letrero", 800, "el letrero vale 800"), merchant("Banner", 800, null)]);
+    expect(lines.map((line) => line.unitAmount)).toEqual([0, 0]);
+  });
+
+  it("uses each amount the merchant wrote for one line only", async () => {
+    const { lines } = await draftWith("Necesito un letrero, cuesta Bs 800. Y un banner.", [merchant("Letrero", 800, "cuesta Bs 800"), merchant("Banner", 800, "cuesta Bs 800")]);
+    expect(lines).toEqual([{ description: "Letrero {{confirmar precio}}", unitAmount: 80000 }, { description: "Banner {{precio}}", unitAmount: 0 }]);
+  });
+
+  it("reads every price of the budget field as money", async () => {
+    const { lines } = await draftWith("Letrero y logo para la tienda nueva", [merchant("Letrero", 800, "letrero Bs 800"), merchant("Logo", 1500, "logo 1500")], "letrero Bs 800, logo 1500");
+    expect(lines).toEqual([{ description: "Letrero {{confirmar precio}}", unitAmount: 80000 }, { description: "Logo {{confirmar precio}}", unitAmount: 150000 }]);
+  });
+
+  it("finds no price in the built-in example prompts", async () => {
+    const examples = [
+      "Diseño de logo e identidad para una cafetería que abre en noviembre: logo, paleta de colores, tipografías y tarjetas de presentación.",
+      "Mantenimiento mensual de jardín para una casa con 200 m² de área verde: poda, riego, abono y limpieza, dos visitas por semana.",
+      "Catering para 50 personas en un evento de empresa: bocaditos salados y dulces, bebidas y personal de servicio durante 4 horas.",
+    ];
+    for (const example of examples) {
+      const numbers = [...example.matchAll(/\d+/g)].map((match) => Number(match[0]));
+      const { lines } = await draftWith(example, numbers.map((value) => merchant(`Ítem ${value}`, value, String(value))));
+      expect(lines.every((line) => line.unitAmount === 0)).toBe(true);
+    }
+  });
+
+  it("cannot be sent until the merchant confirms a price taken from the brief", async () => {
+    const { documents, doc } = await draftWith("Necesito un letrero, cuesta Bs 800", [merchant("Letrero", 800, "cuesta Bs 800")]);
+    await expect(documents.send("m_1", "store_1", doc.id, { email: false })).rejects.toThrow(/\{\{confirmar precio\}\}/);
+  });
+});
+
 describe("ProposalsService — regenerate one section", () => {
   it("rewrites one block with the brief as context and returns it guarded, same type and title", async () => {
     const { proposals, ai } = setupProposals();

@@ -11,9 +11,10 @@ import { DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./docum
 import { buildProposalMerchantEmail } from "./proposal-email";
 import type { AcceptanceContext } from "../legal/terms-acceptance.service";
 import {
-  allowedAmounts,
   buildProposalContext,
   draftToDocument,
+  merchantAllowed,
+  merchantEvidence,
   proposalDraftSchema,
   proposalSectionSchema,
   proposalSystemPrompt,
@@ -86,7 +87,7 @@ export class ProposalsService {
       schema: proposalDraftSchema,
       maxOutputTokens: 6000,
     });
-    const drafted = draftToDocument(result.data, { catalog: context.catalog, allowed: allowedAmounts([dto.brief, dto.budgetHint]) });
+    const drafted = draftToDocument(result.data, { catalog: context.catalog, merchant: merchantEvidence(dto.brief, dto.budgetHint), currency: "BOB" });
     const doc = await this.documents.create(merchantId, storeId, {
       kind: "PROPOSAL",
       title: drafted.title,
@@ -130,7 +131,7 @@ export class ProposalsService {
       maxOutputTokens: 2000,
     });
     // Allowed money: what the merchant wrote, the catalog, and the proposal's own lines and total.
-    const allowed = allowedAmounts([stored?.brief, stored?.budgetHint]);
+    const allowed = merchantAllowed(merchantEvidence(stored?.brief, stored?.budgetHint), doc.currency);
     context.catalog.forEach((entry) => allowed.add(entry.price));
     doc.items.forEach((item) => { if (item.unitAmount > 0) { allowed.add(item.unitAmount); allowed.add(item.amount); } });
     if (doc.totalAmount > 0) allowed.add(doc.totalAmount);

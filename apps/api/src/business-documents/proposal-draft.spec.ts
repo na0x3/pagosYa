@@ -1,15 +1,18 @@
 import {
   PROPOSAL_SECTIONS,
-  allowedAmounts,
   buildProposalContext,
   draftToDocument,
   guardMoneyText,
+  merchantEvidence,
   proposalDraftSchema,
   proposalSystemPrompt,
   proposalUserMessage,
   sectionToBlock,
   type ProposalDraftOutput,
 } from "./proposal-draft";
+import { merchantAmounts } from "./proposal-money";
+
+const none = merchantEvidence("");
 
 const context = buildProposalContext(
   { name: "Estudio Illimani", tagline: "Diseño gráfico en La Paz", aboutText: "Hacemos marcas. ".repeat(60) },
@@ -34,7 +37,7 @@ function output(overrides: Partial<ProposalDraftOutput> = {}): ProposalDraftOutp
     nextStep: "Acepta la propuesta y agendamos la primera reunión.",
     items: [
       { description: "Diseño de logo", quantity: 1, source: "catalog", catalogId: "pl_logo", merchantAmount: 99 },
-      { description: "Letrero", quantity: 1, source: "merchant", catalogId: null, merchantAmount: 800 },
+      { description: "Letrero", quantity: 1, source: "merchant", catalogId: null, merchantAmount: 800, merchantQuote: "cuesta Bs 800" },
       { description: "Fotografía de producto", quantity: 1, source: "unknown", catalogId: null, merchantAmount: null },
     ],
     ...overrides,
@@ -43,31 +46,54 @@ function output(overrides: Partial<ProposalDraftOutput> = {}): ProposalDraftOutp
 
 describe("proposal draft — the price guard", () => {
   it("charges the catalog price, never the number the model wrote for a catalog product", () => {
-    const doc = draftToDocument(output(), { catalog: context.catalog, allowed: allowedAmounts(["letrero por 800 Bs"]) });
+    const doc = draftToDocument(output(), { catalog: context.catalog, merchant: merchantEvidence("letrero por 800 Bs") });
     expect(doc.items[0]).toEqual({ description: "Diseño de logo", quantity: 1, unitAmount: 150000, paymentLinkId: "pl_logo" });
   });
 
   it("treats a catalog id that is not in the store's catalog as an unknown price", () => {
-    const doc = draftToDocument(output({ items: [{ description: "Logo", quantity: 1, source: "catalog", catalogId: "pl_other", merchantAmount: 500 }] }), { catalog: context.catalog, allowed: new Set() });
+    const doc = draftToDocument(output({ items: [{ description: "Logo", quantity: 1, source: "catalog", catalogId: "pl_other", merchantAmount: 500 }] }), { catalog: context.catalog, merchant: none });
     expect(doc.items[0]).toEqual({ description: "Logo {{precio}}", quantity: 1, unitAmount: 0 });
   });
 
-  it("accepts a merchant amount only when the merchant wrote that number", () => {
-    const allowed = allowedAmounts(["Necesito un letrero, cuesta Bs 800", "presupuesto 1.500"]);
-    const doc = draftToDocument(output(), { catalog: context.catalog, allowed });
-    expect(doc.items[1]).toEqual({ description: "Letrero", quantity: 1, unitAmount: 80000 });
-    const invented = draftToDocument(output(), { catalog: context.catalog, allowed: allowedAmounts(["sin montos"]) });
+  it("accepts a merchant amount only when the merchant wrote it as money, marked for confirmation", () => {
+    const doc = draftToDocument(output(), { catalog: context.catalog, merchant: merchantEvidence("Necesito un letrero, cuesta Bs 800", "presupuesto 1.500") });
+    expect(doc.items[1]).toEqual({ description: "Letrero {{confirmar precio}}", quantity: 1, unitAmount: 80000 });
+    const invented = draftToDocument(output(), { catalog: context.catalog, merchant: merchantEvidence("sin montos") });
     expect(invented.items[1]).toEqual({ description: "Letrero {{precio}}", quantity: 1, unitAmount: 0 });
   });
 
   it("turns an unknown price into a {{precio}} placeholder with no amount", () => {
-    const doc = draftToDocument(output(), { catalog: context.catalog, allowed: new Set() });
+    const doc = draftToDocument(output(), { catalog: context.catalog, merchant: none });
     expect(doc.items[2]).toEqual({ description: "Fotografía de producto {{precio}}", quantity: 1, unitAmount: 0 });
   });
 
-  it("reads amounts the way merchants write them", () => {
-    const allowed = allowedAmounts(["Bs 1.500", "2,500.50 dólares", "unos 3 mil", "1500,00", "precio 45"]);
-    expect([...allowed].sort((a, b) => a - b)).toEqual([4500, 150000, 250050, 300000]);
+  it("reads amounts the way merchants write them, with their currency", () => {
+    const read = (brief: string, budget?: string) => merchantAmounts(brief, budget).map(({ cents, currency, total }) => ({ cents, currency, total }));
+    expect(read("logo Bs 1.500, web 2,500.50 dólares, fotos a 45, el letrero cuesta 1500,00")).toEqual([
+      { cents: 150000, currency: "BOB", total: false },
+      { cents: 250050, currency: "USD", total: false },
+      { cents: 4500, currency: null, total: false },
+      { cents: 150000, currency: null, total: false },
+    ]);
+    expect(read("Bs.- 800 · $us 200 · Sus 90 · 1,5 mil Bs · mil quinientos bolivianos · 700 Bs.")).toEqual([
+      { cents: 80000, currency: "BOB", total: false },
+      { cents: 20000, currency: "USD", total: false },
+      { cents: 9000, currency: "USD", total: false },
+      { cents: 150000, currency: "BOB", total: false },
+      { cents: 150000, currency: "BOB", total: false },
+      { cents: 70000, currency: "BOB", total: false },
+    ]);
+    expect(read("presupuesto total Bs 3.000 para logo, tarjetas y plantillas")).toEqual([{ cents: 300000, currency: "BOB", total: true }]);
+    expect(read("Letrero para la tienda", "unos 3 mil")).toEqual([{ cents: 300000, currency: null, total: true }]);
+    expect(read("Letrero", "letrero Bs 800, logo 1500")).toEqual([{ cents: 80000, currency: "BOB", total: false }, { cents: 150000, currency: null, total: false }]);
+  });
+
+  it("finds no money in counts, dates, years, phones, percentages, ranges or bare numbers", () => {
+    expect(merchantAmounts("Catering para 50 personas el 15 de octubre de 2026, 3 cocineros, llamar al 70012345")).toEqual([]);
+    expect(merchantAmounts("Mantenimiento mensual de jardín para una casa con 200 m² de área verde: poda, riego, abono y limpieza, dos visitas por semana.")).toEqual([]);
+    expect(merchantAmounts("Catering para 50 personas en un evento de empresa: bocaditos salados y dulces, bebidas y personal de servicio durante 4 horas.")).toEqual([]);
+    expect(merchantAmounts("Pago 50% al inicio, entre Bs 1.500 y 2.000, unas 1500 fotos, entrega el 10/11, sus 3 hijos, Bs 70012345")).toEqual([]);
+    expect(merchantAmounts("Evento en 2026", "2026, 50 personas, 4 horas")).toEqual([]);
   });
 
   it("replaces money in the text that nobody wrote, and keeps what is allowed", () => {
@@ -80,7 +106,7 @@ describe("proposal draft — the price guard", () => {
   it("allows the proposal's own amounts in the text (lines and total)", () => {
     const doc = draftToDocument(output({ investmentNote: "Total Bs 2.300; el logo cuesta Bs 1.500 y el letrero Bs 800. Extra: Bs 5.000" }), {
       catalog: context.catalog,
-      allowed: allowedAmounts(["letrero 800"]),
+      merchant: merchantEvidence("el letrero cuesta Bs 800"),
     });
     const investment = doc.content.find((block) => block.title === "Inversión");
     expect(investment?.text).toBe("Total Bs 2.300; el logo cuesta Bs 1.500 y el letrero Bs 800. Extra: {{precio}}");
@@ -88,7 +114,7 @@ describe("proposal draft — the price guard", () => {
 
   it("clamps quantities, drops empty lines and keeps at most 20 items", () => {
     const items = Array.from({ length: 25 }, (_, index) => ({ description: index === 0 ? "  " : `Ítem ${index}`, quantity: index === 1 ? 0 : index === 2 ? 1e9 : 2.4, source: "unknown" as const, catalogId: null, merchantAmount: null }));
-    const doc = draftToDocument(output({ items }), { catalog: context.catalog, allowed: new Set() });
+    const doc = draftToDocument(output({ items }), { catalog: context.catalog, merchant: none });
     expect(doc.items).toHaveLength(20);
     expect(doc.items[0].quantity).toBe(1);
     expect(doc.items[1].quantity).toBe(100000);
@@ -98,7 +124,7 @@ describe("proposal draft — the price guard", () => {
 
 describe("proposal draft — blocks", () => {
   it("builds the nine sections in order with their types", () => {
-    const doc = draftToDocument(output(), { catalog: context.catalog, allowed: new Set() });
+    const doc = draftToDocument(output(), { catalog: context.catalog, merchant: none });
     expect(doc.content.map((block) => [block.type, block.title])).toEqual(PROPOSAL_SECTIONS.map((section) => [section.type, section.title]));
     expect(doc.content.find((block) => block.title === "Cronograma")?.items).toEqual(["Semana 1 — Bocetos", "Semana 2 — Entrega final"]);
     expect(doc.content.find((block) => block.title === "Alcance")?.items).toEqual(["Investigación", "Diseño del logo"]);
@@ -106,7 +132,7 @@ describe("proposal draft — blocks", () => {
   });
 
   it("leaves out a section the model returned empty", () => {
-    const doc = draftToDocument(output({ problem: "  ", deliverables: [] }), { catalog: context.catalog, allowed: new Set() });
+    const doc = draftToDocument(output({ problem: "  ", deliverables: [] }), { catalog: context.catalog, merchant: none });
     expect(doc.content.map((block) => block.title)).not.toContain("Entendimiento del problema");
     expect(doc.content.map((block) => block.title)).not.toContain("Entregables");
   });

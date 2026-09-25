@@ -54,6 +54,21 @@ test("an unknown price is an empty price field in the editor, and a {{precio}} m
   assert.equal(proposalItemsPayload([...items, { description: "  ", quantity: 1, unitAmount: null, priceText: "" }]).length, 2);
 });
 
+test("a price YAPI took from the merchant's words is flagged until the merchant confirms it", () => {
+  const items = editorItems([{ description: "Letrero {{confirmar precio}}", quantity: 1, unitAmount: 80000, paymentLinkId: null }]);
+  assert.deepEqual(items.map(({ description, unitAmount, needsPrice, needsConfirm }) => ({ description, unitAmount, needsPrice, needsConfirm })), [
+    { description: "Letrero", unitAmount: 80000, needsPrice: false, needsConfirm: true },
+  ]);
+  // Unconfirmed, the server keeps the marker (it blocks the send) and the pending list asks for it.
+  assert.deepEqual(proposalItemsPayload(items), [{ description: "Letrero {{confirmar precio}}", quantity: 1, unitAmount: 80000 }]);
+  const draft = { title: "Letrero", customer: { name: "Ana" }, items, blocks: [] };
+  assert.deepEqual(pendingData(draft), [{ where: "item:0", label: "Confirma el precio de «Letrero»", token: "{{confirmar precio}}" }]);
+  // One tap confirms it.
+  items[0].needsConfirm = false;
+  assert.deepEqual(proposalItemsPayload(items), [{ description: "Letrero", quantity: 1, unitAmount: 80000 }]);
+  assert.deepEqual(pendingData(draft), []);
+});
+
 test("lists every pending {{dato}} with where it is, so the merchant can fix it before sending", () => {
   const pending = pendingData({
     title: "Propuesta para {{cliente}}",
