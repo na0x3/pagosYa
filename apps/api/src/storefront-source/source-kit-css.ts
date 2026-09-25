@@ -403,3 +403,9 @@ export function applySourceKitCss<T extends SourceProjectFileDto>(files: T[], op
     return content === file.content ? file : { ...file, content };
   }), repairs };
 }
+
+/* ---- prompt ---- */
+const kitCssDirection = (where: string) => `Kit-surface CSS goes ${where}: plain rules on kit classes (.cart-drawer, .cart-added, .checkout-review, .product-detail__*, .menu-add, .checkout-button…). It outranks the kit and DNA, is the only CSS that restyles the product page and may set --kit-btn-* and --motion-* tokens. Prices, totals, pay and buy buttons, quantity, legal and status text are never hidden, faded, scaled down or under 12px.`;
+/** Prompt guidance (stable across stores). The validator enforces it; the prompt only avoids wasted rules. */
+export const SOURCE_KIT_CSS_DIRECTION = kitCssDirection('in styles/kit.css');
+export const SOURCE_KIT_CSS_DIRECTION_NEXT = kitCssDirection('in styles/globals.css between /* pagosya-kit:start */ and /* pagosya-kit:end */');

@@ -92,6 +92,19 @@ describe('Independent source generation',()=>{
     expect(result.generation.autoRepairs).toEqual(expect.arrayContaining([expect.stringMatching(/^styles\.css: removed `display:none` on \.menu-add/), 'styles/kit.css: removed selector body (not a kit surface)']));
     expect(() => validateGeneratedSource(source)).not.toThrow();
   });
+  it('tells the build where kit-surface CSS goes and what it may never do to protected elements', async () => {
+    for (const [framework, source, place] of [['static', files(), 'styles/kit.css'], ['next', nextStoreFiles(), '/* pagosya-kit:start */']] as const) {
+      const { service } = setup(framework);
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Tienda', files: source, products: [] }) }] }] })));
+      await service.generate('m', 's', input);
+      const stable = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text;
+      expect(stable).toContain(place);
+      expect(stable).toMatch(/only CSS that restyles the product page/);
+      expect(stable).toMatch(/prices, totals, pay and buy buttons, quantity, legal and status text/i);
+      expect(stable).not.toContain('Style the runtime product gallery, tabs, .product-detail__buy.checkout-button and checkout using those shared rules');
+      fetchMock.mockRestore();
+    }
+  });
   it('writes the chosen concept DNA in component mode and records planner DNA repairs', async () => {
     const { service, projects } = setup('next');
     const planned = design(); planned.concepts[0].dna = validDna(); planned.concepts[0].layout!.productPage = 'story-led';
@@ -576,10 +589,11 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, usage: { input_tokens: 1000, output_tokens: 2000 }, output: [] })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 1000 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label:'Reparado', files:files() }) }] }] })));
-    // 12, not 10: re-sending the stable prompt costs ~6.7 credits at this model's rate, so a
+    // 13, not 10: re-sending the stable prompt costs ~6.7 credits at this model's rate, so a
     // 10-credit ceiling leaves the repair reserve within a few tokens of its 1024 floor and any
     // prompt edit decides the outcome. The subject here is the repair's allowance, not the ceiling.
-    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 12 });
+    // (12 until sub-project 7's kit-CSS guidance, ~330 characters, used up the margin.)
+    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 13 });
     const first = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     const repair = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
     expect(repair.max_output_tokens).toBeLessThan(first.max_output_tokens);
@@ -728,7 +742,10 @@ describe('Independent source generation',()=>{
     expect(blocks[2][1].text).toContain('#246813');
     expect(blocks[2][1].text).not.toContain('#135724');
     expect(updated.snapshot.files.find((file: any) => file.path === 'brand.css').content).toContain('#246813');
-    expect(requests[0].prompt_cache_key).not.toContain('source-s');
+    // The shared key is 'source-<prefix hash>-<shard>'; the store id never appears in it. (A bare 'source-s' check
+    // failed whenever the base-36 prefix hash itself began with 's', as it did after sub-project 7's prompt edit.)
+    expect(requests[0].prompt_cache_key).toMatch(/^source-[0-9a-z]+-\d+$/);
+    expect(requests[0].prompt_cache_key.split('-')).not.toContain('s');
     expect(requests[0].prompt_cache_key).toBe(requests[1].prompt_cache_key);
     expect(requests[0].prompt_cache_options).toEqual({ mode: 'explicit', ttl: '30m' });
   });
