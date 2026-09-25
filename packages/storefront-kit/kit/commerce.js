@@ -357,6 +357,7 @@
     .menu-item{position:relative}.menu-item:not([data-custom-product]) .menu-item__details{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:inherit;background:transparent;box-shadow:none;cursor:pointer;color:inherit}
     .menu-item .menu-item__details:focus-visible{outline:3px solid currentColor;outline-offset:-4px}.menu-item:not([data-custom-product]) .menu-add{position:relative;inset:auto;z-index:2}
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
+    [data-cart-slot][hidden],[data-cart-field][hidden],[data-added-field][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
@@ -1634,6 +1635,7 @@
        fixed drawer's geometry. Keep it in the checkout's own content column. */
     [data-pagosya-checkout] [data-pagosya-cart][data-checkout-review]{position:static!important;inset:auto!important;z-index:auto;width:100%!important;min-width:0;max-width:none;height:auto!important;min-height:0;max-height:none;margin:0;padding:0;overflow:visible!important;transform:none;box-shadow:none;border:0;background:transparent;color:inherit;opacity:1;visibility:visible}
     [data-pagosya-checkout] .checkout-review>[data-retention-recovery]{grid-column:1 / -1;width:100%;min-width:0}
+    [data-pagosya-checkout] .checkout-review>[data-review-root]{grid-column:1 / -1;width:100%;min-width:0}
     .checkout-review__fields{min-width:0}.checkout-review__summary{min-width:0;border-top:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));padding-top:24px}
     [data-pagosya-checkout] input:not([type=checkbox]):not([type=radio]),[data-pagosya-checkout] textarea{box-sizing:border-box;min-height:48px;width:100%;padding:12px;font:inherit;color:inherit;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
     [data-pagosya-checkout] fieldset{min-width:0;margin:24px 0;padding:0;border:0}
@@ -2192,9 +2194,14 @@
     const policies = slot('policies');
     if (policies) policies.innerHTML = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
     const emptySlot = slot('empty');
-    if (emptySlot) {
-      emptySlot.hidden = !empty;
-      for (const name of ['lines', 'total', 'action', 'savings', 'suggestions', 'note']) { const node = slot(name); if (node) node.hidden = empty; }
+    if (emptySlot) emptySlot.hidden = !empty;
+    // Every other slot hides while the cart is empty, whether or not the template authored an
+    // "empty" slot. "lines" is the one exception without an "empty" slot: it carries the kit's own
+    // empty-cart text, so it must stay visible to say anything at all.
+    for (const name of Object.keys(CART_PARTS)) {
+      if (name === 'lines' && !emptySlot) continue;
+      const node = slot(name);
+      if (node) node.hidden = empty;
     }
     el.replaceChildren(root);
   }
@@ -2276,7 +2283,7 @@
     document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
     document.querySelectorAll("[data-pagosya-cart]").forEach((el) => {
       const focused = el.contains(document.activeElement) ? document.activeElement : null;
-      const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : null;
+      const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : focused?.hasAttribute('data-remove-line') ? 'data-remove-line' : null;
       const focusedId = focusedAction ? focused.getAttribute(focusedAction) : null;
       const remembered = el.hasAttribute("data-checkout-review") ? [...checkoutAnswers] : [];
       const answers = [...remembered, ...[...el.querySelectorAll('input,textarea')].map(field => [field.name, field.value])];
@@ -2309,6 +2316,7 @@
       const reviewLayout = review ? reviewTemplate() : null;
       if (reviewLayout) {
         const root = reviewLayout.make();
+        root.setAttribute('data-review-root', '');
         const summary = root.querySelector('[data-review-slot="summary"]'), fields = root.querySelector('[data-review-slot="fields"]');
         summary.replaceChildren(); fields.replaceChildren();
         for (const child of [...el.children]) (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note') ? summary : fields).append(child);

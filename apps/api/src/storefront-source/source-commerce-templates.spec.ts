@@ -75,6 +75,19 @@ describe('cart line template', () => {
     expect(shop.$('[data-cart-count]').textContent).toBe('1');
   });
 
+  // Fix round 2, finding 3: focusedAction only recognised data-add/data-remove, so removing a whole
+  // line with the templated remove button dropped keyboard focus to <body> on re-render. It must
+  // fall back to the first enabled button inside the re-rendered cart panel.
+  it('keeps focus inside the cart panel after removing a templated line with its remove button', async () => {
+    const shop = boot(LINE, { cart: [{ id: 'lamp', quantity: 1 }, { id: 'desk', quantity: 1 }] });
+    await shop.tick();
+    const remove = shop.$('[data-pagosya-cart] [data-remove-line="lamp"]');
+    remove.focus();
+    remove.click();
+    expect(shop.w.document.activeElement).not.toBe(shop.w.document.body);
+    expect(shop.w.document.activeElement.closest('[data-pagosya-cart]')).not.toBeNull();
+  });
+
   it('is ignored when a required field is missing: default lines render and the invalid flag is set', async () => {
     const shop = boot('<template data-pagosya-cart-line-template><li><h4 data-cart-field="name"></h4></li></template>', { cart: [{ id: 'lamp', quantity: 1 }] });
     await shop.tick();
@@ -129,6 +142,19 @@ describe('cart panel template', () => {
     await shop.tick();
     shop.$('[data-cart-open]').click();
     expect(shop.$('.cart-drawer [data-cart-slot="lines"] .order-empty')).not.toBeNull();
+  });
+
+  // Fix round 2, finding 5: without an "empty" slot the total/action/savings/note slots were never
+  // hidden, so an empty cart still showed "Subtotal Bs 0" and a disabled checkout button in the
+  // themed panel. They must hide whenever the cart is empty, even without an authored empty slot;
+  // "lines" stays visible because it carries the kit's own empty-cart text.
+  it('hides total, action, savings and note while the cart is empty, even without an empty slot', async () => {
+    const shop = boot(CART.replace('<div data-cart-slot="empty" class="vacio">Tu canasta está esperando 🐾</div>', ''));
+    await shop.tick();
+    shop.$('[data-cart-open]').click();
+    const panel = shop.$('.cart-drawer [data-cart-panel]')!;
+    expect(panel.querySelector('[data-cart-slot="lines"]').hidden).toBe(false);
+    for (const slot of ['total', 'action', 'savings', 'note']) expect(panel.querySelector(`[data-cart-slot="${slot}"]`).hidden).toBe(true);
   });
 
   it('is ignored without a total slot or a close button', async () => {
@@ -350,6 +376,10 @@ describe('checkout review template', () => {
     // The pay button still finds its panel: fields stay inside [data-pagosya-cart].
     expect(fields.querySelector('.checkout-button').closest('[data-pagosya-cart]')).toBe(review);
     expect(review.querySelector('.checkout-review__summary')).toBeNull();
+    // Fix round 2, finding 1: the templated root is the review element's only child, so a plain
+    // 2-column .checkout-review grid squeezed it into column 1. data-review-root (mirroring
+    // data-product-page-root) lets kit CSS span it across the full grid.
+    expect(review.querySelector('.mi-revision').hasAttribute('data-review-root')).toBe(true);
   });
 
   it('falls back to the kit review without a fields slot', async () => {
