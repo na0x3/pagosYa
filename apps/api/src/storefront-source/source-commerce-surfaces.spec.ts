@@ -119,10 +119,11 @@ describe('cart placement', () => {
     expect(drawerRule(css, 'sheet')?.body).toMatch(/bottom|inset:auto 0 0/);
     expect(drawerRule(css, 'overlay')?.body).toContain('margin:auto');
   });
-  it('the page cart and the stacked review draw the DNA border weight', () => {
+  it('the page cart and the stacked review draw the DNA border weight and shape', () => {
     const css = dnaCss(boot(DNA).doc);
     expect(rules(css).find(rule => rule.selector === ':root[data-dna-cart=page] .cart-drawer')?.body).toContain('border-top:var(--kit-border) solid var(--kit-accent)');
-    expect(css).toMatch(/:root\[data-dna-review=stacked\] \.checkout-review__summary\{[^}]*border-width:var\(--kit-border\) 0/);
+    // The stacked summary keeps the DNA panel (radius, tint, border), so the store's shape reaches it.
+    expect(rules(css).filter(rule => rule.selector.includes('[data-dna-review=stacked] .checkout-review__summary')).map(rule => rule.body).join(';')).not.toMatch(/background:transparent|border-radius:0/);
     expect(css).toContain(':root[data-dna-frame=bleed]{--kit-photo-radius:min(var(--kit-radius),28px)');
   });
   it('frames cart photos and shapes the quantity buttons from the DNA', () => {
