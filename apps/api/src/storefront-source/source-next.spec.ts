@@ -166,6 +166,23 @@ export default function Home() { const [tab] = useState('portada'); return <><He
     const files = nextStoreFiles(); files[1].content = files[1].content.replace('<main>', '<main><section id="hero">Unplanned hero</section>');
     expect(() => validateNextDesign(files, design)).toThrow();
   });
+  it('lists every TypeScript error with its line so one repair can fix them all', async () => {
+    const files = nextStoreFiles();
+    files[1].content = files[1].content.replace('export default function Home()', 'const wrongHome: number = "text";\nexport default function Home()');
+    files[2].content = files[2].content.replace('export default function Product()', 'const wrongProduct: number = "text";\nexport default function Product()');
+    let message = '';
+    try { await compileNextPreview(files); } catch (error) { message = (error as Error).message; }
+    expect(message).toMatch(/TypeScript components\/home\.tsx:\d+: Type 'string' is not assignable to type 'number'/);
+    expect(message).toMatch(/TypeScript components\/product\.tsx:\d+: Type 'string' is not assignable to type 'number'/);
+  });
+  it('bounds a flood of TypeScript errors to eight lines and a count', async () => {
+    const files = nextStoreFiles();
+    files[1].content = Array.from({ length: 11 }, (_, i) => `const wrong${i}: number = "x";`).join('\n') + '\n' + files[1].content;
+    let message = '';
+    try { await compileNextPreview(files); } catch (error) { message = (error as Error).message; }
+    expect(message.split('\n').filter(line => line.startsWith('TypeScript '))).toHaveLength(8);
+    expect(message).toContain('…y 3 errores más.');
+  });
   it('returns an actionable compile error for missing local components', async () => {
     const files = nextStoreFiles(); files[1].content = "import Missing from './Missing';\n" + files[1].content.replace('<main>', '<Missing/><main>');
     await expect(compileNextPreview(files)).rejects.toThrow('Missing');

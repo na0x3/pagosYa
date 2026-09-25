@@ -375,13 +375,18 @@ function checkNextTypes(files: SourceProjectFileDto[]) {
   const program = ts.createProgram([...virtual.keys()], options, host);
   const errors = ts.getPreEmitDiagnostics(program).filter(d => d.category === ts.DiagnosticCategory.Error);
   if (errors.length) {
-    const error = errors[0];
-    const fileName = error.file?.fileName.replace(root + '/', '') || '';
-    const detail = ts.flattenDiagnosticMessageText(error.messageText, ' ').slice(0, 450);
-    const hint = error.code === 2304 && /Cannot find name '(Header|Footer)'/.test(detail)
-      ? ' Decláralo en el archivo o impórtalo desde un componente local.'
-      : '';
-    throw new BadGatewayException(`TypeScript ${fileName}: ${detail}${detail.endsWith('.') ? '' : '.'}${hint}`);
+    const describe = (error: ts.Diagnostic) => {
+      const fileName = error.file?.fileName.replace(root + '/', '') || '';
+      const line = error.file && error.start !== undefined ? `:${error.file.getLineAndCharacterOfPosition(error.start).line + 1}` : '';
+      const detail = ts.flattenDiagnosticMessageText(error.messageText, ' ').slice(0, 450);
+      const hint = error.code === 2304 && /Cannot find name '(Header|Footer)'/.test(detail)
+        ? ' Decláralo en el archivo o impórtalo desde un componente local.'
+        : '';
+      return `TypeScript ${fileName}${line}: ${detail}${detail.endsWith('.') ? '' : '.'}${hint}`;
+    };
+    // The single bounded repair only sees this message: list every error (capped) so it can fix them together.
+    const shown = errors.slice(0, 8).map(describe);
+    throw new BadGatewayException(shown.join('\n') + (errors.length > 8 ? `\n…y ${errors.length - 8} errores más.` : ''));
   }
 }
 
