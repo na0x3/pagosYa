@@ -439,6 +439,8 @@ export function mountProposalsPanel(deps) {
       items: editorItems(doc.items || []),
       blocks: (Array.isArray(doc.content) ? doc.content : []).map((block) => ({ type: block.type, title: block.title || "", text: block.text || "", items: [...(block.items || [])] })),
       validUntil,
+      /** What the customer's link obeys now (a sent proposal changes it only with a new send). */
+      sentValidUntil: (doc.currentVersion || 0) > 0 ? doc.validUntil : null,
       validPreset: "custom",
       showCatalog: false,
       catalogQuery: "",
@@ -489,7 +491,7 @@ export function mountProposalsPanel(deps) {
             ${VALIDITY.map((option) => `<label class="proposal-pill"><input type="radio" name="proposalValidity" value="${option.id}" ${e.validPreset === option.id ? "checked" : ""}><span>${esc(option.label)}</span></label>`).join("")}
             <label class="proposal-pill"><input type="radio" name="proposalValidity" value="custom" ${e.validPreset === "custom" ? "checked" : ""}><span>Otra fecha</span></label>
           </div>
-          <div class="proposal-custom-date" ${e.validPreset === "custom" ? "" : "hidden"}><label for="proposalValidDate">Válida hasta</label><input id="proposalValidDate" type="date" value="${esc(dueDateInputValue(e.validUntil))}"></div>
+          <div class="proposal-custom-date" ${e.validPreset === "custom" ? "" : "hidden"}><label for="proposalValidDate">Válida hasta</label><input id="proposalValidDate" type="date" min="${esc(dueDateInputValue(new Date().toISOString()))}" value="${esc(dueDateInputValue(e.validUntil))}"></div>
           <p class="proposal-hint" data-proposal-valid-hint>${esc(validHint())}</p>
         </section>
         <div class="proposal-pending" data-proposal-pending role="status" ${pendingData(e).length ? "" : "hidden"}>${pendingHtml()}</div>
@@ -507,6 +509,9 @@ export function mountProposalsPanel(deps) {
   function validHint() {
     if (!editor.validUntil) return "Elige una fecha";
     if (new Date(editor.validUntil).getTime() < Date.now()) return "Esa fecha ya pasó: elige una futura.";
+    if (editor.currentVersion > 0 && editor.sentValidUntil && dueDateInputValue(editor.sentValidUntil) !== dueDateInputValue(editor.validUntil)) {
+      return `Nueva fecha: ${longDate(editor.validUntil)}. Se aplica al enviar la versión nueva; hasta entonces tu cliente la puede aceptar hasta el ${longDate(editor.sentValidUntil)}.`;
+    }
     return `Tu cliente puede aceptarla hasta el ${longDate(editor.validUntil)}.`;
   }
 
@@ -674,11 +679,11 @@ export function mountProposalsPanel(deps) {
     saveTimer = setTimeout(() => void flushSave(), 700);
   }
   let saving = Promise.resolve(true);
-  function flushSave() {
+  function flushSave({ withValidity = false } = {}) {
     clearTimeout(saveTimer);
     if (!editor || editor.saveState === "saved") return saving;
     const current = editor;
-    const body = proposalPayload(current);
+    const body = proposalPayload(current, { validity: current.currentVersion === 0 || withValidity });
     current.saveState = "saving";
     const label = panel.querySelector("[data-proposal-save-state]");
     if (label) label.textContent = saveLabel();
@@ -772,7 +777,8 @@ export function mountProposalsPanel(deps) {
     button.disabled = true;
     button.textContent = "Enviando…";
     current.saveState = current.saveState === "saved" ? "dirty" : current.saveState;
-    const saved = await flushSave();
+    // The new validity travels with the new version.
+    const saved = await flushSave({ withValidity: true });
     try {
       if (!saved) throw new Error("No pudimos guardar tus cambios. Revisa tu conexión e intenta de nuevo.");
       const sent = await deps.api(docPath(current.id, "/send"), { method: "POST", body: JSON.stringify({ email: false }) });

@@ -150,10 +150,11 @@ export function pendingData(draft) {
 }
 
 /**
- * The PATCH body of the editor's autosave (POST adds kind).
+ * The PATCH body of the editor's autosave (POST adds kind). `validity: false` leaves the validity out:
+ * on a sent proposal the row's date is what the customer's link obeys, so it changes only with a new send.
  * @param {{ title: string, customer: { name?: string, email?: string, phone?: string }, items: EditorItem[], blocks: Array<{ type: string, title?: string, text?: string, items?: string[] }>, validUntil: string | null }} draft
  */
-export function proposalPayload(draft) {
+export function proposalPayload(draft, { validity = true } = {}) {
   const clean = (value) => String(value || "").trim() || null;
   return {
     title: draft.title.trim() || "Propuesta",
@@ -166,7 +167,7 @@ export function proposalPayload(draft) {
       if (block.type === "list") return { type: "list", ...title, items: (block.items || []).map((item) => item.trim()).filter(Boolean) };
       return { type: block.type, ...title, text: block.text || "" };
     }),
-    ...(draft.validUntil ? { validUntil: draft.validUntil } : {}),
+    ...(validity && draft.validUntil ? { validUntil: draft.validUntil } : {}),
   };
 }
 

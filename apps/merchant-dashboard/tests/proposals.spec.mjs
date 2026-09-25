@@ -308,6 +308,28 @@ for (const width of [390, 1280]) {
       await expect(editor).toHaveCount(0);
     });
 
+    test("on a sent proposal a new validity waits for 'Enviar versión nueva', and past dates cannot be picked", async ({ page }) => {
+      const api = fakeApi([proposal({ id: "pdoc_view", title: "Fotos de producto" })]);
+      await openProposals(page, api);
+      await page.locator("[data-proposal-card]").first().click();
+      const sheet = page.locator("[data-proposal-sheet]");
+      await sheet.getByRole("button", { name: "Editar" }).click();
+      const editor = page.locator("[data-proposal-editor]");
+      const today = new Date(Date.now() - 4 * 3_600_000).toISOString().slice(0, 10);
+      await expect(editor.locator("#proposalValidDate")).toHaveAttribute("min", today);
+      await editor.getByRole("radio", { name: "30 días" }).check();
+      await expect(editor.locator("[data-proposal-valid-hint]")).toContainText("al enviar la versión nueva");
+      await editor.getByLabel("Texto de «Introducción»").fill("Hola de nuevo.");
+      await expect(page.locator("[data-proposal-save-state]")).toHaveText("Guardado");
+      const autosaves = api.requests.filter((request) => request.method === "PATCH");
+      expect(autosaves.length).toBeGreaterThan(0);
+      expect(autosaves.every((request) => !("validUntil" in request.body))).toBe(true);
+      await page.getByRole("button", { name: "Enviar versión nueva" }).click();
+      await expect(sheet.locator("#proposalSheetTitle")).toContainText("PRO-0009");
+      const beforeSend = api.requests.filter((request) => request.method === "PATCH").pop();
+      expect(new Date(beforeSend.body.validUntil).getTime()).toBeGreaterThan(Date.now() + 29 * 86_400_000);
+    });
+
     test("the catalog picker only adds products in the proposal's currency", async ({ page }) => {
       const api = fakeApi([proposal({ id: "pdoc_draft", number: null, numberLabel: "Borrador", status: "DRAFT", title: "Página web", currentVersion: 0, publicUrl: null, items: [] })]);
       await openProposals(page, api);

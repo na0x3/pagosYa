@@ -278,6 +278,26 @@ async function sentProposal(ctx: ReturnType<typeof setupProposals>, extra: Recor
   return { id: doc.id, token: sent.publicUrl.split("/d/")[1] };
 }
 
+describe("proposals — validity", () => {
+  const past = () => new Date(Date.now() - 86_400_000).toISOString();
+
+  it("refuses a validity in the past on a proposal the customer already has", async () => {
+    const ctx = setupProposals();
+    const { id } = await sentProposal(ctx);
+    await expect(ctx.documents.update("m_1", "store_1", id, { validUntil: past() })).rejects.toThrow(UnprocessableEntityException);
+    await expect(ctx.documents.update("m_1", "store_1", id, { validUntil: past() })).rejects.toThrow(/fecha futura/);
+    expect(new Date(ctx.prisma.documents.find((row) => row.id === id)!.validUntil).getTime()).toBeGreaterThan(Date.now());
+    await expect(ctx.documents.update("m_1", "store_1", id, { validUntil: new Date(Date.now() + 20 * 86_400_000).toISOString() })).resolves.toBeDefined();
+  });
+
+  it("lets a draft hold any date but never sends a proposal that is already past its validity", async () => {
+    const ctx = setupProposals();
+    const draft = await ctx.documents.create("m_1", "store_1", { kind: "PROPOSAL", title: "Letrero", items: [{ description: "Letrero", quantity: 1, unitAmount: 80000 }] });
+    await ctx.documents.update("m_1", "store_1", draft.id, { validUntil: past() });
+    await expect(ctx.documents.send("m_1", "store_1", draft.id, { email: false })).rejects.toThrow(/fecha futura/);
+  });
+});
+
 describe("ProposalsService — the customer accepts", () => {
   it("records who accepted which exact version, from where, once — and tells the merchant", async () => {
     const ctx = setupProposals();

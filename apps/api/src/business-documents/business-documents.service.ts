@@ -129,6 +129,8 @@ export async function expireProposal(db: Pick<Prisma.TransactionClient, "busines
 
 type ProposalPublicFields = { validUntil: Date | null; acceptable: boolean; acceptance: { name: string; at: Date } | null; changesRequestedAt: Date | null };
 
+const pastValidity = () => new UnprocessableEntityException("La validez de la propuesta ya pasó: elige una fecha futura.");
+
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
 type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }>;
@@ -221,6 +223,8 @@ export class BusinessDocumentsService {
     await this.ownedStore(merchantId, storeId);
     const initial = await this.load(storeId, id);
     if (FINAL.includes(initial.status)) throw new ConflictException("Este documento ya no se puede editar");
+    // The row's validity is what the customer's link obeys: a sent proposal never gets one in the past.
+    if (initial.kind === "PROPOSAL" && initial.status !== S.DRAFT && dto.validUntil && new Date(dto.validUntil).getTime() < Date.now()) throw pastValidity();
     const customer = await this.customerFields(storeId, dto, dto.businessCustomerId === undefined);
     const pricedItems = dto.items ? await this.pricedItems(storeId, dto.items) : null;
     await this.prisma.$transaction(async (tx) => {
@@ -552,6 +556,7 @@ export class BusinessDocumentsService {
     const placeholders = findPlaceholders(buildSnapshot(doc), [message]);
     if (placeholders.length) throw new UnprocessableEntityException(`Completa los datos pendientes antes de enviar: ${placeholders.join(", ")}`);
     if (doc.kind === "INVOICE" && doc.totalAmount <= 0) throw new UnprocessableEntityException("Agrega al menos un ítem con monto para enviar el cobro");
+    if (doc.kind === "PROPOSAL" && doc.validUntil && doc.validUntil.getTime() < Date.now()) throw pastValidity();
   }
 
   private async ownedStore(merchantId: string, storeId: string) {

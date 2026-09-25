@@ -108,6 +108,10 @@ test("the save payload carries every editable field; blank contact fields are nu
     content: [{ type: "paragraph", title: "Introducción", text: "Hola" }, { type: "list", title: "Alcance", items: ["a", "b"] }],
     validUntil: "2026-10-10T03:59:59.000Z",
   });
+  // A sent proposal's validity is what the customer's link obeys: autosave leaves it out until the new version is sent.
+  const draft = { title: "T", customer: {}, items: [], blocks: [], validUntil: "2026-10-10T03:59:59.000Z" };
+  assert.equal("validUntil" in proposalPayload(draft, { validity: false }), false);
+  assert.equal(proposalPayload(draft).validUntil, "2026-10-10T03:59:59.000Z");
 });
 
 test("the blank template has the nine sections of an AI draft", () => {
