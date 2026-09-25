@@ -29,6 +29,10 @@ describe('design DNA in the storefront runtime', () => {
     const { version: _version, ...enums } = dnaRuntimeConfig(validDna());
     expect(boot(dnaRuntimeConfig(validDna()), { productPageStyle: enums.product })).toEqual(enums);
   });
+  it('allows exactly the runtime enums the API declares, no more and no fewer', () => {
+    const literal = commerce.match(/const DNA_VALUES = (\{[\s\S]*?\n  \});/)![1];
+    expect(new Function(`return ${literal}`)()).toEqual(SOURCE_DNA_RUNTIME_ENUMS);
+  });
   it('accepts every value the API can send', () => {
     const longest = Math.max(...Object.values(SOURCE_DNA_RUNTIME_ENUMS).map(values => values.length));
     for (let i = 0; i < longest; i++) {
