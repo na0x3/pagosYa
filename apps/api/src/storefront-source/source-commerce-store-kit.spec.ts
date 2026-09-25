@@ -171,6 +171,66 @@ describe('runtime contrast guard: pay and buy buttons and totals read at 4.5:1',
   });
 });
 
+const IMAGE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#123"/></svg>');
+const idle = async (page: Page) => { await page.waitForSelector('.menu-add'); await page.evaluate(() => window.dispatchEvent(new Event('load'))); await page.waitForTimeout(500); };
+const guardOf = (page: Page, selector: string) => page.evaluate(sel => document.querySelector(sel)?.getAttribute('data-pagosya-contrast-guard') ?? null, selector);
+
+describe('runtime contrast guard: backgrounds it cannot see, and interactive states', () => {
+  it.each([
+    ['a ::before background', '.x .checkout-button{position:relative;z-index:0;color:#fff}.x .checkout-button::before{content:"";position:absolute;inset:0;background:#000;z-index:-1}', '<div class="x" style="background:#fff"><a class="checkout-button" href="#">Pagar</a></div>'],
+    ['a backdrop filter', '.x .checkout-button{backdrop-filter:blur(6px) brightness(.3);color:#fff}', '<div class="x" style="background:#fff"><a class="checkout-button" href="#">Pagar</a></div>'],
+    ['a photo it sits over', '.x{position:relative;background:#fff}.x img{display:block}.x .checkout-button{position:absolute;left:8px;bottom:8px;color:#fff}', `<div class="x"><img src="${IMAGE}" width="200" height="200" alt=""><a class="checkout-button" href="#">Pagar</a></div>`],
+  ])('leaves a label over %s alone: its real background is unknown', async (_label, css, markup) => {
+    const page = await open({ css, body: CATALOG + markup });
+    try {
+      await idle(page);
+      expect(await guardOf(page, '.x .checkout-button')).toBeNull();
+      expect(await computed(page, '.x .checkout-button', ['color'])).toEqual({ color: 'rgb(255, 255, 255)' });
+    } finally { await page.close(); }
+  });
+
+  it('measures against a dark canvas under color-scheme: dark, not white', async () => {
+    const page = await open({ css: ':root{color-scheme:dark}.x .checkout-button{color:#eee}', body: CATALOG + '<div class="x"><a class="checkout-button" href="#">Pagar</a></div>' });
+    try {
+      await idle(page);
+      expect(await guardOf(page, '.x .checkout-button')).toBeNull();
+      expect(await computed(page, '.x .checkout-button', ['color'])).toEqual({ color: 'rgb(238, 238, 238)' });
+    } finally { await page.close(); }
+  });
+
+  it('fixes the resting label but lets the store\'s hover and focus colours through', async () => {
+    const page = await open({ css: '.menu-add{background:#797979;color:#fff}.menu-add:hover,.menu-add:focus-visible{background:#000;color:#fff}' });
+    try {
+      await page.waitForSelector('.menu-add');
+      await guarded(page, '.menu-add');
+      expect(await contrastOf(page, '.menu-add')).toBeGreaterThanOrEqual(4.5);
+      await page.hover('.menu-add');
+      expect(await computed(page, '.menu-add', ['color', 'background-color'])).toEqual({ color: 'rgb(255, 255, 255)', 'background-color': 'rgb(0, 0, 0)' });
+      await page.mouse.move(1, 1);
+      await page.focus('.menu-add');
+      await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => document.activeElement?.matches('.menu-add:focus-visible'))).toBe(true);
+      expect(await computed(page, '.menu-add', ['color'])).toEqual({ color: 'rgb(255, 255, 255)' });
+      await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+      expect(await contrastOf(page, '.menu-add')).toBeGreaterThanOrEqual(4.5);
+    } finally { await page.close(); }
+  });
+
+  it('does not measure a hovered control: its hover colours are never pinned onto its resting state', async () => {
+    const page = await open({ css: '.menu-add{background:#111;color:#fff}.menu-add:hover{background:#ddd;color:#ccc}' });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.hover('.menu-add');
+      await page.evaluate(() => window.dispatchEvent(new Event('load')));
+      await page.waitForTimeout(400);
+      await page.mouse.move(1, 1);
+      await page.waitForTimeout(300);
+      expect(await guardOf(page, '.menu-add')).toBeNull();
+      expect(await computed(page, '.menu-add', ['color'])).toEqual({ color: 'rgb(255, 255, 255)' });
+    } finally { await page.close(); }
+  });
+});
+
 describe('the contrast passes go idle', () => {
   it('an idle catalog of 200 cards is not measured again and again (the text probe no longer re-triggers the observer)', async () => {
     // Counts the passes: each one reads the commerce slots once (queueReadableText) and the guarded controls once.

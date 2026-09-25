@@ -1286,6 +1286,9 @@
   shoppingStyle.textContent = `@layer pagosya-commerce {
     .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
+    /* The contrast guard's colour: the first layer's !important outranks every stylesheet, and yields while the control is
+       hovered or focused so the store's own interactive colours (an inverted hover…) still apply. */
+    [data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)),[data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)) [data-pagosya-contrast-guard=text]{color:var(--pagosya-contrast-color)!important;-webkit-text-fill-color:var(--pagosya-contrast-color)!important}
     .pagosya-secure-note{margin:12px 0 0;font-size:13px;opacity:.78}
     .pagosya-policies{display:flex;flex-wrap:wrap;gap:4px 16px;margin:12px 0 0}.cart-drawer>.pagosya-policies{padding:0 24px 20px}
     .pagosya-policies button{min-height:32px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:.25em;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);cursor:pointer}
@@ -1599,15 +1602,22 @@
     probe.remove();
   }
   /* Sub-project 7: pay and buy buttons and totals read at 4.5:1 whatever sets their colours (the store's CSS, its kit
-   * CSS, the DNA). Measured as the scorecard measures: text composited over the ancestors' background colours. A failing
-   * control takes the first readable colour among the store's ink, paper and on-accent, else pure black or white (one of
-   * the two always reaches 4.5:1), inline and !important so no stylesheet undoes it. Text over an image, a gradient or a
-   * colour syntax the page cannot compare is left alone. */
+   * CSS, the DNA). Measured as the scorecard measures: text composited over the ancestors' background colours, over the
+   * page canvas (dark under color-scheme: dark). A failing control takes the first readable colour among the store's ink,
+   * paper and on-accent, else pure black or white (one of the two always reaches 4.5:1). The colour is set through a guard
+   * attribute and a custom property that the kit's first layer answers with !important, so no stylesheet undoes it at
+   * rest, while the store's hover and focus colours still apply. Text over an image, a gradient, a pseudo-element or
+   * backdrop filter, or a colour syntax the page cannot compare is left alone, and a hovered or focused control is never
+   * measured (its interactive colours would be pinned onto its resting state); it is measured once the pointer leaves. */
   const CONTRAST_GUARDED = '.checkout-button,.menu-add,.product-detail__sticky button,[data-pay],[data-checkout],.order-total,.product-detail__subtotal';
   const contrastWarned = typeof WeakSet === 'function' ? new WeakSet() : null;
+  const contrastWaiting = typeof WeakSet === 'function' ? new WeakSet() : null;
+  const interacting = el => { try { return el.matches(':hover') || el.matches(':focus-visible'); } catch { return el.matches(':hover'); } };
   function resetContrastGuard() {
     document.querySelectorAll('[data-pagosya-contrast-guard]').forEach(el => {
-      el.style.removeProperty('color'); el.style.removeProperty('-webkit-text-fill-color'); el.removeAttribute('data-pagosya-contrast-guard');
+      const target = el.closest('[data-pagosya-contrast-guard="fixed"]');
+      if (target && interacting(target)) return;
+      el.style.removeProperty('--pagosya-contrast-color'); el.removeAttribute('data-pagosya-contrast-guard');
     });
   }
   function guardContrast() {
@@ -1632,42 +1642,79 @@
       const stops = image.match(/(?:rgba?|color)\([^)]*\)/gi) || [];
       return thin || (stops.length > 0 && stops.every(stop => { const c = parse(stop); return c && c[3] <= .5; }));
     };
-    const backdrop = element => {
+    const REPLACED = 'img,video,canvas,picture,iframe,object,embed';
+    // Whether a node's own painting hides what is really behind its text: a backdrop filter, a positioned ::before/::after
+    // that paints, or a positioned box over a photo or video (its container's opaque colour is not what it sits on).
+    const hidden = new Map();
+    const obscured = (node, style) => {
+      if (hidden.has(node)) return hidden.get(node);
+      let result = false;
+      const backdropFilter = style.backdropFilter || style.webkitBackdropFilter;
+      if (backdropFilter && backdropFilter !== 'none') result = true;
+      for (const pseudo of result ? [] : ['::before', '::after']) {
+        const box = getComputedStyle(node, pseudo);
+        if (!box.content || box.content === 'none' || box.content === 'normal' || !/^(?:absolute|fixed)$/.test(box.position)) continue;
+        const color = parse(box.backgroundColor);
+        if ((color && color[3] > .1) || !decorative(box)) { result = true; break; }
+      }
+      if (!result && /^(?:absolute|fixed|sticky)$/.test(style.position)) {
+        const rect = node.getBoundingClientRect(), container = node.offsetParent || node.parentElement;
+        result = !!container && [...container.querySelectorAll(REPLACED)].some(media => {
+          if (node.contains(media)) return false;
+          const box = media.getBoundingClientRect();
+          return box.width > 0 && box.height > 0 && box.left < rect.right && box.right > rect.left && box.top < rect.bottom && box.bottom > rect.top;
+        });
+      }
+      hidden.set(node, result);
+      return result;
+    };
+    const probe = contrastProbe(); document.body.append(probe);
+    const resolve = value => { probe.style.color = ''; probe.style.color = value; return parse(getComputedStyle(probe).color); };
+    const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', 'var(--store-accent-foreground, var(--brand-accent-foreground, #ffffff))', '#000000', '#ffffff'].map(resolve).filter(c => c && c[3] >= .99);
+    // The page canvas under everything: dark when the page asks for color-scheme: dark.
+    const canvas = (() => { const c = resolve('Canvas'); return c && c[3] >= .99 ? c : [255, 255, 255, 1]; })();
+    probe.remove();
+    // `deep` also asks whether anything hides the real background; only a failing control pays for it.
+    const backdrop = (element, deep) => {
       const layers = [];
       for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
         const style = getComputedStyle(node);
-        if (!decorative(style)) return null;
+        if (!decorative(style) || (deep && obscured(node, style))) return null;
         const color = parse(style.backgroundColor);
         if (!color) return null;
         if (color[3] > 0) layers.push(color);
         if (color[3] >= .99) break;
       }
-      return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255, 1]);
+      return layers.reverse().reduce((base, layer) => over(layer, base), canvas);
     };
-    const probe = contrastProbe(); document.body.append(probe);
-    const resolve = value => { probe.style.color = ''; probe.style.color = value; return parse(getComputedStyle(probe).color); };
-    const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', 'var(--store-accent-foreground, var(--brand-accent-foreground, #ffffff))', '#000000', '#ffffff'].map(resolve).filter(c => c && c[3] >= .99);
-    probe.remove();
     targets.forEach(target => {
       // A disabled control is exempt (WCAG 1.4.3); renderCart measures again once it is enabled.
       if (target.closest('[data-pagosya-contrast="skip"]') || target.matches(':disabled,[aria-disabled="true"]')) return;
+      if (interacting(target)) {
+        if (contrastWaiting && !contrastWaiting.has(target)) {
+          contrastWaiting.add(target);
+          const later = () => { contrastWaiting.delete(target); target.removeEventListener('pointerleave', later); target.removeEventListener('focusout', later); queueReadableText(); };
+          target.addEventListener('pointerleave', later); target.addEventListener('focusout', later);
+        }
+        return;
+      }
       const texts = [target, ...target.querySelectorAll('*')].filter(node => [...node.childNodes].some(child => child.nodeType === 3 && child.textContent.trim()));
       // An icon-only button (the card's + icon) is read through its own colour, which the icon strokes with.
       const nodes = texts.length ? texts : target.querySelector('svg') ? [target] : [];
       const measured = [];
       for (const node of nodes) {
-        const background = backdrop(node), text = parse(getComputedStyle(node).color);
+        const background = backdrop(node, false), text = parse(getComputedStyle(node).color);
         if (!background || !text) return;
         measured.push({ node, background, ratio: contrast(over(text, background), background) });
       }
       if (!measured.length || measured.every(entry => entry.ratio >= 4.5)) return;
+      if (measured.some(entry => !backdrop(entry.node, true))) return;
       const worst = color => Math.min(...measured.map(entry => contrast(color, entry.background)));
       const chosen = candidates.find(color => worst(color) >= 4.5) || candidates.reduce((best, color) => worst(color) > worst(best) ? color : best, candidates[0]);
       if (!chosen) return;
       const value = `rgb(${chosen.slice(0, 3).map(Math.round).join(',')})`;
       for (const node of new Set([target, ...measured.map(entry => entry.node)])) {
-        node.style.setProperty('color', value, 'important');
-        node.style.setProperty('-webkit-text-fill-color', value, 'important');
+        node.style.setProperty('--pagosya-contrast-color', value);
         node.setAttribute('data-pagosya-contrast-guard', node === target ? 'fixed' : 'text');
       }
       if (contrastWarned && !contrastWarned.has(target)) {
