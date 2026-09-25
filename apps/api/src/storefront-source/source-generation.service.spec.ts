@@ -90,6 +90,19 @@ describe('Independent source generation',()=>{
     expect(config.productPageStyle).toBe('story-led');
     expect(result.generation.autoRepairs).toContain('concepts[0].dna.buttons.hover: invalid');
   });
+  it("rebuilds the owned recipe from the chosen concept's layout grammar after planning", async () => {
+    const { service } = setup('next');
+    const planned = design(); planned.concepts[0].dna = { ...validDna(), layout: { grammar: 'brutalist', density: 'dense' } };
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const compose = jest.spyOn(service as any, 'composeUi');
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    expect((compose.mock.calls[0][0] as any).grammar).toBeUndefined();
+    expect((compose.mock.calls.at(-1)![0] as any).grammar).toBe('brutalist');
+    const build = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text;
+    expect(build).toContain('OWNED COMPOSITION RECIPE (brutalist-raw/');
+    expect(build).not.toContain('OWNED COMPOSITION RECIPE (cafe-expressive/');
+  });
   it('gives an edited store whose saved design has no DNA the same seeded DNA', async () => {
     const { service, projects } = setup();
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));

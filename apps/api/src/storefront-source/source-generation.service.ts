@@ -360,10 +360,11 @@ export class SourceGenerationService {
       const original = assetLegend.find(entry => entry.path === asset.path)?.original;
       return { kind: asset.kind, role: imageUses.find(use => use.url === original)?.role || asset.role };
     });
-    const uiCompositions = creative && useNext && sitePurpose === 'shop' ? this.composeUi({
+    const compositionInput: SourceCompositionInput = {
       seed: `${storeId}:${dto.revision}:${dto.instruction}`, brief: dto.brief, instruction: dto.instruction,
       catalogItemCount: data.items.length, assets: compositionAssets,
-    }) : [];
+    };
+    const uiCompositions = creative && useNext && sitePurpose === 'shop' ? this.composeUi(compositionInput) : [];
     const uiComposition = uiCompositions[0];
     const previousDesign = savedSourceDesign((previous?.snapshot as any)?.files);
     // Rebuild guidance from the brief/concept, never from a retired preset manifest.
@@ -495,6 +496,12 @@ export class SourceGenerationService {
         visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), committedDesign);
         taskPrompt += `\nUpdated visual system after concept selection. This newer manifest is authoritative:\n${sourceVisualSystemContext(visualSystem)}`;
         const chosen = committedDesign.concepts[committedDesign.selected];
+        // The recipe was picked before the concept existed; prefer families that serve the grammar it committed to.
+        const grammar = chosen.dna?.layout.grammar;
+        const regrammed = uiComposition && grammar ? this.composeUi({ ...compositionInput, grammar })[0] : undefined;
+        if (uiComposition && regrammed && (regrammed.family !== uiComposition.family || regrammed.direction !== uiComposition.direction)) {
+          taskPrompt = taskPrompt.replace(sourceUiCompositionRecipe(uiComposition), sourceUiCompositionRecipe(regrammed));
+        }
         taskPrompt = `Implement this committed concept literally. Its layout, typography, image roles and mobile plan were chosen in a separate exploration. Do not replace it with your default layout. Return source files, not new concepts. Selected concept: ${JSON.stringify(chosen)}\nRequired direct main block IDs, in order: ${chosen.layout!.sections.join(', ')}. Use these exact IDs in ${useNext ? 'components/home.tsx' : 'index.html'}; do not rename them to catalogo or generic labels. Put header/navigation outside main ${sitePurpose === 'shop' ? 'and the real catalog' : 'and the principal content'} inside #${chosen.layout!.catalogSection}.\n${taskPrompt}`;
       }
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;

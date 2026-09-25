@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 import { SOURCE_COMPOSITION_FAMILIES, SOURCE_COMPOSITION_PLANNING, sourceUiCompositions, sourceUiCompositionRecipe } from './source-composition-registry';
 
+import { SOURCE_DNA_ENUMS } from './source-dna';
+import { SOURCE_FONT_CATALOG } from './source-font-catalog';
+
 const photos = (count: number) => Array.from({ length: count }, () => ({ kind: 'image', role: 'product' }));
 
 describe('composition selection', () => {
@@ -156,6 +159,50 @@ describe('no stock eyebrow in the examples a model copies', () => {
   it('never hands a recipe an eyebrow prop', () => {
     for (const family of SOURCE_COMPOSITION_FAMILIES) for (const direction of family.directions) {
       expect(sourceUiCompositionRecipe({ ...direction, family: family.id, direction: direction.direction })).not.toMatch(/eyebrow/i);
+    }
+  });
+});
+
+describe('grammar-aligned families', () => {
+  const byId = (id: string) => SOURCE_COMPOSITION_FAMILIES.find(family => family.id === id)!;
+  const fields = ['direction', 'minImages', 'scene', 'header', 'hero', 'catalog', 'card', 'fx', 'signature', 'footer', 'radius', 'rhythm', 'typography', 'mobile', 'assetPlan', 'sections'] as const;
+
+  it('adds five families beyond the original four, each with 3–4 complete directions', () => {
+    expect(SOURCE_COMPOSITION_FAMILIES.length).toBeGreaterThanOrEqual(9);
+    for (const id of ['poster-loud', 'magazine-spread', 'collage-cutout', 'brutalist-raw', 'index-archive']) {
+      const family = byId(id);
+      expect(family.directions.length).toBeGreaterThanOrEqual(3);
+      expect(family.directions.length).toBeLessThanOrEqual(4);
+      for (const direction of family.directions) for (const field of fields) expect(direction[field]).toBeDefined();
+      expect(family.directions.some(direction => direction.minImages === 0)).toBe(true);
+    }
+  });
+
+  it('serves every DNA layout grammar with at least one family', () => {
+    for (const grammar of SOURCE_DNA_ENUMS.layout.grammar) expect(SOURCE_COMPOSITION_FAMILIES.some(family => family.grammars.includes(grammar))).toBe(true);
+    for (const family of SOURCE_COMPOSITION_FAMILIES) for (const grammar of family.grammars) expect(SOURCE_DNA_ENUMS.layout.grammar).toContain(grammar);
+  });
+
+  it("prefers families that match the chosen concept's grammar", () => {
+    const input = { seed: 'store:9', brief: 'Tienda de barrio', assets: photos(3), catalogItemCount: 6 };
+    expect(sourceUiCompositions(input)[0].family).not.toBe('brutalist-raw');
+    expect(sourceUiCompositions({ ...input, grammar: 'brutalist' })[0].family).toBe('brutalist-raw');
+    expect(sourceUiCompositions({ ...input, grammar: 'magazine' })[0].family).toBe('magazine-spread');
+    expect(sourceUiCompositions({ ...input, grammar: 'collage' }).every(s => s.family === 'collage-cutout')).toBe(true);
+    // An unknown grammar is ignored rather than trusted.
+    expect(sourceUiCompositions({ ...input, grammar: 'nonsense' })).toEqual(sourceUiCompositions(input));
+  });
+
+  it('picks the new families from the brief alone when it fits them', () => {
+    expect(sourceUiCompositions({ brief: 'Tienda de discos y vinilos', assets: photos(3), catalogItemCount: 6 })[0].family).toBe('poster-loud');
+    expect(sourceUiCompositions({ brief: 'Ropa vintage y antigüedades', assets: photos(3), catalogItemCount: 6 })[0].family).toBe('index-archive');
+  });
+
+  it('names only catalogued fonts in the new directions', () => {
+    const families = SOURCE_FONT_CATALOG.map(font => font.family).sort((a, b) => b.length - a.length);
+    for (const id of ['poster-loud', 'magazine-spread', 'collage-cutout', 'brutalist-raw', 'index-archive']) for (const direction of byId(id).directions) {
+      const named = direction.typography!.split(/\s*\/\s*/).map(part => part.replace(/\s+(display|text)$/, ''));
+      for (const name of named) expect(families).toContain(name);
     }
   });
 });
