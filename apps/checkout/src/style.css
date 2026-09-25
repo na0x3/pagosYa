@@ -6,47 +6,10 @@
   font-display: swap;
 }
 
-/* Dark gray is the default look everywhere, matching the pagosYaWeb site.
-   Storefront canvases may switch to the light palette when their brand color
-   needs dark text for accessible contrast. */
+/* pagosYa is light everywhere. The dark tokens below are not a theme choice:
+   a storefront switches to them only when the merchant's own brand canvas is
+   dark, so the text on it stays readable. */
 :root {
-  color-scheme: dark;
-  --pg-bg: #171717;
-  --pg-page-bg: #0a0a0a;
-  --pg-page-background: var(--pg-page-bg);
-  --pg-border: #404040;
-  --pg-border-strong: #525252;
-  --pg-text: #f5f5f5;
-  --pg-text-muted: #a3a3a3;
-  --pg-text-faint: #8c8c8c;
-  --pg-primary: #f5f5f5;
-  --pg-primary-hover: #fafafa;
-  --pg-primary-text: #171717;
-  --pg-accent: #818cf8;
-  --pg-accent-contrast: #09090b;
-  --pg-accent-soft: #1e1b4b;
-  --pg-success: #34d399;
-  --pg-success-soft: #052e1f;
-  --pg-success-border: #065f46;
-  --pg-warning: #fbbf24;
-  --pg-warning-soft: #2c1a04;
-  --pg-warning-border: #78350f;
-  --pg-error: #f87171;
-  --pg-error-soft: #2c0b0b;
-  --pg-error-border: #7f1d1d;
-  --pg-focus-ring: rgba(129, 140, 248, 0.35);
-  --pg-accent-2: #c084fc;
-  --pg-rose: #f472b6;
-  --pg-rose-soft: #4a0d2e;
-  --pg-teal: #2dd4bf;
-  --pg-teal-soft: #042f2c;
-  --pg-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --pg-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  /* Keep interactive controls on the browser's familiar native hand pointer. */
-  --pg-hand-cursor: pointer;
-}
-
-:root[data-theme="light"] {
   color-scheme: light;
   --pg-bg: #fbfbfa;
   --pg-page-bg: #f5f5f5;
@@ -76,8 +39,45 @@
   --pg-rose-soft: #fdf2f8;
   --pg-teal: #0d9488;
   --pg-teal-soft: #f0fdfa;
+  --pg-page-background: var(--pg-page-bg);
+  --pg-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --pg-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* Keep interactive controls on the browser's familiar native hand pointer. */
   --pg-hand-cursor: pointer;
 }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --pg-bg: #171717;
+  --pg-page-bg: #0a0a0a;
+  --pg-border: #404040;
+  --pg-border-strong: #525252;
+  --pg-text: #f5f5f5;
+  --pg-text-muted: #a3a3a3;
+  --pg-text-faint: #8c8c8c;
+  --pg-primary: #f5f5f5;
+  --pg-primary-hover: #fafafa;
+  --pg-primary-text: #171717;
+  --pg-accent: #818cf8;
+  --pg-accent-contrast: #09090b;
+  --pg-accent-soft: #1e1b4b;
+  --pg-success: #34d399;
+  --pg-success-soft: #052e1f;
+  --pg-success-border: #065f46;
+  --pg-warning: #fbbf24;
+  --pg-warning-soft: #2c1a04;
+  --pg-warning-border: #78350f;
+  --pg-error: #f87171;
+  --pg-error-soft: #2c0b0b;
+  --pg-error-border: #7f1d1d;
+  --pg-focus-ring: rgba(129, 140, 248, 0.35);
+  --pg-accent-2: #c084fc;
+  --pg-rose: #f472b6;
+  --pg-rose-soft: #4a0d2e;
+  --pg-teal: #2dd4bf;
+  --pg-teal-soft: #042f2c;
+}
+
 
 * {
   box-sizing: border-box;

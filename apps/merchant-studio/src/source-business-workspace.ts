@@ -1,6 +1,5 @@
 import { MerchantStudioApi, SESSION_STORAGE_KEY, type SourceState, type SourceGenerationSettings, type AnalyticsField, type MerchantStore } from './api';
 import { externalIntegrations } from './integration-catalog';
-import { inheritResourceTheme } from './source-resource-theme';
 import { escapeHtml as esc } from './studio-ui';
 import { API_BASE_URL } from './api';
 import { openRetention } from './retention';
@@ -18,7 +17,6 @@ const icons: Record<string, string> = { mail: '<rect x="3" y="5" width="18" heig
 const icon = (name: string) => `<span class="business-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.mail}</svg></span>`;
 const money = (amount: number, currency: string) => new Intl.NumberFormat('es-BO', { style: 'currency', currency }).format(amount / 100);
 export async function mountBusinessWorkspace(app: HTMLDivElement) {
-    inheritResourceTheme();
     document.body.className = 'store-resource-body business-workspace-body';
     const params = new URLSearchParams(location.search), storeId = params.get('store') || '', kind = params.get('library'), tab = params.get('tab') || 'templates';
     const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');

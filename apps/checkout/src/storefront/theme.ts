@@ -143,16 +143,16 @@ export function applyStoreTheme(slug: string, store: Store): void {
   // Storefront branding is per-store, not per-page. Set it for both the
   // catalog and product routes so a shared product link still feels wholly
   // owned by the merchant and never inherits another store's appearance.
-  const solidBackground = siteDocument?.theme.pageBackground || store.backgroundColor || "#0a0a0a";
+  const solidBackground = siteDocument?.theme.pageBackground || store.backgroundColor || "#f5f5f5";
   document.documentElement.style.setProperty("--pg-page-bg", solidBackground);
   const pageTheme = { background: solidBackground, ...backgroundTheme(solidBackground) };
   document.documentElement.style.setProperty("--pg-page-background", pageTheme.background);
   // The store canvas is always color-led. Legacy backgroundImageUrl values are
   // intentionally ignored; photography belongs to heroes and story sections.
   document.body.classList.remove("has-bg-image");
-  const useLightTheme = pageTheme.light;
-  if (useLightTheme) document.documentElement.dataset.theme = "light";
-  else delete document.documentElement.dataset.theme;
+  // Light is the default; only a merchant's own dark canvas needs the on-dark tokens.
+  if (pageTheme.light) delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = "dark";
   // Storefront copy is deliberately binary: never let a generic gray token
   // drift into a merchant canvas where it can blend with a mid-tone color.
   // The higher-contrast choice between pure black and pure white becomes the
@@ -168,7 +168,7 @@ export function applyStoreTheme(slug: string, store: Store): void {
     document.documentElement.style.setProperty("--pg-accent-2", effectiveAccent);
     document.documentElement.style.setProperty("--pg-accent-contrast", accentContrastColor(effectiveAccent));
   } else {
-    const palette = DEFAULT_ACCENT_PALETTES[useLightTheme ? "light" : "dark"];
+    const palette = DEFAULT_ACCENT_PALETTES[pageTheme.light ? "light" : "dark"];
     document.documentElement.style.setProperty("--pg-accent", palette.accent);
     document.documentElement.style.setProperty("--pg-accent-2", palette.accent2);
     document.documentElement.style.setProperty("--pg-accent-contrast", palette.contrast);

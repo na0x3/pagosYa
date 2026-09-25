@@ -1,4 +1,3 @@
-:root[data-resource-theme="dark"] { color-scheme:dark; --resource-paper:#171815; --resource-surface:#20211e; --resource-ink:#f8f8f2; --resource-line:#484a40; --resource-soft:#262722; --resource-muted:#c3c4b7; }
 body.store-resource-body { display:block; margin:0; padding:4px; min-height:0; height:auto; background:var(--resource-paper,#f8f8f2); color:var(--resource-ink,#20211e); font:14px/1.6 Arial,sans-serif; overflow:auto; }
 .store-resource-body #app { height:auto; min-height:0; }
 .store-resource-body * { box-sizing:border-box; }

@@ -2960,7 +2960,7 @@ describe("storefront routes", () => {
     expect(document.documentElement.style.getPropertyValue("--pg-page-bg")).toBe("#f4ead7");
     expect(document.documentElement.style.getPropertyValue("--pg-page-bg-image")).toBe("");
     // Theme contrast follows the brand canvas color, never a photograph.
-    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.documentElement.dataset.theme).toBeUndefined();
 
     const palette = getComputedStyle(document.documentElement);
     const foreground = palette.getPropertyValue("--pg-accent-contrast").trim();
@@ -4709,11 +4709,11 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-links")).toBeFalsy();
     expect(document.querySelector(".store-about")).toBeFalsy();
     expect(document.body.classList.contains("has-custom-accent")).toBe(false);
-    expect(document.documentElement.style.getPropertyValue("--pg-accent")).toBe("#818cf8");
+    expect(document.documentElement.style.getPropertyValue("--pg-accent")).toBe("#4f46e5");
 
     const palette = getComputedStyle(document.documentElement);
     const foreground = palette.getPropertyValue("--pg-accent-contrast").trim();
-    expect(foreground).toBe("#000000");
+    expect(foreground).toBe("#ffffff");
     expect(contrastRatio(foreground, palette.getPropertyValue("--pg-accent").trim())).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(foreground, palette.getPropertyValue("--pg-accent-2").trim())).toBeGreaterThanOrEqual(4.5);
   });
@@ -4890,7 +4890,7 @@ describe("storefront routes", () => {
     await loadCheckout("/?link=cream-background");
 
     expect(document.documentElement.style.getPropertyValue("--pg-page-bg")).toBe("#f4ead7");
-    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.body.dataset.boardTexture).toBe("kraft");
     expect(document.documentElement.style.getPropertyValue("--pg-text")).toBe("#000000");
     expect(document.documentElement.style.getPropertyValue("--pg-text-muted")).toBe("#000000");
@@ -4911,7 +4911,7 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=dark-background");
 
-    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.dataset.theme).toBe("dark");
     expect(document.documentElement.style.getPropertyValue("--pg-text")).toBe("#ffffff");
     expect(document.documentElement.style.getPropertyValue("--pg-text-muted")).toBe("#ffffff");
     expect(document.documentElement.style.getPropertyValue("--pg-text-faint")).toBe("#ffffff");

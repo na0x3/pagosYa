@@ -1,4 +1,3 @@
-import { inheritResourceTheme } from './source-resource-theme';
 import { API_BASE_URL, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
 import type { SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml as escape } from './studio-ui';
@@ -70,7 +69,6 @@ export function collectStoreResources(snapshot: SourceSnapshot | undefined, cata
 }
 
 export async function mountSourceLibrary(app: HTMLDivElement) {
-  inheritResourceTheme();
   document.body.className = 'store-resource-body';
   const params = new URLSearchParams(location.search), storeId = params.get('store') || '', mode = params.get('library');
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');

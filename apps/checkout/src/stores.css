@@ -6,17 +6,17 @@
 }
 
 :root {
-  color-scheme: dark;
-  --ink: #f5f5f5;
-  --muted: #b0b0b0;
-  --faint: #8c8c8c;
-  --ground: #080808;
-  --panel: #151515;
-  --line: #404040;
-  --line-strong: #f5f5f5;
+  color-scheme: light;
+  --ink: #050505;
+  --muted: #3f3f46;
+  --faint: #52525b;
+  --ground: #eee7dc;
+  --panel: #fffaf2;
+  --line: #d6cdbf;
+  --line-strong: #050505;
   --amber: #ffbd59;
   --amber-hover: #ffab2e;
-  --focus: #818cf8;
+  --focus: #4f46e5;
 }
 
 * { box-sizing: border-box; }
@@ -25,7 +25,7 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: "0x
 button, input, a { font: inherit; }
 button, a { cursor: pointer; }
 a { color: inherit; }
-.skip-link { position: fixed; inset: 10px auto auto 10px; z-index: 10; padding: 9px 12px; background: var(--ink); color: #111; transform: translateY(-160%); }
+.skip-link { position: fixed; inset: 10px auto auto 10px; z-index: 10; padding: 9px 12px; background: var(--ink); color: #fff; transform: translateY(-160%); }
 .skip-link:focus { transform: translateY(0); outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .directory-nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; max-width: 1440px; margin: 0 auto; padding: 22px clamp(18px, 4vw, 56px); border-bottom: 1px solid var(--line); color: var(--muted); font-size: .76rem; }

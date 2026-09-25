@@ -1,10 +1,8 @@
-import { inheritResourceTheme } from './source-resource-theme';
 import { MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
 import { createProductForm, type ProductGuideRecord } from './source-create-product';
 import './source-library.css';
 
 export function mountProductGuide(app: HTMLDivElement) {
-  inheritResourceTheme();
   document.body.className = 'store-resource-body product-guide-body';
   const storeId = new URLSearchParams(location.search).get('store') || '';
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');

@@ -29,7 +29,7 @@ function renderPage(clientSecret, checkoutOrigin) {
 <title>pagosYa - Demostración de cobro</title>
 <style>
   @font-face { font-family: "0xProto Mono"; src: url("/fonts/0xProtoNerdFontMono-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
-  :root { color-scheme: dark; --bg:#0a0a0a; --surface:#171717; --surface-soft:#202020; --border:#404040; --text:#f5f5f5; --muted:#a3a3a3; --faint:#8c8c8c; --amber:#ffbd59; --amber-text:#241804; --indigo:#818cf8; --success:#34d399; --error:#f87171; }
+  :root { color-scheme: light; --bg:#eee7dc; --surface:#fffaf2; --surface-soft:#f5eee3; --border:#d6cdbf; --text:#050505; --muted:#3f3f46; --faint:#52525b; --amber:#ffbd59; --amber-text:#241804; --indigo:#4f46e5; --success:#0f7a52; --error:#c62828; }
   * { box-sizing: border-box; }
   body { min-width:320px; min-height:100dvh; margin:0; background:var(--bg); color:var(--text); font-family:"0xProto Mono",ui-monospace,"SF Mono",Menlo,monospace; -webkit-font-smoothing:antialiased; }
   body::before { content:""; position:fixed; inset:0; z-index:-1; background:radial-gradient(circle at 15% 5%,rgba(255,189,89,.11),transparent 30rem),linear-gradient(rgba(255,189,89,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,189,89,.035) 1px,transparent 1px); background-size:auto,44px 44px,44px 44px; mask-image:linear-gradient(to bottom,#000,transparent 80%); }
@@ -44,7 +44,7 @@ function renderPage(clientSecret, checkoutOrigin) {
   .order { display:grid; gap:14px; padding:18px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
   .order-row { display:flex; justify-content:space-between; gap:20px; color:var(--muted); font-size:.8rem; }
   .order-row strong { color:var(--text); font-variant-numeric:tabular-nums; }
-  .payment-shell { padding:12px; border:1px solid var(--border); border-radius:16px; background:color-mix(in srgb,var(--surface) 94%,var(--indigo)); box-shadow:0 28px 80px -50px rgba(0,0,0,.95); }
+  .payment-shell { padding:12px; border:1px solid var(--border); border-radius:16px; background:color-mix(in srgb,var(--surface) 94%,var(--indigo)); box-shadow:0 28px 80px -50px rgba(37,33,28,.45); }
   .payment-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px 8px 16px; }
   .payment-heading h2 { margin:0; font-size:.92rem; }
   .payment-heading span { color:var(--faint); font-size:.68rem; }
