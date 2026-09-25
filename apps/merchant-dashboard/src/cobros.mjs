@@ -76,40 +76,21 @@ export function cobroState(doc, now = new Date()) {
 
 export const STATE_LABEL = { draft: "Borrador", open: "Por cobrar", overdue: "Vencido", paid: "Pagado", voided: "Anulado", closed: "Cerrado" };
 
-/** @param {CobroRow[]} list @param {"all" | "open" | "overdue" | "paid"} filter @param {Date} [now] */
-export function filterCobros(list, filter, now = new Date()) {
-  if (filter === "all") return list;
-  return list.filter((doc) => {
-    const state = cobroState(doc, now);
-    if (filter === "open") return state === "open" || state === "overdue";
-    return state === filter;
-  });
-}
-
-/** @param {CobroRow[]} list @param {Date} [now] */
-export function cobroCounts(list, now = new Date()) {
-  return {
-    all: list.length,
-    open: filterCobros(list, "open", now).length,
-    overdue: filterCobros(list, "overdue", now).length,
-    paid: filterCobros(list, "paid", now).length,
-  };
-}
-
 /**
- * Bolivianos only (a USD cobro is rare and would mix currencies); collected = paid in the last 30 days.
- * @param {CobroRow[]} list @param {Date} [now]
+ * What the list and the detail flag about a cobro's payment (from the API's `payment` flags):
+ * a test-mode payment, and payments the merchant has to refund or reconcile.
+ * @param {{ status: string, payment?: { testMode?: boolean, manual?: boolean, afterClose?: boolean, mismatch?: boolean } }} doc
+ * @returns {{ label: string, tone: "warning" | "test" } | null}
  */
-export function cobroSummary(list, now = new Date()) {
-  const bob = list.filter((doc) => (doc.currency || "BOB") === "BOB");
-  const sum = (/** @type {CobroRow[]} */ rows) => rows.reduce((total, doc) => total + (doc.totalAmount || 0), 0);
-  const since = now.getTime() - 30 * DAY_MS;
-  return {
-    owed: sum(filterCobros(bob, "open", now)),
-    overdue: sum(filterCobros(bob, "overdue", now)),
-    collected: sum(bob.filter((doc) => doc.status === "PAID" && doc.paidAt && new Date(doc.paidAt).getTime() >= since)),
-  };
+export function paymentBadge(doc) {
+  const payment = doc.payment || {};
+  if (payment.afterClose) return { label: doc.status === "VOIDED" ? "Pago recibido tras anular — reembolsar" : "Pago repetido — reembolsar", tone: "warning" };
+  if (payment.mismatch) return { label: "Pago de otra versión — revisar", tone: "warning" };
+  if (payment.testMode && doc.status === "PAID") return { label: "Pago de prueba", tone: "test" };
+  return null;
 }
+
+export const PAYMENT_METHOD_LABEL = { cash: "efectivo", transfer: "transferencia", other: "otro medio" };
 
 /** @param {string} iso */
 export function shortDate(iso) {
@@ -184,7 +165,15 @@ export function timelineEntries(events) {
         break;
       case "checkout_started": entry = ["Tu cliente empezó a pagar", "neutral"]; break;
       case "paid": entry = [data.livemode === false ? "Pagado · pago de prueba" : "Pagado", "good"]; break;
-      case "payment_after_close": entry = ["Llegó un pago con el cobro ya cerrado: revísalo y reembolsa si corresponde", "warning"]; break;
+      case "payment_after_close": entry = ["Llegó un pago con el cobro ya cerrado (anulado o ya pagado): reembólsalo", "warning"]; break;
+      case "payment_mismatch": entry = ["Llegó un pago por otra versión o monto del cobro: revísalo y reembolsa si corresponde", "warning"]; break;
+      case "paid_manually": {
+        const method = PAYMENT_METHOD_LABEL[/** @type {"cash" | "transfer" | "other"} */ (data.method)];
+        entry = [["Marcado como pagado", method, data.reference].filter(Boolean).join(" · "), "good"];
+        break;
+      }
+      case "reminders_off": entry = ["Recordatorios automáticos apagados", "neutral"]; break;
+      case "reminders_on": entry = ["Recordatorios automáticos encendidos", "neutral"]; break;
       case "overdue": entry = ["Venció sin pago", "warning"]; break;
       case "voided": entry = [data.reason ? `Anulado: ${data.reason}` : "Anulado", "bad"]; break;
       default: entry = null;
@@ -203,30 +192,57 @@ export function cobroTitle(items) {
 }
 
 /**
- * @typedef {{ description: string, quantity: number, unitAmount: number | null, paymentLinkId?: string | null }} DraftItem
- * @typedef {{ customer: { name: string, email?: string, phone?: string, businessCustomerId?: string | null }, items: DraftItem[], dueAt?: string | null, note?: string, autoReminders?: boolean }} CobroDraft
+ * @typedef {{ description: string, quantity: number, unitAmount: number | null, priceText?: string, paymentLinkId?: string | null }} DraftItem
+ * @typedef {{ customer: { name: string, email?: string, phone?: string, document?: string, businessCustomerId?: string | null }, items: DraftItem[], dueAt?: string | null, note?: string, autoReminders?: boolean }} CobroDraft
+ */
+
+/** A line the cobro charges: it has both a description and a price. @param {DraftItem} item */
+const isChargedLine = (item) => Boolean(item.description.trim()) && (item.unitAmount ?? 0) > 0;
+/** @param {DraftItem} item */
+const lineQuantity = (item) => Math.max(1, Math.round(item.quantity || 1));
+
+/**
+ * The inline error of one line, or null. A blank line is ignored; a half-filled one never is.
+ * @param {DraftItem} item
+ */
+export function lineProblem(item) {
+  const described = Boolean(item.description.trim());
+  const typedPrice = Boolean(String(item.priceText ?? "").trim());
+  const priced = (item.unitAmount ?? 0) > 0;
+  if (!described && !priced && !typedPrice) return null;
+  if (described && !priced) return typedPrice && item.unitAmount == null ? "Revisa el precio: escribe solo el número, por ejemplo 150,50." : "Falta el precio de esta línea.";
+  if (!described) return "Falta la descripción de esta línea.";
+  return null;
+}
+
+/** The live total: exactly the lines buildCobroPayload sends. @param {DraftItem[]} items */
+export function cobroTotal(items) {
+  return items.filter(isChargedLine).reduce((sum, item) => sum + /** @type {number} */ (item.unitAmount) * lineQuantity(item), 0);
+}
+
+/**
+ * Contact fields are always sent — a cleared one as null — because an omitted field is filled
+ * from the CRM row the customer was picked from, and a cleared one must stay cleared.
  * @param {CobroDraft} draft
  */
 export function buildCobroPayload(draft) {
   const items = draft.items
-    .filter((item) => item.description.trim() && (item.unitAmount ?? 0) > 0)
+    .filter(isChargedLine)
     .map((item) => ({
       description: item.description.trim(),
-      quantity: Math.max(1, Math.round(item.quantity || 1)),
+      quantity: lineQuantity(item),
       unitAmount: /** @type {number} */ (item.unitAmount),
       ...(item.paymentLinkId ? { paymentLinkId: item.paymentLinkId } : {}),
     }));
   const note = draft.note?.trim();
-  // Blank contact fields are omitted: the API validates an email whenever one is sent.
-  const email = draft.customer.email?.trim().toLowerCase();
-  const phone = draft.customer.phone?.trim();
   return {
     kind: "INVOICE",
     title: cobroTitle(items),
     ...(draft.customer.businessCustomerId ? { businessCustomerId: draft.customer.businessCustomerId } : {}),
     customerName: draft.customer.name.trim(),
-    ...(email ? { customerEmail: email } : {}),
-    ...(phone ? { customerPhone: phone } : {}),
+    customerEmail: draft.customer.email?.trim().toLowerCase() || null,
+    customerPhone: draft.customer.phone?.trim() || null,
+    customerDocument: draft.customer.document?.trim() || null,
     items,
     ...(draft.dueAt ? { dueAt: draft.dueAt } : {}),
     autoReminders: draft.autoReminders !== false,
@@ -234,12 +250,14 @@ export function buildCobroPayload(draft) {
   };
 }
 
-/** @param {CobroDraft} draft */
-export function validateCobroDraft(draft) {
+/** @param {CobroDraft} draft @param {Date} [now] */
+export function validateCobroDraft(draft, now = new Date()) {
   const problems = [];
   if (!draft.customer.name?.trim()) problems.push("¿A quién le cobras? Escribe su nombre.");
   const email = draft.customer.email?.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push("Revisa el correo del cliente.");
-  if (!draft.items.some((item) => item.description.trim() && (item.unitAmount ?? 0) > 0)) problems.push("Agrega al menos un producto o servicio con precio.");
+  if (draft.items.some((item) => lineProblem(item))) problems.push("Revisa las líneas marcadas: cada una necesita descripción y precio.");
+  else if (!draft.items.some(isChargedLine)) problems.push("Agrega al menos un producto o servicio con precio.");
+  if (draft.dueAt && new Date(draft.dueAt).getTime() < now.getTime()) problems.push("La fecha de vencimiento ya pasó. Elige hoy o una fecha futura.");
   return problems;
 }

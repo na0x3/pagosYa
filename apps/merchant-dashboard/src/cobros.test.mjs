@@ -2,16 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildCobroPayload,
-  cobroCounts,
   cobroState,
-  cobroSummary,
   cobroTitle,
+  cobroTotal,
   dueDateFromInput,
   dueDateFromPreset,
   dueLine,
-  filterCobros,
   formatMoney,
+  lineProblem,
   parseMoney,
+  paymentBadge,
   timelineEntries,
   validateCobroDraft,
   whatsAppMessage,
@@ -62,21 +62,13 @@ test("the state a merchant cares about", () => {
   assert.equal(cobroState(doc({ status: "VOIDED" }), NOW), "voided");
 });
 
-test("filters and counts: Por cobrar includes overdue, drafts only show under Todos", () => {
-  const list = [
-    doc({ id: "a" }),
-    doc({ id: "b", status: "OVERDUE", totalAmount: 5000 }),
-    doc({ id: "c", status: "PAID", paidAt: "2026-09-20T10:00:00Z", totalAmount: 7000 }),
-    doc({ id: "d", status: "PAID", paidAt: "2026-07-01T10:00:00Z", totalAmount: 9000 }),
-    doc({ id: "e", status: "DRAFT" }),
-    doc({ id: "f", status: "VOIDED" }),
-  ];
-  assert.deepEqual(filterCobros(list, "all", NOW).map((row) => row.id), ["a", "b", "c", "d", "e", "f"]);
-  assert.deepEqual(filterCobros(list, "open", NOW).map((row) => row.id), ["a", "b"]);
-  assert.deepEqual(filterCobros(list, "overdue", NOW).map((row) => row.id), ["b"]);
-  assert.deepEqual(filterCobros(list, "paid", NOW).map((row) => row.id), ["c", "d"]);
-  assert.deepEqual(cobroCounts(list, NOW), { all: 6, open: 2, overdue: 1, paid: 2 });
-  assert.deepEqual(cobroSummary(list, NOW), { owed: 15000, overdue: 5000, collected: 7000 });
+test("a paid cobro says when it was a test payment or needs a refund", () => {
+  assert.equal(paymentBadge(doc({ status: "PAID", payment: { testMode: true } })).label, "Pago de prueba");
+  assert.deepEqual(paymentBadge(doc({ status: "VOIDED", payment: { afterClose: true } })), { label: "Pago recibido tras anular — reembolsar", tone: "warning" });
+  assert.equal(paymentBadge(doc({ status: "PAID", payment: { afterClose: true } })).label, "Pago repetido — reembolsar");
+  assert.equal(paymentBadge(doc({ status: "VIEWED", payment: { mismatch: true } })).label, "Pago de otra versión — revisar");
+  assert.equal(paymentBadge(doc({ status: "PAID", payment: { manual: true } })), null);
+  assert.equal(paymentBadge(doc()), null);
 });
 
 test("the due line reads like a person", () => {
@@ -124,7 +116,7 @@ test("the timeline speaks Spanish and flags a payment after closing", () => {
     "Recordatorio automático por correo (día de vencimiento)",
     "Tu cliente empezó a pagar",
     "Pagado · pago de prueba",
-    "Llegó un pago con el cobro ya cerrado: revísalo y reembolsa si corresponde",
+    "Llegó un pago con el cobro ya cerrado (anulado o ya pagado): reembólsalo",
   ]);
   assert.equal(entries[8].tone, "warning");
   assert.equal(entries[7].tone, "good");
@@ -148,6 +140,7 @@ test("a draft becomes the API payload, with a title from its items", () => {
     customerName: "Ana Quispe",
     customerEmail: "ana@example.com",
     customerPhone: "70000000",
+    customerDocument: null,
     items: [{ description: "Diseño", quantity: 2, unitAmount: 15000, paymentLinkId: "pl_1" }],
     dueAt: "2026-10-03T03:59:59.000Z",
     autoReminders: true,
@@ -155,11 +148,30 @@ test("a draft becomes the API payload, with a title from its items", () => {
   });
 });
 
-test("blank contact fields are left out, since the API validates an email when present", () => {
-  const payload = buildCobroPayload({ customer: { name: "Beto", email: "  ", phone: "" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }], dueAt: null });
-  assert.equal("customerEmail" in payload, false);
-  assert.equal("customerPhone" in payload, false);
+test("contact fields are always sent: a cleared one as null, so it never falls back to the CRM row", () => {
+  const payload = buildCobroPayload({ customer: { name: "Beto", email: "  ", phone: "", document: " 4567890 ", businessCustomerId: "cust_1" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }], dueAt: null });
+  assert.equal(payload.customerEmail, null);
+  assert.equal(payload.customerPhone, null);
+  assert.equal(payload.customerDocument, "4567890");
+  assert.equal(payload.businessCustomerId, "cust_1");
   assert.equal("dueAt" in payload, false);
+});
+
+test("a line needs both a description and a price, and the total counts exactly the lines the payload sends", () => {
+  assert.equal(lineProblem({ description: "", quantity: 1, unitAmount: null, priceText: "" }), null);
+  assert.equal(lineProblem({ description: "Envío", quantity: 1, unitAmount: null, priceText: "" }), "Falta el precio de esta línea.");
+  assert.equal(lineProblem({ description: "Envío", quantity: 1, unitAmount: null, priceText: "abc" }), "Revisa el precio: escribe solo el número, por ejemplo 150,50.");
+  assert.equal(lineProblem({ description: "  ", quantity: 1, unitAmount: 2550, priceText: "25,50" }), "Falta la descripción de esta línea.");
+  assert.equal(lineProblem({ description: "Envío", quantity: 2, unitAmount: 2550, priceText: "25,50" }), null);
+  const items = [
+    { description: "Diseño", quantity: 2, unitAmount: 15000 },
+    { description: "", quantity: 1, unitAmount: 9900 }, // a price without description is not charged
+    { description: "Envío", quantity: 1, unitAmount: null },
+    { description: "Tarjetas", quantity: 1.4, unitAmount: 1000 },
+  ];
+  const payload = buildCobroPayload({ customer: { name: "Ana" }, items, dueAt: null });
+  assert.equal(cobroTotal(items), payload.items.reduce((sum, item) => sum + item.quantity * item.unitAmount, 0));
+  assert.equal(cobroTotal(items), 31000);
 });
 
 test("the draft says what is missing, in plain words", () => {
@@ -169,4 +181,29 @@ test("the draft says what is missing, in plain words", () => {
   ]);
   assert.deepEqual(validateCobroDraft({ customer: { name: "Ana", email: "ana@" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }] }), ["Revisa el correo del cliente."]);
   assert.deepEqual(validateCobroDraft({ customer: { name: "Ana" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }] }), []);
+  // A half-filled line is never silently dropped.
+  assert.deepEqual(validateCobroDraft({ customer: { name: "Ana" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }, { description: "", quantity: 1, unitAmount: 500, priceText: "5" }] }), ["Revisa las líneas marcadas: cada una necesita descripción y precio."]);
+});
+
+test("a due date in the past is refused", () => {
+  const ok = { customer: { name: "Ana" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }] };
+  assert.deepEqual(validateCobroDraft({ ...ok, dueAt: dueDateFromInput("2026-09-24") }, NOW), ["La fecha de vencimiento ya pasó. Elige hoy o una fecha futura."]);
+  assert.deepEqual(validateCobroDraft({ ...ok, dueAt: dueDateFromInput("2026-09-25") }, NOW), []);
+});
+
+test("the timeline names a payment by hand, a mismatch and the reminders switch", () => {
+  const labels = timelineEntries([
+    { id: "1", type: "paid_manually", at: "2026-09-26T15:00:00Z", data: { method: "transfer", reference: "BNB 123" } },
+    { id: "2", type: "payment_mismatch", at: "2026-09-26T15:00:00Z", data: {} },
+    { id: "3", type: "reminders_off", at: "2026-09-26T15:00:00Z" },
+    { id: "4", type: "reminders_on", at: "2026-09-26T15:00:00Z" },
+    { id: "5", type: "paid_manually", at: "2026-09-26T15:00:00Z", data: { method: "cash" } },
+  ]).map((entry) => entry.label);
+  assert.deepEqual(labels, [
+    "Marcado como pagado · transferencia · BNB 123",
+    "Llegó un pago por otra versión o monto del cobro: revísalo y reembolsa si corresponde",
+    "Recordatorios automáticos apagados",
+    "Recordatorios automáticos encendidos",
+    "Marcado como pagado · efectivo",
+  ]);
 });
