@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
 import { addDays, boliviaDay, boliviaDayStart, dayCount } from './store-analytics-days';
 import { buildAnalyticsReport, ROLLUP_ALL } from './store-analytics-report';
-import { ANALYTICS_RETENTION_MONTHS } from './store-analytics.constants';
+import { ANALYTICS_RETENTION_MONTHS, ANALYTICS_SESSION_DAILY_CAP, ANALYTICS_SESSION_DAILY_PAGE_VIEW_CAP } from './store-analytics.constants';
 
 export type IngestContext = { userAgent?: string; gpc?: boolean };
 const PRUNE_BATCH = 5000;
@@ -44,7 +44,8 @@ export class StoreAnalyticsService {
    * Rebuilds the rollup of the last `days` Bolivia days (today included) from the raw rows: remove those days, insert
    * fresh ones, in one transaction under an advisory lock (a second instance skips). Running it again gives the same
    * rows. Each type also gets a (type, day) row with productId and target `*` whose sessions are distinct across every
-   * product and label (the report's totals and series read it). Derived rows from page_view: `_device` (target = device) and `_referrer` (target = the session's referrer
+   * product and label (the report's totals and series read it). One session adds at most 5 to a (type, product, label)
+   * count a day (20 page views), so a replaying script cannot inflate the numbers. Derived rows from page_view: `_device` (target = device) and `_referrer` (target = the session's referrer
    * host, or `direct`; count = sessions). createdAt is UTC wall time, so the Bolivia day is createdAt − 4 h; the
    * bounds are cast explicitly because the server's TimeZone setting is not UTC everywhere.
    */
@@ -60,18 +61,24 @@ export class StoreAnalyticsService {
           SELECT "storeId", ("createdAt" - interval '4 hours')::date AS day, "type", COALESCE("productId", '') AS "productId",
                  COALESCE("target", '') AS "target", "device", "referrerHost", "sessionHash"
           FROM "StoreAnalyticsEvent" WHERE "createdAt" >= (${since}::timestamptz AT TIME ZONE 'UTC')
+        ), s AS (
+          -- One row per session and (type, product, label) a day, its weight capped: a replayed click counts a few times at most.
+          SELECT "storeId", day, "type", "productId", "target", "sessionHash",
+                 LEAST(COUNT(*), CASE WHEN "type" = 'page_view' THEN ${ANALYTICS_SESSION_DAILY_PAGE_VIEW_CAP}::int ELSE ${ANALYTICS_SESSION_DAILY_CAP}::int END)::int AS n
+          FROM e GROUP BY "storeId", day, "type", "productId", "target", "sessionHash"
         ), r AS (
-          SELECT "storeId", day, "type", "productId", "target", COUNT(*)::int AS count, COUNT(DISTINCT "sessionHash")::int AS sessions
-          FROM e GROUP BY "storeId", day, "type", "productId", "target"
+          SELECT "storeId", day, "type", "productId", "target", SUM(n)::int AS count, COUNT(*)::int AS sessions
+          FROM s GROUP BY "storeId", day, "type", "productId", "target"
           UNION ALL
-          SELECT "storeId", day, "type", '*', '*', COUNT(*)::int, COUNT(DISTINCT "sessionHash")::int
-          FROM e GROUP BY "storeId", day, "type"
+          SELECT "storeId", day, "type", '*', '*', SUM(n)::int, COUNT(DISTINCT "sessionHash")::int
+          FROM s GROUP BY "storeId", day, "type"
           UNION ALL
-          SELECT "storeId", day, '_device', '', "device", COUNT(*)::int, COUNT(DISTINCT "sessionHash")::int
-          FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "device"
+          SELECT "storeId", day, '_device', '', "device", SUM(n)::int, COUNT(*)::int
+          FROM (SELECT "storeId", day, "device", "sessionHash", LEAST(COUNT(*), ${ANALYTICS_SESSION_DAILY_PAGE_VIEW_CAP}::int) AS n FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "device", "sessionHash") d
+          GROUP BY "storeId", day, "device"
           UNION ALL
           SELECT "storeId", day, '_referrer', '', COALESCE(ref, 'direct'), COUNT(*)::int, COUNT(*)::int
-          FROM (SELECT "storeId", day, "sessionHash", MAX("referrerHost") AS ref FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "sessionHash") s
+          FROM (SELECT "storeId", day, "sessionHash", MAX("referrerHost") AS ref FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "sessionHash") l
           GROUP BY "storeId", day, COALESCE(ref, 'direct')
         )
         INSERT INTO "StoreAnalyticsDaily" ("id", "storeId", "day", "type", "productId", "target", "count", "uniqueSessions", "updatedAt")

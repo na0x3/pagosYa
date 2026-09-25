@@ -98,4 +98,14 @@ describe('buildAnalyticsReport', () => {
     expect(oneShopper.topProducts.map(product => product.productId)).toEqual(['a', 'b', 'c']);
     expect(oneShopper.topCtas.map(cta => cta.target)).toEqual(['hero-cta', 'nav-cart']);
   });
+
+  it('ranks products by the sessions that viewed them, so one busy session cannot top the list', () => {
+    const ranked = buildAnalyticsReport([
+      row('2026-09-01', 'product_view', 50, 1, { productId: 'pushed' }),
+      row('2026-09-01', 'product_view', 3, 3, { productId: 'liked' }),
+      row('2026-09-01', 'product_view', 2, 2, { productId: 'added' }), row('2026-09-01', 'add_to_cart', 2, 2, { productId: 'added' }),
+      row('2026-09-01', 'product_view', 4, 2, { productId: 'browsed' }),
+    ], new Map(), '2026-09-01', '2026-09-01');
+    expect(ranked.topProducts.map(product => product.productId)).toEqual(['liked', 'added', 'browsed', 'pushed']);
+  });
 });

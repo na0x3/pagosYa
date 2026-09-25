@@ -17,3 +17,11 @@ export const ANALYTICS_PRODUCT_EVENTS: readonly AnalyticsEventType[] = ['product
 export const ANALYTICS_MAX_BATCH = 20;
 /** Raw events are kept 13 calendar months (umbrella decision 5); rollups are kept. */
 export const ANALYTICS_RETENTION_MONTHS = 13;
+
+/**
+ * What one session may weigh in a day's rollup, per (type, product, label): a script replaying the same click all
+ * day moves a count by at most this much. Page views have no product or label, and a real shopper browses many
+ * pages, so they get a wider cap.
+ */
+export const ANALYTICS_SESSION_DAILY_CAP = 5;
+export const ANALYTICS_SESSION_DAILY_PAGE_VIEW_CAP = 20;

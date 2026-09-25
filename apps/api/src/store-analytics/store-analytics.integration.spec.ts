@@ -38,6 +38,10 @@ harness.describeDb('store analytics rollup and retention (real Postgres)', () =>
         event('s2', 'C', 'page_view', '2026-09-01T14:00:00Z', { referrerHost: 'google.com' }),
         // One shopper, three products: one product_view session for the day, not three.
         ...['p1', 'p2', 'p3'].map(productId => event('s3', 'D', 'product_view', '2026-09-01T15:00:00Z', { productId })),
+        // A scripted session counts at most 5 times per (type, product, label) a day (20 for page views); a real one is untouched.
+        ...Array.from({ length: 8 }, () => event('s4', 'E', 'cta_click', '2026-09-01T16:00:00Z', { target: 'hero-cta' })),
+        event('s4', 'F', 'cta_click', '2026-09-01T16:00:00Z', { target: 'hero-cta' }),
+        ...Array.from({ length: 22 }, () => event('s4', 'G', 'page_view', '2026-09-01T16:00:00Z')),
         // Outside the window: never re-rolled, and its old rollup survives.
         event('s1', 'Z', 'page_view', '2026-08-30T10:00:00Z'),
       ] });
@@ -72,10 +76,16 @@ harness.describeDb('store analytics rollup and retention (real Postgres)', () =>
       's3 2026-09-01 product_view p1 - 1/1',
       's3 2026-09-01 product_view p2 - 1/1',
       's3 2026-09-01 product_view p3 - 1/1',
+      's4 2026-09-01 _device - desktop 20/1',
+      's4 2026-09-01 _referrer - direct 1/1',
+      's4 2026-09-01 cta_click - hero-cta 6/2',
+      's4 2026-09-01 cta_click * * 6/2',
+      's4 2026-09-01 page_view - - 20/1',
+      's4 2026-09-01 page_view * * 20/1',
     ];
 
-    it('buckets by Bolivia day, counts sessions once (also per type and day), derives device and referrer rows, and replaces stale rows', async () => {
-      await expect(service.rollup({ now: new Date('2026-09-01T20:00:00Z'), days: 2 })).resolves.toEqual({ rolled: true, rows: 23 });
+    it('buckets by Bolivia day, counts sessions once (also per type and day), caps what one session weighs, derives device and referrer rows, and replaces stale rows', async () => {
+      await expect(service.rollup({ now: new Date('2026-09-01T20:00:00Z'), days: 2 })).resolves.toEqual({ rolled: true, rows: 29 });
       expect(await rows()).toEqual(expected);
     });
 
@@ -112,7 +122,7 @@ harness.describeDb('store analytics rollup and retention (real Postgres)', () =>
       const left = await db.storeAnalyticsEvent.findMany({ where: { storeId: 's9' }, select: { sessionHash: true }, orderBy: { createdAt: 'asc' } });
       expect(left.map(row => row.sessionHash)).toEqual(['edge', 'new']);
       // The earlier fixtures (2026-08/09) are older than 13 months at this `now` as well.
-      expect(removed).toBe(14);
+      expect(removed).toBe(45);
       expect(await db.storeAnalyticsDaily.count()).toBe(before);
     });
   });

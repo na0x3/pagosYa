@@ -73,7 +73,8 @@ export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, strin
   for (const [key, point] of dailyAll) daily.set(key, point);
   for (const [key, point] of daily) { const total = totals[key.slice(0, key.indexOf('|')) as AnalyticsEventType]; total.count += point.count; total.sessions += point.sessions; }
   const series = Object.fromEntries(ANALYTICS_EVENT_TYPES.map(type => [type, days.map(day => ({ day, ...(daily.get(`${type}|${day}`) || { count: 0, sessions: 0 }) }))])) as Record<AnalyticsEventType, ({ day: string } & Tally)[]>;
-  const topProducts = [...products].sort(([, a], [, b]) => b.views - a.views || b.adds - a.adds).slice(0, 10).map(([productId, p]) => ({
+  // Ranked by the sessions that viewed, then added: one busy session cannot push a product to the top.
+  const topProducts = [...products].sort(([, a], [, b]) => b.viewSessions - a.viewSessions || b.addSessions - a.addSessions || b.views - a.views).slice(0, 10).map(([productId, p]) => ({
     productId, name: names.get(productId) ?? 'Producto eliminado', impressions: p.impressions, cardClicks: p.cardClicks, views: p.views, adds: p.adds,
     addRate: p.viewSessions ? rate(p.addSessions, p.viewSessions) : null,
   }));
