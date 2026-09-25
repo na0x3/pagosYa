@@ -1,5 +1,8 @@
 import { ConflictException, HttpException, HttpStatus, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { plainToInstance } from "class-transformer";
+import { validate } from "class-validator";
 import { BusinessDocumentsService } from "./business-documents.service";
+import { CreateBusinessDocumentDto } from "./dto/business-document.dto";
 import { readDocumentLinkToken } from "./document-link-token";
 import { snapshotSha256 } from "./business-document-snapshot";
 
@@ -58,6 +61,17 @@ describe("BusinessDocumentsService — drafts", () => {
     expect(doc.businessCustomerId).toBe("cust_1");
     await expect(service.create("m_1", "store_1", { kind: "PROPOSAL", title: "x", businessCustomerId: "cust_2" })).rejects.toThrow(NotFoundException);
     await expect(service.create("m_1", "store_1", { ...invoice, items: [{ description: "x", quantity: 1, unitAmount: 1, paymentLinkId: "pl_2" }] })).rejects.toThrow(NotFoundException);
+  });
+
+  it("lets a field the merchant cleared (null) win over the CRM row; only an omitted field is filled from it", async () => {
+    const { service } = setup();
+    const doc = await service.create("m_1", "store_1", { kind: "INVOICE", title: "Cobro", businessCustomerId: "cust_1", customerEmail: null, customerDocument: null });
+    expect(doc.customer).toEqual({ name: "Ana Quispe", email: null, phone: expect.anything(), document: null });
+    const edited = await service.update("m_1", "store_1", doc.id, { customerPhone: null });
+    expect(edited.customer.phone).toBeNull();
+    // The API accepts the explicit null the dashboard sends for a cleared field.
+    const dto = plainToInstance(CreateBusinessDocumentDto, { kind: "INVOICE", title: "Cobro", customerEmail: null, customerPhone: null, customerDocument: null });
+    expect(await validate(dto)).toEqual([]);
   });
 
   it("replaces the items and recomputes the totals on update", async () => {

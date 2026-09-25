@@ -507,7 +507,10 @@ export class BusinessDocumentsService {
     return doc;
   }
 
-  /** A CRM customer fills any customer field the merchant did not type. */
+  /**
+   * Precedence, field by field: what the merchant sent wins — a value, or `null` for a field they
+   * cleared — and only a field they did not send at all is filled from the CRM row.
+   */
   private async customerFields(storeId: string, dto: Partial<CreateBusinessDocumentDto>, keepLink = false) {
     const typed = {
       ...(dto.customerName !== undefined && { customerName: dto.customerName || null }),

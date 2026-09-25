@@ -76,17 +76,19 @@ export class CreateBusinessDocumentDto {
   @IsOptional() @IsString() @MaxLength(40)
   businessCustomerId?: string;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(120)
-  customerName?: string;
+  // Customer fields: a value is used as typed, `null` clears the field (it wins over the CRM row),
+  // and an omitted field is filled from `businessCustomerId`'s CRM row.
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @IsSafeText() @MaxLength(120)
+  customerName?: string | null;
 
-  @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(254)
-  customerEmail?: string;
+  @ApiPropertyOptional({ nullable: true, description: "null clears it (no CRM fallback)." }) @IsOptional() @IsEmail() @MaxLength(254)
+  customerEmail?: string | null;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(40)
-  customerPhone?: string;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @IsSafeText() @MaxLength(40)
+  customerPhone?: string | null;
 
-  @ApiPropertyOptional({ description: "NIT or CI." }) @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
-  customerDocument?: string;
+  @ApiPropertyOptional({ nullable: true, description: "NIT or CI." }) @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
+  customerDocument?: string | null;
 
   @ApiPropertyOptional({ description: "Document-level discount in minor units." })
   @IsOptional() @IsInt() @Min(0) @Max(1_000_000_000)
