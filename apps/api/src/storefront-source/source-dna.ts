@@ -1,10 +1,11 @@
 /** Design DNA (sub-project 2): the form, behaviour and placement choices that make one store unlike the next.
  * Colours are deliberately absent: the store's --store-* / --brand-* tokens stay their single source.
  * Nothing here imports source-design.ts, which imports this module (no evaluation-time cycle). */
+import { SOURCE_FONT_IDS } from './source-font-catalog';
 export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
 export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
-/** The self-hosted fonts in the kit; sub-project 4 widens the catalogue. */
-export const SOURCE_DNA_FONTS = ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald'] as const;
+/** The self-hosted fonts in the kit, from the one catalogue (source-font-catalog.ts). */
+export const SOURCE_DNA_FONTS = SOURCE_FONT_IDS;
 
 export const SOURCE_DNA_ENUMS = {
   type: { display: SOURCE_DNA_FONTS, text: SOURCE_DNA_FONTS, case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'] },

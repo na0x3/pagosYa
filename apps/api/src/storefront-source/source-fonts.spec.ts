@@ -20,3 +20,9 @@ it('ships the theme display fonts and licenses in Next exports', async () => {
     expect(bundled.find(file => file.path === `assets/${name}-OFL.txt`)?.content).toContain('SIL OPEN FONT LICENSE');
   }
 });
+
+it('bundles a newly catalogued font and its licence when the CSS references it', async () => {
+  const bundled = await withSourceFonts([{ path: 'styles/globals.css', content: '@font-face{font-family:Syne;src:url(../assets/syne.ttf)}' }]);
+  expect(bundled.map(file => file.path)).toEqual(['styles/globals.css', 'assets/syne.ttf', 'assets/syne-OFL.txt']);
+  expect(Buffer.from(bundled[1].content, 'base64').readUInt32BE(0)).toBe(0x00010000);
+});
