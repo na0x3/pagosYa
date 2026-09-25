@@ -84,6 +84,66 @@
     try { window.fbq?.('track', names[1], payload); } catch {}
     try { window.ttq?.track?.(names[1], payload); } catch {}
   };
+  /* Store analytics (G1), hosted stores only. The sandbox has no storage and cannot see the shopper's choice, so the
+   * kit hands small allow-listed events to pagosYa's page, which applies consent, the session and dedupe, and sends
+   * them. The labels are the API's ANALYTICS_TRACK_LABELS (a test pins them). Never a word the shopper typed. */
+  const ANALYTICS_LABELS = ['hero-cta', 'nav-cart', 'nav-catalog', 'card', 'add', 'checkout', 'pay', 'whatsapp', 'contact', 'promo', 'social', 'newsletter'];
+  const ANALYTICS_PAGE = typeof window.PAGOSYA_PREVIEW_PAGE === 'string' ? window.PAGOSYA_PREVIEW_PAGE : 'index.html';
+  const analyticsQueue = [];
+  const analyticsOnce = new Set();
+  let analyticsTimer = 0;
+  function flushAnalytics() {
+    clearTimeout(analyticsTimer); analyticsTimer = 0;
+    if (analyticsQueue.length) parent.postMessage({ type: 'pagosya:analytics', events: analyticsQueue.splice(0) }, '*');
+  }
+  /** `once` names a moment counted a single time on this page (a product view, a checkout step). */
+  function analytics(type, fields, once) {
+    if (!hosted) return;
+    if (once) { if (analyticsOnce.has(once)) return; analyticsOnce.add(once); }
+    analyticsQueue.push(Object.assign({ type }, fields, { path: ANALYTICS_PAGE }));
+    if (analyticsQueue.length >= 20) flushAnalytics();
+    else if (!analyticsTimer) analyticsTimer = setTimeout(flushAnalytics, 400);
+  }
+  /** The catalog card's product, only when it is one of this store's products. */
+  function cardProductId(card) {
+    const control = card.querySelector('[data-add],[data-product]');
+    let id = card.dataset.productId || control?.dataset.add || control?.dataset.product || null;
+    const link = id ? null : card.querySelector('a[href*="id="]');
+    if (link) { try { id = new URL(link.getAttribute('href'), document.baseURI).searchParams.get('id'); } catch { id = null; } }
+    return products().some(item => item.id === id) ? id : null;
+  }
+  const WHATSAPP_LINK = /^https:\/\/(?:wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)\//i;
+  if (hosted) {
+    window.addEventListener('pagehide', flushAnalytics);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAnalytics(); });
+    // Window capture runs before the kit's own cart-trigger listener, which stops the click from going further.
+    window.addEventListener('click', event => {
+      const target = event.target?.closest ? event.target : null;
+      if (!target) return;
+      const label = target.closest('[data-track]')?.getAttribute('data-track');
+      if (label && ANALYTICS_LABELS.includes(label)) analytics('cta_click', { target: label });
+      const control = target.closest('a,button');
+      const card = control?.closest('.menu-item');
+      if (card && !control.matches('[data-add],[data-card-swatch]')) { const id = cardProductId(card); if (id) analytics('product_card_click', { productId: id }); }
+      // The shopper is leaving for WhatsApp: hand the queue over now.
+      if (control?.matches('a[href]') && WHATSAPP_LINK.test(control.href)) { analytics('whatsapp_click'); flushAnalytics(); }
+    }, true);
+    document.addEventListener('change', event => { if (event.target?.matches?.('input[type=search]') && event.target.value.trim()) analytics('search'); });
+  }
+  let cardObserver = null;
+  const watchedCards = new WeakSet();
+  /** Each catalog card counts as seen once half of it is on screen, once per product on this page. */
+  function observeCards() {
+    if (!hosted || typeof IntersectionObserver !== 'function') return;
+    if (!cardObserver) cardObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      cardObserver.unobserve(entry.target);
+      const id = cardProductId(entry.target);
+      if (id) analytics('product_card_impression', { productId: id }, 'impression:' + id);
+    }), { threshold: 0.5 });
+    document.querySelectorAll('[data-pagosya-catalog] .menu-item').forEach(card => { if (!watchedCards.has(card)) { watchedCards.add(card); cardObserver.observe(card); } });
+  }
+  analytics('page_view');
   const preview = window.PAGOSYA_PREVIEW === true && !hosted;
   const request = async (url, options) => {
     if (!hosted) return fetch(url, options);
@@ -967,6 +1027,7 @@
     const p = products().find(p => p.id === id);
     if (!p) { if (fullProductPage) detail.innerHTML = '<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="index.html#catalogo">Explorar productos</a>'; return; }
     track('product_view', undefined, { value: price(p), currency: p.currency });
+    analytics('product_view', { productId: p.id }, 'view:' + p.id);
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     selectedOptions = completeSelection(p, []);
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
@@ -1215,6 +1276,7 @@
     cartDrawer.dataset.instant = String(keyboard || config.motion === 'off');
     delete addedNotice.dataset.visible;
     cartDrawer.showModal(); renderCart();
+    analytics('cart_open');
     cartDrawer.querySelector('[data-cart-close]').focus();
   }
   function restoreDrawer() {
@@ -2013,6 +2075,7 @@
       structureCatalog(el);
       if (MOTIFS.length) placeCardMotifs(el);
     });
+    observeCards();
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
     if (fullProductPage && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
@@ -2096,7 +2159,7 @@
       // simple lines. Keep options and order review interactive without sending
       // unsupported variant carts to that calculator (or any real checkout).
       const previewOptions = preview && review && cartItems().some(item => item.variantId || item.extraIds);
-      if (review && cart.size && ready) track('checkout_started');
+      if (review && cart.size && ready) { track('checkout_started'); analytics('checkout_step', { step: 'review' }, 'step:review'); }
       const payment = el.dataset.checkoutReview === "payment";
       const action = review ? payment ? "data-finish-demo" : "data-pay" : "data-checkout";
       const actionLabel = review ? payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
@@ -2127,7 +2190,7 @@
       const branchInfo = document.createElement('p'); branchInfo.className = 'order-note'; branchInfo.setAttribute('data-branch-address', '');
       el.querySelector('[name=method]')?.closest('label')?.after(branchInfo);
       select?.addEventListener("change", () => { updateMethods(el); updateShipping(el); });
-      el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
+      el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
       el.querySelector('[name=shippingZoneId]')?.addEventListener('change', () => void shippingQuote(el));
       // Re-quote only with a complete destination; a partial one would be rejected by the API.
       el.querySelector('[name=destDepartment]')?.addEventListener('change', () => { if (hosted) checkoutAnswers.set('destDepartment', el.querySelector('[name=destDepartment]').value); if (!shippingDestination(el) && !(hosted && shippingDepartment(el))) return; const rate = el.querySelector('[name=shippingZoneId]'); if (rate) rate.value = ''; void shippingQuote(el); });
@@ -2205,6 +2268,7 @@
         const result = await response.json();
         if (!response.ok || !result.submitted) throw new Error(Array.isArray(result.message) ? result.message.join(' ') : result.message || 'No se pudo enviar. Inténtalo otra vez.');
         form.reset(); status.textContent = 'Consulta recibida. El equipo de la tienda te contactará.';
+        analytics('contact_submit');
       } catch (error) { status.textContent = error.message || 'No se pudo enviar. Inténtalo otra vez.'; }
       finally { button.disabled = false; }
     });
@@ -2658,11 +2722,12 @@
   document.addEventListener('pagosya:validate-checkout', event => { if (event.detail) event.detail.valid = validateDelivery(event.detail.panel); });
   async function checkout(button) {
     if (!cart.size || !ready || checkingOut || button.disabled) return;
+    analytics('pay_click');
     const panel = button.closest("[data-pagosya-cart]");
     if (!validateDelivery(panel)) return;
     const locationId = panel.querySelector("[name=location]")?.value;
     const fulfillmentMethod = panel.querySelector("[name=method]")?.value;
-    if (fulfillmentMethod) track('delivery_selected', fulfillmentMethod);
+    if (fulfillmentMethod) { track('delivery_selected', fulfillmentMethod); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); }
     const shippingZoneId = panel.querySelector('[name=shippingZoneId]')?.value;
     const creditCode = panel.querySelector('[name=creditCode]')?.value.trim() || undefined;
     if (creditCode && panel.dataset.creditReady !== 'true') { message('Aplica el saldo antes de continuar.'); return; }
@@ -2675,6 +2740,7 @@
       if (!phone) { message("El comercio todavía no tiene un número de WhatsApp configurado."); return; }
       const text = [...cart].map(([id, quantity]) => `${quantity} × ${cartLine(id)?.name}`).join("\n");
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(`Hola, quisiera pedir:\n${text}`)}`;
+      analytics('whatsapp_click'); flushAnalytics();
       if (hosted) parent.postMessage({type:'pagosya:source-external',url},'*'); else window.location.assign(url); return;
     }
     if (store.checkoutMode === "external") {
@@ -2683,6 +2749,7 @@
       return;
     }
     checkingOut = true; button.disabled = true; button.setAttribute("aria-busy", "true"); message("Preparando tu pedido…");
+    flushAnalytics();
     try {
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/cart-checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", body: JSON.stringify({ partnerCode: window.PAGOSYA_PRIVACY?.analyticsAllowed(config.slug) ? partnerCode : undefined, creditCode, recoveryToken: window.PAGOSYA_RETENTION_STATE?.token || undefined, ...(fulfillmentMethod === 'delivery' ? { shippingAddress, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) } : {}), ...(store.shippingEnabled ? { fulfillmentMethod, shippingZoneId, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined } : {}), items: checkoutItems(), ...(locationId ? { locationId, fulfillmentMethod } : {}) }) });
       const result = await response.json();
@@ -2761,6 +2828,7 @@
       const bundle = (Array.isArray(store.bundles) ? store.bundles : []).find(candidate => candidate.id === button.dataset.bundleAdd), entries = bundleEntries(bundle);
       if (!bundle || !entries.length || entries.some(entry => !entry.p || !simpleProduct(entry.p) || remaining(entry.p) < entry.quantity)) { message("Este paquete ya no está disponible completo."); return; }
       track('add_to_cart', undefined, { value: entries.reduce((sum, entry) => sum + price(entry.p) * entry.quantity, 0), currency: entries[0].p.currency });
+      for (const entry of entries) analytics('add_to_cart', { productId: entry.p.id });
       for (const entry of entries) cart.set(lineKey(entry.p.id), (cart.get(lineKey(entry.p.id)) || 0) + entry.quantity);
       renderCart(); message(`${bundle.name} añadido a tu pedido.`);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a tu pedido.`;
@@ -2773,6 +2841,7 @@
       const quantity = cart.get(key) || 0;
       if (remaining(p, variant, line.picks) <= 0) { message("Ya añadiste la cantidad disponible."); return; }
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
+      analytics('add_to_cart', { productId: p.id });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
       cart.set(key, quantity + units); renderCart(); message(`${name} añadido a tu pedido.`); addedFeedback({ ...p, name }, button, event.detail === 0);
       if (MOTIFS.length) playMotifs(p);
