@@ -47,6 +47,7 @@ export class FakePrisma {
     if (include.items) result.items = this.items.filter((item) => item.documentId === doc.id).sort((a, b) => a.position - b.position);
     if (include.versions) result.versions = this.versions.filter((v) => v.documentId === doc.id).sort((a, b) => a.version - b.version);
     if (include.events) result.events = this.events.filter((e) => e.documentId === doc.id && matches(e, include.events.where ?? {}));
+    if (include.signatures) result.signatures = this.signatures.filter((row) => row.documentId === doc.id && matches(row, include.signatures.where ?? {}));
     return result;
   }
 
@@ -174,6 +175,23 @@ export class FakePrisma {
       && (!where.at?.gte || event.at >= where.at.gte)
       && (!where.document?.storeId || this.documents.find((doc) => doc.id === event.documentId)?.storeId === where.document.storeId)).length,
   };
+  /** D3: e-signatures, unique per document + version + role like the schema. */
+  signatures: Row[] = [];
+  businessDocumentSignature = {
+    create: async ({ data }: Row) => {
+      if (this.signatures.some((row) => row.documentId === data.documentId && row.version === data.version && row.role === data.role)) throw unique();
+      const row = { id: id("sig"), signedAt: new Date(), imageUrl: null, codeVerifiedAt: null, ipAddress: null, userAgent: null, ...data };
+      this.signatures.push(row);
+      return { ...row };
+    },
+    findMany: async ({ where }: Row = {}) => this.signatures.filter((row) => matches(row, where)).map((row) => ({ ...row })),
+    findFirst: async ({ where }: Row = {}) => this.signatures.find((row) => matches(row, where)) ?? null,
+    count: async ({ where }: Row = {}) => this.signatures.filter((row) => matches(row, where)).length,
+  };
+  invoicingProfiles: Row[] = [];
+  merchantInvoicingProfile = { findUnique: async ({ where }: Row) => this.invoicingProfiles.find((row) => row.merchantId === where.merchantId) ?? null };
+  kycSubmissions: Row[] = [];
+  merchantKycSubmission = { findFirst: async ({ where }: Row) => [...this.kycSubmissions].reverse().find((row) => matches(row, where)) ?? null };
   paymentIntents: Row[] = [];
   paymentIntent = {
     findUnique: async ({ where }: Row) => this.paymentIntents.find((row) => row.id === where.id) ?? null,

@@ -17,6 +17,9 @@ import { UploadsService } from "../uploads/uploads.service";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { buildDocumentEmail } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
+import { renderContractPdf, type ContractPdfSignature } from "./contract-pdf";
+import { contractMetaBlock, splitContractContent } from "./contract-terms";
+import { contractPublicFields, contractStateWhere, expireContract, OPEN_CONTRACT, signingSummary, waitingFor, type SignatureRow } from "./contract-state";
 import { cancelStaleCheckout } from "./cobro-payment";
 import { sha256Hex } from "../legal/legal-documents.service";
 import {
@@ -65,6 +68,7 @@ const revokedSnapshot = (snapshot: DocumentSnapshot): DocumentSnapshot => ({
   dueAt: null,
   validUntil: null,
   blocks: [],
+  contract: undefined,
 });
 
 const DEFAULT_DOCUMENT_EMAILS_PER_DAY = 200;
@@ -135,7 +139,21 @@ const pastValidity = () => new UnprocessableEntityException("La validez de la pr
 
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
-type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }>;
+type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }> & { signatures?: SignatureRow[] };
+
+/**
+ * A contract's content always starts with its one `contract` block (the parties); a save that
+ * leaves it out keeps the stored one. Other kinds never keep a `contract` block.
+ */
+function normalizeContent(kind: string, content: unknown, previous: unknown): unknown[] {
+  const blocks = Array.isArray(content) ? (content as Array<{ type?: string }>) : [];
+  if (kind !== "CONTRACT") return blocks.filter((block) => block?.type !== "contract");
+  const hasMeta = blocks.some((block) => block?.type === "contract");
+  const { meta, clauses } = splitContractContent(hasMeta ? blocks : [...(Array.isArray(previous) ? (previous as unknown[]).filter((block) => (block as { type?: string })?.type === "contract") : []), ...blocks]);
+  return [contractMetaBlock(meta), ...clauses];
+}
+
+const customerSignedConflict = () => new ConflictException("Tu cliente ya firmó esta versión: fírmala o anúlala para cambiarla.");
 
 /**
  * What the merchant edits, hashed. Two tabs compare it (If-Match on PATCH) so one never silently
@@ -155,6 +173,15 @@ export function editTag(doc: DocumentWithItems): string {
     autoReminders: doc.autoReminders,
     items: [...doc.items].sort((a, b) => a.position - b.position).map((item) => [item.description, item.quantity, item.unitAmount, item.paymentLinkId ?? null]),
   })).slice(0, 24);
+}
+
+const SIGNATURE_FIELDS = { role: true, name: true, method: true, version: true, signedAt: true } as const;
+
+function contractSigning(doc: { content: Prisma.JsonValue; currentVersion: number; status: BusinessDocumentStatus; signatures?: SignatureRow[] }) {
+  const summary = signingSummary(doc.signatures, doc.currentVersion);
+  const order = splitContractContent(doc.content).meta.signingOrder;
+  const next = doc.currentVersion > 0 && OPEN_CONTRACT.includes(doc.status) ? waitingFor(order, summary.merchantSigned, summary.customerSigned) : null;
+  return { ...summary, order, waitingFor: next };
 }
 
 const sameTag = (header: string, tag: string) => header.split(",").some((value) => value.trim().replace(/^W\//, "").replace(/"/g, "") === tag);
@@ -177,7 +204,8 @@ export class BusinessDocumentsService {
 
   // ── merchant ──────────────────────────────────────────────────────────
 
-  async create(merchantId: string, storeId: string, dto: CreateBusinessDocumentDto) {
+  /** `createdData`: what the "created" event records (e.g. `{ fromProposal }`). */
+  async create(merchantId: string, storeId: string, dto: CreateBusinessDocumentDto, createdData?: Prisma.InputJsonValue) {
     await this.ownedStore(merchantId, storeId);
     const customer = await this.customerFields(storeId, dto);
     const items = await this.pricedItems(storeId, dto.items ?? []);
@@ -193,12 +221,12 @@ export class BusinessDocumentsService {
         subtotalAmount: totals.subtotalAmount,
         discountAmount: totals.discountAmount,
         totalAmount: totals.totalAmount,
-        content: (dto.content ?? []) as unknown as Prisma.InputJsonValue,
+        content: normalizeContent(dto.kind, dto.content ?? [], []) as unknown as Prisma.InputJsonValue,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
         autoReminders: dto.autoReminders ?? true,
         items: { create: totals.items.map((item, position) => ({ position, ...item })) },
-        events: { create: [{ type: "created" }] },
+        events: { create: [{ type: "created", ...(createdData !== undefined && { data: createdData }) }] },
       },
     });
     return this.view(await this.load(storeId, created.id));
@@ -211,8 +239,8 @@ export class BusinessDocumentsService {
   async list(merchantId: string, storeId: string, query: ListBusinessDocumentsQueryDto) {
     await this.ownedStore(merchantId, storeId);
     const rows = await this.prisma.businessDocument.findMany({
-      where: { storeId, ...(query.kind && { kind: query.kind }), ...(query.status && { status: query.status }), ...(query.state && (query.kind === "PROPOSAL" ? proposalStateWhere : cobroStateWhere)(query.state, new Date())) },
-      include: { items: { orderBy: { position: "asc" } }, events: { where: { type: { in: PAYMENT_EVENTS } }, select: { type: true, data: true } } },
+      where: { storeId, ...(query.kind && { kind: query.kind }), ...(query.status && { status: query.status }), ...(query.state && (query.kind === "PROPOSAL" ? proposalStateWhere : query.kind === "CONTRACT" ? contractStateWhere : cobroStateWhere)(query.state, new Date())) },
+      include: { items: { orderBy: { position: "asc" } }, events: { where: { type: { in: PAYMENT_EVENTS } }, select: { type: true, data: true } }, signatures: { select: SIGNATURE_FIELDS } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: query.limit ?? 100,
       ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
@@ -228,6 +256,7 @@ export class BusinessDocumentsService {
         items: { orderBy: { position: "asc" } },
         versions: { select: { version: true, sha256: true, sentAt: true, createdAt: true }, orderBy: { version: "asc" } },
         events: { orderBy: { at: "asc" }, take: 200 },
+        signatures: { select: SIGNATURE_FIELDS },
       },
     });
     if (!doc) throw new NotFoundException("Documento no encontrado");
@@ -250,15 +279,19 @@ export class BusinessDocumentsService {
     if (FINAL.includes(initial.status)) throw new ConflictException("Este documento ya no se puede editar");
     // The row's validity is what the customer's link obeys: a sent proposal never gets one in the past.
     if (initial.kind === "PROPOSAL" && initial.status !== S.DRAFT && dto.validUntil && new Date(dto.validUntil).getTime() < Date.now()) throw pastValidity();
+    // A contract the customer already signed is evidence: it is signed or voided, not edited (D3).
+    const contract = initial.kind === "CONTRACT";
+    if (contract && (await this.customerSignedCurrent(this.prisma, id, initial.currentVersion))) throw customerSignedConflict();
     const customer = await this.customerFields(storeId, dto, dto.businessCustomerId === undefined);
     const pricedItems = dto.items ? await this.pricedItems(storeId, dto.items) : null;
     await this.prisma.$transaction(async (tx) => {
       // A conditional save holds the row, so two tabs cannot both pass the check below.
-      if (ifMatch) await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      if (ifMatch || contract) await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
       // Totals come from the row this transaction reads, not from the first read.
       const doc = await tx.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
       if (!doc) throw new NotFoundException("Documento no encontrado");
       if (FINAL.includes(doc.status)) throw new ConflictException("Este documento ya no se puede editar");
+      if (contract && (await this.customerSignedCurrent(tx, id, doc.currentVersion))) throw customerSignedConflict();
       if (ifMatch && !sameTag(ifMatch, editTag(doc))) {
         throw new ConflictException("Este documento cambió en otra pestaña o dispositivo. Recarga para ver la última versión antes de seguir editando.");
       }
@@ -273,7 +306,7 @@ export class BusinessDocumentsService {
           subtotalAmount: totals.subtotalAmount,
           discountAmount: totals.discountAmount,
           totalAmount: totals.totalAmount,
-          ...(dto.content !== undefined && { content: dto.content as unknown as Prisma.InputJsonValue }),
+          ...(dto.content !== undefined && { content: normalizeContent(doc.kind, dto.content, doc.content) as unknown as Prisma.InputJsonValue }),
           ...(dto.dueAt !== undefined && { dueAt: dto.dueAt ? new Date(dto.dueAt) : null }),
           ...(dto.validUntil !== undefined && { validUntil: dto.validUntil ? new Date(dto.validUntil) : null }),
           ...(dto.autoReminders !== undefined && { autoReminders: dto.autoReminders }),
@@ -336,6 +369,8 @@ export class BusinessDocumentsService {
           // committed after this read is never overwritten.
           const notFinal = { id, status: { notIn: FINAL } };
           const to = doc.customerEmail;
+          // A changed contract would orphan the customer's signature on the version they signed.
+          if (doc.kind === "CONTRACT" && (!latest || latest.sha256 !== sha256) && (await this.customerSignedCurrent(tx, id, doc.currentVersion))) throw customerSignedConflict();
           if (latest && latest.sha256 === sha256) {
             const { count } = await tx.businessDocument.updateMany({ where: notFinal, data: { sentAt: now } });
             if (!count) throw new ConflictException("Este documento ya no se puede enviar");
@@ -364,14 +399,15 @@ export class BusinessDocumentsService {
     const to = sent.to;
     if (dto.email !== false && to) {
       try {
-        const pdf = await renderBusinessDocumentPdf({
+        const pdfInput = {
           storeName: store.name,
           logo: await this.storeLogo(store.logoUrl),
           numberLabel: sent.snapshot.numberLabel,
           version: sent.version,
           sha256: sent.sha256,
           snapshot: sent.snapshot,
-        });
+        };
+        const pdf = sent.snapshot.kind === "CONTRACT" ? await renderContractPdf({ ...pdfInput, signatures: [] }) : await renderBusinessDocumentPdf(pdfInput);
         const message = buildDocumentEmail({ storeName: store.name, snapshot: sent.snapshot, publicUrl, message: dto.message });
         await this.email.send({
           to,
@@ -449,12 +485,19 @@ export class BusinessDocumentsService {
       await expireProposal(this.prisma, doc.id, version.version);
       current = S.EXPIRED;
     }
+    // So does a contract past its signing deadline (D3).
+    if (doc.kind === "CONTRACT" && OPEN_CONTRACT.includes(current) && doc.validUntil && doc.validUntil.getTime() < Date.now()) {
+      await expireContract(this.prisma, doc.id, version.version);
+      current = S.EXPIRED;
+    }
     // The merchant looking at their own document is not the customer opening it.
     const preview = Boolean(previewToken) && readDocumentPreviewToken(previewToken!, this.secret()) === doc.id;
     const viewed = !preview && (await this.recordView(doc.id, version.version, context));
     const status = viewed && current === S.SENT ? S.VIEWED : current;
     // Proposals (D2) add their validity and acceptance; cobros keep exactly their D1 fields.
     const proposal = doc.kind === "PROPOSAL" ? await this.proposalFields(doc.id, status, doc.validUntil) : undefined;
+    // Contracts (D3) add who signed, who is next and where the code goes.
+    const contract = doc.kind === "CONTRACT" ? await contractPublicFields(this.prisma, { id: doc.id, status, currentVersion: version.version, validUntil: doc.validUntil }, snapshot) : undefined;
     return {
       kind: doc.kind,
       numberLabel: snapshot.numberLabel,
@@ -470,10 +513,11 @@ export class BusinessDocumentsService {
       payable: doc.kind === "INVOICE" && PAYABLE.includes(status),
       preview,
       // undefined (left out of the JSON) for a cobro.
-      validUntil: proposal?.validUntil,
+      validUntil: proposal?.validUntil ?? contract?.validUntil,
       acceptable: proposal?.acceptable,
       acceptance: proposal?.acceptance,
       changesRequestedAt: proposal?.changesRequestedAt,
+      signing: contract?.signing,
     };
   }
 
@@ -497,6 +541,21 @@ export class BusinessDocumentsService {
     const { doc, version, snapshot } = await this.publicVersion(token);
     const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, logoUrl: true } });
     const voided = doc.status === S.VOIDED;
+    if (doc.kind === "CONTRACT") {
+      // The contract with its signatures (and, once anyone signed, the evidence page).
+      const signatures = await this.prisma.businessDocumentSignature.findMany({ where: { documentId: doc.id, version: version.version } });
+      const buffer = await renderContractPdf({
+        storeName: store?.name ?? "",
+        logo: await this.storeLogo(store?.logoUrl ?? null),
+        numberLabel: snapshot.numberLabel,
+        version: version.version,
+        sha256: version.sha256,
+        snapshot,
+        signatures: signatures as unknown as ContractPdfSignature[],
+        voidedAt: voided ? (doc.voidedAt ?? new Date()).toISOString() : null,
+      });
+      return { buffer, filename: `${snapshot.numberLabel}${doc.status === S.SIGNED ? "-firmado" : ""}.pdf` };
+    }
     const buffer = await renderBusinessDocumentPdf({
       storeName: store?.name ?? "",
       logo: await this.storeLogo(store?.logoUrl ?? null),
@@ -570,7 +629,7 @@ export class BusinessDocumentsService {
     // Reminder emails leave from the same sender, so they count too; a WhatsApp reminder does not.
     const sent =
       // Proposal notifications to the merchant leave from the same sender too (D2).
-      (await tx.businessDocumentEvent.count({ where: { type: { in: ["emailed", "merchant_notified"] }, at: { gte: since }, document: { storeId } } }))
+      (await tx.businessDocumentEvent.count({ where: { type: { in: ["emailed", "merchant_notified", "sign_code_sent"] }, at: { gte: since }, document: { storeId } } }))
       + (await tx.businessDocumentEvent.count({ where: { type: "reminded", data: { path: ["channel"], equals: "email" }, at: { gte: since }, document: { storeId } } }));
     if (sent >= limit) {
       throw new HttpException(
@@ -587,6 +646,16 @@ export class BusinessDocumentsService {
     if (placeholders.length) throw new UnprocessableEntityException(`Completa los datos pendientes antes de enviar: ${placeholders.join(", ")}`);
     if (doc.kind === "INVOICE" && doc.totalAmount <= 0) throw new UnprocessableEntityException("Agrega al menos un ítem con monto para enviar el cobro");
     if (doc.kind === "PROPOSAL" && doc.validUntil && doc.validUntil.getTime() < Date.now()) throw pastValidity();
+    if (doc.kind === "CONTRACT") {
+      if (!doc.customerEmail) throw new UnprocessableEntityException("Agrega el correo del cliente: ahí le llega el código para firmar.");
+      if (doc.validUntil && doc.validUntil.getTime() < Date.now()) throw new UnprocessableEntityException("La fecha límite para firmar ya pasó: elige una fecha futura.");
+    }
+  }
+
+  /** D3: the customer signed the version their link shows (so the merchant can only sign or void). */
+  private async customerSignedCurrent(db: Pick<Prisma.TransactionClient, "businessDocumentSignature">, id: string, version: number) {
+    if (version < 1) return false;
+    return (await db.businessDocumentSignature.count({ where: { documentId: id, version, role: "CUSTOMER" } })) > 0;
   }
 
   private async ownedStore(merchantId: string, storeId: string) {
@@ -599,7 +668,7 @@ export class BusinessDocumentsService {
   }
 
   private async load(storeId: string, id: string): Promise<DocumentWithItems> {
-    const doc = await this.prisma.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
+    const doc = await this.prisma.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } }, signatures: { select: SIGNATURE_FIELDS } } });
     if (!doc) throw new NotFoundException("Documento no encontrado");
     return doc;
   }
@@ -674,6 +743,8 @@ export class BusinessDocumentsService {
       updatedAt: doc.updatedAt,
       editTag: editTag(doc),
       publicUrl: doc.currentVersion > 0 ? this.publicUrl(doc.id) : null,
+      // Contracts (D3): the current version's signatures and who signs next; undefined (left out) otherwise.
+      signing: doc.kind === "CONTRACT" ? contractSigning(doc) : undefined,
     };
   }
 }

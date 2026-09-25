@@ -31,7 +31,7 @@ export function buildDocumentEmail(input: {
     snapshot.validUntil ? `Válido hasta: ${documentDate(snapshot.validUntil)}` : "",
   ].filter(Boolean);
   // A cobro is there to be paid: its button says so.
-  const action = snapshot.kind === "INVOICE" ? "Ver y pagar" : `Ver ${kind.toLowerCase()}`;
+  const action = snapshot.kind === "INVOICE" ? "Ver y pagar" : snapshot.kind === "CONTRACT" ? "Revisar y firmar" : `Ver ${kind.toLowerCase()}`;
   const greeting = snapshot.customer.name ? `Hola ${snapshot.customer.name},` : "Hola,";
   const noun = kind.toLowerCase();
   const intro = reminder === "due"
@@ -40,7 +40,9 @@ export function buildDocumentEmail(input: {
       ? `Tu ${noun} de ${input.storeName} venció el ${documentDate(snapshot.dueAt)}. Si ya lo pagaste, ignora este mensaje.`
       : reminder === "manual"
         ? `${input.storeName} te recuerda ${kind === "Propuesta" ? "esta" : "este"} ${noun} pendiente.`
-        : `${input.storeName} te envió ${kind === "Propuesta" ? "una" : "un"} ${noun}.`;
+        : snapshot.kind === "CONTRACT"
+          ? `${input.storeName} te envió un contrato para revisar y firmar en línea.`
+          : `${input.storeName} te envió ${kind === "Propuesta" ? "una" : "un"} ${noun}.`;
 
   const text = [
     greeting,

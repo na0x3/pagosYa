@@ -1,6 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { sha256Hex } from "../legal/legal-documents.service";
-import { contractSnapshot, contractTexts, splitContractContent, type ContractSnapshot } from "./contract-terms";
+import { contractSnapshot, contractTexts, splitContractContent, type ContractMeta, type ContractSnapshot } from "./contract-terms";
 
 export type BusinessDocumentKindName = "INVOICE" | "PROPOSAL" | "CONTRACT";
 
@@ -18,7 +18,7 @@ export type DocumentBlock = {
   text?: string;
   items?: string[];
   /** Only on the `contract` block (see contract-terms.ts ContractMeta). */
-  contract?: unknown;
+  contract?: ContractMeta;
 };
 
 export type DocumentItemInput = { description: string; quantity: number; unitAmount: number; paymentLinkId?: string | null };

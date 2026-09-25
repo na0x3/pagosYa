@@ -20,6 +20,32 @@ import {
 } from "class-validator";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 import { DOCUMENT_BLOCK_TYPES, type DocumentBlockType } from "../business-document-snapshot";
+import { CONTRACT_TYPES, SIGNING_ORDERS, type ContractType, type SigningOrder } from "../contract-terms";
+
+/** D3: the issuer as it will appear (and be frozen) in the contract. */
+export class ContractMerchantPartyDto {
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(160) legalName!: string;
+  @ApiProperty({ description: "NIT or CI." }) @IsString() @IsSafeText() @MaxLength(40) document!: string;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(120) representative!: string;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(40) representativeDocument!: string;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(240) address!: string;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(254) email!: string;
+}
+
+/** D3: what the contract needs about the customer beyond D0's name / CI-NIT / email columns. */
+export class ContractCustomerPartyDto {
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(240) address!: string;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(120) representative!: string;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(40) representativeDocument!: string;
+}
+
+export class ContractMetaDto {
+  @ApiProperty({ enum: CONTRACT_TYPES }) @IsIn(CONTRACT_TYPES) contractType!: ContractType;
+  @ApiProperty() @IsString() @IsSafeText() @MaxLength(60) city!: string;
+  @ApiProperty({ enum: SIGNING_ORDERS }) @IsIn(SIGNING_ORDERS) signingOrder!: SigningOrder;
+  @ApiProperty({ type: ContractMerchantPartyDto }) @ValidateNested() @Type(() => ContractMerchantPartyDto) merchantParty!: ContractMerchantPartyDto;
+  @ApiProperty({ type: ContractCustomerPartyDto }) @ValidateNested() @Type(() => ContractCustomerPartyDto) customerParty!: ContractCustomerPartyDto;
+}
 
 export const DOCUMENT_CURRENCIES = ["BOB", "USD"] as const;
 
@@ -57,6 +83,10 @@ export class BusinessDocumentBlockDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional() @IsArray() @ArrayMaxSize(50) @IsString({ each: true }) @IsSafeText({ each: true }) @MaxLength(500, { each: true })
   items?: string[];
+
+  @ApiPropertyOptional({ type: ContractMetaDto, description: "Only on the `contract` block of a CONTRACT." })
+  @IsOptional() @ValidateNested() @Type(() => ContractMetaDto)
+  contract?: ContractMetaDto;
 }
 
 export class CreateBusinessDocumentDto {
@@ -130,7 +160,7 @@ export class VoidBusinessDocumentDto {
   reason?: string;
 }
 
-export const DOCUMENT_LIST_STATES = ["open", "overdue", "paid", "draft", "accepted", "closed"] as const;
+export const DOCUMENT_LIST_STATES = ["open", "overdue", "paid", "draft", "accepted", "closed", "signed"] as const;
 export type DocumentListState = (typeof DOCUMENT_LIST_STATES)[number];
 
 export class ListBusinessDocumentsQueryDto {
@@ -264,4 +294,101 @@ export class CreateCobroFromProposalDto {
   @ApiPropertyOptional({ description: "Defaults to 7 days (end of that day in La Paz)." })
   @IsOptional() @IsDateString()
   dueAt?: string;
+}
+
+// ── D3 contracts ─────────────────────────────────────────────────────────
+
+export class DraftContractDto {
+  @ApiProperty({ enum: CONTRACT_TYPES }) @IsIn(CONTRACT_TYPES)
+  contractType!: ContractType;
+
+  @ApiProperty({ example: "Diseño de identidad visual para una cafetería", description: "What the contract is about (empty only with fromProposalId)." })
+  @IsString() @IsSafeText() @MaxLength(2000)
+  objeto!: string;
+
+  @ApiPropertyOptional({ description: "The agreed price in minor units, typed by the merchant." })
+  @IsOptional() @IsInt() @Min(1) @Max(1_000_000_000)
+  priceAmount?: number;
+
+  @ApiPropertyOptional({ enum: DOCUMENT_CURRENCIES, default: "BOB" }) @IsOptional() @IsIn(DOCUMENT_CURRENCIES)
+  currency?: (typeof DOCUMENT_CURRENCIES)[number];
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(500)
+  paymentTerms?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(300)
+  plazo?: string;
+
+  @ApiPropertyOptional({ example: "La Paz" }) @IsOptional() @IsString() @IsSafeText() @MaxLength(60)
+  city?: string;
+
+  @ApiPropertyOptional({ description: "Anything else the contract must say." }) @IsOptional() @IsString() @IsSafeText() @MaxLength(1000)
+  extra?: string;
+
+  @ApiPropertyOptional({ enum: SIGNING_ORDERS, default: "merchant_first" }) @IsOptional() @IsIn(SIGNING_ORDERS)
+  signingOrder?: SigningOrder;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(120)
+  customerName?: string;
+
+  @ApiPropertyOptional({ description: "CI or NIT." }) @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
+  customerDocument?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(254)
+  customerEmail?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(40)
+  customerPhone?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(240)
+  customerAddress?: string;
+
+  @ApiPropertyOptional({ description: "An ACCEPTED proposal of this store: its accepted total and customer prefill the contract." })
+  @IsOptional() @IsString() @MaxLength(40)
+  fromProposalId?: string;
+
+  @ApiPropertyOptional({ default: true, description: "false = the built-in template, no AI call." }) @IsOptional() @IsBoolean()
+  ai?: boolean;
+}
+
+export class RegenerateContractClauseDto {
+  @ApiProperty({ description: "Position among the clauses (0-based)." }) @IsInt() @Min(0) @Max(199)
+  index!: number;
+
+  @ApiPropertyOptional({ example: "Hazla más corta" }) @IsOptional() @IsString() @IsSafeText() @MaxLength(300)
+  instruction?: string;
+}
+
+export const SIGNATURE_METHODS = ["TYPED", "DRAWN"] as const;
+
+export class SignContractDto {
+  @ApiProperty({ description: "The version the signer read (currentVersion)." }) @IsInt() @Min(1)
+  version!: number;
+
+  @ApiProperty({ example: "Ana Quispe" }) @IsString() @IsSafeText() @Length(3, 120)
+  name!: string;
+
+  @ApiProperty({ enum: SIGNATURE_METHODS }) @IsIn(SIGNATURE_METHODS)
+  method!: (typeof SIGNATURE_METHODS)[number];
+
+  @ApiPropertyOptional({ description: "DRAWN: a PNG data URL (≤ 60 000 characters)." }) @IsOptional() @IsString() @MaxLength(60_000)
+  image?: string;
+}
+
+export class PublicSignContractDto extends SignContractDto {
+  @ApiProperty({ description: "The signer ticked 'He leído el contrato'." }) @IsBoolean()
+  readConfirmed!: boolean;
+}
+
+export class ContractCodeRequestDto {
+  @ApiProperty() @IsInt() @Min(1)
+  version!: number;
+}
+
+export class ContractCodeVerifyDto {
+  @ApiProperty() @IsInt() @Min(1)
+  version!: number;
+
+  @ApiProperty({ example: "123456" }) @IsString() @Length(6, 12)
+  code!: string;
 }
