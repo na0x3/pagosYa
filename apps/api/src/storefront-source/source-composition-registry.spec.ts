@@ -193,6 +193,20 @@ describe('grammar-aligned families', () => {
     expect(sourceUiCompositions({ ...input, grammar: 'nonsense' })).toEqual(sourceUiCompositions(input));
   });
 
+  it('never hands a neutral brief a domain-bound family through the grammar alone', () => {
+    const domainBound = ['cafe-expressive', 'beauty-editorial'];
+    for (const brief of ['Tienda de relojes y accesorios', 'Tienda de barrio']) for (const grammar of SOURCE_DNA_ENUMS.layout.grammar) {
+      const picked = sourceUiCompositions({ seed: 'store:4', brief, grammar, assets: photos(3), catalogItemCount: 6 });
+      for (const suggestion of picked) expect(domainBound).not.toContain(suggestion.family);
+    }
+  });
+
+  it('still lets a matching brief and grammar pick the domain-bound family', () => {
+    const cafe = { seed: 'store:4', assets: photos(3), catalogItemCount: 6 };
+    expect(sourceUiCompositions({ ...cafe, brief: 'Cafeteria de especialidad', grammar: 'poster' })[0].family).toBe('cafe-expressive');
+    expect(sourceUiCompositions({ ...cafe, brief: 'Skincare y maquillaje', grammar: 'editorial' })[0].family).toBe('beauty-editorial');
+  });
+
   it('picks the new families from the brief alone when it fits them', () => {
     expect(sourceUiCompositions({ brief: 'Tienda de discos y vinilos', assets: photos(3), catalogItemCount: 6 })[0].family).toBe('poster-loud');
     expect(sourceUiCompositions({ brief: 'Ropa vintage y antigüedades', assets: photos(3), catalogItemCount: 6 })[0].family).toBe('index-archive');
