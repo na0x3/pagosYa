@@ -156,9 +156,9 @@ body.proposal-sheet-open { overflow: hidden; }
 
 .proposal-items { display: grid; gap: 10px; margin-top: 4px; padding: 12px; border-radius: 10px; background: var(--prop-soft, #f1f1ea); }
 .proposal-items-title { margin: 0; font-size: 13px; font-weight: 800; }
-.proposal-line { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "desc desc" "qty price" "flag flag"; gap: 8px; padding: 10px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 10px; background: #fff; }
-.proposal-line > .proposal-icon-button { position: absolute; top: 10px; right: 10px; }
-.proposal-line .proposal-line-desc { grid-area: desc; padding-right: 48px; }
+.proposal-line { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "desc desc remove" "qty price price" "flag flag flag"; align-items: center; gap: 8px; padding: 10px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 10px; background: #fff; }
+.proposal-line > .proposal-icon-button { grid-area: remove; justify-self: end; }
+.proposal-line .proposal-line-desc { grid-area: desc; }
 .proposal-line-qty { grid-area: qty; display: inline-flex; align-items: center; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: #fff; overflow: hidden; width: max-content; }
 .proposal-line-qty button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 18px; font-weight: 700; cursor: pointer; color: var(--pg-text); }
 .proposal-sheet .proposal-line-qty input { width: 48px; min-height: 40px; border: 0; border-radius: 0; text-align: center; padding: 0; box-shadow: none; }
@@ -238,8 +238,6 @@ body.proposal-sheet-open { overflow: hidden; }
 
 @media (min-width: 761px) {
   .proposal-line { grid-template-columns: minmax(0, 1fr) auto auto 36px; grid-template-areas: "desc qty price remove" "flag flag flag flag"; align-items: center; }
-  .proposal-line > .proposal-icon-button { position: static; grid-area: remove; }
-  .proposal-line .proposal-line-desc { padding-right: 12px; }
 }
 @media (max-width: 760px) {
   body.is-logged-in[data-dashboard-view="proposals"] .workspace-yapi { display: none !important; }

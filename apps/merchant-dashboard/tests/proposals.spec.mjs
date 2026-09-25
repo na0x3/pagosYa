@@ -194,6 +194,7 @@ for (const width of [390, 1280]) {
       await expect(send).toBeDisabled();
       await expect(editor.locator("[data-proposal-block]")).toHaveCount(9);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/dashboard-draft-${width}.png` });
+      if (SHOTS) { await editor.getByLabel("Precio de la línea 2").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${SHOTS}/dashboard-items-${width}.png` }); }
 
       // Typing the missing price clears it; the total follows.
       await editor.getByLabel("Precio de la línea 2").fill("200");
