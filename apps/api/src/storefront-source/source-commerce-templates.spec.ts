@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { kitPath } from '@pagosya/storefront-kit';
+import { sourceMotifConfig, sourceMotifPaths } from './source-motifs';
+import { LAMP_SVG } from './fixtures/motifs';
+import type { SourceDnaMotif } from './source-dna';
 
 /** T1: store-authored templates for the product page, cart, cart lines, added notice and checkout review. */
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
@@ -257,6 +260,61 @@ describe('product page template', () => {
     expect(shop.$('[data-pagosya-product] .mi-ficha')).not.toBeNull();
     expect(shop.$('[data-pagosya-product] [data-split]')).toBeNull();
     expect(shop.$('[data-pagosya-product] [data-product-slot="title"] h1')).not.toBeNull();
+  });
+
+  // Fix round 1, finding 1: decorateProductReviews() (commerce.js ~798) bails out before showing the
+  // reviews section unless [data-product-rating] still exists in the DOM. A template that authors a
+  // "reviews" slot but not a "rating" slot must still keep that element, at the front of "reviews".
+  const PAGE_WITH_REVIEWS = PAGE.replace('<div data-product-slot="buy"></div>', '<div data-product-slot="buy"></div><div data-product-slot="reviews"></div>');
+  const hostedContent = (reviewSummary: Record<string, { count: number; average: number }>, reviews: unknown[] = []) => (w: any) => {
+    w.PAGOSYA_PREVIEW_QUERY = 'id=lamp';
+    w.PAGOSYA_HOSTED = true;
+    w.PAGOSYA_HOSTED_REQUEST = jest.fn(async (action: string) => ({ ok: true, body: action === 'content' ? { articles: [], bundles: [], reviews, reviewSummary } : {} }));
+  };
+
+  it('feeds the rating into the reviews slot when the template authors reviews but not rating', async () => {
+    const shop = boot(PAGE_WITH_REVIEWS, {
+      body: '<main data-pagosya-product-page></main>',
+      beforeKit: hostedContent({ lamp: { count: 12, average: 4.5 } }, [{ id: 'r1', productId: 'lamp', displayName: 'Ana', rating: 5, body: 'Bien.' }]),
+    });
+    await shop.tick();
+    const reviews = shop.$('[data-pagosya-product] [data-product-slot="reviews"]')!;
+    expect(reviews.querySelector('[data-product-rating]')).not.toBeNull();
+    expect(reviews.firstElementChild.hasAttribute('data-product-rating')).toBe(true);
+    expect(shop.$('[data-pagosya-product] [data-product-reviews]').hidden).toBe(false);
+  });
+
+  it('still drops rating when the template has neither a rating nor a reviews slot', async () => {
+    const shop = boot(PAGE, {
+      body: '<main data-pagosya-product-page></main>',
+      beforeKit: hostedContent({ lamp: { count: 12, average: 4.5 } }, [{ id: 'r1', productId: 'lamp', displayName: 'Ana', rating: 5, body: 'Bien.' }]),
+    });
+    await shop.tick();
+    expect(shop.$('[data-pagosya-product] [data-product-rating]')).toBeNull();
+  });
+
+  // Fix round 1, finding 2: placeProductMotif() (commerce.js ~1494) queried the now-removed
+  // .product-detail__layout for a hover motif's scope; on a templated page the scope was null and the
+  // motif never armed. The template root now carries data-product-page-root for that scope query.
+  const motif = (overrides: Partial<SourceDnaMotif> = {}): SourceDnaMotif => ({ for: 'product', target: 'lámpara', meaning: 'La lámpara se enciende', behavior: 'glow', trigger: 'hover', placement: 'product', ...overrides });
+  const motifsRuntime = (...motifs: SourceDnaMotif[]) => sourceMotifConfig(motifs, sourceMotifPaths(motifs).map(path => ({ path, content: LAMP_SVG })));
+
+  it('arms a hover product motif on the templated page root, exactly as on the kit layout', async () => {
+    const shop = boot(PAGE, {
+      body: '<main data-pagosya-product-page></main>',
+      beforeKit: (w: any) => {
+        w.PAGOSYA_PREVIEW_QUERY = 'id=lamp';
+        w.PAGOSYA_CONFIG.motifs = motifsRuntime(motif());
+      },
+    });
+    await shop.tick();
+    const root = shop.$('[data-pagosya-product] [data-product-page-root]')!;
+    expect(root).not.toBeNull();
+    const holder = shop.$('.pagosya-motif')!;
+    expect(holder).not.toBeNull();
+    expect(holder.hasAttribute('data-motif-play')).toBe(false);
+    root.dispatchEvent(new shop.w.Event('pointerenter'));
+    expect(holder.hasAttribute('data-motif-play')).toBe(true);
   });
 });
 

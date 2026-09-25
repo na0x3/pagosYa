@@ -1497,7 +1497,7 @@
     const holder = motifSlot(index, 'product', p.id);
     if (!holder) return;
     title.before(holder);
-    armMotif(holder, detail.querySelector('.product-detail__layout'));
+    armMotif(holder, detail.querySelector(':scope > .product-detail__layout, :scope > [data-product-page-root]'));
     guardMotif(holder, detail);
   }
   function placeCardMotifs(root) {
@@ -2221,12 +2221,16 @@
     for (const piece of pieces) {
       const name = PRODUCT_PARTS.find(([, selector]) => piece.matches(selector))?.[0];
       const target = name && slot(name);
+      // decorateProductReviews() needs [data-product-rating] to stay in the DOM even without its own slot:
+      // a template that authors "reviews" but not "rating" still gets the rating line, leading the reviews it asked for.
       if (target) target.append(piece);
+      else if (name === 'rating' && slot('reviews')) slot('reviews').prepend(piece);
       else if (name && PRODUCT_DROPPABLE.has(name)) piece.remove();
       else followers.push(piece);
     }
     if (followers.length) slot('buy').after(...followers);
     layout.replaceWith(root);
+    root.setAttribute('data-product-page-root', '');
     detail.setAttribute('data-page-template', '');
   }
   function renderCart() {
