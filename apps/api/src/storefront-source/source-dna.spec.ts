@@ -1,5 +1,5 @@
 import { validDna } from './fixtures/dna';
-import { defaultDna, dnaFingerprint, dnaRuntimeConfig, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
+import { defaultDna, withSeededDna, dnaFingerprint, dnaRuntimeConfig, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
 
 describe('design DNA', () => {
   it('accepts a full valid DNA unchanged', () => {
@@ -77,5 +77,18 @@ describe('design DNA', () => {
     strict(SOURCE_DNA_SCHEMA);
     expect(SOURCE_DNA_SCHEMA.properties.buttons.properties.form.enum).toEqual([...SOURCE_DNA_ENUMS.buttons.form]);
     expect(SOURCE_DNA_SCHEMA.properties.motifs.maxItems).toBe(3);
+  });
+
+  it('seeds a DNA into a stored config.js without one, and leaves the rest alone', () => {
+    const config = (value: object) => ({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(value)};`, encoding: 'utf8' as const });
+    const read = (files: Array<{ path: string; content: string }>) => JSON.parse(files.find(f => f.path === 'config.js')!.content.match(/=\s*([\s\S]*?);?\s*$/)![1]);
+    const page = { path: 'index.html', content: '<main></main>', encoding: 'utf8' as const };
+    const seeded = withSeededDna([page, config({ productPageStyle: 'dense', data: {} })], 'store-7');
+    expect(seeded[0]).toBe(page);
+    expect(read(seeded)).toEqual({ productPageStyle: 'dense', data: {}, dna: sourceRuntimeDna(undefined, 'store-7', 'dense') });
+    const own = [page, config({ dna: { button: 'pill' } })];
+    expect(withSeededDna(own, 'store-7')[1]).toBe(own[1]);
+    const unreadable = [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {', encoding: 'utf8' as const }];
+    expect(withSeededDna(unreadable, 'store-7')[0]).toBe(unreadable[0]);
   });
 });

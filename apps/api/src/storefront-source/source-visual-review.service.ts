@@ -1,3 +1,4 @@
+import { withSeededDna } from './source-dna';
 import { sourceVisualState } from './source-visual-state';
 import { BadGatewayException, BadRequestException, ConflictException, HttpException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -66,7 +67,8 @@ export class SourceVisualReviewService {
     const current = await this.projects.current(merchantId, storeId);
     if (!input.revision || current.revision !== input.revision) throw new ConflictException('Actualiza a la revisión actual antes de revisar el diseño.');
     const saved = await this.projects.version(merchantId, storeId, input.revision);
-    const snapshot = await currentSourceRuntime(saved.snapshot as unknown as SourceProjectSnapshot);
+    const runtime = await currentSourceRuntime(saved.snapshot as unknown as SourceProjectSnapshot);
+    const snapshot = { ...runtime, files: withSeededDna(runtime.files, storeId) };
     if (!snapshot.files.some(f => f.path === input.page && f.path.endsWith('.html'))) throw new BadRequestException('Selecciona una página de esta revisión.');
     try { sourceVisualState(snapshot, input.page, input.productId); }
     catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Selecciona un producto del catálogo.'); }

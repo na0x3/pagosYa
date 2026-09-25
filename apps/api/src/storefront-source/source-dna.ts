@@ -135,3 +135,18 @@ export function sourceRuntimeDna(dna: SourceDesignDna | undefined, seed: string,
   const runtime = dnaRuntimeConfig(dna ?? defaultDna(seed));
   return SOURCE_PRODUCT_PAGE_STYLES.includes(productPageStyle as SourceProductPageStyle) ? { ...runtime, product: productPageStyle as SourceProductPageStyle } : runtime;
 }
+
+const CONFIG_PATTERN = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
+/** A stored snapshot made runnable (published site, studio preview, design job, visual review) gets the same DNA:
+ * a config.js without one is seeded by the store id. New objects only (files may be shared by caches);
+ * an unreadable config is left as-is. */
+export function withSeededDna<F extends { path: string; content: string }>(files: F[], storeId: string): F[] {
+  return files.map(file => {
+    if (file.path !== 'config.js') return file;
+    try {
+      const config = JSON.parse(file.content.match(CONFIG_PATTERN)?.[1] ?? '');
+      if (!config || typeof config !== 'object' || (config.dna && typeof config.dna === 'object')) return file;
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, dna: sourceRuntimeDna(undefined, storeId, config.productPageStyle) })};` };
+    } catch { return file; }
+  });
+}

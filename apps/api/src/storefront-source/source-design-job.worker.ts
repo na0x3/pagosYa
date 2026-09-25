@@ -9,6 +9,7 @@ import { SourceGenerationService } from './source-generation.service';
 import { SourceVisualReviewService } from './source-visual-review.service';
 import { captureSourceVisuals, probeSourceShopping, type VisualCapture } from './source-visual-capture';
 import { currentSourceRuntime } from './source-runtime';
+import { withSeededDna } from './source-dna';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { sourceProjectDigest, type SourceProjectSnapshot } from './source-project';
 import { sourceVisualState } from './source-visual-state';
@@ -46,7 +47,8 @@ export class SourceDesignJobWorker implements OnModuleDestroy {
       await this.jobs.assertFresh(job, store.merchantId);
       const version = await this.projects.version(store.merchantId, job.storeId, job.revision);
       if (version.digest !== job.sourceDigest) throw new ConflictException('La revisión guardada cambió.');
-      const current = await currentSourceRuntime(version.snapshot as unknown as SourceProjectSnapshot);
+      const runtime = await currentSourceRuntime(version.snapshot as unknown as SourceProjectSnapshot);
+      const current = { ...runtime, files: withSeededDna(runtime.files, job.storeId) };
       if (cp.runtimeDigest && runtimeDigest(current) !== cp.runtimeDigest) throw new ConflictException('El runtime cambió. Inicia otra revisión.');
       // A job does not monopolize the chat generation slot across nonpaid stages.
       // Wait before reserving a stage if an ordinary generation currently owns it.

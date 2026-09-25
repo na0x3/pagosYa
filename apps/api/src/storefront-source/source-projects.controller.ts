@@ -1,4 +1,5 @@
 import { currentSourceRuntime } from './source-runtime';
+import { withSeededDna } from './source-dna';
 import type { SourceProjectSnapshot } from './source-project';
 import { IsBoolean } from 'class-validator';
 import { SourceMotionDto } from './dto/source-motion.dto';
@@ -122,7 +123,7 @@ export class SourceProjectsController {
     const saved = await this.projects.version(merchant.id, storeId, revision);
     const snapshot = await currentSourceRuntime(saved.snapshot as unknown as SourceProjectSnapshot);
     const catalog = await this.generation.catalog(merchant.id, storeId);
-    return { ...saved, snapshot: { ...snapshot, files: snapshot.files.map(file => {
+    return { ...saved, snapshot: { ...snapshot, files: withSeededDna(snapshot.files, storeId).map(file => {
       if (file.path !== 'config.js') return file;
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
       if (!match) return file;
