@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
@@ -9,6 +10,9 @@ import { ANALYTICS_RETENTION_MONTHS, ANALYTICS_SESSION_DAILY_CAP, ANALYTICS_SESS
 export type IngestContext = { userAgent?: string; gpc?: boolean };
 const PRUNE_BATCH = 5000;
 const MAX_REPORT_DAYS = 400;
+const DEFAULT_DAILY_CAP = 50_000;
+/** How long an instance trusts its own count of a store's day before reading the table again. */
+const BUDGET_RESYNC_MS = 5 * 60_000;
 /** Report days are real calendar days in these years (the query DTO pins the same bounds). */
 const FIRST_YEAR = 2020;
 const LAST_YEAR = 2100;
@@ -16,7 +20,38 @@ const LAST_YEAR = 2100;
 /** G1: consented storefront events in, daily rollups out. The funnel (StoreFunnelService) stays as it is. */
 @Injectable()
 export class StoreAnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(StoreAnalyticsService.name);
+  /** Events stored per `storeId|day`, as far as this instance knows (see dailyAllowance). */
+  private readonly budgets = new Map<string, { used: number; syncedAt: number; warned?: boolean }>();
+  /** The clock, replaceable in tests. */
+  now = () => Date.now();
+
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly config?: ConfigService) {}
+
+  /**
+   * Reserves room for up to `wanted` events in the store's Bolivia day under STORE_ANALYTICS_DAILY_CAP. The count lives
+   * in this process and is re-read from the table at most every 5 minutes (other instances write too), so with N
+   * instances a day can pass the cap by at most what the others store in one 5-minute window.
+   */
+  private async dailyAllowance(storeId: string, wanted: number): Promise<number> {
+    const cap = this.config?.get<number>('app.storeAnalyticsDailyCap') ?? DEFAULT_DAILY_CAP;
+    const now = this.now();
+    const day = boliviaDay(new Date(now));
+    const key = `${storeId}|${day}`;
+    let budget = this.budgets.get(key);
+    if (!budget || now - budget.syncedAt >= BUDGET_RESYNC_MS) {
+      if (!budget) for (const old of this.budgets.keys()) if (!old.endsWith(`|${day}`)) this.budgets.delete(old);
+      const stored = await this.prisma.storeAnalyticsEvent.count({ where: { storeId, createdAt: { gte: boliviaDayStart(day) } } });
+      budget = this.budgets.get(key) || { used: 0, syncedAt: now };
+      budget.used = Math.max(budget.used, stored); budget.syncedAt = now;
+      this.budgets.set(key, budget);
+    }
+    // Read and reserve with no await in between, so concurrent requests in this process never share room.
+    const allowed = Math.max(0, Math.min(wanted, cap - budget.used));
+    budget.used += allowed;
+    if (allowed < wanted && !budget.warned) { budget.warned = true; this.logger.warn(`Analytics: store ${storeId} reached ${cap} events on ${day}; the rest of the day is not stored`); }
+    return allowed;
+  }
 
   /** Consent is enforced in the browser (the host page sends nothing without it); GPC is honoured here too. */
   async ingest(slug: string, body: unknown, context: IngestContext = {}): Promise<{ accepted: number }> {
@@ -36,8 +71,10 @@ export class StoreAnalyticsService {
       return [{ storeId: store.id, sessionHash, type: event.type, productId, target: event.target, path: event.path, device, referrerHost: event.type === 'page_view' ? batch.referrerHost : null }];
     });
     if (!data.length) return { accepted: 0 };
-    await this.prisma.storeAnalyticsEvent.createMany({ data });
-    return { accepted: data.length };
+    const allowed = await this.dailyAllowance(store.id, data.length);
+    if (!allowed) return { accepted: 0 };
+    await this.prisma.storeAnalyticsEvent.createMany({ data: data.slice(0, allowed) });
+    return { accepted: allowed };
   }
 
   /**

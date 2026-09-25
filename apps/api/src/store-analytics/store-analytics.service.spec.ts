@@ -8,9 +8,10 @@ function fakePrisma() {
   return {
     store: { findFirst: jest.fn().mockResolvedValue({ id: 's1' }) },
     paymentLink: { findMany: jest.fn().mockResolvedValue([{ id: 'lamp' }]) },
-    storeAnalyticsEvent: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    storeAnalyticsEvent: { createMany: jest.fn().mockResolvedValue({ count: 0 }), count: jest.fn().mockResolvedValue(0) },
   };
 }
+const config = (values: Record<string, unknown>) => ({ get: (key: string) => values[key] });
 
 describe('StoreAnalyticsService.ingest', () => {
   it('accepts only stores the funnel accepts (active, published, not paused)', async () => {
@@ -79,5 +80,44 @@ describe('StoreAnalyticsService.report range checks', () => {
     const { service: analytics } = service();
     await expect(analytics.report('m1', 's1', { from: '2025-01-01', to: '2026-02-04' })).resolves.toMatchObject({ from: '2025-01-01', to: '2026-02-04' });
     await expect(analytics.report('m1', 's1', { from: '2025-01-01', to: '2026-02-05' })).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('StoreAnalyticsService.ingest daily ceiling', () => {
+  const pageViews = (n: number) => ({ sessionId: SESSION, events: Array.from({ length: n }, () => ({ type: 'page_view' })) });
+  const at = (iso: string) => () => Date.parse(iso);
+
+  it('stores at most the per-store daily cap, counting what the table already holds for the Bolivia day', async () => {
+    const prisma = fakePrisma(); prisma.storeAnalyticsEvent.count.mockResolvedValue(7);
+    const service = new StoreAnalyticsService(prisma as never, config({ 'app.storeAnalyticsDailyCap': 10 }) as never);
+    service.now = at('2026-09-01T15:00:00Z');
+    await expect(service.ingest('shop', pageViews(5))).resolves.toEqual({ accepted: 3 });
+    expect(prisma.storeAnalyticsEvent.count).toHaveBeenCalledWith({ where: { storeId: 's1', createdAt: { gte: new Date('2026-09-01T04:00:00Z') } } });
+    expect(prisma.storeAnalyticsEvent.createMany.mock.calls[0][0].data).toHaveLength(3);
+    // Full: nothing more is written, and the in-process counter answers without asking the table again.
+    await expect(service.ingest('shop', pageViews(2))).resolves.toEqual({ accepted: 0 });
+    expect(prisma.storeAnalyticsEvent.createMany).toHaveBeenCalledTimes(1);
+    expect(prisma.storeAnalyticsEvent.count).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-reads the table every 5 minutes (other instances write too) and starts over on a new Bolivia day', async () => {
+    const prisma = fakePrisma(); prisma.storeAnalyticsEvent.count.mockResolvedValue(0);
+    const service = new StoreAnalyticsService(prisma as never, config({ 'app.storeAnalyticsDailyCap': 10 }) as never);
+    service.now = at('2026-09-01T15:00:00Z');
+    await expect(service.ingest('shop', pageViews(4))).resolves.toEqual({ accepted: 4 });
+    prisma.storeAnalyticsEvent.count.mockResolvedValue(9);
+    service.now = at('2026-09-01T15:04:00Z');
+    await expect(service.ingest('shop', pageViews(4))).resolves.toEqual({ accepted: 4 });
+    service.now = at('2026-09-01T15:06:00Z');
+    await expect(service.ingest('shop', pageViews(4))).resolves.toEqual({ accepted: 1 });
+    prisma.storeAnalyticsEvent.count.mockResolvedValue(0);
+    service.now = at('2026-09-02T04:00:00Z');
+    await expect(service.ingest('shop', pageViews(4))).resolves.toEqual({ accepted: 4 });
+    expect(prisma.storeAnalyticsEvent.count).toHaveBeenLastCalledWith({ where: { storeId: 's1', createdAt: { gte: new Date('2026-09-02T04:00:00Z') } } });
+  });
+
+  it('defaults to 50 000 events a store a day', async () => {
+    const prisma = fakePrisma(); prisma.storeAnalyticsEvent.count.mockResolvedValue(49_999);
+    await expect(new StoreAnalyticsService(prisma as never).ingest('shop', pageViews(3))).resolves.toEqual({ accepted: 1 });
   });
 });

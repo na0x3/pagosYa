@@ -87,6 +87,8 @@ export interface AppConfig {
   documentLinkSecret: string;
   /** Per-store cap on cobro / proposal / contract emails in any 24 hours (DOCUMENT_EMAILS_PER_DAY). */
   documentEmailsPerDay: number;
+  /** Per-store ceiling on storefront analytics events stored per Bolivia day (STORE_ANALYTICS_DAILY_CAP). */
+  storeAnalyticsDailyCap: number;
   operationsEncryptionKey: string;
   corsOrigins: string[];
   exposeDocs: boolean;
@@ -269,6 +271,7 @@ export default (): { app: AppConfig } => {
     orderTrackingSecret: process.env.ORDER_TRACKING_SECRET ?? "development-only-order-tracking-secret-change-me",
     documentLinkSecret: process.env.DOCUMENT_LINK_SECRET ?? "development-only-document-link-secret-change-me",
     documentEmailsPerDay: parseBoundedInteger("DOCUMENT_EMAILS_PER_DAY", process.env.DOCUMENT_EMAILS_PER_DAY, 200, 1, 100_000),
+    storeAnalyticsDailyCap: parseBoundedInteger("STORE_ANALYTICS_DAILY_CAP", process.env.STORE_ANALYTICS_DAILY_CAP, 50_000, 1, 10_000_000),
     operationsEncryptionKey: process.env.OPERATIONS_ENCRYPTION_KEY ?? "development-only-operations-key",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,

@@ -177,6 +177,20 @@ describe("document email cap", () => {
   });
 });
 
+describe("store analytics daily cap", () => {
+  const saved = process.env.STORE_ANALYTICS_DAILY_CAP;
+  afterEach(() => { if (saved === undefined) delete process.env.STORE_ANALYTICS_DAILY_CAP; else process.env.STORE_ANALYTICS_DAILY_CAP = saved; });
+
+  it("defaults to 50 000 analytics events per store per day and reads STORE_ANALYTICS_DAILY_CAP", () => {
+    delete process.env.STORE_ANALYTICS_DAILY_CAP;
+    expect(configuration().app.storeAnalyticsDailyCap).toBe(50_000);
+    process.env.STORE_ANALYTICS_DAILY_CAP = "1000";
+    expect(configuration().app.storeAnalyticsDailyCap).toBe(1000);
+    process.env.STORE_ANALYTICS_DAILY_CAP = "0";
+    expect(configuration).toThrow("STORE_ANALYTICS_DAILY_CAP");
+  });
+});
+
 describe("source framework default", () => {
   const saved = process.env.SOURCE_FRAMEWORK;
   afterEach(() => { if (saved === undefined) delete process.env.SOURCE_FRAMEWORK; else process.env.SOURCE_FRAMEWORK = saved; });
