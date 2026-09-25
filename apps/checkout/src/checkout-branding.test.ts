@@ -27,7 +27,10 @@ describe("order confirmation takes the store's DNA", () => {
 describe("confirmation DNA styles", () => {
   const css = readFileSync(`${process.cwd()}/src/checkout-branding.css`, "utf8");
   it("define every button form and radius for the success panel only", () => {
-    for (const form of ["pill", "block", "underline", "tag", "stamp", "outline", "ghost", "split"]) expect(css).toContain(`body.store-branded-checkout[data-dna-button=${form}]{`);
+    // The form tokens (--checkout-dna-btn-*) reference var(--checkout-accent)/var(--checkout-foreground), which are only
+    // ever set on #app (checkout-branding.ts sets them via app.style.setProperty, never on body): declaring the tokens on
+    // body alone made them resolve invalid there, so #app button.primary inherited nothing (see finding 1).
+    for (const form of ["pill", "block", "underline", "tag", "stamp", "outline", "ghost", "split"]) expect(css).toContain(`body.store-branded-checkout[data-dna-button=${form}] #app{`);
     for (const radius of ["none", "soft", "round", "pill"]) expect(css).toContain(`body.store-branded-checkout[data-dna-radius=${radius}]{`);
     expect(css).toMatch(/\[data-dna-button\] #app \.payment-success-panel \.receipt-action\{/);
     expect(css).not.toMatch(/data-dna-[^{]*payment-printer/);
@@ -62,7 +65,7 @@ describe("identity button forms (T2b)", () => {
   });
   it("fill the pay button with the accent pair, and drop the ticket notches on focus", () => {
     for (const form of ["sticker", "ticket", "bubbly", "brutal"]) {
-      const rule = css.match(new RegExp(`body\\.store-branded-checkout\\[data-dna-button=${form}\\]\\{([^}]*)\\}`))?.[1] ?? "";
+      const rule = css.match(new RegExp(`body\\.store-branded-checkout\\[data-dna-button=${form}\\] #app\\{([^}]*)\\}`))?.[1] ?? "";
       expect(rule).toContain("--checkout-dna-btn-bg:var(--checkout-accent)");
       expect(rule).toContain("--checkout-dna-btn-fg:var(--checkout-accent-foreground)");
     }
