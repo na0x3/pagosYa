@@ -217,13 +217,16 @@ export function buildCobroPayload(draft) {
       ...(item.paymentLinkId ? { paymentLinkId: item.paymentLinkId } : {}),
     }));
   const note = draft.note?.trim();
+  // Blank contact fields are omitted: the API validates an email whenever one is sent.
+  const email = draft.customer.email?.trim().toLowerCase();
+  const phone = draft.customer.phone?.trim();
   return {
     kind: "INVOICE",
     title: cobroTitle(items),
     ...(draft.customer.businessCustomerId ? { businessCustomerId: draft.customer.businessCustomerId } : {}),
     customerName: draft.customer.name.trim(),
-    customerEmail: draft.customer.email?.trim().toLowerCase() || "",
-    customerPhone: draft.customer.phone?.trim() || "",
+    ...(email ? { customerEmail: email } : {}),
+    ...(phone ? { customerPhone: phone } : {}),
     items,
     ...(draft.dueAt ? { dueAt: draft.dueAt } : {}),
     autoReminders: draft.autoReminders !== false,

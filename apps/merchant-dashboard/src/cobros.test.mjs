@@ -155,6 +155,13 @@ test("a draft becomes the API payload, with a title from its items", () => {
   });
 });
 
+test("blank contact fields are left out, since the API validates an email when present", () => {
+  const payload = buildCobroPayload({ customer: { name: "Beto", email: "  ", phone: "" }, items: [{ description: "x", quantity: 1, unitAmount: 100 }], dueAt: null });
+  assert.equal("customerEmail" in payload, false);
+  assert.equal("customerPhone" in payload, false);
+  assert.equal("dueAt" in payload, false);
+});
+
 test("the draft says what is missing, in plain words", () => {
   assert.deepEqual(validateCobroDraft({ customer: { name: "" }, items: [], dueAt: null }), [
     "¿A quién le cobras? Escribe su nombre.",
