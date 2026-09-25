@@ -1,5 +1,5 @@
 import { MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
-import { createProductForm, type ProductGuideRecord } from './source-create-product';
+import { createProductForm, PRODUCT_GUIDE_STEPS, type ProductGuideRecord, type ProductGuideStep } from './source-create-product';
 import './source-library.css';
 
 export function mountProductGuide(app: HTMLDivElement) {
@@ -7,7 +7,7 @@ export function mountProductGuide(app: HTMLDivElement) {
   const storeId = new URLSearchParams(location.search).get('store') || '';
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
   let form: ReturnType<typeof createProductForm> | undefined, saved = false;
-  function start(initial?: ProductGuideRecord) {
+  function start(initial?: ProductGuideRecord, step?: ProductGuideStep) {
     form?.dispose(); saved = false;
     form = createProductForm(api, storeId, () => {
       saved = true;
@@ -15,8 +15,9 @@ export function mountProductGuide(app: HTMLDivElement) {
     }, () => {
       if (!canLeave()) return;
       start();
-    }, initial);
+    }, initial, step);
     app.replaceChildren(form.element);
+    if (step) form.focus();
   }
   function canLeave() {
     if (form?.isBusy) return false;
@@ -26,7 +27,8 @@ export function mountProductGuide(app: HTMLDivElement) {
   if (window.parent === window) window.addEventListener('beforeunload', event => { if (!saved && (form?.isBusy || form?.hasChanges)) { event.preventDefault(); event.returnValue = ''; } });
   window.addEventListener('message', event => {
     if (event.origin !== location.origin || event.source !== window.parent) return;
-    if (event.data?.type === 'pagosya:product-guide-edit' && event.data.storeId === storeId && event.data.product?.id && canLeave()) start(event.data.product);
+    // `step` (optional, from Crecimiento) opens the product where an insight points: description, price, photos or stock.
+    if (event.data?.type === 'pagosya:product-guide-edit' && event.data.storeId === storeId && event.data.product?.id && canLeave()) start(event.data.product, PRODUCT_GUIDE_STEPS.includes(event.data.step) ? event.data.step : undefined);
     if (event.data?.type === 'pagosya:product-guide-new' && canLeave()) { start(); form?.focus(); }
     if (event.data?.type === 'pagosya:product-guide-focus') { if (saved) start(); form?.focus(); }
   });

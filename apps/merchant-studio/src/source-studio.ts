@@ -139,6 +139,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const action = event.data.action;
     if (action === 'compose' && typeof event.data.text === 'string') {
       instruction = [instruction.trim(), event.data.text.slice(0, 12000)].filter(Boolean).join('\n\n').slice(0, 12000);
+      // A suggestion from the dashboard's Crecimiento view: say where it came from; the merchant still sends it.
+      if (event.data.origin === 'growth') {
+        toast = 'Sugerencia lista: revísala y envíala cuando quieras.';
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 6000);
+      }
       chatExpanded = true; render(); focusComposer(); scheduleEstimate();
     } else if (action === 'media') {
       const button = app.querySelector<HTMLButtonElement>('[data-visual-tab="assets"]');
