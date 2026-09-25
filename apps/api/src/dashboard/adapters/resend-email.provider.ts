@@ -33,6 +33,10 @@ export class ResendEmailProvider implements EmailProvider {
       to: req.to,
       subject: req.subject,
       text: req.body,
+      ...(req.html ? { html: req.html } : {}),
+      ...(req.attachments?.length
+        ? { attachments: req.attachments.map(({ filename, content, contentType }) => ({ filename, content, contentType })) }
+        : {}),
       ...(req.replyTo ? { replyTo: req.replyTo } : {}),
       // Resend passes these through as real headers on the sent message. This
       // is how the inbox's own Message-ID reaches the wire, so a reply comes

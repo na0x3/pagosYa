@@ -139,6 +139,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const action = event.data.action;
     if (action === 'compose' && typeof event.data.text === 'string') {
       instruction = [instruction.trim(), event.data.text.slice(0, 12000)].filter(Boolean).join('\n\n').slice(0, 12000);
+      // A suggestion from the dashboard's Crecimiento view: say where it came from; the merchant still sends it.
+      if (event.data.origin === 'growth') {
+        toast = 'Sugerencia lista: revísala y envíala cuando quieras.';
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 6000);
+      }
       chatExpanded = true; render(); focusComposer(); scheduleEstimate();
     } else if (action === 'media') {
       const button = app.querySelector<HTMLButtonElement>('[data-visual-tab="assets"]');
@@ -208,7 +214,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       } catch { generationSettings.motion = 'subtle'; generationSettings.scrollFeel = 'soft'; }
     }
     draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; scheduleEstimate();
-    if (version) { if (waitForChecks) await runChecks(); else void runChecks(); }
+    // A saved design shows at once; the browser checks load every page at four widths and report when done.
+    if (version) { if (waitForChecks) { render(); await runChecks(); } else void runChecks(); }
   }
   async function boot() {
     stores = await api.listStores();
@@ -281,7 +288,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
         if (result.revision) {
-          await load(result.revision.revision, true); mode = 'preview';
+          mode = 'preview'; await load(result.revision.revision, true);
           toast = checks?.some(row => row.status === 'failed') ? 'Cambios guardados con errores pendientes. Revisa el resultado en el chat.' : checks?.some(row => row.status === 'warning' || row.status === 'skipped') ? 'Diseño comprobado con pasos pendientes. Revisa el resultado en el chat.' : 'Comprobaciones terminadas. Revisa el diseño antes de publicar.';
         }
       } catch (e) {

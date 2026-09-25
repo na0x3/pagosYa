@@ -10,7 +10,7 @@
  * Styling is self-contained (`ui-` classes + CSS custom properties), never Tailwind, because the
  * Tailwind pass only scans authored components.
  */
-import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
 
 /* ------------------------------------------------------------------ tokens */
@@ -71,7 +71,7 @@ export function themeCss(tokens: StoreTokens): string {
 /* ------------------------------------------------------------------ base css */
 
 const UI_CSS = `
-:root{--ui-line:color-mix(in srgb,var(--ui-ink) 14%,var(--ui-paper));--ui-ink-85:color-mix(in srgb,var(--ui-ink) 85%,var(--ui-paper));--ui-ink-70:color-mix(in srgb,var(--ui-ink) 70%,var(--ui-paper));--ui-ink-55:color-mix(in srgb,var(--ui-ink) 55%,var(--ui-paper));--ui-ink-40:color-mix(in srgb,var(--ui-ink) 40%,var(--ui-paper));--ui-body:clamp(15px,.35vw + 14px,17px);--ui-display:clamp(calc(var(--ui-body) * 1.9),calc(var(--ui-body) * var(--ui-ratio) * .42 + 3.2vw),calc(var(--ui-body) * var(--ui-ratio)));--ui-h2:clamp(calc(var(--ui-body) * 1.5),1.2vw + 1.2rem,calc(var(--ui-body) * var(--ui-ratio) * .62));--ui-ease:cubic-bezier(.22,1,.36,1);--ui-shadow:0 1px 2px color-mix(in srgb,var(--ui-ink) 8%,transparent),0 12px 32px -12px color-mix(in srgb,var(--ui-ink) 22%,transparent)}
+:root{--ui-line:color-mix(in srgb,var(--ui-ink) 14%,var(--ui-paper));--ui-ink-85:color-mix(in srgb,var(--ui-ink) 85%,var(--ui-paper));--ui-ink-70:color-mix(in srgb,var(--ui-ink) 70%,var(--ui-paper));--ui-ink-55:color-mix(in srgb,var(--ui-ink) 55%,var(--ui-paper));--ui-ink-40:color-mix(in srgb,var(--ui-ink) 40%,var(--ui-paper));--ui-body:clamp(15px,.35vw + 14px,17px);--ui-display:clamp(calc(var(--ui-body) * 1.9),calc(var(--ui-body) * var(--ui-ratio) * .42 + 3.2vw),calc(var(--ui-body) * var(--ui-ratio)));--ui-h2:clamp(calc(var(--ui-body) * 1.5),1.2vw + 1.2rem,calc(var(--ui-body) * var(--ui-ratio) * .62));--ui-ease:var(--motion-ease-settle,cubic-bezier(.22,1,.36,1));--ui-shadow:0 1px 2px color-mix(in srgb,var(--ui-ink) 8%,transparent),0 12px 32px -12px color-mix(in srgb,var(--ui-ink) 22%,transparent)}
 body{margin:0;background:var(--ui-paper)}
 html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!important}.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}.lenis.lenis-stopped{overflow:clip}
 .ui-root{background:var(--ui-paper);color:var(--ui-ink);font-family:var(--ui-body-font);font-size:var(--ui-body);line-height:1.7;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100dvh}
@@ -93,7 +93,7 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-muted{color:var(--ui-ink-70)}
 .ui-hairline{border:0;border-top:1px solid var(--ui-line);margin:0}
 .ui-stack{display:flex;flex-direction:column;gap:var(--ui-s3)}.ui-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-s3)}
-.ui-button{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:0 var(--ui-s5);border:1px solid transparent;border-radius:var(--ui-radius-control);font:inherit;font-weight:600;font-size:15px;letter-spacing:.01em;text-decoration:none;cursor:pointer;transition:transform .2s var(--ui-ease),background-color .2s,color .2s,border-color .2s}
+.ui-button{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:0 var(--ui-s5);border:1px solid transparent;border-radius:var(--ui-radius-control);font:inherit;font-weight:600;font-size:15px;letter-spacing:.01em;text-decoration:none;cursor:pointer;transition:transform var(--motion-fast,.2s) var(--motion-ease,var(--ui-ease)),background-color var(--motion-fast,.2s),color var(--motion-fast,.2s),border-color var(--motion-fast,.2s)}
 .ui-button:active{transform:scale(.97)}
 .ui-button[data-variant=solid]{background:var(--ui-accent);color:var(--ui-on-accent)}.ui-button[data-variant=solid]:hover{background:color-mix(in srgb,var(--ui-accent) 88%,var(--ui-ink))}
 .ui-button[data-variant=outline]{border-color:currentColor;color:inherit;background:transparent}.ui-button[data-variant=outline]:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
@@ -115,7 +115,7 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-brand{display:inline-flex;flex-direction:column;color:inherit;text-decoration:none;line-height:1.1;min-width:0}.ui-brand__name{font-family:var(--ui-display-font);font-weight:var(--ui-display-weight);font-size:clamp(19px,1.2vw + 12px,26px);letter-spacing:-.01em}.ui-brand__tag{font-size:11px;letter-spacing:var(--ui-tracking);text-transform:uppercase;color:var(--ui-ink-70);margin-top:3px}.ui-brand img{max-height:40px;width:auto}
 .ui-nav{display:flex;gap:var(--ui-s1)}.ui-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 var(--ui-s3);color:var(--ui-ink-85);text-decoration:none;font-size:15px;border-radius:var(--ui-radius-control)}.ui-nav a:hover{color:var(--ui-ink);background:color-mix(in srgb,var(--ui-ink) 5%,transparent)}
 .ui-header__tools{display:flex;align-items:center;gap:var(--ui-s2)}
-.ui-cart{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 var(--ui-s3);border:1px solid var(--ui-line);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.ui-cart:hover{border-color:var(--ui-ink-40)}
+.ui-cart{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 var(--ui-s3);border:1px solid var(--ui-line);border-radius:var(--kit-btn-radius,999px);background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.ui-cart:hover{border-color:var(--ui-ink-40)}:root[data-dna-button] .ui-cart{text-transform:var(--kit-btn-case);letter-spacing:var(--kit-btn-tracking)}
 .ui-cart [data-cart-count]{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--ui-accent);color:var(--ui-on-accent);font-size:12px;font-variant-numeric:tabular-nums}.ui-cart [data-cart-count]:empty{display:none}
 .ui-menu{display:none}.ui-menu summary{list-style:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;cursor:pointer}.ui-menu summary::-webkit-details-marker{display:none}
 .ui-menu__panel{position:absolute;left:0;right:0;top:100%;display:grid;gap:2px;padding:var(--ui-s3) clamp(16px,4vw,48px) var(--ui-s5);background:var(--ui-paper);border-bottom:1px solid var(--ui-line);box-shadow:var(--ui-shadow)}.ui-menu__panel a{min-height:48px;display:flex;align-items:center;color:inherit;text-decoration:none;font-size:18px;border-bottom:1px solid var(--ui-line)}
@@ -169,13 +169,13 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 @media (max-width:820px){[data-ui-catalog] :is([data-pagosya-grid]:not(:has(>.catalog-group)),.catalog-group__items),[data-ui-catalog][data-layout=editorial] :is([data-pagosya-grid]:not(:has(>.catalog-group)),.catalog-group__items),[data-ui-catalog][data-layout=spotlight] :is([data-pagosya-grid]:not(:has(>.catalog-group)),.catalog-group__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:var(--ui-s5) var(--ui-s3)!important}[data-ui-catalog][data-layout] .menu-item:nth-child(n){grid-column:auto;grid-row:auto}[data-ui-catalog][data-layout=spotlight] .menu-item:first-child{grid-column:1/-1}}
 .ui-card{position:relative;display:flex;flex-direction:column;gap:var(--ui-s3);height:100%;color:inherit;padding:0!important}
 .ui-card__media{position:relative;display:block;overflow:hidden;aspect-ratio:var(--ui-aspect);border-radius:var(--ui-radius-media);background:var(--ui-surface)}
-.ui-card__media img{width:100%;height:100%;object-fit:cover;transition:transform .9s var(--ui-ease)}
+.ui-card__media img{width:100%;height:100%;object-fit:cover;transition:transform var(--motion-slow,.9s) var(--motion-ease,var(--ui-ease))}
 .ui-card__body{display:flex;flex-direction:column;gap:var(--ui-s1);margin-top:auto}
 .ui-card__name{font-family:var(--ui-display-font);font-weight:var(--ui-display-weight);font-size:calc(var(--ui-body) * 1.05);line-height:1.25;margin:0}.ui-card__name :is(a,button){color:inherit;text-decoration:none;font:inherit;background:none;border:0;padding:0;text-align:inherit;cursor:pointer}.ui-card__name :is(a,button)::after{content:"";position:absolute;inset:0;z-index:1}
 .ui-card__media:is(button){width:100%;padding:0;border:0;cursor:pointer}
 .ui-card__price{font-variant-numeric:tabular-nums;font-weight:600;margin:0}.ui-card__meta{font-size:13px;color:var(--ui-ink-70);margin:0}
 .ui-card__desc{font-size:14px;color:var(--ui-ink-70);margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ui-card__add{position:relative;z-index:2;align-self:flex-start;min-height:44px;padding:0 var(--ui-s4);border:1px solid var(--ui-ink);border-radius:var(--ui-radius-control);background:transparent;color:var(--ui-ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background-color .2s,color .2s}.ui-card__add:hover:not(:disabled){background:var(--ui-ink);color:var(--ui-paper)}.ui-card__add:disabled{opacity:.45;cursor:default}
+.ui-card__add{position:relative;z-index:2;align-self:flex-start;min-height:44px;padding:0 var(--ui-s4);border:1px solid var(--ui-ink);border-radius:var(--kit-btn-radius,var(--ui-radius-control));background:transparent;color:var(--ui-ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background-color .2s,color .2s}.ui-card__add:hover:not(:disabled){background:var(--ui-ink);color:var(--ui-paper)}.ui-card__add:disabled{opacity:.45;cursor:default}
 .ui-card[data-sold-out] .ui-card__media img{filter:grayscale(.6);opacity:.7}
 .ui-card[data-card=overlay] .ui-card__body{position:absolute;inset:auto var(--ui-s3) var(--ui-s3);padding:var(--ui-s3) var(--ui-s4);border-radius:var(--ui-radius-control);background:color-mix(in srgb,var(--ui-paper) 90%,transparent);backdrop-filter:blur(10px)}.ui-card[data-card=overlay] .ui-card__body{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:var(--ui-s3)}.ui-card[data-card=overlay] .ui-card__body>:not(.ui-card__add){grid-column:1}.ui-card[data-card=overlay] .ui-card__add{grid-column:2;grid-row:1/span 4;align-self:center;background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-on-accent)}
 .ui-card{container-type:inline-size}
@@ -184,8 +184,8 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-card[data-card=minimal] .ui-card__media{border-radius:0}.ui-card[data-card=minimal] .ui-card__body{flex-direction:row;flex-wrap:wrap;justify-content:space-between;gap:var(--ui-s1) var(--ui-s3)}.ui-card[data-card=minimal] .ui-card__name{flex:1 1 60%}.ui-card[data-card=minimal] .ui-card__add{border:0;padding:0;text-decoration:underline;text-underline-offset:.3em;background:none!important;color:inherit!important;flex-basis:100%}
 .ui-card[data-card=framed]{padding:var(--ui-s3)!important;border:1px solid var(--ui-line);border-radius:calc(var(--ui-radius-media) + 6px);background:var(--ui-paper);transition:border-color .25s,box-shadow .25s}.ui-card[data-card=framed]:hover{border-color:var(--ui-ink-40);box-shadow:var(--ui-shadow)}.ui-card[data-card=framed] .ui-card__add{width:100%;background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-on-accent)}
 .ui-card[data-card=caption] .ui-card__body{text-align:center;align-items:center}.ui-card[data-card=caption] .ui-card__name{font-style:var(--ui-subhead-style)}.ui-card[data-card=caption] .ui-card__add{align-self:center;border-radius:999px}
-[data-fx~=zoom] .ui-card:hover .ui-card__media img{transform:scale(1.06)}
-[data-fx~=lift] .ui-card{transition:transform .35s var(--ui-ease)}[data-fx~=lift] .ui-card:hover{transform:translateY(-6px)}
+:root:not([data-dna-card=zoom]) [data-fx~=zoom] .ui-card:hover .ui-card__media img{transform:scale(1.06)}
+[data-fx~=lift] .ui-card{transition:transform var(--motion-base,.35s) var(--motion-ease,var(--ui-ease))}:root:not([data-dna-card=tilt]) [data-fx~=lift] .ui-card:hover{transform:translateY(-6px)}
 .ui-feature{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ui-s7);align-items:center}.ui-feature[data-reverse] .ui-feature__media{order:2}.ui-feature__media{border-radius:var(--ui-radius-media);overflow:hidden;aspect-ratio:4/5;background:var(--ui-surface)}.ui-feature__media img{width:100%;height:100%;object-fit:cover}
 @media (max-width:820px){.ui-feature{grid-template-columns:1fr;gap:var(--ui-s5)}.ui-feature[data-reverse] .ui-feature__media{order:0}}
 .ui-chapters{display:grid;gap:var(--ui-s5)}.ui-chapter{position:sticky;top:calc(var(--ui-s6) + var(--i) * 18px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ui-s6);align-items:center;min-height:min(72dvh,640px);padding:var(--ui-s6);border:1px solid var(--ui-line);border-radius:calc(var(--ui-radius-media) + 8px);background:var(--ui-paper);box-shadow:var(--ui-shadow)}.ui-chapter:nth-child(even){background:var(--ui-surface)}.ui-chapter__media{aspect-ratio:4/3;border-radius:var(--ui-radius-media);overflow:hidden}.ui-chapter__media img{width:100%;height:100%;object-fit:cover}
@@ -214,7 +214,7 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
     :root:not([data-ui-motion=off]) .ui-scroll-grow{animation:ui-grow-media linear both;animation-timeline:view();animation-range:entry 0% cover 50%}
   }
 }
-@keyframes ui-reveal{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes ui-reveal{from{opacity:0;transform:translateY(var(--motion-distance,28px))}to{opacity:1;transform:none}}
 @keyframes ui-grow{from{transform:scale(.86);opacity:.35}to{transform:none;opacity:1}}
 @keyframes ui-grow-media{from{transform:scale(.8);border-radius:calc(var(--ui-radius-media) * 2.5)}to{transform:none}}
 @keyframes ui-word{from{opacity:.38}to{opacity:1}}
@@ -247,6 +247,46 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 `;
 
 /* ------------------------------------------------------------------ motion */
+
+export type MotionPersonality = 'calm' | 'snappy' | 'playful' | 'cinematic';
+type MotionTokenSet = { ease: string; settle: string; exit: string; settleExit: string; fast: number; base: number; slow: number; distance: number; stagger: number; parallax: number; press: number };
+/**
+ * The store's motion personality (html[data-dna-motion]) as numbers and curves: a mirror of MOTION_TOKENS in the
+ * commerce runtime, which sets the same values as --motion-* tokens (a test pins both to the API's table). The mirror
+ * serves code that runs before that runtime has loaded: React effects run before the deferred commerce.js.
+ * ease/exit may overshoot (playful): transforms only; settle/settleExit never do.
+ */
+const MOTION_PERSONALITIES: Record<MotionPersonality, MotionTokenSet> = {
+  calm: { ease: 'cubic-bezier(.25,.1,.25,1)', settle: 'cubic-bezier(.25,.1,.25,1)', exit: 'cubic-bezier(.4,0,1,1)', settleExit: 'cubic-bezier(.4,0,1,1)', fast: 180, base: 320, slow: 560, distance: 12, stagger: 70, parallax: .5, press: .98 },
+  snappy: { ease: 'cubic-bezier(.2,.9,.2,1)', settle: 'cubic-bezier(.2,.9,.2,1)', exit: 'cubic-bezier(.4,0,.6,1)', settleExit: 'cubic-bezier(.4,0,.6,1)', fast: 120, base: 200, slow: 320, distance: 8, stagger: 35, parallax: .3, press: .96 },
+  playful: { ease: 'cubic-bezier(.34,1.56,.64,1)', settle: 'cubic-bezier(.22,1,.36,1)', exit: 'cubic-bezier(.36,0,.66,-.56)', settleExit: 'cubic-bezier(.5,0,.75,0)', fast: 200, base: 360, slow: 600, distance: 18, stagger: 60, parallax: .8, press: .92 },
+  cinematic: { ease: 'cubic-bezier(.16,1,.3,1)', settle: 'cubic-bezier(.16,1,.3,1)', exit: 'cubic-bezier(.7,0,.84,0)', settleExit: 'cubic-bezier(.7,0,.84,0)', fast: 260, base: 520, slow: 900, distance: 28, stagger: 110, parallax: 1.3, press: .98 },
+};
+const MOTION_VARS: Record<keyof MotionTokenSet, string> = { ease: '--motion-ease', settle: '--motion-ease-settle', exit: '--motion-ease-exit', settleExit: '--motion-ease-settle-exit', fast: '--motion-fast', base: '--motion-base', slow: '--motion-slow', distance: '--motion-distance', stagger: '--motion-stagger', parallax: '--motion-parallax', press: '--motion-press-scale' };
+type MotionNumber = 'fast' | 'base' | 'slow' | 'distance' | 'stagger' | 'parallax' | 'press';
+type MotionCurve = 'ease' | 'settle' | 'exit' | 'settleExit';
+
+function motionPersonality(): MotionTokenSet | null {
+  const name = document.documentElement.getAttribute('data-dna-motion')
+    ?? (window as unknown as { PAGOSYA_CONFIG?: { dna?: { motion?: unknown } } }).PAGOSYA_CONFIG?.dna?.motion;
+  return typeof name === 'string' && Object.prototype.hasOwnProperty.call(MOTION_PERSONALITIES, name) ? MOTION_PERSONALITIES[name as MotionPersonality] : null;
+}
+const motionVar = (name: keyof MotionTokenSet) => typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(MOTION_VARS[name]).trim() : '';
+/**
+ * A motion number (ms, px or a factor) for WAAPI and Motion code: the store's own --motion-* value, else its
+ * personality's, else `fallback` — the use site's value for a store without a personality. Client-only (effects).
+ */
+export function motionToken(name: MotionNumber, fallback: number): number {
+  if (typeof document === 'undefined') return fallback;
+  const match = motionVar(name).match(/^(-?\d*\.?\d+)(ms|s|px)?$/);
+  if (match) return Number(match[1]) * (match[2] === 's' ? 1000 : 1);
+  return motionPersonality()?.[name] ?? fallback;
+}
+/** A motion curve, resolved like motionToken. `ease` and `exit` may overshoot: use them on transforms only. */
+export function motionEase(name: MotionCurve, fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+  return motionVar(name) || motionPersonality()?.[name] || fallback;
+}
 
 /** True only when the shopper allows motion and the merchant has not switched it off. */
 export function useUiMotion(): boolean {
@@ -402,11 +442,16 @@ function PageEntranceRun({ variant, mark, duration, onDone }: { variant: 'letter
  * to reveal the real page underneath. Purely decorative — the page beneath is always real and
  * interactive, since the overlay is `pointer-events:none` and never delays content.
  */
-export function PageEntrance({ variant = 'letter', mark = 'a', duration = 900 }: { variant?: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark?: string; duration?: number }) {
+export function PageEntrance({ variant = 'letter', mark = 'a', duration }: { variant?: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark?: string; duration?: number }) {
+  return <Entrance variant={variant} mark={mark} duration={duration} fallback={900} />;
+}
+
+/** An author's duration keeps its bounds; without one the store's motion personality sets it, within the 1000ms opening. */
+function Entrance({ variant, mark, duration, fallback }: { variant: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark: string; duration?: number; fallback: number }) {
   const enabled = useUiMotion();
   const [epoch, setEpoch] = useState(0);
   const started = useRef(false);
-  const ms = clamp(duration, 400, 1400, 900);
+  const ms = duration !== undefined ? clamp(duration, 400, 1400, fallback) : clamp(motionToken('slow', fallback), 700, 1000, fallback);
   const onDone = useCallback(() => setEpoch(0), []);
   const glyph = (mark || 'a').trim().slice(0, variant === 'wordmark' ? 48 : 2) || 'a';
 
@@ -428,13 +473,13 @@ export function PageEntrance({ variant = 'letter', mark = 'a', duration = 900 }:
 }
 
 /** A clear once-per-visit brand reveal using the merchant's actual wordmark. */
-export function BrandEntrance({ name, duration = 1000 }: { name: string; duration?: number }) {
-  return <PageEntrance variant="wordmark" mark={name} duration={duration} />;
+export function BrandEntrance({ name, duration }: { name: string; duration?: number }) {
+  return <Entrance variant="wordmark" mark={name} duration={duration} fallback={1000} />;
 }
 
 /** A decorative brand stroke that reveals the page and cancels on the shopper's first input. */
-export function SignatureStrokeEntrance({ duration = 1000 }: { duration?: number }) {
-  return <PageEntrance variant="stroke" duration={duration} />;
+export function SignatureStrokeEntrance({ duration }: { duration?: number }) {
+  return <Entrance variant="stroke" mark="a" duration={duration} fallback={1000} />;
 }
 
 /**
@@ -442,7 +487,7 @@ export function SignatureStrokeEntrance({ duration = 1000 }: { duration?: number
  * on mount. Progressive enhancement: without JS, reduced motion, or motion off, children are
  * simply visible, since nothing here hides them by default.
  */
-export function EntranceGroup({ children, delay = 0, stagger = 60, className }: { children: ReactNode; delay?: number; stagger?: number; className?: string }) {
+export function EntranceGroup({ children, delay = 0, stagger, className }: { children: ReactNode; delay?: number; stagger?: number; className?: string }) {
   const enabled = useUiMotion();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -452,15 +497,17 @@ export function EntranceGroup({ children, delay = 0, stagger = 60, className }: 
     const items = Array.from(root.children) as HTMLElement[];
     if (!items.length || typeof items[0].animate !== 'function') return;
     const easing = readUiEase();
-    const itemDuration = 320;
+    // The store's motion personality sets the pace; an explicit stagger is the author's choice.
+    const itemDuration = clamp(motionToken('base', 320), 120, 600, 320);
+    const distance = clamp(motionToken('distance', 20), 0, 40, 20);
     const cap = 1000 - itemDuration - 1;
-    const step = clamp(stagger, 0, 120, 60);
+    const step = clamp(stagger ?? motionToken('stagger', 60), 0, 120, 60);
     const base = clamp(delay, 0, 600, 0);
     let anims: Animation[] = [];
     const play = () => {
       anims.forEach(a => a.cancel());
       anims = items.map((item, index) => item.animate(
-        [{ transform: 'translateY(20px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 }],
+        [{ transform: `translateY(${distance}px)`, opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 }],
         { duration: itemDuration, delay: Math.min(base + index * step, cap), easing, fill: 'both' },
       ));
     };
@@ -549,6 +596,20 @@ export function CartButton({ label = 'Pedido' }: { label?: string }) {
 export function CommerceSlots() {
   return <><div data-pagosya-cart hidden /><p data-pagosya-status role="status" aria-live="polite" /></>;
 }
+/* T1 kit templates: author the markup of a kit surface; the commerce runtime fills the slots. Prices, totals,
+ * stock, options and checkout stay platform-owned. Each template needs one root element and its required slots:
+ * product page gallery/title/pricing/buy; cart lines/total/action plus a button[data-cart-close]; cart line
+ * name/line-total/quantity; added notice message plus a button[data-cart-open]; review summary/fields. */
+export function ProductPageTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-product-page-template>{children}</template>; }
+export function CartTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-cart-template>{children}</template>; }
+export function CartLineTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-cart-line-template>{children}</template>; }
+export function AddedTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-added-template>{children}</template>; }
+export function ReviewTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-review-template>{children}</template>; }
+const KIT_SLOT_ATTRIBUTE = { product: 'data-product-slot', cart: 'data-cart-slot', line: 'data-cart-field', added: 'data-added-field', review: 'data-review-slot' } as const;
+export function KitSlot({ kind, name, as = 'div', className, children }: { kind: keyof typeof KIT_SLOT_ATTRIBUTE; name: string; as?: keyof JSX.IntrinsicElements; className?: string; children?: ReactNode }) {
+  const Tag = as as any;
+  return <Tag className={className} {...{ [KIT_SLOT_ATTRIBUTE[kind]]: name }}>{children}</Tag>;
+}
 export function AnnouncementBar({ children }: { children: ReactNode }) { return <div className="ui-announcement">{children}</div>; }
 
 export type NavLink = { label: string; href: string };
@@ -569,7 +630,7 @@ function OverlayMenu({ links, name }: { links: NavLink[]; name: string }) {
     animation.current?.cancel();
     const finish = () => { el.close(); setOpen(false); trigger.current?.focus({ preventScroll: true }); };
     if (animate && enabled && typeof el.animate === 'function') {
-      const current = el.animate([{ transform: 'translateY(0%)' }, { transform: 'translateY(-100%)' }], { duration: 220, easing: readUiEase(), fill: 'forwards' });
+      const current = el.animate([{ transform: 'translateY(0%)' }, { transform: 'translateY(-100%)' }], { duration: clamp(motionToken('fast', 220), 80, 400, 220), easing: motionEase('settleExit', readUiEase()), fill: 'forwards' });
       animation.current = current;
       current.finished.then(() => { finish(); current.cancel(); }).catch(() => {});
     } else finish();
@@ -580,7 +641,7 @@ function OverlayMenu({ links, name }: { links: NavLink[]; name: string }) {
       const el = dialog.current;
       if (!el || el.open) return;
       animation.current?.cancel(); el.showModal(); setOpen(true);
-      if (enabled && event.detail > 0 && typeof el.animate === 'function') animation.current = el.animate([{ transform: 'translateY(-100%)' }, { transform: 'translateY(0%)' }], { duration: 240, easing: readUiEase() });
+      if (enabled && event.detail > 0 && typeof el.animate === 'function') animation.current = el.animate([{ transform: 'translateY(-100%)' }, { transform: 'translateY(0%)' }], { duration: clamp(motionToken('base', 240), 120, 400, 240), easing: readUiEase() });
     }}>Menú <span aria-hidden="true">☰</span></button>
     <dialog ref={dialog} id={id} className="ui-overlay-menu" aria-label={`Menú de ${name}`} onCancel={event => { event.preventDefault(); close(false); }} onClose={() => setOpen(false)} onKeyDown={() => animation.current?.finish()}>
       <div className="ui-overlay-menu__bar"><span>{name}</span><button type="button" autoFocus onClick={event => close(event.detail > 0)}>Cerrar <span aria-hidden="true">×</span></button></div>
@@ -827,7 +888,10 @@ export function Parallax({ children, strength = 60, mobileStrength = 0, classNam
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
-  const limit = mobile ? clamp(mobileStrength, -20, 20, 0) : clamp(strength, -160, 160, 60);
+  // The store's motion personality scales the author's strength (×0.3 snappy … ×1.3 cinematic), within the same bounds.
+  const [depth, setDepth] = useState(1);
+  useEffect(() => { setDepth(clamp(motionToken('parallax', 1), 0, 2, 1)); }, []);
+  const limit = mobile ? clamp(mobileStrength * depth, -20, 20, 0) : clamp(strength * depth, -160, 160, 60);
   const transform = useTransform(scrollYProgress, [0, 1], [`translateY(${limit}px)`, `translateY(${-limit}px)`]);
   // The scroll target (outer) stays untransformed so its own measured position can't feed back into the transform it drives.
   return <div ref={outerRef} className={className} data-ui-parallax="">
@@ -845,8 +909,8 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
     let anim: Animation | undefined;
     const start = () => {
       if (!anim) anim = el.animate(
-        [{ transform: 'translateY(28px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 }],
-        { duration: 500, delay: clamp(delay, 0, 300, 0), easing: readUiEase(), fill: 'both' },
+        [{ transform: `translateY(${clamp(motionToken('distance', 28), 0, 40, 28)}px)`, opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 }],
+        { duration: clamp(motionToken('slow', 500), 200, 900, 500), delay: clamp(delay, 0, 300, 0), easing: readUiEase(), fill: 'both' },
       );
       return anim;
     };

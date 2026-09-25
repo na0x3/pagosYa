@@ -83,6 +83,17 @@ export interface AppConfig {
   consumerDashboardOrigin: string;
   merchantDashboardOrigin: string;
   orderTrackingSecret: string;
+  /** Signs public cobro / proposal / contract links (business-documents/document-link-token.ts). */
+  documentLinkSecret: string;
+  /** Per-store cap on cobro / proposal / contract emails in any 24 hours (DOCUMENT_EMAILS_PER_DAY). */
+  documentEmailsPerDay: number;
+  /**
+   * Keys the storefront analytics session hash (store-analytics.service.ts). Its own secret, so raw analytics rows can
+   * never be joined to StoreFunnelVisit (plain sha256 of the same session id) or, through it, to orders.
+   */
+  analyticsSessionSecret: string;
+  /** Per-store ceiling on storefront analytics events stored per Bolivia day (STORE_ANALYTICS_DAILY_CAP). */
+  storeAnalyticsDailyCap: number;
   operationsEncryptionKey: string;
   corsOrigins: string[];
   exposeDocs: boolean;
@@ -163,6 +174,9 @@ export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, envi
   return dlocal.enabled || environment !== "production";
 }
 
+/** The analytics session key outside production (the production check refuses it: "dev-" / "change-me"). */
+export const DEVELOPMENT_ANALYTICS_SESSION_SECRET = "development-only-analytics-session-secret-change-me";
+
 export function assertProductionSecurityConfig(app: AppConfig): void {
   if (app.environment !== "production") return;
   const failures: string[] = [];
@@ -195,6 +209,8 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
   requireSecret("INTERNAL_RAIL_CALLBACK_SECRET", app.internalRailCallbackSecret);
   requireSecret("INTERNAL_OPS_SECRET", app.internalOpsSecret);
   requireSecret("ORDER_TRACKING_SECRET", app.orderTrackingSecret);
+  requireSecret("DOCUMENT_LINK_SECRET", app.documentLinkSecret);
+  requireSecret("ANALYTICS_SESSION_SECRET", app.analyticsSessionSecret);
   requireSecret("OPERATIONS_ENCRYPTION_KEY", app.operationsEncryptionKey);
   requireHttps("CHECKOUT_ORIGIN", app.checkoutOrigin);
   requireHttps("CONSUMER_DASHBOARD_ORIGIN", app.consumerDashboardOrigin);
@@ -262,6 +278,10 @@ export default (): { app: AppConfig } => {
     consumerDashboardOrigin: process.env.CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324",
     merchantDashboardOrigin: process.env.MERCHANT_DASHBOARD_ORIGIN ?? "http://localhost:4322",
     orderTrackingSecret: process.env.ORDER_TRACKING_SECRET ?? "development-only-order-tracking-secret-change-me",
+    documentLinkSecret: process.env.DOCUMENT_LINK_SECRET ?? "development-only-document-link-secret-change-me",
+    analyticsSessionSecret: process.env.ANALYTICS_SESSION_SECRET ?? DEVELOPMENT_ANALYTICS_SESSION_SECRET,
+    documentEmailsPerDay: parseBoundedInteger("DOCUMENT_EMAILS_PER_DAY", process.env.DOCUMENT_EMAILS_PER_DAY, 200, 1, 100_000),
+    storeAnalyticsDailyCap: parseBoundedInteger("STORE_ANALYTICS_DAILY_CAP", process.env.STORE_ANALYTICS_DAILY_CAP, 50_000, 1, 10_000_000),
     operationsEncryptionKey: process.env.OPERATIONS_ENCRYPTION_KEY ?? "development-only-operations-key",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,

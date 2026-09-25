@@ -97,7 +97,8 @@ test('retired sections are absent and old view selections fall back to the overv
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const loadedResources = []; page.on('request', request => loadedResources.push(new URL(request.url()).pathname));
   const { requests } = await workspace(page);
-  for (const view of ['operations', 'growth', 'events', 'settings', 'appearance']) {
+  // 'growth' was retired once and came back as Crecimiento (G2, tests/growth.spec.mjs).
+  for (const view of ['operations', 'events', 'settings', 'appearance']) {
     await expect(page.locator(`[data-dashboard-view="${view}"], [data-dashboard-page="${view}"]`)).toHaveCount(0);
     await page.evaluate(view => window.setDashboardView(view), view);
     await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'overview');

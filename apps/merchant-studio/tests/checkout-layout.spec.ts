@@ -12,6 +12,35 @@ for (const saved of [null, 'http://localhost:5199']) test(`Studio uses ${saved ?
   expect(origin).toBe(saved || 'http://localhost:5175');
 });
 
+for (const width of [1280, 390]) test(`'Seguir comprando' lines up with the cart content even under a store's generic button rules at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto('/?demo=1');
+  await page.evaluate(async ({ commerce }) => {
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
+    const snapshot = { schemaVersion: 1, brief: {}, files: [
+      // A generated store's reset: every button full width, left aligned, no margin.
+      { path: 'index.html', content: `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font:16px/1.5 Georgia,serif}button{width:100%;text-align:left;margin:0;padding:0}</style><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><header><button type="button" data-cart-open style="width:auto">Mi pedido <b data-cart-count>0</b></button></header><main><div data-pagosya-catalog></div></main><div data-pagosya-cart hidden></div><p data-pagosya-status></p></body></html>` },
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'arte', data: { storeName: 'Arte', locations: [], categories: [], items: [{ id: 'cuadro', name: 'Café en el Jardín', amount: 25590, currency: 'BOB', stock: 5, imageUrls: [] }] } }) + ';' },
+      { path: 'commerce.js', content: commerce },
+    ] };
+    document.body.innerHTML = ''; document.body.style.margin = '0';
+    const frame = document.createElement('iframe'); frame.title = 'Tienda'; frame.sandbox.add('allow-scripts'); frame.style.cssText = 'width:100%;height:100vh;border:0';
+    frame.srcdoc = sourcePreviewDocument(snapshot, 'index.html', { cart: [{ id: 'cuadro', quantity: 5 }] }); document.body.append(frame);
+  }, { commerce });
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('button', { name: /Mi pedido/ }).click();
+  const continueButton = frame.getByRole('button', { name: 'Seguir comprando', exact: true });
+  await expect(continueButton).toBeVisible();
+  const box = await continueButton.evaluate(el => {
+    const body = el.closest('dialog')!.querySelector('.cart-drawer__body')!;
+    const style = getComputedStyle(body), rect = body.getBoundingClientRect(), own = el.getBoundingClientRect();
+    return { left: own.left, right: own.right, contentLeft: rect.left + parseFloat(style.paddingLeft), contentRight: rect.right - parseFloat(style.paddingRight), align: getComputedStyle(el).textAlign };
+  });
+  expect(box.left).toBeGreaterThanOrEqual(box.contentLeft - 1);
+  expect(box.right).toBeLessThanOrEqual(box.contentRight + 1);
+  expect(box.align).toBe('center');
+});
+
 for (const width of [1440, 1024, 390]) test(`checkout stays inside its authored column at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await page.goto('/?demo=1');

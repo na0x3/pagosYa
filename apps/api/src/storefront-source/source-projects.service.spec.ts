@@ -7,6 +7,8 @@ import { ConflictException, NotFoundException } from "@nestjs/common";
 import { SourceProjectsService } from "./source-projects.service";
 import { sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
 import { validateLegacySources } from "./source-legacy";
+import { dnaFingerprint } from "./source-dna";
+import { validDna } from "./fixtures/dna";
 
 const input = () => ({ revision: 0, label: "First", brief: { businessType: "Café", audience: "Neighbors", primaryAction: "Pickup", visualDirection: "Menu" }, files: [
   { path: "package.json", content: '{"name":"cafe","scripts":{"build":"node build.mjs"}}' },
@@ -167,5 +169,78 @@ describe('React source revisions', () => {
     expect(archive.buffer.toString()).toContain('pages/index.tsx');
     expect(archive.buffer.toString()).toContain('public/commerce.js');
     expect(archive.buffer.toString()).not.toContain('_compiled/home.js');
+  });
+});
+
+describe('store kit CSS on save', () => {
+  it('serves the component block while it exists and drops the compiled file with it', async () => {
+    const { service } = setup();
+    const withBlock = nextStoreFiles().map(f => f.path === 'styles/globals.css' ? { ...f, content: f.content + '\n/* pagosya-kit:start */\n.cart-drawer{background:#fff}\n/* pagosya-kit:end */\n' } : f);
+    await service.save('m1', 's1', { revision: 0, label: 'Next', brief: nextBrief, files: [...withBlock, ...nextProjectScaffold('cafe'), { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` }, { path: 'commerce.js', content: '/* runtime */' }] });
+    const first: any = await service.version('m1', 's1', 1);
+    expect(first.snapshot.files.find((f: any) => f.path === 'styles/kit.css').content).toContain('@layer pagosya-store-kit');
+    await service.editFile('m1', 's1', { revision: 1, path: 'styles/globals.css', content: nextStoreFiles().find(f => f.path === 'styles/globals.css')!.content });
+    const second: any = await service.version('m1', 's1', 2);
+    expect(second.snapshot.files.some((f: any) => f.path === 'styles/kit.css')).toBe(false);
+    expect(second.snapshot.files.find((f: any) => f.path === 'index.html').content).not.toContain('kit.css');
+  });
+  it('validates a static kit file a merchant edits by hand, and leaves their other stylesheets alone', async () => {
+    const { service } = setup();
+    const prepared = await service.prepare({ revision: 0, label: 'Static', brief: nextBrief, files: [
+      { path: 'index.html', content: '<!doctype html><html><head><link rel="stylesheet" href="styles.css"></head><body></body></html>' },
+      { path: 'styles.css', content: '.menu-add{display:none}' }, { path: 'styles/kit.css', content: '.cart-drawer{color:red}body{margin:0}' },
+      { path: 'package.json', content: JSON.stringify({ name: 'x', private: true, type: 'module', scripts: { build: 'node build.mjs', start: 'node server.mjs' } }) }, { path: 'README.md', content: '# x' },
+    ] } as any);
+    const file = (path: string) => prepared.files.find((f: any) => f.path === path)!.content;
+    expect(file('styles/kit.css')).toContain('@layer pagosya-store-kit');
+    expect(file('styles/kit.css')).not.toContain('body');
+    expect(file('styles.css')).toContain('.menu-add{display:none}');
+    expect(file('index.html')).toContain('data-pagosya-kit="store"');
+  });
+});
+
+describe('DNA motifs on save (sub-project 3)', () => {
+  it("re-sanitises a merchant's hand-edited config.js motifs and motif files", async () => {
+    const { service } = setup();
+    const hostile = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><foreignObject><img src=x onerror="alert(1)"></foreignObject><path onclick="alert(1)" d="M1 1h20"/></svg>';
+    const prepared = await service.prepare({ revision: 0, label: 'Static', brief: nextBrief, files: [
+      { path: 'index.html', content: '<!doctype html><html><head></head><body></body></html>' },
+      { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'cafe', motifs: [{ file: 'motifs/lampara.svg', for: 'product', target: 'Lámpara', behavior: 'glow', trigger: 'hover', placement: 'product', svg: hostile }] })};` },
+      { path: 'motifs/lampara.svg', content: hostile },
+      { path: 'package.json', content: JSON.stringify({ name: 'x', private: true, type: 'module', scripts: { build: 'node build.mjs', start: 'node server.mjs' } }) }, { path: 'README.md', content: '# x' },
+    ] } as any);
+    const file = (path: string) => prepared.files.find((f: any) => f.path === path)!.content;
+    expect(file('motifs/lampara.svg')).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h20"/></svg>');
+    expect(file('config.js')).not.toMatch(/foreignObject|onerror|onclick/);
+    expect(file('config.js')).toContain('<path d=\\"M1 1h20\\"/>');
+  });
+});
+
+describe('design fingerprint memory', () => {
+  const designFile = (dna?: unknown) => ({ path: 'design-direction.json', content: JSON.stringify({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
+    name, premise: 'Handmade ceramics', opening: `${name} opening`, flow: `${name} flow`, typography: 'Fraunces / Instrument Sans', imagery: 'None', mobile: 'Stack',
+    ...(dna ? { dna } : {}),
+  })) }) });
+
+  it("saves the chosen concept's DNA fingerprint with the revision, and null without one", async () => {
+    const { service, prisma } = setup();
+    const dna = { ...validDna(), buttons: { form: 'tag', hover: 'fill', press: 'sink' } };
+    await service.save('m1', 's1', { ...input(), files: [...input().files, designFile(dna)] });
+    expect(prisma.storeSourceVersion.create.mock.calls[0][0].data.designFingerprint).toBe(dnaFingerprint(dna as any));
+    await service.save('m1', 's1', { ...input(), revision: 1, files: [...input().files, designFile()] });
+    expect(prisma.storeSourceVersion.create.mock.calls[1][0].data.designFingerprint).toBeNull();
+    await service.save('m1', 's1', { ...input(), revision: 2 });
+    expect(prisma.storeSourceVersion.create.mock.calls[2][0].data.designFingerprint).toBeNull();
+  });
+
+  it("reads the last 40 fingerprints of other stores from the last 60 days, without loading snapshots", async () => {
+    const { service, prisma } = setup();
+    prisma.storeSourceVersion.findMany = jest.fn().mockResolvedValue([{ designFingerprint: 'a' }, { designFingerprint: 'b' }, { designFingerprint: 'a' }]);
+    const now = new Date('2026-09-24T12:00:00Z');
+    expect(await service.recentDesignFingerprints('s1', now)).toEqual(['a', 'b']);
+    expect(prisma.storeSourceVersion.findMany).toHaveBeenCalledWith({
+      where: { storeId: { not: 's1' }, designFingerprint: { not: null }, createdAt: { gte: new Date('2026-07-26T12:00:00Z') } },
+      orderBy: { createdAt: 'desc' }, take: 40, select: { designFingerprint: true },
+    });
   });
 });

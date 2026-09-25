@@ -3,6 +3,7 @@ import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
 import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
+import { createStoreAnalytics } from './store-analytics';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
 import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, hostedImageUrls, hostedCatalogImages } from '@pagosya/storefront-preview';
@@ -85,6 +86,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (routedProduct && (!sourceCanConfigureProduct(routedProduct) || routedProduct.variants?.length && !site.snapshot?.files?.some((file: { path: string; content: string }) => file.path === 'commerce.js' && file.content.includes(SOURCE_PRODUCT_OPTIONS_MARKER)))) return false;
   rememberSourceVisit(slug, site.visitToken);
   const snapshot: SourceSnapshot = site.snapshot;
+  // Published media arrives as named files; the API serves their bytes from this revision's directory.
+  const assetSource = typeof site.assetPath === 'string' ? new URL(`${API_BASE_URL}${site.assetPath}`, location.href).href : null;
+  if (assetSource) for (const file of snapshot.files) if (file.encoding === 'url') file.content = assetSource + file.path.split('/').map(encodeURIComponent).join('/');
   const config = snapshot.files.find(f => f.path === 'config.js');
   if (!config) throw new Error('No se pudo cargar la configuración de esta tienda.');
   const match = config.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
@@ -111,9 +115,11 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
+  // G1: the frame only names moments; consent, the session, dedupe and sending happen here.
+  const analytics = createStoreAnalytics(slug, merchantPreview, () => funnel.sessionId());
   const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug === slug) funnel.track('visit'); };
   window.addEventListener('pagosya:privacy-change', consentChanged);
   const pending = new Set<string>();
@@ -163,6 +169,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       return;
     }
     if (data?.type === 'pagosya:funnel') { funnel.track(data.event, data.method); return; }
+    if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) data.events.slice(0, 40).forEach(analytics.record); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
       try {
         // Merchant-configured destinations (social links, WhatsApp, phone, email) open for the shopper.
@@ -203,6 +210,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       const interactive = ['checkout', 'lead', 'review'].includes(data.action) || (data.action === 'retention' && ['subscribe', 'carts', 'cards'].includes(String(frameBody.path)));
       let previous: { values?: Record<string, string | boolean>; error?: string } | undefined;
       for (let attempt = 0; ; attempt++) {
+      if (data.action === 'checkout' && attempt === 0) analytics.record({ type: 'checkout_step', step: 'contact' });
       const personal = interactive ? await collectPersonalFields(data.action, frameBody, { storeName: store.storeName, creditsEnabled: (store as { creditsEnabled?: boolean }).creditsEnabled, carrierRate: typeof frameBody.shippingZoneId === 'string' && carrierRates.has(frameBody.shippingZoneId) }, previous) : {};
       if (personal === null) { reply(false, { message: 'Cancelaste el formulario seguro.', cancelled: true }); return; }
       const body: Record<string, any> = data.action === 'retention' && (frameBody.payload || Object.keys(personal).length) ? { ...frameBody, payload: { ...(frameBody.payload as object || {}), ...personal } } : { ...frameBody, ...personal };
@@ -237,6 +245,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         document.body.classList.remove('source-store-page');
         window.history.replaceState({ ...(window.history.state || {}), pagosYaCheckout: { clientSecret: json.clientSecret } }, '', location.href);
         markPrivateStorePage();
+        analytics.record({ type: 'checkout_step', step: 'payment' }); analytics.flush();
         await onPayment(json.clientSecret);
         cartStorage.clear();
       } else reply(true, shipping || content ? json : { submitted: true });
@@ -246,7 +255,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     finally { pending.delete(data.action); }
   };
   window.addEventListener('message', receive);
-  window.addEventListener('pagehide', () => { window.removeEventListener('message', receive); window.removeEventListener('pagosya:privacy-change', consentChanged); }, { once: true });
+  window.addEventListener('pagehide', () => { window.removeEventListener('message', receive); window.removeEventListener('pagosya:privacy-change', consentChanged); analytics.dispose(); }, { once: true });
   const requestedPage = new URLSearchParams(location.search).get('source_page');
   show(
     routeProduct && prepared.files.some(f => f.path === (settings.productPage || 'product.html')) ? settings.productPage || 'product.html'

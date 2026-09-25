@@ -67,3 +67,19 @@ it('rejects unrequested SVG drawings and library illustrations but permits expli
   after[1].content = before[1].content.replace('/assets/sample.png', '/assets/creative/burger.svg');
   expect(() => validateSourceArtwork(before, after, request)).toThrow('ilustraciones');
 });
+it('allows only the DNA motif files the platform declared, never an unrequested inline drawing', () => {
+  const before = nextStoreFiles(), after = nextStoreFiles();
+  after[1].content = after[1].content.replace('<main>', '<main><img src="motifs/lampara.svg" alt="" aria-hidden="true" />');
+  expect(() => validateSourceArtwork(before, after, request, ['motifs/lampara.svg'])).not.toThrow();
+  // A motif the DNA did not declare is unrequested art, whichever way the page references it.
+  expect(() => validateSourceArtwork(before, after, request, ['motifs/taza.svg'])).toThrow('ilustraciones');
+  expect(() => validateSourceArtwork(before, after, request)).toThrow('ilustraciones');
+  after[4].content += '\n.hero{background:url(motifs/sol.svg)}';
+  expect(() => validateSourceArtwork(before, after, request, ['motifs/lampara.svg'])).toThrow('ilustraciones');
+  // Declared motifs never license an inline <svg> copy in a page: the sanitiser only sees motifs/*.svg files.
+  const inline = nextStoreFiles();
+  inline[1].content = inline[1].content.replace('<main>', '<main><svg viewBox="0 0 4 4"><path d="M0 0"/></svg>');
+  expect(() => validateSourceArtwork(before, inline, request, ['motifs/lampara.svg'])).toThrow('ilustraciones');
+  // A reference the previous revision already had is not new art.
+  expect(() => validateSourceArtwork(after, after, request, [])).not.toThrow();
+});

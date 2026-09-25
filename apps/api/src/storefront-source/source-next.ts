@@ -1,3 +1,5 @@
+import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
+import { isSourceMotifFile } from './source-motifs';
 import { BadGatewayException } from '@nestjs/common';
 import { build } from 'esbuild';
 import postcss from 'postcss';
@@ -25,7 +27,7 @@ export function nextContentPages(files: SourceProjectFileDto[], purpose: SourceS
       .map(file => ({ name: file.path.slice(11, -4), path: file.path.slice(16, -4) + '.html' }))];
 }
 
-export const SOURCE_NEXT_INSTRUCTIONS = `Generate a real Next.js storefront using React, TypeScript and Tailwind CSS 3. The platform supplies the trusted Next.js Pages Router scaffold, package.json, configuration, runtime and build tooling. Return ONLY components/**/*.tsx and styles/globals.css. Required default-export React components: components/home.tsx, components/product.tsx, components/checkout.tsx. Extract a shared Header, Footer and other reusable pieces into components/. Each page must reuse the same actual shared navigation, typography and brand. Use className with complete literal Tailwind utility names, responsive prefixes, arbitrary values and normal React event handlers/useState/useEffect for interaction. Use styles/globals.css for shared tokens, @font-face, runtime commerce selectors and custom animation. The platform adds @tailwind directives. ${SOURCE_CREATIVE_TOOLS}\n${SOURCE_UI_TOOLS}\nReact and relative component imports are available; do not import remote resources, server modules, Next APIs or CSS from components. Do not output framework configuration, HTML files, site.js, styles.css or compiled bundles. Do not use dangerouslySetInnerHTML, eval, new Function, dynamic imports, script tags or authored fetch calls. Use ordinary anchors with index.html, product.html and checkout.html hrefs, because the same components run in isolated preview and Next.js static exports. The framework supplies document/head/scripts and SEO; components return page content, never html/head/body tags.
+export const SOURCE_NEXT_INSTRUCTIONS = `Generate a real Next.js storefront using React, TypeScript and Tailwind CSS 3. The platform supplies the trusted Next.js Pages Router scaffold, package.json, configuration, runtime and build tooling. Return ONLY components/**/*.tsx and styles/globals.css. Required default-export React components: components/home.tsx, components/product.tsx, components/checkout.tsx. Extract a shared Header, Footer and other reusable pieces into components/. Each page must reuse the same actual shared navigation, typography and brand. Use className with complete literal Tailwind utility names, responsive prefixes, arbitrary values and normal React event handlers/useState/useEffect for interaction. Use styles/globals.css for shared tokens, @font-face, runtime commerce selectors (kit surfaces in its pagosya-kit block) and custom animation. The platform adds @tailwind directives. ${SOURCE_CREATIVE_TOOLS}\n${SOURCE_UI_TOOLS}\nReact and relative component imports are available; do not import remote resources, server modules, Next APIs or CSS from components. Do not output framework configuration, HTML files, site.js, styles.css or compiled bundles. Do not use dangerouslySetInnerHTML, eval, new Function, dynamic imports, script tags or authored fetch calls. Use ordinary anchors with index.html, product.html and checkout.html hrefs, because the same components run in isolated preview and Next.js static exports. The framework supplies document/head/scripts and SEO; components return page content, never html/head/body tags.
 The existing PagosYa commerce runtime owns products, prices, cart, checkout, forms, reviews, bundles, loyalty, privacy and payments. Homepage MUST render one empty data-pagosya-catalog mount, an empty hidden data-pagosya-cart mount, data-pagosya-status (role=status aria-live=polite), and a real button with data-cart-open. Product MUST render empty data-pagosya-product-page and data-pagosya-cart mounts, data-pagosya-status, and a real button with data-cart-open (product pages need the same cart access as the homepage). Checkout must render one empty data-pagosya-checkout-page and data-pagosya-status; do not duplicate payment fields/cart markup. The runtime starts after React mounts. Style its menu-item, menu-item__name, menu-item__desc, menu-item__price, menu-add, order-item, order-line, order-field, order-total, order-note, checkout-button, product-page and checkout-page classes in globals.css. It emits pagosya:ready for idempotent decoration; never write into an observed catalog subtree from a MutationObserver. Do not register custom purchase/payment implementations. Never render React children inside these runtime-owned mounts or remove them during unrelated state changes. Style runtime classes in globals.css; Tailwind utilities on the surrounding layout are encouraged. On product pages, let actual product photography lead: allocate roughly half the desktop content width to the main image with thumbnails below, and use full available width above the details on mobile. Keep the entire product visible with object-fit:contain and avoid viewport-height caps that shrink photos in the editor. Start with the product gallery and actual product name, price and purchase action; do not add an oversized generic introductory heading above this mount. Honor explicit merchant layout requests. Homepage and product need usable cart access; all pages need navigation back to index.html. Add the optional contact hook as an empty hidden data-pagosya-contact mount; the runtime owns whether it appears. An optional newsletter block wraps its copy, one real button with data-pagosya-subscribe-open and an empty role=status paragraph in a data-pagosya-subscribe-block element; never add an email input or an onClick to that button, the runtime opens the secure signup form. Every authored intrinsic <img> must include an explicit meaningful alt value, or alt="" plus aria-hidden="true" when purely decorative; a JSX prop spread alone does not satisfy this contract. Location iframes may be normal React JSX with a supported HTTPS map src, title, loading=lazy and responsive sizing. Uploaded assets use literal /assets/... paths. Do not copy reference-site assets or fabricate product photography. Read browser globals only in effects or event handlers so Next.js can prerender the page. Define main and its planned direct section IDs literally in components/home.tsx. For tabs, steps or other multi-view homepages, keep every planned section mounted as a literal direct child of main in plan order and switch views by toggling the hidden attribute, aria attributes or className from state; never wrap planned sections in conditionals, .map(), switch statements or {expressions}. Put runtime hooks in literal JSX with no children; do not hide them behind conditions. Native React/CSS/SVG motion is available with reduced-motion support. Respect the selected motion mode and confirmed brand tokens. Preserve unrelated components and CSS for local edits. A whole-site redesign can replace existing components; legacy HTML supplied during migration is reference material to reconstruct in React while preserving its business content and commerce behavior.
 Before returning source, perform a strict TypeScript scope pass: every uppercase JSX tag or referenced component name must be declared in that file or explicitly imported from a returned local components/*.tsx file. Shared Header, Footer and other primitives must have one concrete definition and matching imports in every page that uses them; never rely on a symbol existing in another file implicitly. Do not return a page that would produce Cannot find name, module-not-found or JSX intrinsic-element errors.
 Homepage MUST contain exactly one semantic primary h1, either authored directly or supplied by @pagosya/ui Hero, VideoHero, FloatingMedia, ScrollScrubHero or Display with its default as="h1".
@@ -36,6 +38,8 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
   const seen = new Set<string>();
   const missingAlt: string[] = [];
   for (const file of files) {
+    // DNA motif drawings are the one non-component output; the sanitiser, not this validator, owns them.
+    if (file && typeof file.path === 'string' && isSourceMotifFile(file.path) && typeof file.content === 'string' && file.encoding !== 'base64') continue;
     if (!file || typeof file.path !== 'string' || !nextSourceFile(file.path) || seen.has(file.path.toLowerCase()) || typeof file.content !== 'string' || file.content.length > 180000 || file.encoding === 'base64') throw new BadGatewayException(`Archivo React no permitido: ${file?.path}`);
     seen.add(file.path.toLowerCase());
     if (file.path.endsWith('.css')) {
@@ -311,6 +315,153 @@ function nextComponentExports(source: ts.SourceFile): { defaultExport: boolean; 
 }
 
 /**
+ * Platform mounts that carry no design: inserting one never changes how the store looks.
+ * Only CommerceSlots qualifies (a hidden cart container and a status line). Catalog,
+ * ProductDetail and CheckoutDetail render real sections and a <main>; where they go is design,
+ * so a page missing them still goes to the AI repair.
+ */
+const COMMERCE_MOUNTS: Record<string, Array<{ hooks: string[]; component: string }>> = {
+  home: [{ hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
+  product: [{ hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
+  checkout: [{ hooks: ['data-pagosya-status'], component: 'CommerceSlots' }],
+};
+
+/** The JSX element or fragment returned by the file's default-exported component, if it has one. */
+function defaultExportRoot(source: ts.SourceFile): ts.JsxElement | ts.JsxFragment | undefined {
+  const unwrap = (node: ts.Node | undefined): ts.JsxElement | ts.JsxFragment | undefined => {
+    let expression = node as ts.Expression | undefined;
+    while (expression && ts.isParenthesizedExpression(expression)) expression = expression.expression;
+    return expression && (ts.isJsxElement(expression) || ts.isJsxFragment(expression)) ? expression : undefined;
+  };
+  const returned = (body: ts.Node | undefined): ts.JsxElement | ts.JsxFragment | undefined => {
+    if (!body) return undefined;
+    if (!ts.isBlock(body)) return unwrap(body);
+    for (const statement of body.statements) if (ts.isReturnStatement(statement)) return unwrap(statement.expression);
+    return undefined;
+  };
+  for (const statement of source.statements) {
+    const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) || [] : [];
+    const isDefault = modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword) && modifiers.some(m => m.kind === ts.SyntaxKind.DefaultKeyword);
+    if (isDefault && ts.isFunctionDeclaration(statement)) return returned(statement.body);
+    if (ts.isExportAssignment(statement) && (ts.isArrowFunction(statement.expression) || ts.isFunctionExpression(statement.expression))) return returned(statement.expression.body);
+  }
+  return undefined;
+}
+
+/** The page file and every local component it imports, followed transitively. */
+function pageComponentFiles(files: SourceProjectFileDto[], pagePath: string): SourceProjectFileDto[] {
+  const byPath = new Map(files.map(f => [f.path, f]));
+  const seen = new Set<string>(), queue = [pagePath];
+  while (queue.length) {
+    const path = queue.shift()!;
+    const file = byPath.get(path);
+    if (!file || seen.has(path)) continue;
+    seen.add(path);
+    for (const match of file.content.matchAll(/from\s+['"]\.\/([\w-]+)(?:\.tsx)?['"]/g)) queue.push(`components/${match[1]}.tsx`);
+  }
+  return [...seen].map(path => byPath.get(path)!);
+}
+
+function withUiImport(content: string, names: string[]): string {
+  const existing = /import \{([^}]*)\} from '@pagosya\/ui';/.exec(content);
+  if (!existing) return `import { ${names.join(', ')} } from '@pagosya/ui';\n${content}`;
+  const current = existing[1].split(',').map(name => name.trim()).filter(Boolean);
+  const merged = [...current, ...names.filter(name => !current.includes(name))];
+  return content.replace(existing[0], `import { ${merged.join(', ')} } from '@pagosya/ui';`);
+}
+
+/**
+ * Inserts platform-owned commerce mounts a page lacks entirely. They carry no design, so a
+ * paid repair round-trip for them buys nothing. The cart button is left to the AI: where it
+ * sits is part of the design.
+ */
+export function repairNextCommerceMounts(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop'): { files: SourceProjectFileDto[]; repairs: string[] } {
+  if (purpose !== 'shop') return { files, repairs: [] };
+  const repairs: string[] = [];
+  let current = files;
+  for (const [page, mounts] of Object.entries(COMMERCE_MOUNTS)) {
+    const path = `components/${page}.tsx`;
+    const file = current.find(f => f.path === path);
+    if (!file) continue;
+    const markup = nextPageMarkup(current, page);
+    // A mount named in any component file (even inside a conditional the markup walk cannot see)
+    // may already render on this page; never add a second one.
+    const componentText = pageComponentFiles(current, path).map(f => f.content).join('\n');
+    const needed = mounts.filter(mount =>
+      mount.hooks.some(hook => !new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup))
+      && !componentText.includes(mount.component) && !mount.hooks.some(hook => componentText.includes(hook)));
+    if (!needed.length) continue;
+    const source = ts.createSourceFile(path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const root = defaultExportRoot(source);
+    if (!root) continue;
+    const at = ts.isJsxElement(root) ? root.closingElement.getStart(source) : root.closingFragment.getStart(source);
+    const names = needed.map(mount => mount.component);
+    const content = withUiImport(file.content.slice(0, at) + names.map(name => `<${name} />`).join('') + file.content.slice(at), names);
+    current = current.map(f => f === file ? { ...f, content } : f);
+    repairs.push(`${path}: added ${names.join(', ')}`);
+  }
+  return { files: current, repairs };
+}
+
+const COMMERCE_SLOT_ATTRIBUTE = /^data-pagosya-(catalog|cart|status|product-page|checkout-page|contact)$/;
+
+/**
+ * Two validator findings with exactly one correct answer, fixed in code instead of spending a paid repair
+ * (which can trade one finding for another and exhaust the attempts): an authored <img> with no usable alt
+ * is decoration (alt="" aria-hidden="true", as the HTML repair does), and a commerce slot React filled is
+ * emptied, because the runtime replaces whatever is inside it.
+ */
+export function repairNextAuthoredMarkup(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; repairs: string[] } {
+  const repairs: string[] = [];
+  const repaired = files.map(file => {
+    if (!file.path.endsWith('.tsx') || typeof file.content !== 'string' || file.encoding === 'base64') return file;
+    const source = ts.createSourceFile(file.path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const attribute = (node: ts.JsxOpeningLikeElement, name: string) => node.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(source) === name) as ts.JsxAttribute | undefined;
+    const value = (attr: ts.JsxAttribute | undefined): ts.Expression | undefined => {
+      const initial = attr?.initializer;
+      let expression = initial && ts.isJsxExpression(initial) ? initial.expression : initial;
+      while (expression && ts.isParenthesizedExpression(expression)) expression = expression.expression;
+      return expression;
+    };
+    const edits: Array<{ start: number; end: number; text: string }> = [];
+    let images = 0, slots = 0;
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some(a => ts.isJsxAttribute(a) && COMMERCE_SLOT_ATTRIBUTE.test(a.name.getText(source)))
+        && node.children.some(c => !ts.isJsxText(c) || c.text.trim())) {
+        // Everything inside goes, images included, so there is nothing further to visit.
+        edits.push({ start: node.openingElement.end, end: node.closingElement.getStart(source), text: '' });
+        slots++;
+        return;
+      }
+      if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && node.tagName.getText(source) === 'img' && !attribute(node, 'aria-hidden')) {
+        // Same finding as validateNextSources. An image that states aria-hidden either way keeps it: aria-hidden={false}
+        // claims the image carries meaning, and that finding stays with the AI repair.
+        const altAttribute = attribute(node, 'alt');
+        const alt = value(altAttribute);
+        const role = value(attribute(node, 'role'));
+        const presentation = Boolean(role && ts.isStringLiteral(role) && role.text === 'presentation');
+        const empty = alt && (ts.isStringLiteral(alt) || ts.isNoSubstitutionTemplateLiteral(alt)) && !alt.text.trim();
+        const unusable = alt && ([ts.SyntaxKind.NullKeyword, ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword].includes(alt.kind) || ts.isIdentifier(alt) && alt.text === 'undefined');
+        if (!alt || unusable || empty && !presentation) {
+          if (altAttribute && unusable) edits.push({ start: altAttribute.getStart(source), end: altAttribute.end, text: 'alt=""' });
+          edits.push({ start: node.attributes.end, end: node.attributes.end, text: `${altAttribute ? '' : ' alt=""'} aria-hidden="true"` });
+          images++;
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    if (!edits.length) return file;
+    let content = file.content;
+    for (const edit of edits.sort((a, b) => b.start - a.start || b.end - a.end)) content = content.slice(0, edit.start) + edit.text + content.slice(edit.end);
+    if (images) repairs.push(`${file.path}: marked ${images} image${images === 1 ? '' : 's'} without alt text as decorative`);
+    if (slots) repairs.push(`${file.path}: emptied ${slots} commerce slot${slots === 1 ? '' : 's'}`);
+    return { ...file, content };
+  });
+  return { files: repairs.length ? repaired : files, repairs };
+}
+
+/**
  * Repairs omitted local imports and the two shared primitives most likely to
  * be omitted by a compact model response. Unknown missing components still go
  * through the normal AI repair path instead of being hidden.
@@ -375,13 +526,25 @@ function checkNextTypes(files: SourceProjectFileDto[]) {
   const program = ts.createProgram([...virtual.keys()], options, host);
   const errors = ts.getPreEmitDiagnostics(program).filter(d => d.category === ts.DiagnosticCategory.Error);
   if (errors.length) {
-    const error = errors[0];
-    const fileName = error.file?.fileName.replace(root + '/', '') || '';
-    const detail = ts.flattenDiagnosticMessageText(error.messageText, ' ').slice(0, 450);
-    const hint = error.code === 2304 && /Cannot find name '(Header|Footer)'/.test(detail)
-      ? ' Decláralo en el archivo o impórtalo desde un componente local.'
-      : '';
-    throw new BadGatewayException(`TypeScript ${fileName}: ${detail}${detail.endsWith('.') ? '' : '.'}${hint}`);
+    const describe = (error: ts.Diagnostic) => {
+      const fileName = error.file?.fileName.replace(root + '/', '') || '';
+      const line = error.file && error.start !== undefined ? `:${error.file.getLineAndCharacterOfPosition(error.start).line + 1}` : '';
+      const detail = ts.flattenDiagnosticMessageText(error.messageText, ' ').slice(0, 220);
+      const hint = error.code === 2304 && /Cannot find name '(Header|Footer)'/.test(detail)
+        ? ' Decláralo en el archivo o impórtalo desde un componente local.'
+        : '';
+      return `TypeScript ${fileName}${line}: ${detail}${detail.endsWith('.') ? '' : '.'}${hint}`;
+    };
+    // The single bounded repair only sees this message, and the prompt keeps 2,000 characters of it:
+    // list as many errors as fit (at most 8) so it can fix them together, then count the rest.
+    const shown: string[] = [];
+    for (const error of errors.slice(0, 8)) {
+      const line = describe(error);
+      if (shown.length && shown.join('\n').length + line.length + 1 > 1700) break;
+      shown.push(line);
+    }
+    const rest = errors.length - shown.length;
+    throw new BadGatewayException(shown.join('\n') + (rest > 0 ? `\n…y ${rest} errores más.` : ''));
   }
 }
 
@@ -394,10 +557,15 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
   const source = new Map(authored.map(f => [f.path, f.content]));
   source.set('lib/creative.tsx', creativeRuntime());
   source.set('lib/ui.tsx', uiRuntime());
+  // The store kit block is served on its own, in its cascade layer (sub-project 7); Tailwind never sees it.
+  const globals = extractKitBlock(source.get('styles/globals.css') ?? '');
+  const storeKit = globals.block === null ? '' : validateStoreKitCss(globals.block).css;
   // Tailwind may resolve a different PostCSS 8 patch; its plugin uses the same runtime contract.
   const css = await postcss([tailwindcss({ content: authored.filter(f => f.path.endsWith('.tsx')).map(f => ({ raw: f.content, extension: 'tsx' })), corePlugins: { preflight: true } }) as unknown as import('postcss').Plugin])
-    .process('@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' + source.get('styles/globals.css'), { from: undefined });
-  const compiled: SourceProjectFileDto[] = [{ path: 'styles.css', content: css.css }, { path: 'site.js', content: '/* React components own authored interactions. */' }];
+    .process('@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' + globals.rest, { from: undefined });
+  // Tailwind utilities are authored CSS too (`[&_.menu-add]:opacity-0`): the compiled sheet meets the protected-element rules.
+  const compiled: SourceProjectFileDto[] = [{ path: 'styles.css', content: validateAuthoredCss(css.css, 'styles.css').css }, { path: 'site.js', content: '/* React components own authored interactions. */' }];
+  if (storeKit) compiled.push({ path: SOURCE_KIT_CSS_PATH, content: storeKit });
   for (const page of pages) {
     const entry = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {flushSync} from 'react-dom'; import {CreativeProvider} from '@pagosya/creative'; import Page from './components/${page.name}'; flushSync(()=>createRoot(document.getElementById('pagosya-react-root')).render(React.createElement(CreativeProvider, null, React.createElement(Page))));`;
     try {
@@ -426,7 +594,7 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
     } catch (error: any) {
       throw new BadGatewayException(`No se pudo compilar ${page.name}: ${String(error.errors?.[0]?.text || error.message).slice(0, 450)}`);
     }
-    compiled.push({ path: page.path, content: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="brand.css"></head><body><div id="pagosya-react-root"></div><script src="config.js" defer></script><script src="_compiled/${page.name}.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>` });
+    compiled.push({ path: page.path, content: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">${storeKit ? storeKitLink() : ''}<link rel="stylesheet" href="brand.css"></head><body><div id="pagosya-react-root"></div><script src="config.js" defer></script><script src="_compiled/${page.name}.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>` });
   }
   compiled.push({ path: 'source-next-layout.json', content: JSON.stringify(Object.fromEntries(pages.map(page => [page.path, nextPageMarkup(authored, page.name)]))) });
   return compiled;

@@ -1319,10 +1319,13 @@ model StoreSourceVersion {
   snapshot     Json
   restoredFrom Int?
   createdAt    DateTime           @default(now())
+  /// dnaFingerprint of the chosen design concept (sub-project 4 cross-store memory); null when the revision has no DNA.
+  designFingerprint String?
 
   checkResults SourceCheckResult[]
 
   @@id([storeId, revision])
+  @@index([createdAt, designFingerprint])
 }
 
 model SourceRuntimeBundle {
@@ -2842,4 +2845,207 @@ model AiCreditRedemption {
   createdAt    DateTime @default(now())
 
   @@index([merchantId])
+}
+
+// ── Business documents (cobros, proposals, contracts) ─────────────────────
+// docs/superpowers/specs/2026-09-25-document-foundations-design.md.
+// No relations to existing models (plain indexed ids, like BusinessCustomer),
+// so these tables were added without altering any existing table.
+
+enum BusinessDocumentKind {
+  INVOICE
+  PROPOSAL
+  CONTRACT
+}
+
+enum BusinessDocumentStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  CHANGES_REQUESTED
+  SIGNED
+  PAID
+  OVERDUE
+  DECLINED
+  EXPIRED
+  VOIDED
+}
+
+enum BusinessDocumentSignerRole {
+  MERCHANT
+  CUSTOMER
+}
+
+enum BusinessDocumentSignatureMethod {
+  TYPED
+  DRAWN
+}
+
+model BusinessDocument {
+  id                 String                      @id @default(cuid())
+  storeId            String
+  merchantId         String
+  kind               BusinessDocumentKind
+  // Assigned on the first send, per store and kind; drafts have none.
+  number             Int?
+  status             BusinessDocumentStatus      @default(DRAFT)
+  title              String
+  currency           String                      @default("BOB")
+  // Customer snapshot; businessCustomerId optionally links the store CRM row.
+  businessCustomerId String?
+  customerName       String?
+  customerEmail      String?
+  customerPhone      String?
+  customerDocument   String?
+  // Integer minor units.
+  subtotalAmount     Int                         @default(0)
+  discountAmount     Int                         @default(0)
+  totalAmount        Int                         @default(0)
+  // Typed blocks: heading | paragraph | list | clause.
+  content            Json                        @default("[]")
+  dueAt              DateTime?
+  validUntil         DateTime?
+  // Latest sent version (0 = never sent). The public link shows only that version.
+  currentVersion     Int                         @default(0)
+  sentAt             DateTime?
+  viewedAt           DateTime?
+  voidedAt           DateTime?
+  // Cobros (D1): the checkout that pays it, when it was paid, and whether the worker sends reminders.
+  paymentIntentId    String?
+  paidAt             DateTime?
+  autoReminders      Boolean                     @default(true)
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  items              BusinessDocumentItem[]
+  versions           BusinessDocumentVersion[]
+  events             BusinessDocumentEvent[]
+  signatures         BusinessDocumentSignature[]
+
+  @@unique([storeId, kind, number])
+  @@index([storeId, kind, status, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([paymentIntentId])
+  @@index([kind, status, dueAt])
+}
+
+model BusinessDocumentItem {
+  id            String           @id @default(cuid())
+  documentId    String
+  document      BusinessDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  position      Int
+  description   String
+  quantity      Int
+  unitAmount    Int
+  amount        Int
+  paymentLinkId String?
+
+  @@index([documentId, position])
+}
+
+/// Immutable: one row per send that changed the document.
+model BusinessDocumentVersion {
+  id         String           @id @default(cuid())
+  documentId String
+  document   BusinessDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version    Int
+  sha256     String
+  content    Json
+  createdAt  DateTime         @default(now())
+  sentAt     DateTime?
+
+  @@unique([documentId, version])
+}
+
+model BusinessDocumentEvent {
+  id         String           @id @default(cuid())
+  documentId String
+  document   BusinessDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  // created | sent | emailed | email_failed | viewed | voided (D1–D3 add more).
+  type       String
+  version    Int?
+  at         DateTime         @default(now())
+  ipAddress  String?
+  userAgent  String?
+  data       Json?
+  // Set for events that must happen once, e.g. "viewed:v2".
+  dedupeKey  String?
+
+  @@unique([documentId, dedupeKey])
+  @@index([documentId, at])
+}
+
+/// D3 e-signature evidence; one signature per role per version.
+model BusinessDocumentSignature {
+  id             String                          @id @default(cuid())
+  documentId     String
+  document       BusinessDocument                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  role           BusinessDocumentSignerRole
+  name           String
+  method         BusinessDocumentSignatureMethod
+  imageUrl       String?
+  email          String
+  codeVerifiedAt DateTime?
+  ipAddress      String?
+  userAgent      String?
+  version        Int
+  versionSha256  String
+  signedAt       DateTime                        @default(now())
+
+  @@unique([documentId, version, role])
+}
+
+/// G1 analytics: one consented storefront event. No IP, user agent, customer field or search words.
+/// Kept 13 months (StoreAnalyticsWorker prunes). No relation to Store: plain indexed id (D0 rule).
+model StoreAnalyticsEvent {
+  id           BigInt   @id @default(autoincrement())
+  storeId      String
+  /// sha256 of the funnel session UUID — the same hash StoreFunnelVisit stores.
+  sessionHash  String
+  type         String
+  productId    String?
+  /// A data-track label (cta_click) or a checkout step (checkout_step).
+  target       String?
+  /// The store page file, e.g. product.html.
+  path         String?
+  /// mobile | desktop
+  device       String
+  /// Host name only, on page_view.
+  referrerHost String?
+  createdAt    DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([createdAt])
+}
+
+/// G1 analytics: per Bolivia day (UTC−4) rollup of StoreAnalyticsEvent. No personal data; kept.
+/// productId / target are '' for "none" so the unique key holds. type also takes _device and _referrer.
+model StoreAnalyticsDaily {
+  id             String   @id @default(cuid())
+  storeId        String
+  day            DateTime @db.Date
+  type           String
+  productId      String   @default("")
+  target         String   @default("")
+  count          Int
+  uniqueSessions Int
+  updatedAt      DateTime @updatedAt
+
+  @@unique([storeId, day, type, productId, target])
+  @@index([storeId, day])
+}
+
+/// G2 guided growth: a merchant hid an insight ("Ocultar") or put it off ("Recordar en 7 días"). insightId is the
+/// engine's stable id (rule or rule:<product|step|label|host>). No relation to Store (D0/G1 rule).
+model StoreGrowthInsightState {
+  id        String    @id @default(cuid())
+  storeId   String
+  insightId String
+  /// dismissed | snoozed
+  status    String
+  until     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([storeId, insightId])
 }

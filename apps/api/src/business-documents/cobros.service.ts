@@ -1,0 +1,516 @@
+import { ConflictException, HttpException, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { BusinessDocumentStatus, MerchantStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
+import { EMAIL_PROVIDER } from "../dashboard/tokens";
+import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
+import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
+import { paymentCheckoutUrl } from "../operations/operations-helpers";
+import { BusinessDocumentsService, cobroStateWhere } from "./business-documents.service";
+import { documentNumberLabel } from "./business-document-snapshot";
+import { businessDocumentLink, cancelStaleCheckout } from "./cobro-payment";
+import { buildDocumentEmail, type DocumentReminderStage } from "./business-document-email";
+import { renderBusinessDocumentPdf } from "./business-document-pdf";
+import type { DocumentSnapshot } from "./business-document-snapshot";
+import type { CobroRemindersDto, MarkCobroPaidDto, RemindCobroDto, ShareCobroDto } from "./dto/business-document.dto";
+import { DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./document-link-token";
+
+const S = BusinessDocumentStatus;
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Sent and not closed: the customer still owes it. Overdue stays payable. */
+const OPEN: BusinessDocumentStatus[] = [S.SENT, S.VIEWED, S.OVERDUE];
+
+/** Between two email reminders of the same cobro, manual or automatic. */
+const REMINDER_COOLDOWN_MS = 6 * HOUR_MS;
+
+/**
+ * Automatic reminders (spec §2.7). The due date is the end of that day in Bolivia,
+ * so "due" opens at 09:00 La Paz on the due day; "overdue" is 3 days late and
+ * closes after 10, so an old backlog is never mailed after a deploy.
+ */
+const DUE_REMINDER_OPENS_BEFORE_MS = 15 * HOUR_MS;
+const DUE_REMINDER_MIN_AGE_MS = DAY_MS;
+const OVERDUE_REMINDER_AFTER_MS = 3 * DAY_MS;
+const OVERDUE_REMINDER_UNTIL_MS = 10 * DAY_MS;
+
+/** Events that mean the customer has the link: shared from the dashboard, emailed, or opened. */
+const SHARED_EVENTS = ["shared", "emailed", "viewed"];
+
+class ReminderCooldown extends Error {}
+
+const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
+
+type Suggestion = { businessCustomerId: string | null; name: string; email: string | null; phone: string | null; document: string | null; source: "crm" | "cobro" | "buyer" };
+
+/** A checkout still worth handing back to the customer. */
+const REUSABLE_INTENT: PaymentIntentStatus[] = [
+  PaymentIntentStatus.REQUIRES_PAYMENT_METHOD,
+  PaymentIntentStatus.REQUIRES_CONFIRMATION,
+  PaymentIntentStatus.REQUIRES_ACTION,
+  PaymentIntentStatus.PROCESSING,
+];
+
+/**
+ * D1: what turns a business document of kind INVOICE into a cobro the customer
+ * pays — the checkout behind the public link, reminders, overdue and the
+ * customer picker. Drafting, sending and the link itself stay in
+ * BusinessDocumentsService (D0).
+ */
+@Injectable()
+export class CobrosService {
+  private readonly logger = new Logger(CobrosService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+    @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+    private readonly paymentIntents: PaymentIntentsService,
+    private readonly documents: BusinessDocumentsService,
+  ) {}
+
+  // ── public: pay ───────────────────────────────────────────────────────
+
+  /**
+   * The checkout for the latest *sent* version's total. One open checkout per
+   * version is reused; the document row is locked so two taps on Pagar get the same one.
+   */
+  async pay(token: string) {
+    const notFound = () => new NotFoundException("No encontramos este cobro");
+    const id = readDocumentLinkToken(token, this.secret());
+    if (!id) throw notFound();
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      const doc = await tx.businessDocument.findUnique({ where: { id } });
+      if (!doc || doc.currentVersion < 1 || doc.kind !== "INVOICE") throw notFound();
+      if (doc.status === S.VOIDED) throw new ConflictException("Este cobro fue anulado. Si tienes dudas, escríbele al comercio.");
+      if (doc.status === S.PAID) throw new ConflictException("Este cobro ya está pagado. ¡Gracias!");
+      if (doc.status === S.EXPIRED) throw new ConflictException("Este cobro venció y ya no se puede pagar. Pídele al comercio uno nuevo.");
+      const version = await tx.businessDocumentVersion.findUnique({ where: { documentId_version: { documentId: id, version: doc.currentVersion } } });
+      if (!version) throw notFound();
+      const snapshot = version.content as unknown as DocumentSnapshot;
+      if (snapshot.totalAmount <= 0) throw new UnprocessableEntityException("Este cobro no tiene un monto para pagar");
+
+      const store = await tx.store.findUnique({ where: { id: doc.storeId }, select: { name: true, status: true } });
+      const merchant = await tx.merchant.findUnique({ where: { id: doc.merchantId }, select: { status: true } });
+      // Checked before any checkout is handed out, a reused one included.
+      if (!merchant || merchant.status === MerchantStatus.SUSPENDED) {
+        throw new ConflictException(`${store?.name || "Este comercio"} no está recibiendo pagos en línea en este momento. Escríbele para pagarle de otra forma.`);
+      }
+      if (!store || store.status !== "ACTIVE") {
+        throw new ConflictException(`Esta tienda ya no está activa y no recibe pagos en línea. Escríbele a ${store?.name || "el comercio"} para pagarle de otra forma.`);
+      }
+
+      const existing = doc.paymentIntentId ? await tx.paymentIntent.findUnique({ where: { id: doc.paymentIntentId } }) : null;
+      if (existing) {
+        if (existing.status === PaymentIntentStatus.SUCCEEDED) throw new ConflictException("Este cobro ya está pagado. ¡Gracias!");
+        const sameCharge = businessDocumentLink(existing.metadata)?.version === doc.currentVersion
+          && existing.amount === snapshot.totalAmount
+          && existing.currency === snapshot.currency;
+        if (sameCharge && REUSABLE_INTENT.includes(existing.status)) return this.checkout(existing);
+        // A checkout the customer never started (or that failed) is closed; one in progress
+        // (a QR on screen) is left to finish, and the paid hook records whichever succeeds.
+        // Never waits for the intent's lock (see cancelStaleCheckout for the lock order).
+        if (existing.status === PaymentIntentStatus.REQUIRES_PAYMENT_METHOD || existing.status === PaymentIntentStatus.FAILED) {
+          await cancelStaleCheckout(tx, existing.id);
+        }
+      }
+
+      // The subscriptions rule: real money only once both the merchant and the store are live.
+      // Here that means a PENDING (not yet verified) merchant pays in test mode.
+      const livemode = merchant.status === MerchantStatus.ACTIVE && store.status === "ACTIVE";
+      const intent = await this.paymentIntents.createInTransaction(tx, doc.merchantId, livemode, {
+        amount: snapshot.totalAmount,
+        currency: snapshot.currency,
+        description: `${snapshot.numberLabel} · ${snapshot.title} · ${store.name}`.slice(0, 250),
+        // The frozen customer: the checkout prefills it and the SIN factura gets the NIT/CI.
+        customerName: snapshot.customer.name ?? undefined,
+        customerEmail: snapshot.customer.email ?? undefined,
+        customerPhone: snapshot.customer.phone ?? undefined,
+        customerDocument: snapshot.customer.document ?? undefined,
+        metadata: { storeId: doc.storeId, businessDocument: { documentId: id, version: doc.currentVersion, numberLabel: snapshot.numberLabel } },
+      }, "buyer");
+      await tx.businessDocument.update({ where: { id }, data: { paymentIntentId: intent.id } });
+      await tx.businessDocumentEvent.create({ data: { documentId: id, type: "checkout_started", version: doc.currentVersion, data: { paymentIntentId: intent.id } } });
+      return this.checkout(intent);
+    });
+  }
+
+  // ── merchant: reminders, sharing, customers ───────────────────────────
+
+  /**
+   * "Recordar". Email sends the reminder (HTML + PDF) through the store's daily
+   * cap, at most once every 6 hours per cobro; WhatsApp only records it, since
+   * the dashboard opens wa.me itself.
+   */
+  async remind(merchantId: string, storeId: string, id: string, dto: RemindCobroDto) {
+    const store = await this.ownedStore(merchantId, storeId);
+    const doc = await this.openCobro(storeId, id, "Solo puedes recordar un cobro enviado que aún no se pagó");
+    if (dto.channel === "whatsapp") {
+      await this.prisma.businessDocumentEvent.create({ data: { documentId: id, type: "reminded", version: doc.currentVersion, data: { channel: "whatsapp", automatic: false } } });
+      return { emailed: false };
+    }
+    const snapshot = await this.latestSnapshot(id, doc.currentVersion);
+    const to = snapshot.customer.email;
+    if (!to) throw new UnprocessableEntityException("Este cliente no tiene correo. Recuérdaselo por WhatsApp o agrega su correo y vuelve a enviar el cobro.");
+    const last = await this.lastEmailReminder(this.prisma, id, new Date());
+    if (last) {
+      const hours = Math.max(1, Math.ceil((last.at.getTime() + REMINDER_COOLDOWN_MS - Date.now()) / HOUR_MS));
+      throw new ConflictException(`Ya le enviaste un recordatorio por correo hace poco. Podrás enviar otro en ${hours} h; mientras tanto, recuérdaselo por WhatsApp.`);
+    }
+    const event = await this.prisma.$transaction(async (tx) => {
+      await this.documents.assertEmailQuota(tx, storeId);
+      return tx.businessDocumentEvent.create({ data: { documentId: id, type: "reminded", version: doc.currentVersion, data: { channel: "email", automatic: false, to } } });
+    });
+    const emailed = await this.deliverReminder({ id, version: doc.currentVersion, snapshot, to, store, stage: "manual", eventId: event.id });
+    return { emailed };
+  }
+
+  /** The dashboard's WhatsApp and Copiar enlace, for the timeline. */
+  async shared(merchantId: string, storeId: string, id: string, dto: ShareCobroDto) {
+    await this.ownedStore(merchantId, storeId);
+    const doc = await this.prisma.businessDocument.findFirst({ where: { id, storeId }, select: { id: true, currentVersion: true, status: true } });
+    if (!doc) throw new NotFoundException("Documento no encontrado");
+    if (doc.currentVersion < 1 || doc.status === S.VOIDED) throw new ConflictException("Este documento no tiene un enlace para compartir");
+    await this.prisma.businessDocumentEvent.create({ data: { documentId: id, type: "shared", version: doc.currentVersion, data: { channel: dto.channel } } });
+    return { shared: true };
+  }
+
+  /**
+   * "Marcar como pagado": the customer paid in cash, by transfer or otherwise outside
+   * pagosYa. The cobro closes as PAID (so reminders stop and it counts in "Cobrado"),
+   * its unstarted checkout is closed, and the timeline says how it was paid. A checkout
+   * already in progress is left alone; if it also succeeds it lands as payment_after_close.
+   */
+  async markPaid(merchantId: string, storeId: string, id: string, dto: MarkCobroPaidDto) {
+    await this.ownedStore(merchantId, storeId);
+    await this.prisma.$transaction(async (tx) => {
+      // Document first, intent never waited for (lock order: cobro-payment.ts cancelStaleCheckout).
+      await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      const doc = await tx.businessDocument.findFirst({ where: { id, storeId } });
+      if (!doc) throw new NotFoundException("Documento no encontrado");
+      const refusal = "Solo puedes marcar como pagado un cobro enviado que aún no se pagó";
+      if (doc.kind !== "INVOICE" || doc.currentVersion < 1) throw new ConflictException(refusal);
+      const { count } = await tx.businessDocument.updateMany({ where: { id, status: { in: OPEN } }, data: { status: S.PAID, paidAt: new Date() } });
+      if (!count) throw new ConflictException(refusal);
+      if (doc.paymentIntentId) await cancelStaleCheckout(tx, doc.paymentIntentId);
+      const reference = dto.reference?.trim();
+      await tx.businessDocumentEvent.create({
+        data: { documentId: id, type: "paid_manually", version: doc.currentVersion, data: { method: dto.method, ...(reference && { reference }) } },
+      });
+    });
+    return this.documents.get(merchantId, storeId, id);
+  }
+
+  /** The automatic reminders switch after creation; only while the cobro can still be paid. */
+  async setAutoReminders(merchantId: string, storeId: string, id: string, dto: CobroRemindersDto) {
+    await this.ownedStore(merchantId, storeId);
+    const doc = await this.prisma.businessDocument.findFirst({ where: { id, storeId }, select: { id: true, kind: true, currentVersion: true } });
+    if (!doc) throw new NotFoundException("Documento no encontrado");
+    const { count } = await this.prisma.businessDocument.updateMany({
+      where: { id, kind: "INVOICE", status: { in: [S.DRAFT, ...OPEN] } },
+      data: { autoReminders: dto.autoReminders },
+    });
+    if (!count) throw new ConflictException("Este cobro ya está cerrado: no tiene recordatorios");
+    await this.prisma.businessDocumentEvent.create({
+      data: { documentId: id, type: dto.autoReminders ? "reminders_on" : "reminders_off", version: doc.currentVersion || null },
+    });
+    return this.documents.get(merchantId, storeId, id);
+  }
+
+  /**
+   * Who the merchant is likely charging: the store's CRM first, then customers of
+   * earlier cobros, then recent paying buyers — one row per person, at most 12.
+   */
+  async customerSuggestions(merchantId: string, storeId: string, q?: string): Promise<Suggestion[]> {
+    await this.ownedStore(merchantId, storeId);
+    const term = q?.trim().slice(0, 80);
+    const like = (fields: string[]) => (term ? { OR: fields.map((field) => ({ [field]: { contains: term, mode: "insensitive" as const } })) } : {});
+    const [crm, cobros, buyers] = await Promise.all([
+      this.prisma.businessCustomer.findMany({
+        where: { storeId, ...like(["name", "email", "phone"]) },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+      }),
+      this.prisma.businessDocument.findMany({
+        where: { storeId, customerName: { not: null }, ...like(["customerName", "customerEmail", "customerPhone"]) },
+        select: { customerName: true, customerEmail: true, customerPhone: true, customerDocument: true, businessCustomerId: true },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      }),
+      this.prisma.paymentIntent.findMany({
+        where: { merchantId, status: PaymentIntentStatus.SUCCEEDED, customerName: { not: null }, metadata: { path: ["storeId"], equals: storeId }, ...like(["customerName", "customerEmail", "customerPhone"]) },
+        select: { customerName: true, customerEmail: true, customerPhone: true, customerDocument: true },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      }),
+    ]);
+    const rows: Suggestion[] = [
+      ...crm.map((row) => ({ businessCustomerId: row.id, name: row.name, email: row.email, phone: row.phone, document: row.document, source: "crm" as const })),
+      ...cobros.map((row) => ({ businessCustomerId: row.businessCustomerId, name: row.customerName!, email: row.customerEmail, phone: row.customerPhone, document: row.customerDocument, source: "cobro" as const })),
+      ...buyers.map((row) => ({ businessCustomerId: null, name: row.customerName!, email: row.customerEmail, phone: row.customerPhone, document: row.customerDocument, source: "buyer" as const })),
+    ];
+    const seen = new Set<string>();
+    const unique: Suggestion[] = [];
+    for (const row of rows) {
+      const keys = [row.email?.trim().toLowerCase(), row.phone?.replace(/\D/g, ""), row.name.trim().toLocaleLowerCase("es-BO")].filter((key): key is string => Boolean(key));
+      if (keys.some((key) => seen.has(key))) continue;
+      keys.forEach((key) => seen.add(key));
+      unique.push({ ...row, email: row.email || null, phone: row.phone || null, document: row.document || null });
+      if (unique.length === 12) break;
+    }
+    return unique;
+  }
+
+  /**
+   * The Cobros header, over every cobro of the store (the list is paged): counts per tab,
+   * overdue computed from the due date, and per-currency sums. "Cobrado" is the last 30 days
+   * of real money — a test-mode payment is summed apart — and `attention` lists the payments
+   * of the last 30 days the merchant has to refund or reconcile.
+   */
+  async summary(merchantId: string, storeId: string) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, status: true } });
+    if (!store) throw new NotFoundException("Store not found");
+    const merchant = await this.prisma.merchant.findUnique({ where: { id: merchantId }, select: { status: true } });
+    const now = new Date();
+    const since = new Date(now.getTime() - 30 * DAY_MS);
+    const base = { storeId, kind: "INVOICE" as const };
+    const [byStatus, late, testPaid, attentionEvents] = await Promise.all([
+      this.prisma.businessDocument.groupBy({ by: ["status", "currency"], where: base, _count: { _all: true }, _sum: { totalAmount: true } }),
+      this.prisma.businessDocument.groupBy({ by: ["currency"], where: { ...base, ...cobroStateWhere("overdue", now) }, _count: { _all: true }, _sum: { totalAmount: true } }),
+      this.prisma.businessDocumentEvent.findMany({
+        where: { type: "paid", data: { path: ["livemode"], equals: false }, document: { ...base, status: S.PAID } },
+        select: { documentId: true },
+      }),
+      this.prisma.businessDocumentEvent.findMany({
+        where: { type: { in: ["payment_after_close", "payment_mismatch"] }, at: { gte: since }, document: base },
+        select: { documentId: true, type: true, at: true, data: true },
+        orderBy: { at: "desc" },
+        take: 20,
+      }),
+    ]);
+    const testIds = [...new Set(testPaid.map((event) => event.documentId))];
+    const paidWindow = { ...base, status: S.PAID, paidAt: { gte: since } };
+    const [collected, testCollected] = await Promise.all([
+      this.prisma.businessDocument.groupBy({ by: ["currency"], where: { ...paidWindow, id: { notIn: testIds } }, _sum: { totalAmount: true } }),
+      testIds.length ? this.prisma.businessDocument.groupBy({ by: ["currency"], where: { ...paidWindow, id: { in: testIds } }, _sum: { totalAmount: true } }) : Promise.resolve([]),
+    ]);
+
+    const count = (statuses: BusinessDocumentStatus[]) => byStatus.filter((row) => statuses.includes(row.status)).reduce((total, row) => total + row._count._all, 0);
+    const sumOf = (rows: Array<{ currency: string; _sum: { totalAmount: number | null } }>, currency: string) =>
+      rows.filter((row) => row.currency === currency).reduce((total, row) => total + (row._sum.totalAmount ?? 0), 0);
+    const currencies = [...new Set(byStatus.map((row) => row.currency))].sort((a, b) => (a === "BOB" ? -1 : b === "BOB" ? 1 : a.localeCompare(b)));
+    const owedRows = byStatus.filter((row) => OPEN.includes(row.status));
+
+    const labels = new Map((await (attentionEvents.length
+      ? this.prisma.businessDocument.findMany({ where: { id: { in: [...new Set(attentionEvents.map((event) => event.documentId))] } }, select: { id: true, kind: true, number: true } })
+      : Promise.resolve([]))).map((doc) => [doc.id, documentNumberLabel(doc.kind, doc.number)]));
+    const field = (data: Prisma.JsonValue | null, key: string) => (data && typeof data === "object" && !Array.isArray(data) ? (data[key] ?? null) : null);
+
+    return {
+      // While the merchant is not verified (or the store is not live) a cobro's checkout runs in test mode.
+      testMode: merchant?.status !== MerchantStatus.ACTIVE || store.status !== "ACTIVE",
+      merchantStatus: merchant?.status ?? null,
+      storeStatus: store.status,
+      counts: {
+        all: count(Object.values(S)),
+        draft: count([S.DRAFT]),
+        open: count(OPEN),
+        overdue: late.reduce((total, row) => total + row._count._all, 0),
+        paid: count([S.PAID]),
+        voided: count([S.VOIDED]),
+      },
+      totals: currencies.map((currency) => ({
+        currency,
+        owed: sumOf(owedRows, currency),
+        overdue: sumOf(late, currency),
+        collected: sumOf(collected, currency),
+        testCollected: sumOf(testCollected, currency),
+      })),
+      attention: attentionEvents.map((event) => ({
+        documentId: event.documentId,
+        numberLabel: labels.get(event.documentId) ?? "",
+        type: event.type,
+        statusBefore: field(event.data, "statusBefore"),
+        amount: field(event.data, "amount"),
+        currency: field(event.data, "currency"),
+        at: event.at,
+      })),
+    };
+  }
+
+  // ── worker ────────────────────────────────────────────────────────────
+
+  /** Overdue first, so a reminder three days late finds the cobro already marked. */
+  async runMaintenance(now = new Date()) {
+    const overdue = await this.markOverdue(now);
+    const reminders = await this.sendAutomaticReminders(now);
+    return { overdue, reminders };
+  }
+
+  private async markOverdue(now: Date) {
+    const late = await this.prisma.businessDocument.findMany({
+      where: { kind: "INVOICE", status: { in: [S.SENT, S.VIEWED] }, dueAt: { lt: now } },
+      select: { id: true, currentVersion: true },
+      take: 500,
+    });
+    let marked = 0;
+    for (const doc of late) {
+      const { count } = await this.prisma.businessDocument.updateMany({ where: { id: doc.id, status: { in: [S.SENT, S.VIEWED] } }, data: { status: S.OVERDUE } });
+      if (!count) continue;
+      marked += 1;
+      await this.prisma.businessDocumentEvent.createMany({
+        data: [{ documentId: doc.id, type: "overdue", version: doc.currentVersion, dedupeKey: `overdue:v${doc.currentVersion}` }],
+        skipDuplicates: true,
+      });
+    }
+    return marked;
+  }
+
+  private async sendAutomaticReminders(now: Date) {
+    const candidates = await this.prisma.businessDocument.findMany({
+      where: {
+        kind: "INVOICE",
+        status: { in: OPEN },
+        autoReminders: true,
+        customerEmail: { not: null },
+        dueAt: { gte: new Date(now.getTime() - OVERDUE_REMINDER_UNTIL_MS), lte: new Date(now.getTime() + DUE_REMINDER_OPENS_BEFORE_MS) },
+      },
+      select: { id: true, storeId: true, currentVersion: true, dueAt: true, sentAt: true },
+      take: 500,
+    });
+    let sent = 0;
+    for (const doc of candidates) {
+      const stage = this.reminderStage(doc.dueAt!, doc.sentAt, now);
+      if (!stage) continue;
+      try {
+        if (await this.sendAutomaticReminder(doc, stage, now)) sent += 1;
+      } catch (error) {
+        this.logger.warn(`Automatic reminder for ${doc.id} failed: ${(error as Error).message}`);
+      }
+    }
+    return sent;
+  }
+
+  private reminderStage(dueAt: Date, sentAt: Date | null, now: Date): Exclude<DocumentReminderStage, "manual"> | null {
+    const due = dueAt.getTime();
+    const at = now.getTime();
+    if (at >= due - DUE_REMINDER_OPENS_BEFORE_MS && at <= due && sentAt && sentAt.getTime() <= at - DUE_REMINDER_MIN_AGE_MS) return "due";
+    if (at >= due + OVERDUE_REMINDER_AFTER_MS && at <= due + OVERDUE_REMINDER_UNTIL_MS) return "overdue";
+    return null;
+  }
+
+  /**
+   * Claimed with a dedupeKey before the email leaves, so two API instances never both send it.
+   * Nothing is claimed (the next tick retries while the window is open) when the cobro was never
+   * shared, when an email reminder went out in the last 6 hours, or when the store is at its cap.
+   */
+  private async sendAutomaticReminder(doc: { id: string; storeId: string; currentVersion: number }, stage: "due" | "overdue", now: Date) {
+    // "Crear cobro" only freezes the cobro; a customer who never got the link is not reminded of it.
+    const reached = await this.prisma.businessDocumentEvent.findFirst({ where: { documentId: doc.id, type: { in: SHARED_EVENTS } }, select: { id: true } });
+    if (!reached) return false;
+    const snapshot = await this.latestSnapshot(doc.id, doc.currentVersion);
+    const to = snapshot.customer.email;
+    if (!to) return false;
+    const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, contactEmail: true, logoUrl: true } });
+    if (!store) return false;
+    let eventId: string;
+    try {
+      eventId = await this.prisma.$transaction(async (tx) => {
+        // One cooldown for manual and automatic email reminders of the same cobro.
+        if (await this.lastEmailReminder(tx, doc.id, now)) throw new ReminderCooldown();
+        await this.documents.assertEmailQuota(tx, doc.storeId);
+        const event = await tx.businessDocumentEvent.create({
+          data: { documentId: doc.id, type: "reminded", version: doc.currentVersion, dedupeKey: `reminder:${stage}:v${doc.currentVersion}`, data: { channel: "email", automatic: true, stage, to } },
+        });
+        return event.id;
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) return false; // already sent for this version
+      if (error instanceof ReminderCooldown) return false; // a reminder went out < 6 h ago: next run
+      if (error instanceof HttpException && error.getStatus() === 429) return false; // over the store's cap: next run
+      throw error;
+    }
+    return this.deliverReminder({ id: doc.id, version: doc.currentVersion, snapshot, to, store, stage, eventId });
+  }
+
+  // ── helpers ───────────────────────────────────────────────────────────
+
+  private async deliverReminder(input: {
+    id: string;
+    version: number;
+    snapshot: DocumentSnapshot;
+    to: string;
+    store: { name: string; contactEmail: string | null; logoUrl: string | null };
+    stage: DocumentReminderStage;
+    eventId: string;
+  }): Promise<boolean> {
+    const { snapshot, store } = input;
+    try {
+      const version = await this.prisma.businessDocumentVersion.findUnique({ where: { documentId_version: { documentId: input.id, version: input.version } } });
+      const pdf = await renderBusinessDocumentPdf({
+        storeName: store.name,
+        logo: await this.documents.storeLogo(store.logoUrl),
+        numberLabel: snapshot.numberLabel,
+        version: input.version,
+        sha256: version?.sha256 ?? "",
+        snapshot,
+      });
+      const message = buildDocumentEmail({ storeName: store.name, snapshot, publicUrl: this.documents.publicUrl(input.id), reminder: input.stage });
+      await this.email.send({
+        to: input.to,
+        subject: message.subject,
+        body: message.text,
+        html: message.html,
+        replyTo: store.contactEmail ?? undefined,
+        attachments: [{ filename: `${snapshot.numberLabel}.pdf`, contentType: "application/pdf", content: pdf.toString("base64") }],
+        idempotencyKey: `business-document/${input.eventId}`,
+        failLoudly: true,
+      });
+      return true;
+    } catch (error) {
+      this.logger.warn(`Cobro ${input.id} reminder email failed: ${(error as Error).message}`);
+      await this.prisma.businessDocumentEvent.create({
+        data: { documentId: input.id, type: "email_failed", version: input.version, data: { to: input.to, reminder: input.stage, reason: (error as Error).message.slice(0, 200) } },
+      });
+      return false;
+    }
+  }
+
+  /** The latest email reminder (manual or automatic) inside the shared cooldown, if any. */
+  private lastEmailReminder(db: Pick<Prisma.TransactionClient, "businessDocumentEvent">, documentId: string, now: Date) {
+    return db.businessDocumentEvent.findFirst({
+      where: { documentId, type: "reminded", data: { path: ["channel"], equals: "email" }, at: { gte: new Date(now.getTime() - REMINDER_COOLDOWN_MS) } },
+      orderBy: { at: "desc" },
+    });
+  }
+
+  private async openCobro(storeId: string, id: string, refusal: string) {
+    const doc = await this.prisma.businessDocument.findFirst({ where: { id, storeId } });
+    if (!doc) throw new NotFoundException("Documento no encontrado");
+    if (doc.kind !== "INVOICE" || doc.currentVersion < 1 || !OPEN.includes(doc.status)) throw new ConflictException(refusal);
+    return doc;
+  }
+
+  private async latestSnapshot(id: string, version: number) {
+    const row = await this.prisma.businessDocumentVersion.findUnique({ where: { documentId_version: { documentId: id, version } } });
+    if (!row) throw new NotFoundException("Documento no encontrado");
+    return row.content as unknown as DocumentSnapshot;
+  }
+
+  private async ownedStore(merchantId: string, storeId: string) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, name: true, contactEmail: true, logoUrl: true } });
+    if (!store) throw new NotFoundException("Store not found");
+    return store;
+  }
+
+  private checkout(intent: { id: string; clientSecret: string }) {
+    return { paymentIntentId: intent.id, clientSecret: intent.clientSecret, checkoutUrl: paymentCheckoutUrl(this.config, intent.clientSecret) };
+  }
+
+  private secret() {
+    return this.config.get<string>("app.documentLinkSecret") ?? DEVELOPMENT_DOCUMENT_LINK_SECRET;
+  }
+}

@@ -55,11 +55,11 @@ const INK = "#111111";
 const MUTED = "#666666";
 const LINE = "#d4d4d4";
 
-function money(cents: number, currency = "BOB"): string {
+export function money(cents: number, currency = "BOB"): string {
   return `${(cents / 100).toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 }
 
-function formatDate(value: Date | string | null): string {
+export function formatDate(value: Date | string | null): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat("es-BO", {
     year: "numeric",
@@ -85,7 +85,7 @@ function orderStatusLabel(status: string): string {
   return map[status] || status;
 }
 
-async function collectPdfBuffer(doc: PDFKit.PDFDocument): Promise<Buffer> {
+export async function collectPdfBuffer(doc: PDFKit.PDFDocument): Promise<Buffer> {
   const chunks: Buffer[] = [];
   return new Promise<Buffer>((resolve, reject) => {
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -103,21 +103,34 @@ function applyHeader(doc: PDFKit.PDFDocument, title: string, subtitle: string): 
   doc.moveDown(1.2);
 }
 
-function ensureNewPage(doc: PDFKit.PDFDocument, needed = 56, title = "PAGOSYA"): void {
+/** Draws a continuation page's header and leaves `doc.y` where the content resumes. */
+export type PdfPageHeader = (doc: PDFKit.PDFDocument) => void;
+
+/**
+ * Starts a new page when `needed` points no longer fit. Reports get the pagosYa
+ * band; business documents pass their own store header.
+ */
+export function ensureNewPage(doc: PDFKit.PDFDocument, needed = 56, title = "PAGOSYA", header?: PdfPageHeader): void {
   if (doc.y + needed > doc.page.height - (doc.page.margins.bottom + 8)) {
     doc.addPage();
+    if (header) {
+      header(doc);
+      return;
+    }
     applyHeader(doc, title, `Página continuada · Generado ${formatDate(new Date())}`);
     doc.y = 120;
   }
 }
 
-function writeWrappedLines(doc: PDFKit.PDFDocument, lines: string[], title: string, fontSize = 8.5): void {
+export function writeWrappedLines(doc: PDFKit.PDFDocument, lines: string[], title: string, fontSize = 8.5, header?: PdfPageHeader): void {
   const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const lineGap = 2;
   doc.font("Helvetica").fontSize(fontSize).lineGap(lineGap);
   for (const line of lines) {
     const height = doc.heightOfString(line, { width, lineGap });
-    ensureNewPage(doc, height + 8, title);
+    ensureNewPage(doc, height + 8, title, header);
+    // A custom header may leave another font set; the report path keeps its old behaviour.
+    if (header) doc.font("Helvetica").fontSize(fontSize).lineGap(lineGap);
     doc.text(line, { width, lineGap });
   }
 }

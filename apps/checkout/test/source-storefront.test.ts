@@ -140,3 +140,16 @@ it('ignores a location request from the design frame', async () => {
   expect(getCurrentPosition).not.toHaveBeenCalled();
   post.mockRestore();
 });
+
+it('loads bundled media from the published asset directory instead of inlining it', async () => {
+  window.history.replaceState({}, '', '/s/tienda');
+  const hosted = site() as any;
+  hosted.assetPath = '/stores/public/tienda/source-site/assets/3-0123456789ab/';
+  hosted.snapshot.files[0].content = '<img src="assets/hero.jpg" alt=""><script src="config.js"></script>';
+  hosted.snapshot.files.push({ path: 'assets/hero.jpg', encoding: 'url', content: '' });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => hosted }));
+  expect(await mountPublishedSource(document.querySelector('#app')!, 'tienda', store, vi.fn(), true)).toBe(true);
+  const srcdoc = document.querySelector('iframe')!.srcdoc;
+  expect(srcdoc).toContain('/v1/stores/public/tienda/source-site/assets/3-0123456789ab/assets/hero.jpg');
+  expect(srcdoc).not.toContain('data:image/jpeg');
+});

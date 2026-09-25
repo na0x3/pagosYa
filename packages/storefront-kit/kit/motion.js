@@ -41,7 +41,7 @@
   style.textContent = `
     @media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
       html[data-pagosya-motion=subtle] .menu-item__image,
-      html[data-pagosya-motion=expressive] .menu-item__image { transition: transform 160ms var(--ease-out, cubic-bezier(.23,1,.32,1)); }
+      html[data-pagosya-motion=expressive] .menu-item__image { transition: transform var(--motion-fast,160ms) var(--motion-ease,var(--ease-out,cubic-bezier(.23,1,.32,1))); }
       html[data-pagosya-motion=subtle] .menu-item:hover .menu-item__image { transform: scale(1.02); }
       html[data-pagosya-motion=expressive] .menu-item:hover .menu-item__image { transform: scale(1.035); }
     }
@@ -65,6 +65,14 @@
   const start = () => {
     if (stopped || reduce.matches) return;
     const ease = getComputedStyle(root).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
+    // The store's motion personality (--motion-*, set by commerce.js from data-dna-motion); without one, today's values.
+    // A store's own values are clamped as @pagosya/ui clamps them: durations 0-900ms, travel 0-40px.
+    const LIMITS = { '--motion-fast': 900, '--motion-base': 900, '--motion-distance': 40 };
+    const token = name => { const m = getComputedStyle(root).getPropertyValue(name).trim().match(/^(-?\d*\.?\d+)(ms|s|px)?$/); return m ? Math.min(LIMITS[name], Math.max(0, Number(m[1]) * (m[2] === 's' ? 1000 : 1))) : null; };
+    const expressive = mode === 'expressive';
+    const duration = (expressive ? token('--motion-base') : token('--motion-fast')) ?? (expressive ? 280 : 220);
+    const travel = token('--motion-distance');
+    const distance = travel === null ? (expressive ? 10 : 6) : expressive ? travel : travel / 2;
     const seen = new WeakSet();
     observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
@@ -79,9 +87,9 @@
         const frames = floating && base === 'none'
           ? [{ transform: 'translateY(0)' }, { transform: 'translateY(-6px)' }, { transform: 'translateY(0)' }]
           : base === 'none'
-            ? [{ opacity: .75, transform: `translateY(${mode === 'expressive' ? 10 : 6}px)` }, { opacity: 1, transform: 'translateY(0)' }]
+            ? [{ opacity: .75, transform: `translateY(${distance}px)` }, { opacity: 1, transform: 'translateY(0)' }]
             : [{ opacity: .75 }, { opacity: 1 }];
-        const animation = el.animate(frames, { duration: floating ? 2400 : mode === 'expressive' ? 280 : 220, iterations: floating ? 2 : 1, easing: floating ? 'cubic-bezier(.77,0,.175,1)' : ease });
+        const animation = el.animate(frames, { duration: floating ? 2400 : duration, iterations: floating ? 2 : 1, easing: floating ? 'cubic-bezier(.77,0,.175,1)' : ease });
         animations.add(animation);
         animation.finished.then(() => animations.delete(animation), () => animations.delete(animation));
       }

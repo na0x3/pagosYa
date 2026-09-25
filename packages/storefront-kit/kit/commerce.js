@@ -2,6 +2,71 @@
   "use strict";
   // pagosya-product-options:v1 — bounded variant IDs, prices, stock and galleries.
   const config = window.PAGOSYA_CONFIG || {};
+  // Design DNA: each enum becomes data-dna-<name> on <html>, so variant CSS and motion can key on it.
+  // Same values as SOURCE_DNA_RUNTIME_ENUMS in the API (a test pins them); anything else is ignored.
+  const DNA_VALUES = {
+    display: ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald', 'syne', 'unbounded', 'space-grotesk', 'dm-serif-display', 'playfair-display', 'epilogue', 'sora', 'manrope', 'newsreader', 'young-serif', 'rubik', 'space-mono', 'big-shoulders-display', 'bebas-neue', 'anton', 'chivo', 'lora', 'libre-caslon-text', 'outfit', 'figtree', 'familjen-grotesk', 'bitter', 'nunito', 'shrikhand', 'bodoni-moda'],
+    text: ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald', 'syne', 'unbounded', 'space-grotesk', 'dm-serif-display', 'playfair-display', 'epilogue', 'sora', 'manrope', 'newsreader', 'young-serif', 'rubik', 'space-mono', 'big-shoulders-display', 'bebas-neue', 'anton', 'chivo', 'lora', 'libre-caslon-text', 'outfit', 'figtree', 'familjen-grotesk', 'bitter', 'nunito', 'shrikhand', 'bodoni-moda'],
+    case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'],
+    radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid'],
+    button: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split'], hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
+    motion: ['calm', 'snappy', 'playful', 'cinematic'], grammar: ['editorial', 'grid', 'collage', 'index', 'poster', 'magazine', 'brutalist'], density: ['airy', 'balanced', 'dense'],
+    cart: ['drawer', 'sheet', 'page', 'overlay'], added: ['toast', 'ribbon', 'bubble', 'inline', 'stamp'], product: ['editorial', 'dense', 'image-led', 'story-led'],
+    review: ['split', 'stacked', 'ticket', 'notebook'], card: ['still', 'second-photo', 'swatch-swap', 'zoom', 'quick-look', 'tilt'],
+  };
+  // Motion personality (sub-project 6): data-dna-motion sets these as --motion-* tokens (MOTION_CSS). Same table as
+  // SOURCE_MOTION_TOKENS in the API and MOTION_PERSONALITIES in ui.tsx (tests pin them). The tokens exist only for a
+  // personality; every use site falls back to its own literal, so a store without one moves exactly as before.
+  // ease/exit may overshoot (playful): transforms only. settle/settleExit stay inside 0..1: every other property, and
+  // surfaces anchored to a screen edge, where an overshoot would open a gap.
+  const MOTION_TOKENS = {
+    calm: { ease: 'cubic-bezier(.25,.1,.25,1)', settle: 'cubic-bezier(.25,.1,.25,1)', exit: 'cubic-bezier(.4,0,1,1)', settleExit: 'cubic-bezier(.4,0,1,1)', fast: 180, base: 320, slow: 560, distance: 12, stagger: 70, parallax: .5, press: .98 },
+    snappy: { ease: 'cubic-bezier(.2,.9,.2,1)', settle: 'cubic-bezier(.2,.9,.2,1)', exit: 'cubic-bezier(.4,0,.6,1)', settleExit: 'cubic-bezier(.4,0,.6,1)', fast: 120, base: 200, slow: 320, distance: 8, stagger: 35, parallax: .3, press: .96 },
+    playful: { ease: 'cubic-bezier(.34,1.56,.64,1)', settle: 'cubic-bezier(.22,1,.36,1)', exit: 'cubic-bezier(.36,0,.66,-.56)', settleExit: 'cubic-bezier(.5,0,.75,0)', fast: 200, base: 360, slow: 600, distance: 18, stagger: 60, parallax: .8, press: .92 },
+    cinematic: { ease: 'cubic-bezier(.16,1,.3,1)', settle: 'cubic-bezier(.16,1,.3,1)', exit: 'cubic-bezier(.7,0,.84,0)', settleExit: 'cubic-bezier(.7,0,.84,0)', fast: 260, base: 520, slow: 900, distance: 28, stagger: 110, parallax: 1.3, press: .98 },
+  };
+  const MOTION_CSS = [
+    ...Object.entries(MOTION_TOKENS).map(([name, t]) => `:root[data-dna-motion=${name}]{--motion-ease:${t.ease};--motion-ease-settle:${t.settle};--motion-ease-exit:${t.exit};--motion-ease-settle-exit:${t.settleExit};--motion-fast:${t.fast}ms;--motion-base:${t.base}ms;--motion-slow:${t.slow}ms;--motion-distance:${t.distance}px;--motion-stagger:${t.stagger}ms;--motion-parallax:${t.parallax};--motion-press-scale:${t.press}}`),
+    /* The kit's long-referenced but never-defined eases become the personality's settle curve. */
+    ':root[data-dna-motion]{--ease-out:var(--motion-ease-settle);--ease-drawer:var(--motion-ease-settle)}',
+    /* Leaving: panels on the settle exit curve (never anticipates), the notice's slide on the exit curve. */
+    ':root[data-dna-motion] .cart-drawer:not([open]){transition-timing-function:var(--motion-ease-settle-exit)}',
+    /* Curves only (the notice's transition lists opacity, transform, visibility): the kit's instant and reduced-motion rules still switch it off. */
+    ':root[data-dna-motion] .cart-added:not([data-visible=true]){transition-timing-function:var(--motion-ease-settle-exit),var(--motion-ease-exit),linear}',
+    /* The ribbon hangs from a screen edge: an overshoot would open a gap above it. */
+    ':root[data-dna-added=ribbon] .cart-added{--motion-ease:var(--motion-ease-settle);--motion-ease-exit:var(--motion-ease-settle-exit)}',
+  ];
+  const MOTION_TOKEN_NAMES = { ease: '--motion-ease', settle: '--motion-ease-settle', exit: '--motion-ease-exit', settleExit: '--motion-ease-settle-exit', fast: '--motion-fast', base: '--motion-base', slow: '--motion-slow', distance: '--motion-distance', stagger: '--motion-stagger', parallax: '--motion-parallax', press: '--motion-press-scale' };
+  /* A store's own numbers are held to the range @pagosya/ui allows (a press scale of 0 would collapse the button; a
+   * negative duration makes animate() throw). */
+  const MOTION_LIMITS = { fast: [0, 900], base: [0, 900], slow: [0, 900], distance: [0, 40], stagger: [0, 120], parallax: [0, 2], press: [.85, 1] };
+  /* One token for WAAPI, which cannot read the cascade: the store's own --motion-* value (computed, clamped), else the
+   * personality's table value, else the use site's literal (today's value). */
+  function motionValue(name, fallback) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(MOTION_TOKEN_NAMES[name]).trim();
+    if (raw && typeof fallback === 'string') return raw;
+    const number = raw.match(/^(-?\d*\.?\d+)(ms|s|px)?$/);
+    if (number) { const [min, max] = MOTION_LIMITS[name]; return Math.min(max, Math.max(min, Number(number[1]) * (number[2] === 's' ? 1000 : 1))); }
+    const personality = document.documentElement.getAttribute('data-dna-motion');
+    return Object.prototype.hasOwnProperty.call(MOTION_TOKENS, personality ?? '') ? MOTION_TOKENS[personality][name] : fallback;
+  }
+  // product is the one exception: render() sets it from productPageStyle(), the page this kit actually draws.
+  const hasDna = Boolean(config.dna && typeof config.dna === 'object');
+  if (hasDna) {
+    for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+  }
+  /* DNA motifs (sub-project 3): small line drawings the kit places next to the product title, in a corner of matching
+   * cards and in the cart header, and animates with its own keyframes on the --motion-* tokens. The API sanitised the
+   * markup; it is verified again against the same allow-lists (a test pins them) and imported as nodes, never as HTML.
+   * A store without motifs gets no style, no slot and no attribute. */
+  const MOTIF_ELEMENTS = ['svg', 'g', 'path', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'rect', 'defs', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'mask', 'title', 'desc'];
+  const MOTIF_ATTRIBUTES = ['viewBox', 'preserveAspectRatio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'fx', 'fy', 'fr', 'd', 'points', 'pathLength', 'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'color', 'transform', 'vector-effect', 'clip-path', 'clip-rule', 'mask', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform', 'spreadMethod', 'clipPathUnits', 'maskUnits', 'maskContentUnits', 'class', 'id', 'data-part', 'aria-hidden', 'focusable'];
+  const MOTIF_BEHAVIORS = ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'];
+  const MOTIF_SLOT_TRIGGERS = ['appear', 'scroll', 'hover', 'add-to-cart'];
+  const MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
+    && MOTIF_BEHAVIORS.includes(motif.behavior) && MOTIF_SLOT_TRIGGERS.includes(motif.trigger) && ['product', 'card', 'cart'].includes(motif.placement)
+    && ['store', 'category', 'product'].includes(motif.for) && typeof motif.target === 'string' && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg));
+  let motifObserver = null;
   const hosted = window.PAGOSYA_HOSTED === true;
   // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
   // and the merchant's measurement tags. Those tags exist only after the shopper accepted
@@ -19,6 +84,66 @@
     try { window.fbq?.('track', names[1], payload); } catch {}
     try { window.ttq?.track?.(names[1], payload); } catch {}
   };
+  /* Store analytics (G1), hosted stores only. The sandbox has no storage and cannot see the shopper's choice, so the
+   * kit hands small allow-listed events to pagosYa's page, which applies consent, the session and dedupe, and sends
+   * them. The labels are the API's ANALYTICS_TRACK_LABELS (a test pins them). Never a word the shopper typed. */
+  const ANALYTICS_LABELS = ['hero-cta', 'nav-cart', 'nav-catalog', 'card', 'add', 'checkout', 'pay', 'whatsapp', 'contact', 'promo', 'social', 'newsletter'];
+  const ANALYTICS_PAGE = typeof window.PAGOSYA_PREVIEW_PAGE === 'string' ? window.PAGOSYA_PREVIEW_PAGE : 'index.html';
+  const analyticsQueue = [];
+  const analyticsOnce = new Set();
+  let analyticsTimer = 0;
+  function flushAnalytics() {
+    clearTimeout(analyticsTimer); analyticsTimer = 0;
+    if (analyticsQueue.length) parent.postMessage({ type: 'pagosya:analytics', events: analyticsQueue.splice(0) }, '*');
+  }
+  /** `once` names a moment counted a single time on this page (a product view, a checkout step). */
+  function analytics(type, fields, once) {
+    if (!hosted) return;
+    if (once) { if (analyticsOnce.has(once)) return; analyticsOnce.add(once); }
+    analyticsQueue.push(Object.assign({ type }, fields, { path: ANALYTICS_PAGE }));
+    if (analyticsQueue.length >= 20) flushAnalytics();
+    else if (!analyticsTimer) analyticsTimer = setTimeout(flushAnalytics, 400);
+  }
+  /** The catalog card's product, only when it is one of this store's products. */
+  function cardProductId(card) {
+    const control = card.querySelector('[data-add],[data-product]');
+    let id = card.dataset.productId || control?.dataset.add || control?.dataset.product || null;
+    const link = id ? null : card.querySelector('a[href*="id="]');
+    if (link) { try { id = new URL(link.getAttribute('href'), document.baseURI).searchParams.get('id'); } catch { id = null; } }
+    return products().some(item => item.id === id) ? id : null;
+  }
+  const WHATSAPP_LINK = /^https:\/\/(?:wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)\//i;
+  if (hosted) {
+    window.addEventListener('pagehide', flushAnalytics);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAnalytics(); });
+    // Window capture runs before the kit's own cart-trigger listener, which stops the click from going further.
+    window.addEventListener('click', event => {
+      const target = event.target?.closest ? event.target : null;
+      if (!target) return;
+      const label = target.closest('[data-track]')?.getAttribute('data-track');
+      if (label && ANALYTICS_LABELS.includes(label)) analytics('cta_click', { target: label });
+      const control = target.closest('a,button');
+      const card = control?.closest('.menu-item');
+      if (card && !control.matches('[data-add],[data-card-swatch]')) { const id = cardProductId(card); if (id) analytics('product_card_click', { productId: id }); }
+      // The shopper is leaving for WhatsApp: hand the queue over now.
+      if (control?.matches('a[href]') && WHATSAPP_LINK.test(control.href)) { analytics('whatsapp_click'); flushAnalytics(); }
+    }, true);
+    document.addEventListener('change', event => { if (event.target?.matches?.('input[type=search]') && event.target.value.trim()) analytics('search'); });
+  }
+  let cardObserver = null;
+  const watchedCards = new WeakSet();
+  /** Each catalog card counts as seen once half of it is on screen, once per product on this page. */
+  function observeCards() {
+    if (!hosted || typeof IntersectionObserver !== 'function') return;
+    if (!cardObserver) cardObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      cardObserver.unobserve(entry.target);
+      const id = cardProductId(entry.target);
+      if (id) analytics('product_card_impression', { productId: id }, 'impression:' + id);
+    }), { threshold: 0.5 });
+    document.querySelectorAll('[data-pagosya-catalog] .menu-item').forEach(card => { if (!watchedCards.has(card)) { watchedCards.add(card); cardObserver.observe(card); } });
+  }
+  analytics('page_view');
   const preview = window.PAGOSYA_PREVIEW === true && !hosted;
   const request = async (url, options) => {
     if (!hosted) return fetch(url, options);
@@ -225,14 +350,18 @@
   };
   const detailStyle = document.createElement("style");
   detailStyle.dataset.pagosyaKit = 'product';
+  // Cascade order (sub-project 5 review): kit defaults < the store's DNA < the store's own CSS, which is unlayered
+  // and therefore wins over both. The contact base sits under the DNA so the DNA button form reaches its submit.
   detailStyle.textContent = `
+    @layer pagosya-commerce, pagosya-contact-base, pagosya-dna;
     .menu-item{position:relative}.menu-item:not([data-custom-product]) .menu-item__details{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:inherit;background:transparent;box-shadow:none;cursor:pointer;color:inherit}
     .menu-item .menu-item__details:focus-visible{outline:3px solid currentColor;outline-offset:-4px}.menu-item:not([data-custom-product]) .menu-add{position:relative;inset:auto;z-index:2}
-    .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
+    [data-cart-slot][hidden],[data-cart-field][hidden],[data-added-field][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
+      .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
       [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
@@ -899,6 +1028,7 @@
     const p = products().find(p => p.id === id);
     if (!p) { if (fullProductPage) detail.innerHTML = '<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="index.html#catalogo">Explorar productos</a>'; return; }
     track('product_view', undefined, { value: price(p), currency: p.currency });
+    analytics('product_view', { productId: p.id }, 'view:' + p.id);
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     selectedOptions = completeSelection(p, []);
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
@@ -910,13 +1040,16 @@
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
     detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy">${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
+    detail.removeAttribute('data-page-template');
+    applyProductPageTemplate();
     showImage(0);
-    if (fullProductPage && !images.length) {
+    if (fullProductPage && !images.length && !detail.hasAttribute('data-page-template')) {
       // Mobile reads identity, purchase, then details; desktop places the purchase panel beside both.
       const copy = detail.querySelector('.product-detail__copy'), [summary, buybox, details] = ['summary', 'buybox', 'details'].map(name => Object.assign(document.createElement('div'), { className: 'product-detail__' + name }));
       for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__highlights,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
     }
+    if (MOTIFS.length) placeProductMotif(p);
     watchHighlights();
     watchStickyBar();
     decorateProductReviews();
@@ -1102,7 +1235,11 @@
   });
   // An empty mount is reserved for the drawer. Preserve deliberately authored
   // inline cart content, but do not append a second empty order below the footer.
-  const authoredDrawerTrigger = document.querySelector('[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]');
+  // Every control that opens the cart (source-commerce-contract accepts these); the click handler, the drawer mount
+  // and the added-notice overlap check share it. A link or button holding the cart count opens the cart too.
+  const CART_TRIGGERS = '[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]';
+  const cartTriggers = () => [...new Set([...document.querySelectorAll(CART_TRIGGERS), ...[...document.querySelectorAll('[data-cart-count]')].map(count => count.closest('a,button')).filter(Boolean)])].filter(el => !el.closest('template'));
+  const authoredDrawerTrigger = [...document.querySelectorAll(CART_TRIGGERS)].find(el => !el.closest('template'));
   if (authoredDrawerTrigger) document.querySelectorAll('[data-pagosya-cart]:not([data-checkout-review])').forEach(slot => {
     if (!slot.childElementCount && !slot.textContent.trim()) slot.hidden = true;
   });
@@ -1111,6 +1248,8 @@
   cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title');
   cartDrawer.innerHTML = '<header class="cart-drawer__header"><h2 id="cart-drawer-title">Tu pedido</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>';
   document.body.append(cartDrawer);
+  // A bottom-sheet cart shows a grab handle; the element only exists for stores with a DNA.
+  if (hasDna) cartDrawer.querySelector('.cart-drawer__header').insertAdjacentHTML('afterbegin', '<span class="cart-drawer__grip" aria-hidden="true"></span>');
   function renderPolicyLinks() {
     cartDrawer.querySelector(':scope > .pagosya-policies')?.remove();
     const drawerPolicies = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
@@ -1140,7 +1279,12 @@
     cartDrawer.dataset.instant = String(keyboard || config.motion === 'off');
     delete addedNotice.dataset.visible;
     cartDrawer.showModal(); renderCart();
-    cartDrawer.querySelector('[data-cart-close]').focus();
+    const templated = Boolean(drawerSlot.querySelector('[data-cart-panel]'));
+    cartDrawer.toggleAttribute('data-template', templated);
+    if (templated) { cartDrawer.removeAttribute('aria-labelledby'); cartDrawer.setAttribute('aria-label', 'Tu pedido'); }
+    else { cartDrawer.removeAttribute('aria-label'); cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title'); }
+    analytics('cart_open');
+    (cartDrawer.querySelector('[data-cart-panel] [data-cart-close]') || cartDrawer.querySelector('[data-cart-close]')).focus();
   }
   function restoreDrawer() {
     if (!drawerSlot) return;
@@ -1161,7 +1305,7 @@
     }
   });
   document.addEventListener('click', event => {
-    const trigger = event.target.closest('[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]')
+    const trigger = event.target.closest(CART_TRIGGERS)
       || event.target.closest('a,button')?.querySelector('[data-cart-count]')?.closest('a,button');
     if (!trigger) return;
     event.preventDefault(); event.stopImmediatePropagation(); openCart(trigger, event.detail === 0);
@@ -1171,26 +1315,262 @@
   addedNotice.innerHTML = '<span></span><button type="button" data-cart-open>Ver pedido</button>';
   document.body.append(addedNotice);
   let addedTimer;
+  /* DNA placements: the bubble hangs under the cart button, the inline note under the pressed button.
+   * Whatever the placement, the note never covers a cart button (phone headers especially): it moves to the other edge. */
+  function placeAddedNotice(button) {
+    if (!hasDna) return;
+    for (const name of ['--added-top', '--added-left', '--added-right', '--added-arrow']) addedNotice.style.removeProperty(name);
+    delete addedNotice.dataset.flip;
+    const shown = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
+    const triggers = cartTriggers().filter(el => !addedNotice.contains(el) && !cartDrawer.contains(el) && shown(el));
+    const placement = document.documentElement.getAttribute('data-dna-added');
+    const cartBox = triggers[0]?.getBoundingClientRect();
+    if (placement === 'bubble') {
+      addedNotice.style.setProperty('--added-top', `${cartBox ? Math.round(cartBox.bottom + 10) : 16}px`);
+      // Hang from the side the cart button is on, so the bubble stays on screen.
+      if (cartBox && cartBox.left + cartBox.width / 2 < innerWidth / 2) addedNotice.style.setProperty('--added-left', `${Math.max(12, Math.round(cartBox.left))}px`);
+      else addedNotice.style.setProperty('--added-right', `${cartBox ? Math.max(12, Math.round(innerWidth - cartBox.right)) : 16}px`);
+    }
+    if (placement === 'inline' && button?.isConnected) {
+      const r = button.getBoundingClientRect();
+      addedNotice.style.setProperty('--added-top', `${Math.round(Math.min(r.bottom + 8, innerHeight - 96))}px`);
+      addedNotice.style.setProperty('--added-left', `${Math.round(Math.max(12, Math.min(r.left, innerWidth - 332)))}px`);
+    }
+    const box = addedNotice.getBoundingClientRect();
+    if (placement === 'bubble' && cartBox && box.width) addedNotice.style.setProperty('--added-arrow', `${Math.round(Math.max(14, Math.min(box.width - 26, cartBox.left + cartBox.width / 2 - box.left - 6)))}px`);
+    const covers = triggers.some(el => { const r = el.getBoundingClientRect(); return r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; });
+    if (covers) addedNotice.dataset.flip = box.top + box.bottom < innerHeight ? 'bottom' : 'top';
+  }
   function addedFeedback(product, button, keyboard) {
     if (button.closest('[data-pagosya-cart]')) return;
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
-    addedNotice.querySelector('span').textContent = `${product.name} añadido a tu pedido.`;
+    const template = addedTemplate();
+    if (template && !addedNotice.hasAttribute('data-template')) { addedNotice.replaceChildren(template.make()); addedNotice.setAttribute('data-template', ''); }
+    const text = `${product.name} añadido a tu pedido.`;
+    if (addedNotice.hasAttribute('data-template')) {
+      addedNotice.querySelector('[data-added-field="message"]').textContent = text;
+      const name = addedNotice.querySelector('[data-added-field="name"]');
+      if (name) name.textContent = product.name;
+      const photo = addedNotice.querySelector('[data-added-field="photo"]'), image = galleryImages(product)[0];
+      if (photo) { photo.hidden = !image; if (image) { photo.src = image; photo.alt = ''; } else photo.removeAttribute('src'); }
+    } else addedNotice.querySelector('span').textContent = text;
     addedNotice.dataset.visible = 'true';
+    placeAddedNotice(button);
     clearTimeout(addedTimer);
     addedTimer = setTimeout(() => { if (!addedNotice.contains(document.activeElement)) delete addedNotice.dataset.visible; }, 4000);
     // The confirmation remains visible with reduced motion or motion explicitly off.
     if (!keyboard && config.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const targets = [button, ...document.querySelectorAll('[data-cart-count]')];
+      const duration = motionValue('fast', 200), scale = motionValue('press', .96);
+      const ease = motionValue('ease', 'cubic-bezier(.23,1,.32,1)'), settle = motionValue('settle', 'cubic-bezier(.23,1,.32,1)');
       for (const target of targets) if (target.isConnected && target.animate) {
         target.getAnimations().forEach(animation => animation.cancel());
-        target.animate([{ transform: 'scale(0.96)', opacity: 0.65 }, { transform: 'scale(1)', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' });
+        // Two animations so a playful overshoot moves only the scale; the fade always settles.
+        target.animate([{ transform: `scale(${scale})` }, { transform: 'scale(1)' }], { duration, easing: ease });
+        target.animate([{ opacity: .65 }, { opacity: 1 }], { duration, easing: settle });
       }
     }
   }
+  /* DNA motifs: verification, slots, triggers. Every animation is finite, ends at rest and starts only when motion is
+   * allowed; the kit's reduced-motion rule also switches it off in CSS. */
+  function motifDrawing(markup) {
+    let root;
+    try { root = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement; } catch { return null; }
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    if (!root || root.namespaceURI !== SVG_NS || root.localName !== 'svg') return null;
+    for (const el of [root, ...root.querySelectorAll('*')]) {
+      if (el.namespaceURI !== SVG_NS || !MOTIF_ELEMENTS.includes(el.localName)) return null;
+      for (const attr of [...el.attributes]) {
+        if (el === root && attr.name === 'xmlns') continue;
+        const value = attr.value;
+        if (!MOTIF_ATTRIBUTES.includes(attr.name) || /[<>"`\\]|(?:javascript|vbscript|data)\s*:|expression\s*\(/i.test(value)
+          || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
+      }
+    }
+    root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
+    return root;
+  }
+  const motifText = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const motifWords = value => motifText(value).split(/[^a-z0-9]+/).filter(Boolean);
+  /* The target's words appear in order as whole words (a word also matches its plural, -s/-es): "té" is not inside
+   * "Chocolate caliente", "pan" is not inside "Empanada", "lámpara" matches "Lámpara de mesa" and "Lámparas". */
+  function motifWordsMatch(text, target) {
+    const words = motifWords(text);
+    for (let i = 0; target.length && i + target.length <= words.length; i++) {
+      if (target.every((word, j) => [word, `${word}s`, `${word}es`].includes(words[i + j]))) return true;
+    }
+    return false;
+  }
+  /* A product matches its motif by id, by name, or by its category's name; a store-wide motif matches every product. */
+  function motifMatches(motif, p) {
+    if (!p) return false;
+    if (motif.for === 'store' || p.id === motif.target) return true;
+    const target = motifWords(motif.target);
+    const category = (store.categories || []).find(c => c.id === p.categoryId);
+    return motifWordsMatch(p.name, target) || Boolean(category) && motifWordsMatch(category.name, target);
+  }
+  const motifMotion = () => config.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function playMotif(holder) {
+    if (!holder.isConnected || !motifMotion()) return;
+    holder.removeAttribute('data-motif-play');
+    void holder.getBoundingClientRect(); // restarts the keyframes when it plays again
+    holder.setAttribute('data-motif-play', '');
+  }
+  function observeMotif(holder, once) {
+    if (typeof IntersectionObserver !== 'function') { playMotif(holder); return; }
+    if (!motifObserver) motifObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        playMotif(entry.target);
+        if (entry.target.hasAttribute('data-motif-once')) motifObserver.unobserve(entry.target);
+      }
+    }, { threshold: .5 });
+    if (once) holder.setAttribute('data-motif-once', '');
+    motifObserver.observe(holder);
+  }
+  /* appear plays once when first seen, scroll each time it comes into view, hover on the card or product (focus too;
+   * appear on a device without hover), add-to-cart from the add handler. */
+  function armMotif(holder, scope) {
+    const trigger = holder.dataset.motifTrigger;
+    if (trigger === 'hover' && scope) {
+      scope.addEventListener('pointerenter', () => playMotif(holder));
+      scope.addEventListener('focusin', () => playMotif(holder));
+      if (!matchMedia('(hover: hover)').matches) observeMotif(holder, true);
+    } else if (trigger === 'appear' || trigger === 'scroll') observeMotif(holder, trigger === 'appear');
+  }
+  /* Each placed copy gets its own ids (the same drawing sits in several cards, and a gradient or mask must resolve inside
+   * its own copy), all under the platform prefix pym-, which no page or kit id uses. A reference to an id the drawing
+   * lacks points nowhere. */
+  let motifCopies = 0;
+  function scopeMotifIds(svg, prefix) {
+    const copy = ++motifCopies;
+    const scoped = id => `${id.startsWith('pym-') ? id : prefix + id}-${copy}`;
+    for (const el of [svg, ...svg.querySelectorAll('*')]) {
+      for (const attr of [...el.attributes]) {
+        const ref = attr.value.trim().match(/^url\(\s*#([A-Za-z][\w-]*)\s*\)$/);
+        if (attr.name === 'id') el.setAttribute('id', scoped(attr.value));
+        else if (ref) el.setAttribute(attr.name, `url(#${scoped(ref[1])})`);
+      }
+    }
+  }
+  function motifSlot(index, slot, productId) {
+    const motif = MOTIFS[index], drawing = motifDrawing(motif.svg);
+    if (!drawing) return null;
+    const holder = document.createElement('span');
+    holder.className = 'pagosya-motif';
+    holder.setAttribute('aria-hidden', 'true');
+    Object.assign(holder.dataset, { motifSlot: slot, motifBehavior: motif.behavior, motifTrigger: motif.trigger, motifIndex: String(index) }, productId ? { motifProduct: productId } : {});
+    holder.style.setProperty('--pagosya-motif-ms', `${motionValue('slow', 560)}ms`);
+    const svg = document.importNode(drawing, true);
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    scopeMotifIds(svg, `pym-${/^motifs\/([a-z0-9-]+)\.svg$/.exec(motif.file)?.[1] ?? 'motif'}-`);
+    // A behaviour with a labelled part animates that part; a drawing without one animates as a whole.
+    const part = { glow: 'light', steam: 'steam' }[motif.behavior];
+    if (part && !svg.querySelector(`[data-part="${part}"]`)) svg.setAttribute('data-part', part);
+    if (motif.behavior === 'draw') svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect').forEach(el => el.setAttribute('pathLength', '1'));
+    holder.append(svg);
+    return holder;
+  }
+  /* A motif never covers a price, a purchase control or a total: a placed one that would is removed. A card motif must also
+   * sit inside its card (a card the store made static would anchor the corner elsewhere). */
+  const MOTIF_BLEED = 8;
+  const MOTIF_PROTECTED = '.menu-item__price,.menu-add,[data-product-field="price"],[data-product-add],[data-product-pricing],.product-detail__buy,.checkout-button,.order-total';
+  function guardMotif(holder, scope, contained) {
+    const check = () => {
+      if (!holder.isConnected) return;
+      const box = holder.getBoundingClientRect(), frame = scope.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      if (contained && (box.left < frame.left - 1 || box.right > frame.right + 1 || box.top < frame.top - 1 || box.bottom > frame.bottom + 1)) { holder.remove(); return; }
+      // The paint may reach MOTIF_BLEED px past the box (the clip's margin for the glow).
+      const covers = [...scope.querySelectorAll(MOTIF_PROTECTED)].some(el => {
+        const r = el.getBoundingClientRect(), b = MOTIF_BLEED;
+        return r.width > 0 && r.height > 0 && r.left < box.right + b && r.right > box.left - b && r.top < box.bottom + b && r.bottom > box.top - b;
+      });
+      if (covers) holder.remove();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check); else check();
+  }
+  const motifFor = (placement, p) => MOTIFS.findIndex(motif => motif.placement === placement && motifMatches(motif, p));
+  function placeProductMotif(p) {
+    const index = motifFor('product', p), title = detail.querySelector('#pagosya-product-title');
+    if (index < 0 || !title) return;
+    const holder = motifSlot(index, 'product', p.id);
+    if (!holder) return;
+    title.before(holder);
+    armMotif(holder, detail.querySelector(':scope > .product-detail__layout, :scope > [data-product-page-root]'));
+    guardMotif(holder, detail);
+  }
+  function placeCardMotifs(root) {
+    if (!MOTIFS.some(motif => motif.placement === 'card')) return;
+    root.querySelectorAll('.menu-item').forEach(card => {
+      if (card.querySelector(':scope > .pagosya-motif')) return;
+      const control = card.querySelector('[data-add],[data-product]');
+      const link = card.querySelector('a[href*="id="]');
+      const id = card.dataset.productId || control?.dataset.add || control?.dataset.product || (link ? new URL(link.getAttribute('href'), location.href).searchParams.get('id') : null);
+      const p = products().find(item => item.id === id), index = motifFor('card', p);
+      if (index < 0) return;
+      const holder = motifSlot(index, 'card', p.id);
+      if (!holder) return;
+      card.append(holder);
+      armMotif(holder, card);
+      guardMotif(holder, card, true);
+    });
+  }
+  function playMotifs(p) {
+    document.querySelectorAll('.pagosya-motif[data-motif-trigger="add-to-cart"]').forEach(holder => {
+      const motif = MOTIFS[Number(holder.dataset.motifIndex)];
+      if (motif && (holder.dataset.motifProduct ? holder.dataset.motifProduct === p.id : motifMatches(motif, p))) playMotif(holder);
+    });
+  }
+  if (MOTIFS.length) {
+    const motifStyle = document.createElement('style');
+    motifStyle.dataset.pagosyaKit = 'motifs';
+    const ms = factor => `calc(var(--pagosya-motif-ms,560ms)*${factor})`;
+    // The settle curve only: the personality's overshoot curve is kept for transform transitions (glow and steam fade).
+    const settle = 'var(--motion-ease-settle,cubic-bezier(.23,1,.32,1))';
+    const play = behavior => `.pagosya-motif[data-motif-play][data-motif-behavior=${behavior}]`;
+    // Layered !important: the store's own CSS (unlayered) cannot enlarge a slot past 64px, make it catch clicks or lift
+    // the clip. The clip keeps every stroke inside the slot plus MOTIF_BLEED px, room for the glow's drop-shadow.
+    motifStyle.textContent = `@layer pagosya-commerce {
+      .pagosya-motif{display:inline-block!important;box-sizing:border-box;width:48px;height:48px;max-width:64px!important;max-height:64px!important;overflow:visible!important;clip-path:inset(-${MOTIF_BLEED}px)!important;pointer-events:none!important;line-height:0;vertical-align:middle;flex:none;color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
+      .pagosya-motif>svg{display:block;width:100%;height:100%;max-width:64px!important;max-height:64px!important;overflow:visible;transform-origin:50% 100%}
+      .pagosya-motif svg [data-part]{transform-box:fill-box;transform-origin:50% 100%}
+      .pagosya-motif[data-motif-slot=product]{display:block!important;width:56px;height:56px;margin:0 0 10px}
+      .pagosya-motif[data-motif-slot=card]{position:absolute;top:10px;right:10px;z-index:2;width:40px;height:40px}
+      .pagosya-motif[data-motif-slot=cart]{width:36px;height:36px;margin-inline:12px auto}
+      @keyframes pagosya-motif-glow{0%{opacity:.2;filter:none}18%{opacity:.85}28%{opacity:.45}55%{opacity:1;filter:drop-shadow(0 0 6px currentColor)}100%{opacity:1;filter:none}}
+      @keyframes pagosya-motif-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+      @keyframes pagosya-motif-sway{0%,100%{transform:rotate(0)}30%{transform:rotate(-6deg)}70%{transform:rotate(5deg)}}
+      @keyframes pagosya-motif-steam{0%{opacity:0;transform:translateY(5px)}55%{opacity:1}100%{opacity:1;transform:none}}
+      @keyframes pagosya-motif-grow{from{transform:scale(.35);opacity:0}to{transform:none;opacity:1}}
+      @keyframes pagosya-motif-bounce{0%,100%{transform:none}35%{transform:translateY(-8px)}65%{transform:translateY(0)}80%{transform:translateY(-3px)}}
+      @keyframes pagosya-motif-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+      @keyframes pagosya-motif-float{0%,100%{transform:none}50%{transform:translateY(-5px)}}
+      ${play('glow')} svg [data-part=light],${play('glow')} svg[data-part=light]{animation:pagosya-motif-glow ${ms(2)} ${settle} 1 backwards}
+      ${play('draw')} svg [pathLength]{stroke-dasharray:1;animation:pagosya-motif-draw ${ms(2.5)} ${settle} 1 backwards}
+      ${play('sway')}>svg{animation:pagosya-motif-sway ${ms(1.5)} ${settle} 3}
+      ${play('steam')} svg [data-part=steam],${play('steam')} svg[data-part=steam]{animation:pagosya-motif-steam ${ms(1.6)} ${settle} 3 backwards}
+      ${play('grow')}>svg{animation:pagosya-motif-grow ${ms(1.2)} ${settle} 1 backwards}
+      ${play('bounce')}>svg{animation:pagosya-motif-bounce ${ms(1.4)} ${settle} 2}
+      ${play('spin')}>svg{transform-origin:50% 50%;animation:pagosya-motif-spin ${ms(4)} linear 1}
+      ${play('float')}>svg{animation:pagosya-motif-float ${ms(2)} ${settle} 2}
+      @media (prefers-reduced-motion: reduce){.pagosya-motif,.pagosya-motif *{animation:none!important;transition:none!important}}
+    }`;
+    document.head.append(motifStyle);
+    const cartIndex = MOTIFS.findIndex(motif => motif.placement === 'cart');
+    const cartHolder = cartIndex < 0 ? null : motifSlot(cartIndex, 'cart');
+    if (cartHolder) { cartDrawer.querySelector('#cart-drawer-title').after(cartHolder); armMotif(cartHolder, cartDrawer); }
+  }
   const shoppingStyle = document.createElement('style');
-  shoppingStyle.textContent = `
-    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform 250ms var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),display 250ms allow-discrete,overlay 250ms allow-discrete}
+  // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
+  // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
+  shoppingStyle.textContent = `@layer pagosya-commerce {
+    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
+    /* The contrast guard's colour: the first layer's !important outranks every stylesheet, and yields while the control is
+       hovered or focused so the store's own interactive colours (an inverted hover…) still apply. */
+    [data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)),[data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)) [data-pagosya-contrast-guard=text]{color:var(--pagosya-contrast-color)!important;-webkit-text-fill-color:var(--pagosya-contrast-color)!important}
     .pagosya-secure-note{margin:12px 0 0;font-size:13px;opacity:.78}
     .pagosya-policies{display:flex;flex-wrap:wrap;gap:4px 16px;margin:12px 0 0}.cart-drawer>.pagosya-policies{padding:0 24px 20px}
     .pagosya-policies button{min-height:32px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:.25em;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);cursor:pointer}
@@ -1236,11 +1616,11 @@
     .cart-drawer .order-total{padding:24px 0;font-size:20px}.cart-drawer .order-empty{padding:40px 0;line-height:1.6}
     .cart-drawer .order-note{font-size:14px;line-height:1.5}
     .cart-drawer .checkout-button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:52px;padding:16px 20px;border:0;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))}
-    .cart-drawer button:disabled{opacity:.5;cursor:default}.cart-drawer__continue{display:block;margin:0 auto 32px;border:0;background:transparent;text-decoration:underline;text-underline-offset:4px}
+    .cart-drawer button:disabled{opacity:.5;cursor:default}.cart-drawer>.cart-drawer__continue{display:block!important;position:static!important;float:none!important;box-sizing:border-box!important;width:calc(100% - 64px)!important;max-width:none!important;margin:0 32px 32px!important;padding:10px 0;border:0;background:transparent;text-align:center!important;text-decoration:underline;text-underline-offset:4px}.cart-drawer[data-template]>:is(.cart-drawer__header,.cart-drawer__continue,.pagosya-policies){display:none!important}.cart-drawer[data-template] .cart-drawer__body{padding:0}
     .cart-drawer :focus-visible,.cart-added :focus-visible{outline:3px solid currentColor;outline-offset:3px}
-    .cart-added{position:fixed;inset:auto 24px 24px auto;z-index:2147483001;display:flex;align-items:center;gap:20px;max-width:min(480px,calc(100vw - 48px));padding:12px 16px;background:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));color:var(--store-background,var(--brand-background,var(--paper,#fff)));font:inherit;box-shadow:0 8px 24px #0002;opacity:0;transform:translateY(12px);visibility:hidden;transition:opacity 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),transform 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),visibility 200ms}
+    .cart-added{position:fixed;inset:auto 24px 24px auto;z-index:2147483001;display:flex;align-items:center;gap:20px;max-width:min(480px,calc(100vw - 48px));padding:12px 16px;background:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));color:var(--store-background,var(--brand-background,var(--paper,#fff)));font:inherit;box-shadow:0 8px 24px #0002;opacity:0;transform:translateY(12px);visibility:hidden;transition:opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),transform var(--motion-fast,200ms) var(--motion-ease,var(--ease-out,cubic-bezier(.23,1,.32,1))),visibility var(--motion-fast,200ms)}
     .cart-added[data-visible=true]{opacity:1;transform:translateY(0);visibility:visible}.cart-added span{overflow-wrap:anywhere}.cart-added button{flex-shrink:0;min-height:44px;background:transparent;border:0;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:4px}
-    @media(max-width:700px){.cart-drawer{width:100vw}.cart-drawer__header{padding:20px}.cart-drawer__body{padding:8px 20px 24px}.cart-added{inset:auto 12px 12px;max-width:none;gap:12px}}
+    @media(max-width:700px){.cart-drawer{width:100vw}.cart-drawer__header{padding:20px}.cart-drawer__body{padding:8px 20px 24px}.cart-drawer>.cart-drawer__continue{width:calc(100% - 40px)!important;margin:0 20px 24px!important}.cart-added{inset:auto 12px 12px;max-width:none;gap:12px}}
     .cart-drawer[data-instant=true],.cart-added[data-instant=true]{transition:none}[data-cart-count]{display:inline-block}
     @media(prefers-reduced-motion:reduce){.cart-drawer,.cart-added{transition:none;transform:none}}
   `;
@@ -1255,6 +1635,7 @@
        fixed drawer's geometry. Keep it in the checkout's own content column. */
     [data-pagosya-checkout] [data-pagosya-cart][data-checkout-review]{position:static!important;inset:auto!important;z-index:auto;width:100%!important;min-width:0;max-width:none;height:auto!important;min-height:0;max-height:none;margin:0;padding:0;overflow:visible!important;transform:none;box-shadow:none;border:0;background:transparent;color:inherit;opacity:1;visibility:visible}
     [data-pagosya-checkout] .checkout-review>[data-retention-recovery]{grid-column:1 / -1;width:100%;min-width:0}
+    [data-pagosya-checkout] .checkout-review>[data-review-root]{grid-column:1 / -1;width:100%;min-width:0}
     .checkout-review__fields{min-width:0}.checkout-review__summary{min-width:0;border-top:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));padding-top:24px}
     [data-pagosya-checkout] input:not([type=checkbox]):not([type=radio]),[data-pagosya-checkout] textarea{box-sizing:border-box;min-height:48px;width:100%;padding:12px;font:inherit;color:inherit;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
     [data-pagosya-checkout] fieldset{min-width:0;margin:24px 0;padding:0;border:0}
@@ -1263,7 +1644,7 @@
     [data-pagosya-checkout] :focus-visible{outline:3px solid currentColor;outline-offset:3px}
     @media(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:1fr;gap:32px}}
     @container(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:minmax(0,1fr);gap:32px}}
-  `;
+  }`;
   document.head.append(shoppingStyle);
   let checkoutTrigger = null, checkoutPreviousHash = "", checkoutOverflow = "";
   const inertBeforeCheckout = new Map();
@@ -1330,6 +1711,34 @@
   }, true);
   // Sold out means no units for the product or for any of its combinations; a shopper cannot choose options that cannot be bought.
   const soldOut = p => limit(p) === 0 || (Array.isArray(p.variants) && p.variants.length > 0 && p.variants.every(v => limit(v) === 0));
+  /* Card preview (DNA): how a catalog card previews the product before it is opened. Each falls back to a
+   * still card when its data is missing (one photo, fewer than two variant photos, or a full product page). */
+  const cardMode = () => hasDna ? document.documentElement.getAttribute('data-dna-card') : null;
+  function cardSwatches(p) {
+    const seen = new Set(), list = [];
+    for (const v of Array.isArray(p.variants) ? p.variants : []) {
+      const url = safeUrl(v?.imageUrl);
+      if (!url || seen.has(url) || typeof v.name !== 'string' || !v.name.trim()) continue;
+      seen.add(url);
+      list.push({ url, name: v.name, color: (Array.isArray(v.options) ? v.options : []).map(o => typeof o?.name === 'string' && typeof o?.value === 'string' ? swatchColor(o.name, o.value) : '').find(Boolean) || '' });
+      if (list.length === 4) break;
+    }
+    return list.length > 1 ? list : [];
+  }
+  function cardPreview(p, image) {
+    const mode = cardMode();
+    if (!image || !mode) return {};
+    if (mode === 'second-photo') { const alt = galleryImages(p).find(url => url !== image); return alt ? { alt } : {}; }
+    if (mode === 'swatch-swap') { const swatches = cardSwatches(p); return swatches.length ? { swatches } : {}; }
+    if (mode === 'quick-look' && !fullProductPage) return { chip: true };
+    return {};
+  }
+  // The second photo is fetched only when the shopper reaches the card (pointer, focus or touch): see loadCardAlt.
+  const CARD_SIZES = '(max-width: 820px) 50vw, 25vw';
+  const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
+  // Swatch thumbnails are 22px: the smallest rendition is enough.
+  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
+  const cardChipMarkup = p => `<button type="button" class="menu-item__quick-look" data-product="${escape(p.id)}" aria-label="Vista rápida de ${escape(p.name)}">Vista rápida</button>`;
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
     if (!template || !template.content) return null;
@@ -1378,6 +1787,19 @@
         detail.replaceWith(button);
       }
     });
+    const cardExtras = cardPreview(p, image);
+    // Re-read the photo: an image link may have been rebuilt as a button above.
+    if (cardExtras.alt) root.querySelector('.menu-item__image')?.insertAdjacentHTML('afterend', cardAltMarkup(cardExtras.alt));
+    if (cardExtras.swatches) {
+      const after = field('price');
+      if (after && !after.closest('a,button')) after.insertAdjacentHTML('afterend', cardSwatchMarkup(p, cardExtras.swatches)); else root.insertAdjacentHTML('beforeend', cardSwatchMarkup(p, cardExtras.swatches));
+    }
+    if (cardExtras.chip) {
+      // The chip belongs to the photo: right after it, outside any link or button that wraps it.
+      let anchor = root.querySelector('.menu-item__image');
+      for (let el = anchor?.parentElement; el && el !== root; el = el.parentElement) if (el.matches('a,button')) anchor = el;
+      if (anchor) anchor.insertAdjacentHTML('afterend', cardChipMarkup(p)); else root.insertAdjacentHTML('beforeend', cardChipMarkup(p));
+    }
     root.toggleAttribute('data-no-image', !image);
     root.querySelectorAll('[data-product-media]').forEach(media => { media.hidden = !image; });
     buy.classList.add('menu-add'); buy.type = 'button';
@@ -1404,7 +1826,8 @@
     const complex = p.variants?.length || p.extras?.length;
     const custom = customProductCard(p, image, complex);
     if (custom) return custom;
-    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
+    const cardExtras = cardPreview(p, image);
+    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : ""}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${cardExtras.swatches ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
@@ -1421,9 +1844,12 @@
   // photographs or gradients is left alone (its real background is unknown); authored markup outside
   // the commerce slots is never touched.
   const CONTRAST_SLOTS = '[data-pagosya-catalog],[data-pagosya-product-page],[data-pagosya-cart],[data-pagosya-checkout-page],dialog[data-pagosya-product]';
+  // The colour probes are inserted and removed on every pass; the observer ignores them, or each pass would queue the next.
+  const contrastProbe = () => { const probe = document.createElement('span'); probe.hidden = true; probe.setAttribute('data-pagosya-contrast-probe', ''); return probe; };
+  const probeOnly = record => [...record.addedNodes, ...record.removedNodes].every(node => node.nodeType === 1 && node.hasAttribute('data-pagosya-contrast-probe'));
   function readableText(root) {
     if (!root || !root.isConnected) return;
-    const probe = document.createElement('span'); probe.hidden = true; root.append(probe);
+    const probe = contrastProbe(); root.append(probe);
     // Browsers report color-mix() results as color(srgb r g b / a) with 0–1 channels, not rgb().
     const parseColor = value => { const n = (String(value).match(/[\d.]+/g) || []).map(Number); if (n.length < 3) return null; const scale = /^color\(srgb/i.test(value) ? 255 : 1; return [n[0] * scale, n[1] * scale, n[2] * scale, n.length > 3 ? n[3] : 1]; };
     const rgba = value => { probe.style.color = ''; probe.style.color = value; return parseColor(getComputedStyle(probe).color); };
@@ -1458,14 +1884,145 @@
     }
     probe.remove();
   }
+  /* Sub-project 7: pay and buy buttons and totals read at 4.5:1 whatever sets their colours (the store's CSS, its kit
+   * CSS, the DNA). Measured as the scorecard measures: text composited over the ancestors' background colours, over the
+   * page canvas (dark under color-scheme: dark). A failing control takes the first readable colour among the store's ink,
+   * paper and on-accent, else pure black or white (one of the two always reaches 4.5:1). The colour is set through a guard
+   * attribute and a custom property that the kit's first layer answers with !important, so no stylesheet undoes it at
+   * rest, while the store's hover and focus colours still apply. Text over an image, a gradient, a pseudo-element or
+   * backdrop filter, or a colour syntax the page cannot compare is left alone, and a hovered or focused control is never
+   * measured (its interactive colours would be pinned onto its resting state); it is measured once the pointer leaves. */
+  const CONTRAST_GUARDED = '.checkout-button,.menu-add,.product-detail__sticky button,[data-pay],[data-checkout],.order-total,.product-detail__subtotal';
+  const contrastWarned = typeof WeakSet === 'function' ? new WeakSet() : null;
+  const contrastWaiting = typeof WeakSet === 'function' ? new WeakSet() : null;
+  const interacting = el => { try { return el.matches(':hover') || el.matches(':focus-visible'); } catch { return el.matches(':hover'); } };
+  function resetContrastGuard() {
+    document.querySelectorAll('[data-pagosya-contrast-guard]').forEach(el => {
+      const target = el.closest('[data-pagosya-contrast-guard="fixed"]');
+      if (target && interacting(target)) return;
+      el.style.removeProperty('--pagosya-contrast-color'); el.removeAttribute('data-pagosya-contrast-guard');
+    });
+  }
+  function guardContrast() {
+    const targets = document.querySelectorAll(CONTRAST_GUARDED);
+    if (!targets.length || !document.body) return;
+    const parse = value => {
+      const text = String(value), n = (text.match(/-?[\d.]+/g) || []).map(Number);
+      if (!/^(?:rgba?\(|color\(srgb)/i.test(text) || n.length < 3) return null;
+      const scale = /^color\(srgb/i.test(text) ? 255 : 1;
+      return [n[0] * scale, n[1] * scale, n[2] * scale, n.length > 3 ? n[3] : 1];
+    };
+    const over = (top, base) => [0, 1, 2].map(i => top[i] * top[3] + base[i] * (1 - top[3])).concat(1);
+    const luminance = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+    const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+    // A decoration paints no real background: a gradient drawn as a line (the DNA underline-grow hover, at most 2px in
+    // one direction, 0 at rest) or a gradient whose colours are all mostly transparent (the DNA shine).
+    const decorative = style => {
+      const image = style.backgroundImage;
+      if (!image || image === 'none') return true;
+      if (/url\(/i.test(image)) return false;
+      const thin = style.backgroundSize.split(',').every(size => size.trim().split(/\s+/).some(part => /^[\d.]+px$/.test(part) && parseFloat(part) <= 2));
+      const stops = image.match(/(?:rgba?|color)\([^)]*\)/gi) || [];
+      return thin || (stops.length > 0 && stops.every(stop => { const c = parse(stop); return c && c[3] <= .5; }));
+    };
+    const REPLACED = 'img,video,canvas,picture,iframe,object,embed';
+    // Whether a node's own painting hides what is really behind its text: a backdrop filter, a positioned ::before/::after
+    // that paints, or a positioned box over a photo or video (its container's opaque colour is not what it sits on).
+    const hidden = new Map();
+    const obscured = (node, style) => {
+      if (hidden.has(node)) return hidden.get(node);
+      let result = false;
+      const backdropFilter = style.backdropFilter || style.webkitBackdropFilter;
+      if (backdropFilter && backdropFilter !== 'none') result = true;
+      for (const pseudo of result ? [] : ['::before', '::after']) {
+        const box = getComputedStyle(node, pseudo);
+        if (!box.content || box.content === 'none' || box.content === 'normal' || !/^(?:absolute|fixed)$/.test(box.position)) continue;
+        const color = parse(box.backgroundColor);
+        if ((color && color[3] > .1) || !decorative(box)) { result = true; break; }
+      }
+      if (!result && /^(?:absolute|fixed|sticky)$/.test(style.position)) {
+        const rect = node.getBoundingClientRect(), container = node.offsetParent || node.parentElement;
+        result = !!container && [...container.querySelectorAll(REPLACED)].some(media => {
+          if (node.contains(media)) return false;
+          const box = media.getBoundingClientRect();
+          return box.width > 0 && box.height > 0 && box.left < rect.right && box.right > rect.left && box.top < rect.bottom && box.bottom > rect.top;
+        });
+      }
+      hidden.set(node, result);
+      return result;
+    };
+    const probe = contrastProbe(); document.body.append(probe);
+    const resolve = value => { probe.style.color = ''; probe.style.color = value; return parse(getComputedStyle(probe).color); };
+    const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', 'var(--store-accent-foreground, var(--brand-accent-foreground, #ffffff))', '#000000', '#ffffff'].map(resolve).filter(c => c && c[3] >= .99);
+    // The page canvas under everything: dark when the page asks for color-scheme: dark.
+    const canvas = (() => { const c = resolve('Canvas'); return c && c[3] >= .99 ? c : [255, 255, 255, 1]; })();
+    probe.remove();
+    // `deep` also asks whether anything hides the real background; only a failing control pays for it.
+    const backdrop = (element, deep) => {
+      const layers = [];
+      for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (!decorative(style) || (deep && obscured(node, style))) return null;
+        const color = parse(style.backgroundColor);
+        if (!color) return null;
+        if (color[3] > 0) layers.push(color);
+        if (color[3] >= .99) break;
+      }
+      return layers.reverse().reduce((base, layer) => over(layer, base), canvas);
+    };
+    targets.forEach(target => {
+      // A disabled control is exempt (WCAG 1.4.3); renderCart measures again once it is enabled.
+      if (target.closest('[data-pagosya-contrast="skip"]') || target.matches(':disabled,[aria-disabled="true"]')) return;
+      if (interacting(target)) {
+        if (contrastWaiting && !contrastWaiting.has(target)) {
+          contrastWaiting.add(target);
+          const later = () => { contrastWaiting.delete(target); target.removeEventListener('pointerleave', later); target.removeEventListener('focusout', later); queueReadableText(); };
+          target.addEventListener('pointerleave', later); target.addEventListener('focusout', later);
+        }
+        return;
+      }
+      const texts = [target, ...target.querySelectorAll('*')].filter(node => [...node.childNodes].some(child => child.nodeType === 3 && child.textContent.trim()));
+      // An icon-only button (the card's + icon) is read through its own colour, which the icon strokes with.
+      const nodes = texts.length ? texts : target.querySelector('svg') ? [target] : [];
+      const measured = [];
+      for (const node of nodes) {
+        const background = backdrop(node, false), text = parse(getComputedStyle(node).color);
+        if (!background || !text) return;
+        measured.push({ node, background, ratio: contrast(over(text, background), background) });
+      }
+      if (!measured.length || measured.every(entry => entry.ratio >= 4.5)) return;
+      if (measured.some(entry => !backdrop(entry.node, true))) return;
+      const worst = color => Math.min(...measured.map(entry => contrast(color, entry.background)));
+      const chosen = candidates.find(color => worst(color) >= 4.5) || candidates.reduce((best, color) => worst(color) > worst(best) ? color : best, candidates[0]);
+      if (!chosen) return;
+      const value = `rgb(${chosen.slice(0, 3).map(Math.round).join(',')})`;
+      for (const node of new Set([target, ...measured.map(entry => entry.node)])) {
+        node.style.setProperty('--pagosya-contrast-color', value);
+        node.setAttribute('data-pagosya-contrast-guard', node === target ? 'fixed' : 'text');
+      }
+      if (contrastWarned && !contrastWarned.has(target)) {
+        contrastWarned.add(target);
+        console.warn(`pagosYa: contraste ${Math.min(...measured.map(entry => entry.ratio)).toFixed(2)}:1 en un botón de compra o un total; se usó ${value} para que se lea (mínimo 4.5:1).`, target);
+      }
+    });
+  }
   let contrastQueued = false;
   function queueReadableText() {
     if (contrastQueued) return;
     contrastQueued = true;
-    setTimeout(() => { contrastQueued = false; document.querySelectorAll(CONTRAST_SLOTS).forEach(readableText); }, 120);
+    setTimeout(() => {
+      contrastQueued = false;
+      try { resetContrastGuard(); } catch { /* Guards never break the store. */ }
+      document.querySelectorAll(CONTRAST_SLOTS).forEach(readableText);
+      try { guardContrast(); } catch { /* Guards never break the store. */ }
+    }, 120);
   }
+  function guardContrastNow() { try { guardContrast(); } catch { /* Guards never break the store. */ } }
+  window.addEventListener('load', queueReadableText);
   if (typeof MutationObserver === 'function') {
-    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) queueReadableText(); }).observe(document.body, { childList: true, subtree: true });
+    // The guard also runs right away (a mutation callback runs before the page's next task), so a pay or buy button
+    // never shows unreadable, not even for the timer's 120ms; the timer then measures again with the text fixes applied.
+    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && !probeOnly(record) && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) { guardContrastNow(); queueReadableText(); } }).observe(document.body, { childList: true, subtree: true });
     if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
   }
   const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';
@@ -1499,6 +2056,8 @@
   const catalogTabs = (currentSlug) => `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}"${c.slug === currentSlug ? ' aria-current="page"' : ''}>${escape(c.name)}</a>`).join("")}</nav>`;
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
+    // The catalog can change the fallback style, so this follows every render.
+    if (hasDna) document.documentElement.setAttribute('data-dna-product', productPageStyle());
     document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
     document.querySelectorAll("[data-pagosya-categories]").forEach((el) => {
       el.hidden = !(store.categories || []).length;
@@ -1531,7 +2090,10 @@
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
+      if (MOTIFS.length) placeCardMotifs(el);
     });
+    observeCards();
+    if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
     if (fullProductPage && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
       if (p) {
@@ -1565,7 +2127,124 @@
     if (fullCheckoutPage) showCheckout(location.hash === '#pago-de-prueba' && (preview || config.demo));
     renderCart();
     renderContact();
+    // Validate every authored template as soon as the store is ready, not only when its surface
+    // happens to render: added/review/product-page templates otherwise stay unvalidated until a
+    // shopper adds to cart, opens checkout or opens a product, which is too late for Studio's
+    // publishing check to catch a broken one. This is validation only — each reader just sets or
+    // clears its flag and discards the clone; their lazy use at the real render site is unchanged.
+    cartLineTemplate(); cartTemplate(); addedTemplate(); reviewTemplate(); productPageTemplate();
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
+  }
+  /* T1 templates: a store may author the markup of a kit surface. Read at use time (React may render the
+   * <template> after this script, and puts its children on the element instead of .content). */
+  function kitTemplate(name, flag, isValid) {
+    const template = document.querySelector(`template[data-pagosya-${name}-template]`);
+    if (!template) return null;
+    const source = template.content && template.content.children.length ? template.content : template;
+    const root = source.firstElementChild;
+    if (source.children.length !== 1 || !root || !isValid(root)) { document.documentElement.dataset[flag] = 'true'; return null; }
+    delete document.documentElement.dataset[flag];
+    return { make: () => root.cloneNode(true) };
+  }
+  const imgField = (root, selector) => { const node = root.querySelector(selector); return !node || node.tagName === 'IMG'; };
+  const addedTemplate = () => kitTemplate('added', 'addedTemplateInvalid', root =>
+    root.querySelector('[data-added-field="message"]') && root.querySelector('button[data-cart-open]') && imgField(root, '[data-added-field="photo"]'));
+  const cartLineTemplate = () => kitTemplate('cart-line', 'cartLineTemplateInvalid', root =>
+    ['name', 'line-total', 'quantity'].every(field => root.querySelector(`[data-cart-field="${field}"]`)) && imgField(root, '[data-cart-field="photo"]'));
+  function applyLineTemplate(el, views, template) {
+    [...el.querySelectorAll('.order-items > li.order-item')].forEach((li, index) => {
+      const view = views[index];
+      if (!view) return;
+      const root = template.make();
+      const field = name => root.querySelector(`[data-cart-field="${name}"]`);
+      const text = (name, value) => { const node = field(name); if (!node) return; node.textContent = value; node.hidden = !value; };
+      root.classList.add('order-item');
+      root.dataset.cartLine = view.id;
+      text('name', view.p.name);
+      text('line-total', money(view.amount * view.quantity, view.p.currency));
+      text('option', view.option);
+      text('unit', view.unit);
+      text('stock', view.stock);
+      const photo = field('photo');
+      if (photo) {
+        photo.hidden = !view.image;
+        if (view.image) { photo.src = view.image; photo.alt = ''; photo.loading = 'lazy'; } else photo.removeAttribute('src');
+      }
+      field('quantity').replaceChildren(li.querySelector('.quantity'));
+      const remove = field('remove');
+      if (remove) { remove.setAttribute('type', 'button'); remove.setAttribute('data-remove-line', view.id); remove.setAttribute('aria-label', `Quitar ${view.name} del pedido`); }
+      li.replaceWith(root);
+    });
+  }
+  const cartTemplate = () => kitTemplate('cart', 'cartTemplateInvalid', root =>
+    ['lines', 'total', 'action'].every(slot => root.querySelector(`[data-cart-slot="${slot}"]`)) && root.querySelector('button[data-cart-close]'));
+  const CART_PARTS = { lines: '.order-items', suggestions: '.order-recommendations', savings: '.order-savings', total: '.order-total', action: '[data-checkout]', note: '.order-note' };
+  function applyCartTemplate(el, empty, template) {
+    const root = template.make();
+    root.setAttribute('data-cart-panel', '');
+    const slot = name => root.querySelector(`[data-cart-slot="${name}"]`);
+    root.querySelectorAll('[data-cart-slot]').forEach(node => { if (node.dataset.cartSlot !== 'empty') node.replaceChildren(); });
+    let anchor = slot('action');
+    for (const part of [...el.children]) {
+      const name = Object.keys(CART_PARTS).find(key => part.matches(CART_PARTS[key]));
+      const target = name && slot(name);
+      if (target) target.append(part);
+      else { anchor.after(part); anchor = part; }
+    }
+    const policies = slot('policies');
+    if (policies) policies.innerHTML = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
+    const emptySlot = slot('empty');
+    if (emptySlot) emptySlot.hidden = !empty;
+    // Every other slot hides while the cart is empty, whether or not the template authored an
+    // "empty" slot. "lines" is the one exception without an "empty" slot: it carries the kit's own
+    // empty-cart text, so it must stay visible to say anything at all.
+    for (const name of Object.keys(CART_PARTS)) {
+      if (name === 'lines' && !emptySlot) continue;
+      const node = slot(name);
+      if (node) node.hidden = empty;
+    }
+    el.replaceChildren(root);
+  }
+  const reviewTemplate = () => kitTemplate('review', 'reviewTemplateInvalid', root =>
+    root.querySelector('[data-review-slot="summary"]') && root.querySelector('[data-review-slot="fields"]'));
+  const productPageTemplate = () => kitTemplate('product-page', 'productPageTemplateInvalid', root =>
+    ['gallery', 'title', 'pricing', 'buy'].every(slot => root.querySelector(`[data-product-slot="${slot}"]`)));
+  // A piece goes to the first slot whose selector it matches; "buy" is last because its "p" catches the sold-out note.
+  const PRODUCT_PARTS = [
+    ['gallery', '.product-detail__gallery'], ['breadcrumb', '.product-detail__breadcrumb'], ['category', '.product-detail__eyebrow'],
+    ['title', '#pagosya-product-title'], ['rating', '.product-detail__rating'], ['pricing', '.product-detail__pricing'],
+    ['description', '.product-detail__intro'], ['highlights', '.product-detail__highlights,.product-detail__chips'],
+    ['delivery', '.product-detail__assurances'], ['info', '.product-tabs,[role=tabpanel],.product-detail__facts,.product-delivery-list'],
+    ['bundles', '.product-detail__bundles,.product-detail__bundle-links'], ['related', '.product-detail__related'], ['reviews', '.product-detail__reviews'],
+    ['buy', '.product-detail__options,.product-detail__box,.product-detail__purchase,.product-detail__buy,.product-detail__status,p'],
+  ];
+  // Purchase terms and anything unrecognised are never lost: they follow the buy slot when the template has no place for them.
+  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'highlights', 'bundles', 'related', 'reviews']);
+  function applyProductPageTemplate() {
+    const template = productPageTemplate();
+    const layout = detail.querySelector(':scope > .product-detail__layout');
+    if (!template || !layout) return;
+    const copy = layout.querySelector(':scope > .product-detail__copy');
+    const pieces = [...[...layout.children].filter(child => child !== copy), ...(copy ? [...copy.children] : []),
+      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews'))];
+    const root = template.make();
+    const slot = name => root.querySelector(`[data-product-slot="${name}"]`);
+    root.querySelectorAll('[data-product-slot]').forEach(node => node.replaceChildren());
+    const followers = [];
+    for (const piece of pieces) {
+      const name = PRODUCT_PARTS.find(([, selector]) => piece.matches(selector))?.[0];
+      const target = name && slot(name);
+      // decorateProductReviews() needs [data-product-rating] to stay in the DOM even without its own slot:
+      // a template that authors "reviews" but not "rating" still gets the rating line, leading the reviews it asked for.
+      if (target) target.append(piece);
+      else if (name === 'rating' && slot('reviews')) slot('reviews').prepend(piece);
+      else if (name && PRODUCT_DROPPABLE.has(name)) piece.remove();
+      else followers.push(piece);
+    }
+    if (followers.length) slot('buy').after(...followers);
+    layout.replaceWith(root);
+    root.setAttribute('data-product-page-root', '');
+    detail.setAttribute('data-page-template', '');
   }
   function renderCart() {
     if (hosted && ready) notifyHostedCart();
@@ -1582,6 +2261,7 @@
     });
     let total = 0, count = 0, savings = 0;
     const rows = [];
+    const lineViews = [];
     for (const [id, quantity] of cart) {
       const line = cartLine(id);
       if (!line) continue;
@@ -1596,11 +2276,14 @@
       const unitCopy = quantity > 1 || saved ? `<p class="order-item__unit">${money(amount, p.currency)} c/u${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
       const few = Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? `<p class="order-item__stock">${p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`}</p>` : '';
       rows.push(`<li class="order-item"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
+      lineViews.push({ id, p, name, amount, quantity, image, option,
+        unit: quantity > 1 || saved ? `${money(amount, p.currency)} c/u${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
+        stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
     document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
     document.querySelectorAll("[data-pagosya-cart]").forEach((el) => {
       const focused = el.contains(document.activeElement) ? document.activeElement : null;
-      const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : null;
+      const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : focused?.hasAttribute('data-remove-line') ? 'data-remove-line' : null;
       const focusedId = focusedAction ? focused.getAttribute(focusedAction) : null;
       const remembered = el.hasAttribute("data-checkout-review") ? [...checkoutAnswers] : [];
       const answers = [...remembered, ...[...el.querySelectorAll('input,textarea')].map(field => [field.name, field.value])];
@@ -1614,11 +2297,15 @@
       // simple lines. Keep options and order review interactive without sending
       // unsupported variant carts to that calculator (or any real checkout).
       const previewOptions = preview && review && cartItems().some(item => item.variantId || item.extraIds);
-      if (review && cart.size && ready) track('checkout_started');
+      if (review && cart.size && ready) { track('checkout_started'); analytics('checkout_step', { step: 'review' }, 'step:review'); }
       const payment = el.dataset.checkoutReview === "payment";
       const action = review ? payment ? "data-finish-demo" : "data-pay" : "data-checkout";
       const actionLabel = review ? payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
       el.innerHTML = `<ul class="order-items">${rows.join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`;
+      const lineTemplate = cartLineTemplate();
+      if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
+      const panelTemplate = review ? null : cartTemplate();
+      if (panelTemplate) applyCartTemplate(el, !count, panelTemplate);
       if (hosted) secureFields(el, ['shippingAddress', 'creditCode'], 'Tu dirección y tu saldo se piden en el formulario seguro de pagosYa al continuar.');
       if (previewOptions) {
         const note = document.createElement('p'); note.className = 'order-note';
@@ -1626,7 +2313,19 @@
         el.append(note);
       }
       for (const [name, value] of answers) { const field = [...el.querySelectorAll('input,textarea')].find(field => field.name === name); if (field) field.value = value; }
-      if (review) {
+      const reviewLayout = review ? reviewTemplate() : null;
+      if (reviewLayout) {
+        const root = reviewLayout.make();
+        root.setAttribute('data-review-root', '');
+        const summary = root.querySelector('[data-review-slot="summary"]'), fields = root.querySelector('[data-review-slot="fields"]');
+        summary.replaceChildren(); fields.replaceChildren();
+        for (const child of [...el.children]) (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note') ? summary : fields).append(child);
+        const feedback = document.createElement('p');
+        feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
+        fields.append(feedback);
+        el.replaceChildren(root);
+        el.classList.add('checkout-review'); el.setAttribute('data-review-template', '');
+      } else if (review) {
         const summary = document.createElement('aside'); summary.className = 'checkout-review__summary';
         summary.innerHTML = `<h2>Tu pedido</h2>${count ? `<p class="checkout-review__count">${count} ${count === 1 ? 'producto' : 'productos'}</p>` : ''}`;
         for (const child of [...el.children]) if (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note')) summary.append(child);
@@ -1645,7 +2344,7 @@
       const branchInfo = document.createElement('p'); branchInfo.className = 'order-note'; branchInfo.setAttribute('data-branch-address', '');
       el.querySelector('[name=method]')?.closest('label')?.after(branchInfo);
       select?.addEventListener("change", () => { updateMethods(el); updateShipping(el); });
-      el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
+      el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
       el.querySelector('[name=shippingZoneId]')?.addEventListener('change', () => void shippingQuote(el));
       // Re-quote only with a complete destination; a partial one would be rejected by the API.
       el.querySelector('[name=destDepartment]')?.addEventListener('change', () => { if (hosted) checkoutAnswers.set('destDepartment', el.querySelector('[name=destDepartment]').value); if (!shippingDestination(el) && !(hosted && shippingDepartment(el))) return; const rate = el.querySelector('[name=shippingZoneId]'); if (rate) rate.value = ''; void shippingQuote(el); });
@@ -1667,6 +2366,9 @@
     updateOptions();
     updateBox();
     updateQuantity();
+    // Totals and pay buttons were just re-rendered (and add buttons re-enabled): measure them again.
+    guardContrastNow();
+    queueReadableText();
     document.dispatchEvent(new CustomEvent("pagosya:cart-updated"));
   }
   function renderContact() {
@@ -1720,14 +2422,246 @@
         const result = await response.json();
         if (!response.ok || !result.submitted) throw new Error(Array.isArray(result.message) ? result.message.join(' ') : result.message || 'No se pudo enviar. Inténtalo otra vez.');
         form.reset(); status.textContent = 'Consulta recibida. El equipo de la tienda te contactará.';
+        analytics('contact_submit');
       } catch (error) { status.textContent = error.message || 'No se pudo enviar. Inténtalo otra vez.'; }
       finally { button.disabled = false; }
     });
   }
   const contactStyle = document.createElement('style');
   contactStyle.textContent = `[data-pagosya-contact]{position:fixed;right:24px;bottom:24px;z-index:1000;width:auto;max-width:none;margin:0;padding:0;color:inherit;font:inherit;pointer-events:none}[data-pagosya-contact][hidden]{display:none}[data-pagosya-contact] button{font:inherit;cursor:pointer}[data-pagosya-contact] svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}[data-pagosya-contact] .pagosya-contact-launcher{display:grid;place-items:center;width:56px;height:56px;padding:0;border:1px solid currentColor!important;border-radius:14px;background:var(--ink,#20211d)!important;color:var(--paper,#fffaf0)!important;pointer-events:auto}[data-pagosya-contact] .pagosya-contact-launcher span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[data-pagosya-contact] .pagosya-contact-panel{position:absolute;right:0;bottom:68px;width:min(380px,calc(100vw - 32px));max-height:min(720px,calc(100dvh - 104px));overflow:auto;padding:24px;border:1px solid currentColor!important;border-radius:16px;background:var(--paper,#fffaf0)!important;color:var(--ink,#20211d)!important;pointer-events:auto}[data-pagosya-contact] .pagosya-contact-panel[hidden]{display:none}[data-pagosya-contact] .pagosya-contact-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}[data-pagosya-contact] h2{font:inherit;font-size:clamp(24px,4vw,32px);font-weight:700;margin:0 0 10px}[data-pagosya-contact] p{line-height:1.6}[data-pagosya-contact] .pagosya-contact-heading p{margin:0}[data-pagosya-contact] .pagosya-contact-close{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;padding:0;border:1px solid currentColor;border-radius:50%;background:transparent;color:inherit}[data-pagosya-contact] form{display:grid;gap:16px;margin-top:24px}[data-pagosya-contact] label{display:grid;gap:8px;font-size:15px}[data-pagosya-contact] input,[data-pagosya-contact] textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid currentColor;border-radius:4px;background:transparent;color:inherit;font:inherit}[data-pagosya-contact] form>button[type="submit"]{min-height:48px;padding:12px 24px;background:var(--ink,#20211d);color:var(--paper,#fffaf0);border:1px solid currentColor;font:inherit}[data-pagosya-contact] button:disabled{opacity:.6}[data-pagosya-contact] :focus-visible{outline:3px solid currentColor;outline-offset:4px}[data-contact-status]{min-height:24px;overflow-wrap:anywhere}@media(max-width:560px){[data-pagosya-contact]{right:16px;bottom:16px}[data-pagosya-contact] .pagosya-contact-panel{bottom:68px;width:calc(100vw - 32px);padding:20px}}@media(prefers-reduced-motion:reduce){[data-pagosya-contact] *{transition:none!important;animation:none!important}}`;
+  // DNA stores: the launcher and panel take the store's tokens and DNA shape (inside the same layer, so its !important colours yield).
+  contactStyle.textContent += ':root[data-dna-button] [data-pagosya-contact] .pagosya-contact-launcher{border-radius:var(--kit-radius-panel);border:var(--kit-border) solid var(--kit-line)!important;background:var(--kit-accent)!important;color:var(--kit-on-accent)!important;box-shadow:0 12px 30px -14px #0009}'
+    + ':root[data-dna-button] [data-pagosya-contact] .pagosya-contact-panel{border-radius:var(--kit-radius-panel);border:max(var(--kit-border),1px) solid var(--kit-line)!important;background:var(--kit-paper)!important;color:var(--kit-ink)!important;box-shadow:0 24px 60px -24px #0009}'
+    + ':root[data-dna-button] [data-pagosya-contact] :is(input,textarea){border-radius:var(--kit-radius);border-color:var(--kit-line)}:root[data-dna-button] [data-pagosya-contact] .pagosya-contact-close{border-radius:var(--kit-radius)}'
+    + ':root[data-dna-button] [data-pagosya-contact] h2{font-family:var(--store-heading-font,var(--brand-heading-font,inherit))}';
   contactStyle.textContent = '@layer pagosya-contact-base {' + contactStyle.textContent + '}';
   document.head.append(contactStyle);
+  // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
+  // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a
+  // store without one renders exactly as before. Surfaces read one shared token set.
+  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit])';
+  const KIT_STEPPERS = ':where(.quantity button,.product-detail__quantity,.product-detail__box-stepper button)';
+  /* The product page is platform-owned: its kit styles are unlayered and authored rules on its hooks are released
+   * (releaseProductPageStyles), so the DNA reaches its buttons with an unlayered, product-scoped copy of the rules. */
+  const PAGE_BUTTONS = '[data-pagosya-product][data-style] :is(.product-detail__buy,.product-detail__sticky button,.product-detail__bundle-add)';
+  const PAGE_STEPPERS = '[data-pagosya-product][data-style] :is(.product-detail__quantity,.product-detail__box-stepper button)';
+  const dnaForm = (value, tokens) => `:root[data-dna-button=${value}]{${tokens}}`;
+  const dnaHover = (buttons, value, declarations) => `@media(hover:hover){:root[data-dna-hover=${value}] ${buttons}:hover:not(:disabled){${declarations}}}:root[data-dna-hover=${value}] ${buttons}:focus-visible{${declarations}}`;
+  /* Form, focus, hover and press of a set of buttons (and the shape of their steppers). */
+  const dnaButtonRules = (buttons, steppers) => [
+    /* Primary pay, checkout and buy buttons (.checkout-button) keep their full size (52px cart, 48px checkout and product) and padding. */
+    `:root[data-dna-button] ${buttons}:not(.checkout-button){min-height:44px;padding:var(--kit-btn-pad)}`,
+    `:root[data-dna-button] ${buttons}{border:var(--kit-btn-border);border-radius:var(--kit-btn-radius);background:var(--kit-btn-bg);color:var(--kit-btn-fg);text-transform:var(--kit-btn-case);font-variant-caps:var(--kit-btn-caps,normal);letter-spacing:var(--kit-btn-tracking);text-decoration:var(--kit-btn-decor);clip-path:var(--kit-btn-clip);box-shadow:var(--kit-btn-shadow);transition:transform var(--motion-fast,160ms) var(--motion-ease,var(--kit-ease)),box-shadow var(--motion-fast,160ms) var(--kit-ease),background-position var(--motion-slow,480ms) var(--kit-ease),background-size var(--motion-base,240ms) var(--kit-ease),filter var(--motion-fast,160ms)}`,
+    `:root[data-dna-button] ${steppers}{border-radius:var(--kit-radius);border-width:max(var(--kit-border),1px)}`,
+    /* Hover (and keyboard focus): never the only focus indicator. */
+    dnaHover(buttons, 'lift', 'transform:translateY(-2px);box-shadow:var(--kit-btn-shadow),0 8px 18px -8px color-mix(in srgb,currentColor 60%,transparent)'),
+    /* Fill: the button's edge fills in with its own text colour. The background never changes, so the text keeps its contrast. */
+    dnaHover(buttons, 'fill', 'box-shadow:var(--kit-btn-shadow),inset 0 0 0 .2em currentColor'),
+    `:root[data-dna-hover=underline-grow] ${buttons}{background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:50% calc(100% - .35em);background-size:0 1.5px}`,
+    dnaHover(buttons, 'underline-grow', 'background-size:calc(100% - 2em) 1.5px'),
+    dnaHover(buttons, 'tilt', 'transform:rotate(-2deg)'),
+    `:root[data-dna-hover=shine] ${buttons}{background-image:linear-gradient(110deg,transparent 35%,rgb(255 255 255/.38) 50%,transparent 65%);background-repeat:no-repeat;background-size:260% 100%;background-position:100% 0}`,
+    dnaHover(buttons, 'shine', 'background-position:0 0'),
+    dnaHover(buttons, 'invert', 'background-color:var(--kit-btn-invert-bg);color:var(--kit-btn-invert-fg)'),
+    /* Press. The stamp form rocks a little instead. */
+    `:root[data-dna-press] ${buttons}:active:not(:disabled){transform:var(--kit-press)}:root[data-dna-press=sink] ${buttons}:active:not(:disabled){box-shadow:none}`,
+    `:root[data-dna-button=stamp] ${buttons}:active:not(:disabled){transform:var(--kit-press) rotate(-2.5deg)}`,
+    /* Keyboard focus, last so no hover effect replaces it: an ink ring on a paper halo reads on filled and open
+     * forms alike, and the tag notch is dropped so nothing clips the ring. The store's own focus style still wins. */
+    `:root[data-dna-button] ${buttons}:focus-visible:not(:disabled){outline:3px solid var(--kit-ink);outline-offset:2px;box-shadow:0 0 0 2px var(--kit-paper),var(--kit-btn-shadow);clip-path:none}`,
+  ];
+  const DNA_CSS = [
+    /* Tokens. Colours stay the store's own (--store-*, then --brand-*, then legacy names). */
+    `:root{--kit-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));--kit-paper:var(--store-background,var(--brand-background,var(--paper,#fff)));--kit-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--kit-ink))));--kit-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--kit-paper)));--kit-surface:var(--store-surface,var(--brand-surface,color-mix(in srgb,var(--kit-ink) 5%,var(--kit-paper))));--kit-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--kit-ink) 18%,var(--kit-paper))));--kit-radius:var(--store-radius,var(--brand-radius,0px));--kit-radius-panel:var(--kit-radius);--kit-border:1px;--kit-photo-radius:var(--kit-radius);--kit-photo-pad:0px;--kit-photo-bg:transparent;--kit-photo-shadow:none;--kit-ease:var(--motion-ease-settle,cubic-bezier(.23,1,.32,1))}`,
+    ...MOTION_CSS,
+    ':root[data-dna-radius=none]{--kit-radius:0px;--kit-radius-panel:0px}',
+    ':root[data-dna-radius=soft]{--kit-radius:6px;--kit-radius-panel:10px}',
+    ':root[data-dna-radius=round]{--kit-radius:14px;--kit-radius-panel:22px}',
+    ':root[data-dna-radius=pill]{--kit-radius:999px;--kit-radius-panel:30px}',
+    ':root[data-dna-border=none]{--kit-border:0px}:root[data-dna-border=hairline]{--kit-border:1px}:root[data-dna-border=bold]{--kit-border:2.5px}',
+    /* Type voice: case and tracking reach open button forms and the kit's panel titles. */
+    ':root[data-dna-case=none]{--kit-type-case:none;--kit-type-caps:normal}:root[data-dna-case=upper]{--kit-type-case:uppercase;--kit-type-caps:normal}:root[data-dna-case=small-caps]{--kit-type-case:none;--kit-type-caps:all-small-caps}',
+    ':root[data-dna-tracking=tight]{--kit-type-tracking:-.01em}:root[data-dna-tracking=normal]{--kit-type-tracking:.01em}:root[data-dna-tracking=wide]{--kit-type-tracking:.1em}',
+    ':root[data-dna-case] :is(.cart-drawer__header h2,.checkout-review__summary h2){font-family:var(--store-heading-font,var(--brand-heading-font,inherit));text-transform:var(--kit-type-case);font-variant-caps:var(--kit-type-caps);letter-spacing:var(--kit-type-tracking)}',
+    /* Image framing, for card and cart photos. */
+    ':root[data-dna-frame=bleed]{--kit-photo-radius:min(var(--kit-radius),28px);--kit-photo-pad:0px}',
+    ':root[data-dna-frame=inset]{--kit-photo-radius:min(var(--kit-radius),24px);--kit-photo-pad:6px;--kit-photo-bg:var(--kit-surface)}',
+    ':root[data-dna-frame=rounded]{--kit-photo-radius:18px;--kit-photo-pad:0px}',
+    ':root[data-dna-frame=arch]{--kit-photo-radius:999px 999px 8px 8px / 42% 42% 8px 8px;--kit-photo-pad:0px}',
+    ':root[data-dna-frame=polaroid]{--kit-photo-radius:2px;--kit-photo-pad:6px 6px 22px;--kit-photo-bg:#fff;--kit-photo-shadow:0 6px 18px -8px #0006}',
+    /* Button forms. Filled forms use the store's accent pair; open forms take currentColor, so they read on any card. */
+    dnaForm('pill', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:999px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.7em 1.6em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    dnaForm('block', '--kit-btn-invert-bg:var(--kit-paper);--kit-btn-invert-fg:var(--kit-ink);--kit-btn-radius:0px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-ink);--kit-btn-fg:var(--kit-paper);--kit-btn-case:uppercase;--kit-btn-tracking:.09em;--kit-btn-pad:.9em 1.5em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    dnaForm('underline', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:0px;--kit-btn-border:0 solid transparent;--kit-btn-bg:transparent;--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.5em .15em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:inset 0 -2px 0 currentColor'),
+    dnaForm('tag', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:3px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:uppercase;--kit-btn-tracking:.06em;--kit-btn-pad:.7em 1.7em .7em 1.3em;--kit-btn-decor:none;--kit-btn-clip:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);--kit-btn-shadow:0 0 #0000'),
+    dnaForm('stamp', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:2px;--kit-btn-border:4px double currentColor;--kit-btn-bg:transparent;--kit-btn-fg:inherit;--kit-btn-case:uppercase;--kit-btn-tracking:.16em;--kit-btn-pad:.6em 1.3em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    dnaForm('outline', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:var(--kit-radius);--kit-btn-border:1.5px solid currentColor;--kit-btn-bg:transparent;--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.7em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    dnaForm('ghost', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:var(--kit-radius);--kit-btn-border:0 solid transparent;--kit-btn-bg:color-mix(in srgb,currentColor 11%,transparent);--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.75em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    dnaForm('split', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:var(--kit-radius);--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.75em 1.2em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    /* Open forms keep a primary pay, checkout or buy button filled with the store's accent pair: it must read as the next step. */
+    ':root:is([data-dna-button=underline],[data-dna-button=ghost],[data-dna-button=outline],[data-dna-button=stamp]) :where(.checkout-button,.product-detail__sticky button){--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent)}',
+    /* Split: the price (or the arrow) sits in its own cell. */
+    ':root[data-dna-button=split] .checkout-button{display:flex;justify-content:space-between;gap:0}',
+    ':root[data-dna-button=split] .checkout-button>svg{box-sizing:content-box;padding-left:1em;margin-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}',
+    ...dnaButtonRules(KIT_BUTTONS, KIT_STEPPERS),
+    ':root[data-dna-press=squash]{--kit-press:scale(.97,.9)}:root[data-dna-press=sink]{--kit-press:translateY(2px)}:root[data-dna-press=pop]{--kit-press:scale(1.06)}:root[data-dna-press=none]{--kit-press:translate(0)}',
+    /* Cart: right drawer (today's place, restyled), bottom sheet, full page or centred card. */
+    ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}:root[data-dna-cart] .cart-drawer__grip{display:none}',
+    ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(440px,92vw);border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
+    ':root[data-dna-cart=drawer] .cart-drawer:not([open]){transform:translateX(100%);opacity:0}',
+    '@starting-style{:root[data-dna-cart=drawer] .cart-drawer[open]{transform:translateX(100%);opacity:0}}',
+    ':root[data-dna-cart=sheet] .cart-drawer{inset:auto 0 0 0;margin:0 auto;width:min(760px,100vw);height:auto;max-height:min(88dvh,900px);border-top-width:var(--kit-border);border-radius:var(--kit-radius-panel) var(--kit-radius-panel) 0 0;background:var(--kit-surface);transform:translateY(0)}',
+    ':root[data-dna-cart=sheet] .cart-drawer:not([open]){transform:translateY(100%);opacity:0}',
+    '@starting-style{:root[data-dna-cart=sheet] .cart-drawer[open]{transform:translateY(100%);opacity:0}}',
+    ':root[data-dna-cart=sheet] .cart-drawer__header{position:relative;padding-top:32px}:root[data-dna-cart=sheet] .cart-drawer__grip{display:block;position:absolute;top:12px;left:50%;width:44px;height:5px;border-radius:3px;background:currentColor;opacity:.3;transform:translateX(-50%)}',
+    ':root[data-dna-cart=page] .cart-drawer{inset:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border-top:var(--kit-border) solid var(--kit-accent);background:var(--kit-surface)}',
+    ':root[data-dna-cart=page] .cart-drawer:not([open]){transform:translateY(28px);opacity:0}',
+    '@starting-style{:root[data-dna-cart=page] .cart-drawer[open]{transform:translateY(28px);opacity:0}}',
+    ':root[data-dna-cart=page] .cart-drawer :is(.cart-drawer__header,.cart-drawer__body),:root[data-dna-cart=page] .cart-drawer>.pagosya-policies{box-sizing:border-box;width:100%;max-width:880px;margin-inline:auto}:root[data-dna-cart=page] .cart-drawer__header{border-bottom-width:max(var(--kit-border),1px)}:root[data-dna-cart=page] .cart-drawer::backdrop{background:var(--kit-surface)}',
+    ':root[data-dna-cart=overlay] .cart-drawer{inset:0;margin:auto;width:min(620px,calc(100vw - 32px));height:auto;max-height:min(86dvh,820px);border-width:var(--kit-border);border-radius:var(--kit-radius-panel);background:var(--kit-paper);box-shadow:0 24px 80px -24px #0009}',
+    ':root[data-dna-cart=overlay] .cart-drawer:not([open]){transform:scale(.96);opacity:0}',
+    '@starting-style{:root[data-dna-cart=overlay] .cart-drawer[open]{transform:scale(.96);opacity:0}}',
+    '@media(max-width:700px){:root[data-dna-cart=drawer] .cart-drawer{width:100vw;border-radius:0}:root[data-dna-cart=sheet] .cart-drawer{width:100vw;max-height:92dvh}:root[data-dna-cart=page] .cart-drawer{width:100vw}:root[data-dna-cart=overlay] .cart-drawer{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}}',
+    ':root[data-dna-frame] .order-item__photo{box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
+    /* Added to cart: corner toast (restyled), ribbon, bubble under the cart button, inline note, centred stamp. */
+    ':root[data-dna-added] .cart-added{box-sizing:border-box;border:var(--kit-border) solid var(--kit-line);flex-wrap:wrap;gap:6px 16px}',
+    ':root[data-dna-added=toast] .cart-added{inset:auto 24px 24px auto;width:min(360px,calc(100vw - 48px));padding:14px 16px;border-radius:var(--kit-radius-panel);background:var(--kit-paper);color:var(--kit-ink);box-shadow:0 18px 44px -18px #0008}',
+    ':root[data-dna-added=ribbon] .cart-added{inset:0 0 auto 0;width:auto;max-width:none;justify-content:center;padding:14px 24px;border-width:0 0 var(--kit-border);border-radius:0;background:var(--kit-accent);color:var(--kit-on-accent);box-shadow:0 10px 30px -18px #0009}',
+    ':root[data-dna-added=ribbon] .cart-added:not([data-visible=true]){transform:translateY(-100%)}',
+    ':root[data-dna-added=bubble] .cart-added{inset:var(--added-top,16px) var(--added-right,auto) auto var(--added-left,auto);width:min(300px,calc(100vw - 24px));padding:12px 14px;border-radius:max(var(--kit-radius-panel),8px);background:var(--kit-ink);color:var(--kit-paper);box-shadow:0 14px 34px -14px #0009}',
+    ':root[data-dna-added=bubble] .cart-added::before{content:"";position:absolute;top:-7px;left:var(--added-arrow,calc(100% - 36px));width:12px;height:12px;background:inherit;transform:rotate(45deg)}',
+    ':root[data-dna-added=bubble] .cart-added:not([data-visible=true]){transform:translateY(-8px) scale(.96)}',
+    ':root[data-dna-added=inline] .cart-added{inset:var(--added-top,auto) auto auto var(--added-left,12px);width:min(320px,calc(100vw - 24px));padding:10px 12px;border-radius:min(var(--kit-radius),12px);border-left:4px solid var(--kit-accent);background:var(--kit-surface);color:var(--kit-ink);box-shadow:0 10px 24px -14px #0008}',
+    ':root[data-dna-added=inline] .cart-added:not([data-visible=true]){transform:translateY(-6px)}',
+    ':root[data-dna-added=stamp] .cart-added{inset:0;margin:auto;width:fit-content;height:fit-content;max-width:calc(100vw - 48px);flex-direction:column;justify-content:center;padding:18px 28px;border:4px double currentColor;border-radius:var(--kit-radius);background:var(--kit-paper);color:var(--kit-ink);text-align:center;text-transform:uppercase;letter-spacing:.12em;box-shadow:0 30px 80px -30px #0009;transform:rotate(-4deg)}',
+    ':root[data-dna-added=stamp] .cart-added:not([data-visible=true]){transform:rotate(-4deg) scale(1.12)}',
+    '@media(max-width:700px){:root[data-dna-added=toast] .cart-added{inset:auto 12px 12px 12px;width:auto}:root[data-dna-added=ribbon] .cart-added{inset:auto 0 0 0;border-width:var(--kit-border) 0 0}:root[data-dna-added=ribbon] .cart-added:not([data-visible=true]){transform:translateY(100%)}:root[data-dna-added=bubble] .cart-added{left:12px;right:12px;width:auto}}',
+    ':root[data-dna-added] .cart-added[data-flip=bottom]{inset:auto 12px 12px 12px;width:auto;margin:0}:root[data-dna-added] .cart-added[data-flip=top]{inset:12px 12px auto 12px;width:auto;margin:0}',
+    /* Checkout review: the same fields and actions in four layouts; the order summary becomes a DNA panel. */
+    ':root[data-dna-density=airy]{--kit-review-max:680px;--kit-summary-fr:.8fr;--kit-gap:clamp(40px,7vw,112px);--kit-pad:clamp(22px,3.4vw,36px)}:root[data-dna-density=balanced]{--kit-review-max:780px;--kit-summary-fr:1fr;--kit-gap:clamp(32px,5vw,80px);--kit-pad:clamp(18px,3vw,28px)}:root[data-dna-density=dense]{--kit-review-max:920px;--kit-summary-fr:1.3fr;--kit-gap:clamp(20px,3vw,40px);--kit-pad:clamp(14px,2vw,20px)}',
+    ':root[data-dna-review] .checkout-review__summary{box-sizing:border-box;padding:var(--kit-pad,clamp(18px,3vw,28px));border:var(--kit-border) solid var(--kit-line);border-radius:var(--kit-radius-panel);background:var(--kit-surface)}',
+    ':root[data-dna-review=split] .checkout-review{grid-template-columns:minmax(260px,var(--kit-summary-fr,1fr)) minmax(0,1.35fr);gap:var(--kit-gap,clamp(32px,6vw,96px))}:root[data-dna-review=split] .checkout-review__summary{position:sticky;top:24px}',
+    ':root[data-dna-review=stacked] .checkout-review{grid-template-columns:minmax(0,1fr);max-width:var(--kit-review-max,760px);margin-inline:auto;gap:var(--kit-gap,32px)}:root[data-dna-review=stacked] .checkout-review__summary{box-shadow:0 18px 40px -30px #0007}',
+    ':root[data-dna-review=ticket] .checkout-review{grid-template-columns:minmax(0,1.35fr) minmax(260px,var(--kit-summary-fr,.9fr));gap:var(--kit-gap,clamp(32px,6vw,96px))}:root[data-dna-review=ticket] .checkout-review__fields{grid-column:1;grid-row:1}',
+    ':root[data-dna-review=ticket] .checkout-review__summary{grid-column:2;grid-row:1;position:sticky;top:24px;padding-bottom:40px;border:1.5px dashed color-mix(in srgb,var(--kit-ink) 35%,transparent);border-bottom:0;border-radius:var(--kit-radius) var(--kit-radius) 0 0;background:var(--kit-paper);font-variant-numeric:tabular-nums;-webkit-mask:radial-gradient(circle at 9px 100%,#0000 6px,#000 6.5px) 0 0/18px 100%;mask:radial-gradient(circle at 9px 100%,#0000 6px,#000 6.5px) 0 0/18px 100%;box-shadow:0 1px 0 color-mix(in srgb,var(--kit-ink) 8%,transparent)}',
+    ':root[data-dna-review=ticket] .checkout-review__summary h2{text-transform:uppercase;letter-spacing:.14em;font-size:max(13px,.8em)}',
+    ':root[data-dna-review=notebook] .checkout-review{grid-template-columns:minmax(0,var(--kit-summary-fr,.85fr)) minmax(0,1.15fr);gap:var(--kit-gap,clamp(28px,5vw,72px))}',
+    ':root[data-dna-review=notebook] .checkout-review__summary{padding-left:32px;border:0;border-left:3px double color-mix(in srgb,var(--kit-accent) 70%,transparent);border-radius:0;background:repeating-linear-gradient(var(--kit-paper) 0 31px,color-mix(in srgb,var(--kit-accent) 22%,var(--kit-paper)) 31px 32px)}',
+    ':root[data-dna-review=notebook] .checkout-review__summary .order-item{border-bottom-style:dotted}',
+    '@media(max-width:700px){:root[data-dna-review] .checkout-review{grid-template-columns:minmax(0,1fr)}:root[data-dna-review] :is(.checkout-review__summary,.checkout-review__fields){grid-column:auto;grid-row:auto;position:static}}',
+    '@container(max-width:700px){:root[data-dna-review] .checkout-review{grid-template-columns:minmax(0,1fr)}:root[data-dna-review] :is(.checkout-review__summary,.checkout-review__fields){grid-column:auto;grid-row:auto;position:static}}',
+    /* Catalog cards: framing, and how the card previews the product (hover, keyboard focus, long press on touch). */
+    ':root[data-dna-frame=bleed]{--kit-photo-round:min(var(--kit-radius),28px)}:root[data-dna-frame=inset]{--kit-photo-round:min(var(--kit-radius),24px)}:root[data-dna-frame=rounded]{--kit-photo-round:18px}:root[data-dna-frame=arch]{--kit-photo-round:50% 50% 8px 8px / 42% 42% 8px 8px}:root[data-dna-frame=polaroid]{--kit-photo-round:2px}',
+    ':root[data-dna-frame] .menu-item :is(.menu-item__image,.menu-item__image-alt){box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background-color:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
+    ':root[data-dna-card=second-photo] .menu-item__image-alt{position:absolute;z-index:0;top:0;left:0;width:100%;height:auto;object-fit:cover;opacity:0;pointer-events:none;transition:opacity var(--motion-base,320ms) var(--kit-ease)}',
+    '@media(hover:hover){:root[data-dna-card=second-photo] .menu-item:hover .menu-item__image-alt{opacity:1}}:root[data-dna-card=second-photo] .menu-item:is(:focus-within,[data-previewing]) .menu-item__image-alt{opacity:1}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches button{display:grid;place-items:center;width:36px;height:36px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches span{display:block;width:22px;height:22px;overflow:hidden;border-radius:50%;background:var(--swatch,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 28%,transparent)}:root[data-dna-card=swatch-swap] .menu-item__swatches img{display:block;width:100%;height:100%;object-fit:cover}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches button[aria-pressed=true] span{box-shadow:0 0 0 2px var(--kit-paper),0 0 0 3.5px currentColor}:root[data-dna-card=swatch-swap] .menu-item__swatches button:focus-visible{outline:2px solid currentColor;outline-offset:1px}',
+    ':root[data-dna-card=zoom] .menu-item__image{clip-path:inset(0 round var(--kit-photo-round,0px));transition:transform var(--motion-slow,600ms) var(--motion-ease,var(--kit-ease)),clip-path var(--motion-slow,600ms) var(--kit-ease)}',
+    '@media(hover:hover){:root[data-dna-card=zoom] .menu-item:hover .menu-item__image{transform:scale(1.08);clip-path:inset(3.7% round var(--kit-photo-round,0px))}}:root[data-dna-card=zoom] .menu-item:focus-within .menu-item__image{transform:scale(1.08);clip-path:inset(3.7% round var(--kit-photo-round,0px))}',
+    ':root[data-dna-card=quick-look] .menu-item__quick-look{position:absolute;z-index:3;top:calc(var(--look-top,0px) + 10px);left:calc(var(--look-left,100%) - 10px);right:auto;min-height:36px;margin:0;padding:6px 14px;border:1px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);color:var(--kit-ink);font:inherit;font-size:13px;line-height:1.2;cursor:pointer;opacity:0;transform:translate(-100%,-4px);transition:opacity var(--motion-fast,200ms) var(--kit-ease),transform var(--motion-fast,200ms) var(--motion-ease,var(--kit-ease))}',
+    '@media(hover:hover){:root[data-dna-card=quick-look] .menu-item:hover .menu-item__quick-look{opacity:1;transform:translateX(-100%)}}:root[data-dna-card=quick-look] .menu-item:focus-within .menu-item__quick-look{opacity:1;transform:translateX(-100%)}@media(hover:none){:root[data-dna-card=quick-look] .menu-item__quick-look{opacity:1;transform:translateX(-100%)}}',
+    ':root[data-dna-card=quick-look] .menu-item__quick-look:focus-visible{outline:3px solid currentColor;outline-offset:2px}',
+    ':root[data-dna-card=tilt] .menu-item{transition:transform var(--motion-fast,240ms) var(--kit-ease)}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:perspective(900px) rotateX(var(--card-tilt-y,0deg)) rotateY(var(--card-tilt-x,0deg))}',
+  ];
+  const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added,:root[data-dna-card] .menu-item,:root[data-dna-card] .menu-item :is(.menu-item__image,.menu-item__image-alt,.menu-item__quick-look){transition:none}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:none}}`;
+  const DNA_PAGE_CSS = [
+    ...dnaButtonRules(PAGE_BUTTONS, PAGE_STEPPERS),
+    ':root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy{display:flex;justify-content:space-between;gap:0}',
+    '@media(min-width:481px){:root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy-total:not(:empty){display:inline-block;margin-left:1em;padding-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}:root[data-dna-button=split] [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:none}}',
+  ];
+  if (hasDna) {
+    const dnaStyle = document.createElement('style');
+    dnaStyle.dataset.pagosyaKit = 'dna';
+    // Every variant sits in the pagosya-dna layer: above the kit defaults, below the store's own (unlayered) CSS.
+    dnaStyle.textContent = `@layer pagosya-dna {\n${[...DNA_CSS, DNA_REDUCED_MOTION].join('\n')}\n}\n${DNA_PAGE_CSS.join('\n')}`;
+    document.head.append(dnaStyle);
+  }
+  /* Card preview listeners (DNA stores only). The second photo follows the photo's box; a long press previews
+   * it on touch (and swallows the click that follows); keyboard focus previews it too (CSS :focus-within). */
+  function loadCardAlt(alt) {
+    if (!alt?.dataset.src || alt.hasAttribute('src')) return;
+    if (alt.dataset.srcset) { alt.srcset = alt.dataset.srcset; alt.sizes = alt.dataset.sizes || CARD_SIZES; }
+    alt.src = alt.dataset.src;
+  }
+  function syncCardAlt(card) {
+    const photo = card?.querySelector('.menu-item__image'), alt = card?.querySelector('.menu-item__image-alt');
+    if (!photo || !alt) return;
+    loadCardAlt(alt);
+    const style = getComputedStyle(photo);
+    Object.assign(alt.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: style.borderRadius, objectPosition: style.objectPosition });
+  }
+  /* The quick-look chip hangs from the photo's top-right corner (measured in the chip's positioned ancestor),
+   * so a row or an asymmetric template never has its price or name covered. */
+  function placeQuickLook(card) {
+    const chip = card?.querySelector('.menu-item__quick-look'), photo = card?.querySelector('.menu-item__image');
+    if (!chip || !photo) return;
+    const host = chip.offsetParent || card, p = photo.getBoundingClientRect(), h = host.getBoundingClientRect();
+    if (!p.width || !p.height) return;
+    chip.style.setProperty('--look-top', `${Math.round(p.top - h.top - (host.clientTop || 0))}px`);
+    chip.style.setProperty('--look-left', `${Math.round(p.right - h.left - (host.clientLeft || 0))}px`);
+  }
+  function placeQuickLooks() { if (cardMode() === 'quick-look') document.querySelectorAll('.menu-item').forEach(placeQuickLook); }
+  if (hasDna) {
+    const cardOf = event => event.target?.closest?.('.menu-item');
+    const reach = card => { syncCardAlt(card); placeQuickLook(card); };
+    document.addEventListener('pointerover', event => reach(cardOf(event)), { passive: true });
+    document.addEventListener('focusin', event => reach(cardOf(event)));
+    // Touch shows the chip without hover: place it once the photos have a size, and again when the layout changes.
+    document.addEventListener('load', event => { if (event.target?.matches?.('.menu-item .menu-item__image')) placeQuickLook(cardOf(event)); }, true);
+    addEventListener('resize', placeQuickLooks, { passive: true });
+    let pressTimer, pressedCard = null, swallowUntil = 0;
+    /* Only a press on the photo previews: a slow tap on the add button, a link or a field must still act. The default
+     * card's details overlay covers the photo, so a press on it counts when the finger is inside the photo's box. */
+    const photoPress = event => {
+      const card = cardOf(event), photo = card?.querySelector('.menu-item__image');
+      if (!photo || !card.querySelector('.menu-item__image-alt')) return null;
+      if (photo.contains(event.target) || event.target.closest?.('.menu-item__image-alt')) return card;
+      const control = event.target.closest?.('button,a,input,select,textarea,label,summary,[role=button]');
+      if (control && !control.contains(photo) && !control.matches('.menu-item__details')) return null;
+      const touch = event.touches?.[0], r = photo.getBoundingClientRect();
+      return touch && touch.clientX >= r.left && touch.clientX <= r.right && touch.clientY >= r.top && touch.clientY <= r.bottom ? card : null;
+    };
+    document.addEventListener('touchstart', event => {
+      const card = photoPress(event);
+      if (!card) return;
+      loadCardAlt(card.querySelector('.menu-item__image-alt'));
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => { syncCardAlt(card); card.setAttribute('data-previewing', ''); pressedCard = card; }, 450);
+    }, { passive: true });
+    const release = () => { clearTimeout(pressTimer); if (pressedCard) { pressedCard.removeAttribute('data-previewing'); pressedCard = null; swallowUntil = Date.now() + 600; } };
+    for (const name of ['touchend', 'touchcancel', 'touchmove']) document.addEventListener(name, release, { passive: true });
+    document.addEventListener('contextmenu', event => { if (event.target?.closest?.('.menu-item[data-previewing]')) event.preventDefault(); });
+    document.addEventListener('click', event => {
+      if (Date.now() < swallowUntil && cardOf(event)) { swallowUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
+      const swatch = event.target?.closest?.('[data-card-swatch]');
+      const card = swatch?.closest('.menu-item'), photo = card?.querySelector('.menu-item__image');
+      if (!photo) return;
+      event.preventDefault();
+      const set = responsiveSrcset(swatch.dataset.cardSwatch);
+      if (set) { photo.srcset = set; photo.sizes = photo.getAttribute('sizes') || CARD_SIZES; } else { photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); }
+      photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
+      card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
+    }, true);
+    // Tilt follows a fine pointer only, and never with reduced motion.
+    const tiltAllowed = () => cardMode() === 'tilt' && config.motion !== 'off' && matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.addEventListener('pointermove', event => {
+      const card = event.pointerType === 'mouse' && tiltAllowed() ? cardOf(event) : null;
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      card.setAttribute('data-tilting', '');
+      card.style.setProperty('--card-tilt-x', `${(((event.clientX - r.left) / r.width) - 0.5) * 7}deg`);
+      card.style.setProperty('--card-tilt-y', `${(0.5 - ((event.clientY - r.top) / r.height)) * 7}deg`);
+    }, { passive: true });
+    document.addEventListener('pointerout', event => {
+      const card = cardOf(event);
+      if (!card || card.contains(event.relatedTarget)) return;
+      card.removeAttribute('data-tilting'); card.style.removeProperty('--card-tilt-x'); card.style.removeProperty('--card-tilt-y');
+    }, { passive: true });
+  }
   // Carrier stores (shippingCarriersEnabled) need a structured Bolivian address
   // and a door pin. The map is optional: address + "Usar mi ubicación" still work.
   const DEPARTMENTS = [['LA_PAZ','La Paz'],['SANTA_CRUZ','Santa Cruz'],['COCHABAMBA','Cochabamba'],['ORURO','Oruro'],['POTOSI','Potosí'],['CHUQUISACA','Chuquisaca'],['TARIJA','Tarija'],['BENI','Beni'],['PANDO','Pando']];
@@ -1942,11 +2876,12 @@
   document.addEventListener('pagosya:validate-checkout', event => { if (event.detail) event.detail.valid = validateDelivery(event.detail.panel); });
   async function checkout(button) {
     if (!cart.size || !ready || checkingOut || button.disabled) return;
+    analytics('pay_click');
     const panel = button.closest("[data-pagosya-cart]");
     if (!validateDelivery(panel)) return;
     const locationId = panel.querySelector("[name=location]")?.value;
     const fulfillmentMethod = panel.querySelector("[name=method]")?.value;
-    if (fulfillmentMethod) track('delivery_selected', fulfillmentMethod);
+    if (fulfillmentMethod) { track('delivery_selected', fulfillmentMethod); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); }
     const shippingZoneId = panel.querySelector('[name=shippingZoneId]')?.value;
     const creditCode = panel.querySelector('[name=creditCode]')?.value.trim() || undefined;
     if (creditCode && panel.dataset.creditReady !== 'true') { message('Aplica el saldo antes de continuar.'); return; }
@@ -1959,6 +2894,7 @@
       if (!phone) { message("El comercio todavía no tiene un número de WhatsApp configurado."); return; }
       const text = [...cart].map(([id, quantity]) => `${quantity} × ${cartLine(id)?.name}`).join("\n");
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(`Hola, quisiera pedir:\n${text}`)}`;
+      analytics('whatsapp_click'); flushAnalytics();
       if (hosted) parent.postMessage({type:'pagosya:source-external',url},'*'); else window.location.assign(url); return;
     }
     if (store.checkoutMode === "external") {
@@ -1967,6 +2903,7 @@
       return;
     }
     checkingOut = true; button.disabled = true; button.setAttribute("aria-busy", "true"); message("Preparando tu pedido…");
+    flushAnalytics();
     try {
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/cart-checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", body: JSON.stringify({ partnerCode: window.PAGOSYA_PRIVACY?.analyticsAllowed(config.slug) ? partnerCode : undefined, creditCode, recoveryToken: window.PAGOSYA_RETENTION_STATE?.token || undefined, ...(fulfillmentMethod === 'delivery' ? { shippingAddress, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) } : {}), ...(store.shippingEnabled ? { fulfillmentMethod, shippingZoneId, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined } : {}), items: checkoutItems(), ...(locationId ? { locationId, fulfillmentMethod } : {}) }) });
       const result = await response.json();
@@ -2045,6 +2982,7 @@
       const bundle = (Array.isArray(store.bundles) ? store.bundles : []).find(candidate => candidate.id === button.dataset.bundleAdd), entries = bundleEntries(bundle);
       if (!bundle || !entries.length || entries.some(entry => !entry.p || !simpleProduct(entry.p) || remaining(entry.p) < entry.quantity)) { message("Este paquete ya no está disponible completo."); return; }
       track('add_to_cart', undefined, { value: entries.reduce((sum, entry) => sum + price(entry.p) * entry.quantity, 0), currency: entries[0].p.currency });
+      for (const entry of entries) analytics('add_to_cart', { productId: entry.p.id });
       for (const entry of entries) cart.set(lineKey(entry.p.id), (cart.get(lineKey(entry.p.id)) || 0) + entry.quantity);
       renderCart(); message(`${bundle.name} añadido a tu pedido.`);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a tu pedido.`;
@@ -2057,10 +2995,13 @@
       const quantity = cart.get(key) || 0;
       if (remaining(p, variant, line.picks) <= 0) { message("Ya añadiste la cantidad disponible."); return; }
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
+      analytics('add_to_cart', { productId: p.id });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
       cart.set(key, quantity + units); renderCart(); message(`${name} añadido a tu pedido.`); addedFeedback({ ...p, name }, button, event.detail === 0);
+      if (MOTIFS.length) playMotifs(p);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a tu pedido.`;
     }
+    if (button.hasAttribute("data-remove-line")) { cart.delete(button.dataset.removeLine); renderCart(); message("Pedido actualizado."); return; }
     if (button.hasAttribute("data-remove")) { const id = button.dataset.remove; const quantity = cart.get(id) || 0; if (quantity > 1) cart.set(id, quantity - 1); else cart.delete(id); renderCart(); message("Pedido actualizado."); }
     if (button.hasAttribute("data-checkout")) openCheckout(button);
     if (button.hasAttribute('data-shipping-quote')) { void shippingQuote(button.closest('[data-pagosya-cart]')); return; }

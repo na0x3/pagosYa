@@ -3,7 +3,6 @@ import { sourcePreviewDocument, receivePreviewNavigation, createPreviewImageLoad
 import { escapeHtml } from './studio-ui';
 import './source-browser.css';
 import { bindSourcePaymentPreview } from './source-payment-preview';
-import { showComebackPreview } from './comeback-preview';
 
 /** Trusted full-window shell: authored source still runs only in an opaque iframe. */
 export async function mountSourceBrowser(app: HTMLDivElement) {
@@ -39,13 +38,8 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     try { cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch { /* Start with an empty preview cart. */ }
     const html = sourcePreviewDocument(hydrated, page, { query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true });
     document.title = `${version.label} · Vista previa`;
-  app.innerHTML = `<header class="source-browser-bar"><span>Vista previa · Sin cobros</span><label>Página <select aria-label="Página de la vista previa">${snapshot.files.filter(f => f.path.endsWith('.html')).map(f => `<option value="${escapeHtml(f.path)}" ${f.path === page ? 'selected' : ''}>${escapeHtml(f.path)}</option>`).join('')}</select></label></header><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>`;
+    app.innerHTML = '<iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>';
     const frame = app.querySelector('iframe')!;
-    const comeback = document.createElement('button');
-    comeback.type = 'button';
-    comeback.textContent = 'Ver tarjeta Comeback';
-    comeback.addEventListener('click', () => showComebackPreview(hydrated));
-    app.querySelector('.source-browser-bar')!.append(comeback);
     bindSourcePaymentPreview(() => frame, () => hydrated);
     frame.srcdoc = html;
     const controller = new AbortController();
@@ -61,15 +55,8 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
         if (tab) { tab.opener = null; return; }
       }
       frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, paymentForm: true });
-      app.querySelector('select')!.value = next.page;
       history.replaceState(null, '', destination.href);
     }, { signal: controller.signal });
-    app.querySelector('select')!.addEventListener('change', event => {
-      const url = new URL(location.href);
-      url.searchParams.set('page', (event.target as HTMLSelectElement).value);
-      url.searchParams.delete('query'); url.searchParams.delete('anchor');
-      location.assign(url.href);
-    });
   } catch (error) {
     const message = error instanceof ApiError && error.status === 401
       ? 'Tu sesión venció. Inicia sesión en el editor y vuelve a usar «Ver en navegador».'

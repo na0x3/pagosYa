@@ -13,6 +13,9 @@ import { SOURCE_CONVERSATION_INSTRUCTIONS } from './source-conversation.service'
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { samplePhotoColours } from './source-photo-sampler';
+import { dnaFingerprint, dnaRuntimeConfig, sourceRuntimeDna } from './source-dna';
+import { validDna } from './fixtures/dna';
+import { LAMP_SVG } from './fixtures/motifs';
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
 const design = (): designModule.SourceDesign => ({ selected: 0, concepts: ['Menu', 'Poster', 'Counter'].map(name => ({
@@ -46,6 +49,11 @@ it('permits static service pricing while rejecting authored commerce prices', ()
   expect(() => validateGeneratedSource(source, 'shop')).toThrow('Precios estáticos');
 });
 
+it('accepts DNA motif drawings in a static generation, and no other new file type', () => {
+  expect(() => validateGeneratedSource([...files(), { path: 'motifs/lampara.svg', content: '<svg/>' }])).not.toThrow();
+  expect(() => validateGeneratedSource([...files(), { path: 'assets/lampara.svg', content: '<svg/>' }])).toThrow('archivo reservado');
+});
+
 describe('targeted visual edit scope', () => {
   it('keeps the rendered home surface in scope for a new marquee', () => {
     expect(sourceMarqueeEditPaths([
@@ -67,6 +75,199 @@ function setup(framework = 'static') {
 describe('Independent source generation',()=>{
   beforeEach(() => { jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(design()); const exploration = designModule.sourceDesignExploration(0); jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(exploration); });
   afterEach(()=>jest.restoreAllMocks());
+  const configOf = (saved: any) => JSON.parse(saved.files.find((f: any) => f.path === 'config.js').content.match(/=\s*([\s\S]*);/)[1]);
+  it('writes a seeded DNA into config.js of a static store whose design has none', async () => {
+    const { service, projects } = setup();
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));
+    await service.generate('m', 's', input);
+    const config = configOf(projects.save.mock.calls[0][2]);
+    expect(config.dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
+    expect(config.dna.product).toBe(config.productPageStyle);
+  });
+  it('validates the store kit CSS and every stylesheet, links the kit CSS and records the repairs', async () => {
+    const { service, projects } = setup();
+    const source = [...files().map(f => f.path === 'styles.css' ? { ...f, content: 'body { color: #222; }\n.menu-add{display:none}' } : f), { path: 'styles/kit.css', content: '.cart-drawer{background:#fff}body{margin:0}' }];
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: source }) }] }] })));
+    const result: any = await service.generate('m', 's', input);
+    const saved = projects.save.mock.calls[0][2].files;
+    const file = (path: string) => saved.find((f: any) => f.path === path)?.content;
+    expect(file('styles.css')).toContain('body { color: #222; }');
+    expect(file('styles.css')).not.toMatch(/\.menu-add\s*\{\s*display/);
+    expect(file('styles/kit.css')).toContain('@layer pagosya-store-kit');
+    expect(file('index.html')).toContain('<link rel="stylesheet" href="styles/kit.css" data-pagosya-kit="store">');
+    expect(result.generation.autoRepairs).toEqual(expect.arrayContaining([expect.stringMatching(/^styles\.css: removed `display:none` on \.menu-add/), 'styles/kit.css: removed selector body (not a kit surface)']));
+    expect(() => validateGeneratedSource(source)).not.toThrow();
+  });
+  it('tells the build where kit-surface CSS goes and what it may never do to protected elements', async () => {
+    for (const [framework, source, place] of [['static', files(), 'styles/kit.css'], ['next', nextStoreFiles(), '/* pagosya-kit:start */']] as const) {
+      const { service } = setup(framework);
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Tienda', files: source, products: [] }) }] }] })));
+      await service.generate('m', 's', input);
+      const stable = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text;
+      expect(stable).toContain(place);
+      expect(stable).toMatch(/only CSS that restyles the product page/);
+      expect(stable).toMatch(/prices, totals, pay and buy buttons, quantity, legal and status text/i);
+      expect(stable).not.toContain('Style the runtime product gallery, tabs, .product-detail__buy.checkout-button and checkout using those shared rules');
+      fetchMock.mockRestore();
+    }
+  });
+  it('writes the chosen concept DNA in component mode and records planner DNA repairs', async () => {
+    const { service, projects } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna(); planned.concepts[0].layout!.productPage = 'story-led';
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockImplementation(async request => { request.repairs?.push('concepts[0].dna.buttons.hover: invalid'); return planned; });
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    const result = await service.generate('m', 's', input);
+    expect(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].dnaSeed).toBe('s');
+    const config = configOf(projects.save.mock.calls[0][2]);
+    expect(config.dna).toEqual(dnaRuntimeConfig(validDna()));
+    expect(config.productPageStyle).toBe('story-led');
+    expect(result.generation.autoRepairs).toContain('concepts[0].dna.buttons.hover: invalid');
+  });
+  it('tells the build to author the purchase control in the chosen DNA button form, so authored CSS and the DNA agree', async () => {
+    const { service } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna();
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    const [stable, task] = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content.map((part: any) => part.text);
+    expect(task).toContain('Purchase control form: stamp.');
+    expect(stable).toContain("follows the store's DNA button form, given as 'Purchase control form'");
+  });
+  it("tells the build the store's motion personality and to author timing with the --motion-* tokens", async () => {
+    const { service } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna();
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    const [stable, task] = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content.map((part: any) => part.text);
+    expect(task).toContain('Motion personality: playful.');
+    expect(stable).toContain("given as 'Motion personality'");
+    expect(stable).toContain('var(--motion-base');
+    expect(stable).toContain('leave duration and stagger unset');
+  });
+  it("rebuilds the owned recipe from the chosen concept's layout grammar after planning", async () => {
+    const { service } = setup('next');
+    const planned = design(); planned.concepts[0].dna = { ...validDna(), layout: { grammar: 'brutalist', density: 'dense' } };
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const compose = jest.spyOn(service as any, 'composeUi');
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    expect((compose.mock.calls[0][0] as any).grammar).toBeUndefined();
+    expect((compose.mock.calls.at(-1)![0] as any).grammar).toBe('brutalist');
+    const build = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text;
+    expect(build).toContain('OWNED COMPOSITION RECIPE (brutalist-raw/');
+    expect(build).not.toContain('OWNED COMPOSITION RECIPE (cafe-expressive/');
+  });
+  it('steers planning away from recent fingerprints and repairs a colliding chosen DNA in code', async () => {
+    const { service, projects } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna();
+    const taken = dnaFingerprint(validDna());
+    projects.recentDesignFingerprints = jest.fn().mockResolvedValue([taken, 'pill|drawer|toast|oswald+instrument']);
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    const result = await service.generate('m', 's', input);
+    expect(projects.recentDesignFingerprints).toHaveBeenCalledWith('s');
+    expect(JSON.parse(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].context).avoidRecent).toEqual([taken, 'pill|drawer|toast|oswald+instrument']);
+    const saved = projects.save.mock.calls[0][2];
+    const savedDna = JSON.parse(saved.files.find((f: any) => f.path === 'design-direction.json').content).concepts[0].dna;
+    expect(dnaFingerprint(savedDna)).not.toBe(taken);
+    // product follows the page the kit renders (productPageStyle); every other enum is the repaired DNA.
+    expect(configOf(saved).dna).toEqual({ ...dnaRuntimeConfig(savedDna), product: configOf(saved).productPageStyle });
+    expect(result.generation.autoRepairs.some((repair: string) => repair.startsWith(`dna: fingerprint ${taken} was used by a recent store`))).toBe(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).toContain(JSON.stringify(savedDna.buttons));
+  });
+  it('plans without memory when the fingerprint lookup fails', async () => {
+    const { service, projects } = setup('next');
+    projects.recentDesignFingerprints = jest.fn().mockRejectedValue(new Error('db down'));
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    expect(JSON.parse(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].context).avoidRecent).toEqual([]);
+    expect(projects.save).toHaveBeenCalledTimes(1);
+  });
+  describe('DNA motifs (sub-project 3)', () => {
+    const lamp = { for: 'product', target: 'Lámpara', meaning: 'La lámpara se enciende y brilla', behavior: 'glow', trigger: 'hover', placement: 'product' } as const;
+    const sun = { for: 'store', target: 'Sol', meaning: 'Un sol que sale', behavior: 'grow', trigger: 'appear', placement: 'hero' } as const;
+    const plan = (...motifs: any[]) => { const planned = design(); planned.concepts[0].dna = { ...validDna(), motifs }; jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned); };
+    const respond = (body: unknown) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(body) }] }] }));
+    const hostileLamp = LAMP_SVG.replace('<title>', '<script>alert(1)</script><title>');
+    const expectLamp = (saved: any, result: any) => {
+      const drawing = saved.files.find((f: any) => f.path === 'motifs/lampara.svg');
+      expect(drawing.content).not.toContain('script');
+      expect(drawing.content).toContain('data-part="light"');
+      expect(saved.files.some((f: any) => f.path === 'motifs/extra.svg')).toBe(false);
+      const motifs = configOf(saved).motifs;
+      expect(motifs).toEqual([{ file: 'motifs/lampara.svg', for: 'product', target: 'Lámpara', behavior: 'glow', trigger: 'hover', placement: 'product', svg: drawing.content }]);
+      expect(JSON.stringify(configOf(saved))).not.toContain('se enciende');
+      expect(result.generation.autoRepairs).toEqual(expect.arrayContaining(['motifs/lampara.svg: removed <script>', 'motifs/extra.svg: not a DNA motif, dropped']));
+    };
+
+    it('asks a static build to draw each motif, saves the sanitised drawing and carries it in config.js without prose', async () => {
+      const { service, projects } = setup();
+      plan(lamp, sun);
+      const page = files().map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('<h1>Menú</h1>', '<h1>Menú</h1><img src="motifs/sol.svg" alt="" aria-hidden="true">') } : file);
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: [...page, { path: 'motifs/lampara.svg', content: hostileLamp }, { path: 'motifs/sol.svg', content: LAMP_SVG }, { path: 'motifs/extra.svg', content: LAMP_SVG }] }));
+      const result = await service.generate('m', 's', input);
+      const task = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text;
+      expect(task).toContain('DNA MOTIFS');
+      expect(task).toContain('motifs/lampara.svg');
+      const saved = projects.save.mock.calls[0][2];
+      expectLamp(saved, result);
+      // The hero motif is a file the page places itself; it has no kit slot.
+      expect(saved.files.some((f: any) => f.path === 'motifs/sol.svg')).toBe(true);
+      expect(configOf(saved).motifs.map((m: any) => m.file)).toEqual(['motifs/lampara.svg']);
+    });
+    it('does the same in component mode', async () => {
+      const { service, projects } = setup('next');
+      plan(lamp);
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'React shop', files: [...nextStoreFiles(), { path: 'motifs/lampara.svg', content: hostileLamp }, { path: 'motifs/extra.svg', content: LAMP_SVG }], products: [] }));
+      const result = await service.generate('m', 's', input);
+      expectLamp(projects.save.mock.calls[0][2], result);
+    });
+    it('keeps the drawings and config motifs on a later local edit', async () => {
+      const { service, projects } = setup();
+      plan(lamp);
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: [...files(), { path: 'motifs/lampara.svg', content: LAMP_SVG }] }));
+      await service.generate('m', 's', input);
+      const saved = projects.save.mock.calls[0][2];
+      projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
+      fetchMock.mockResolvedValue(respond({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }));
+      await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
+      const edited = projects.save.mock.calls[1][2];
+      expect(edited.files.find((f: any) => f.path === 'motifs/lampara.svg').content).toBe(saved.files.find((f: any) => f.path === 'motifs/lampara.svg').content);
+      expect(configOf(edited).motifs).toEqual(configOf(saved).motifs);
+    });
+    it('rejects a page that references a motif the DNA did not declare', async () => {
+      const { service, projects, prisma } = setup();
+      plan(lamp);
+      const page = files().map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('<h1>Menú</h1>', '<h1>Menú</h1><img src="motifs/taza.svg" alt="">') } : file);
+      jest.spyOn(globalThis, 'fetch').mockImplementation(async () => respond({ label: 'Menu', files: page }));
+      await expect(service.generate('m', 's', input)).rejects.toThrow();
+      expect(projects.save).not.toHaveBeenCalled();
+      const failed = prisma.storeSourceGeneration.updateMany.mock.calls.find((call: any) => call[0].data.status === 'FAILED')[0].data.attempts;
+      expect(failed.map((attempt: any) => attempt.failureReason)).toEqual(expect.arrayContaining([expect.stringContaining('ilustraciones no solicitadas')]));
+    });
+    it('leaves a store without motifs exactly as before: no prompt section, no config key, no files', async () => {
+      const { service, projects } = setup();
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: files() }));
+      await service.generate('m', 's', input);
+      expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).not.toContain('DNA MOTIFS');
+      const saved = projects.save.mock.calls[0][2];
+      expect(configOf(saved)).not.toHaveProperty('motifs');
+      expect(saved.files.some((f: any) => f.path.startsWith('motifs/'))).toBe(false);
+    });
+  });
+  it('gives an edited store whose saved design has no DNA the same seeded DNA', async () => {
+    const { service, projects } = setup();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));
+    await service.generate('m', 's', input);
+    const saved = projects.save.mock.calls[0][2];
+    const old = configOf(saved); delete old.dna;
+    saved.files.find((f: any) => f.path === 'config.js').content = `window.PAGOSYA_CONFIG = ${JSON.stringify(old)};\n`;
+    projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }) }] }] })));
+    await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
+    expect(configOf(projects.save.mock.calls[1][2]).dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
+  });
   it('generates a presentation site without silently adding product or checkout pages', async () => {
     const { service, projects } = setup('next');
     const source = nextStoreFiles().filter(file => !['components/product.tsx', 'components/checkout.tsx'].includes(file.path)).map(file => ({ ...file,
@@ -370,7 +571,7 @@ describe('Independent source generation',()=>{
     expect(result.generation.attempts.map(attempt => attempt.phase)).toEqual(['design', 'source']);
     expect(result.generation.credits).toBe(3);
     expect(JSON.parse(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'design-direction.json').content))
-      .toMatchObject(designModule.validateSourceDesign(design(), 0, true, true));
+      .toMatchObject(designModule.validateSourceDesign(design(), 0, true, true, { seed: 's' }));
   });
   it('repairs a disguised extra hero against the same committed concept before saving', async () => {
     const { service, projects } = setup();
@@ -382,6 +583,24 @@ describe('Independent source generation',()=>{
     expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('exact committed design');
     expect(projects.save).toHaveBeenCalledTimes(1);
     expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'index.html').content).not.toContain('Generic hero');
+  });
+  it('adds eyebrow guidance to a repair when the failed candidate labels more than two sections', async () => {
+    const { service } = setup();
+    const response = (source: any) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'Menu', files: source }) }] }] }));
+    const wrong = files(); wrong[0].content = wrong[0].content.replace('<main>', '<main>' + ['a', 'b', 'c'].map(id => `<section id="${id}"><p class="eyebrow">Etiqueta</p><h2>${id}</h2></section>`).join(''));
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response(wrong)).mockResolvedValueOnce(response(files()));
+    await service.generate('m', 's', input);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).not.toContain('Stock pattern:');
+    expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('Stock pattern: 3 sections');
+  });
+  it('tells a redesign that the previous pages overused eyebrows, without failing', async () => {
+    const { service, projects } = setup();
+    const previous = files(); previous[0].content = previous[0].content.replace('<main>', '<main>' + ['a', 'b', 'c'].map(id => `<section id="${id}"><span class="kicker">Etiqueta</span><h2>${id}</h2></section>`).join(''));
+    projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: { files: previous } });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'New direction', edits: [], appends: [], files: files() }) }] }] })));
+    await service.generate('m', 's', { ...input, revision: 1, instruction: 'Make the site completely different' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).toContain('Stock pattern: 3 sections');
+    expect(projects.save).toHaveBeenCalledTimes(1);
   });
   it('does not add a source repair when planning already used the shared repair allowance', async () => {
     jest.mocked(SourceDesignPlanner.prototype.explore).mockRestore();
@@ -448,10 +667,11 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, usage: { input_tokens: 1000, output_tokens: 2000 }, output: [] })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 1000 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label:'Reparado', files:files() }) }] }] })));
-    // 12, not 10: re-sending the stable prompt costs ~6.7 credits at this model's rate, so a
+    // 13, not 10: re-sending the stable prompt costs ~6.7 credits at this model's rate, so a
     // 10-credit ceiling leaves the repair reserve within a few tokens of its 1024 floor and any
     // prompt edit decides the outcome. The subject here is the repair's allowance, not the ceiling.
-    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 12 });
+    // (12 until sub-project 7's kit-CSS guidance, ~330 characters, used up the margin.)
+    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 13 });
     const first = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     const repair = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
     expect(repair.max_output_tokens).toBeLessThan(first.max_output_tokens);
@@ -600,7 +820,10 @@ describe('Independent source generation',()=>{
     expect(blocks[2][1].text).toContain('#246813');
     expect(blocks[2][1].text).not.toContain('#135724');
     expect(updated.snapshot.files.find((file: any) => file.path === 'brand.css').content).toContain('#246813');
-    expect(requests[0].prompt_cache_key).not.toContain('source-s');
+    // The shared key is 'source-<prefix hash>-<shard>'; the store id never appears in it. (A bare 'source-s' check
+    // failed whenever the base-36 prefix hash itself began with 's', as it did after sub-project 7's prompt edit.)
+    expect(requests[0].prompt_cache_key).toMatch(/^source-[0-9a-z]+-\d+$/);
+    expect(requests[0].prompt_cache_key.split('-')).not.toContain('s');
     expect(requests[0].prompt_cache_key).toBe(requests[1].prompt_cache_key);
     expect(requests[0].prompt_cache_options).toEqual({ mode: 'explicit', ttl: '30m' });
   });

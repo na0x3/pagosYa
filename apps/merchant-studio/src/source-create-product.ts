@@ -27,8 +27,13 @@ export function parseSpecificationLines(text: string): { rows: ProductSpecificat
   return { rows, problem: '' };
 }
 
+/** Steps another screen may open an existing product at (Crecimiento's insights), and their place in the guide. */
+export const PRODUCT_GUIDE_STEPS = ['description', 'price', 'photos', 'stock'] as const;
+export type ProductGuideStep = typeof PRODUCT_GUIDE_STEPS[number];
+const GUIDE_STEP_NUMBER: Record<ProductGuideStep, number> = { description: 2, price: 3, photos: 5, stock: 7 };
+
 /** Fixed YAPI questions. Keep answers, combinations and successful uploads on retry. */
-export function createProductForm(api: MerchantStudioApi, storeId: string, onSaved: () => void, onClose: () => void, initial?: ProductGuideRecord) {
+export function createProductForm(api: MerchantStudioApi, storeId: string, onSaved: () => void, onClose: () => void, initial?: ProductGuideRecord, startAt?: ProductGuideStep) {
   const dialog = document.createElement('section');
   dialog.className = 'product-create-panel';
   dialog.setAttribute('aria-labelledby', 'product-create-title');
@@ -394,6 +399,8 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     })().catch(cause => { setBusy(false); status.textContent = ''; showError(cause instanceof Error ? cause.message : 'No se pudo guardar el producto. Tus datos siguen aquí.'); });
   });
   if (photos.length) drawPhotos();
+  // An existing product is already valid, so it may open past the earlier steps. With options, stock lives per combination (step 6).
+  if (initial && startAt) step = startAt === 'stock' && optionsToggle.checked ? 6 : GUIDE_STEP_NUMBER[startAt];
   updateStep();
   return { element: dialog, dispose, focus: () => dialog.querySelector<HTMLElement>(`[data-guide-step="${step}"] input, [data-guide-step="${step}"] textarea`)?.focus(), get isBusy() { return busy; }, get hasChanges() { return !completed && Boolean(nameInput.value.trim() || photos.length); } };
 }

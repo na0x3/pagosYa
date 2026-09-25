@@ -13,6 +13,8 @@ const SECURITY_ENV_KEYS = [
   "CONSUMER_DASHBOARD_ORIGIN",
   "MERCHANT_DASHBOARD_ORIGIN",
   "ORDER_TRACKING_SECRET",
+  "DOCUMENT_LINK_SECRET",
+  "ANALYTICS_SESSION_SECRET",
   "OPERATIONS_ENCRYPTION_KEY",
   "PAGOSYA_WEB_ORIGIN",
   "ADDITIONAL_CORS_ORIGINS",
@@ -41,6 +43,8 @@ function setStrongProductionEnv() {
   process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
   process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
   process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+  process.env.DOCUMENT_LINK_SECRET = "documents_" + "e".repeat(48);
+  process.env.ANALYTICS_SESSION_SECRET = "analytics_" + "f".repeat(48);
   process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
   process.env.ADDITIONAL_CORS_ORIGINS = "https://ops.pagosya.bo,https://dashboard.pagosya.bo";
   process.env.BANECO_QR_ENABLED = "false";
@@ -95,6 +99,8 @@ describe("production security configuration", () => {
     process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
     process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
     process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+    process.env.DOCUMENT_LINK_SECRET = "documents_" + "e".repeat(48);
+    process.env.ANALYTICS_SESSION_SECRET = "analytics_" + "f".repeat(48);
     process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
     process.env.ADDITIONAL_CORS_ORIGINS = "https://ops.pagosya.bo,https://dashboard.pagosya.bo";
     process.env.BANECO_QR_ENABLED = "false";
@@ -105,6 +111,22 @@ describe("production security configuration", () => {
     expect(result.app.trustProxy).toBe(1);
     expect(result.app.exposeDocs).toBe(false);
     expect(result.app.databaseUrl).toContain("connection_limit=10");
+  });
+
+  it("refuses production without a strong document link secret", () => {
+    setStrongProductionEnv();
+    delete process.env.DOCUMENT_LINK_SECRET;
+    expect(configuration).toThrow("DOCUMENT_LINK_SECRET");
+    process.env.DOCUMENT_LINK_SECRET = "development-only-document-link-secret-change-me";
+    expect(configuration).toThrow("DOCUMENT_LINK_SECRET");
+  });
+
+  it("refuses production without a strong analytics session secret", () => {
+    setStrongProductionEnv();
+    delete process.env.ANALYTICS_SESSION_SECRET;
+    expect(configuration).toThrow("ANALYTICS_SESSION_SECRET");
+    process.env.ANALYTICS_SESSION_SECRET = "development-only-analytics-session-secret-change-me";
+    expect(configuration).toThrow("ANALYTICS_SESSION_SECRET");
   });
 
   it("refuses an FX rate in production while dLocal would run on fixtures", () => {
@@ -149,5 +171,45 @@ describe("domain commerce configuration", () => {
     const { app } = configuration() as any;
     expect(app.domainCommerce.target).toBe("edge.example.test");
     expect(app.customDomains.target).toBe("edge.example.test");
+  });
+});
+
+describe("document email cap", () => {
+  const saved = process.env.DOCUMENT_EMAILS_PER_DAY;
+  afterEach(() => { if (saved === undefined) delete process.env.DOCUMENT_EMAILS_PER_DAY; else process.env.DOCUMENT_EMAILS_PER_DAY = saved; });
+
+  it("defaults to 200 document emails per store per day and reads DOCUMENT_EMAILS_PER_DAY", () => {
+    delete process.env.DOCUMENT_EMAILS_PER_DAY;
+    expect(configuration().app.documentEmailsPerDay).toBe(200);
+    process.env.DOCUMENT_EMAILS_PER_DAY = "50";
+    expect(configuration().app.documentEmailsPerDay).toBe(50);
+    process.env.DOCUMENT_EMAILS_PER_DAY = "0";
+    expect(configuration).toThrow("DOCUMENT_EMAILS_PER_DAY");
+  });
+});
+
+describe("store analytics daily cap", () => {
+  const saved = process.env.STORE_ANALYTICS_DAILY_CAP;
+  afterEach(() => { if (saved === undefined) delete process.env.STORE_ANALYTICS_DAILY_CAP; else process.env.STORE_ANALYTICS_DAILY_CAP = saved; });
+
+  it("defaults to 50 000 analytics events per store per day and reads STORE_ANALYTICS_DAILY_CAP", () => {
+    delete process.env.STORE_ANALYTICS_DAILY_CAP;
+    expect(configuration().app.storeAnalyticsDailyCap).toBe(50_000);
+    process.env.STORE_ANALYTICS_DAILY_CAP = "1000";
+    expect(configuration().app.storeAnalyticsDailyCap).toBe(1000);
+    process.env.STORE_ANALYTICS_DAILY_CAP = "0";
+    expect(configuration).toThrow("STORE_ANALYTICS_DAILY_CAP");
+  });
+});
+
+describe("source framework default", () => {
+  const saved = process.env.SOURCE_FRAMEWORK;
+  afterEach(() => { if (saved === undefined) delete process.env.SOURCE_FRAMEWORK; else process.env.SOURCE_FRAMEWORK = saved; });
+
+  it("generates new stores in component mode unless static is asked for explicitly", () => {
+    delete process.env.SOURCE_FRAMEWORK;
+    expect(configuration().app.sourceFramework).toBe("next");
+    process.env.SOURCE_FRAMEWORK = "static";
+    expect(configuration().app.sourceFramework).toBe("static");
   });
 });

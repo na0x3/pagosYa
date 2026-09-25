@@ -29,6 +29,7 @@ import { VisualStudioModule } from "./visual-studio/visual-studio.module";
 import { BrandModule } from "./brand/brand.module";
 import { ProductContentModule } from "./product-content/product-content.module";
 import { StoreGrowthModule } from "./store-growth/store-growth.module";
+import { StoreAnalyticsModule } from "./store-analytics/store-analytics.module";
 import { StoreSeoModule } from "./store-seo/store-seo.module";
 import { RetentionModule } from "./retention/retention.module";
 import { EmailWorkspaceModule } from "./email-workspace/email-workspace.module";
@@ -40,6 +41,7 @@ import { CollectionsModule } from "./collections/collections.module";
 import { FinancesModule } from "./finances/finances.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { DebtCollectionsModule } from "./debt-collections/debt-collections.module";
+import { BusinessDocumentsModule } from "./business-documents/business-documents.module";
 import { ConsumerModule } from "./consumer/consumer.module";
 // Store-level CRM, inventory, appointments, delivery, POS, and integrations.
 import { OperationsModule } from "./operations/operations.module";
@@ -97,6 +99,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     BrandModule,
     ProductContentModule,
     StoreGrowthModule,
+    StoreAnalyticsModule,
     StoreSeoModule,
     RetentionModule,
     EmailWorkspaceModule,
@@ -109,6 +112,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     FinancesModule,
     UploadsModule,
     DebtCollectionsModule,
+    BusinessDocumentsModule,
     ConsumerModule,
     OperationsModule,
     CommercePlatformModule,

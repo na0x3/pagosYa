@@ -1,7 +1,7 @@
 // Compiles real Next.js projects; under a full parallel run this takes well past the 5s default.
 jest.setTimeout(60_000);
 
-import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
+import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextAuthoredMarkup, repairNextCommerceMounts, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
 import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from './fixtures/next-store';
 import { sourceProjectSnapshot } from './source-project';
 import { assertSourceCommerceContract } from './source-commerce-contract';
@@ -9,6 +9,26 @@ import { creativeStoreFiles } from './fixtures/creative-store';
 import { withCreativeAssets } from './source-creative-assets';
 
 describe('Next.js storefront compilation', () => {
+  it('compiles the pagosya-kit block of globals.css into the served store kit CSS, linked after the store stylesheet', async () => {
+    const source = nextStoreFiles().map(f => f.path === 'styles/globals.css' ? { ...f, content: f.content + '\n/* pagosya-kit:start */\n.cart-drawer{background:rgb(9,8,7)}\n.product-detail__buy{border-radius:3px}\n/* pagosya-kit:end */\n' } : f);
+    const compiled = await compileNextPreview(source);
+    const kit = compiled.find(f => f.path === 'styles/kit.css')!.content;
+    expect(kit).toContain('@layer pagosya-store-kit');
+    expect(kit).toContain(':root:not(#pagosya-store-kit) .product-detail__buy');
+    expect(compiled.find(f => f.path === 'styles.css')!.content).not.toMatch(/rgb\(9, ?8, ?7\)|product-detail__buy/);
+    expect(compiled.find(f => f.path === 'index.html')!.content).toContain('<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="styles/kit.css" data-pagosya-kit="store">');
+    const plain = await compileNextPreview(nextStoreFiles());
+    expect(plain.some(f => f.path === 'styles/kit.css')).toBe(false);
+    expect(plain.find(f => f.path === 'index.html')!.content).not.toContain('kit.css');
+  });
+  it('holds the compiled Tailwind output to the protected-element rules: an arbitrary variant cannot fade the buy button', async () => {
+    const source = nextStoreFiles().map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content + '\n// [&_.menu-add]:opacity-0 [&_.checkout-button]:hidden [&_.hero]:opacity-0\n' } : f);
+    expect(source.some(f => f.content.includes('[&_.menu-add]:opacity-0'))).toBe(true);
+    const css = (await compileNextPreview(source)).find(f => f.path === 'styles.css')!.content;
+    expect(css).toMatch(/\.hero\s*\{\s*opacity:\s*0/);
+    expect(css).not.toMatch(/\.menu-add\s*\{\s*opacity:\s*0/);
+    expect(css).not.toMatch(/\.checkout-button\s*\{\s*display:\s*none/);
+  });
   it.each([
     '<img src="foto.png" />', '<img src="foto.png"></img>',
     '<img {...props} />', '<img alt="" />', '<img alt={""} />',
@@ -28,6 +48,11 @@ describe('Next.js storefront compilation', () => {
     const files = nextStoreFiles();
     files.push({ path: 'components/photo.tsx', content: `export const Photo = (props: any) => ${markup};` });
     expect(() => validateNextSources(files)).not.toThrow();
+  });
+  it('accepts DNA motif drawings as the one non-component output, and nothing else', () => {
+    const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><path d="M0 0h4"/></svg>';
+    expect(() => validateNextSources([...nextStoreFiles(), { path: 'motifs/lampara.svg', content: drawing }])).not.toThrow();
+    for (const path of ['motifs/a/b.svg', 'assets/lampara.svg', 'motifs/lampara.js']) expect(() => validateNextSources([...nextStoreFiles(), { path, content: drawing }])).toThrow('Archivo React no permitido');
   });
   it('trusts UI components but still validates authored images in their children', () => {
     const files = nextStoreFiles();
@@ -166,6 +191,33 @@ export default function Home() { const [tab] = useState('portada'); return <><He
     const files = nextStoreFiles(); files[1].content = files[1].content.replace('<main>', '<main><section id="hero">Unplanned hero</section>');
     expect(() => validateNextDesign(files, design)).toThrow();
   });
+  it('lists every TypeScript error with its line so one repair can fix them all', async () => {
+    const files = nextStoreFiles();
+    files[1].content = files[1].content.replace('export default function Home()', 'const wrongHome: number = "text";\nexport default function Home()');
+    files[2].content = files[2].content.replace('export default function Product()', 'const wrongProduct: number = "text";\nexport default function Product()');
+    let message = '';
+    try { await compileNextPreview(files); } catch (error) { message = (error as Error).message; }
+    expect(message).toMatch(/TypeScript components\/home\.tsx:\d+: Type 'string' is not assignable to type 'number'/);
+    expect(message).toMatch(/TypeScript components\/product\.tsx:\d+: Type 'string' is not assignable to type 'number'/);
+  });
+  it('bounds a flood of TypeScript errors to eight lines and a count', async () => {
+    const files = nextStoreFiles();
+    files[1].content = Array.from({ length: 11 }, (_, i) => `const wrong${i}: number = "x";`).join('\n') + '\n' + files[1].content;
+    let message = '';
+    try { await compileNextPreview(files); } catch (error) { message = (error as Error).message; }
+    expect(message.split('\n').filter(line => line.startsWith('TypeScript '))).toHaveLength(8);
+    expect(message).toContain('…y 3 errores más.');
+  });
+  it('keeps the whole TypeScript report within the repair prompt budget', async () => {
+    const files = nextStoreFiles();
+    // "missing properties" diagnostics print the whole target type, so each detail is long.
+    const shape = Array.from({ length: 12 }, (_, i) => `veryLongPropertyNameForTheDiagnostic${i}: number`).join('; ');
+    files[1].content = Array.from({ length: 8 }, (_, i) => `const wrong${i}: { ${shape} } = {};`).join('\n') + '\n' + files[1].content;
+    let message = '';
+    try { await compileNextPreview(files); } catch (error) { message = (error as Error).message; }
+    expect(message.length).toBeLessThanOrEqual(1800);
+    expect(message).toMatch(/TypeScript components\/home\.tsx:\d+:/);
+  });
   it('returns an actionable compile error for missing local components', async () => {
     const files = nextStoreFiles(); files[1].content = "import Missing from './Missing';\n" + files[1].content.replace('<main>', '<Missing/><main>');
     await expect(compileNextPreview(files)).rejects.toThrow('Missing');
@@ -189,5 +241,124 @@ export default function Home() { const [tab] = useState('portada'); return <><He
     expect(checkout.content).toContain("import Footer from './Footer';");
     expect(checkout.content).not.toContain('generated page referenced Footer');
     await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/checkout.js' })]));
+  });
+});
+
+describe('mechanical authored markup repair', () => {
+  const home = (files: ReturnType<typeof nextStoreFiles>) => files.find(f => f.path === 'components/home.tsx')!;
+
+  it('marks an image without alt as decorative instead of failing the generation', () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<img src="/assets/sample.png" alt="Marca de prueba" width="16" height="16"/>', '<img src="/assets/sample.png" width="16" height="16"/><img src="/assets/sample.png" alt="" />');
+    expect(() => validateNextSources(files)).toThrow(/texto alternativo/);
+    const { files: repaired, repairs } = repairNextAuthoredMarkup(files);
+    expect(home(repaired).content).toContain('<img src="/assets/sample.png" width="16" height="16" alt="" aria-hidden="true"/>');
+    expect(home(repaired).content).toContain('<img src="/assets/sample.png" alt="" aria-hidden="true" />');
+    expect(repairs).toEqual(['components/home.tsx: marked 2 images without alt text as decorative']);
+    expect(() => validateNextSources(repaired)).not.toThrow();
+  });
+
+  it('empties a commerce slot React filled, since the runtime owns what goes inside', async () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-catalog />', '<div data-pagosya-catalog className="grid"><article>Producto de muestra</article>{null}</div>');
+    expect(() => validateNextSources(files)).toThrow(/contenedores de comercio/);
+    const { files: repaired, repairs } = repairNextAuthoredMarkup(files);
+    expect(home(repaired).content).toContain('<div data-pagosya-catalog className="grid"></div>');
+    expect(repairs).toEqual(['components/home.tsx: emptied 1 commerce slot']);
+    expect(() => validateNextSources(repaired)).not.toThrow();
+    await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/home.js' })]));
+  });
+
+  it('leaves valid markup untouched', () => {
+    const files = nextStoreFiles();
+    const { files: repaired, repairs } = repairNextAuthoredMarkup(files);
+    expect(repairs).toEqual([]);
+    expect(repaired).toEqual(files);
+  });
+});
+
+describe('mechanical commerce mount repair', () => {
+  const home = (files: ReturnType<typeof nextStoreFiles>) => files.find(f => f.path === 'components/home.tsx')!;
+  const product = (files: ReturnType<typeof nextStoreFiles>) => files.find(f => f.path === 'components/product.tsx')!;
+
+  it('adds CommerceSlots when a page lacks the cart and status mounts, and the result compiles', async () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content).toContain('<CommerceSlots />');
+    expect(home(repaired).content).toMatch(/import \{[^}]*\bCommerceSlots\b[^}]*\} from '@pagosya\/ui';/);
+    expect(repairs).toEqual(['components/home.tsx: added CommerceSlots']);
+    expect(() => validateNextSources(repaired)).not.toThrow();
+    await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/home.js' })]));
+  });
+
+  it('leaves design-bearing mounts (product page, catalog) to the AI repair', () => {
+    const files = nextStoreFiles();
+    product(files).content = product(files).content.replace('<main data-pagosya-product-page/>', '<main/>');
+    home(files).content = home(files).content.replace('<div data-pagosya-catalog />', '');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(product(repaired).content).not.toContain('ProductDetail');
+    expect(home(repaired).content).not.toContain('Catalog');
+    expect(repairs).toEqual([]);
+    expect(() => validateNextSources(repaired)).toThrow('product necesita data-pagosya-product-page');
+  });
+
+  it('never duplicates a mount that an imported component renders conditionally', () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '');
+    files[0].content = "import { CommerceSlots } from '@pagosya/ui';\n" + files[0].content.replace('</header>', '{Math.random() > 1 && <CommerceSlots />}</header>');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content).not.toContain('CommerceSlots');
+    expect(repairs).toEqual([]);
+  });
+
+  it('extends an existing @pagosya/ui import instead of adding a second one', () => {
+    const files = nextStoreFiles();
+    home(files).content = "import { Reveal } from '@pagosya/ui';\n" + home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '');
+    const { files: repaired } = repairNextCommerceMounts(files);
+    expect(home(repaired).content.match(/from '@pagosya\/ui'/g)).toHaveLength(1);
+    expect(home(repaired).content).toMatch(/import \{ Reveal, CommerceSlots \} from '@pagosya\/ui';/);
+  });
+
+  it('never duplicates a mount the page already names, even inside a conditional', () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '{open && <CommerceSlots />}');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content.match(/CommerceSlots \/>/g)).toHaveLength(1);
+    expect(repairs).toEqual([]);
+  });
+
+  it('leaves a page without a default-exported JSX return unchanged', () => {
+    const files = nextStoreFiles();
+    home(files).content = 'const Page = () => null; export default Page;';
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content).toBe('const Page = () => null; export default Page;');
+    expect(repairs).toEqual([]);
+  });
+
+  it('does not decide where the cart button goes: a missing data-cart-open still fails', () => {
+    const files = nextStoreFiles();
+    files[0].content = files[0].content.replace('data-cart-open', 'data-other');
+    const { files: repaired } = repairNextCommerceMounts(files);
+    expect(() => validateNextSources(repaired)).toThrow('home necesita data-cart-open');
+  });
+});
+
+describe('kit templates in React', () => {
+  it('a store using every kit template helper validates and compiles', async () => {
+    const files = nextStoreFiles();
+    const home = files.find(f => f.path === 'components/home.tsx')!;
+    home.content = "import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, ProductPageTemplate, KitSlot } from '@pagosya/ui';\n"
+      + home.content.replace('<div data-pagosya-catalog />', `<div data-pagosya-catalog />
+<CartTemplate><div className="canasta"><h2>Tu canasta</h2><button data-cart-close>Cerrar</button><KitSlot kind="cart" name="lines" /><KitSlot kind="cart" name="total" /><KitSlot kind="cart" name="action" /></div></CartTemplate>
+<CartLineTemplate><li><KitSlot kind="line" name="name" as="h3" /><KitSlot kind="line" name="line-total" as="strong" /><KitSlot kind="line" name="quantity" /></li></CartLineTemplate>
+<AddedTemplate><div><KitSlot kind="added" name="message" as="span" /><button data-cart-open>Ver</button></div></AddedTemplate>
+<ReviewTemplate><div><KitSlot kind="review" name="summary" /><KitSlot kind="review" name="fields" /></div></ReviewTemplate>
+<ProductPageTemplate><article><KitSlot kind="product" name="gallery" /><KitSlot kind="product" name="title" /><KitSlot kind="product" name="pricing" /><KitSlot kind="product" name="buy" /></article></ProductPageTemplate>`);
+    expect(() => validateNextSources(files)).not.toThrow();
+    const compiled = await compileNextPreview(files);
+    const compiledHome = compiled.find(f => f.path === '_compiled/home.js')!;
+    expect(compiledHome.content).toContain('data-pagosya-cart-template');
+    expect(compiledHome.content).toContain('data-cart-slot');
   });
 });

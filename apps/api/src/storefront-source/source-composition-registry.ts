@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto';
+import { SOURCE_DNA_ENUMS } from './source-dna';
+
+export type SourceLayoutGrammar = typeof SOURCE_DNA_ENUMS.layout.grammar[number];
 
 /**
  * The signature moment of a direction, named after the `@pagosya/ui` component
@@ -28,12 +31,20 @@ export type SourceUiComposition = {
 type Direction = Omit<SourceUiComposition, 'family' | 'rationale' | 'referenceExample'> & { minImages: number };
 export type SourceCompositionFamily = {
   id: string; purpose: string; terms: readonly string[]; referenceExample?: string;
+  /** DNA layout grammars this family serves, strongest first: the chosen concept's grammar prefers it. */
+  grammars: readonly SourceLayoutGrammar[];
+  /**
+   * The family's look only makes sense for its own trade (a café menu, a beauty
+   * edit). It earns the grammar bonus only when the brief names that trade, so a
+   * planner's grammar never turns a watch shop into a coffee counter.
+   */
+  domainBound?: boolean;
   directions: readonly Direction[];
 };
 
 export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
   {
-    id: 'cafe-expressive', purpose: 'A memorable food or drink identity with a fast path to the real menu.',
+    id: 'cafe-expressive', domainBound: true, grammars: ['poster', 'editorial'], purpose: 'A memorable food or drink identity with a fast path to the real menu.',
     terms: ['cafe', 'coffee', 'cafeteria', 'panaderia', 'bakery', 'restaurante', 'restaurant', 'bebidas', 'heladeria'],
     referenceExample: 'examples/yapi-design-families/cafe-expressive',
     directions: [
@@ -45,7 +56,7 @@ export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
     ],
   },
   {
-    id: 'beauty-editorial', purpose: 'Editorial beauty, skincare or fragrance presentation with clear product choices.',
+    id: 'beauty-editorial', domainBound: true, grammars: ['editorial', 'magazine'], purpose: 'Editorial beauty, skincare or fragrance presentation with clear product choices.',
     terms: ['beauty', 'belleza', 'cosmetica', 'cosmeticos', 'skincare', 'piel', 'perfume', 'fragrance', 'maquillaje'],
     referenceExample: 'examples/yapi-design-families/beauty-editorial',
     directions: [
@@ -57,7 +68,7 @@ export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
     ],
   },
   {
-    id: 'product-cinematic', purpose: 'Image-led furniture, objects, clothing or considered product stories.',
+    id: 'product-cinematic', grammars: ['editorial', 'collage'], purpose: 'Image-led furniture, objects, clothing or considered product stories.',
     terms: ['furniture', 'muebles', 'mobiliario', 'interiores', 'interior', 'design objects', 'objetos', 'cinematic', 'cinematografico', 'moda', 'fashion', 'textiles'],
     referenceExample: 'examples/yapi-design-families/product-cinematic',
     directions: [
@@ -69,7 +80,7 @@ export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
     ],
   },
   {
-    id: 'catalog-practical', purpose: 'Photo-light or broad catalogs where finding and buying products is the main task.',
+    id: 'catalog-practical', grammars: ['grid', 'index'], purpose: 'Photo-light or broad catalogs where finding and buying products is the main task.',
     terms: ['catalogo', 'catalog', 'ferreteria', 'hardware', 'abarrotes', 'grocery', 'repuestos', 'wholesale', 'mayorista'],
     directions: [
       { direction: 'Clear catalog', minImages: 0, scene: 'directory', header: 'classic', hero: 'typographic', catalog: 'grid', card: 'minimal', fx: 'none', signature: 'A bespoke compact category index grounded in the real catalog.', footer: 'paper', radius: '4-8', rhythm: 'dense (space 0.92)', typography: 'Instrument Sans with strong heading weight contrast', mobile: 'Keep category controls and purchase buttons reachable without horizontal page overflow.', assetPlan: 'Does not depend on photography; use existing product images only.', sections: ['opening', 'catalog'] },
@@ -78,10 +89,57 @@ export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
       { direction: 'Shelf sequence', minImages: 3, scene: 'chapters', header: 'classic', hero: 'split', catalog: 'rail', card: 'classic', fx: 'reveal lift', signature: 'StoryChapters walking the real aisles or ranges, each with one approved photograph and factual copy.', footer: 'ink', radius: '4-8', rhythm: 'balanced (space 1)', typography: 'Instrument Sans with contrasting display scale', mobile: 'Chapters read in order without pinning; the rail stays swipeable with prices visible.', assetPlan: 'Three approved photographs of real ranges; never stage a category that does not exist.', sections: ['opening', 'collection', 'ranges'] },
     ],
   },
+  {
+    id: 'poster-loud', grammars: ['poster', 'brutalist'], purpose: 'A loud, type-first identity for music, events, streetwear and drops, with the live catalog one scroll away.',
+    terms: ['discos', 'vinilos', 'vinyl', 'records', 'musica', 'music', 'eventos', 'events', 'streetwear', 'ropa urbana', 'merch', 'sneakers', 'zapatillas'],
+    directions: [
+      { direction: 'Headline poster', minImages: 0, scene: 'text-fill', header: 'classic', hero: 'typographic', catalog: 'grid', card: 'minimal', fx: 'reveal', signature: 'A wall-sized headline cropped by the viewport edge, set from the real merchant name or offer, then the live drop grid.', footer: 'ink', radius: '0', rhythm: 'tight (space 0.9)', typography: 'Big Shoulders Display display / Space Grotesk text', mobile: 'The headline wraps to three lines at most at 320px; the grid starts within the first screen.', assetPlan: 'Photo-independent; the typography is the poster.', sections: ['opening', 'drop'] },
+      { direction: 'Drop reel', minImages: 2, scene: 'marquee', header: 'floating', hero: 'fullbleed', catalog: 'rail', card: 'overlay', fx: 'grow', signature: 'Marquee of the real product or release names over a full-bleed approved photograph, like a flyposted wall.', footer: 'ink', radius: '0', rhythm: 'tight (space 0.9)', typography: 'Anton display / Chivo text', mobile: 'Rail scrolls by touch; the marquee slows and stops under reduced motion.', assetPlan: 'Two approved photographs; only names that exist in the catalog.', sections: ['opening', 'drop'] },
+      { direction: 'Gig bill', minImages: 1, scene: 'floating-media', header: 'split', hero: 'split', catalog: 'grid', card: 'framed', fx: 'lift', signature: 'An asymmetric bill-poster opening: stacked condensed lines beside one approved image, set like a concert bill.', footer: 'paper', radius: '0', rhythm: 'balanced (space 1)', typography: 'Bebas Neue display / Space Mono text', mobile: 'Lines stack above a single contained image; decorative drift stops for reduced motion.', assetPlan: 'One approved image; never invent dates, venues or line-ups.', sections: ['opening', 'drop', 'info'] },
+    ],
+  },
+  {
+    id: 'magazine-spread', grammars: ['magazine', 'editorial'], purpose: 'A printed-magazine rhythm for books, stationery, food writing and considered goods.',
+    terms: ['libros', 'books', 'libreria', 'bookshop', 'revista', 'magazine', 'papeleria', 'stationery', 'zine'],
+    directions: [
+      { direction: 'Cover story', minImages: 1, scene: 'feature-split', header: 'centered', hero: 'editorial', catalog: 'editorial', card: 'caption', fx: 'none', signature: 'A cover-like opening with a masthead wordmark and one approved photograph, then a feature spread about a real product.', footer: 'paper', radius: '0', rhythm: 'airy (space 1.15)', typography: 'Playfair Display display / Newsreader text', mobile: 'Masthead, then the photograph, then the headline; columns become one reading column.', assetPlan: 'One approved photograph; the feature copy uses supplied facts only.', sections: ['cover', 'catalog', 'feature'] },
+      { direction: 'Feature well', minImages: 3, scene: 'chapters', header: 'split', hero: 'split', catalog: 'grid', card: 'caption', fx: 'reveal', signature: 'StoryChapters paced like a magazine feature well: one approved photograph and one evidenced fact per page.', footer: 'ink', radius: '0', rhythm: 'balanced (space 1)', typography: 'DM Serif Display display / Figtree text', mobile: 'Chapters read in order without pinning.', assetPlan: 'Three approved photographs; never invent an interview or quote.', sections: ['opening', 'catalog', 'feature'] },
+      { direction: 'Contents page', minImages: 0, scene: 'directory', header: 'classic', hero: 'typographic', catalog: 'editorial', card: 'minimal', fx: 'none', signature: 'A table of contents built from the real categories, with page-number-like counts of real products.', footer: 'paper', radius: '0', rhythm: 'balanced (space 1)', typography: 'Libre Caslon Text display / Manrope text', mobile: 'Contents become a single column of tappable rows.', assetPlan: 'Photo-independent; counts come from the live catalog only.', sections: ['contents', 'catalog'] },
+    ],
+  },
+  {
+    id: 'collage-cutout', grammars: ['collage'], purpose: 'Layered, handmade-feeling composition for crafts, toys, gifts, plants and playful goods.',
+    terms: ['artesania', 'artesanias', 'handmade', 'hecho a mano', 'crafts', 'juguetes', 'toys', 'regalos', 'gifts', 'plantas', 'plants', 'flores', 'flowers'],
+    directions: [
+      { direction: 'Scrapbook table', minImages: 2, scene: 'floating-media', header: 'floating', hero: 'split', catalog: 'masonry', card: 'framed', fx: 'grow', signature: 'Approved photographs laid like prints on a table, overlapping at slight angles around the real name.', footer: 'paper', radius: '4-8', rhythm: 'balanced (space 1)', typography: 'Shrikhand display / Nunito text', mobile: 'Prints stack with small offsets; nothing covers text or controls.', assetPlan: 'Two or more approved photographs; keep every product whole.', sections: ['opening', 'catalog'] },
+      { direction: 'Pinned gallery', minImages: 3, scene: 'gallery', header: 'centered', hero: 'editorial', catalog: 'masonry', card: 'overlay', fx: 'reveal zoom', signature: 'A pinned-board Gallery of approved photographs with handwritten-feeling captions from real product names.', footer: 'ink', radius: '4-8', rhythm: 'airy (space 1.15)', typography: 'Young Serif display / Rubik text', mobile: 'The board becomes a two-column grid; captions stay legible.', assetPlan: 'Three or more approved photographs; show only goods the merchant sells.', sections: ['opening', 'catalog', 'board'] },
+      { direction: 'Label sheet', minImages: 0, scene: 'marquee', header: 'classic', hero: 'typographic', catalog: 'grid', card: 'framed', fx: 'lift', signature: 'Real category names set as tilted paper labels around the catalog; no invented artwork.', footer: 'paper', radius: '14-24', rhythm: 'balanced (space 1)', typography: 'Rubik display / Nunito text', mobile: 'Labels straighten into a wrapping row above the grid.', assetPlan: 'Photo-independent; labels come from real categories.', sections: ['opening', 'catalog'] },
+    ],
+  },
+  {
+    id: 'brutalist-raw', grammars: ['brutalist', 'grid'], purpose: 'Raw, structural, high-contrast storefront for tech, tools, skate and experimental brands.',
+    terms: ['tecnologia', 'tech', 'electronica', 'electronics', 'gaming', 'skate', 'gadgets', 'software'],
+    directions: [
+      { direction: 'Spec sheet', minImages: 0, scene: 'directory', header: 'classic', hero: 'typographic', catalog: 'grid', card: 'minimal', fx: 'none', signature: 'Exposed grid lines and monospaced real specifications; the catalog reads like a parts sheet.', footer: 'ink', radius: '0', rhythm: 'dense (space 0.92)', typography: 'Space Mono display / Space Grotesk text', mobile: 'Spec rows stack; no horizontal page scroll.', assetPlan: 'Photo-independent; specifications come from the catalog only.', sections: ['opening', 'catalog'] },
+      { direction: 'Exposed grid', minImages: 1, scene: 'text-fill', header: 'split', hero: 'split', catalog: 'grid', card: 'classic', fx: 'reveal lift', signature: 'A hard-edged split opening with visible grid rules and one oversized statement that fills as it is read.', footer: 'ink', radius: '0', rhythm: 'tight (space 0.9)', typography: 'Unbounded display / Epilogue text', mobile: 'Grid rules collapse to a single column divider.', assetPlan: 'One approved image, shown uncropped.', sections: ['opening', 'catalog', 'statement'] },
+      { direction: 'Product x-ray', minImages: 2, scene: 'scrub-media', header: 'floating', hero: 'fullbleed', catalog: 'spotlight', card: 'framed', fx: 'zoom', signature: 'ScrollScrubHero holding one approved product photograph while labelled real specifications resolve.', footer: 'ink', radius: '0', rhythm: 'balanced (space 1)', typography: 'Syne display / Chivo text', mobile: 'The scrub becomes a static opening with the specifications listed below.', assetPlan: 'Two approved photographs; never invent specifications.', sections: ['opening', 'catalog'] },
+    ],
+  },
+  {
+    id: 'index-archive', grammars: ['index', 'grid'], purpose: 'A numbered archive for vintage, antiques, collections and curated one-off pieces.',
+    terms: ['vintage', 'antiguedades', 'antiques', 'coleccion', 'coleccionables', 'collectibles', 'archivo', 'archive', 'segunda mano', 'thrift'],
+    directions: [
+      { direction: 'Numbered archive', minImages: 0, scene: 'directory', header: 'classic', hero: 'typographic', catalog: 'editorial', card: 'caption', fx: 'none', signature: 'Each real piece gets an archive number and a one-line record, like an auction index.', footer: 'paper', radius: '0', rhythm: 'dense (space 0.92)', typography: 'Bodoni Moda display / Familjen Grotesk text', mobile: 'Index rows keep number, name and price on one line where they fit.', assetPlan: 'Photo-independent; numbers are presentational, never stock claims.', sections: ['index', 'catalog'] },
+      { direction: 'Lot catalogue', minImages: 2, scene: 'gallery', header: 'centered', hero: 'editorial', catalog: 'masonry', card: 'caption', fx: 'zoom', signature: 'A contact-sheet Gallery of approved photographs captioned with real lot names.', footer: 'paper', radius: '0', rhythm: 'airy (space 1.15)', typography: 'Lora display / Outfit text', mobile: 'The sheet becomes a two-column grid.', assetPlan: 'Two or more approved photographs; one-off pieces stay truthful about condition.', sections: ['opening', 'catalog', 'sheet'] },
+      { direction: 'Shelf index', minImages: 1, scene: 'feature-split', header: 'split', hero: 'split', catalog: 'grid', card: 'minimal', fx: 'reveal', signature: 'A shelf-label index beside one approved photograph of the collection.', footer: 'ink', radius: '4-8', rhythm: 'balanced (space 1)', typography: 'Sora display / Bitter text', mobile: 'Photograph first, then the index as rows.', assetPlan: 'One approved photograph of the real collection.', sections: ['opening', 'catalog', 'shelf'] },
+    ],
+  },
 ];
 
 export type SourceCompositionInput = {
   seed?: string; brief?: unknown; instruction?: string; catalogItemCount?: number;
+  /** The chosen concept's DNA layout.grammar; unknown values are ignored. */
+  grammar?: string;
   assets?: ReadonlyArray<{ kind: string; role?: string }>;
 };
 const normalized = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -93,10 +151,15 @@ export function sourceUiCompositions(input: SourceCompositionInput = {}): Source
   const text = normalized(`${brief} ${input.instruction ?? ''}`);
   const imageCount = (input.assets ?? []).filter(asset => asset.kind === 'image' && !['logo', 'reference', 'unused'].includes(asset.role ?? '')).length;
   const seed = input.seed ?? `${brief}|${input.instruction ?? ''}`;
-  const ranked = SOURCE_COMPOSITION_FAMILIES.map(family => ({ family,
-    score: family.terms.reduce((sum, term) => sum + (new RegExp(`(?:^|[^a-z])${term}(?:$|[^a-z])`).test(text) ? 10 : 0), 0)
-      + (family.id === 'catalog-practical' ? 1 + ((input.catalogItemCount ?? 0) > 24 ? 12 : 0) : 0),
-  })).sort((a, b) => b.score - a.score);
+  const ranked = SOURCE_COMPOSITION_FAMILIES.map(family => {
+    const keywords = family.terms.reduce((sum, term) => sum + (new RegExp(`(?:^|[^a-z])${term}(?:$|[^a-z])`).test(text) ? 10 : 0), 0);
+    // The planner already committed to this grammar, so it outweighs a keyword match —
+    // except for a domain-bound family the brief never named.
+    const grammarFits = Boolean(input.grammar) && (!family.domainBound || keywords > 0);
+    return { family, score: keywords
+      + (family.id === 'catalog-practical' ? 1 + ((input.catalogItemCount ?? 0) > 24 ? 12 : 0) : 0)
+      + (grammarFits && family.grammars[0] === input.grammar ? 25 : grammarFits && family.grammars.includes(input.grammar as SourceLayoutGrammar) ? 12 : 0) };
+  }).sort((a, b) => b.score - a.score);
   const primary = ranked[0].family;
   const candidates = ranked.flatMap(({ family }, rank) => family.directions
     .filter(direction => direction.minImages <= imageCount)
@@ -128,19 +191,19 @@ const SCENES: Record<SceneName, { opening?: string; story?: string; imports: rea
   'floating-media': { feel: 'soft', imports: ['FloatingMedia'],
     opening: '<FloatingMedia images={approvedImages} title={merchantHeading} lead={merchantIntro} actions={<Button href="#collection">Ver productos</Button>}/>' },
   'scrub-media': { feel: 'cinematic', imports: ['ScrollScrubHero'],
-    opening: '<ScrollScrubHero poster={approvedHero} eyebrow={merchantEyebrow} title={merchantHeading} lead={merchantIntro} actions={<Button href="#collection">Ver productos</Button>}/>' },
+    opening: '<ScrollScrubHero poster={approvedHero} title={merchantHeading} lead={merchantIntro} actions={<Button href="#collection">Ver productos</Button>}/>' },
   showcase: { feel: 'cinematic', imports: ['ProductShowcase'],
-    story: '<ProductShowcase image={approvedHero} eyebrow={merchantEyebrow} title={actualProductName} body={actualProductFacts} action={<Button href="#collection">Ver la colección</Button>}/>' },
+    story: '<ProductShowcase image={approvedHero} title={actualProductName} body={actualProductFacts} action={<Button href="#collection">Ver la colección</Button>}/>' },
   'parallax-stack': { feel: 'cinematic', imports: ['ParallaxStack'],
     story: '<ParallaxStack images={approvedImages}/>' },
   chapters: { feel: 'soft', imports: ['StoryChapters'],
-    story: '<StoryChapters chapters={[{eyebrow:evidencedStep,title:evidencedStepTitle,body:evidencedStepCopy,image:approvedStepImage}]}/>' },
+    story: '<StoryChapters chapters={[{title:evidencedStepTitle,body:evidencedStepCopy,image:approvedStepImage}]}/>' },
   gallery: { feel: 'soft', imports: ['Gallery'],
     story: '<Gallery images={approvedImages} variant="mosaic"/>' },
   'text-fill': { feel: 'native', imports: ['TextFillStatement'],
     story: '<TextFillStatement>{merchantStatement}</TextFillStatement>' },
   directory: { feel: 'native', imports: ['SectionSequence', 'SectionHead'],
-    story: '<SectionSequence><SectionHead eyebrow={realCategoryLabel} title={realCategoryTitle}/><Text>{evidencedCategoryCopy}</Text></SectionSequence>' },
+    story: '<SectionSequence><SectionHead title={realCategoryTitle}/><Text>{evidencedCategoryCopy}</Text></SectionSequence>' },
   marquee: { feel: 'native', imports: ['Marquee'],
     story: '<Marquee items={realCatalogLabels}/>' },
   // Only honest with two photographs of the same subject the merchant supplied;

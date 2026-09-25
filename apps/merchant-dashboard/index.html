@@ -10,6 +10,10 @@
 <meta name="theme-color" content="#eee7dc">
 <link rel="stylesheet" href="/src/dashboard.css">
 <link rel="stylesheet" href="/src/workspace-design.css">
+<link rel="stylesheet" href="/src/cobros.css">
+<link rel="stylesheet" href="/src/growth.css">
+<link rel="stylesheet" href="/src/proposals.css">
+<link rel="stylesheet" href="/src/contracts.css">
 </head>
 <body>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
@@ -164,6 +168,7 @@
         <label class="sidebar-store-picker" for="sidebarStorePicker">Tienda activa<select id="sidebarStorePicker" aria-label="Tienda activa"><option value="">Selecciona una tienda</option></select></label>
         <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
           <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
+          <a class="dashboard-nav-button" href="#dashboard-growth" data-dashboard-view="growth"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/><path d="M3 21h18"/></svg></span>Crecimiento</a>
           <details class="dashboard-nav-group" data-nav-group="tienda">
             <summary class="dashboard-nav-button dashboard-nav-summary" title="Tu tienda"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/></svg></span>Tu tienda<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
             <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Mi tienda</a>
@@ -178,6 +183,12 @@
             <a class="dashboard-nav-button" href="#dashboard-inbox" data-dashboard-view="inbox"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Inbox</a>
             <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
             <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
+          </details>
+          <details class="dashboard-nav-group" data-nav-group="documentos">
+            <summary class="dashboard-nav-button dashboard-nav-summary" title="Documentos"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg></span>Documentos<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
+            <a class="dashboard-nav-button" href="#dashboard-cobros" data-dashboard-view="cobros"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/></svg></span>Cobros</a>
+            <a class="dashboard-nav-button" href="#dashboard-proposals" data-dashboard-view="proposals"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="m10 14 1.5 1.5L15 12"/></svg></span>Propuestas</a>
+            <a class="dashboard-nav-button" href="#dashboard-contracts" data-dashboard-view="contracts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v6"/><path d="M14 3v5h5"/><path d="M7 3v18h6"/><path d="M15 21l6-6-2-2-6 6v2z"/></svg></span>Contratos</a>
           </details>
           <details class="dashboard-nav-group" data-nav-group="crecer">
             <summary class="dashboard-nav-button dashboard-nav-summary" title="Crecer"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg></span>Crecer<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
@@ -463,6 +474,10 @@
       </div>
     </section>
 
+    <section class="cobros-view" id="cobrosSection" data-dashboard-page="cobros" aria-label="Cobros" hidden><div id="cobrosRoot"></div></section>
+    <section class="growth-view" id="growthSection" data-dashboard-page="growth" aria-label="Crecimiento" hidden><div id="growthRoot"></div></section>
+    <section class="proposals-view" id="proposalsSection" data-dashboard-page="proposals" aria-label="Propuestas" hidden><div id="proposalsRoot"></div></section>
+    <section class="contracts-view" id="contractsSection" data-dashboard-page="contracts" aria-label="Contratos" hidden><div id="contractsRoot"></div></section>
     <section class="block charge-links-workspace" id="chargeLinksSection" data-dashboard-page="charge-links">
       <header class="charge-links-banner" aria-labelledby="chargeLinksBannerTitle">
         <div class="charge-links-banner-copy">

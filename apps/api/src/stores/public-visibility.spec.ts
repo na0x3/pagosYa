@@ -129,6 +129,15 @@ describe('First publication visibility', () => {
   });
 
 
+  it('serves the store DNA with the public store, seeded when the published config has none', async () => {
+    const { publishing, catalog } = setup();
+    await publishing.publish('merchant-1', 'store-1', 1, 0);
+    const { sourceRuntimeDna } = await import('../storefront-source/source-dna');
+    expect((await catalog.getStorePublic('nueva', { trackView: false })).dna).toEqual(sourceRuntimeDna(undefined, 'store-1'));
+    // No confirmation motif in that config: the checkout renders its confirmation as before.
+    expect((await catalog.getStorePublic('nueva', { trackView: false })).confirmationMotif).toBeNull();
+  });
+
   it('reports a never-published store as inactive and cannot expose it by toggling visibility', async () => {
     const { publishing, row, prisma } = setup();
     const { publicationState } = await import('../storefront-source/source-publishing.service');

@@ -14,17 +14,32 @@ describe('experiment evidence', () => {
 });
 
 import { SourcePublishingService } from './source-publishing.service';
-it('keeps merchant MP4 video bytes in a published snapshot while omitting private export tools', async () => {
-  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) } };
+it('serves merchant MP4 video bytes from the asset route while omitting private export tools', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'a'.repeat(64) }) } };
   const service = new SourcePublishingService(prisma);
-  jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [
+  jest.spyOn(service, 'snapshot').mockImplementation(async () => ({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [
     { path: 'index.html', content: '<video controls src="assets/ritual.mp4"></video>', encoding: 'utf8' },
     { path: 'assets/ritual.mp4', content: Buffer.from('test-video').toString('base64'), encoding: 'base64' },
     { path: 'server.mjs', content: 'private export server', encoding: 'utf8' },
-  ] });
+  ] }));
   const site = await service.publicSite('demo');
-  expect(site.snapshot?.files.find(f => f.path === 'assets/ritual.mp4')?.content).toBe(Buffer.from('test-video').toString('base64'));
+  expect(site.snapshot?.files.find(f => f.path === 'assets/ritual.mp4')).toEqual({ path: 'assets/ritual.mp4', encoding: 'url', content: '' });
+  await expect(service.publicAsset('demo', '1-aaaaaaaaaaaa', 'assets/ritual.mp4')).resolves.toMatchObject({ contentType: 'video/mp4' });
   expect(site.snapshot?.files.some(f => f.path === 'server.mjs')).toBe(false);
+});
+
+import { sourceRuntimeDna } from './source-dna';
+it('gives a published revision without a DNA a seeded one, and leaves an existing DNA alone', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 'store-7', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'b'.repeat(64) }) } };
+  const service = new SourcePublishingService(prisma);
+  const config = (value: object) => ({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(value)};`, encoding: 'utf8' as const });
+  const served = async (value: object) => {
+    jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [{ path: 'index.html', content: '<main></main>', encoding: 'utf8' }, config(value)] } as any);
+    const site = await service.publicSite('demo');
+    return JSON.parse(site.snapshot!.files.find(f => f.path === 'config.js')!.content.match(/=\s*([\s\S]*?);?\s*$/)![1]);
+  };
+  expect((await served({ productPageStyle: 'dense', data: {} })).dna).toEqual(sourceRuntimeDna(undefined, 'store-7', 'dense'));
+  expect((await served({ dna: { button: 'pill' } })).dna).toEqual({ button: 'pill' });
 });
 
 import { createHash } from 'node:crypto';
@@ -261,4 +276,19 @@ describe('versioned trusted runtime publications', () => {
     expect(prisma.store.update).toHaveBeenCalledTimes(writes);
     expect(publications).toHaveLength(history);
   });
+});
+
+it('serves the sanitised DNA motif drawings with the public site, as text the preview inlines', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'c'.repeat(64) }) } };
+  const service = new SourcePublishingService(prisma);
+  const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h20"/></svg>';
+  jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [
+    { path: 'index.html', content: '<img src="motifs/sol.svg" alt="" aria-hidden="true">', encoding: 'utf8' },
+    { path: 'motifs/sol.svg', content: drawing, encoding: 'utf8' },
+    { path: 'assets/other.svg', content: drawing, encoding: 'utf8' },
+  ] } as any);
+  const site = await service.publicSite('demo');
+  expect(site.snapshot?.files.find(f => f.path === 'motifs/sol.svg')).toEqual({ path: 'motifs/sol.svg', content: drawing, encoding: 'utf8' });
+  // Only motif drawings, which every save sanitises; other SVG files stay private as before.
+  expect(site.snapshot?.files.some(f => f.path === 'assets/other.svg')).toBe(false);
 });

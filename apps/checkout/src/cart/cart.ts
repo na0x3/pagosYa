@@ -2,6 +2,7 @@
 import { pickedExtras, pickGroups, parseCartItemKey, restoreCart, persistCart } from "../cart-state";
 import { StoreItem, Store } from "../api";
 import { state } from "../state";
+import { addedProducts, productQuantities } from "../store-analytics";
 import { formatAmount } from "../ui/html";
 
 
@@ -171,6 +172,9 @@ export function loadCart(store: Store): void {
 }
 export function saveCart(store: Store): void {
   const count = cartCount(); if (count > state.funnelCartCount) state.activeStoreFunnel?.track('add_to_cart');
+  const quantities = productQuantities(cart, key => parseCartItemKey(key).paymentLinkId);
+  for (const productId of addedProducts(state.analyticsCartQuantities, quantities)) state.activeStoreAnalytics?.record({ type: 'add_to_cart', productId });
+  state.analyticsCartQuantities = quantities;
   state.funnelCartCount = count; persistCart(store.storeId, cart);
 }
 

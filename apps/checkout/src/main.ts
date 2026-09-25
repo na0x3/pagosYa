@@ -1,6 +1,8 @@
 import { mountVerificationPage } from './verification';
 import { sourceCanConfigureProduct } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
+import { createStoreAnalytics, productQuantities } from './store-analytics';
+import { parseCartItemKey } from './cart-state';
 import { markPrivateStorePage } from './store-seo';
 import '@pagosya/storefront-kit/kit/retention.js';
 import {
@@ -19,16 +21,19 @@ import { sourcePaymentPreview, renderForm, enterPaymentFlow } from "./checkout/p
 import { escapeHtml } from "./ui/html";
 import { storefrontRouteFromLocation, productIdFromLocation } from "./storefront/routes";
 import { renderOrderTracking } from "./orders/order-tracking";
+import { renderCobroPage } from "./documents/cobro-page";
 import { renderDebtCollection } from "./checkout/debt-collection";
 import { suppressStoreViewForMerchant } from "./storefront/merchant-views";
 import { standaloneStorePreviewPatch } from "./preview-editor/patch";
-import { loadCart, cartCount } from "./cart/cart";
+import { loadCart, cartCount, cart } from "./cart/cart";
 import { renderStoreRoute, restoreCatalogScroll, restoreCatalogPosition, catalogScrollByStore } from "./storefront/navigation";
 import { ICON_X } from "./ui/icons";
 import { bindStoreEditorCanvas, listenForStoreEditorMessages } from "./preview-editor/bridge";
 import { storefrontPages } from "./storefront/navigation";
 import { renderProductPage } from "./storefront/product-page";
 import { renderStore } from "./storefront/store-page";
+import { rememberStoreDna } from "./checkout-branding";
+import { rememberConfirmationMotif } from "./checkout-motif";
 
 async function main() {
   const verificationRoute = /^\/verificar\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
@@ -36,6 +41,15 @@ async function main() {
     let slug = '';
     try { slug = decodeURIComponent(verificationRoute); } catch {}
     await mountVerificationPage(slug, app);
+    return;
+  }
+  // A cobro a merchant sent (business document link, D1): its own page, no store scripts.
+  const cobroToken = /^\/d\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
+  if (cobroToken) {
+    let token = '';
+    try { token = decodeURIComponent(cobroToken); } catch {}
+    await renderCobroPage(token);
+    observeResize(app);
     return;
   }
   const intlReturn = parseReturnParams(window.location.search);
@@ -141,6 +155,8 @@ async function main() {
   if (linkSlug && !clientSecret) {
     try {
       const store = await fetchStore(linkSlug, { preview: suppressStoreViewForMerchant(linkSlug) });
+      rememberStoreDna(store.dna);
+      rememberConfirmationMotif(store.confirmationMotif);
       const proposalPatch = standaloneStorePreviewPatch();
       const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;
       const routedProduct = renderedStore.items.find(item => item.id === productIdFromLocation());
@@ -152,8 +168,12 @@ async function main() {
       }
       state.activeStoreFunnel = renderedStore.publishedSourceRevision ? createStoreFunnel(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug)) : null;
       state.activeStoreFunnel?.track('visit');
+      const funnel = state.activeStoreFunnel;
+      state.activeStoreAnalytics = funnel ? createStoreAnalytics(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug), () => funnel.sessionId()) : null;
+      state.activeStoreAnalytics?.record({ type: 'page_view', path: routedProduct ? 'product.html' : 'index.html' });
       loadCart(renderedStore);
       state.funnelCartCount = cartCount();
+      state.analyticsCartQuantities = productQuantities(cart, key => parseCartItemKey(key).paymentLinkId);
       renderStoreRoute(linkSlug, renderedStore);
       restoreCatalogScroll(0);
       observeResize(app);

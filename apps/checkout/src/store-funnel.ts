@@ -35,5 +35,6 @@ export function createStoreFunnel(slug: string, preview: boolean) {
       } catch { sent.delete(event); /* Analytics must never interrupt buying. */ }
     });
   }
-  return { track, token: () => { session(); return allowed() ? token : undefined; } };
+  // The session id is shared with store analytics (G1) so events and funnel visits carry the same hash.
+  return { track, token: () => { session(); return allowed() ? token : undefined; }, sessionId: () => session() };
 }

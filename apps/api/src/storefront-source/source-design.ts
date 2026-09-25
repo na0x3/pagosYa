@@ -4,12 +4,12 @@ import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { SOURCE_VISUAL_ASSET_DIRECTION } from './source-visual-assets';
 import { SOURCE_SCROLL_FEELS, type SourceScrollFeel } from './source-motion';
+import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
 
 export const SOURCE_DESIGN_FILE = 'design-direction.json';
 export const SOURCE_PRODUCT_PRESENTATION_DIRECTION = `The platform renders every product page and quick view inside the empty data-pagosya-product-page mount, in the editorial, dense, image-led or story-led presentation chosen by layout.productPage. Image-led uses an expansive uncropped photo beside purchasing details; story-led places the photo above a readable product story and purchasing details. Do not write CSS for [data-pagosya-product], [data-pagosya-product-page] or any .product-detail__ class; the runtime ignores those rules. The product page takes its identity from the tokens in :root (background, foreground, accent, accent-foreground, surface, border, radius, body-font, heading-font), so choose them with the product page in mind: the accent fills the purchase button and must contrast with accent-foreground, and heading-font sets the product title. Keep the header and footer of product.html consistent with the homepage. Header search and cart actions are icon-only buttons with accessible names, and the cart shows its count in a small badge. Never place a second static product configurator beside the mount, and never pad a product with fabricated reviews, certifications, benefits, shipping guarantees or nutrition claims. On local edits apply this guidance only to the requested scope.`;
 const fields = ['name', 'premise', 'opening', 'flow', 'typography', 'imagery', 'mobile'] as const;
-export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
-export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
+export { SOURCE_PRODUCT_PAGE_STYLES, type SourceProductPageStyle } from './source-dna';
 export type SourceDesignLayout = { sections: string[]; catalogSection: string; standaloneIntro: boolean; productsInOpening: boolean; productPage?: SourceProductPageStyle };
 export const SOURCE_STORY_ROLES = ['opening', 'proof', 'offer', 'difference', 'trust', 'action'] as const;
 export const SOURCE_STORY_MEDIA = ['none', 'hero', 'product', 'editorial'] as const;
@@ -23,13 +23,13 @@ export type SourceMotionChoreography = {
   mode: 'subtle' | 'expressive'; scrollFeel: SourceScrollFeel; entrance: typeof SOURCE_ENTRANCE_KINDS[number];
   scenes: Array<{ section: string; kind: typeof SOURCE_SCENE_KINDS[number]; intensity: 1 | 2 | 3 }>;
 };
-export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography };
+export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna };
 export type SourceDesign = { concepts: SourceDesignConcept[]; selected: number; selection?: { source: 'planner' | 'forced'; rationale: string | null } };
 export const sourceDesignSchema = {
   type: 'object', additionalProperties: false, required: ['concepts', 'selected'], properties: {
     selected: { type: 'integer', minimum: 0, maximum: 2 },
     concepts: { type: 'array', minItems: 3, maxItems: 3, items: {
-      type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion'],
+      type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion', 'dna'],
       properties: { ...Object.fromEntries(fields.map(field => [field, { type: 'string', minLength: 1, maxLength: field === 'name' ? 80 : 500 }])),
         layout: { type: 'object', additionalProperties: false, required: ['sections', 'catalogSection', 'standaloneIntro', 'productsInOpening', 'productPage'], properties: {
           productPage: { type: 'string', enum: [...SOURCE_PRODUCT_PAGE_STYLES] },
@@ -37,7 +37,7 @@ export const sourceDesignSchema = {
           catalogSection: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, standaloneIntro: { type: 'boolean' }, productsInOpening: { type: 'boolean' },
         } },
         story: { type: 'object', additionalProperties: false, required: ['promise', 'eyebrow', 'headline', 'support', 'primaryAction', 'beats'], properties: {
-          promise: { type: 'string', minLength: 1, maxLength: 140 }, eyebrow: { type: 'string', minLength: 1, maxLength: 40 }, headline: { type: 'string', minLength: 1, maxLength: 100 }, support: { type: 'string', minLength: 1, maxLength: 240 }, primaryAction: { type: 'string', minLength: 1, maxLength: 60 },
+          promise: { type: 'string', minLength: 1, maxLength: 140 }, eyebrow: { type: 'string', minLength: 0, maxLength: 40 }, headline: { type: 'string', minLength: 1, maxLength: 100 }, support: { type: 'string', minLength: 1, maxLength: 240 }, primaryAction: { type: 'string', minLength: 1, maxLength: 60 },
           beats: { type: 'array', minItems: 1, maxItems: 12, items: { type: 'object', additionalProperties: false, required: ['section', 'role', 'headline', 'media'], properties: {
             section: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, role: { type: 'string', enum: [...SOURCE_STORY_ROLES] }, headline: { type: 'string', minLength: 1, maxLength: 100 }, media: { type: 'string', enum: [...SOURCE_STORY_MEDIA] },
           } } },
@@ -48,6 +48,7 @@ export const sourceDesignSchema = {
             section: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, kind: { type: 'string', enum: [...SOURCE_SCENE_KINDS] }, intensity: { type: 'integer', minimum: 1, maximum: 3 },
           } } },
         } },
+        dna: SOURCE_DNA_SCHEMA,
       },
     } },
   },
@@ -65,7 +66,8 @@ function fitProse(text: string, max: number) {
   return (word >= max * 0.5 ? cut.slice(0, word) : cut).trim();
 }
 
-export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false): SourceDesign {
+/** dnaOptions.seed (the store id) seeds field defaults per concept; repairs collects what was fixed in code. */
+export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[] } = {}): SourceDesign {
   const fail = (detail = '') => { throw new BadGatewayException('La propuesta necesita tres composiciones distintas y una dirección de diseño válida.' + (detail ? ' ' + detail : '')); };
   if (!value || !Number.isInteger(value.selected) || value.selected < 0 || value.selected > 2 || (selected !== undefined && value.selected !== selected)
     || !Array.isArray(value.concepts) || value.concepts.length !== 3) return fail();
@@ -93,7 +95,9 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
     if (requireNarrative || story !== undefined || choreography !== undefined) {
       if (!result.layout || !story || !choreography) return fail(`concepts[${index}]: story, motion y layout deben planearse juntos.`);
       const short = (text: unknown, max: number) => typeof text === 'string' && text.trim().length > 0 && text.trim().length <= max;
-      if (!short(story.promise, 140) || !short(story.eyebrow, 40) || !short(story.headline, 100) || !short(story.support, 240) || !short(story.primaryAction, 60)
+      // The eyebrow is optional: an empty (or, in older plans, absent) one is the default, not a slip.
+      const eyebrow = story.eyebrow ?? '';
+      if (!short(story.promise, 140) || typeof eyebrow !== 'string' || eyebrow.trim().length > 40 || !short(story.headline, 100) || !short(story.support, 240) || !short(story.primaryAction, 60)
         || !Array.isArray(story.beats) || !story.beats.length || story.beats.length > 12) return fail(`concepts[${index}].story: completa promesa, apertura, acción y 1–12 beats breves.`);
       const beatSections = story.beats.map((beat: any) => beat?.section);
       const exactStory = JSON.stringify(beatSections) === JSON.stringify(result.layout.sections);
@@ -111,8 +115,20 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel) || !SOURCE_ENTRANCE_KINDS.includes(choreography.entrance)
         || !Array.isArray(scenes) || scenes.length > 2 || scenes.some((scene: any) => !result.layout!.sections.includes(scene?.section) || !SOURCE_SCENE_KINDS.includes(scene?.kind) || ![1, 2, 3].includes(scene?.intensity))
         || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa entrada válida y hasta dos escenas en sections distintas.`);
-      result.story = { promise: story.promise.trim(), eyebrow: story.eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: beat.headline.trim(), media: beat.media })) };
+      result.story = { promise: story.promise.trim(), eyebrow: eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: beat.headline.trim(), media: beat.media })) };
       result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: choreography.entrance, scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
+    }
+    // Planned concepts always carry a DNA; saved ones only when they already had it, so old revisions stay byte-equal.
+    if (requireLayout || concept.dna !== undefined) {
+      // A bad DNA is repaired in code and reported: it never costs the paid planning retry.
+      const { dna, repairs } = normalizeDna(concept.dna, dnaOptions.seed !== undefined ? `${dnaOptions.seed}:${index}` : result.name);
+      // One source for the product page: a DNA product the model chose wins; a defaulted one follows the planned layout.
+      if (result.layout?.productPage) {
+        if (SOURCE_PRODUCT_PAGE_STYLES.includes(concept.dna?.surfaces?.product)) result.layout.productPage = dna.surfaces.product;
+        else dna.surfaces.product = result.layout.productPage;
+      }
+      result.dna = dna;
+      dnaOptions.repairs?.push(...repairs.map(repair => `concepts[${index}].${repair}`));
     }
     return result;
   });
@@ -251,7 +267,7 @@ export const SOURCE_SPACING_SCALE_FACTOR = { min: 0.85, max: 1.25 } as const;
 export const SOURCE_GAP_CONTRAST_MIN = 6;
 export const SOURCE_BODY_MEASURE_CH = { min: 46, max: 62 } as const;
 /** Exactly one accent, and only these slots may carry it. */
-export const SOURCE_ACCENT_SLOTS = ['announcement bar fill', 'rating marks', 'eyebrow text', 'selected-state ring or fill', 'primary action fill'] as const;
+export const SOURCE_ACCENT_SLOTS = ['announcement bar fill', 'rating marks', 'small label text', 'selected-state ring or fill', 'primary action fill'] as const;
 export const SOURCE_HAIRLINES_PER_SCREEN_MAX = 3;
 export const SOURCE_HAIRLINE_INK_PERCENT = 14;
 export const SOURCE_MEDIA_TO_CONTROL_RADIUS = { min: 1.2, max: 2.0 } as const;
@@ -262,7 +278,7 @@ export const SOURCE_TYPE_ROLE_DIRECTION = `Type system. Start with five useful r
 - display: default titles at ${SOURCE_DISPLAY_BODY_RATIO.min}-${SOURCE_DISPLAY_BODY_RATIO.max}x body, weight 350-500 for a restrained editorial composition. An expressive or poster concept may use substantially larger type and weight 600-800 when the actual font supports it; specify responsive clamp, line breaks and a mobile size that fits at 320px. Keep line-height appropriate to the typeface and letter-spacing never below -0.04em.
 - subhead: optional supporting line, normal or italic according to the brand, same family or the serif partner, around 1.05-1.25x body. Omit it when it repeats the heading.
 - body: start around 16px desktop and mobile, line-height 1.5-1.8 suited to the language and measure, max-width ${SOURCE_BODY_MEASURE_CH.min}-${SOURCE_BODY_MEASURE_CH.max}ch for prose. Short interface labels and large editorial introductions can use a different measured width.
-- label: eyebrows, option legends, breadcrumbs and announcements at 10.5-12px, uppercase, letter-spacing 0.10-0.20em, weight 500-600.
+- label: option legends, breadcrumbs and announcements at 10.5-12px, often uppercase, letter-spacing 0.10-0.20em, weight 500-600. A small label above a heading is optional and rare, never a default for every section.
 - numeric: prices, counters, quantities and spec values with font-variant-numeric:tabular-nums; price ${SOURCE_NUMERIC_PRICE_RATIO.editorial} body in editorial concepts and ${SOURCE_NUMERIC_PRICE_RATIO.dense} in dense ones.
 Check scale against the actual heading and longest product name. The default display:body band is not a maximum: a short theatrical headline can be larger, while product names and controls must wrap cleanly. Never clip text or hide overflow to simulate fit.
 Create hierarchy with size, measure, colour and weight as the concept requires. Start with at most two weights per family; bold lettering is appropriate for expressive brands. Italic is optional, never a universal signature. Use supported font styles instead of forcing a faux italic.
@@ -294,7 +310,11 @@ ${SOURCE_ICON_DIRECTION}
 Build the mobile concept with equal care: retain its distinguishing imagery/composition, visible navigation and buying action. Content may reflow substantially rather than simply shrinking the desktop. Use natural customer-facing copy about products and shopping. Do not describe runtime hooks, generated capability, API tokens, schemas or “real options” in storefront copy. Every authored link or control must work. Keep real content visible without animation. Use reduced-motion alternatives and keyboard-accessible controls.
 Before returning files, review the implementation against the selected concept: actual catalog selectors exist, imagery is used with its intended role, sections contain meaningful content, mobile retains the identity, and product/checkout share the visual language. Resolve mismatches in the code. Do not claim browser verification: Studio separately inspects the rendered result.`;
 
-export const SOURCE_STORY_MOTION_CONTRACT = `For each concept, commit to story and motion objects before writing code. story turns the page into one coherent argument: a short promise; an opening eyebrow of roughly 2–5 words, headline of roughly 3–9 words, one or two supporting sentences and one primary action; then one beat for every layout section in the same order. Each beat states its role, truthful headline and media role. The catalog/principal-content beat must prove or present the offer. Do not repeat the opening headline in later beats or invent claims. motion names the saved choreography: subtle or expressive, native/soft/cinematic scroll feel, one clear branded entrance and up to two section scenes. The selected concept should feel bold: reveal the actual merchant wordmark before the page, then use two different purposeful scene types across different story sections when the layout has at least two sections. A conventional text column beside one static image is not a signature opening; compose scale, cropping, layers and motion into a recognizable first scene. Use scrub-media only with an approved local poster/video and always keep a static mobile/reduced-motion reading order. Use parallax-stack only for approved imagery. Keep motion off commerce controls, forms and long body copy.`;
+/** Stock patterns that make stores look alike; the concept may still argue for one. */
+export const SOURCE_STOCK_PATTERNS = 'Avoid these stock patterns unless the concept argues for one: an uppercase eyebrow above every heading; a centred hero with two buttons; three icon-and-text columns; a generic "Why choose us" block; a testimonial carousel without real reviews.';
+
+export const SOURCE_STORY_MOTION_CONTRACT = `For each concept, commit to story and motion objects before writing code. story turns the page into one coherent argument: a short promise; an optional eyebrow (leave it empty unless the concept argues for a small label), a headline of roughly 3–9 words, one or two supporting sentences and one primary action; then one beat for every layout section in the same order. Each beat states its role, truthful headline and media role. The catalog/principal-content beat must prove or present the offer. Do not repeat the opening headline in later beats or invent claims. motion names the saved choreography: subtle or expressive, native/soft/cinematic scroll feel, one clear branded entrance and up to two section scenes. The selected concept should feel bold: reveal the actual merchant wordmark before the page, then use two different purposeful scene types across different story sections when the layout has at least two sections. A conventional text column beside one static image is not a signature opening; compose scale, cropping, layers and motion into a recognizable first scene. Use scrub-media only with an approved local poster/video and always keep a static mobile/reduced-motion reading order. Use parallax-stack only for approved imagery. Keep motion off commerce controls, forms and long body copy.
+${SOURCE_STOCK_PATTERNS}`;
 
 /** Layout-only control arm for matched benchmarks. Production generation uses SOURCE_DESIGN_CONTRACT. */
 export const SOURCE_LAYOUT_CONTRACT = `For each concept, commit to the layout object before writing code. layout.productPage chooses the platform product page style: "dense" for products bought on specifications (electronics, tools, appliances, vehicles, technical gear), "editorial" for a balanced photo/details composition, "image-led" for strong product photography with a compact purchase column, or "story-led" for a large photo followed by a readable product narrative and purchasing details. Keep real purchasing controls and product photos; never fabricate story claims. layout.sections lists the invented IDs of the direct content blocks inside main, in exact order (1–12 blocks, no required count). layout.catalogSection is the ID of the block containing the real data-pagosya-catalog. Optional runtime contact/comeback/subscribe slots may sit outside these content blocks. Every other direct content element in main must be one of the listed blocks. When the merchant asks for tabs, separate views or distinct sections, list every tab panel or view as its own block in layout.sections, in navigation order; the implementation keeps them all mounted and toggles visibility. When standaloneIntro=false, layout.sections[0] MUST equal layout.catalogSection. Put the masthead/header outside main. The catalog block is first and must not contain a disguised full-screen introduction: compact brand/context and immediately purchasable products lead. For this catalog-first choice, the actual catalog must begin within the first 320 CSS pixels of the document at both desktop and mobile; use a compact masthead or place intro beside products, not a large nested headline above them. productsInOpening means a real product name, price AND add action are visible without scrolling at BOTH 1280x844 and 390x844. This is a checked promise, not prose. Set the booleans honestly to match the concept. A photo/wordmark-led concept may have a standalone intro; a menu-led concept need not. The three concepts must differ in at least two meaningful structural choices (opening, product presentation, density, alignment, typography hierarchy, story sequence); explain those contrasts in their premises. Use the merchant's precise choices first. Do not produce three editorial-serif headline/catalog/footer variations. Give each concept its own visual grammar; type-led, image-led, densely useful and spacious compositions are all available. Keep a clearly labelled Mi pedido button and count visible in the mobile header outside collapsed navigation. Do not hide purchasing controls in a menu. Match product and checkout surfaces to the selected typography, geometry and spacing; empty photo galleries and empty status boxes must take no space. Use semantic product headings and aria-hidden on decorative marks. Do not insert the same emoji or fake sequential number into every product. Leave absent product imagery out; brand illustration belongs to the composition, not a pretend product thumbnail. For optional product images use a data-product-media wrapper; the runtime hides it when no image exists and marks the product data-no-image. Collapse any reserved media column for [data-no-image], rather than leaving blank tiles. For every product composition, place the actual name, price and add action as a coherent group. When a featured product uses multiple grid rows, explicitly place media, copy and purchase areas; do not let auto-placement put the price under the image in a different column from its name. Use minmax(0,1fr), min-width:0 and wrapping purchase actions where necessary. At 320px, every purchase control must fit its container with a comfortable 44px hit area. Never hide overflow to conceal a clipped purchase action. Mark separate product artwork with data-product-decoration and aria-hidden=true. Size CSS/SVG drawings against the available column width, including pseudo-elements; transform:scale alone does not remove intrinsic grid sizing. Keep decorative artwork in its own layout space; on mobile it must not overlap headings, copy or controls. Keep display letter-spacing at or above -0.04em and preserve open counters and clear word spaces.
@@ -302,3 +322,50 @@ ${SOURCE_CARD_AND_MASTHEAD_DIRECTION}
 Action hierarchy must make sense for the selected concept and merchant brief. Navigation uses real anchors and state changes use buttons. Keep purchasing accessible through the experience; do not invent destinations or use inactive controls.`;
 
 export const SOURCE_DESIGN_CONTRACT = `${SOURCE_STORY_MOTION_CONTRACT}\n${SOURCE_LAYOUT_CONTRACT}`;
+
+const EYEBROW_CLASS = /(?:^|[\s_-])(?:eyebrow|kicker|overline)(?:$|[\s_-])/i;
+const EYEBROW_PROP = /\beyebrow=(?:"[^"]*\S[^"]*"|'[^']*\S[^']*'|\{(?!\s*(?:''|""|``|null|undefined)\s*\})[^}]+\})/;
+const CLASS_ATTRIBUTE = /\bclass(?:Name)?=(?:"([^"]*)"|'([^']*)'|\{\s*['"`]([^'"`]*)['"`]\s*\})/g;
+const HEADING = /<(?:h[1-6]\b|Heading\b|Display\b)/i;
+const pixels = (value: string, unit: string) => Number(value) * (unit === 'px' ? 1 : 16);
+
+/** Classes whose CSS reads as an eyebrow: uppercase, positively tracked and, when a size is set, small. */
+function eyebrowCssClasses(css: string): Set<string> {
+  const classes = new Set<string>();
+  for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/text-transform\s*:\s*uppercase/i.test(body)) continue;
+    const tracking = body.match(/letter-spacing\s*:\s*(\d*\.?\d+)\s*(em|rem|px)/i);
+    if (!tracking || Number(tracking[1]) <= 0) continue;
+    const size = body.match(/font-size\s*:\s*(\d*\.?\d+)\s*(px|rem|em)/i);
+    if (size && pixels(size[1], size[2].toLowerCase()) > 14) continue;
+    for (const [, name] of selector.matchAll(/\.([A-Za-z_][\w-]*)/g)) classes.add(name);
+  }
+  return classes;
+}
+
+/** Sections (HTML <section> or the kit's <Section>) whose first heading is preceded by an eyebrow-like label.
+ * Regex-based and forgiving: it is a soft signal for guidance, never a gate, and never throws. */
+export function sourceEyebrowSections(files: SourceProjectFileDto[]): number {
+  try {
+    const text = files.filter(file => file.encoding !== 'base64');
+    const cssClasses = eyebrowCssClasses(text.filter(file => file.path.endsWith('.css')).map(file => file.content).join('\n'));
+    let count = 0;
+    for (const file of text.filter(candidate => /\.(html|tsx|jsx)$/.test(candidate.path))) {
+      for (const chunk of file.content.split(/<section\b/i).slice(1)) {
+        const section = chunk.split(/<\/section\s*>/i)[0];
+        const heading = section.search(HEADING);
+        const before = heading < 0 ? section : section.slice(0, heading);
+        const labelled = EYEBROW_PROP.test(section) || /<Eyebrow\b/.test(before)
+          || [...before.matchAll(CLASS_ATTRIBUTE)].some(match => (match[1] ?? match[2] ?? match[3] ?? '').split(/\s+/).some(name => name && (EYEBROW_CLASS.test(name) || cssClasses.has(name))));
+        if (labelled && (heading >= 0 || EYEBROW_PROP.test(section))) count++;
+      }
+    }
+    return count;
+  } catch { return 0; }
+}
+
+/** Guidance (not a failure) when more than two sections carry an eyebrow: the stock pattern this sub-project removes. */
+export function sourceEyebrowNote(files: SourceProjectFileDto[]): string | null {
+  const count = sourceEyebrowSections(files);
+  return count > 2 ? `Stock pattern: ${count} sections put a small uppercase label (eyebrow) above their heading. Keep at most one or two where the concept earns them; let the rest open with the heading itself or another device.` : null;
+}

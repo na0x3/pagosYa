@@ -24,6 +24,7 @@ import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRa
 import { LimitsService } from "../limits/limits.service";
 import { LimitsWarningService } from "../limits/limits-warning.service";
 import { InboxService } from "../inbox/inbox.service";
+import { markBusinessDocumentPaid } from "../business-documents/cobro-payment";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -682,6 +683,8 @@ export class PaymentIntentsService {
           where: { paymentIntentId, status: "DUE" },
           data: { status: "PAID", paidAt: new Date() },
         });
+        // A cobro (business document) paid through its public link; never throws (see the helper).
+        await markBusinessDocumentPaid(tx, updated);
         await tx.appointment.updateMany({
           where: { depositPaymentIntentId: paymentIntentId, status: "PENDING" },
           data: { status: "CONFIRMED", holdExpiresAt: null },

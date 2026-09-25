@@ -8,6 +8,13 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { sourceProjectDigest, sourceProjectSnapshot, type SourceProjectSnapshot } from './source-project';
 import { sourceMotionMode, withSourceMotion } from './source-motion';
+import { withSeededDna } from './source-dna';
+import { isSourceMotifFile } from './source-motifs';
+
+const PUBLIC_ASSET = /\.(png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i;
+const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', mp4: 'video/mp4', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf' };
+/** Published revisions are immutable, so their decoded media can be cached by store and revision. */
+const ASSET_CACHE_REVISIONS = 12;
 
 export function experimentEvidence(a: { visitors: number; buyers: number }, b: { visitors: number; buyers: number }, startedAt: Date, now = new Date(), truncated = false) {
   const interval = (n: number, x: number) => {
@@ -179,15 +186,67 @@ export class SourcePublishingService {
       }
       revision = visit.variant === 'B' ? experiment.variantRevision : experiment.controlRevision; visitToken = visit.token;
     }
-    const snapshot = await this.snapshot(store.id, revision);
+    const { snapshot, files } = await this.publicRevisionFiles(store.id, revision, store.publishedRuntimeDigest);
+    // Export tooling is private. Only the selected public revision's browser assets leave the API.
+    const assetPath = `/stores/public/${encodeURIComponent(slug)}/source-site/assets/${await this.assetVersion(store.id, revision)}/`;
+    // Stores published before the DNA existed get one seeded by the store id, without regenerating.
+    const publicFiles = withSeededDna(files, store.id)
+      // DNA motif drawings travel as text (every save sanitises them); the preview inlines them for a hero <img>.
+      .filter(f => (/\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) || isSourceMotifFile(f.path) && f.encoding !== 'base64') && !['server.mjs', 'build.mjs'].includes(f.path))
+      // Binary media is served by publicAsset; the site JSON only names it.
+      .map(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path) ? { path: f.path, encoding: 'url' as const, content: '' } : f);
+    return { published: true, revision, visitToken, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };
+  }
+
+  /** One in-flight load per revision: a burst of first requests shares it instead of each decoding the snapshot. */
+  private readonly assetCache = new Map<string, Promise<Map<string, { bytes: Buffer; etag: string }>>>();
+
+  /** The files a visitor receives: the revision merged with its trusted runtime. Site JSON and asset route share it. */
+  private async publicRevisionFiles(storeId: string, revision: number, runtimeDigest: string | null) {
+    const snapshot = await this.snapshot(storeId, revision);
     // Hosted publications keep their trusted kit even after a deployment; previews use the current kit.
-    const runtime = store.publishedRuntimeDigest
-      ? await this.prisma.sourceRuntimeBundle.findUniqueOrThrow({ where: { digest: store.publishedRuntimeDigest } })
+    const runtime = runtimeDigest
+      ? await this.prisma.sourceRuntimeBundle.findUniqueOrThrow({ where: { digest: runtimeDigest } })
       : null;
     const { files } = runtime
       ? await withSourceRuntime(snapshot, { digest: runtime.digest, files: runtime.files as SourceRuntimeFiles })
       : await currentSourceRuntime(snapshot);
-    // Export tooling is private. Only the selected public revision's browser assets leave the API.
-    return { published: true, revision, visitToken, analyticsAvailable: true, snapshot: { ...snapshot, brief: {}, files: files.filter(f => /\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) && !['server.mjs', 'build.mjs'].includes(f.path)) } };
+    return { snapshot, files };
+  }
+
+  /** Revisions a visitor can already see: the published one and a running experiment's arms. */
+  private async servableRevisions(storeId: string, published: number): Promise<number[]> {
+    const experiment = await this.prisma.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } });
+    return [published, ...(experiment ? [experiment.controlRevision, experiment.variantRevision] : [])];
+  }
+
+  private async assetVersion(storeId: string, revision: number): Promise<string> {
+    const version = await this.prisma.storeSourceVersion.findUnique({ where: { storeId_revision: { storeId, revision } }, select: { digest: true } });
+    if (!version) throw new NotFoundException('Revisión no encontrada');
+    return `${revision}-${version.digest.slice(0, 12)}`;
+  }
+
+  async publicAsset(slug: string, version: string, path: string): Promise<{ bytes: Buffer; contentType: string; etag: string }> {
+    const missing = () => new NotFoundException('Archivo no encontrado');
+    const match = /^(\d+)-([a-f0-9]{12})$/.exec(version);
+    if (!match || !PUBLIC_ASSET.test(path) || path.split('/').some(part => !part || part === '.' || part === '..')) throw missing();
+    const revision = Number(match[1]);
+    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true, publishedRuntimeDigest: true } });
+    if (!store?.publishedSourceRevision || !(await this.servableRevisions(store.id, store.publishedSourceRevision)).includes(revision)) throw missing();
+    // The digest pins the URL to this store's exact revision, so a reused slug never inherits cached media.
+    if (await this.assetVersion(store.id, revision) !== version) throw missing();
+    const key = `${store.id}:${revision}:${store.publishedRuntimeDigest ?? 'current'}`;
+    let load = this.assetCache.get(key);
+    if (load) this.assetCache.delete(key); // re-inserted below: least recently used is evicted first
+    else load = this.publicRevisionFiles(store.id, revision, store.publishedRuntimeDigest).then(({ files }) => new Map(files
+      .filter(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path))
+      .map(f => { const bytes = Buffer.from(f.content, 'base64'); return [f.path, { bytes, etag: `"${createHash('sha1').update(bytes).digest('base64url')}"` }] as const; })));
+    this.assetCache.set(key, load);
+    while (this.assetCache.size > ASSET_CACHE_REVISIONS) this.assetCache.delete(this.assetCache.keys().next().value!);
+    let files: Map<string, { bytes: Buffer; etag: string }>;
+    try { files = await load; } catch (error) { if (this.assetCache.get(key) === load) this.assetCache.delete(key); throw error; }
+    const file = files.get(path);
+    if (!file) throw missing();
+    return { bytes: file.bytes, contentType: ASSET_TYPES[path.split('.').pop()!.toLowerCase()], etag: file.etag };
   }
 }

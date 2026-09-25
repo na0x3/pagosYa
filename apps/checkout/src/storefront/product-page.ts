@@ -20,7 +20,7 @@ import { bindCartCheckout } from "../cart/cart-review-dialog";
 
 
 export function renderProductPage(slug: string, store: Store, productId: string): void {
-  if (store.items.some(item => item.id === productId)) state.activeStoreFunnel?.track('product_view');
+  if (store.items.some(item => item.id === productId)) { state.activeStoreFunnel?.track('product_view'); state.activeStoreAnalytics?.record({ type: 'product_view', productId, path: 'product.html' }); }
   state.activeHeroCleanup?.();
   state.activeHeroCleanup = null;
   state.activeStoreExperienceCleanup?.();
