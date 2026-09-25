@@ -10,6 +10,7 @@ import { escapeHtml, formatAmount } from "../ui/html";
 import { storeCatalogUrl } from "../storefront/routes";
 import { ICON_CLOCK, ICON_ARROW_RIGHT, ICON_PRINTER, ICON_CHECK, ICON_X } from "../ui/icons";
 import { app } from "../ui/app";
+import { mountConfirmationMotif } from "../checkout-motif";
 
 export function closePendingIntlPopup() {
   state.pendingIntlPopup?.close();
@@ -175,6 +176,7 @@ export function renderSuccess(order: OrderSummary, preview = false) {
       ${preview ? '<p>No se realizó ningún cobro ni se creó un pedido real.</p><button class="secondary" id="preview-back" type="button">Volver al pedido</button>' : backToStoreHtml()}
     </div>
   `;
+  mountConfirmationMotif(app.querySelector('.payment-success-panel'));
   app.querySelector('#preview-back')?.addEventListener('click', closeSourcePaymentPreview);
   if (!preview && state.activeOrderTrackingToken) void mountDigitalDownloads(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken);
   if (!preview && state.activeOrderTrackingToken) void mountComebackCard(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken, order.id);

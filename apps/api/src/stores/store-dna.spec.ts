@@ -1,4 +1,4 @@
-import { clearStoreDnaCache, publishedStoreDna } from './store-dna';
+import { clearStoreDnaCache, publishedStoreDna, publishedStoreLook } from './store-dna';
 import { sourceRuntimeDna } from '../storefront-source/source-dna';
 
 describe('publishedStoreDna', () => {
@@ -49,5 +49,31 @@ describe('publishedStoreDna', () => {
     await publishedStoreDna(prisma, 's0', 1); // evicted (least recently used)
     await publishedStoreDna(prisma, 's599', 1); // still cached
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(601);
+  });
+});
+
+describe('publishedStoreLook (sub-project 3: the confirmation motif)', () => {
+  beforeEach(() => clearStoreDnaCache());
+  const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5L20 6"/></svg>';
+  const motif = (overrides: object = {}) => ({ file: 'motifs/tienda.svg', for: 'store', target: 'Tienda', behavior: 'draw', trigger: 'purchase', placement: 'confirmation', svg: drawing, ...overrides });
+  const config = (value: object): any => ({ $queryRaw: jest.fn(async () => [{ content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 's', ...value })};` }]) });
+
+  it('serves the confirmation motif of the published config with the DNA, from one read', async () => {
+    const prisma = config({ dna: { button: 'stamp' }, motifs: [motif({ placement: 'product', trigger: 'hover', behavior: 'glow' }), motif()] });
+    const look = await publishedStoreLook(prisma, 'store-1', 3);
+    expect(look).toEqual({ dna: expect.objectContaining({ button: 'stamp' }), confirmationMotif: { behavior: 'draw', svg: drawing } });
+    await expect(publishedStoreDna(prisma, 'store-1', 3)).resolves.toEqual(look!.dna);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+  it('re-sanitises the markup it serves, and serves none when it cannot be cleaned', async () => {
+    const hostile = drawing.replace('<path', '<foreignObject><img src=x onerror="alert(1)"></foreignObject><path onclick="alert(1)"');
+    expect((await publishedStoreLook(config({ motifs: [motif({ svg: hostile })] }), 'store-1', 3))!.confirmationMotif).toEqual({ behavior: 'draw', svg: drawing });
+    clearStoreDnaCache();
+    expect((await publishedStoreLook(config({ motifs: [motif({ svg: '<img src=x onerror=alert(1)>' })] }), 'store-1', 3))!.confirmationMotif).toBeNull();
+  });
+  it('has no confirmation motif without one, for a classic store, or when the read fails', async () => {
+    expect((await publishedStoreLook(config({ motifs: [motif({ placement: 'cart', trigger: 'appear' })] }), 'store-1', 3))!.confirmationMotif).toBeNull();
+    await expect(publishedStoreLook(config({ motifs: [motif()] }), 'store-1', null)).resolves.toBeNull();
+    expect((await publishedStoreLook({ $queryRaw: jest.fn(async () => { throw new Error('db'); }) } as any, 'store-1', 9))!.confirmationMotif).toBeNull();
   });
 });

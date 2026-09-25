@@ -73,3 +73,26 @@ body.store-branded-checkout[data-dna-button] #app .payment-success-panel button.
 body.store-branded-checkout:is([data-dna-button=underline],[data-dna-button=ghost],[data-dna-button=outline],[data-dna-button=stamp]) #app button.primary{--checkout-dna-btn-bg:var(--checkout-accent);--checkout-dna-btn-fg:var(--checkout-accent-foreground)}
 /* Keyboard focus: a foreground ring on a background halo reads on filled and open forms; the tag notch is dropped so nothing clips it. */
 body.store-branded-checkout[data-dna-button] #app :is(button.primary,.payment-success-panel .receipt-action):focus-visible{clip-path:none;outline:3px solid var(--checkout-foreground);outline-offset:2px;box-shadow:0 0 0 2px var(--checkout-background),var(--checkout-dna-btn-shadow,0 0 #0000)!important}
+
+/* Sub-project 3: the store's confirmation motif (checkout-motif.ts). Decorative, at most 64px, one finite play. */
+#app .payment-success-motif{display:block;width:56px;height:56px;max-width:64px!important;max-height:64px!important;margin:0 auto 12px;line-height:0;pointer-events:none;color:var(--checkout-accent,currentColor)}
+#app .payment-success-motif>svg{display:block;width:100%;height:100%;max-width:64px;max-height:64px;overflow:visible;transform-origin:50% 100%}
+#app .payment-success-motif svg [data-part]{transform-box:fill-box;transform-origin:50% 100%}
+@keyframes checkout-motif-glow{0%{opacity:.2;filter:none}18%{opacity:.85}28%{opacity:.45}55%{opacity:1;filter:drop-shadow(0 0 6px currentColor)}100%{opacity:1;filter:none}}
+@keyframes checkout-motif-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes checkout-motif-sway{0%,100%{transform:rotate(0)}30%{transform:rotate(-6deg)}70%{transform:rotate(5deg)}}
+@keyframes checkout-motif-steam{0%{opacity:0;transform:translateY(5px)}55%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes checkout-motif-grow{from{transform:scale(.35);opacity:0}to{transform:none;opacity:1}}
+@keyframes checkout-motif-bounce{0%,100%{transform:none}35%{transform:translateY(-8px)}65%{transform:translateY(0)}80%{transform:translateY(-3px)}}
+@keyframes checkout-motif-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes checkout-motif-float{0%,100%{transform:none}50%{transform:translateY(-5px)}}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=glow] :is(svg[data-part=light],svg [data-part=light]){animation:checkout-motif-glow 1.1s cubic-bezier(.23,1,.32,1) 1 backwards}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=draw] svg [pathLength]{stroke-dasharray:1;animation:checkout-motif-draw 1.4s cubic-bezier(.23,1,.32,1) 1 backwards}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=sway]>svg{animation:checkout-motif-sway .85s cubic-bezier(.23,1,.32,1) 3}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=steam] :is(svg[data-part=steam],svg [data-part=steam]){animation:checkout-motif-steam .9s cubic-bezier(.23,1,.32,1) 3 backwards}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=grow]>svg{animation:checkout-motif-grow .7s cubic-bezier(.23,1,.32,1) 1 backwards}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=bounce]>svg{animation:checkout-motif-bounce .8s cubic-bezier(.23,1,.32,1) 2}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=spin]>svg{transform-origin:50% 50%;animation:checkout-motif-spin 2.2s linear 1}
+#app .payment-success-motif[data-motif-play][data-motif-behavior=float]>svg{animation:checkout-motif-float 1.1s cubic-bezier(.23,1,.32,1) 2}
+@media (prefers-reduced-motion: reduce){#app .payment-success-motif,#app .payment-success-motif *{animation:none!important;transition:none!important}}
+@media print{#app .payment-success-motif{display:none}}

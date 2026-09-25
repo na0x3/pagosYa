@@ -93,6 +93,11 @@ describe('motif slots', () => {
     const list = (name: string) => runInNewContext(commerce.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`))![1]);
     expect(list('MOTIF_ELEMENTS')).toEqual([...MOTIF_SVG_ELEMENTS]);
     expect(list('MOTIF_ATTRIBUTES')).toEqual([...MOTIF_SVG_ATTRIBUTES]);
+    // The checkout's order confirmation verifies with the same lists.
+    const checkout = readFileSync(join(__dirname, '../../../checkout/src/checkout-motif.ts'), 'utf8');
+    const checkoutList = (name: string) => runInNewContext(checkout.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`))![1]);
+    expect(checkoutList('MOTIF_ELEMENTS')).toEqual([...MOTIF_SVG_ELEMENTS]);
+    expect(checkoutList('MOTIF_ATTRIBUTES')).toEqual([...MOTIF_SVG_ATTRIBUTES]);
   });
 });
 

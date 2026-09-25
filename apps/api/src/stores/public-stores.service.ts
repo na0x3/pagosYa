@@ -7,7 +7,7 @@ import { readStoreLocations, readLocationStocks } from "./store-locations";
 import { storePolicies } from "./store-presentation";
 import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperiences, readStoreAnimations, readStoreContentOrder } from "./store-presentation";
 import { readProductExtras, readStringArray, readProductVariants } from "./product-pricing";
-import { publishedStoreDna } from "./store-dna";
+import { publishedStoreLook } from "./store-dna";
 
 /** What shoppers read: a published store with its catalog, the store directory, newsletter sign-ups, and batched view counting. */
 @Injectable()
@@ -172,7 +172,7 @@ export class PublicStoresService implements OnModuleDestroy {
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
     const trackView = !options.ownerMerchantId && options.trackView !== false;
-    const [items, categories, links, productStats, appointmentOfferings, collections, dna] = await Promise.all([
+    const [items, categories, links, productStats, appointmentOfferings, collections, look] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
@@ -190,8 +190,8 @@ export class PublicStoresService implements OnModuleDestroy {
         orderBy: { sortOrder: 'asc' },
         include: { products: { orderBy: { sortOrder: 'asc' }, select: { paymentLinkId: true } } },
       }),
-      // The hosted order confirmation takes the store's button form and radius from the same DNA the storefront serves.
-      publishedStoreDna(this.prisma, store.id, store.publishedSourceRevision),
+      // The hosted order confirmation takes the store's button form, radius and confirmation motif from the published config.
+      publishedStoreLook(this.prisma, store.id, store.publishedSourceRevision),
     ]);
     if (trackView) this.queueStoreView(store.id);
 
@@ -228,7 +228,8 @@ export class PublicStoresService implements OnModuleDestroy {
     return {
       storeId: store.id,
       publishedSourceRevision: store.publishedSourceRevision ?? null,
-      dna,
+      dna: look?.dna ?? null,
+      confirmationMotif: look?.confirmationMotif ?? null,
       storeName: store.name,
       creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled,
       tagline: store.tagline,

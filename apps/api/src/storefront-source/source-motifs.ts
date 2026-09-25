@@ -82,6 +82,12 @@ export function sourceMotifConfig(motifs: readonly SourceDnaMotif[] = [], files:
   });
 }
 
+/** A stored `config.motifs` value made safe again: known entries only, markup re-sanitised, at most 3. */
+export function sanitizeRuntimeMotifs(value: unknown): SourceRuntimeMotif[] {
+  return (Array.isArray(value) ? value : []).slice(0, MAX_MOTIFS)
+    .flatMap((motif: any) => { const entry = motif && typeof motif === 'object' ? runtimeMotif(motif, motif.file, motif.svg) : undefined; return entry ? [entry] : []; });
+}
+
 const CONFIG_PATTERN = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
 /** Every save (the merchant's own included) re-sanitises motif files and config.js motifs. Nothing to change → the same
  * array, byte for byte. An unreadable config.js is left to the save's own checks. */
@@ -100,8 +106,7 @@ export function withSanitizedMotifs<F extends File>(files: F[]): { files: F[]; r
     let config: any;
     try { config = JSON.parse(file.content.match(CONFIG_PATTERN)?.[1] ?? ''); } catch { return [file]; }
     if (!config || typeof config !== 'object' || !('motifs' in config)) return [file];
-    const motifs = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, MAX_MOTIFS)
-      .flatMap((motif: any) => { const entry = motif && typeof motif === 'object' ? runtimeMotif(motif, motif.file, motif.svg) : undefined; return entry ? [entry] : []; });
+    const motifs = sanitizeRuntimeMotifs(config.motifs);
     if (JSON.stringify(motifs) === JSON.stringify(config.motifs)) return [file];
     changed = true; repairs.push('config.js: motifs re-sanitised');
     return [{ ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, motifs })};\n` }];

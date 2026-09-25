@@ -216,6 +216,8 @@ export interface Store {
   publishedSourceRevision?: number | null;
   /** The store's runtime Design DNA (enums only); the order confirmation reads button and radius. */
   dna?: Record<string, string | number> | null;
+  /** The store's confirmation motif (a sanitised DNA drawing and its behaviour), shown on the order confirmation. */
+  confirmationMotif?: { behavior: string; svg: string } | null;
   storeId: string;
   storeName: string;
   tagline: string | null;
