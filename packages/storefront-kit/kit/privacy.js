@@ -9,7 +9,7 @@
     const temporary = memory.get(slug); return temporary?.expires > Date.now() ? temporary.analytics : null;
   }
   function clearTracking(slug) {
-    try { localStorage.removeItem(`pagosya:source-visitor:${slug}`); sessionStorage.removeItem(`pagosya:source-visit:${slug}`); sessionStorage.removeItem(`pagosya:partner:${slug}`); sessionStorage.removeItem(`pagosya:funnel:${slug}`); } catch {}
+    try { localStorage.removeItem(`pagosya:source-visitor:${slug}`); sessionStorage.removeItem(`pagosya:source-visit:${slug}`); sessionStorage.removeItem(`pagosya:partner:${slug}`); sessionStorage.removeItem(`pagosya:funnel:${slug}`); sessionStorage.removeItem(`pagosya:analytics:${slug}`); } catch {}
   }
   function save(slug, analytics) {
     if (navigator.globalPrivacyControl === true) analytics = false;
