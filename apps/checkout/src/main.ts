@@ -29,6 +29,7 @@ import { bindStoreEditorCanvas, listenForStoreEditorMessages } from "./preview-e
 import { storefrontPages } from "./storefront/navigation";
 import { renderProductPage } from "./storefront/product-page";
 import { renderStore } from "./storefront/store-page";
+import { rememberStoreDna } from "./checkout-branding";
 
 async function main() {
   const verificationRoute = /^\/verificar\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
@@ -141,6 +142,7 @@ async function main() {
   if (linkSlug && !clientSecret) {
     try {
       const store = await fetchStore(linkSlug, { preview: suppressStoreViewForMerchant(linkSlug) });
+      rememberStoreDna(store.dna);
       const proposalPatch = standaloneStorePreviewPatch();
       const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;
       const routedProduct = renderedStore.items.find(item => item.id === productIdFromLocation());
