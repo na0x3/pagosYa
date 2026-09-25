@@ -6,7 +6,7 @@ import commerceRuntime from '@pagosya/storefront-kit/kit/commerce.js?raw';
 import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
 
-export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" }
+export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" | "url" }
 export interface SourceSnapshot { schemaVersion: number; brief: { sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial'; businessType: string; audience: string; primaryAction: string; visualDirection: string }; files: SourceFile[] }
 
 const mediaTypes: Record<string, string> = { mp4: "video/mp4", svg: "image/svg+xml", html: "text/html", css: "text/css", js: "text/javascript", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", avif: "image/avif", gif: "image/gif", ttf: "font/ttf", woff: "font/woff", woff2: "font/woff2" };
@@ -31,12 +31,27 @@ export function uploadImageSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[] } = {}): string {
+/** A published revision's own asset directory, served by the API. Same origin rules as uploads. */
+export function hostedAssetSource(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const local = url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+    if ((url.protocol !== 'https:' && !local) || url.username || url.password || url.search || url.hash || !/\/source-site\/assets\/\d+-[a-f0-9]{12}\/$/.test(url.pathname)) return null;
+    return url.href;
+  } catch { return null; }
+}
+
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[] } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
   const files = new Map(snapshot.files.map((file) => [file.path, file]));
-  const data = (file: SourceFile, content?: string) => `data:${mediaTypes[file.path.split(".").pop() || ""] || "application/octet-stream"};base64,${content !== undefined ? base64(content) : file.encoding === "base64" ? file.content : base64(file.content)}`;
+  const assetSources = (navigation.assetSources || []).map(hostedAssetSource).filter((source): source is string => Boolean(source));
+  const inline = (file: SourceFile, content?: string) => `data:${mediaTypes[file.path.split(".").pop() || ""] || "application/octet-stream"};base64,${content !== undefined ? base64(content) : file.encoding === "base64" ? file.content : base64(file.content)}`;
+  // Hosted stores hand us URLs for binary files; anything outside the validated directory resolves to nothing.
+  const data = (file: SourceFile, content?: string) => file.encoding === 'url'
+    ? (assetSources.some(source => file.content.startsWith(source)) ? file.content : '')
+    : inline(file, content);
   const resolve = (path: string, base = page): SourceFile | undefined => {
     if (/^(?:[a-z]+:|\/\/|#)/i.test(path)) return undefined;
     const url = new URL(path, `https://source.invalid/${base}`);
@@ -61,7 +76,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     let content = file.content;
     if (file.path === "commerce.js") content = `${privacyRuntime}\n${commerceRuntime}\n${retentionRuntime}`;
     if (file.path === "config.js") {
-      for (const asset of snapshot.files.filter((f) => f.encoding === "base64")) content = content.split(JSON.stringify(asset.path)).join(JSON.stringify(data(asset)));
+      for (const asset of snapshot.files.filter((f) => f.encoding === "base64" || f.encoding === "url")) content = content.split(JSON.stringify(asset.path)).join(JSON.stringify(data(asset)));
       content = compactPreviewImageData(content);
     }
     el.src = data(file, content); el.removeAttribute("integrity"); el.removeAttribute("crossorigin");
@@ -77,12 +92,12 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     el.removeAttribute("srcset");
     const file = resolve(el.getAttribute("src") || "");
     const src = el.getAttribute("src") || "";
-    if (file) el.setAttribute("src", data(file));
+    if (file) { const value = data(file); if (value) el.setAttribute("src", value); else el.removeAttribute("src"); }
     else if (!src.startsWith("data:") && !(el.tagName === "IMG" && imageSources.some(source => src.startsWith(source)))) el.removeAttribute("src");
   });
   doc.querySelectorAll('video[poster]').forEach(el => {
     const poster = resolve(el.getAttribute('poster') || '');
-    if (poster) el.setAttribute('poster', data(poster)); else el.removeAttribute('poster');
+    const value = poster ? data(poster) : ''; if (value) el.setAttribute('poster', value); else el.removeAttribute('poster');
   });
   doc.querySelectorAll("a").forEach((el) => {
     const href = el.getAttribute("href") || '';
@@ -92,8 +107,9 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     const outside = navigation.hosted === true && /^(?:https?:|tel:|mailto:)/i.test(href);
     if (!outside && !href.startsWith('#') && !resolve(href)?.path.endsWith('.html')) el.removeAttribute('href');
   });
+  const assets = assetSources.length ? ' ' + assetSources.join(' ') : '';
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
-  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
+  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${assets}${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:${assets}; media-src data: blob:${assets}; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
   doc.head.prepend(policy);
   // CSP does not govern DNS prefetching; turn it off so generated code cannot leak data through lookups.
   const dnsPrefetch = doc.createElement('meta'); dnsPrefetch.httpEquiv = 'x-dns-prefetch-control'; dnsPrefetch.content = 'off';
