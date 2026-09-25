@@ -1,12 +1,15 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { BusinessDocumentStatus } from "@prisma/client";
+import { BusinessDocumentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { StructuredCompletionService } from "../ai/structured-completion";
-import { BusinessDocumentsService, OPEN_PROPOSAL } from "./business-documents.service";
-import type { DocumentBlock } from "./business-document-snapshot";
+import { BusinessDocumentsService, expireProposal, OPEN_PROPOSAL } from "./business-documents.service";
+import { documentNumberLabel, type DocumentBlock } from "./business-document-snapshot";
+import { DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./document-link-token";
+import { buildProposalMerchantEmail } from "./proposal-email";
+import type { AcceptanceContext } from "../legal/terms-acceptance.service";
 import {
   allowedAmounts,
   buildProposalContext,
@@ -23,7 +26,7 @@ import {
   type ProposalSectionOutput,
   type ProposalTone,
 } from "./proposal-draft";
-import type { DraftProposalDto, RegenerateProposalSectionDto } from "./dto/business-document.dto";
+import type { AcceptProposalDto, DraftProposalDto, RegenerateProposalSectionDto, RequestProposalChangesDto } from "./dto/business-document.dto";
 
 const S = BusinessDocumentStatus;
 
@@ -42,6 +45,11 @@ export function endOfLaPazDay(days: number, now = new Date()): Date {
   const day = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) + days * DAY_MS;
   return new Date(day + DAY_MS - 1000 + LA_PAZ_OFFSET_MS);
 }
+
+/** How many "Pedir cambios" one proposal takes in 24 hours: enough for a conversation, not a relay. */
+const CHANGE_REQUESTS_PER_DAY = 5;
+
+type ProposalRow = { id: string; storeId: string; merchantId: string; kind: string; number: number | null; title: string; currency: string; totalAmount: number; currentVersion: number };
 
 type BriefEventData = { brief: string; budgetHint: string | null; deadline: string | null; tone: ProposalTone; model: string };
 
@@ -167,7 +175,182 @@ export class ProposalsService {
     };
   }
 
+  // ── public: the customer's answer ─────────────────────────────────────
+
+  /**
+   * "Aceptar propuesta": the customer's typed name and email, the exact version they read
+   * (its sha256), the time, IP and user agent — a simple acceptance record, not a signature.
+   */
+  async accept(token: string, dto: AcceptProposalDto, context: AcceptanceContext) {
+    const id = this.tokenId(token);
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      const doc = await this.lockedProposal(tx, id);
+      if (doc.status === S.ACCEPTED) {
+        // A double tap (or a second visit) gets the acceptance on record, never a second one.
+        const event = await tx.businessDocumentEvent.findFirst({ where: { documentId: id, type: "accepted" } });
+        return { kind: "done" as const, name: ((event?.data ?? {}) as { name?: string }).name ?? "", at: event?.at ?? new Date() };
+      }
+      const closed = await this.closedReason(tx, doc, "aceptar");
+      if (closed) return closed;
+      if (dto.version !== doc.currentVersion) {
+        throw new ConflictException("El comercio actualizó esta propuesta. Vuelve a abrir el enlace para leer la versión nueva antes de aceptarla.");
+      }
+      const version = await tx.businessDocumentVersion.findUnique({ where: { documentId_version: { documentId: id, version: doc.currentVersion } } });
+      if (!version) throw new NotFoundException("No encontramos esta propuesta");
+      const { count } = await tx.businessDocument.updateMany({ where: { id, status: { in: OPEN_PROPOSAL }, currentVersion: dto.version }, data: { status: S.ACCEPTED } });
+      if (!count) throw new ConflictException("Esta propuesta ya no se puede aceptar.");
+      const name = dto.name.trim();
+      const email = dto.email.trim().toLowerCase();
+      const event = await tx.businessDocumentEvent.create({
+        data: {
+          documentId: id, type: "accepted", version: version.version, ipAddress: context.ipAddress, userAgent: context.userAgent, dedupeKey: "accepted",
+          data: { name, email, version: version.version, sha256: version.sha256 },
+        },
+      });
+      return { kind: "accepted" as const, doc, name, email, at: event.at };
+    });
+    if (outcome.kind === "closed") throw new ConflictException(outcome.message);
+    if (outcome.kind === "accepted") {
+      await this.notifyMerchant(outcome.doc, "accepted", { name: outcome.name, email: outcome.email });
+    }
+    return { status: S.ACCEPTED, acceptance: { name: outcome.name, at: outcome.at } };
+  }
+
+  /**
+   * "Pedir cambios": the message reaches the merchant three ways — the proposal's timeline,
+   * an Inbox conversation with the customer, and an email inside the store's daily cap.
+   */
+  async requestChanges(token: string, dto: RequestProposalChangesDto, context: AcceptanceContext) {
+    const id = this.tokenId(token);
+    const name = dto.name?.trim() || null;
+    const email = dto.email.trim().toLowerCase();
+    const message = dto.message.trim();
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      const doc = await this.lockedProposal(tx, id);
+      if (doc.status === S.ACCEPTED) throw new ConflictException("Esta propuesta ya fue aceptada. Si necesitas algo más, escríbele al comercio.");
+      const closed = await this.closedReason(tx, doc, "pedir cambios en");
+      if (closed) return closed;
+      const recent = await tx.businessDocumentEvent.count({ where: { documentId: id, type: "changes_requested", at: { gte: new Date(Date.now() - DAY_MS) } } });
+      if (recent >= CHANGE_REQUESTS_PER_DAY) {
+        throw new HttpException("Ya enviaste varios pedidos de cambios hoy. El comercio los está revisando; también puedes escribirle directamente.", HttpStatus.TOO_MANY_REQUESTS);
+      }
+      const { count } = await tx.businessDocument.updateMany({ where: { id, status: { in: OPEN_PROPOSAL } }, data: { status: S.CHANGES_REQUESTED } });
+      if (!count) throw new ConflictException("Esta propuesta ya no admite cambios.");
+      const event = await tx.businessDocumentEvent.create({
+        data: { documentId: id, type: "changes_requested", version: doc.currentVersion, ipAddress: context.ipAddress, userAgent: context.userAgent, data: { name, email, message, version: doc.currentVersion } },
+      });
+      // The merchant's Inbox: one conversation per proposal and customer email.
+      const subject = `Propuesta ${documentNumberLabel("PROPOSAL", doc.number)}`;
+      const thread = await tx.storeInboxThread.findFirst({ where: { storeId: doc.storeId, customerEmail: email, subject } });
+      const threadId = thread
+        ? (await tx.storeInboxThread.update({ where: { id: thread.id }, data: { unreadForMerchant: true, lastMessageAt: event.at, ...(name && !thread.customerName && { customerName: name }) } })).id
+        : (await tx.storeInboxThread.create({ data: { storeId: doc.storeId, merchantId: doc.merchantId, subject, customerEmail: email, customerName: name, unreadForMerchant: true, lastMessageAt: event.at } })).id;
+      await tx.storeInboxMessage.create({
+        data: { threadId, direction: "INBOUND", fromEmail: email, toEmail: "", body: message, messageId: `proposal.${event.id}@pagosya`, inReplyTo: null, hadAttachments: false },
+      });
+      return { kind: "requested" as const, doc };
+    });
+    if (outcome.kind === "closed") throw new ConflictException(outcome.message);
+    await this.notifyMerchant(outcome.doc, "changes", { name, email, message });
+    return { status: S.CHANGES_REQUESTED };
+  }
+
+  // ── worker ────────────────────────────────────────────────────────────
+
+  /** Open proposals past their validity become EXPIRED (conditional, once per version). */
+  async expireOverdue(now = new Date()) {
+    const late = await this.prisma.businessDocument.findMany({
+      where: { kind: "PROPOSAL", status: { in: OPEN_PROPOSAL }, validUntil: { lt: now } },
+      select: { id: true, currentVersion: true },
+      take: 500,
+    });
+    let expired = 0;
+    for (const doc of late) if (await expireProposal(this.prisma, doc.id, doc.currentVersion, now)) expired += 1;
+    return expired;
+  }
+
   // ── helpers ───────────────────────────────────────────────────────────
+
+  private tokenId(token: string) {
+    const id = readDocumentLinkToken(token, this.config.get<string>("app.documentLinkSecret") ?? DEVELOPMENT_DOCUMENT_LINK_SECRET);
+    if (!id) throw new NotFoundException("No encontramos esta propuesta");
+    return id;
+  }
+
+  private async lockedProposal(tx: Prisma.TransactionClient, id: string) {
+    const doc = await tx.businessDocument.findUnique({ where: { id } });
+    // A cobro, a draft or a bad link answer the same way.
+    if (!doc || doc.kind !== "PROPOSAL" || doc.currentVersion < 1) throw new NotFoundException("No encontramos esta propuesta");
+    return doc;
+  }
+
+  /** Why the customer can no longer act on it, or null. A proposal past its validity is expired here. */
+  private async closedReason(tx: Prisma.TransactionClient, doc: { id: string; status: BusinessDocumentStatus; validUntil: Date | null; currentVersion: number }, verb: string) {
+    const closed = (message: string) => ({ kind: "closed" as const, message });
+    if (doc.status === S.VOIDED) return closed(`Esta propuesta fue anulada y ya no se puede ${verb === "aceptar" ? "aceptar" : "comentar"}. Escríbele al comercio si tienes dudas.`);
+    const past = Boolean(doc.validUntil && doc.validUntil.getTime() < Date.now());
+    if (doc.status === S.EXPIRED || (past && OPEN_PROPOSAL.includes(doc.status))) {
+      // Committed with the transaction; the refusal is thrown after it.
+      if (doc.status !== S.EXPIRED) await expireProposal(tx, doc.id, doc.currentVersion);
+      return closed("Esta propuesta venció. Pídele al comercio una propuesta actualizada.");
+    }
+    if (!OPEN_PROPOSAL.includes(doc.status)) return closed(`Ya no puedes ${verb} esta propuesta.`);
+    return null;
+  }
+
+  /**
+   * One email to the merchant (store contact email, else the account's), claimed as a
+   * `merchant_notified` event inside the store's daily document email cap. Over the cap, or
+   * when delivery fails, the customer's answer is still in the timeline (and the Inbox).
+   */
+  private async notifyMerchant(doc: ProposalRow, reason: "accepted" | "changes", customer: { name: string | null; email: string; message?: string }) {
+    try {
+      const [store, merchant] = await Promise.all([
+        this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, contactEmail: true } }),
+        this.prisma.merchant.findUnique({ where: { id: doc.merchantId }, select: { email: true } }),
+      ]);
+      const to = store?.contactEmail || merchant?.email;
+      if (!store || !to) return false;
+      let eventId: string;
+      try {
+        eventId = await this.prisma.$transaction(async (tx) => {
+          await this.documents.assertEmailQuota(tx, doc.storeId);
+          const event = await tx.businessDocumentEvent.create({ data: { documentId: doc.id, type: "merchant_notified", version: doc.currentVersion, data: { to, reason } } });
+          return event.id;
+        });
+      } catch (error) {
+        if (error instanceof HttpException && error.getStatus() === 429) return false; // the store's cap: the timeline has it
+        throw error;
+      }
+      const origin = (this.config.get<string>("app.merchantDashboardOrigin") ?? "http://localhost:4322").replace(/\/$/, "");
+      const message = buildProposalMerchantEmail({
+        reason,
+        storeName: store.name,
+        numberLabel: documentNumberLabel("PROPOSAL", doc.number),
+        title: doc.title,
+        totalAmount: doc.totalAmount,
+        currency: doc.currency,
+        customerName: customer.name,
+        customerEmail: customer.email,
+        message: customer.message,
+        dashboardUrl: `${origin}/#dashboard-proposals`,
+      });
+      try {
+        await this.email.send({ to, subject: message.subject, body: message.text, html: message.html, replyTo: customer.email, idempotencyKey: `business-document/${eventId}`, failLoudly: true });
+        return true;
+      } catch (error) {
+        this.logger.warn(`Proposal ${doc.id} merchant email failed: ${(error as Error).message}`);
+        await this.prisma.businessDocumentEvent.create({ data: { documentId: doc.id, type: "email_failed", version: doc.currentVersion, data: { to, reason, notice: "merchant", error: (error as Error).message.slice(0, 200) } } });
+        return false;
+      }
+    } catch (error) {
+      // The customer's answer is already committed; a notification problem never undoes it.
+      this.logger.warn(`Proposal ${doc.id} merchant notification failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
 
   /** What YAPI knows about the store: name, tagline, about, categories and ≤60 active priced products. */
   private async context(store: { id: string; name: string; tagline: string | null; aboutText: string | null }) {

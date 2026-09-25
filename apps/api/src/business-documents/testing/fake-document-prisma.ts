@@ -188,6 +188,29 @@ export class FakePrisma {
       return { count: rows.length };
     },
   };
+  inboxThreads: Row[] = [];
+  inboxMessages: Row[] = [];
+  storeInboxThread = {
+    findFirst: async ({ where }: Row) => this.inboxThreads.find((row) => matches(row, where)) ?? null,
+    create: async ({ data }: Row) => {
+      const row = { id: id("thr"), status: "OPEN", unreadForMerchant: true, lastMessageAt: new Date(), createdAt: new Date(), leadId: null, orderId: null, ...data };
+      this.inboxThreads.push(row);
+      return { ...row };
+    },
+    update: async ({ where, data }: Row) => {
+      const row = this.inboxThreads.find((candidate) => candidate.id === where.id)!;
+      Object.assign(row, data);
+      return { ...row };
+    },
+  };
+  storeInboxMessage = {
+    create: async ({ data }: Row) => {
+      if (data.messageId && this.inboxMessages.some((row) => row.messageId === data.messageId)) throw unique();
+      const row = { id: id("msg"), createdAt: new Date(), ...data };
+      this.inboxMessages.push(row);
+      return { ...row };
+    },
+  };
   /** Raw SQL the service ran (the row locks), as text. */
   rawQueries: string[] = [];
   /** PaymentIntent rows another transaction holds (a checkout being confirmed or captured). */

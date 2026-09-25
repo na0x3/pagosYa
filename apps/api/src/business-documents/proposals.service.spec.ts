@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConflictException, HttpException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { BusinessDocumentsService } from "./business-documents.service";
 import { ProposalsService } from "./proposals.service";
 import type { ProposalDraftOutput } from "./proposal-draft";
@@ -170,5 +170,192 @@ describe("proposals — list states and summary", () => {
     expect(summary.counts).toEqual({ all: 6, draft: 1, open: 2, changes: 1, accepted: 1, closed: 2 });
     expect(summary.totals).toEqual([{ currency: "BOB", open: 50000, accepted30: 50000 }]);
     await expect(proposals.summary("m_2", "store_1")).rejects.toThrow(NotFoundException);
+  });
+});
+
+const CONTEXT = { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0 (iPhone)" };
+
+async function sentProposal(ctx: ReturnType<typeof setupProposals>, extra: Record<string, unknown> = {}) {
+  const doc = await ctx.documents.create("m_1", "store_1", {
+    kind: "PROPOSAL",
+    title: "Identidad visual",
+    customerName: "Café Aroma",
+    customerEmail: "aroma@example.com",
+    items: [{ description: "Diseño de logo", quantity: 1, unitAmount: 150000 }, { description: "Tarjetas", quantity: 2, unitAmount: 35000 }],
+    discountAmount: 20000,
+    content: [{ type: "paragraph", title: "Introducción", text: "Hola" }],
+    validUntil: new Date(Date.now() + 10 * 86_400_000).toISOString(),
+    ...extra,
+  });
+  const sent = await ctx.documents.send("m_1", "store_1", doc.id, { email: false });
+  return { id: doc.id, token: sent.publicUrl.split("/d/")[1] };
+}
+
+describe("ProposalsService — the customer accepts", () => {
+  it("records who accepted which exact version, from where, once — and tells the merchant", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    const result = await ctx.proposals.accept(token, { name: "Ana Quispe", email: "Ana@Example.com", version: 1 }, CONTEXT);
+    expect(result).toEqual({ status: "ACCEPTED", acceptance: { name: "Ana Quispe", at: expect.any(Date) } });
+    expect(ctx.prisma.documents.find((row) => row.id === id)!.status).toBe("ACCEPTED");
+    const accepted = ctx.prisma.events.filter((event) => event.type === "accepted");
+    expect(accepted).toEqual([expect.objectContaining({
+      documentId: id, version: 1, ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0 (iPhone)", dedupeKey: "accepted",
+      data: { name: "Ana Quispe", email: "ana@example.com", version: 1, sha256: ctx.prisma.versions[0].sha256 },
+    })]);
+    expect(ctx.prisma.rawQueries.some((sql) => /FOR UPDATE/.test(sql))).toBe(true);
+    expect(ctx.email.send).toHaveBeenCalledTimes(1);
+    const mail = ctx.email.send.mock.calls[0][0];
+    expect(mail).toEqual(expect.objectContaining({ to: "hola@illimani.bo", replyTo: "ana@example.com", failLoudly: true }));
+    expect(mail.subject).toBe("¡Ana Quispe aceptó tu propuesta PRO-0001!");
+    expect(mail.html).toContain("https://panel.example/#dashboard-proposals");
+    expect(ctx.prisma.events.filter((event) => event.type === "merchant_notified")).toEqual([expect.objectContaining({ data: { to: "hola@illimani.bo", reason: "accepted" } })]);
+  });
+
+  it("answers a double tap with the same acceptance, without a second record or email", async () => {
+    const ctx = setupProposals();
+    const { token } = await sentProposal(ctx);
+    await ctx.proposals.accept(token, { name: "Ana Quispe", email: "ana@example.com", version: 1 }, CONTEXT);
+    const again = await ctx.proposals.accept(token, { name: "Otro", email: "otro@example.com", version: 1 }, CONTEXT);
+    expect(again).toEqual({ status: "ACCEPTED", acceptance: { name: "Ana Quispe", at: expect.any(Date) } });
+    expect(ctx.prisma.events.filter((event) => event.type === "accepted")).toHaveLength(1);
+    expect(ctx.email.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a stale version: the customer must read what the merchant re-sent", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    await ctx.documents.update("m_1", "store_1", id, { title: "Identidad visual y letrero" });
+    await ctx.documents.send("m_1", "store_1", id, { email: false });
+    await expect(ctx.proposals.accept(token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).rejects.toThrow(/actualizó esta propuesta/);
+    expect(ctx.prisma.documents.find((row) => row.id === id)!.status).toBe("SENT");
+    await expect(ctx.proposals.accept(token, { name: "Ana", email: "ana@example.com", version: 2 }, CONTEXT)).resolves.toEqual(expect.objectContaining({ status: "ACCEPTED" }));
+  });
+
+  it("refuses a proposal past its validity even before the worker runs, and marks it expired once", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    ctx.prisma.documents.find((row) => row.id === id)!.validUntil = new Date(Date.now() - 60_000);
+    await expect(ctx.proposals.accept(token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).rejects.toThrow(ConflictException);
+    await expect(ctx.proposals.accept(token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).rejects.toThrow(/venció/);
+    expect(ctx.prisma.documents.find((row) => row.id === id)!.status).toBe("EXPIRED");
+    expect(ctx.prisma.events.filter((event) => event.type === "expired")).toEqual([expect.objectContaining({ version: 1, dedupeKey: "expired:v1" })]);
+    expect(ctx.prisma.events.filter((event) => event.type === "accepted")).toHaveLength(0);
+  });
+
+  it("refuses a voided proposal, a cobro and a bad token", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    await expect(ctx.proposals.accept("bad.token", { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).rejects.toThrow(NotFoundException);
+    const cobro = await ctx.documents.create("m_1", "store_1", { kind: "INVOICE", title: "Cobro", items: [{ description: "x", quantity: 1, unitAmount: 100 }] });
+    const cobroLink = (await ctx.documents.send("m_1", "store_1", cobro.id, { email: false })).publicUrl.split("/d/")[1];
+    await expect(ctx.proposals.accept(cobroLink, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).rejects.toThrow(NotFoundException);
+    await ctx.documents.void("m_1", "store_1", id, {});
+    await expect(ctx.proposals.accept(token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).rejects.toThrow(/anulada/);
+  });
+});
+
+describe("ProposalsService — the customer asks for changes", () => {
+  const request = { name: "Ana Quispe", email: "ana@example.com", message: "¿Puede incluir el envío de las tarjetas?" };
+
+  it("marks it, lands in the merchant's Inbox and emails the merchant (reply goes to the customer)", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    await expect(ctx.proposals.requestChanges(token, request, CONTEXT)).resolves.toEqual({ status: "CHANGES_REQUESTED" });
+    expect(ctx.prisma.documents.find((row) => row.id === id)!.status).toBe("CHANGES_REQUESTED");
+    const event = ctx.prisma.events.find((row) => row.type === "changes_requested")!;
+    expect(event).toEqual(expect.objectContaining({ version: 1, ipAddress: "190.0.0.1", data: { name: "Ana Quispe", email: "ana@example.com", message: request.message, version: 1 } }));
+    expect(ctx.prisma.inboxThreads).toEqual([expect.objectContaining({ storeId: "store_1", merchantId: "m_1", subject: "Propuesta PRO-0001", customerEmail: "ana@example.com", customerName: "Ana Quispe", unreadForMerchant: true })]);
+    expect(ctx.prisma.inboxMessages).toEqual([expect.objectContaining({ threadId: ctx.prisma.inboxThreads[0].id, direction: "INBOUND", fromEmail: "ana@example.com", body: request.message, messageId: `proposal.${event.id}@pagosya` })]);
+    const mail = ctx.email.send.mock.calls[0][0];
+    expect(mail).toEqual(expect.objectContaining({ to: "hola@illimani.bo", replyTo: "ana@example.com" }));
+    expect(mail.subject).toBe("Ana Quispe pidió cambios en la propuesta PRO-0001");
+    expect(mail.body).toContain(request.message);
+    // A second request reuses the same Inbox conversation.
+    await ctx.proposals.requestChanges(token, { ...request, message: "Y otro color" }, CONTEXT);
+    expect(ctx.prisma.inboxThreads).toHaveLength(1);
+    expect(ctx.prisma.inboxMessages).toHaveLength(2);
+  });
+
+  it("keeps the request (timeline and Inbox) but skips the email when the store is at its daily cap", async () => {
+    const ctx = setupProposals({ "app.documentEmailsPerDay": 1 });
+    const { id, token } = await sentProposal(ctx);
+    ctx.prisma.events.push({ id: "evt_old", documentId: id, type: "emailed", at: new Date(), data: {} });
+    await ctx.proposals.requestChanges(token, request, CONTEXT);
+    expect(ctx.email.send).not.toHaveBeenCalled();
+    expect(ctx.prisma.events.filter((event) => event.type === "merchant_notified")).toHaveLength(0);
+    expect(ctx.prisma.inboxMessages).toHaveLength(1);
+    expect(ctx.prisma.documents.find((row) => row.id === id)!.status).toBe("CHANGES_REQUESTED");
+  });
+
+  it("counts merchant notifications against the store's daily document email cap", async () => {
+    const ctx = setupProposals({ "app.documentEmailsPerDay": 1 });
+    const { token } = await sentProposal(ctx);
+    await ctx.proposals.requestChanges(token, request, CONTEXT);
+    expect(ctx.email.send).toHaveBeenCalledTimes(1);
+    await ctx.proposals.requestChanges(token, { ...request, message: "Otra cosa" }, CONTEXT);
+    expect(ctx.email.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows at most 5 requests per proposal a day", async () => {
+    const ctx = setupProposals();
+    const { token } = await sentProposal(ctx);
+    for (let index = 0; index < 5; index += 1) await ctx.proposals.requestChanges(token, { ...request, message: `Cambio ${index}` }, CONTEXT);
+    const sixth = ctx.proposals.requestChanges(token, request, CONTEXT);
+    await expect(sixth).rejects.toThrow(HttpException);
+    await expect(ctx.proposals.requestChanges(token, request, CONTEXT)).rejects.toMatchObject({ status: 429 });
+  });
+
+  it("refuses an accepted proposal, and still lets a proposal with changes requested be accepted", async () => {
+    const ctx = setupProposals();
+    const { token } = await sentProposal(ctx);
+    await ctx.proposals.requestChanges(token, request, CONTEXT);
+    await expect(ctx.proposals.accept(token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT)).resolves.toEqual(expect.objectContaining({ status: "ACCEPTED" }));
+    await expect(ctx.proposals.requestChanges(token, request, CONTEXT)).rejects.toThrow(/ya fue aceptada/);
+  });
+});
+
+describe("proposals — the public view and expiry", () => {
+  it("shows validity, whether it can be accepted, and who accepted it (never their email)", async () => {
+    const ctx = setupProposals();
+    const { token } = await sentProposal(ctx);
+    const open = await ctx.documents.publicView(token, CONTEXT);
+    expect(open).toEqual(expect.objectContaining({ kind: "PROPOSAL", status: "VIEWED", acceptable: true, acceptance: null, validUntil: expect.any(Date), payable: false }));
+    await ctx.proposals.accept(token, { name: "Ana Quispe", email: "ana@example.com", version: 1 }, CONTEXT);
+    const accepted = await ctx.documents.publicView(token, CONTEXT);
+    expect(accepted).toEqual(expect.objectContaining({ status: "ACCEPTED", acceptable: false, acceptance: { name: "Ana Quispe", at: expect.any(Date) } }));
+    expect(JSON.stringify(accepted.acceptance)).not.toContain("ana@example.com");
+  });
+
+  it("says when changes were requested", async () => {
+    const ctx = setupProposals();
+    const { token } = await sentProposal(ctx);
+    await ctx.proposals.requestChanges(token, { email: "ana@example.com", message: "Otro color" }, CONTEXT);
+    const view = await ctx.documents.publicView(token, CONTEXT);
+    expect(view).toEqual(expect.objectContaining({ status: "CHANGES_REQUESTED", acceptable: true, changesRequestedAt: expect.any(Date) }));
+  });
+
+  it("expires on read once its validity passed, recorded once", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    ctx.prisma.documents.find((row) => row.id === id)!.validUntil = new Date(Date.now() - 1000);
+    expect(await ctx.documents.publicView(token, CONTEXT)).toEqual(expect.objectContaining({ status: "EXPIRED", acceptable: false }));
+    await ctx.documents.publicView(token, CONTEXT);
+    expect(ctx.prisma.events.filter((event) => event.type === "expired")).toHaveLength(1);
+  });
+
+  it("the worker expires only open proposals past their validity, once", async () => {
+    const ctx = setupProposals();
+    const late = await sentProposal(ctx);
+    const fresh = await sentProposal(ctx);
+    const accepted = await sentProposal(ctx);
+    await ctx.proposals.accept(accepted.token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT);
+    const cobro = await ctx.documents.create("m_1", "store_1", { kind: "INVOICE", title: "Cobro", validUntil: new Date(Date.now() - 1000).toISOString() });
+    for (const row of ctx.prisma.documents) if (row.id !== fresh.id) row.validUntil = new Date(Date.now() - 1000);
+    expect(await ctx.proposals.expireOverdue()).toBe(1);
+    expect(await ctx.proposals.expireOverdue()).toBe(0);
+    const status = (docId: string) => ctx.prisma.documents.find((row) => row.id === docId)!.status;
+    expect([status(late.id), status(fresh.id), status(accepted.id), status(cobro.id)]).toEqual(["EXPIRED", "SENT", "ACCEPTED", "DRAFT"]);
+    expect(ctx.prisma.events.filter((event) => event.type === "expired")).toHaveLength(1);
   });
 });

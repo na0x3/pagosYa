@@ -112,6 +112,23 @@ export function proposalStateWhere(state: DocumentListState, now: Date): Prisma.
   return { status: { in: [] } };
 }
 
+/**
+ * A proposal past its validity is closed: conditional (never over an accepted or voided one),
+ * recorded once per version. Used on read, when the customer acts, and by the worker.
+ */
+export async function expireProposal(db: Pick<Prisma.TransactionClient, "businessDocument" | "businessDocumentEvent">, id: string, version: number, now = new Date()) {
+  const { count } = await db.businessDocument.updateMany({
+    where: { id, kind: "PROPOSAL", status: { in: OPEN_PROPOSAL }, validUntil: { lt: now } },
+    data: { status: S.EXPIRED },
+  });
+  if (count) {
+    await db.businessDocumentEvent.createMany({ data: [{ documentId: id, type: "expired", version, dedupeKey: `expired:v${version}` }], skipDuplicates: true });
+  }
+  return count > 0;
+}
+
+type ProposalPublicFields = { validUntil: Date | null; acceptable: boolean; acceptance: { name: string; at: Date } | null; changesRequestedAt: Date | null };
+
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
 type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }>;
@@ -392,10 +409,18 @@ export class BusinessDocumentsService {
       contactEmail: store?.contactEmail ?? null,
       contactPhone: store?.contactPhone ?? null,
     };
+    // A proposal past its validity closes now, without waiting for the worker.
+    let current = doc.status;
+    if (doc.kind === "PROPOSAL" && OPEN_PROPOSAL.includes(current) && doc.validUntil && doc.validUntil.getTime() < Date.now()) {
+      await expireProposal(this.prisma, doc.id, version.version);
+      current = S.EXPIRED;
+    }
     // The merchant looking at their own document is not the customer opening it.
     const preview = Boolean(previewToken) && readDocumentPreviewToken(previewToken!, this.secret()) === doc.id;
     const viewed = !preview && (await this.recordView(doc.id, version.version, context));
-    const status = viewed && doc.status === S.SENT ? S.VIEWED : doc.status;
+    const status = viewed && current === S.SENT ? S.VIEWED : current;
+    // Proposals (D2) add their validity and acceptance; cobros keep exactly their D1 fields.
+    const proposal = doc.kind === "PROPOSAL" ? await this.proposalFields(doc.id, status, doc.validUntil) : undefined;
     return {
       kind: doc.kind,
       numberLabel: snapshot.numberLabel,
@@ -410,6 +435,26 @@ export class BusinessDocumentsService {
       paidAt: doc.paidAt,
       payable: doc.kind === "INVOICE" && PAYABLE.includes(status),
       preview,
+      // undefined (left out of the JSON) for a cobro.
+      validUntil: proposal?.validUntil,
+      acceptable: proposal?.acceptable,
+      acceptance: proposal?.acceptance,
+      changesRequestedAt: proposal?.changesRequestedAt,
+    };
+  }
+
+  /** Proposals (D2): validity, whether it can still be accepted, and who accepted it (name only). */
+  private async proposalFields(documentId: string, status: BusinessDocumentStatus, validUntil: Date | null): Promise<ProposalPublicFields> {
+    const [accepted, changes] = await Promise.all([
+      status === S.ACCEPTED ? this.prisma.businessDocumentEvent.findFirst({ where: { documentId, type: "accepted" } }) : Promise.resolve(null),
+      status === S.CHANGES_REQUESTED ? this.prisma.businessDocumentEvent.findFirst({ where: { documentId, type: "changes_requested" }, orderBy: { at: "desc" } }) : Promise.resolve(null),
+    ]);
+    const acceptedData = (accepted?.data ?? null) as { name?: string } | null;
+    return {
+      validUntil,
+      acceptable: OPEN_PROPOSAL.includes(status),
+      acceptance: accepted ? { name: acceptedData?.name ?? "", at: accepted.at } : null,
+      changesRequestedAt: changes?.at ?? null,
     };
   }
 
@@ -436,7 +481,7 @@ export class BusinessDocumentsService {
     if (!id) throw notFound();
     const doc = await this.prisma.businessDocument.findUnique({
       where: { id },
-      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true, voidedAt: true, dueAt: true, paidAt: true },
+      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true, voidedAt: true, dueAt: true, paidAt: true, validUntil: true },
     });
     // A never-sent draft answers exactly like a bad token.
     if (!doc || doc.currentVersion < 1) throw notFound();
@@ -490,7 +535,8 @@ export class BusinessDocumentsService {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     // Reminder emails leave from the same sender, so they count too; a WhatsApp reminder does not.
     const sent =
-      (await tx.businessDocumentEvent.count({ where: { type: "emailed", at: { gte: since }, document: { storeId } } }))
+      // Proposal notifications to the merchant leave from the same sender too (D2).
+      (await tx.businessDocumentEvent.count({ where: { type: { in: ["emailed", "merchant_notified"] }, at: { gte: since }, document: { storeId } } }))
       + (await tx.businessDocumentEvent.count({ where: { type: "reminded", data: { path: ["channel"], equals: "email" }, at: { gte: since }, document: { storeId } } }));
     if (sent >= limit) {
       throw new HttpException(
