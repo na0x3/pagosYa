@@ -90,6 +90,16 @@ describe('Independent source generation',()=>{
     expect(config.productPageStyle).toBe('story-led');
     expect(result.generation.autoRepairs).toContain('concepts[0].dna.buttons.hover: invalid');
   });
+  it('tells the build to author the purchase control in the chosen DNA button form, so authored CSS and the DNA agree', async () => {
+    const { service } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna();
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    await service.generate('m', 's', input);
+    const [stable, task] = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content.map((part: any) => part.text);
+    expect(task).toContain('Purchase control form: stamp.');
+    expect(stable).toContain("follows the store's DNA button form, given as 'Purchase control form'");
+  });
   it("rebuilds the owned recipe from the chosen concept's layout grammar after planning", async () => {
     const { service } = setup('next');
     const planned = design(); planned.concepts[0].dna = { ...validDna(), layout: { grammar: 'brutalist', density: 'dense' } };

@@ -242,14 +242,17 @@
   };
   const detailStyle = document.createElement("style");
   detailStyle.dataset.pagosyaKit = 'product';
+  // Cascade order (sub-project 5 review): kit defaults < the store's DNA < the store's own CSS, which is unlayered
+  // and therefore wins over both. The contact base sits under the DNA so the DNA button form reaches its submit.
   detailStyle.textContent = `
+    @layer pagosya-commerce, pagosya-contact-base, pagosya-dna;
     .menu-item{position:relative}.menu-item:not([data-custom-product]) .menu-item__details{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:inherit;background:transparent;box-shadow:none;cursor:pointer;color:inherit}
     .menu-item .menu-item__details:focus-visible{outline:3px solid currentColor;outline-offset:-4px}.menu-item:not([data-custom-product]) .menu-add{position:relative;inset:auto;z-index:2}
-    .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
+      .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
       [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
@@ -1234,7 +1237,9 @@
     }
   }
   const shoppingStyle = document.createElement('style');
-  shoppingStyle.textContent = `
+  // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
+  // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
+  shoppingStyle.textContent = `@layer pagosya-commerce {
     .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform 250ms var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),display 250ms allow-discrete,overlay 250ms allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
     .pagosya-secure-note{margin:12px 0 0;font-size:13px;opacity:.78}
@@ -1309,7 +1314,7 @@
     [data-pagosya-checkout] :focus-visible{outline:3px solid currentColor;outline-offset:3px}
     @media(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:1fr;gap:32px}}
     @container(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:minmax(0,1fr);gap:32px}}
-  `;
+  }`;
   document.head.append(shoppingStyle);
   let checkoutTrigger = null, checkoutPreviousHash = "", checkoutOverflow = "";
   const inertBeforeCheckout = new Map();
@@ -1818,10 +1823,32 @@
   // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
   // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a
   // store without one renders exactly as before. Surfaces read one shared token set.
-  const KIT_BUTTONS = ':is(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit])';
-  const KIT_STEPPERS = ':is(.quantity button,.product-detail__quantity,.product-detail__box-stepper button)';
+  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit])';
+  const KIT_STEPPERS = ':where(.quantity button,.product-detail__quantity,.product-detail__box-stepper button)';
+  /* The product page is platform-owned: its kit styles are unlayered and authored rules on its hooks are released
+   * (releaseProductPageStyles), so the DNA reaches its buttons with an unlayered, product-scoped copy of the rules. */
+  const PAGE_BUTTONS = '[data-pagosya-product][data-style] :is(.product-detail__buy,.product-detail__sticky button,.product-detail__bundle-add)';
+  const PAGE_STEPPERS = '[data-pagosya-product][data-style] :is(.product-detail__quantity,.product-detail__box-stepper button)';
   const dnaForm = (value, tokens) => `:root[data-dna-button=${value}]{${tokens}}`;
-  const dnaHover = (value, declarations) => `@media(hover:hover){:root[data-dna-hover=${value}] ${KIT_BUTTONS}:hover:not(:disabled){${declarations}}}:root[data-dna-hover=${value}] ${KIT_BUTTONS}:focus-visible{${declarations}}`;
+  const dnaHover = (buttons, value, declarations) => `@media(hover:hover){:root[data-dna-hover=${value}] ${buttons}:hover:not(:disabled){${declarations}}}:root[data-dna-hover=${value}] ${buttons}:focus-visible{${declarations}}`;
+  /* Form, focus, hover and press of a set of buttons (and the shape of their steppers). */
+  const dnaButtonRules = (buttons, steppers) => [
+    `:root[data-dna-button] ${buttons}{min-height:44px;border:var(--kit-btn-border);border-radius:var(--kit-btn-radius);background:var(--kit-btn-bg);color:var(--kit-btn-fg);text-transform:var(--kit-btn-case);font-variant-caps:var(--kit-btn-caps,normal);letter-spacing:var(--kit-btn-tracking);padding:var(--kit-btn-pad);text-decoration:var(--kit-btn-decor);clip-path:var(--kit-btn-clip);box-shadow:var(--kit-btn-shadow);transition:transform 160ms var(--kit-ease),box-shadow 160ms var(--kit-ease),background-position 480ms var(--kit-ease),background-size 240ms var(--kit-ease),filter 160ms}`,
+    `:root[data-dna-button] ${buttons}:focus-visible{outline:3px solid currentColor;outline-offset:3px}`,
+    `:root[data-dna-button] ${steppers}{border-radius:var(--kit-radius);border-width:max(var(--kit-border),1px)}`,
+    /* Hover (and keyboard focus): never the only focus indicator. */
+    dnaHover(buttons, 'lift', 'transform:translateY(-2px);box-shadow:var(--kit-btn-shadow),0 8px 18px -8px color-mix(in srgb,currentColor 60%,transparent)'),
+    dnaHover(buttons, 'fill', 'background-image:linear-gradient(color-mix(in srgb,currentColor 16%,transparent),color-mix(in srgb,currentColor 16%,transparent))'),
+    `:root[data-dna-hover=underline-grow] ${buttons}{background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:50% calc(100% - .35em);background-size:0 1.5px}`,
+    dnaHover(buttons, 'underline-grow', 'background-size:calc(100% - 2em) 1.5px'),
+    dnaHover(buttons, 'tilt', 'transform:rotate(-2deg)'),
+    `:root[data-dna-hover=shine] ${buttons}{background-image:linear-gradient(110deg,transparent 35%,rgb(255 255 255/.38) 50%,transparent 65%);background-repeat:no-repeat;background-size:260% 100%;background-position:100% 0}`,
+    dnaHover(buttons, 'shine', 'background-position:0 0'),
+    dnaHover(buttons, 'invert', 'background-color:var(--kit-btn-invert-bg);color:var(--kit-btn-invert-fg)'),
+    /* Press. The stamp form rocks a little instead. */
+    `:root[data-dna-press] ${buttons}:active:not(:disabled){transform:var(--kit-press)}:root[data-dna-press=sink] ${buttons}:active:not(:disabled){box-shadow:none}`,
+    `:root[data-dna-button=stamp] ${buttons}:active:not(:disabled){transform:var(--kit-press) rotate(-2.5deg)}`,
+  ];
   const DNA_CSS = [
     /* Tokens. Colours stay the store's own (--store-*, then --brand-*, then legacy names). */
     `:root{--kit-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));--kit-paper:var(--store-background,var(--brand-background,var(--paper,#fff)));--kit-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--kit-ink))));--kit-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--kit-paper)));--kit-surface:var(--store-surface,var(--brand-surface,color-mix(in srgb,var(--kit-ink) 5%,var(--kit-paper))));--kit-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--kit-ink) 18%,var(--kit-paper))));--kit-radius:var(--store-radius,var(--brand-radius,0px));--kit-radius-panel:var(--kit-radius);--kit-border:1px;--kit-photo-radius:var(--kit-radius);--kit-photo-pad:0px;--kit-photo-bg:transparent;--kit-photo-shadow:none;--kit-ease:cubic-bezier(.23,1,.32,1)}`,
@@ -1849,26 +1876,11 @@
     dnaForm('outline', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:var(--kit-radius);--kit-btn-border:1.5px solid currentColor;--kit-btn-bg:transparent;--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.7em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:none'),
     dnaForm('ghost', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:var(--kit-radius);--kit-btn-border:0 solid transparent;--kit-btn-bg:color-mix(in srgb,currentColor 11%,transparent);--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.75em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:none'),
     dnaForm('split', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:var(--kit-radius);--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.75em 1.2em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:none'),
-    `:root[data-dna-button] ${KIT_BUTTONS}{min-height:44px;border:var(--kit-btn-border);border-radius:var(--kit-btn-radius);background:var(--kit-btn-bg);color:var(--kit-btn-fg);text-transform:var(--kit-btn-case);font-variant-caps:var(--kit-btn-caps,normal);letter-spacing:var(--kit-btn-tracking);padding:var(--kit-btn-pad);text-decoration:var(--kit-btn-decor);clip-path:var(--kit-btn-clip);box-shadow:var(--kit-btn-shadow);transition:transform 160ms var(--kit-ease),box-shadow 160ms var(--kit-ease),background-position 480ms var(--kit-ease),background-size 240ms var(--kit-ease),filter 160ms}`,
-    `:root[data-dna-button] ${KIT_BUTTONS}:focus-visible{outline:3px solid currentColor;outline-offset:3px}`,
     /* Split: the price (or the arrow) sits in its own cell. */
-    ':root[data-dna-button=split] :is(.checkout-button,[data-pagosya-product] .product-detail__buy){display:flex;justify-content:space-between;gap:0}',
+    ':root[data-dna-button=split] .checkout-button{display:flex;justify-content:space-between;gap:0}',
     ':root[data-dna-button=split] .checkout-button>svg{box-sizing:content-box;padding-left:1em;margin-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}',
-    '@media(min-width:481px){:root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy-total:not(:empty){display:inline-block;margin-left:1em;padding-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}:root[data-dna-button=split] [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:none}}',
-    `:root[data-dna-button] ${KIT_STEPPERS}{border-radius:var(--kit-radius);border-width:max(var(--kit-border),1px)}`,
-    /* Hover (and keyboard focus): never the only focus indicator. */
-    dnaHover('lift', 'transform:translateY(-2px);box-shadow:var(--kit-btn-shadow),0 8px 18px -8px color-mix(in srgb,currentColor 60%,transparent)'),
-    dnaHover('fill', 'background-image:linear-gradient(color-mix(in srgb,currentColor 16%,transparent),color-mix(in srgb,currentColor 16%,transparent))'),
-    `:root[data-dna-hover=underline-grow] ${KIT_BUTTONS}{background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:50% calc(100% - .35em);background-size:0 1.5px}`,
-    dnaHover('underline-grow', 'background-size:calc(100% - 2em) 1.5px'),
-    dnaHover('tilt', 'transform:rotate(-2deg)'),
-    `:root[data-dna-hover=shine] ${KIT_BUTTONS}{background-image:linear-gradient(110deg,transparent 35%,rgb(255 255 255/.38) 50%,transparent 65%);background-repeat:no-repeat;background-size:260% 100%;background-position:100% 0}`,
-    dnaHover('shine', 'background-position:0 0'),
-    dnaHover('invert', 'background-color:var(--kit-btn-invert-bg);color:var(--kit-btn-invert-fg)'),
-    /* Press. The stamp form rocks a little instead. */
+    ...dnaButtonRules(KIT_BUTTONS, KIT_STEPPERS),
     ':root[data-dna-press=squash]{--kit-press:scale(.97,.9)}:root[data-dna-press=sink]{--kit-press:translateY(2px)}:root[data-dna-press=pop]{--kit-press:scale(1.06)}:root[data-dna-press=none]{--kit-press:translate(0)}',
-    `:root[data-dna-press] ${KIT_BUTTONS}:active:not(:disabled){transform:var(--kit-press)}:root[data-dna-press=sink] ${KIT_BUTTONS}:active:not(:disabled){box-shadow:none}`,
-    `:root[data-dna-button=stamp] ${KIT_BUTTONS}:active:not(:disabled){transform:var(--kit-press) rotate(-2.5deg)}`,
     /* Cart: right drawer (today's place, restyled), bottom sheet, full page or centred card. */
     ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}:root[data-dna-cart] .cart-drawer__grip{display:none}',
     ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(440px,92vw);border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
@@ -1931,10 +1943,16 @@
     ':root[data-dna-card=tilt] .menu-item{transition:transform 240ms var(--kit-ease)}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:perspective(900px) rotateX(var(--card-tilt-y,0deg)) rotateY(var(--card-tilt-x,0deg))}',
   ];
   const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added,:root[data-dna-card] .menu-item,:root[data-dna-card] .menu-item :is(.menu-item__image,.menu-item__image-alt,.menu-item__quick-look){transition:none}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:none}}`;
+  const DNA_PAGE_CSS = [
+    ...dnaButtonRules(PAGE_BUTTONS, PAGE_STEPPERS),
+    ':root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy{display:flex;justify-content:space-between;gap:0}',
+    '@media(min-width:481px){:root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy-total:not(:empty){display:inline-block;margin-left:1em;padding-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}:root[data-dna-button=split] [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:none}}',
+  ];
   if (hasDna) {
     const dnaStyle = document.createElement('style');
     dnaStyle.dataset.pagosyaKit = 'dna';
-    dnaStyle.textContent = [...DNA_CSS, DNA_REDUCED_MOTION].join('\n');
+    // Every variant sits in the pagosya-dna layer: above the kit defaults, below the store's own (unlayered) CSS.
+    dnaStyle.textContent = `@layer pagosya-dna {\n${[...DNA_CSS, DNA_REDUCED_MOTION].join('\n')}\n}\n${DNA_PAGE_CSS.join('\n')}`;
     document.head.append(dnaStyle);
   }
   /* Card preview listeners (DNA stores only). The second photo follows the photo's box; a long press previews
