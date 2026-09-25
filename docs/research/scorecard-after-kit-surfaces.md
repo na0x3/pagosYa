@@ -100,3 +100,10 @@ Re-run on the same 12 store ids (`--stores`, out `tmp/scorecard/after-free-css`,
 
 - **Quality: 0 of 12 stores fail (was 1 of 12).** The red's buy button goes from 4.41 to 4.76:1. The failing control is the product page's buy button. It is white on a mid-tone accent, and no near-black or white text reaches 4.5 on that accent (`#111` gives about 4.3). The guard switched its label to pure black, the first candidate that reads (after the store's own ink, paper and on-accent). On this store's own CSS, the guard's first version made no change: it ran on a 120ms timer, after the collector had already measured, and it treated the DNA underline-grow hover (a zero-size gradient at rest) as an unknown background. Both are fixed: the guard now runs as the controls render, and it looks through DNA line and shine decorations.
 - Every other store's buy contrast is unchanged (5.09–14.15), and so is uniqueness: the closest pairs, means and too-close-to-default counts are the same as the table above, and the kit-DNA-only closest pair is still 0.33 with a mean of 0.78.
+
+### After the sub-project 7 review fixes, 2026-09-25
+
+Re-run on the same 12 ids (`--stores`, out `tmp/scorecard/after-free-css-review`). The guard now sets its colour through a first-layer rule that yields on hover and focus, measures against the page canvas, and skips labels over pseudo-elements, backdrop filters and photos. The contrast passes also go idle.
+
+- **Quality: still 0 of 12 stores fail.** Every buy contrast is unchanged, from The red's 4.76 to 14.15.
+- **Uniqueness is unchanged, except one timing artefact.** In this run, Pliegue uixh5's mobile press transform read `none` instead of its 4px press, so the button closest pair became BookShelf ↔ Pliegue uixh5 at 0.20 (it was 0.22). Two single-store re-runs read the 4px press again. The press is sampled mid-transition, so this is measurement noise, not a change.
