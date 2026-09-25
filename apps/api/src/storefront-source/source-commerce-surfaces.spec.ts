@@ -262,3 +262,15 @@ describe('contact, privacy and sticky buy bar', () => {
     expect(dnaCss(boot(DNA).doc)).toContain('.product-detail__sticky button');
   });
 });
+
+describe('component mode reads the same DNA', () => {
+  const ui = readFileSync(kitPath('ui.tsx'), 'utf8');
+  it('card and cart buttons read the button tokens, uncapped by the theme radius', () => {
+    expect(ui).toMatch(/\.ui-card__add\{[^}]*border-radius:var\(--kit-btn-radius,var\(--ui-radius-control\)\)/);
+    expect(ui).toMatch(/\.ui-cart\{[^}]*border-radius:var\(--kit-btn-radius,999px\)/);
+  });
+  it('the catalog hover effects yield to the DNA card preview', () => {
+    expect(ui).toContain(':root:not([data-dna-card]) [data-fx~=zoom] .ui-card:hover .ui-card__media img');
+    expect(ui).toContain(':root:not([data-dna-card=tilt]) [data-fx~=lift] .ui-card:hover');
+  });
+});
