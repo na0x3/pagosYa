@@ -28,7 +28,8 @@ const MOTION_PROPS: Record<string, keyof typeof SOURCE_MOTION_LIMITS> = {
 const HEADER = '/* pagosYa store kit CSS. Validated on every save: surface rules load in the pagosya-store-kit layer and product-page rules are scoped by the platform. Edit as plain CSS rules on kit surfaces. */';
 /** A leading `html`/`:root` compound qualified only by DNA attributes. */
 const QUALIFIER = /^(?:html|:root)(?:\[data-dna-[\w-]+(?:[~|^$*]?=(?:"[^"]*"|'[^']*'|[\w-]+))?\])*$/i;
-const KIT_ROOT = /^(?:[a-z][a-z0-9-]*)?(?:\.cart-drawer|\.cart-added|\.order-item|\.checkout-review|\[data-pagosya-checkout|\[data-pagosya-product|\.product-detail__|\.menu-item|\.menu-add|\.checkout-button|\.pagosya-contact-|\[data-pagosya-contact|\[data-pagosya-privacy|\.quantity)/i;
+/** A kit surface compound: the class or hook itself, or its BEM element/modifier (never `.checkout-buttonX`). */
+const KIT_ROOT = /^(?:[a-z][a-z0-9-]*)?(?:\.(?:cart-drawer|cart-added|order-item|checkout-review|menu-item|menu-add|checkout-button|quantity)(?:(?:__|--)[\w-]*)?(?![\w-])|\.product-detail__[\w-]|\.pagosya-contact-[\w-]|\[data-pagosya-(?:checkout(?:-page)?|product(?:-page)?|contact|privacy)(?=[\]~|^$*=\s]))/i;
 /** Price, total, buy/pay button, quantity, legal and privacy text, the status line. */
 const PROTECTED = /\.[\w-]*(?:price|total)[\w-]*|\.(?:checkout-button|menu-add|quantity|pagosya-policies|pagosya-secure-note)(?![\w-])|\.product-detail__(?:buy|quantity|status)|\[data-(?:pay|add|checkout|product-quantity|pagosya-status|pagosya-checkout-status|pagosya-privacy|pagosya-policy|pagosya-policies)(?![\w-])|\[data-product-field=["']?price/i;
 /** Legal, privacy and status compounds: every descendant is protected text. */
@@ -69,9 +70,12 @@ export function splitSelectors(list: string): string[] {
   return parts.map(part => part.trim()).filter(Boolean);
 }
 /** The compounds of one selector, split on combinators outside brackets, parentheses and quotes. */
-function compounds(selector: string): string[] {
-  const parts: string[] = [];
-  let depth = 0, quote = '', current = '';
+function compounds(selector: string): string[] { return compoundsWith(selector).parts; }
+/** The compounds and the combinator before each (' ', '>', '+', '~'; '' before the first). */
+function compoundsWith(selector: string): { parts: string[]; joins: string[] } {
+  const parts: string[] = [], joins: string[] = [];
+  let depth = 0, quote = '', current = '', join = '';
+  const push = () => { if (current) { joins.push(parts.length ? join || ' ' : ''); parts.push(current); join = ''; } current = ''; };
   for (let i = 0; i < selector.length; i++) {
     const c = selector[i];
     if (c === '\\') { current += c + (selector[i + 1] ?? ''); i++; continue; }
@@ -79,11 +83,11 @@ function compounds(selector: string): string[] {
     if (c === '"' || c === "'") quote = c;
     else if (c === '(' || c === '[') depth++;
     else if (c === ')' || c === ']') depth--;
-    if (depth === 0 && /[\s>+~]/.test(c)) { if (current) parts.push(current); current = ''; continue; }
+    if (depth === 0 && /[\s>+~]/.test(c)) { push(); if (c !== ' ' && !/\s/.test(c)) join = c; continue; }
     current += c;
   }
-  if (current) parts.push(current);
-  return parts;
+  push();
+  return { parts, joins };
 }
 const withoutNot = (compound: string) => compound.replace(/:not\((?:[^()]|\([^()]*\))*\)/gi, '');
 /** The compound's own simple selectors: functional pseudo-classes and their arguments removed. */
@@ -91,10 +95,12 @@ const ownSimple = (compound: string) => compound.replace(/:(?:not|is|where|has|m
 
 /** 'surface' when rooted on a kit surface, 'root' for a bare :root/html (tokens only), else null. */
 function kitSelector(selector: string): 'surface' | 'root' | null {
-  const parts = compounds(selector);
+  const { parts, joins } = compoundsWith(selector);
   const first = QUALIFIER.test(parts[0] ?? '') ? 1 : 0;
   if (first === parts.length) return 'root';
-  return KIT_ROOT.test(parts[first]) ? 'surface' : null;
+  if (!KIT_ROOT.test(parts[first])) return null;
+  // A sibling combinator leaves the kit surface unless it lands on another one (`.menu-item + .menu-item`).
+  return parts.every((part, index) => index <= first || !/[+~]/.test(joins[index]) || KIT_ROOT.test(part)) ? 'surface' : null;
 }
 /**
  * 'element': a protected element (every rule applies). 'container': any other product-page hook; it holds the buy flow, so

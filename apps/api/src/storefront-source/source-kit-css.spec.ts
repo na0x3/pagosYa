@@ -36,6 +36,20 @@ describe('store kit CSS: allowed selectors', () => {
     expect(out.repairs.join('\n')).toMatch(/color/);
   });
 
+  it.each([
+    '.checkout-buttonX', '.quantityfoo', '.menu-itemx .a', '.cart-drawer-fake', '[data-pagosya-checkoutx]', '[data-pagosya-privacy-x]',
+    '.cart-drawer ~ *', '.cart-drawer + main', '.menu-item ~ .hero .menu-add',
+  ])('strips %s: not a kit surface', selector => {
+    const out = kit(`${selector}{border-radius:3px}`);
+    expect(sheet(out.css)).toEqual([]);
+    expect(out.repairs.join('\n')).toMatch(/not a kit surface/);
+  });
+
+  it.each(['.menu-item + .menu-item', '.order-item ~ .order-item__photo', '[data-pagosya-checkout-page] .x', '[data-pagosya-product-page] .x', '.cart-drawer__body', '.menu-item--featured'])('keeps %s', selector => {
+    const out = kit(`${selector}{border-radius:3px}`);
+    expect(out.repairs).toEqual([]);
+  });
+
   it('strips selectors that are not rooted on a kit surface, keeping the rest of the list', () => {
     const out = kit('body .menu-add, .cart-drawer{background:#fff}button{color:red}.hero{margin:0}.cart-drawer{.x{color:red}}');
     expect(sheet(out.css).map(d => d.selector)).toEqual(['.cart-drawer']);
