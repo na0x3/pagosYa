@@ -66,7 +66,7 @@ body.proposal-sheet-open { overflow: hidden; }
 .proposal-sheet-layer { position: fixed; inset: 0; z-index: 4100; display: grid; place-items: center; }
 .proposal-sheet-layer[hidden] { display: none; }
 .proposal-sheet-backdrop { position: absolute; inset: 0; background: rgba(20, 20, 16, .45); }
-.proposal-sheet { position: relative; display: flex; flex-direction: column; width: min(640px, calc(100vw - 32px)); max-height: min(900px, calc(100dvh - 48px)); background: var(--pg-bg, #f8f8f2); border: 2px solid var(--prop-line, #20211e); border-radius: 16px; box-shadow: 6px 6px 0 #20211e; overflow: hidden; color: var(--pg-text, #20211e); animation: proposal-sheet-in .18s ease-out; outline: none; }
+.proposal-sheet { position: relative; display: flex; flex-direction: column; width: min(640px, calc(100vw - 32px)); max-height: min(900px, calc(100dvh - 48px)); background: var(--pg-bg, #f8f8f2); border: 2px solid var(--prop-line, #20211e); border-radius: 16px; box-shadow: 6px 6px 0 #20211e; overflow: hidden; overflow: clip; color: var(--pg-text, #20211e); animation: proposal-sheet-in .18s ease-out; outline: none; }
 .proposal-sheet.is-wide { width: min(880px, calc(100vw - 32px)); height: min(900px, calc(100dvh - 48px)); }
 @keyframes proposal-sheet-in { from { transform: translateY(12px); opacity: 0; } }
 .proposal-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; background: var(--pg-surface, #fff); border-bottom: 2px solid var(--prop-line, #20211e); }

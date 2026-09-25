@@ -213,6 +213,9 @@ for (const width of [390, 1280]) {
       await jump.click();
       await expect(editor.locator("[data-proposal-pending] [data-proposal-goto]").first()).toBeFocused();
       await expect(editor.locator("[data-proposal-pending]")).toBeInViewport();
+      // Only the sheet's body scrolls: the header and the footer stay put.
+      await page.waitForTimeout(600);
+      expect(await page.locator("[data-proposal-sheet]").evaluate((element) => element.scrollTop)).toBe(0);
 
       // A price read from the merchant's words is shown, flagged, and waits for a confirm tap.
       await expect(editor.locator("[data-proposal-pending]")).toContainText("Confirma el precio de «Letrero»");

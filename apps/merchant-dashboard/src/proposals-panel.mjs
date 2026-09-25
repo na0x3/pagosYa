@@ -677,6 +677,13 @@ export function mountProposalsPanel(deps) {
     if (focus) panel.querySelector(focus)?.focus({ preventScroll: false });
   }
 
+  /** scrollIntoView may also scroll the clipped sheet (older Safari lacks overflow: clip): only its body scrolls. */
+  function keepSheetInPlace() {
+    panel.scrollTop = 0;
+    requestAnimationFrame(() => { panel.scrollTop = 0; });
+    setTimeout(() => { panel.scrollTop = 0; }, 450);
+  }
+
   // Autosave: every change is PATCHed after a short pause; closing or sending flushes it.
   function markDirty() {
     if (!editor) return;
@@ -1220,6 +1227,7 @@ export function mountProposalsPanel(deps) {
         const list = panel.querySelector("[data-proposal-pending]");
         list?.scrollIntoView({ block: "center", behavior: "smooth" });
         list?.querySelector("[data-proposal-goto]")?.focus({ preventScroll: true });
+        keepSheetInPlace();
         return;
       }
       const goto = target.closest("[data-proposal-goto]");
@@ -1233,6 +1241,7 @@ export function mountProposalsPanel(deps) {
         const field = (kind === "item" && panel.querySelector(`[data-proposal-line="${at}"] [data-proposal-confirm-line]`)) || panel.querySelector(selector);
         field?.scrollIntoView({ block: "center", behavior: "smooth" });
         field?.focus({ preventScroll: true });
+        keepSheetInPlace();
         return;
       }
     }
