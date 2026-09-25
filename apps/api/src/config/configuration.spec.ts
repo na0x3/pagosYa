@@ -163,6 +163,20 @@ describe("domain commerce configuration", () => {
   });
 });
 
+describe("document email cap", () => {
+  const saved = process.env.DOCUMENT_EMAILS_PER_DAY;
+  afterEach(() => { if (saved === undefined) delete process.env.DOCUMENT_EMAILS_PER_DAY; else process.env.DOCUMENT_EMAILS_PER_DAY = saved; });
+
+  it("defaults to 200 document emails per store per day and reads DOCUMENT_EMAILS_PER_DAY", () => {
+    delete process.env.DOCUMENT_EMAILS_PER_DAY;
+    expect(configuration().app.documentEmailsPerDay).toBe(200);
+    process.env.DOCUMENT_EMAILS_PER_DAY = "50";
+    expect(configuration().app.documentEmailsPerDay).toBe(50);
+    process.env.DOCUMENT_EMAILS_PER_DAY = "0";
+    expect(configuration).toThrow("DOCUMENT_EMAILS_PER_DAY");
+  });
+});
+
 describe("source framework default", () => {
   const saved = process.env.SOURCE_FRAMEWORK;
   afterEach(() => { if (saved === undefined) delete process.env.SOURCE_FRAMEWORK; else process.env.SOURCE_FRAMEWORK = saved; });

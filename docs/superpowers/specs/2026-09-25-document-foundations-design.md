@@ -74,6 +74,10 @@ questions: every choice below is a ruling the owner may overturn.
     mock logs them and keeps its last 20 messages. Existing callers are unchanged. Document emails
     go from the platform sender with `replyTo = store.contactEmail`, and use `failLoudly`, so a
     failed delivery becomes an `email_failed` event and `emailed: false` rather than a lost send.
+    Each store may email at most `DOCUMENT_EMAILS_PER_DAY` documents (default 200) in any 24
+    hours, counted from its `emailed` events. Over the cap a send that would email answers 429
+    with a Spanish message pointing to the link; a send with `email: false` (link, WhatsApp,
+    copy) is never capped.
 11. **PDF renderer** (`business-documents/business-document-pdf.ts`) builds on the finance-pdf
     helpers. Those helpers become exports, and `ensureNewPage` / `writeWrappedLines` take an
     optional header callback, so the page-break logic is reused under a store header instead of

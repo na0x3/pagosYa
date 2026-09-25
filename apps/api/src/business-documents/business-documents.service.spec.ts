@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConflictException, HttpException, HttpStatus, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { BusinessDocumentsService } from "./business-documents.service";
 import { readDocumentLinkToken } from "./document-link-token";
 import { snapshotSha256 } from "./business-document-snapshot";
@@ -108,13 +108,17 @@ class FakePrisma {
       this.events.push(event);
       return event;
     },
+    count: async ({ where }: Row) => this.events.filter((event) =>
+      (where.type === undefined || event.type === where.type)
+      && (!where.at?.gte || event.at >= where.at.gte)
+      && (!where.document?.storeId || this.documents.find((doc) => doc.id === event.documentId)?.storeId === where.document.storeId)).length,
   };
   $transaction = async (fn: (tx: this) => Promise<unknown>) => fn(this);
 }
 
 const SECRET = "test-document-link-secret-with-at-least-32-chars";
 
-function setup() {
+function setup(config: Record<string, unknown> = {}) {
   const prisma = new FakePrisma();
   prisma.stores.push(
     { id: "store_1", merchantId: "m_1", name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png", contactEmail: "hola@illimani.bo" },
@@ -124,7 +128,7 @@ function setup() {
   prisma.customers.push({ id: "cust_2", storeId: "store_2", name: "Ajeno", email: "x@example.com", phone: null, document: null });
   prisma.paymentLinks.push({ id: "pl_1", storeId: "store_1" }, { id: "pl_2", storeId: "store_2" });
   const email = { send: jest.fn().mockResolvedValue(undefined) };
-  const values: Record<string, string> = { "app.documentLinkSecret": SECRET, "app.checkoutOrigin": "https://pay.example/" };
+  const values: Record<string, unknown> = { "app.documentLinkSecret": SECRET, "app.checkoutOrigin": "https://pay.example/", ...config };
   const service = new BusinessDocumentsService(prisma as any, { get: (key: string) => values[key] } as any, email as any);
   return { prisma, email, service };
 }
@@ -403,6 +407,42 @@ describe("BusinessDocumentsService — send", () => {
     expect(prisma3.versions[0].content.customer.email).toBe("nuevo@example.com");
     expect(email.send).not.toHaveBeenCalled();
     expect(email2.send).not.toHaveBeenCalled();
+  });
+
+  it("caps document emails per store per day, counting the last 24 hours of emailed events", async () => {
+    const { service, prisma, email } = setup({ "app.documentEmailsPerDay": 2 });
+    const first = await service.create("m_1", "store_1", invoice);
+    await service.send("m_1", "store_1", first.id, {});
+    // An old delivery and another store's delivery do not count.
+    prisma.events.push({ id: "old", documentId: first.id, type: "emailed", at: new Date(Date.now() - 25 * 3600_000) });
+    prisma.documents.push({ id: "foreign", storeId: "store_2", kind: "INVOICE", status: "SENT", currentVersion: 1 });
+    prisma.events.push({ id: "foreign_evt", documentId: "foreign", type: "emailed", at: new Date() });
+    const second = await service.create("m_1", "store_1", invoice);
+    await service.send("m_1", "store_1", second.id, {});
+    expect(email.send).toHaveBeenCalledTimes(2);
+
+    const third = await service.create("m_1", "store_1", invoice);
+    const refused = await service.send("m_1", "store_1", third.id, {}).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(HttpException);
+    expect((refused as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
+    expect((refused as HttpException).message).toMatch(/límite de 2 correos/);
+    expect((refused as HttpException).message).toMatch(/WhatsApp/);
+    expect(email.send).toHaveBeenCalledTimes(2);
+    expect(prisma.documents.find((doc) => doc.id === third.id)).toEqual(expect.objectContaining({ status: "DRAFT", number: null }));
+
+    // The link, WhatsApp and copy channels do not email, so they are not capped.
+    const linkOnly = await service.send("m_1", "store_1", third.id, { email: false });
+    expect(linkOnly.document.status).toBe("SENT");
+    expect(linkOnly.publicUrl).toMatch(/\/d\//);
+  });
+
+  it("defaults the document email cap to 200 a day", async () => {
+    const { service, prisma, email } = setup();
+    const created = await service.create("m_1", "store_1", invoice);
+    for (let n = 0; n < 199; n += 1) prisma.events.push({ id: `e${n}`, documentId: created.id, type: "emailed", at: new Date() });
+    await service.send("m_1", "store_1", created.id, {});
+    expect(email.send).toHaveBeenCalledTimes(1);
+    await expect(service.send("m_1", "store_1", created.id, {})).rejects.toThrow("límite de 200 correos");
   });
 
   it("does not email when there is no customer email", async () => {

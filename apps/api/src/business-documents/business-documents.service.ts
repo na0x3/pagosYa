@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   Logger,
@@ -52,6 +54,8 @@ const revokedSnapshot = (snapshot: DocumentSnapshot): DocumentSnapshot => ({
   validUntil: null,
   blocks: [],
 });
+
+const DEFAULT_DOCUMENT_EMAILS_PER_DAY = 200;
 
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
@@ -200,6 +204,8 @@ export class BusinessDocumentsService {
           const doc = await tx.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
           if (!doc) throw new NotFoundException("Documento no encontrado");
           this.assertSendable(doc, dto.message);
+          // Only the email channel is capped; a link-only send (WhatsApp, copy) never is.
+          if (dto.email !== false && doc.customerEmail) await this.assertEmailQuota(tx, storeId);
           const number = doc.number ?? ((await tx.businessDocument.aggregate({ where: { storeId, kind: doc.kind }, _max: { number: true } }))._max.number ?? 0) + 1;
           const snapshot = buildSnapshot({ ...doc, number });
           const sha256 = snapshotSha256(snapshot);
@@ -361,6 +367,23 @@ export class BusinessDocumentsService {
   }
 
   // ── helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * A per-store cap on document emails in the last 24 hours, counted from the
+   * `emailed` events, so a compromised or careless account cannot spam from
+   * the platform sender. Soft under concurrency: two sends at the edge may both pass.
+   */
+  private async assertEmailQuota(tx: Prisma.TransactionClient, storeId: string) {
+    const limit = this.config.get<number>("app.documentEmailsPerDay") ?? DEFAULT_DOCUMENT_EMAILS_PER_DAY;
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const sent = await tx.businessDocumentEvent.count({ where: { type: "emailed", at: { gte: since }, document: { storeId } } });
+    if (sent >= limit) {
+      throw new HttpException(
+        `Alcanzaste el límite de ${limit} correos de documentos por día para esta tienda. Comparte el enlace por WhatsApp o cópialo, o vuelve a enviarlo por correo mañana.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
 
   /** What makes a document sendable, checked on whichever read is about to be written from. */
   private assertSendable(doc: DocumentWithItems, message?: string) {
