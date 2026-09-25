@@ -8,107 +8,72 @@ see `docs/history/SESSION_LOG.md`. For architecture and how to run locally, see
 **This file is only updated when the user explicitly asks.** The Stop hook
 that used to force this every turn was disabled by request. Don't re-add it.
 
-Updated: 2026-09-16 (overnight session)
-Branch: `feature/independent-storefront-projects` — **not merged to main, not pushed**
-HEAD: `1f06747`
-Working tree: clean except `.impeccable/*.png` (unrelated, already modified
-  when the session started — left alone deliberately)
+Updated: 2026-09-24
+Branch: `feature/daily-rewards` — **pushed to origin, not merged to main**
+Working tree: clean. `main` = `origin/main` = `b2e4050`; this branch contains it,
+so the merge is a clean `--no-ff`.
 
-## 1. Read these first
+## 1. Next action — the owner's call first
 
-- `docs/CATALOG_ARRANGEMENT.md` — the catalog arrangement feature, now implemented
-- `docs/STOREFRONT_DESIGN_LEVEL_UP.md` — **new**, the design gap vs amboras.com, phased
-- `docs/DOMAIN_SHOP_READINESS.md` — **new**, why nobody can buy a domain yet
-- `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/progress.md` — the build ledger, with all
-  37 rulings, their reasoning and what each costs if wrong
-- `.superpowers/sdd/design-phase0-report.md` — what Phase 0 changed and what it skipped
+**(a) Merge `feature/daily-rewards`.** Review-ready: full API suite (1929 + 34),
+checkout 313, Studio 189 browser, dashboard 73 browser + 19 unit, `pnpm build`,
+`pnpm lint` (0 errors) and `check:boundaries` all green on 2026-09-24. Merging
+was deliberately left to the owner. Open a PR at
+`https://github.com/na0x3/pagosYa/pull/new/feature/daily-rewards` or merge
+locally with `--no-ff` like earlier branches.
 
-## 2. Next action — pick one, they are independent
+**(b) ASFI sub-project 3** (holdback / reserve / automatic payouts). 1 and 2
+are on main. Process is spec → owner approves design → plan → build; start with
+brainstorming. See the ASFI section of the auto-memory.
 
-**(a) Storefront design, Phase 1+** — `docs/STOREFRONT_DESIGN_LEVEL_UP.md`.
-Phase 0 is committed but **changes nothing until the four benchmark stores are
-regenerated**. Do that first and look at the captures before building further.
-The later phases touch `commerce.js` / `commerce-pages.css`, which are served
-live to every published store; the spec isolates the risky `line-height`
-change with its own revert threshold.
+**(c) Storefront design** — rerun the four benchmarks (~142 credits, needs the
+owner's go-ahead) to render §6.1 photo intelligence, then §6.2. Details in
+`docs/STOREFRONT_DESIGN_PHASE0_RESULT.md` §6a.
 
-**(b) Domain shop** — `docs/DOMAIN_SHOP_READINESS.md`. The backend is real at
-every hop; two things block it, one of which only the owner can do (§4).
+**(d) Keep splitting `dashboard.js`** (4.9k lines) with the `mountX(deps)`
+pattern documented in `docs/CLEAN_CODE_PLAN.md` (Phase 5, continued). Next
+candidates: profile/sessions menu, payment-link lists, finance charts,
+product/catalog import.
 
-**(c) Merge this branch.** The catalog work is review-clean. See §3.
+## 2. What this branch carries
 
-## 3. Catalog arrangement — done, ready to merge
+- Daily luck wheel and dice board (server-drawn with `crypto.randomInt` under a
+  merchant lock); the board pops up per earned roll. Companion profile art.
+- pagosYa is light everywhere; dark tokens remain only for a storefront whose
+  own brand canvas is dark.
+- Comeback card opens centered after the receipt; Studio test sales preview it.
+- Studio plugin dialogs restyled and pinned inside the dashboard iframe.
+- Storefront cart lines: photo, option, unit price, low stock, savings.
+- **Security fixes:**
+  - `metadata.fx` was accepted from merchants at intent creation. It is read as
+    the BOB price an international charge converts from *and* as the amount
+    counted against ASFI limits, so a merchant could overcharge an international
+    buyer or record a 1-centavo payment against their limits. `create()` now
+    strips it. **Check production for intents created earlier with a
+    merchant-seeded `fx`.**
+  - Dice-board rolls counted test-mode payments, so free test payments could
+    farm rolls and the AI credits they win. Now live payments only.
+- One shared HTML escaper (`merchant-dashboard/src/html.mjs`); the old
+  `dashboard.js` one did not escape `'`.
+- ESLint errors 74 → 0 and `pnpm lint` gates CI. 954 warnings remain as a
+  burn-down; promote a rule to error when its count reaches zero.
+- Rewards panel moved out of the `dashboard.js` closure into
+  `src/rewards-panel.mjs`.
 
-Store owners choose how products are arranged: one grid (`all`, the default
-every existing store is on), sections per collection, a separate products
-page, or a tab per collection. Plus collections that work like playlists, two
-platform-owned pages with real hosted URLs, a Studio panel, and a YAPI chat
-flow that **asks before applying**.
+## 3. Domain shop — every remaining blocker is the owner's
 
-- 8 planned tasks, 12 fix rounds, a whole-feature review and a scoped
-  re-review. Final verdict: **ready with one logged follow-up**.
-- Both migrations applied against a real local database holding 42 stores /
-  83 products; all 42 backfilled to `catalogLayout='all'`.
-- All four arrangements verified in a browser at 1280×844 and 390×844.
-- Suites at review time: api 840 serial, checkout 227 + 4 SEO, studio 44 unit
-  + 164 Playwright, all `tsc` clean.
+All buildable items in `docs/DOMAIN_SHOP_READINESS.md` §5a are done (Studio
+entry point, stalled-payment escalation, checkout expiry, required CNAME target,
+operator tooling, expiry warnings). Left: Name.com reseller + Cloudflare for
+SaaS accounts, the platform merchant, pricing/renewal/refund policy, legal
+terms (§5b), then funded sandbox and live smoke tests (§5c).
 
-**Known, accepted, logged — not bugs to re-find:**
-- Under `tabs`, `/productos` is not linked from the storefront but is still in
-  the sitemap. Direct consequence of the owner's own §7 decision.
-- A genuine yes phrased `"dale, va a quedar lindo"` falls into the
-  confirm-twice guard, because `va a` is a mind-change marker. Benign
-  direction: a false negative costs one extra confirmation; a false positive
-  changes a live store.
-- The YAPI recogniser is a whitelist and will always miss some phrasings. That
-  is deliberate — the owner chose ask-before-applying precisely so misses are
-  cheap. Do not "improve" it into silently applying changes.
+## 4. Loose files the owner should move
 
-## 4. Domain shop — blocked, and one blocker is the owner's
-
-A merchant **cannot buy a domain today**, for two independent reasons:
-
-1. **No credentials.** Every `NAMECOM_*` / `DOMAIN_*` variable is absent, so
-   config throws 503 and the UI degrades correctly. Unblocking needs a funded
-   Name.com reseller account and a Cloudflare for SaaS zone — **owner-only work.**
-2. **No Studio entry point at all.** The UI exists only in the merchant
-   dashboard, three layers deep. Nothing in `apps/merchant-studio` references
-   it. A panel spec is in §6 of the readiness doc — it must add both the
-   toolbar button *and* the `source-business-workspace.ts` catalog entry;
-   adding only the button reproduces a bug found and fixed this session.
-
-**Fix before going live, regardless of the above:** a paid order can stall
-forever with no support case. The escalation in `domain-commerce.service.ts`
-excludes `AWAITING_PAYMENT`, which is exactly the status a paid-but-
-unregistered order holds. Merchant pays, receives nothing, nobody is told.
-Also `CUSTOM_DOMAIN_CNAME_TARGET` has a default, so its guard can never fire —
-it fails open where every other variable fails closed.
-
-## 5. Storefront design — Phase 0 landed, with a cost
-
-Phase 0 is generator-prompt and token work only. No kit file was touched, so
-no published storefront changed. It covers five type roles with a constrained
-display:body ratio, an ink-opacity ladder, an eight-step spacing scale, a `ch`
-measure cap, a five-slot accent budget sampled from the merchant's own goods,
-and a persisted per-store photography scene contract so a catalogue reads as
-one shoot rather than one-off packshots.
-
-**Decide before the next generation run:** the stable prompt grew ~4.6 KB
-(~2,300 input tokens, ~0.6 credits per attempt). A merchant on a 10-credit
-ceiling can no longer afford a repair after a truncated first response; a test
-fixture was raised 10 → 12 to reflect that. `minCredits` scales automatically
-so nobody is silently under-provisioned, but the practical floor rose.
-
-**Open, from the spec's §13:** one italic role currently forces a sans-led
-concept into a serif partner (only two bundled fonts carry true italics);
-reading a merchant's uploaded photos to set the surface colour is unbuilt, and
-is the half that would fix grey-on-cream for *existing* catalogues without
-regenerating; card/scene aspect is not yet a merchant choice.
-
-**Caveat on the reference:** amboras publishes no live demo store. Their
-example links are static screenshots of product detail pages only. Their
-marketing CSS was quoted exactly; everything about their storefronts is
-measured off pixels and stated as ratios. Nobody has seen their homepages.
+`SFVL-SOL-AUT-709354049-9526` (ASFI/bank PDF) sits at the repo root, and
+`visor (1).pdf` is a byte-identical copy. Both are gitignored now (`/*.pdf`),
+so they can't be committed by accident. The duplicate and the empty
+`pagosya-backup.dump` can be deleted; automated deletion was blocked.
 
 ## 6. Production readiness — unchanged, carried forward, NOT re-verified
 
