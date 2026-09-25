@@ -44,6 +44,19 @@ it('measures the DNA kit surfaces apart from each other and from the kit default
   expect(first.sample.surfaces.card).toEqual(expect.objectContaining({ hover: 'scale' }));
   expect(second.sample.surfaces.card).toEqual(expect.objectContaining({ hover: 'chip' }));
   expect(first.sample.errors).toEqual([]);
+  // Press, the notice's top border and the typeface each surface renders in are measured too.
+  expect([first.sample.surfaces.button!.press, second.sample.surfaces.button!.press]).toEqual([expect.stringContaining('matrix'), expect.stringContaining('matrix')]);
+  expect(first.sample.surfaces.button!.press).not.toBe(second.sample.surfaces.button!.press);
+  expect([first.sample.surfaces.added!.border, second.sample.surfaces.added!.border]).toEqual([1, 2]); // hairline; bold 2.5px snaps to 2 device pixels
+  for (const surface of ['cart', 'review', 'added', 'card'] as const) expect(first.sample.surfaces[surface]).toEqual(expect.objectContaining({ font: expect.any(String) }));
+});
+
+it('measures the cart with the product in it when the home page cannot add to the cart', async () => {
+  const kit = await kitDefaultSnapshot();
+  const noCatalog = { ...kit, files: kit.files.map(f => f.path === 'index.html' ? { ...f, content: f.content.replace('<div data-pagosya-catalog data-pagosya-grid></div>', '') } : f) };
+  const { sample } = await collectStoreSample({ id: 'n', name: 'n', snapshot: noCatalog });
+  expect(sample.surfaces.cart).toEqual(expect.objectContaining({ stepRadius: expect.any(Number) }));
+  expect(sample.surfaces.cart!.stepRadius).toBeGreaterThanOrEqual(0);
 });
 
 it('counts motion hooks in authored files only', () => {

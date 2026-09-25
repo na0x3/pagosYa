@@ -21,7 +21,7 @@ type ViewportFacts = {
 };
 
 /** Everything measured in the page, in one self-contained function (it is serialized into the browser). */
-function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' | 'review' | 'card-hover' | 'button-hover' }) {
+function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' | 'review' | 'card-hover' | 'button-hover' | 'button-press' }) {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   // Canvas parsing handles every CSS colour syntax (color-mix, oklch, color()) and returns sRGB bytes.
@@ -59,6 +59,9 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     if (getComputedStyle(cardEl).transform !== 'none') return 'tilt';
     return 'none';
   }
+  // The typeface a surface's title or text renders in, and its case (text-transform / small caps).
+  const voice = (el: Element | null | undefined) => el ? { font: family(getComputedStyle(el).fontFamily), titleCase: `${getComputedStyle(el).textTransform}/${getComputedStyle(el).fontVariantCaps}` } : { font: '', titleCase: '' };
+  if (kind === 'button-press') { const el = first('.menu-add'); return el ? getComputedStyle(el).transform : null; }
   if (kind === 'button-hover') {
     const el = first('.menu-add');
     if (!el) return null;
@@ -74,7 +77,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     const buttonEl = first('.menu-add');
     const add = buttonEl && cardEl?.contains(buttonEl) ? form(buttonEl) : {};
     const card = cardEl ? { aspect: round(cardEl.getBoundingClientRect().width / cardEl.getBoundingClientRect().height), imageRadius: image ? radius(image) : 0, align: getComputedStyle(cardEl.querySelector('h3, h2, .menu-item__copy') || cardEl).textAlign, images: cardEl.querySelectorAll('img').length,
-      pad: image ? Math.round(px(getComputedStyle(image).paddingBottom)) : 0, swatches: cardEl.querySelectorAll('[data-card-swatch]').length, addRadius: add.btnRadius ?? -1, addBorder: add.btnBorder ?? -1, addTransform: add.btnTransform ?? 'none' } : null;
+      font: voice(cardEl.querySelector('[data-product-field="name"], h3, h2')).font, pad: image ? Math.round(px(getComputedStyle(image).paddingBottom)) : 0, swatches: cardEl.querySelectorAll('[data-card-swatch]').length, addRadius: add.btnRadius ?? -1, addBorder: add.btnBorder ?? -1, addTransform: add.btnTransform ?? 'none' } : null;
     const hoverBefore = buttonEl ? (() => { const st = getComputedStyle(buttonEl); return JSON.stringify([st.transform, st.filter, st.backgroundImage === 'none' ? 'none' : `${st.backgroundSize} ${st.backgroundPosition}`, st.boxShadow]); })() : null;
     const missingImages = Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && (!i.complete || !i.naturalWidth); }).length;
     return { dna, type, card, hoverBefore, button: buttonEl ? control(buttonEl) : null, overflow: document.documentElement.scrollWidth > vw + 1, fontsLoaded: document.fonts.status === 'loaded', missingImages };
@@ -84,7 +87,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     if (!el) return null;
     const r = el.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
     const position = `${cy < vh / 3 ? 'top' : cy > vh * 2 / 3 ? 'bottom' : 'middle'}-${cx < vw / 3 ? 'left' : cx > vw * 2 / 3 ? 'right' : 'center'}`;
-    return { position, width: round(r.width / vw), height: Math.round(r.height), radius: radius(el), bg: background(el), border: border(el), ...form(first('.cart-added[data-visible="true"] button') ?? undefined) };
+    return { position, width: round(r.width / vw), height: Math.round(r.height), radius: radius(el), bg: background(el), border: Math.max(px(getComputedStyle(el).borderTopWidth), px(getComputedStyle(el).borderBottomWidth)), font: voice(el.querySelector('span')).font, ...form(first('.cart-added[data-visible="true"] button') ?? undefined) };
   }
   if (kind === 'cart') {
     const el = document.querySelector('dialog.cart-drawer[open]');
@@ -93,7 +96,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     // A bottom sheet narrower than the viewport still reads as a bottom sheet.
     const position = left && right && top && bottom ? 'full' : bottom && !top ? 'bottom' : top && !bottom ? 'top' : right && !left ? 'right' : left && !right ? 'left' : 'centered';
     const photo = el.querySelector('.order-item__photo'), step = el.querySelector('.quantity button');
-    return { position, width: round(r.width / vw), radius: radius(el), bg: background(el), page: background(document.body), border: border(el), photoRadius: photo ? radius(photo) : -1, stepRadius: step ? radius(step) : -1, ...form(el.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
+    return { position, width: round(r.width / vw), radius: radius(el), bg: background(el), page: background(document.body), border: border(el), ...voice(el.querySelector('.cart-drawer__header h2')), photoRadius: photo ? radius(photo) : -1, stepRadius: step ? radius(step) : -1, ...form(el.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
   }
   if (kind === 'product') {
     const el = document.querySelector('[data-pagosya-product][data-style]');
@@ -110,7 +113,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
   if (summary && fields) { const a = summary.getBoundingClientRect(), b = fields.getBoundingClientRect(); position = a.left >= b.right - 1 ? 'right' : a.right <= b.left + 1 ? 'left' : a.top >= b.bottom - 1 ? 'below' : 'above'; }
   const box = summary?.getBoundingClientRect(), whole = review.getBoundingClientRect();
   return { columns: s.display.includes('grid') ? s.gridTemplateColumns.split(' ').filter(Boolean).length : 1, summary: position,
-    summaryShare: box && whole.width ? round(box.width / whole.width) : 0, width: round(whole.width / vw), radius: summary ? radius(summary) : 0, border: summary ? border(summary) : 0,
+    ...voice(summary?.querySelector('h2')), summaryShare: box && whole.width ? round(box.width / whole.width) : 0, width: round(whole.width / vw), radius: summary ? radius(summary) : 0, border: summary ? border(summary) : 0,
     bgDelta: summary ? round(Math.abs(lum(background(summary)) - lum(background(document.body))) * 1000) / 1000 : 0, ...form(review.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
 }
 
@@ -149,7 +152,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
   const measureAdded = async () => {
     const added = await page.evaluate(measureInPage, { kind: 'added' as const }) as any;
     if (!added) throw new Error('the added-to-cart confirmation did not appear');
-    facts.surfaces.added = { position: added.position, width: added.width, height: added.height, radius: added.radius, bgLum: luminance(added.bg), border: added.border, ...formSample(added) };
+    facts.surfaces.added = { position: added.position, width: added.width, height: added.height, radius: added.radius, bgLum: luminance(added.bg), border: added.border, font: added.font, ...formSample(added) };
     await shot('added');
   };
   let added = false;
@@ -173,19 +176,25 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
         await buttonTarget.hover({ timeout: 2000 }).catch(() => undefined);
         const after = await page.evaluate(measureInPage, { kind: 'button-hover' as const }) as string | null;
         facts.surfaces.button.hover = after === null || after === home.hoverBefore ? 'none' : after;
+        // Press: hold the button down, read it, and release elsewhere so nothing is added.
+        await page.mouse.down();
+        facts.surfaces.button.press = await page.evaluate(measureInPage, { kind: 'button-press' as const }) as string ?? 'none';
+        await page.mouse.move(0, 0);
+        await page.mouse.up();
       }
       await page.mouse.move(0, 0);
     });
     await step('added', async () => { if (await addFirstProduct(page)) { added = true; await measureAdded(); } });
-    await step('cart', async () => {
+    const measureCart = async () => {
       const opened = await page.evaluate(() => { const t = document.querySelector<HTMLElement>('[data-cart-open], a[href="#pedido"], a[href="#carrito"], a[href="#cart"]'); t?.click(); return !!t; });
       if (!opened) throw new Error('no cart trigger');
       await page.waitForSelector('dialog.cart-drawer[open]', { timeout: 3000 });
       const cart = await page.evaluate(measureInPage, { kind: 'cart' as const }) as any;
-      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000, border: cart.border, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
+      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000, border: cart.border, font: cart.font, titleCase: cart.titleCase, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
       await shot('cart');
       await page.evaluate(() => document.querySelector<HTMLDialogElement>('dialog.cart-drawer[open]')?.close());
-    });
+    };
+    await step('cart', measureCart);
     const product = config.data?.items?.[0];
     if (config.productPage && product) await step('product', async () => {
       await page.goto(`${origin}/${config.productPage}?id=${encodeURIComponent(product.id)}`, { waitUntil: 'load', timeout: 10000 });
@@ -199,13 +208,15 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
         const groups = await page.locator('.product-detail__options fieldset').count();
         for (let group = 0; group < groups; group++) await page.locator(`[data-product-option="${group}"]:not([disabled])`).first().click();
         if (await addFirstProduct(page)) { added = true; await measureAdded(); }
+        // The home could not add: measure the cart again, now with the product in it.
+        if (added && facts.surfaces.cart?.stepRadius === -1) { const old = shots?.findIndex(s => s.name === `cart-${viewport}`) ?? -1; if (old >= 0) shots!.splice(old, 1); await measureCart(); }
       }
     });
     if (config.checkoutPage && added) await step('review', async () => {
       await page.goto(`${origin}/${config.checkoutPage}`, { waitUntil: 'load', timeout: 10000 });
       await page.waitForSelector('.checkout-review', { timeout: 5000 });
       const review = await page.evaluate(measureInPage, { kind: 'review' as const }) as any;
-      facts.surfaces.review = { columns: review.columns, summary: review.summary, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
+      facts.surfaces.review = { columns: review.columns, summary: review.summary, font: review.font, titleCase: review.titleCase, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
     });
   } finally { await page.close(); }
   return facts;
