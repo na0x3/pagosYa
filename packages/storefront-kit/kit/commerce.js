@@ -37,13 +37,16 @@
     ':root[data-dna-added=ribbon] .cart-added{--motion-ease:var(--motion-ease-settle);--motion-ease-exit:var(--motion-ease-settle-exit)}',
   ];
   const MOTION_TOKEN_NAMES = { ease: '--motion-ease', settle: '--motion-ease-settle', exit: '--motion-ease-exit', settleExit: '--motion-ease-settle-exit', fast: '--motion-fast', base: '--motion-base', slow: '--motion-slow', distance: '--motion-distance', stagger: '--motion-stagger', parallax: '--motion-parallax', press: '--motion-press-scale' };
-  /* One token for WAAPI, which cannot read the cascade: the store's own --motion-* value (computed), else the personality's
-   * table value, else the use site's literal (today's value). */
+  /* A store's own numbers are held to the range @pagosya/ui allows (a press scale of 0 would collapse the button; a
+   * negative duration makes animate() throw). */
+  const MOTION_LIMITS = { fast: [0, 900], base: [0, 900], slow: [0, 900], distance: [0, 40], stagger: [0, 120], parallax: [0, 2], press: [.85, 1] };
+  /* One token for WAAPI, which cannot read the cascade: the store's own --motion-* value (computed, clamped), else the
+   * personality's table value, else the use site's literal (today's value). */
   function motionValue(name, fallback) {
     const raw = getComputedStyle(document.documentElement).getPropertyValue(MOTION_TOKEN_NAMES[name]).trim();
     if (raw && typeof fallback === 'string') return raw;
     const number = raw.match(/^(-?\d*\.?\d+)(ms|s|px)?$/);
-    if (number) return Number(number[1]) * (number[2] === 's' ? 1000 : 1);
+    if (number) { const [min, max] = MOTION_LIMITS[name]; return Math.min(max, Math.max(min, Number(number[1]) * (number[2] === 's' ? 1000 : 1))); }
     const personality = document.documentElement.getAttribute('data-dna-motion');
     return Object.prototype.hasOwnProperty.call(MOTION_TOKENS, personality ?? '') ? MOTION_TOKENS[personality][name] : fallback;
   }

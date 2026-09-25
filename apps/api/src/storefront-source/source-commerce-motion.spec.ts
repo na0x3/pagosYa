@@ -115,6 +115,20 @@ describe('the add pulse takes the personality', () => {
       [[{ opacity: 0.65 }, { opacity: 1 }], { duration: t.fast, easing: t.settle }],
     ]);
   });
+  it('clamps a store\'s own out-of-range tokens: press scale 0.85-1, duration 0-900ms', async () => {
+    const RECORD = `window.__animations=[];Element.prototype.animate=function(k,o){window.__animations.push({keyframes:k,options:o});return{cancel(){},finished:Promise.resolve()};};`;
+    const pulseOf = async (css: string) => {
+      const page = await open({ css, dna: { ...DNA, motion: 'playful' }, runtime: `${RECORD}\n${commerce}` });
+      try {
+        await page.click('.menu-add');
+        await page.waitForFunction(() => (window as any).__animations.some((a: any) => String(a.keyframes[0].transform).startsWith('scale')));
+        const call = await page.evaluate(() => (window as any).__animations.find((a: any) => String(a.keyframes[0].transform).startsWith('scale')));
+        return { from: call.keyframes[0].transform, duration: call.options.duration };
+      } finally { await page.close(); }
+    };
+    expect(await pulseOf(':root{--motion-press-scale:0;--motion-fast:3s}')).toEqual({ from: 'scale(0.85)', duration: 900 });
+    expect(await pulseOf(':root{--motion-press-scale:1.4;--motion-fast:-50ms}')).toEqual({ from: 'scale(1)', duration: 0 });
+  });
   it('pulses the cart count too', () => {
     expect(addWithPointer({ dna: { ...DNA, motion: 'snappy' } }).filter(call => call.el === 'count')).toHaveLength(2);
   });
@@ -194,8 +208,8 @@ describe('kit transitions take the personality in the browser', () => {
 describe('motion.js reveals and card hover take the personality', () => {
   const REVEAL_BODY = `${CATALOG}<main><section style="height:1600px"><p>Inicio</p></section><section><h2 id="reveal">Nuestra historia</h2></section></main>`;
   const RECORD = `window.__animations=[];const __animate=Element.prototype.animate;Element.prototype.animate=function(k,o){window.__animations.push({id:this.id,keyframes:k,options:o});return __animate.call(this,k,o);};`;
-  async function reveal(motion: 'subtle' | 'expressive', personality?: string) {
-    const page = await open({ dna: personality ? { ...DNA, motion: personality } : undefined, settings: { motion }, body: REVEAL_BODY, runtime: `${RECORD}\n${commerce}\n${motionRuntime}` });
+  async function reveal(motion: 'subtle' | 'expressive', personality?: string, css?: string) {
+    const page = await open({ css, dna: personality ? { ...DNA, motion: personality } : undefined, settings: { motion }, body: REVEAL_BODY, runtime: `${RECORD}\n${commerce}\n${motionRuntime}` });
     try {
       await page.waitForSelector('.menu-add');
       await page.evaluate(() => document.getElementById('reveal')!.scrollIntoView());
@@ -212,6 +226,11 @@ describe('motion.js reveals and card hover take the personality', () => {
     expect(await reveal('expressive', 'cinematic')).toEqual({ duration: 520, easing: 'cubic-bezier(.16,1,.3,1)', from: 'translateY(28px)' });
     expect(await reveal('subtle', 'cinematic')).toEqual({ duration: 260, easing: 'cubic-bezier(.16,1,.3,1)', from: 'translateY(14px)' });
     expect(await reveal('expressive', 'playful')).toEqual({ duration: 360, easing: 'cubic-bezier(.22,1,.36,1)', from: 'translateY(18px)' });
+  });
+  it('clamps a store\'s own out-of-range tokens like @pagosya/ui: durations 0-900ms, travel 0-40px', async () => {
+    const css = ':root{--motion-base:3s;--motion-fast:-40ms;--motion-distance:200px}';
+    expect(await reveal('expressive', 'snappy', css)).toEqual(expect.objectContaining({ duration: 900, from: 'translateY(40px)' }));
+    expect(await reveal('subtle', undefined, css)).toEqual(expect.objectContaining({ duration: 0, from: 'translateY(20px)' }));
   });
   it('the card photo hover keeps 160ms without a personality and takes the fast token with one', async () => {
     for (const [personality, duration] of [[undefined, '0.16s'], ['snappy', '0.12s']] as const) {

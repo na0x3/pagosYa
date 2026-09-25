@@ -66,7 +66,9 @@
     if (stopped || reduce.matches) return;
     const ease = getComputedStyle(root).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
     // The store's motion personality (--motion-*, set by commerce.js from data-dna-motion); without one, today's values.
-    const token = name => { const m = getComputedStyle(root).getPropertyValue(name).trim().match(/^(-?\d*\.?\d+)(ms|s|px)?$/); return m ? Number(m[1]) * (m[2] === 's' ? 1000 : 1) : null; };
+    // A store's own values are clamped as @pagosya/ui clamps them: durations 0-900ms, travel 0-40px.
+    const LIMITS = { '--motion-fast': 900, '--motion-base': 900, '--motion-distance': 40 };
+    const token = name => { const m = getComputedStyle(root).getPropertyValue(name).trim().match(/^(-?\d*\.?\d+)(ms|s|px)?$/); return m ? Math.min(LIMITS[name], Math.max(0, Number(m[1]) * (m[2] === 's' ? 1000 : 1))) : null; };
     const expressive = mode === 'expressive';
     const duration = (expressive ? token('--motion-base') : token('--motion-fast')) ?? (expressive ? 280 : 220);
     const travel = token('--motion-distance');
