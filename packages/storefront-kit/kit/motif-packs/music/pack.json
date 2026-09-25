@@ -1,0 +1,66 @@
+{
+  "id": "music",
+  "version": 1,
+  "name": "Música",
+  "topics": {
+    "es": [
+      "música",
+      "instrumento",
+      "instrumentos",
+      "canción",
+      "discos",
+      "vinilo",
+      "guitarra"
+    ],
+    "en": [
+      "music",
+      "instrument",
+      "song",
+      "records",
+      "vinyl",
+      "guitar"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}
