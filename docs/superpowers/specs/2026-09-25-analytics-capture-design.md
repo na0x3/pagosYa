@@ -58,8 +58,8 @@ is a ruling the owner may overturn. G1 only captures and serves the data; G2 dra
    - The same store eligibility as the funnel (404 otherwise). Throttled 30 requests/min per client; up to 20
      events per request.
    - The envelope is strict (a v4 UUID `sessionId`, an array of 1–20 objects, else 400). Each event is checked on
-     its own: an unknown type, a missing or unknown label/step, a malformed field, or a `productId` that is not an
-     active product of this store drops that event only; unknown fields are dropped. This keeps a batch from an
+     its own: an unknown type, a missing or unknown label/step, a malformed field, or a `productId` that is not a
+     product of this store drops that event only; unknown fields are dropped. This keeps a batch from an
      older kit useful. The answer is `202 { accepted: n }`.
    - A request carrying `Sec-GPC: 1` records nothing (`accepted: 0`), matching the client rule.
    - Consent is enforced where it lives, in the browser: the host page sends nothing without it, like the funnel.
