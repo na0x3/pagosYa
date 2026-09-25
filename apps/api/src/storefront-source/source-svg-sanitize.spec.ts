@@ -44,6 +44,12 @@ describe('sanitizeMotifSvg', () => {
     expect(sanitizeMotifSvg(wrap('<title>&lt;/script&gt;</title>')).svg).toContain('<title>&lt;/script&gt;</title>');
   });
 
+  it('removes a transform on the root <svg> (it would move the drawing out of its slot), keeping inner transforms', () => {
+    const result = sanitizeMotifSvg('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" transform="translate(0 120) scale(4)"><g transform="rotate(10 32 32)"><path d="M0 0h64v64H0z"/></g></svg>');
+    expect(result.svg).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g transform="rotate(10 32 32)"><path d="M0 0h64v64H0z"/></g></svg>');
+    expect(result.removed).toEqual(['transform']);
+  });
+
   it('drops a drawing over the size cap, even when the excess is one huge path', () => {
     const huge = wrap(`<path d="M0 0${' l1 1'.repeat(1500)}"/>`);
     expect(Buffer.byteLength(huge)).toBeGreaterThan(MOTIF_SVG_MAX_BYTES);

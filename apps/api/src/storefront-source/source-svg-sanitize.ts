@@ -60,6 +60,8 @@ export function sanitizeMotifSvg(raw: string, options: { idPrefix?: string } = {
     for (const attr of node.attrs ?? []) {
       const name = attr.prefix ? `${attr.prefix}:${attr.name}` : attr.name;
       if (isRoot && name === 'xmlns') continue;
+      // A root transform moves the whole drawing out of its slot (the slot clips paint too; this keeps the file honest).
+      if (isRoot && name === 'transform') { removed.add(name); continue; }
       if (!ATTRIBUTES.has(name) || !safeValue(name, attr.value)) { removed.add(name); continue; }
       let value = attr.value;
       if (name === 'id') value = prefixed(value);

@@ -1309,6 +1309,7 @@
           || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
       }
     }
+    root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
     return root;
   }
   const motifText = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -1369,6 +1370,7 @@
   }
   /* A motif never covers a price, a purchase control or a total: a placed one that would is removed. A card motif must also
    * sit inside its card (a card the store made static would anchor the corner elsewhere). */
+  const MOTIF_BLEED = 8;
   const MOTIF_PROTECTED = '.menu-item__price,.menu-add,[data-product-field="price"],[data-product-add],[data-product-pricing],.product-detail__buy,.checkout-button,.order-total';
   function guardMotif(holder, scope, contained) {
     const check = () => {
@@ -1376,9 +1378,10 @@
       const box = holder.getBoundingClientRect(), frame = scope.getBoundingClientRect();
       if (!box.width || !box.height) return;
       if (contained && (box.left < frame.left - 1 || box.right > frame.right + 1 || box.top < frame.top - 1 || box.bottom > frame.bottom + 1)) { holder.remove(); return; }
+      // The paint may reach MOTIF_BLEED px past the box (the clip's margin for the glow).
       const covers = [...scope.querySelectorAll(MOTIF_PROTECTED)].some(el => {
-        const r = el.getBoundingClientRect();
-        return r.width > 0 && r.height > 0 && r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top;
+        const r = el.getBoundingClientRect(), b = MOTIF_BLEED;
+        return r.width > 0 && r.height > 0 && r.left < box.right + b && r.right > box.left - b && r.top < box.bottom + b && r.bottom > box.top - b;
       });
       if (covers) holder.remove();
     };
@@ -1423,12 +1426,13 @@
     // The settle curve only: the personality's overshoot curve is kept for transform transitions (glow and steam fade).
     const settle = 'var(--motion-ease-settle,cubic-bezier(.23,1,.32,1))';
     const play = behavior => `.pagosya-motif[data-motif-play][data-motif-behavior=${behavior}]`;
-    // Layered !important: the store's own CSS (unlayered) cannot enlarge a slot past 64px or make it catch clicks.
+    // Layered !important: the store's own CSS (unlayered) cannot enlarge a slot past 64px, make it catch clicks or lift
+    // the clip. The clip keeps every stroke inside the slot plus MOTIF_BLEED px, room for the glow's drop-shadow.
     motifStyle.textContent = `@layer pagosya-commerce {
-      .pagosya-motif{display:inline-block;box-sizing:border-box;width:48px;height:48px;max-width:64px!important;max-height:64px!important;overflow:visible!important;pointer-events:none!important;line-height:0;vertical-align:middle;flex:none;color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
+      .pagosya-motif{display:inline-block!important;box-sizing:border-box;width:48px;height:48px;max-width:64px!important;max-height:64px!important;overflow:visible!important;clip-path:inset(-${MOTIF_BLEED}px)!important;pointer-events:none!important;line-height:0;vertical-align:middle;flex:none;color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
       .pagosya-motif>svg{display:block;width:100%;height:100%;max-width:64px!important;max-height:64px!important;overflow:visible;transform-origin:50% 100%}
       .pagosya-motif svg [data-part]{transform-box:fill-box;transform-origin:50% 100%}
-      .pagosya-motif[data-motif-slot=product]{display:block;width:56px;height:56px;margin:0 0 10px}
+      .pagosya-motif[data-motif-slot=product]{display:block!important;width:56px;height:56px;margin:0 0 10px}
       .pagosya-motif[data-motif-slot=card]{position:absolute;top:10px;right:10px;z-index:2;width:40px;height:40px}
       .pagosya-motif[data-motif-slot=cart]{width:36px;height:36px;margin-inline:12px auto}
       @keyframes pagosya-motif-glow{0%{opacity:.2;filter:none}18%{opacity:.85}28%{opacity:.45}55%{opacity:1;filter:drop-shadow(0 0 6px currentColor)}100%{opacity:1;filter:none}}

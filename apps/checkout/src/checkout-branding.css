@@ -74,8 +74,9 @@ body.store-branded-checkout:is([data-dna-button=underline],[data-dna-button=ghos
 /* Keyboard focus: a foreground ring on a background halo reads on filled and open forms; the tag notch is dropped so nothing clips it. */
 body.store-branded-checkout[data-dna-button] #app :is(button.primary,.payment-success-panel .receipt-action):focus-visible{clip-path:none;outline:3px solid var(--checkout-foreground);outline-offset:2px;box-shadow:0 0 0 2px var(--checkout-background),var(--checkout-dna-btn-shadow,0 0 #0000)!important}
 
-/* Sub-project 3: the store's confirmation motif (checkout-motif.ts). Decorative, at most 64px, one finite play. */
-#app .payment-success-motif{display:block;width:56px;height:56px;max-width:64px!important;max-height:64px!important;margin:0 auto 12px;line-height:0;pointer-events:none;color:var(--checkout-accent,currentColor)}
+/* Sub-project 3: the store's confirmation motif (checkout-motif.ts). Decorative, at most 64px, one finite play. The clip keeps
+   its paint inside the slot plus 8px (the glow's drop-shadow), never over the status line or the receipt. */
+#app .payment-success-motif{display:block!important;width:56px;height:56px;max-width:64px!important;max-height:64px!important;margin:0 auto 12px;line-height:0;pointer-events:none;clip-path:inset(-8px)!important;color:var(--checkout-accent,currentColor)}
 #app .payment-success-motif>svg{display:block;width:100%;height:100%;max-width:64px;max-height:64px;overflow:visible;transform-origin:50% 100%}
 #app .payment-success-motif svg [data-part]{transform-box:fill-box;transform-origin:50% 100%}
 @keyframes checkout-motif-glow{0%{opacity:.2;filter:none}18%{opacity:.85}28%{opacity:.45}55%{opacity:1;filter:drop-shadow(0 0 6px currentColor)}100%{opacity:1;filter:none}}

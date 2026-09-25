@@ -27,6 +27,7 @@ function verifiedDrawing(markup: string): SVGSVGElement | null {
         || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
     }
   }
+  root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
   return root as unknown as SVGSVGElement;
 }
 
