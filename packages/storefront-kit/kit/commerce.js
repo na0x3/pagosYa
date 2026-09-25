@@ -1650,8 +1650,11 @@
       const state = section.getAttribute('data-motif-pattern');
       if (state === 'placed' || state === 'skipped' || section.closest(PATTERN_EXCLUDED) || section.querySelector(PATTERN_EXCLUDED)) continue;
       const back = patternBackdrop(section), ink = motifRgb(getComputedStyle(section).color);
+      // A text element that (or whose own ancestor up to the section) paints its own opaque background sits on that
+      // colour, not on the tile: a filled badge or button inside a patterned section is not part of this check.
+      const sitsOnTile = el => { for (let node = el; node && node !== section; node = node.parentElement) { const colour = motifRgb(getComputedStyle(node).backgroundColor); if (colour && colour[3] >= .99) return false; } return true; };
       const texts = [section, ...section.querySelectorAll('*')]
-        .filter(el => [...el.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()))
+        .filter(el => [...el.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && sitsOnTile(el))
         .slice(0, 40).map(el => motifRgb(getComputedStyle(el).color)).filter(colour => colour && colour[3] > 0);
       const alpha = back && ink && ink[3] > 0 ? patternAlpha(ink, back, texts) : 0;
       const drawing = alpha ? motifDrawing(MOTIFS[index].svg) : null;
