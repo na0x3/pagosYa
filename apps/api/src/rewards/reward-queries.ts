@@ -5,7 +5,7 @@ import type { PrismaService } from "../prisma/prisma.service";
 export type Db = PrismaService | Prisma.TransactionClient;
 
 export function countStoreSales(db: Db, merchantId: string, storeId: string) {
-  return db.paymentIntent.count({ where: { merchantId, status: PaymentIntentStatus.SUCCEEDED, metadata: { path: ["storeId"], equals: storeId } } });
+  return db.paymentIntent.count({ where: { merchantId, status: PaymentIntentStatus.SUCCEEDED, livemode: true, metadata: { path: ["storeId"], equals: storeId } } });
 }
 
 export async function gameXpForStore(db: Db, storeId: string) {
