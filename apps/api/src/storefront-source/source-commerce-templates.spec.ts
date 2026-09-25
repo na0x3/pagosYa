@@ -90,3 +90,49 @@ describe('cart line template', () => {
     expect(shop.$('.cart-drawer .mi-linea [data-cart-field="name"]').textContent).toBe('Lámpara Luna');
   });
 });
+
+const CART = `<template data-pagosya-cart-template><div class="mi-carrito"><header><h2>Tu canasta</h2><button data-cart-close>Cerrar</button></header><div data-cart-slot="lines"></div><div data-cart-slot="savings"></div><div data-cart-slot="total">Total: Bs 0</div><div data-cart-slot="note"></div><div data-cart-slot="action"></div><div data-cart-slot="empty" class="vacio">Tu canasta está esperando 🐾</div><div data-cart-slot="policies"></div><button data-cart-close class="seguir">Seguir mirando</button></div></template>`;
+
+describe('cart panel template', () => {
+  it('lays the kit cart into the authored panel and hides the kit drawer chrome', async () => {
+    const shop = boot(CART, { cart: [{ id: 'lamp', quantity: 1 }] });
+    await shop.tick();
+    shop.$('[data-cart-open]').click();
+    const panel = shop.$('.cart-drawer [data-cart-panel]')!;
+    expect(panel.classList.contains('mi-carrito')).toBe(true);
+    expect(panel.querySelector('[data-cart-slot="lines"] .order-items li')).not.toBeNull();
+    expect(panel.querySelector('[data-cart-slot="total"]').textContent).not.toContain('Bs 0');
+    expect(panel.querySelector('[data-cart-slot="total"] .order-total')).not.toBeNull();
+    expect(panel.querySelector('[data-cart-slot="action"] [data-checkout]')).not.toBeNull();
+    expect(panel.querySelector('[data-cart-slot="empty"]').hidden).toBe(true);
+    expect(shop.$('.cart-drawer').hasAttribute('data-template')).toBe(true);
+    expect(shop.w.document.activeElement.closest('[data-cart-panel]')).not.toBeNull();
+    panel.querySelector('.seguir').click();
+    expect(shop.$('.cart-drawer').hasAttribute('open')).toBe(false);
+  });
+
+  it('shows only the authored empty slot while the cart is empty', async () => {
+    const shop = boot(CART);
+    await shop.tick();
+    shop.$('[data-cart-open]').click();
+    const panel = shop.$('.cart-drawer [data-cart-panel]')!;
+    expect(panel.querySelector('[data-cart-slot="empty"]').hidden).toBe(false);
+    for (const slot of ['lines', 'total', 'action', 'savings', 'note']) expect(panel.querySelector(`[data-cart-slot="${slot}"]`).hidden).toBe(true);
+  });
+
+  it('keeps the kit empty text in the lines slot when the template has no empty slot', async () => {
+    const shop = boot(CART.replace('<div data-cart-slot="empty" class="vacio">Tu canasta está esperando 🐾</div>', ''));
+    await shop.tick();
+    shop.$('[data-cart-open]').click();
+    expect(shop.$('.cart-drawer [data-cart-slot="lines"] .order-empty')).not.toBeNull();
+  });
+
+  it('is ignored without a total slot or a close button', async () => {
+    const shop = boot(CART.replace('<div data-cart-slot="total">Total: Bs 0</div>', ''), { cart: [{ id: 'lamp', quantity: 1 }] });
+    await shop.tick();
+    shop.$('[data-cart-open]').click();
+    expect(shop.$('.cart-drawer [data-cart-panel]')).toBeNull();
+    expect(shop.$('.cart-drawer .order-total')).not.toBeNull();
+    expect(shop.flag('cartTemplateInvalid')).toBe('true');
+  });
+});
