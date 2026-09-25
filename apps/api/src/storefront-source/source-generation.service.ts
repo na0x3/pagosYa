@@ -23,7 +23,7 @@ import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-referenc
 import { sourceUiCompositions, sourceUiCompositionPrompt, type SourceCompositionInput } from './source-ui';
 import { sourceUiCompositionRecipe } from './source-composition-registry';
 import { validateSourcePriceClaims } from './source-price-claims';
-import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
+import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { SourceDesignPlanner } from './source-design-planner';
@@ -615,6 +615,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               const mounts = repairNextCommerceMounts(generated.files, sitePurpose);
               generated.files = mounts.files;
               autoRepairs.push(...mounts.repairs);
+              // Missing alt text and filled commerce slots have one right answer; fixing them here keeps a paid
+              // repair from trading one finding for another until the attempts run out.
+              const markup = repairNextAuthoredMarkup(generated.files);
+              generated.files = markup.files;
+              autoRepairs.push(...markup.repairs);
             }
             await progress?.('validating');
             const declaredMotifs = designMotifs(committedDesign ?? previousDesign);

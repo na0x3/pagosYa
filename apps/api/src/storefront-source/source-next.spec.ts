@@ -1,7 +1,7 @@
 // Compiles real Next.js projects; under a full parallel run this takes well past the 5s default.
 jest.setTimeout(60_000);
 
-import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextCommerceMounts, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
+import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextAuthoredMarkup, repairNextCommerceMounts, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
 import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from './fixtures/next-store';
 import { sourceProjectSnapshot } from './source-project';
 import { assertSourceCommerceContract } from './source-commerce-contract';
@@ -241,6 +241,39 @@ export default function Home() { const [tab] = useState('portada'); return <><He
     expect(checkout.content).toContain("import Footer from './Footer';");
     expect(checkout.content).not.toContain('generated page referenced Footer');
     await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/checkout.js' })]));
+  });
+});
+
+describe('mechanical authored markup repair', () => {
+  const home = (files: ReturnType<typeof nextStoreFiles>) => files.find(f => f.path === 'components/home.tsx')!;
+
+  it('marks an image without alt as decorative instead of failing the generation', () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<img src="/assets/sample.png" alt="Marca de prueba" width="16" height="16"/>', '<img src="/assets/sample.png" width="16" height="16"/><img src="/assets/sample.png" alt="" />');
+    expect(() => validateNextSources(files)).toThrow(/texto alternativo/);
+    const { files: repaired, repairs } = repairNextAuthoredMarkup(files);
+    expect(home(repaired).content).toContain('<img src="/assets/sample.png" width="16" height="16" alt="" aria-hidden="true"/>');
+    expect(home(repaired).content).toContain('<img src="/assets/sample.png" alt="" aria-hidden="true" />');
+    expect(repairs).toEqual(['components/home.tsx: marked 2 images without alt text as decorative']);
+    expect(() => validateNextSources(repaired)).not.toThrow();
+  });
+
+  it('empties a commerce slot React filled, since the runtime owns what goes inside', async () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-catalog />', '<div data-pagosya-catalog className="grid"><article>Producto de muestra</article>{null}</div>');
+    expect(() => validateNextSources(files)).toThrow(/contenedores de comercio/);
+    const { files: repaired, repairs } = repairNextAuthoredMarkup(files);
+    expect(home(repaired).content).toContain('<div data-pagosya-catalog className="grid"></div>');
+    expect(repairs).toEqual(['components/home.tsx: emptied 1 commerce slot']);
+    expect(() => validateNextSources(repaired)).not.toThrow();
+    await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/home.js' })]));
+  });
+
+  it('leaves valid markup untouched', () => {
+    const files = nextStoreFiles();
+    const { files: repaired, repairs } = repairNextAuthoredMarkup(files);
+    expect(repairs).toEqual([]);
+    expect(repaired).toEqual(files);
   });
 });
 

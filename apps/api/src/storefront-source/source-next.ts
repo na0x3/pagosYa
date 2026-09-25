@@ -403,6 +403,64 @@ export function repairNextCommerceMounts(files: SourceProjectFileDto[], purpose:
   return { files: current, repairs };
 }
 
+const COMMERCE_SLOT_ATTRIBUTE = /^data-pagosya-(catalog|cart|status|product-page|checkout-page|contact)$/;
+
+/**
+ * Two validator findings with exactly one correct answer, fixed in code instead of spending a paid repair
+ * (which can trade one finding for another and exhaust the attempts): an authored <img> with no usable alt
+ * is decoration (alt="" aria-hidden="true", as the HTML repair does), and a commerce slot React filled is
+ * emptied, because the runtime replaces whatever is inside it.
+ */
+export function repairNextAuthoredMarkup(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; repairs: string[] } {
+  const repairs: string[] = [];
+  const repaired = files.map(file => {
+    if (!file.path.endsWith('.tsx') || typeof file.content !== 'string' || file.encoding === 'base64') return file;
+    const source = ts.createSourceFile(file.path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const attribute = (node: ts.JsxOpeningLikeElement, name: string) => node.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(source) === name) as ts.JsxAttribute | undefined;
+    const value = (attr: ts.JsxAttribute | undefined): ts.Expression | undefined => {
+      const initial = attr?.initializer;
+      let expression = initial && ts.isJsxExpression(initial) ? initial.expression : initial;
+      while (expression && ts.isParenthesizedExpression(expression)) expression = expression.expression;
+      return expression;
+    };
+    const edits: Array<{ start: number; end: number; text: string }> = [];
+    let images = 0, slots = 0;
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some(a => ts.isJsxAttribute(a) && COMMERCE_SLOT_ATTRIBUTE.test(a.name.getText(source)))
+        && node.children.some(c => !ts.isJsxText(c) || c.text.trim())) {
+        // Everything inside goes, images included, so there is nothing further to visit.
+        edits.push({ start: node.openingElement.end, end: node.closingElement.getStart(source), text: '' });
+        slots++;
+        return;
+      }
+      if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && node.tagName.getText(source) === 'img' && !attribute(node, 'aria-hidden')) {
+        // Same finding as validateNextSources. An image that states aria-hidden either way keeps it: aria-hidden={false}
+        // claims the image carries meaning, and that finding stays with the AI repair.
+        const altAttribute = attribute(node, 'alt');
+        const alt = value(altAttribute);
+        const role = value(attribute(node, 'role'));
+        const presentation = Boolean(role && ts.isStringLiteral(role) && role.text === 'presentation');
+        const empty = alt && (ts.isStringLiteral(alt) || ts.isNoSubstitutionTemplateLiteral(alt)) && !alt.text.trim();
+        const unusable = alt && ([ts.SyntaxKind.NullKeyword, ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword].includes(alt.kind) || ts.isIdentifier(alt) && alt.text === 'undefined');
+        if (!alt || unusable || empty && !presentation) {
+          if (altAttribute && unusable) edits.push({ start: altAttribute.getStart(source), end: altAttribute.end, text: 'alt=""' });
+          edits.push({ start: node.attributes.end, end: node.attributes.end, text: `${altAttribute ? '' : ' alt=""'} aria-hidden="true"` });
+          images++;
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    if (!edits.length) return file;
+    let content = file.content;
+    for (const edit of edits.sort((a, b) => b.start - a.start || b.end - a.end)) content = content.slice(0, edit.start) + edit.text + content.slice(edit.end);
+    if (images) repairs.push(`${file.path}: marked ${images} image${images === 1 ? '' : 's'} without alt text as decorative`);
+    if (slots) repairs.push(`${file.path}: emptied ${slots} commerce slot${slots === 1 ? '' : 's'}`);
+    return { ...file, content };
+  });
+  return { files: repairs.length ? repaired : files, repairs };
+}
+
 /**
  * Repairs omitted local imports and the two shared primitives most likely to
  * be omitted by a compact model response. Unknown missing components still go
