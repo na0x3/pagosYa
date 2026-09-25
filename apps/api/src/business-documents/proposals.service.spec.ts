@@ -175,6 +175,15 @@ describe("ProposalsService — a merchant price only from the merchant's own mon
     }
   });
 
+  it("never prices a line with a catalog product sold in another currency", async () => {
+    const ctx = setupProposals();
+    ctx.prisma.paymentLinks.push({ id: "pl_usd", storeId: "store_1", name: "Hosting anual", amount: 9000, currency: "USD", status: "ACTIVE", categoryId: null });
+    ctx.ai.structuredCompletion.mockResolvedValueOnce({ data: aiOutput({ items: [{ description: "Hosting anual", quantity: 1, source: "catalog", catalogId: "pl_usd", merchantAmount: null }] }), model: "gpt-5.6-luna", responseId: "r", durationMs: 1 });
+    const doc = await ctx.proposals.draft("m_1", "store_1", { brief: "Página web con hosting anual", tone: "formal" });
+    expect(doc.currency).toBe("BOB");
+    expect(doc.items.map(({ description, unitAmount, paymentLinkId }) => ({ description, unitAmount, paymentLinkId }))).toEqual([{ description: "Hosting anual {{precio}}", unitAmount: 0, paymentLinkId: null }]);
+  });
+
   it("cannot be sent until the merchant confirms a price taken from the brief", async () => {
     const { documents, doc } = await draftWith("Necesito un letrero, cuesta Bs 800", [merchant("Letrero", 800, "cuesta Bs 800")]);
     await expect(documents.send("m_1", "store_1", doc.id, { email: false })).rejects.toThrow(/\{\{confirmar precio\}\}/);

@@ -201,18 +201,18 @@ export function merchantAllowed(evidence: MerchantEvidence, currency = "BOB"): S
  * A money mention nobody wrote (not in `allowed`, or in a currency nobody uses here) becomes
  * {{precio}}; a range is one mention. Percentages, counts, dates and years stay.
  */
-export function guardMoneyText(text: string, allowed: Set<number>): string {
+export function guardMoneyText(text: string, allowed: Set<number>, currency = "BOB"): string {
   let out = text;
   for (const mention of moneyInText(text).reverse()) {
-    const ok = mention.currency !== "OTHER" && mention.values.every((value) => allowed.has(value));
+    const ok = (!mention.currency || mention.currency === currency) && mention.values.every((value) => allowed.has(value));
     if (!ok) out = `${out.slice(0, mention.start)}${PRICE_PLACEHOLDER}${out.slice(mention.end)}`;
   }
   return out;
 }
 
-const clean = (value: string | null | undefined, max: number, allowed: Set<number>) => guardMoneyText(String(value ?? "").trim(), allowed).slice(0, max);
-const cleanList = (values: string[] | null | undefined, allowed: Set<number>) =>
-  (values ?? []).map((value) => clean(value, 500, allowed)).filter(Boolean).slice(0, 50);
+const clean = (value: string | null | undefined, max: number, allowed: Set<number>, currency: string) => guardMoneyText(String(value ?? "").trim(), allowed, currency).slice(0, max);
+const cleanList = (values: string[] | null | undefined, allowed: Set<number>, currency: string) =>
+  (values ?? []).map((value) => clean(value, 500, allowed, currency)).filter(Boolean).slice(0, 50);
 
 /** The merchant amount this line may use: quoted from the brief, unused, a total only for a lone line. */
 function merchantAmountFor(item: ProposalDraftItem, quantity: number, lines: number, evidence: MerchantEvidence, currency: string, used: Set<MerchantAmount>) {
@@ -237,10 +237,11 @@ function priceItems(items: ProposalDraftItem[], catalog: CatalogEntry[], evidenc
   const lines = (items ?? []).filter((item) => item.description?.trim()).slice(0, MAX_ITEMS);
   const used = new Set<MerchantAmount>();
   return lines.map((item) => {
-    const description = clean(item.description, MAX_DESCRIPTION, allowed).replace(MARKERS, " ").trim();
+    const description = clean(item.description, MAX_DESCRIPTION, allowed, currency).replace(MARKERS, " ").trim();
     const quantity = Math.min(100_000, Math.max(1, Math.floor(Number(item.quantity) || 1)));
     const product = item.source === "catalog" && item.catalogId ? byId.get(item.catalogId) : undefined;
-    if (product && product.price > 0 && product.price <= MAX_UNIT_AMOUNT) return { description, quantity, unitAmount: product.price, paymentLinkId: product.id };
+    // A product sold in another currency is not a price for this proposal.
+    if (product && product.currency === currency && product.price > 0 && product.price <= MAX_UNIT_AMOUNT) return { description, quantity, unitAmount: product.price, paymentLinkId: product.id };
     const amount = merchantAmountFor(item, quantity, lines.length, evidence, currency, used);
     if (amount) {
       used.add(amount);
@@ -256,7 +257,7 @@ export function draftToDocument(data: ProposalDraftOutput, input: { catalog: Cat
   const allowed = merchantAllowed(input.merchant, currency);
   const items = priceItems(data.items, input.catalog, input.merchant, currency, allowed);
   // The text may repeat the merchant's amounts, the proposal's own (a line, the total) and catalog prices.
-  const textAllowed = new Set<number>([...allowed, ...input.catalog.map((entry) => entry.price)]);
+  const textAllowed = new Set<number>([...allowed, ...input.catalog.filter((entry) => entry.currency === currency).map((entry) => entry.price)]);
   for (const item of items) if (item.unitAmount > 0) { textAllowed.add(item.unitAmount); textAllowed.add(item.unitAmount * item.quantity); }
   textAllowed.add(items.reduce((sum, item) => sum + item.unitAmount * item.quantity, 0));
 
@@ -275,20 +276,20 @@ export function draftToDocument(data: ProposalDraftOutput, input: { catalog: Cat
   for (const section of PROPOSAL_SECTIONS) {
     const value = values[section.key];
     if (section.type === "list") {
-      const list = cleanList(value as string[], textAllowed);
+      const list = cleanList(value as string[], textAllowed, currency);
       if (list.length) content.push({ type: "list", title: section.title, items: list });
     } else {
-      const text = clean(value as string, 5000, textAllowed);
+      const text = clean(value as string, 5000, textAllowed, currency);
       if (text) content.push({ type: section.type, title: section.title, text });
     }
   }
-  const title = clean(data.title, 200, textAllowed) || "Propuesta";
+  const title = clean(data.title, 200, textAllowed, currency) || "Propuesta";
   return { title, content, items };
 }
 
 /** A regenerated section: same type and title as the one it replaces, guarded like a draft. */
-export function sectionToBlock(data: ProposalSectionOutput, block: { type: DocumentBlockType; title?: string }, allowed: Set<number>): DocumentBlock {
+export function sectionToBlock(data: ProposalSectionOutput, block: { type: DocumentBlockType; title?: string }, allowed: Set<number>, currency = "BOB"): DocumentBlock {
   const base = { type: block.type, ...(block.title !== undefined && { title: block.title }) };
-  if (block.type === "list") return { ...base, items: cleanList(data.items, allowed) };
-  return { ...base, text: clean(data.text, 5000, allowed) };
+  if (block.type === "list") return { ...base, items: cleanList(data.items, allowed, currency) };
+  return { ...base, text: clean(data.text, 5000, allowed, currency) };
 }

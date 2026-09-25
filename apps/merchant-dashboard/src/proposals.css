@@ -178,7 +178,10 @@ body.proposal-sheet-open { overflow: hidden; }
 .proposal-catalog[hidden] { display: none; }
 .proposal-catalog-list { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
 .proposal-catalog-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: #fff; color: inherit; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
-.proposal-catalog-list button:hover { border-color: var(--prop-line, #20211e); }
+.proposal-catalog-list button:hover:not(:disabled) { border-color: var(--prop-line, #20211e); }
+.proposal-catalog-list button:disabled { cursor: not-allowed; color: var(--pg-text-muted); background: var(--prop-soft, #f1f1ea); }
+.proposal-catalog-list button span { display: grid; gap: 2px; }
+.proposal-catalog-list button small { font-size: 12px; font-weight: 600; }
 
 .proposal-pending { padding: 12px 14px; border: 2px solid #c2410c; border-radius: 12px; background: #fff4e5; color: #7c2d12; font-size: 14px; }
 .proposal-pending[hidden] { display: none; }

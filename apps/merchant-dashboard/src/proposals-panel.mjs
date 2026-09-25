@@ -431,6 +431,7 @@ export function mountProposalsPanel(deps) {
       id: doc.id,
       numberLabel: doc.numberLabel,
       status: doc.status,
+      currency: doc.currency || "BOB",
       currentVersion: doc.currentVersion || 0,
       ai: ai || (doc.events || []).some((event) => event.type === "ai_drafted"),
       title: doc.title || "",
@@ -596,10 +597,18 @@ export function mountProposalsPanel(deps) {
     if (!catalog) return `<p class="proposal-hint">Cargando tu catálogo…</p>`;
     if (!catalog.rows.length) return `<p class="proposal-hint">Aún no tienes productos con precio. Escribe la línea a mano.</p>`;
     const query = (editor?.catalogQuery || "").toLowerCase();
-    const rows = catalog.rows.filter((row) => !query || String(row.name).toLowerCase().includes(query)).slice(0, 30);
+    const currency = editor?.currency || "BOB";
+    // Products in the proposal's currency first; one sold in another currency is shown, not addable.
+    const rows = catalog.rows
+      .filter((row) => !query || String(row.name).toLowerCase().includes(query))
+      .sort((a, b) => Number((a.currency || "BOB") !== currency) - Number((b.currency || "BOB") !== currency))
+      .slice(0, 30);
     return `<label for="proposalCatalogSearch" class="sr-only">Buscar en tu catálogo</label>
       <input id="proposalCatalogSearch" data-proposal-catalog-search placeholder="Buscar producto" value="${esc(editor?.catalogQuery || "")}">
-      <ul class="proposal-catalog-list">${rows.map((row) => `<li><button type="button" data-proposal-product="${esc(row.id)}"><span>${esc(row.name)}</span><strong>${esc(formatMoney(row.amount, row.currency))}</strong></button></li>`).join("") || '<li class="proposal-hint">Sin resultados</li>'}</ul>`;
+      <ul class="proposal-catalog-list">${rows.map((row) => {
+        const other = (row.currency || "BOB") !== currency;
+        return `<li><button type="button" data-proposal-product="${esc(row.id)}" ${other ? "disabled" : ""}><span>${esc(row.name)}${other ? `<small>Otra moneda: esta propuesta es en ${esc(currency === "BOB" ? "bolivianos" : "dólares")}</small>` : ""}</span><strong>${esc(formatMoney(row.amount, row.currency))}</strong></button></li>`;
+      }).join("") || '<li class="proposal-hint">Sin resultados</li>'}</ul>`;
   }
 
   function pendingHtml() {
@@ -1149,7 +1158,7 @@ export function mountProposalsPanel(deps) {
       const product = target.closest("[data-proposal-product]");
       if (product) {
         const row = catalog?.rows.find((candidate) => candidate.id === product.dataset.proposalProduct);
-        if (!row) return;
+        if (!row || (row.currency || "BOB") !== editor.currency) return;
         editor.items.push({ description: String(row.name).slice(0, 480), quantity: 1, unitAmount: row.amount, priceText: formatMoney(row.amount).replace(/^Bs\s/, ""), paymentLinkId: row.id });
         editor.showCatalog = false;
         panel.querySelector("[data-proposal-catalog-panel]").hidden = true;

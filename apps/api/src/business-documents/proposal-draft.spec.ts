@@ -62,6 +62,22 @@ describe("proposal draft — the price guard", () => {
     expect(invented.items[1]).toEqual({ description: "Letrero {{precio}}", quantity: 1, unitAmount: 0 });
   });
 
+  it("uses only prices in the proposal's currency", () => {
+    const usd = buildProposalContext({ name: "T", tagline: null, aboutText: null }, [], [{ id: "pl_usd", name: "Hosting", amount: 9000, currency: "USD", categoryId: null }]);
+    const items: ProposalDraftOutput["items"] = [
+      { description: "Hosting", quantity: 1, source: "catalog", catalogId: "pl_usd", merchantAmount: null },
+      { description: "Dominio", quantity: 1, source: "merchant", catalogId: null, merchantAmount: 20, merchantQuote: "cuesta $us 20" },
+    ];
+    const doc = draftToDocument(output({ items, investmentNote: "Hosting por $us 90, dominio $us 20 y Bs 90 de instalación." }), { catalog: usd.catalog, merchant: merchantEvidence("el dominio cuesta $us 20"), currency: "BOB" });
+    expect(doc.items).toEqual([
+      { description: "Hosting {{precio}}", quantity: 1, unitAmount: 0 },
+      { description: "Dominio {{precio}}", quantity: 1, unitAmount: 0 },
+    ]);
+    expect(doc.content.find((block) => block.title === "Inversión")?.text).toBe("Hosting por {{precio}}, dominio {{precio}} y {{precio}} de instalación.");
+    expect(guardMoneyText("Son $us 1.500 o Bs 1.500", new Set([150000]), "BOB")).toBe("Son {{precio}} o Bs 1.500");
+    expect(guardMoneyText("Son $us 1.500 o Bs 1.500", new Set([150000]), "USD")).toBe("Son $us 1.500 o {{precio}}");
+  });
+
   it("turns an unknown price into a {{precio}} placeholder with no amount", () => {
     const doc = draftToDocument(output(), { catalog: context.catalog, merchant: none });
     expect(doc.items[2]).toEqual({ description: "Fotografía de producto {{precio}}", quantity: 1, unitAmount: 0 });

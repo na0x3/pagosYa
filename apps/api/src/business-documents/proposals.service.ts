@@ -132,10 +132,10 @@ export class ProposalsService {
     });
     // Allowed money: what the merchant wrote, the catalog, and the proposal's own lines and total.
     const allowed = merchantAllowed(merchantEvidence(stored?.brief, stored?.budgetHint), doc.currency);
-    context.catalog.forEach((entry) => allowed.add(entry.price));
+    context.catalog.forEach((entry) => { if (entry.currency === doc.currency) allowed.add(entry.price); });
     doc.items.forEach((item) => { if (item.unitAmount > 0) { allowed.add(item.unitAmount); allowed.add(item.amount); } });
     if (doc.totalAmount > 0) allowed.add(doc.totalAmount);
-    return { block: sectionToBlock(result.data, block, allowed) };
+    return { block: sectionToBlock(result.data, block, allowed, doc.currency) };
   }
 
   // ── merchant: header ──────────────────────────────────────────────────

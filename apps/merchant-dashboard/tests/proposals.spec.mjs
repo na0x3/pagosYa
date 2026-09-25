@@ -73,7 +73,10 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
     if (path === "/merchants/kyc") return json({ status: "APPROVED" });
     if (path === "/merchants/invoicing_profile") return json({ status: "CONFIGURED", cuis: "CUIS-1" });
     if (path === "/merchants/finances") return json({ totalRevenue: 0, paymentCount: 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" });
-    if (path === "/stores/store_1/payment_links") return json([{ id: "pl_logo", name: "Diseño de logo", amount: 150000, currency: "BOB", status: "ACTIVE", imageUrls: [] }]);
+    if (path === "/stores/store_1/payment_links") return json([
+      { id: "pl_logo", name: "Diseño de logo", amount: 150000, currency: "BOB", status: "ACTIVE", imageUrls: [] },
+      { id: "pl_usd", name: "Hosting anual", amount: 9000, currency: "USD", status: "ACTIVE", imageUrls: [] },
+    ]);
     if (path === "/stores/store_1/cobros/summary") {
       const cobros = documents.filter((doc) => doc.kind === "INVOICE");
       return json({ testMode: false, merchantStatus: "ACTIVE", storeStatus: "ACTIVE", counts: { all: cobros.length, draft: 0, open: cobros.length, overdue: 0, paid: 0, voided: 0 }, totals: [], attention: [] });
@@ -284,6 +287,22 @@ for (const width of [390, 1280]) {
       await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "cobros");
       await expect(page.locator("[data-cobro-sheet] #cobroSheetTitle")).toHaveText("¡Cobro COB-0001 listo!");
       expect(api.requests.some((request) => request.method === "POST" && request.path === "/stores/store_1/documents/pdoc_acc/cobro")).toBe(true);
+    });
+
+    test("the catalog picker only adds products in the proposal's currency", async ({ page }) => {
+      const api = fakeApi([proposal({ id: "pdoc_draft", number: null, numberLabel: "Borrador", status: "DRAFT", title: "Página web", currentVersion: 0, publicUrl: null, items: [] })]);
+      await openProposals(page, api);
+      await page.locator("[data-proposal-card]").first().click();
+      const sheet = page.locator("[data-proposal-sheet]");
+      await sheet.getByRole("button", { name: "Seguir editando" }).click();
+      const editor = page.locator("[data-proposal-editor]");
+      await editor.getByRole("button", { name: "Desde tu catálogo" }).click();
+      const usd = editor.locator('[data-proposal-product="pl_usd"]');
+      await expect(usd).toBeDisabled();
+      await expect(usd).toContainText("Otra moneda");
+      await editor.locator('[data-proposal-product="pl_logo"]').click();
+      await expect(editor.getByLabel("Descripción de la línea 1")).toHaveValue("Diseño de logo");
+      await expect(editor.locator("[data-proposal-line]")).toHaveCount(1);
     });
 
     test("without AI (no key on the server) the merchant can still start from the template", async ({ page }) => {
