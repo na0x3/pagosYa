@@ -1,12 +1,14 @@
 import { BadRequestException } from "@nestjs/common";
 import { sha256Hex } from "../legal/legal-documents.service";
+import { contractSnapshot, contractTexts, splitContractContent, type ContractSnapshot } from "./contract-terms";
 
 export type BusinessDocumentKindName = "INVOICE" | "PROPOSAL" | "CONTRACT";
 
 /** The postgres `integer` columns hold up to 2,147,483,647; stay clearly below. */
 export const MAX_DOCUMENT_AMOUNT = 2_000_000_000;
 
-export const DOCUMENT_BLOCK_TYPES = ["heading", "paragraph", "list", "clause"] as const;
+/** `contract` (D3) holds a contract's parties and settings; only CONTRACT documents keep it. */
+export const DOCUMENT_BLOCK_TYPES = ["heading", "paragraph", "list", "clause", "contract"] as const;
 export type DocumentBlockType = (typeof DOCUMENT_BLOCK_TYPES)[number];
 
 /** Written by the editor (D1–D3) and by AI drafting (D2/D3). */
@@ -15,6 +17,8 @@ export type DocumentBlock = {
   title?: string;
   text?: string;
   items?: string[];
+  /** Only on the `contract` block (see contract-terms.ts ContractMeta). */
+  contract?: unknown;
 };
 
 export type DocumentItemInput = { description: string; quantity: number; unitAmount: number; paymentLinkId?: string | null };
@@ -33,6 +37,8 @@ export type DocumentSnapshot = {
   dueAt: string | null;
   validUntil: string | null;
   blocks: DocumentBlock[];
+  /** CONTRACT only (D3): issuer, parties and the server-written texts, frozen and hashed with the rest. */
+  contract?: ContractSnapshot;
 };
 
 export type SnapshotSource = {
@@ -74,7 +80,8 @@ export function computeTotals<T extends DocumentItemInput>(items: T[], discountA
 
 function cleanBlocks(content: unknown): DocumentBlock[] {
   if (!Array.isArray(content)) return [];
-  return content.map((raw: DocumentBlock) => ({
+  // The contract block is data, not text: a contract's snapshot carries it as `contract`, other kinds never do.
+  return content.filter((raw: DocumentBlock) => raw?.type !== "contract").map((raw: DocumentBlock) => ({
     type: raw.type,
     ...(raw.title !== undefined && { title: raw.title }),
     ...(raw.text !== undefined && { text: raw.text }),
@@ -103,6 +110,9 @@ export function buildSnapshot(source: SnapshotSource): DocumentSnapshot {
     dueAt: source.dueAt ? source.dueAt.toISOString() : null,
     validUntil: source.validUntil ? source.validUntil.toISOString() : null,
     blocks: cleanBlocks(source.content),
+    ...(source.kind === "CONTRACT" && {
+      contract: contractSnapshot(splitContractContent(source.content).meta, { name: source.customerName, document: source.customerDocument, email: source.customerEmail }),
+    }),
   };
 }
 
@@ -134,6 +144,7 @@ export function findPlaceholders(snapshot: DocumentSnapshot, extra: Array<string
     snapshot.customer.document,
     ...snapshot.items.map((item) => item.description),
     ...snapshot.blocks.flatMap((block) => [block.title, block.text, ...(block.items ?? [])]),
+    ...contractTexts(snapshot.contract),
     ...extra,
   ];
   const found = texts.flatMap((text) => text?.match(/\{\{[^{}]{1,80}\}\}/g) ?? []);
