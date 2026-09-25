@@ -7,15 +7,7 @@
 <title>pagosYa - Panel de comercio</title>
 <meta name="description" content="Administra tu tienda, catálogo, cobros, desembolsos y facturación local desde pagosYa.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" id="dashboardThemeColor" content="#0a0a0a">
-<script>
-  try {
-    const savedDashboardTheme = localStorage.getItem("pagosya_dashboard_theme");
-    document.documentElement.dataset.dashboardTheme = savedDashboardTheme === "dark" ? "dark" : "light";
-  } catch {
-    document.documentElement.dataset.dashboardTheme = "light";
-  }
-</script>
+<meta name="theme-color" content="#eee7dc">
 <link rel="stylesheet" href="/src/dashboard.css">
 <link rel="stylesheet" href="/src/workspace-design.css">
 </head>
@@ -26,7 +18,7 @@
          second brand lockup. Kept as the page's only h1 for the outline. -->
     <h1 class="sr-only">pagosYa · Panel de Comercio</h1>
     <a class="topbar-xp" id="topbarXp" href="#dashboard-progress" data-dashboard-view="progress" hidden>
-      <span class="topbar-xp-avatar" aria-hidden="true"><img id="topbarXpImage" src="/assets/profile-1.png" alt=""></span>
+      <span class="topbar-xp-avatar" aria-hidden="true"><img id="topbarXpImage" src="/assets/profile-1.png?v=3" alt=""></span>
       <span class="topbar-xp-body">
         <span class="topbar-xp-line"><strong id="topbarXpLevel">Nivel 1 · Perdiz</strong><span class="topbar-xp-next" id="topbarXpNext">100 XP para Capibara</span></span>
         <span class="topbar-xp-track" id="topbarXpTrack" role="progressbar" aria-label="Experiencia para el siguiente nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topbarXpFill"></span></span>
@@ -34,19 +26,6 @@
       <span class="topbar-xp-gain" id="topbarXpGain" aria-hidden="true" hidden></span>
     </a>
     <div class="topbar-actions">
-      <div class="theme-control">
-        <span class="theme-control-label" id="dashboardThemeLabel">Tema</span>
-        <div class="theme-switcher" role="group" aria-labelledby="dashboardThemeLabel">
-          <button class="theme-option" type="button" data-dashboard-theme-value="light" aria-pressed="false">
-            <span class="theme-swatch beige" aria-hidden="true"></span>
-            Beige
-          </button>
-          <button class="theme-option" type="button" data-dashboard-theme-value="dark" aria-pressed="true">
-            <span class="theme-swatch graphite" aria-hidden="true"></span>
-            Grafito
-          </button>
-        </div>
-      </div>
       <div id="loggedInBar">
         <button class="profile-trigger" id="profileMenuTrigger" type="button" popovertarget="profileMenu" aria-expanded="false" aria-label="Abrir perfil" title="Perfil y sesión">
           <span class="profile-trigger-avatar" id="profileTriggerAvatar" aria-hidden="true"></span>
@@ -69,7 +48,7 @@
             <button class="profile-avatar-option" type="button" data-profile-avatar="1" aria-label="Elegir la perdiz"></button>
             <button class="profile-avatar-option" type="button" data-profile-avatar="2" aria-label="Elegir el capibara"></button>
             <button class="profile-avatar-option" type="button" data-profile-avatar="3" aria-label="Elegir el oso hormiguero"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="4" aria-label="Elegir la suricata"></button>
+            <button class="profile-avatar-option" type="button" data-profile-avatar="4" aria-label="Elegir la vizcacha"></button>
           </div>
         </fieldset>
         <section class="profile-sessions" aria-labelledby="profileSessionsTitle">
@@ -441,7 +420,6 @@
           <p class="luck-wheel-note">Premios reales: XP para tu nivel, créditos de IA para YAPI y stickers para tu álbum. Los premios grandes son los más difíciles.</p>
         </div>
       </section>
-       <section class="rewards-board-panel" id="rewardsBoardSection" aria-labelledby="rewardsBoardTitle"><div class="rewards-board" id="rewardsBoard" role="list" aria-label="Tablero de premios"><span class="rewards-board-token" id="rewardsBoardToken" data-tile="0" aria-hidden="true"></span><div class="rewards-board-center"><h3 id="rewardsBoardTitle">Tablero de la suerte</h3><span class="rewards-board-die" id="rewardsBoardDie" aria-live="polite">🎲</span><button class="luck-wheel-spin" id="rewardsBoardRoll" type="button">Tirar dado</button></div></div><p class="rewards-board-hint" id="rewardsBoardHint"></p><div class="luck-wheel-result" id="rewardsBoardResult" aria-live="polite" hidden></div></section>
 
       <section aria-labelledby="gamificationStarsTitle">
         <div class="gamification-section-title"><h3 id="gamificationStarsTitle">Estrellas del negocio</h3><p id="gamificationStarsSummary">Completa hitos reales de ventas y audiencia. Las estrellas no se compran: se ganan.</p></div>
@@ -1003,7 +981,7 @@
               <button class="session-profile-avatar-option" type="button" data-login-avatar="1" aria-label="Elegir la perdiz"></button>
               <button class="session-profile-avatar-option" type="button" data-login-avatar="2" aria-label="Elegir el capibara"></button>
               <button class="session-profile-avatar-option" type="button" data-login-avatar="3" aria-label="Elegir el oso hormiguero"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="4" aria-label="Elegir la suricata"></button>
+              <button class="session-profile-avatar-option" type="button" data-login-avatar="4" aria-label="Elegir la vizcacha"></button>
             </div>
           </div>
         </div>
@@ -1041,7 +1019,14 @@
     <div id="luckWheelModalSlot"></div>
   </div>
 </div>
+<div class="luck-wheel-modal rewards-board-modal" id="rewardsBoardModal" role="dialog" aria-modal="true" aria-labelledby="rewardsBoardTitle" hidden>
+  <div class="luck-wheel-modal-card">
+    <button class="luck-wheel-modal-close" id="rewardsBoardModalClose" type="button" aria-label="Cerrar el tablero">×</button>
+    <p class="rewards-board-kicker" id="rewardsBoardKicker">¡Completaste 10 ventas! Ganaste un tiro de dado.</p>
+    <section class="rewards-board-panel" id="rewardsBoardSection" aria-labelledby="rewardsBoardTitle"><div class="rewards-board" id="rewardsBoard" role="list" aria-label="Tablero de premios"><span class="rewards-board-token" id="rewardsBoardToken" data-tile="0" aria-hidden="true"></span><div class="rewards-board-center"><h3 id="rewardsBoardTitle">Tablero de la suerte</h3><span class="rewards-board-die" id="rewardsBoardDie" aria-live="polite">🎲</span><button class="luck-wheel-spin" id="rewardsBoardRoll" type="button">Tirar dado</button></div></div><p class="rewards-board-hint" id="rewardsBoardHint"></p><div class="luck-wheel-result" id="rewardsBoardResult" aria-live="polite" hidden></div></section>
+  </div>
+</div>
 <script src="/variant-editor.js"></script>
-<script src="/src/dashboard.js"></script>
+<script type="module" src="/src/dashboard.js"></script>
 </body>
 </html>

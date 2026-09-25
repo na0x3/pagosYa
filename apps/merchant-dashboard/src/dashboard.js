@@ -1,29 +1,9 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
+import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
+
   (() => {
-  const DASHBOARD_THEME_KEY = "pagosya_dashboard_theme";
-  const dashboardThemeButtons = [...document.querySelectorAll("[data-dashboard-theme-value]")];
-
-  function setDashboardTheme(theme, remember = true) {
-    const nextTheme = theme === "light" ? "light" : "dark";
-    document.documentElement.dataset.dashboardTheme = nextTheme;
-    document.getElementById("dashboardThemeColor").content = nextTheme === "light" ? "#eee7dc" : "#0a0a0a";
-    dashboardThemeButtons.forEach((button) => {
-      button.setAttribute("aria-pressed", String(button.dataset.dashboardThemeValue === nextTheme));
-    });
-    document.getElementById("merchantStudioFrame")?.contentWindow?.postMessage({ type: "pagosya:workspace-theme", theme: nextTheme }, location.origin);
-    if (remember) {
-      try {
-        localStorage.setItem(DASHBOARD_THEME_KEY, nextTheme);
-      } catch {
-        // The visual preference still applies for this visit when storage is unavailable.
-      }
-    }
-  }
-
-  dashboardThemeButtons.forEach((button) => {
-    button.addEventListener("click", () => setDashboardTheme(button.dataset.dashboardThemeValue));
-  });
-  setDashboardTheme(document.documentElement.dataset.dashboardTheme, false);
+  // The dashboard ships a single light theme; drop any preference left by the old switcher.
+  try { localStorage.removeItem("pagosya_dashboard_theme"); } catch { /* storage unavailable */ }
 
   // Keep XP current while the merchant leaves the dashboard open. A newly
   // completed sale can therefore unlock and announce its companion in-session.
@@ -77,10 +57,6 @@
   let pendingLoginSessionId = null;
   let resolveProfileSelection = null;
 
-  function profileAvatarSvg(avatarId) {
-    const normalized = Number(avatarId) >= 1 && Number(avatarId) <= 4 ? Number(avatarId) : 1;
-    return `<img class="profile-avatar-image profile-avatar-image-${normalized}" src="/assets/profile-${normalized}.png" alt="">`;
-  }
 
   function profileAvatarStorageKey() {
     return PROFILE_AVATAR_STORAGE_PREFIX + String(emailEl.value || "default").trim().toLocaleLowerCase("es");
@@ -102,12 +78,12 @@
   }
 
   function renderProfileAvatar() {
-    const markup = profileAvatarSvg(selectedProfileAvatar);
+    const markup = profileAvatarHtml(selectedProfileAvatar);
     profileTriggerAvatarEl.innerHTML = markup;
     profileMenuAvatarEl.innerHTML = markup;
     document.querySelectorAll("[data-profile-avatar]").forEach((button) => {
       const avatarId = Number(button.dataset.profileAvatar);
-      button.innerHTML = profileAvatarSvg(avatarId);
+      button.innerHTML = profileAvatarHtml(avatarId);
       button.setAttribute("aria-pressed", String(avatarId === selectedProfileAvatar));
     });
   }
@@ -116,7 +92,7 @@
     selectedLoginAvatar = avatarId >= 1 && avatarId <= 4 ? avatarId : 1;
     document.querySelectorAll("[data-login-avatar]").forEach((button) => {
       const optionId = Number(button.dataset.loginAvatar);
-      button.innerHTML = profileAvatarSvg(optionId);
+      button.innerHTML = profileAvatarHtml(optionId);
       button.setAttribute("aria-pressed", String(optionId === selectedLoginAvatar));
     });
   }
@@ -193,7 +169,7 @@
     applyCurrentSessionIdentity(sessions.find((session) => session.current));
     profileSessionsEl.innerHTML = sessions.map((session) => `<div class="profile-session-row">
       <div class="profile-session-person">
-        <span class="profile-session-avatar" aria-hidden="true">${profileAvatarSvg(session.profileAvatarId)}</span>
+        <span class="profile-session-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span>
         <div class="profile-session-copy"><strong>${esc(session.profileName || "Sin nombre")}</strong><small>Inicio: ${esc(formatSessionDate(session.createdAt))}${session.isPrimary ? " · Principal" : ""}</small></div>
       </div>
       <div class="profile-session-actions">
@@ -203,7 +179,7 @@
       </div>
       ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${Number(session.profileAvatarId) || 1}">
         <label>Nombre del perfil<input name="profileName" value="${esc(session.profileName || "")}" maxlength="32" autocomplete="off" required></label>
-        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${[1, 2, 3, 4].map((avatarId) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${avatarId}" aria-label="Elegir avatar ${avatarId}" aria-pressed="${avatarId === Number(session.profileAvatarId)}">${profileAvatarSvg(avatarId)}</button>`).join("")}</div>
+        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${[1, 2, 3, 4].map((avatarId) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${avatarId}" aria-label="Elegir avatar ${avatarId}" aria-pressed="${avatarId === Number(session.profileAvatarId)}">${profileAvatarHtml(avatarId)}</button>`).join("")}</div>
         <div class="profile-session-edit-actions"><button class="ghost" type="button" data-cancel-session-edit>Cancelar</button><button class="primary" type="submit">Guardar</button></div>
       </form>` : ""}
     </div>`).join("");
@@ -245,7 +221,7 @@
     });
     sessionProfileExistingEl.hidden = choices.length === 0;
     sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${Number(session.profileAvatarId) || 1}" aria-pressed="false">
-      <span class="session-profile-choice-avatar" aria-hidden="true">${profileAvatarSvg(session.profileAvatarId)}</span><span>${esc(session.profileName)}</span>
+      <span class="session-profile-choice-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span><span>${esc(session.profileName)}</span>
     </button>`).join("");
 
     const isUnassigned = !currentSession?.profileName || currentSession.profileName === "Seleccionar perfil";
@@ -423,17 +399,7 @@
   let lastBalances = null;
   const GAMIFICATION_XP_PER_SALE = 50;
   const GAMIFICATION_XP_PER_VISIT = 2;
-  // Progression tuning lives here. Change xpRequired values without touching map rendering or animation code.
-  const ADVENTURE_LEVELS = [
-    { id: 1, name: "Perdiz", englishName: "Quail", xpRequired: 0, character: "Pipa", rarity: "Exploradora", asset: "/assets/profile-1.png", alt: "Una perdiz ilustrada", description: "Curiosa, veloz y siempre lista para dar el primer paso." },
-    { id: 2, name: "Capibara", englishName: "Capybara", xpRequired: 100, character: "Capi", rarity: "Compañero", asset: "/assets/profile-2.png", alt: "Un capibara ilustrado", description: "Convierte el crecimiento constante en un paseo tranquilo." },
-    { id: 3, name: "Oso hormiguero", englishName: "Anteater", xpRequired: 250, character: "Turi", rarity: "Rastreador", asset: "/assets/profile-3.png", alt: "Un oso hormiguero ilustrado", description: "Encuentra oportunidades donde otros solo ven camino." },
-    { id: 4, name: "Suricata", englishName: "Meerkat", xpRequired: 450, character: "Suri", rarity: "Vigía", asset: "/assets/profile-4.png", alt: "Una suricata ilustrada", description: "Mira lejos y te recuerda cuál es la próxima meta." },
-    { id: 5, name: "Loro vaquero", englishName: "Cowboy Parrot", xpRequired: 700, character: "Pico", rarity: "Raro", asset: "/assets/gamification-1.png", alt: "Un loro colorido con sombrero vaquero", description: "Cruza la selva con estilo y celebra cada avance." },
-    { id: 6, name: "Guacamaya azul", englishName: "Blue Macaw", xpRequired: 1000, character: "Ala", rarity: "Épico", asset: "/assets/gamification-2.png", alt: "Una guacamaya azul volando", description: "Toma altura para mostrarte todo lo que ya construiste." },
-    { id: 7, name: "Lechuza", englishName: "Owl", xpRequired: 1400, character: "Luma", rarity: "Épico", asset: "/assets/gamification-3.png", alt: "Una lechuza aventurera", description: "La constancia ilumina incluso los caminos más oscuros." },
-    { id: 8, name: "Perezoso", englishName: "Sloth", xpRequired: 1900, character: "Moro", rarity: "Legendario", asset: "/assets/gamification-4.png", alt: "Un perezoso en la etapa final", description: "Crecer con paciencia también merece una gran celebración." },
-  ];
+
   window.ADVENTURE_LEVELS = ADVENTURE_LEVELS;
   // World rewards use only signals the application already owns. Benefits that
   // require billing or promotion infrastructure are deliberately not implied.
@@ -464,12 +430,7 @@
     { type: "reward", rewardIndex: 6 },
     { type: "character", id: "character-8", levelIndex: 7, special: true },
   ];
-  const GAMIFICATION_RUNNERS = [
-    { name: "Perdiz", asset: "/assets/profile-1.png", description: "Paso atento" },
-    { name: "Capibara", asset: "/assets/profile-2.png", description: "Ritmo sereno" },
-    { name: "Oso hormiguero", asset: "/assets/profile-3.png", description: "Ruta curiosa" },
-    { name: "Suricata", asset: "/assets/profile-4.png", description: "Mirada alerta" },
-  ];
+
   const GAMIFICATION_STARS = [
     { id: "first-view", title: "Primera mirada", description: "El enlace de tu tienda recibió su primera visita.", earned: ({ visits }) => visits >= 1, progress: ({ visits }) => `${Math.min(visits, 1)}/1 visita` },
     { id: "first-sale", title: "Primera venta", description: "Completaste tu primer pago exitoso.", earned: ({ sales }) => sales >= 1, progress: ({ sales }) => `${Math.min(sales, 1)}/1 venta` },
@@ -803,7 +764,7 @@
       }
       return;
     }
-    if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; frame.contentWindow?.postMessage({ type: "pagosya:workspace-theme", theme: document.documentElement.dataset.dashboardTheme }, location.origin); deliverStudioAction(); return; }
+    if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; deliverStudioAction(); return; }
     if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
       if (pendingStudioAction?.action === "compose") document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
@@ -2658,7 +2619,7 @@
     const runnerIndex = selectedGamificationRunner();
     const runner = GAMIFICATION_RUNNERS[runnerIndex];
     document.getElementById("gamificationRunnerPicker").innerHTML = GAMIFICATION_RUNNERS.map((entry, index) => `<button class="adventure-runner-option" type="button" data-runner-select="${index}" aria-pressed="${index === runnerIndex}" aria-label="Elegir a ${esc(entry.name)} para las celebraciones" title="${esc(entry.name)}">
-      <span class="gamification-runner-face">${profileAvatarSvg(index + 1)}</span><span><strong>${esc(entry.name)}</strong><span>${esc(entry.description)}</span></span>
+      <span class="gamification-runner-face">${profileAvatarHtml(index + 1)}</span><span><strong>${esc(entry.name)}</strong><span>${esc(entry.description)}</span></span>
     </button>`).join("");
     const currentLevel = state?.currentLevel || ADVENTURE_LEVELS[0];
     document.getElementById("adventurePlayerFace").innerHTML = `<img class="profile-avatar-image" src="${esc(currentLevel.asset)}" alt="">`;
@@ -3071,7 +3032,8 @@
       rewardsState = state?.wheel && state?.board && Array.isArray(state.wheel.segments) ? state : null;
     } catch { rewardsState = null; }
     renderLuckWheel();
-    renderRewardsBoard();
+    await renderRewardsBoard();
+    maybeOpenRewardsBoardModal();
     return rewardsState;
   }
 
@@ -3087,7 +3049,7 @@
     disc.dataset.segments = segments.join(",");
     disc.innerHTML = `<circle r="98" class="luck-wheel-rim"/>${segments.map((key, index) => {
       const visual = WHEEL_VISUALS[key]; const start = index * slice; const end = start + slice; const center = start + slice / 2;
-      return `<path d="M0 0 L${point(start, 92).join(" ")} A92 92 0 0 1 ${point(end, 92).join(" ")} Z" fill="${visual.color}"/><g transform="rotate(${center})" fill="${visual.ink || "#15352f"}"><text y="-76" class="luck-wheel-icon">${visual.icon}</text><text x="47" transform="rotate(-90)" class="luck-wheel-label">${esc(visual.label)}</text></g>`;
+      return `<path d="M0 0 L${point(start, 92).join(" ")} A92 92 0 0 1 ${point(end, 92).join(" ")} Z" fill="${esc(visual.color)}"/><g transform="rotate(${center})" fill="${esc(visual.ink || "#15352f")}"><text y="-76" class="luck-wheel-icon">${esc(visual.icon)}</text><text x="47" transform="rotate(-90)" class="luck-wheel-label">${esc(visual.label)}</text></g>`;
     }).join("")}${segments.map((_, index) => { const [cx, cy] = point(index * slice, 92); return `<circle cx="${cx}" cy="${cy}" r="3.2" class="luck-wheel-peg"/>`; }).join("")}`;
   }
 
@@ -3096,7 +3058,7 @@
     document.getElementById("luckWheelAlbumCount").textContent = `${stickers.filter((sticker) => sticker.owned).length} de ${stickers.length}`;
     document.getElementById("luckWheelAlbum").innerHTML = stickers.map((sticker) => {
       const label = sticker.owned ? esc(sticker.name) : "Sticker por descubrir";
-      return `<span class="luck-wheel-sticker${sticker.owned ? " is-owned" : ""}${sticker.rare ? " is-rare" : ""}${sticker.id === newStickerId ? " is-new" : ""}" role="img" title="${label}" aria-label="${label}">${sticker.owned ? sticker.icon : "?"}</span>`;
+      return `<span class="luck-wheel-sticker${sticker.owned ? " is-owned" : ""}${sticker.rare ? " is-rare" : ""}${sticker.id === newStickerId ? " is-new" : ""}" role="img" title="${label}" aria-label="${label}">${sticker.owned ? esc(sticker.icon) : "?"}</span>`;
     }).join("");
   }
 
@@ -3104,7 +3066,7 @@
     const box = document.getElementById("luckWheelResult");
     if (!copy) { box.hidden = true; box.innerHTML = ""; return; }
     box.hidden = false; box.dataset.kind = kind;
-    box.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${copy.icon}</span><span><strong>${esc(copy.title)}</strong>${esc(copy.message)}</span>`;
+    box.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${esc(copy.icon)}</span><span><strong>${esc(copy.title)}</strong>${esc(copy.message)}</span>`;
   }
 
   function renderLuckWheel() {
@@ -3127,6 +3089,9 @@
     const modal = document.getElementById("luckWheelModal"); const wheel = document.getElementById("luckWheel");
     if (!modal || !wheel) return;
     luckWheelHome ||= { parent: wheel.parentElement, next: wheel.nextSibling };
+    // One popup at a time: the board steps aside and reopens when the wheel closes.
+    const boardModal = document.getElementById("rewardsBoardModal");
+    if (boardModal && !rewardsBoardRolling) boardModal.hidden = true;
     document.getElementById("luckWheelModalSlot").appendChild(wheel);
     modal.hidden = false;
     document.getElementById("luckWheelSpin").focus();
@@ -3137,10 +3102,11 @@
     if (!modal || modal.hidden || luckWheelSpinning) return;
     modal.hidden = true;
     if (luckWheelHome) luckWheelHome.parent.insertBefore(wheel, luckWheelHome.next);
+    maybeOpenRewardsBoardModal();
   }
   document.getElementById("luckWheelModalClose")?.addEventListener("click", closeLuckWheelModal);
   document.getElementById("luckWheelModal")?.addEventListener("click", (event) => { if (event.target.id === "luckWheelModal") closeLuckWheelModal(); });
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeLuckWheelModal(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeLuckWheelModal(); closeRewardsBoardModal(); } });
 
   function currentTotalXp() { return lastFinances ? gamificationState(lastFinances).xp : 0; }
 
@@ -3242,6 +3208,31 @@
   document.getElementById("luckWheelHub")?.addEventListener("click", spinLuckWheel);
 
   let rewardsBoardRolling = false;
+  // The board only appears as a popup when a new roll is earned (one per 10 sales). Rolls are
+  // stored server-side, so a roll earned while logged out pops the board on the next login.
+  let rewardsBoardRollsAcknowledged = 0;
+
+  function maybeOpenRewardsBoardModal() {
+    const modal = document.getElementById("rewardsBoardModal");
+    const rolls = rewardsState?.board.rollsAvailable || 0;
+    if (!modal || !modal.hidden) return;
+    // Spent rolls lower the bar so the next earned roll opens it again.
+    rewardsBoardRollsAcknowledged = Math.min(rewardsBoardRollsAcknowledged, rolls);
+    if (rolls <= rewardsBoardRollsAcknowledged) return;
+    // The daily wheel goes first; closing it calls back here.
+    if (!document.getElementById("luckWheelModal")?.hidden) return;
+    modal.hidden = false;
+    document.getElementById("rewardsBoardRoll")?.focus();
+  }
+
+  function closeRewardsBoardModal() {
+    const modal = document.getElementById("rewardsBoardModal");
+    if (!modal || modal.hidden || rewardsBoardRolling) return;
+    modal.hidden = true;
+    rewardsBoardRollsAcknowledged = rewardsState?.board.rollsAvailable || 0;
+  }
+  document.getElementById("rewardsBoardModalClose")?.addEventListener("click", closeRewardsBoardModal);
+  document.getElementById("rewardsBoardModal")?.addEventListener("click", (event) => { if (event.target.id === "rewardsBoardModal") closeRewardsBoardModal(); });
 
   function placeBoardToken(token, index, boardTileCoords) {
     const { row, col } = boardTileCoords(index);
@@ -3275,6 +3266,8 @@
     if (rewardsBoardRolling) return;
     placeBoardToken(token, state.position, boardTileCoords);
     button.disabled = state.rollsAvailable <= 0;
+    const kicker = document.getElementById("rewardsBoardKicker");
+    if (kicker) kicker.textContent = state.rollsAvailable > 1 ? `¡Tus ventas te dieron ${state.rollsAvailable.toLocaleString("es-BO")} tiros de dado!` : "¡Completaste 10 ventas! Ganaste un tiro de dado.";
     button.textContent = state.rollsAvailable > 0 ? `Tirar dado (${state.rollsAvailable.toLocaleString("es-BO")})` : "Sin tiros";
     hint.textContent = `Te faltan ${state.salesUntilNextRoll.toLocaleString("es-BO")} ${state.salesUntilNextRoll === 1 ? "venta" : "ventas"} para el próximo tiro · Vueltas completadas: ${state.lapsCompleted.toLocaleString("es-BO")}`;
   }
@@ -3307,12 +3300,11 @@
     }
     const copy = rewardCopy(result.grant);
     resultBox.hidden = false; resultBox.dataset.kind = result.grant.kind;
-    resultBox.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${copy.icon}</span><span><strong>${esc(copy.title)}</strong>${esc(copy.message)}${result.lapCompleted ? " ¡Completaste una vuelta!" : ""}</span>`;
+    resultBox.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${esc(copy.icon)}</span><span><strong>${esc(copy.title)}</strong>${esc(copy.message)}${result.lapCompleted ? " ¡Completaste una vuelta!" : ""}</span>`;
     rewardsBoardRolling = false;
     await announceRewardGrant(result.grant, previousXp, document.getElementById("rewardsBoard"), { showCard: false });
   }
-  // Delegated: the Horizonte markup is built lazily, after this listener is attached.
-  document.addEventListener("click", (event) => { if (event.target.closest?.("#rewardsBoardRoll")) rollRewardsBoard(); });
+  document.getElementById("rewardsBoardRoll")?.addEventListener("click", rollRewardsBoard);
 
   function renderGamification(finances, { announce = true } = {}) {
     const state = gamificationState(finances);
@@ -3452,6 +3444,8 @@
       if (storeId !== currentStoreId) return;
       renderTotalFinances(totalFinances);
       renderFinances(scopedFinances);
+      // New sales may have earned a board roll; loadRewards pops the board when they did.
+      loadRewards();
     }).catch(() => {
       // The product mutation already succeeded. Keep the last summary instead
       // of turning a non-critical refresh into a blocking error.
@@ -4738,7 +4732,7 @@
         },
       });
       window.google.accounts.id.renderButton(document.getElementById("merchantGoogleButton"), {
-        theme: document.documentElement.dataset.dashboardTheme === "light" ? "outline" : "filled_black",
+        theme: "outline",
         size: "large",
         shape: "rectangular",
         text: "continue_with",

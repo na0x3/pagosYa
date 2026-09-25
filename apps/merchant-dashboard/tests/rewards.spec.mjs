@@ -43,7 +43,7 @@ const store = {
 const segments = ["STICKER_COMMON", "XP_25", "AI_CREDITS_5", "TIP", "XP_50", "RESPIN", "STICKER_RARE", "XP_200", "AI_CREDITS_25"];
 const rewards = (overrides = {}) => ({
   wheel: { available: true, day: "2026-09-24", spinsUsed: 0, spinsAllowed: 1, segments },
-  board: { position: 0, rollsUsed: 0, rollsAvailable: 1, salesUntilNextRoll: 10, lapsCompleted: 0, tiles: Array(24).fill("STICKER_COMMON") },
+  board: { position: 0, rollsUsed: 0, rollsAvailable: 0, salesUntilNextRoll: 10, lapsCompleted: 0, tiles: Array(24).fill("STICKER_COMMON") },
   bonusXp: 0, stickers: [], aiCreditBalance: 0, aiCreditsThisMonth: 0, aiCreditMonthlyCap: 50, ...overrides,
 });
 
@@ -140,7 +140,7 @@ test("the companion hops along the Horizonte board and the prize is shown", asyn
     currentRewards: rewards({ wheel: usedWheel, board: { position: 0, rollsUsed: 0, rollsAvailable: 1, salesUntilNextRoll: 4, lapsCompleted: 0, tiles } }),
     rollResponse: { json: { die: 3, from: 0, to: 3, lapCompleted: false, grant: { id: "g2", prize: "AI_CREDITS_5", kind: "AI_CREDITS", amount: 5, convertedFrom: null, sticker: null, tip: null }, board: { position: 3, rollsUsed: 1, rollsAvailable: 0, salesUntilNextRoll: 4, lapsCompleted: 0, tiles } } },
   });
-  await page.evaluate(() => window.setDashboardView("progress"));
+  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
   await expect(page.locator("#rewardsBoard .board-tile")).toHaveCount(24);
   await expect(page.locator("#rewardsBoardRoll")).toHaveText(/Tirar dado \(1\)/);
   await page.locator("#rewardsBoardRoll").click();
@@ -166,25 +166,47 @@ test("on a phone the wheel modal sits above the sidebar and the YAPI dock", asyn
   expect(covered).toEqual([]);
 });
 
-test("the Horizonte map is gone and the dice board stands on its own below the wheel", async ({ page }) => {
+const usedWheelState = { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments };
+const boardWith = (rollsAvailable) => ({ position: 0, rollsUsed: 0, rollsAvailable, salesUntilNextRoll: 10, lapsCompleted: 0, tiles: Array(24).fill("STICKER_COMMON") });
+
+test("the board is not on the progress page and pops up when 10 sales earn a roll", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await openDashboard(page, { wheelAvailable: false, currentRewards: rewards({ wheel: { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments } }) });
+  const options = { wheelAvailable: false, currentRewards: rewards({ wheel: usedWheelState, board: boardWith(0) }) };
+  await openDashboard(page, options);
   await page.evaluate(() => window.setDashboardView("progress"));
   await expect(page.locator("#animalAdventure")).toHaveCount(0);
-  await expect(page.getByText("Horizonte pagosYa")).toHaveCount(0);
-  const board = page.locator("#rewardsBoardSection");
-  await expect(board).toBeVisible();
-  await expect(board.locator(".board-tile")).toHaveCount(24);
-  const [wheelBox, boardBox] = await Promise.all([page.locator("#luckWheel").boundingBox(), board.boundingBox()]);
-  expect(boardBox.y).toBeGreaterThan(wheelBox.y);
+  await expect(page.locator("#luckWheel")).toBeVisible();
+  await expect(page.locator("#rewardsBoard")).toBeHidden();
+  // A background refresh sees the 10th sale's roll and pops the board.
+  options.currentRewards = rewards({ wheel: usedWheelState, board: boardWith(1) });
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
+  await expect(page.locator("#rewardsBoardKicker")).toContainText("10 ventas");
+  // Dismissing it keeps it closed until another roll is earned.
+  await page.locator("#rewardsBoardModalClose").click();
+  await expect(page.locator("#rewardsBoardModal")).toBeHidden();
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await page.waitForTimeout(500);
+  await expect(page.locator("#rewardsBoardModal")).toBeHidden();
+  options.currentRewards = rewards({ wheel: usedWheelState, board: boardWith(2) });
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("a roll earned while logged out pops the board after the daily wheel on login", async ({ page }) => {
+  await openDashboard(page, { wheelAvailable: true, currentRewards: rewards({ board: boardWith(1) }) });
+  await expect(page.locator("#luckWheelModal")).toBeVisible();
+  await expect(page.locator("#rewardsBoardModal")).toBeHidden();
+  await page.locator("#luckWheelModalClose").click();
+  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
 });
 
 test("on a phone the board's center content stays inside the ring of tiles", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  await openDashboard(page, { wheelAvailable: false, currentRewards: rewards({ wheel: { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments } }) });
-  await page.evaluate(() => window.setDashboardView("progress"));
+  await openDashboard(page, { wheelAvailable: false, currentRewards: rewards({ wheel: usedWheelState, board: boardWith(1) }) });
+  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
   await expect(page.locator("#rewardsBoard .board-tile")).toHaveCount(24);
   const overlaps = await page.evaluate(() => {
     const tiles = [...document.querySelectorAll("#rewardsBoard .board-tile")].map((tile) => tile.getBoundingClientRect());

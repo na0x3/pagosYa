@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { watch } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -72,6 +73,22 @@ function isDashboardSourceFile(filename) {
   return normalized === "index.html" || normalized.startsWith("assets/") || normalized.startsWith("fonts/") || normalized.startsWith("src/");
 }
 
+// Images keep stable URLs, so a long max-age would pin a replaced file in the
+// browser for a day. Revalidating against a content ETag costs a 304 when
+// nothing changed and picks up a new file on the very next load.
+async function sendImage(req, res, filePath) {
+  const image = await readFile(filePath);
+  const etag = `"${createHash("sha1").update(image).digest("base64url")}"`;
+  const headers = { "content-type": "image/png", "cache-control": "no-cache", etag };
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, headers);
+    res.end();
+    return;
+  }
+  res.writeHead(200, headers);
+  res.end(image);
+}
+
 const server = createServer(async (req, res) => {
   applySecurityHeaders(res);
   try {
@@ -119,7 +136,7 @@ const server = createServer(async (req, res) => {
       res.end(font);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
@@ -132,21 +149,11 @@ const server = createServer(async (req, res) => {
       res.end(content); return;
     }
     if (mascotAssets.has(requestUrl.pathname)) {
-      const image = await readFile(path.join(dirname, "assets", mascotAssets.get(requestUrl.pathname)));
-      res.writeHead(200, {
-        "content-type": "image/png",
-        "cache-control": liveReloadEnabled ? "no-cache" : "public, max-age=86400",
-      });
-      res.end(image);
+      await sendImage(req, res, path.join(dirname, "assets", mascotAssets.get(requestUrl.pathname)));
       return;
     }
     if (sharedAssets.has(requestUrl.pathname)) {
-      const image = await readFile(sharedAssets.get(requestUrl.pathname));
-      res.writeHead(200, {
-        "content-type": "image/png",
-        "cache-control": liveReloadEnabled ? "no-cache" : "public, max-age=86400",
-      });
-      res.end(image);
+      await sendImage(req, res, sharedAssets.get(requestUrl.pathname));
       return;
     }
     res.writeHead(404);

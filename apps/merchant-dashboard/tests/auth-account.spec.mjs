@@ -131,7 +131,7 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await expect(page.locator("#loggedInAs")).toContainText("owner@gmail.com");
   await expect(page.locator("#profileSessionCount")).toHaveText("1 / 3");
   await expect(page.locator("#profileDisplayName")).toHaveText("María");
-  await expect(page.locator('[data-profile-avatar="1"] img')).toHaveAttribute("src", "/assets/profile-1.png");
+  await expect(page.locator('[data-profile-avatar="1"] img')).toHaveAttribute("src", "/assets/profile-1.png?v=3");
   await page.locator('[data-profile-avatar="4"]').click();
   expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:owner@gmail.com"))).toBe("4");
   await page.locator("#moneyVisibilityToggle").click();
