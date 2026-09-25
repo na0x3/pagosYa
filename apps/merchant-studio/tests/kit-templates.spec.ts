@@ -46,17 +46,48 @@ for (const width of [1280, 390]) test(`a fully templated store shops end to end 
   expect(await shop.locator('html').evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+async function checkBroken(browserPage: any, broken: string) {
+  return browserPage.evaluate(async ({ commerce, html, config }: any) => {
+    const { checkSourceWebsite } = await import('/src/source-checks.ts');
+    return checkSourceWebsite({ schemaVersion: 1, brief: { sitePurpose: 'shop' }, files: [{ path: 'index.html', content: html }, { path: 'config.js', content: config }, { path: 'commerce.js', content: commerce }] } as any);
+  }, { commerce, html: page(broken), config: CONFIG });
+}
+
 test('a broken cart template falls back to the kit cart and the checks fail publishing', async ({ page: browserPage }) => {
   const broken = TEMPLATES.replace('<div data-cart-slot="total"></div>', '');
   const shop = await mount(browserPage, broken);
   await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
   await expect(shop.locator('.cart-drawer .order-total')).toBeVisible();
-  const results = await browserPage.evaluate(async ({ commerce, html, config }: any) => {
-    const { checkSourceWebsite } = await import('/src/source-checks.ts');
-    return checkSourceWebsite({ schemaVersion: 1, brief: { sitePurpose: 'shop' }, files: [{ path: 'index.html', content: html }, { path: 'config.js', content: config }, { path: 'commerce.js', content: commerce }] } as any);
-  }, { commerce, html: page(broken), config: CONFIG });
+  const results = await checkBroken(browserPage, broken);
   // checkSourceWebsite prefixes every row's label with "<viewport> · <file>", so match by
   // substring rather than an exact label (see source-checks.ts, and existing
   // `row.label.includes(...)` assertions in tests/source-checks.spec.ts).
   expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('carrito') })]));
+});
+
+// Fix round 1: added/review/product-page templates were only validated lazily, when their surface
+// happened to render during the probe's own simulated buy → added-notice → checkout journey. A
+// simple product's page is never opened by that simulation at all, so a broken product-page
+// template never failed publishing. Each of these proves its surface's own broken template fails
+// 'Plantillas de compra' via the real checkSourceWebsite run (four viewports), independent of
+// whether the probe's simulation happens to reach that surface.
+test('a broken added-notice template fails the checks and names the notice', async ({ page: browserPage }) => {
+  const broken = TEMPLATES.replace('<button data-cart-open>Ver canasta</button>', '');
+  await mount(browserPage, broken);
+  const results = await checkBroken(browserPage, broken);
+  expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('aviso') })]));
+});
+
+test('a broken review template fails the checks and names the review', async ({ page: browserPage }) => {
+  const broken = TEMPLATES.replace('<section data-review-slot="fields"></section>', '<section></section>');
+  await mount(browserPage, broken);
+  const results = await checkBroken(browserPage, broken);
+  expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('revisión') })]));
+});
+
+test('a broken product-page template fails the checks and names the product page', async ({ page: browserPage }) => {
+  const broken = TEMPLATES.replace('<div data-product-slot="buy"></div>', '<div></div>');
+  await mount(browserPage, broken);
+  const results = await checkBroken(browserPage, broken);
+  expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('página de producto') })]));
 });

@@ -251,6 +251,21 @@ describe('product page template', () => {
     expect(shop.flag('productPageTemplateInvalid')).toBe('true');
   });
 
+  // Fix round 1, finding 1: productPageTemplateInvalid was only set inside openProduct(), so a
+  // store whose simple product is never opened during Studio's automatic check (it isn't — the
+  // probe only clicks the catalog card's "add" button) could publish a broken product-page
+  // template undetected. render() now validates every template as soon as the store is ready, so
+  // the flag is already set here even though no product page was opened.
+  it('flags an invalid product-page template as soon as the store is ready, without opening any product', async () => {
+    const shop = boot(PAGE.replace('<div data-product-slot="buy"></div>', ''));
+    await shop.tick();
+    // The product dialog exists from init (it's appended to <body> unconditionally) but stays
+    // closed and empty until a shopper opens a product — confirming this run never did.
+    expect(shop.$('[data-pagosya-product]').hasAttribute('open')).toBe(false);
+    expect(shop.$('[data-pagosya-product] .mi-ficha')).toBeNull();
+    expect(shop.flag('productPageTemplateInvalid')).toBe('true');
+  });
+
   it('lays out the full page without photos: the split copy is replaced by the authored layout', async () => {
     const shop = boot(PAGE, {
       body: '<main data-pagosya-product-page></main>',

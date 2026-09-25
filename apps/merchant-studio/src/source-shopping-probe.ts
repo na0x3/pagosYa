@@ -149,14 +149,6 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         }
       }
       if (document.documentElement.dataset.productTemplateInvalid === 'true') warn('Composición de productos', 'La plantilla personalizada no pudo conectarse al catálogo; se mostró la presentación básica. Revisa sus campos de nombre, precio, detalle y compra.');
-      const TEMPLATE_FAILURES: Array<[string, string]> = [
-        ['productPageTemplateInvalid', 'La plantilla de la página de producto no tiene galería, título, precio o compra; se mostró la página básica.'],
-        ['cartTemplateInvalid', 'La plantilla del carrito no tiene las líneas, el total, el botón para continuar o el botón para cerrar; se mostró el carrito básico.'],
-        ['cartLineTemplateInvalid', 'La plantilla de las líneas del carrito no tiene nombre, total o cantidad; se mostraron las líneas básicas.'],
-        ['addedTemplateInvalid', 'El aviso de producto añadido no tiene mensaje o botón para ver el pedido; se mostró el aviso básico.'],
-        ['reviewTemplateInvalid', 'La plantilla de revisión del pedido no tiene resumen o campos; se mostró la revisión básica.'],
-      ];
-      for (const [flag, detail] of TEMPLATE_FAILURES) if (document.documentElement.dataset[flag] === 'true') add('Plantillas de compra', false, detail);
       const emptySections = [...document.querySelectorAll<HTMLElement>('section')].filter(section => {
         if (!shown(section) || section.querySelector('img,svg,canvas,video,iframe,input,button,[data-pagosya-catalog],[data-pagosya-product],[data-pagosya-cart]') || section.matches('[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-contact]')) return false;
         if (getComputedStyle(section).backgroundImage !== 'none' || getComputedStyle(section, '::before').content !== 'none') return false;
@@ -268,6 +260,19 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         options?.click(); await pause();
       } else if (document.querySelector('[data-pagosya-catalog]')) add('Compra de producto', false, 'Añade un producto simple disponible para comprobar el recorrido.');
       }
+      // Checked after the simulated buy/added-notice/checkout/review steps above: the kit now
+      // validates every authored template as soon as the store is ready (commerce.js render()), so
+      // these flags are already settled by page load, but checking here — after the commerce
+      // journey rather than before it — keeps this check honest about what it depends on and
+      // matches when a merchant would actually notice a broken surface.
+      const TEMPLATE_FAILURES: Array<[string, string]> = [
+        ['productPageTemplateInvalid', 'La plantilla de la página de producto no tiene galería, título, precio o compra; se mostró la página básica.'],
+        ['cartTemplateInvalid', 'La plantilla del carrito no tiene las líneas, el total, el botón para continuar o el botón para cerrar; se mostró el carrito básico.'],
+        ['cartLineTemplateInvalid', 'La plantilla de las líneas del carrito no tiene nombre, total o cantidad; se mostraron las líneas básicas.'],
+        ['addedTemplateInvalid', 'El aviso de producto añadido no tiene mensaje o botón para ver el pedido; se mostró el aviso básico.'],
+        ['reviewTemplateInvalid', 'La plantilla de revisión del pedido no tiene resumen o campos; se mostró la revisión básica.'],
+      ];
+      for (const [flag, detail] of TEMPLATE_FAILURES) if (document.documentElement.dataset[flag] === 'true') add('Plantillas de compra', false, detail);
       const form = document.querySelector<HTMLFormElement>('[data-pagosya-contact] form');
       if (form && !(window as any).PAGOSYA_HOSTED) {
         const values: Record<string, string> = { name: 'Prueba de sitio', email: 'prueba@example.com', message: 'Comprobación automática del formulario.' };

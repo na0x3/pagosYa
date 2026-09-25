@@ -2125,6 +2125,12 @@
     if (fullCheckoutPage) showCheckout(location.hash === '#pago-de-prueba' && (preview || config.demo));
     renderCart();
     renderContact();
+    // Validate every authored template as soon as the store is ready, not only when its surface
+    // happens to render: added/review/product-page templates otherwise stay unvalidated until a
+    // shopper adds to cart, opens checkout or opens a product, which is too late for Studio's
+    // publishing check to catch a broken one. This is validation only — each reader just sets or
+    // clears its flag and discards the clone; their lazy use at the real render site is unchanged.
+    cartLineTemplate(); cartTemplate(); addedTemplate(); reviewTemplate(); productPageTemplate();
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
   }
   /* T1 templates: a store may author the markup of a kit surface. Read at use time (React may render the
