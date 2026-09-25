@@ -1,0 +1,64 @@
+{
+  "id": "lamps",
+  "version": 1,
+  "name": "Lámparas y luz",
+  "topics": {
+    "es": [
+      "lámpara",
+      "lámparas",
+      "iluminación",
+      "luz",
+      "foco",
+      "velas decorativas"
+    ],
+    "en": [
+      "lamp",
+      "lamps",
+      "lighting",
+      "light",
+      "bulb"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "glow"
+    }
+  ]
+}
