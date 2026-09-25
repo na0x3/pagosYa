@@ -49,14 +49,18 @@ is a ruling the owner may overturn. G1 only captures and serves the data; G2 dra
    CTA labels (the only accepted `data-track` values): `hero-cta`, `nav-cart`, `nav-catalog`, `card`, `add`,
    `checkout`, `pay`, `whatsapp`, `contact`, `promo`, `social`, `newsletter`. The same three lists exist in the
    API, the kit and the host page; tests pin them equal.
-3. **What a row holds.** `storeId`, `sessionHash` (the funnel's `sha256(sessionId)`, so G2 can join events to
-   funnel visits), `type`, `productId?`, `target?` (CTA label or checkout step), `path?` (the store page file,
+3. **What a row holds.** `storeId`, `sessionHash` (HMAC-SHA256 of the funnel's session id under its own
+   `ANALYTICS_SESSION_SECRET`, required in production — review ruling: raw analytics rows must not be joinable to
+   `StoreFunnelVisit` or, through it, to orders), `type`, `productId?`, `target?` (CTA label or checkout step), `path?` (the store page file,
    e.g. `product.html`), `device` (`mobile` | `desktop`, from the User-Agent on the server; the User-Agent itself
    is never stored), `referrerHost?` (host name only, lower case, no `www.`, never a path or query), `createdAt`
    (server time; the client's clock is not trusted). No IP, no user agent, no customer field, no search words.
 4. **Ingestion.** `POST v1/stores/public/:slug/events` `{ sessionId, events: [...] , referrer? }`:
-   - The same store eligibility as the funnel (404 otherwise). Throttled 30 requests/min per client; up to 20
-     events per request.
+   - The same store eligibility as the funnel (404 otherwise). Throttled 240 requests/min per IP (carrier NAT); up to
+     20 events per request. A browser request whose `Origin` is neither a configured first-party origin (the checkout
+     app) nor the store's active custom domain is refused (403). At most `STORE_ANALYTICS_DAILY_CAP` (default 50 000)
+     events are stored per store per Bolivia day (an in-process count re-read from the table every 5 minutes; with
+     several instances the cap can be passed by what the others store in one such window).
    - The envelope is strict (a v4 UUID `sessionId`, an array of 1–20 objects, else 400). Each event is checked on
      its own: an unknown type, a missing or unknown label/step, a malformed field, or a `productId` that is not a
      product of this store drops that event only; unknown fields are dropped. This keeps a batch from an
@@ -82,24 +86,31 @@ is a ruling the owner may overturn. G1 only captures and serves the data; G2 dra
    today (the first run after a start: the last 7 days) from the raw rows in one transaction under a Postgres
    advisory lock: delete those days' rollups, insert fresh ones. Re-running gives the same rows. A rollup row is
    `(storeId, day, type, productId, target) → count, uniqueSessions`, with `''` for "none" so the unique key
-   works. Two derived kinds come from `page_view`: `_device` (target `mobile`/`desktop`) and `_referrer` (target
+   works. One session adds at most 5 to a `(type, productId, target)` count a day (20 for `page_view`), so a
+   replayed click cannot inflate the numbers. Each type also gets a `(type, day)` row with `productId = target = '*'`
+   whose `uniqueSessions` is distinct across all products and labels (totals and series read it). Two derived kinds
+   come from `page_view`: `_device` (target `mobile`/`desktop`) and `_referrer` (target
    = host, or `direct`). Rollups hold no session hash or other personal data and are kept.
 8. **Retention.** The same worker deletes raw events older than 13 calendar months, 5 000 rows at a time, at most
    once every 6 hours per instance.
 9. **Read API for G2.** `GET v1/stores/:storeId/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD&granularity=day`
-   (merchant auth, the store must belong to the merchant, else 404; default the last 30 days; `from ≤ to`, at most
-   400 days; `granularity` only `day`). It reads rollups only (data lags at most 15 minutes) and returns:
+   (merchant auth, the store must belong to the merchant, else 404; default the last 30 days; days in 2020–2100,
+   `from ≤ to`, at most 400 days, checked arithmetically before any day is listed; `granularity` only `day`). It reads rollups only (data lags at most 15 minutes) and returns:
    - `totals`: per event type `{ count, sessions }`;
    - `series`: per event type, one `{ day, count, sessions }` per day in the range (zeros included);
-   - `topProducts` (10, by views): `{ productId, name, impressions, cardClicks, views, adds, addRate }` with
+   - `topProducts` (10, by view sessions, then add sessions): `{ productId, name, impressions, cardClicks, views, adds, addRate }` with
      `addRate = adds sessions / views sessions` in percent, one decimal (`null` without views; it can pass 100 when
      shoppers add from the card without opening the product); a deleted product is named "Producto eliminado";
    - `topCtas`: `{ target, clicks, sessions }`;
    - `devices`: `{ device, pageViews, sessions }`; `referrers` (10): `{ host, sessions }` — landing sessions per
      referrer host, `direct` when the session arrived without one;
-   - `checkoutSteps`: `cart_open`, `review`, `delivery` (optional), `pay_click`, `contact`, `payment`, each
-     `{ step, optional, sessions, dropOff }`, where `dropOff` is the percentage lost from the previous required step
-     (`null` when that step had none, never below 0). `delivery` is optional because digital-only and pickup-less stores skip it.
+   - `checkoutSteps`: `cart_open`, `review`, `delivery` (optional), `pay_click`, `whatsapp`, `contact`, `payment`, each
+     `{ step, optional, reachable, sessions, dropOff }`, where `dropOff` is the percentage lost from the previous
+     required reachable step (`null` when that step had none, never below 0). `reachable` follows the store's current
+     `checkoutMode`: `payment` reaches all but `whatsapp`; `whatsapp` ends at `whatsapp` (the WhatsApp click);
+     `external` ends at `pay_click`. An unreachable step has `dropOff: null`. `delivery` is optional because
+     digital-only and pickup-less stores skip it. `referrers[].host` is a plain host name or `direct`; G2 renders it
+     as text only.
    "sessions" over a range is the sum of each day's unique sessions (a session crossing midnight counts twice).
 10. **Generation prompt.** One line in `SOURCE_SHOPPING_FLOW`: mark primary calls to action with `data-track`,
     using only the allow-listed labels. Untagged elements still produce every kit event; the labels only name
