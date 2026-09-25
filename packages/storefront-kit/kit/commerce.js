@@ -1619,11 +1619,21 @@
     const over = (top, base) => [0, 1, 2].map(i => top[i] * top[3] + base[i] * (1 - top[3])).concat(1);
     const luminance = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
     const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+    // A decoration paints no real background: a gradient drawn as a line (the DNA underline-grow hover, at most 2px in
+    // one direction, 0 at rest) or a gradient whose colours are all mostly transparent (the DNA shine).
+    const decorative = style => {
+      const image = style.backgroundImage;
+      if (!image || image === 'none') return true;
+      if (/url\(/i.test(image)) return false;
+      const thin = style.backgroundSize.split(',').every(size => size.trim().split(/\s+/).some(part => /^[\d.]+px$/.test(part) && parseFloat(part) <= 2));
+      const stops = image.match(/(?:rgba?|color)\([^)]*\)/gi) || [];
+      return thin || (stops.length > 0 && stops.every(stop => { const c = parse(stop); return c && c[3] <= .5; }));
+    };
     const backdrop = element => {
       const layers = [];
       for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
         const style = getComputedStyle(node);
-        if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+        if (!decorative(style)) return null;
         const color = parse(style.backgroundColor);
         if (!color) return null;
         if (color[3] > 0) layers.push(color);
@@ -1674,9 +1684,12 @@
       try { guardContrast(); } catch { /* Guards never break the store. */ }
     }, 120);
   }
+  function guardContrastNow() { try { guardContrast(); } catch { /* Guards never break the store. */ } }
   window.addEventListener('load', queueReadableText);
   if (typeof MutationObserver === 'function') {
-    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) queueReadableText(); }).observe(document.body, { childList: true, subtree: true });
+    // The guard also runs right away (a mutation callback runs before the page's next task), so a pay or buy button
+    // never shows unreadable, not even for the timer's 120ms; the timer then measures again with the text fixes applied.
+    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) { guardContrastNow(); queueReadableText(); } }).observe(document.body, { childList: true, subtree: true });
     if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
   }
   const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';
@@ -1882,6 +1895,7 @@
     updateBox();
     updateQuantity();
     // Totals and pay buttons were just re-rendered (and add buttons re-enabled): measure them again.
+    guardContrastNow();
     queueReadableText();
     document.dispatchEvent(new CustomEvent("pagosya:cart-updated"));
   }

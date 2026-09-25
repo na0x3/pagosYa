@@ -117,6 +117,34 @@ describe('runtime contrast guard: pay and buy buttons and totals read at 4.5:1',
     }
   });
 
+  it('holds the product page buy button and the card button as soon as they render, before any timer', async () => {
+    const page = await open({ css: '.menu-add{background:#797979;color:#fff}', kit: '.product-detail__buy{background:#797979;color:#fff}', body: PRODUCT + '<section data-pagosya-catalog></section>', query: '?id=taza' });
+    try {
+      await page.waitForSelector('[data-pagosya-product][data-style] .product-detail__layout');
+      expect(await contrastOf(page, '[data-pagosya-product] .product-detail__buy span')).toBeGreaterThanOrEqual(4.5);
+      await page.waitForSelector('.menu-add');
+      expect(await contrastOf(page, '.menu-add')).toBeGreaterThanOrEqual(4.5);
+    } finally { await page.close(); }
+  });
+
+  it.each(['underline-grow', 'shine'])('sees through the DNA %s hover decoration, which paints no background at rest', async hover => {
+    const page = await open({ dna: { ...DNA, hover }, kit: '.product-detail__buy{background-color:#797979;color:#fff}', body: PRODUCT, query: '?id=taza' });
+    try {
+      await page.waitForSelector('[data-pagosya-product][data-style] .product-detail__layout');
+      expect(await computed(page, '[data-pagosya-product] .product-detail__buy', ['background-image'])).not.toEqual({ 'background-image': 'none' });
+      expect(await contrastOf(page, '[data-pagosya-product] .product-detail__buy')).toBeGreaterThanOrEqual(4.5);
+    } finally { await page.close(); }
+  });
+
+  it('leaves text over a real gradient alone: its background is unknown', async () => {
+    const page = await open({ css: '.menu-add{background:linear-gradient(#000,#222);color:#fff}' });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.waitForTimeout(400);
+      expect(await page.evaluate(() => document.querySelectorAll('.menu-add[data-pagosya-contrast-guard]').length)).toBe(0);
+    } finally { await page.close(); }
+  });
+
   it('leaves a readable button alone', async () => {
     const page = await open({ css: '.menu-add{background:#fff;color:#111}' });
     try {
