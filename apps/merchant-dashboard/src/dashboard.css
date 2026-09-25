@@ -111,6 +111,10 @@
   }
   button:hover { border-color: var(--pg-text-faint); }
   button:disabled { cursor: not-allowed; opacity: 0.62; }
+  /* Same "disabled" look as button:disabled, without the native attribute: a control that keeps keyboard
+     focus while a save is pending (native `disabled` on a focused element blurs it to <body>) is marked
+     aria-disabled instead, guarded in JS against the click it still receives. */
+  button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.62; }
   button.is-loading { display: inline-flex; align-items: center; gap: 8px; }
   button.is-loading::after {
     content: ""; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent;
@@ -1686,21 +1690,6 @@
   .gamification-rulebook span { display: block; margin-top: 5px; font-size: .68rem; font-weight: 850; line-height: 1.45; }
 
   .gamification-expedition { display: grid; gap: 16px; }
-  .gamification-runner-picker {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: var(--bento-line) solid var(--bento-keyline);
-    background: var(--bento-card); box-shadow: var(--bento-shadow); border-radius: var(--bento-radius);}
-  .gamification-runner-option {
-    display: grid; grid-template-columns: 54px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; min-height: 82px;
-    padding: 12px; border: 0; border-right: 3px solid var(--bento-keyline); border-radius: 0; background: var(--bento-card); color: var(--pg-text); text-align: left;
-  }
-  .gamification-runner-option:last-child { border-right: 0; }
-  .gamification-runner-option[aria-pressed="true"] { background: var(--bento-yellow); color: #09090b; }
-  .gamification-runner-option:focus-visible { position: relative; z-index: 1; outline: 3px solid var(--pg-accent); outline-offset: -6px; }
-  .gamification-runner-face { width: 54px; height: 54px; overflow: hidden; border: var(--bento-line-soft) solid var(--bento-keyline); border-radius: 50%; background: #fff; }
-  .gamification-runner-option strong, .gamification-runner-option span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .gamification-runner-option strong { font-size: .72rem; text-transform: uppercase; }
-  .gamification-runner-option span { margin-top: 3px; color: var(--pg-text-muted); font-size: .6rem; }
-  .gamification-runner-option[aria-pressed="true"] span { color: #3f3f46; }
   .gamification-map {
     position: relative; min-height: 520px; overflow: hidden; border: var(--bento-line) solid var(--bento-keyline);
     background: var(--bento-green); color: #09090b; box-shadow: var(--bento-shadow); isolation: isolate; border-radius: var(--bento-radius);}
@@ -1794,9 +1783,6 @@
     .gamification-star:nth-child(3) { border-right: 0; }
     .gamification-star:nth-child(n+4) { border-bottom: 0; }
     .gamification-companions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .gamification-runner-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .gamification-runner-option:nth-child(2) { border-right: 0; }
-    .gamification-runner-option:nth-child(-n+2) { border-bottom: 3px solid var(--bento-keyline); }
   }
   @media (max-width: 720px) {
     body[data-dashboard-view="progress"] .workspace-header { display: none; }
@@ -1830,9 +1816,6 @@
     .gamification-companions { grid-template-columns: 1fr; }
     .gamification-toast { grid-template-columns: 72px minmax(0, 1fr) 44px; }
     .gamification-toast-blob { width: 56px; height: 56px; }
-    .gamification-runner-picker { grid-template-columns: 1fr; }
-    .gamification-runner-option, .gamification-runner-option:nth-child(2) { border-right: 0; border-bottom: 3px solid var(--bento-keyline); }
-    .gamification-runner-option:last-child { border-bottom: 0; }
     .gamification-map { min-height: 560px; }
     .gamification-map-route { display: none; }
     .gamification-map-route-mobile { display: block; inset: 0; width: 100%; height: 100%; }
@@ -1946,7 +1929,6 @@
     position: absolute; left: 0; top: 0; z-index: 10; width: clamp(54px, 6vw, 78px); height: clamp(54px, 6vw, 78px); pointer-events: none; will-change: transform;
   }
   .adventure-player-face { display: block; width: 100%; height: 100%; overflow: hidden; border: 4px solid #5b3216; border-radius: 50%; background: #f5cd66; box-shadow: 0 0 0 5px rgba(255,237,144,.65), 4px 5px 0 rgba(63,31,13,.46); }
-  .adventure-player-face .profile-avatar-image { width: 100%; height: 100%; border: 0; }
   .adventure-player-flag { position: absolute; right: -7px; bottom: -4px; padding: 3px 6px; border: 2px solid #4c2912; background: #9c3821; color: #fff6d7; font-family: var(--pg-font); font-size: .52rem; font-weight: 950; text-transform: uppercase; }
   .adventure-guide {
     position: absolute; right: .5%; bottom: -.5%; z-index: 14; display: grid; width: clamp(112px, 13vw, 178px); min-height: 0; padding: 0;
@@ -1977,10 +1959,6 @@
   .adventure-level-detail strong { display: block; color: #762f1c; font: 900 .85rem Georgia; text-transform: uppercase; }
   .adventure-runner-control { display: flex; align-items: center; gap: 10px; font-family: var(--pg-font); font-size: .57rem; font-weight: 950; text-transform: uppercase; }
   .adventure-runner-picker { display: flex; gap: 6px; }
-  .adventure-runner-option { width: 44px; height: 44px; padding: 0; overflow: hidden; border: 2px solid #543016; border-radius: 50%; background: #e5bd72; }
-  .adventure-runner-option[aria-pressed="true"] { background: #f0c72f; box-shadow: 0 0 0 3px rgba(255,235,138,.72); }
-  .adventure-runner-option .gamification-runner-face, .adventure-runner-option .profile-avatar-image { display: block; width: 100%; height: 100%; border: 0; border-radius: 50%; }
-  .adventure-runner-option > span:last-child { display: none; }
   .adventure-debug { display: flex; align-items: center; gap: 5px; font-family: var(--pg-font); }
   .adventure-debug > span { margin-right: 3px; font-size: .53rem; font-weight: 950; text-transform: uppercase; }
   .adventure-debug button { min-height: 38px; padding: 7px 9px; border: 2px solid #4f2c14; background: #e8c477; color: #321b0b; font-size: .58rem; box-shadow: none; }
@@ -1995,7 +1973,7 @@
 
   @media (hover: hover) and (pointer: fine) {
     .adventure-level-node:not(.is-locked):hover .adventure-level-art { transform: translateY(-5px); filter: drop-shadow(0 8px 5px rgba(80,40,12,.28)); }
-    .adventure-runner-option:hover, .adventure-debug button:hover { transform: translateY(-2px); }
+    .adventure-debug button:hover { transform: translateY(-2px); }
   }
   @media (max-width: 900px) {
     .adventure-map-header { grid-template-columns: 1fr; gap: 16px; }
@@ -2038,7 +2016,7 @@
     .adventure-xp-toast { right: 25px; top: 214px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .gamification-summary-track span, .gamification-level-track span, .gamification-companion-art img { transition: none; }
+    .gamification-summary-track span, .gamification-level-track span, .gamification-companion-art svg { transition: none; }
     .gamification-toast, .gamification-star.is-unlocking { animation: none; }
     .bird-unlock-dialog { transition: opacity 200ms var(--ease-out-ui); }
     @starting-style { .bird-unlock-dialog[open] { opacity: 0; transform: none; } }
