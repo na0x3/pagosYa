@@ -1,0 +1,65 @@
+{
+  "id": "cake",
+  "version": 1,
+  "name": "Pasteles y velas",
+  "topics": {
+    "es": [
+      "torta",
+      "tortas",
+      "pastel",
+      "pastelería",
+      "cupcake",
+      "repostería",
+      "cumpleaños"
+    ],
+    "en": [
+      "cake",
+      "cupcake",
+      "pastry",
+      "birthday",
+      "patisserie"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}
