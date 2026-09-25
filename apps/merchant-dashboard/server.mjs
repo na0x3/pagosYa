@@ -13,6 +13,13 @@ const variantEditorAssets = new Map([
   ["/variant-editor.js", "variant-editor.js"],
   ["/variant-editor.css", "variant-editor.css"],
 ]);
+// B1 blob characters: the browser loads Blobatar and @pagosya/blob-characters as native ES modules through the
+// import map in index.html. Only these named files are served from the two package folders.
+const requireFromDashboard = createRequire(import.meta.url);
+const vendorModules = [
+  { prefix: "/vendor/blobatar/", dir: path.join(path.dirname(requireFromDashboard.resolve("blobatar/package.json")), "dist"), files: new Set(["internal.js", "expression.js", "motion.css"]) },
+  { prefix: "/vendor/blob-characters/", dir: path.dirname(requireFromDashboard.resolve("@pagosya/blob-characters/package.json")), files: new Set(["index.mjs", "render.mjs", "player.mjs", "blob-motion.css"]) },
+];
 const PORT = process.env.PORT ?? 4323;
 // Full-page live reload is opt-in. Native file pickers and browser-control
 // helpers can touch local files while a merchant is choosing imagery; treating
@@ -136,7 +143,7 @@ const server = createServer(async (req, res) => {
       res.end(font);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/profile-blob.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
@@ -147,6 +154,15 @@ const server = createServer(async (req, res) => {
       const content = await readFile(path.join(variantEditorDir, filename), "utf8");
       res.writeHead(200, { "content-type": filename.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", "cache-control": "no-store" });
       res.end(content); return;
+    }
+    const vendor = vendorModules.find((entry) => requestUrl.pathname.startsWith(entry.prefix));
+    if (vendor) {
+      const filename = requestUrl.pathname.slice(vendor.prefix.length);
+      if (!vendor.files.has(filename)) { res.writeHead(404); res.end("not found"); return; }
+      const content = await readFile(path.join(vendor.dir, filename), "utf8");
+      res.writeHead(200, { "content-type": filename.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", "cache-control": "no-store" });
+      res.end(content);
+      return;
     }
     if (mascotAssets.has(requestUrl.pathname)) {
       await sendImage(req, res, path.join(dirname, "assets", mascotAssets.get(requestUrl.pathname)));

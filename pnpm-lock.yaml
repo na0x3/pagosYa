@@ -394,6 +394,9 @@ importers:
 
   apps/merchant-dashboard:
     dependencies:
+      '@pagosya/blob-characters':
+        specifier: workspace:*
+        version: link:../../packages/blob-characters
       '@pagosya/variant-editor':
         specifier: workspace:*
         version: link:../../packages/variant-editor
