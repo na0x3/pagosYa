@@ -141,3 +141,54 @@ test("a full profile menu (three sessions and an open edit form) renders only st
   expect(await page.locator("#profileMenu .mo-root").count()).toBe(0);
   expect(await page.locator("#profileMenu svg.blob-figure:not(:has(.blob-plate))").count()).toBe(0);
 });
+
+test("a successful save keeps its new variation even when the refresh after it fails, and shows no avatar error", async ({ page }) => {
+  const state = await openDashboard(page);
+  let failNextSessionsGet = false;
+  await page.route("http://localhost:3001/v1/dashboard/sessions", async (route) => {
+    if (route.request().method() !== "GET" || !failNextSessionsGet) return route.fallback();
+    return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "boom" }) });
+  });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  failNextSessionsGet = true;
+  const before = await page.locator("#profileTriggerAvatar").innerHTML();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  const saved = state.patches[0].profileAvatarId;
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${saved}"]`)).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("#profileTriggerAvatar").innerHTML()).not.toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe(String(saved));
+  expect(await page.locator(".profile-session-state", { hasText: "No pudimos guardar el avatar" }).count()).toBe(0);
+});
+
+test("a rejected save rolls back to the previous variation and shows the error", async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  await page.route("http://localhost:3001/v1/dashboard/sessions/session_current", async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    return route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ message: "No se pudo guardar" }) });
+  });
+  const before = await page.locator("#profileTriggerAvatar").innerHTML();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect(page.locator(".profile-session-state", { hasText: "No pudimos guardar el avatar" })).toBeVisible();
+  await expect(page.locator('#profileAvatarOptions [data-profile-avatar="1"]')).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("#profileTriggerAvatar").innerHTML()).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe("1");
+  expect(state.patches).toEqual([]);
+});
+
+test('rapid double-clicks on "Otra variación" send only one PATCH while a save is pending', async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  await page.evaluate(() => {
+    const button = document.getElementById("profileAvatarShuffle");
+    button.click();
+    button.click();
+  });
+  await expect.poll(() => state.patches.length).toBe(1);
+  await page.waitForTimeout(200);
+  expect(state.patches.length).toBe(1);
+});

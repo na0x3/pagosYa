@@ -142,29 +142,55 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     renderProfileAvatar();
   }
 
+  // Guards selectProfileVariation against overlapping requests: while a save is in flight, the
+  // option buttons and the shuffle button are disabled (native `disabled` blocks the click before
+  // any further call can start), and the function itself re-checks the flag as a second line of defense.
+  let profileVariationSaveInFlight = false;
+
+  function setProfileAvatarControlsBusy(busy) {
+    profileAvatarOptionsEl.querySelectorAll("[data-profile-avatar]").forEach((button) => { button.disabled = busy; });
+    const shuffleButton = document.getElementById("profileAvatarShuffle");
+    if (shuffleButton) shuffleButton.disabled = busy;
+  }
+
   async function selectProfileVariation(variation) {
+    if (profileVariationSaveInFlight) return;
     const previousAvatar = selectedProfileAvatar;
     selectedProfileAvatar = normalizeVariation(variation);
     try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
     renderProfileAvatar();
     const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
     if (!currentSession) return;
+    profileVariationSaveInFlight = true;
+    setProfileAvatarControlsBusy(true);
     try {
       await updateProfileSession(currentSession.id, currentSession.profileName, selectedProfileAvatar);
-      await loadProfileSessions(false);
     } catch (error) {
       selectedProfileAvatar = previousAvatar;
       try { localStorage.setItem(profileAvatarStorageKey(), String(previousAvatar)); } catch {}
       renderProfileAvatar();
       profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
+      profileVariationSaveInFlight = false;
+      setProfileAvatarControlsBusy(false);
+      return;
     }
+    // The save already succeeded; a refresh that fails afterwards keeps the new variation and shows no error
+    // (calling loadProfileSessions here would overwrite the menu with its own "couldn't load" message).
+    try {
+      const payload = await api("/dashboard/sessions");
+      renderProfileSessions(payload);
+    } catch { /* save succeeded; nothing to roll back */ }
+    profileVariationSaveInFlight = false;
+    setProfileAvatarControlsBusy(false);
   }
   profileAvatarOptionsEl.addEventListener("click", (event) => {
+    if (profileVariationSaveInFlight) return;
     const button = event.target.closest("[data-profile-avatar]");
     if (button) void selectProfileVariation(Number(button.dataset.profileAvatar));
   });
   // "Otra variación": a fresh blob, saved at once, with three new alternatives beside it.
   document.getElementById("profileAvatarShuffle").addEventListener("click", () => {
+    if (profileVariationSaveInFlight) return;
     const next = randomVariation(profileVariationChoices);
     profileVariationChoices = variationChoices(next);
     void selectProfileVariation(next);
