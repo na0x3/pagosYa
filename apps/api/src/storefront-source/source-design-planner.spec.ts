@@ -1,6 +1,8 @@
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
 import { SourceRequestBudget } from './source-request-budget';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
+import { SOURCE_DNA_DIRECTION, SOURCE_DNA_SCHEMA } from './source-dna';
+import { validDna } from './fixtures/dna';
 
 const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
   layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true },
@@ -100,4 +102,29 @@ it('supports a layout-only control arm without exposing story or motion fields',
   expect(schema.properties).not.toHaveProperty('motion');
   expect(result.concepts[1]).not.toHaveProperty('story');
   expect(result.selected).toBe(1);
+});
+
+it('asks for a DNA per concept in both arms, with room for it in the output budget', async () => {
+  const reserve = jest.spyOn(SourceRequestBudget.prototype, 'reserve');
+  const mock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => planningResponse({ index: 1, rationale: 'Fits.' }));
+  await new SourceDesignPlanner().explore({ ...input(), selected: undefined });
+  await new SourceDesignPlanner().explore({ ...input(), selected: undefined, narrative: false });
+  for (const call of mock.mock.calls) {
+    const body = JSON.parse(call[1]!.body as string);
+    const items = body.text.format.schema.properties.concepts.items;
+    expect(items.required).toContain('dna');
+    expect(items.properties.dna).toEqual(SOURCE_DNA_SCHEMA);
+    expect(body.input[0].content[0].text).toContain(SOURCE_DNA_DIRECTION);
+  }
+  expect(reserve.mock.calls.map(call => call[2])).toEqual([4800, 4800]);
+});
+
+it('repairs an invalid DNA in code instead of spending the paid retry', async () => {
+  const withDna = concepts.map(concept => ({ ...concept, dna: { ...validDna(), buttons: { form: 'sparkle', hover: 'lift', press: 'pop' } } }));
+  const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts: withDna, selection: { index: 1, rationale: 'Fits.' } }) }] }] })));
+  const repairs: string[] = [];
+  const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, dnaSeed: 'store-1', repairs });
+  expect(mock).toHaveBeenCalledTimes(1);
+  expect(result.concepts[1].dna!.buttons.form).not.toBe('sparkle');
+  expect(repairs).toEqual(expect.arrayContaining([expect.stringContaining('concepts[1].dna.buttons.form')]));
 });

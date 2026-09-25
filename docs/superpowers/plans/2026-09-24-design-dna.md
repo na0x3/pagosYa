@@ -212,7 +212,7 @@ describe('design DNA in concepts', () => {
     expect(concept.dna!.buttons.form).not.toBe('sparkle');
     expect(concept.dna!.surfaces.product).toBe('dense');
     expect(concept.layout?.productPage).toBe('dense');
-    expect(repairs).toEqual([expect.stringContaining('concepts[1].dna.buttons.form'), expect.stringContaining('concepts[1].dna.surfaces.product')]);
+    expect(repairs.filter(repair => repair.startsWith('concepts[1]'))).toEqual([expect.stringContaining('concepts[1].dna.buttons.form'), expect.stringContaining('concepts[1].dna.surfaces.product')]);
   });
   it('gives every planned concept a DNA, and leaves a saved design without one untouched', () => {
     expect(validateSourceDesign(planned(), 1, true).concepts.every(concept => concept.dna)).toBe(true);
@@ -227,7 +227,7 @@ In `source-design-planner.spec.ts` (import `validDna`, `SOURCE_DNA_SCHEMA`, `SOU
 ```ts
 it('asks for a DNA per concept in both arms, with room for it in the output budget', async () => {
   const reserve = jest.spyOn(SourceRequestBudget.prototype, 'reserve');
-  const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(planningResponse({ index: 1, rationale: 'Fits.' }));
+  const mock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => planningResponse({ index: 1, rationale: 'Fits.' }));
   await new SourceDesignPlanner().explore({ ...input(), selected: undefined });
   await new SourceDesignPlanner().explore({ ...input(), selected: undefined, narrative: false });
   for (const call of mock.mock.calls) {

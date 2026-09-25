@@ -1,4 +1,5 @@
-import { relaxSourceTracking, validateSourcePresentation, adoptTrailingDesignSections, savedSourceDesign,sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation } from './source-design';
+import { relaxSourceTracking, validateSourcePresentation, adoptTrailingDesignSections, savedSourceDesign,sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation , SOURCE_PRODUCT_PAGE_STYLES } from './source-design';
+import { validDna } from './fixtures/dna';
 
 const proposal = () => ({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
   name, premise: 'Handmade ceramics from La Paz', opening: name + ' opening', flow: name + ' flow',
@@ -233,4 +234,28 @@ it('eases an over-tight heading to the tracking floor instead of failing the sto
   expect(relaxed[1].content).toContain('tracking-[-0.04em]');
   expect(() => validateSourcePresentation(relaxed)).not.toThrow();
   expect(relaxSourceTracking(files, files)).toEqual(files);
+});
+
+describe('design DNA in concepts', () => {
+  const planned = () => { const value = proposal() as any; for (const concept of value.concepts) concept.layout = { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true, productPage: 'dense' }; return value; };
+  it('keeps a valid DNA and lets its product surface decide the product page', () => {
+    const value = planned(); value.concepts[1].dna = validDna();
+    const concept = validateSourceDesign(value, 1, true).concepts[1];
+    expect(concept.dna).toEqual(validDna());
+    expect(concept.layout?.productPage).toBe('story-led');
+  });
+  it('repairs an invalid DNA in code, reports it, and keeps the planned product page when the DNA product was defaulted', () => {
+    const value = planned(); value.concepts[1].dna = { ...validDna(), buttons: { form: 'sparkle', hover: 'lift', press: 'pop' }, surfaces: { ...validDna().surfaces, product: 'luxury' } };
+    const repairs: string[] = [];
+    const concept = validateSourceDesign(value, 1, true, false, { seed: 'store-1', repairs }).concepts[1];
+    expect(concept.dna!.buttons.form).not.toBe('sparkle');
+    expect(concept.dna!.surfaces.product).toBe('dense');
+    expect(concept.layout?.productPage).toBe('dense');
+    expect(repairs.filter(repair => repair.startsWith('concepts[1]'))).toEqual([expect.stringContaining('concepts[1].dna.buttons.form'), expect.stringContaining('concepts[1].dna.surfaces.product')]);
+  });
+  it('gives every planned concept a DNA, and leaves a saved design without one untouched', () => {
+    expect(validateSourceDesign(planned(), 1, true).concepts.every(concept => concept.dna)).toBe(true);
+    expect(validateSourceDesign(proposal(), 1).concepts.some(concept => 'dna' in concept)).toBe(false);
+    expect(SOURCE_PRODUCT_PAGE_STYLES).toEqual(['editorial', 'dense', 'image-led', 'story-led']);
+  });
 });

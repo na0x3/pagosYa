@@ -4,12 +4,12 @@ import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { SOURCE_VISUAL_ASSET_DIRECTION } from './source-visual-assets';
 import { SOURCE_SCROLL_FEELS, type SourceScrollFeel } from './source-motion';
+import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
 
 export const SOURCE_DESIGN_FILE = 'design-direction.json';
 export const SOURCE_PRODUCT_PRESENTATION_DIRECTION = `The platform renders every product page and quick view inside the empty data-pagosya-product-page mount, in the editorial, dense, image-led or story-led presentation chosen by layout.productPage. Image-led uses an expansive uncropped photo beside purchasing details; story-led places the photo above a readable product story and purchasing details. Do not write CSS for [data-pagosya-product], [data-pagosya-product-page] or any .product-detail__ class; the runtime ignores those rules. The product page takes its identity from the tokens in :root (background, foreground, accent, accent-foreground, surface, border, radius, body-font, heading-font), so choose them with the product page in mind: the accent fills the purchase button and must contrast with accent-foreground, and heading-font sets the product title. Keep the header and footer of product.html consistent with the homepage. Header search and cart actions are icon-only buttons with accessible names, and the cart shows its count in a small badge. Never place a second static product configurator beside the mount, and never pad a product with fabricated reviews, certifications, benefits, shipping guarantees or nutrition claims. On local edits apply this guidance only to the requested scope.`;
 const fields = ['name', 'premise', 'opening', 'flow', 'typography', 'imagery', 'mobile'] as const;
-export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
-export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
+export { SOURCE_PRODUCT_PAGE_STYLES, type SourceProductPageStyle } from './source-dna';
 export type SourceDesignLayout = { sections: string[]; catalogSection: string; standaloneIntro: boolean; productsInOpening: boolean; productPage?: SourceProductPageStyle };
 export const SOURCE_STORY_ROLES = ['opening', 'proof', 'offer', 'difference', 'trust', 'action'] as const;
 export const SOURCE_STORY_MEDIA = ['none', 'hero', 'product', 'editorial'] as const;
@@ -23,13 +23,13 @@ export type SourceMotionChoreography = {
   mode: 'subtle' | 'expressive'; scrollFeel: SourceScrollFeel; entrance: typeof SOURCE_ENTRANCE_KINDS[number];
   scenes: Array<{ section: string; kind: typeof SOURCE_SCENE_KINDS[number]; intensity: 1 | 2 | 3 }>;
 };
-export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography };
+export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna };
 export type SourceDesign = { concepts: SourceDesignConcept[]; selected: number; selection?: { source: 'planner' | 'forced'; rationale: string | null } };
 export const sourceDesignSchema = {
   type: 'object', additionalProperties: false, required: ['concepts', 'selected'], properties: {
     selected: { type: 'integer', minimum: 0, maximum: 2 },
     concepts: { type: 'array', minItems: 3, maxItems: 3, items: {
-      type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion'],
+      type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion', 'dna'],
       properties: { ...Object.fromEntries(fields.map(field => [field, { type: 'string', minLength: 1, maxLength: field === 'name' ? 80 : 500 }])),
         layout: { type: 'object', additionalProperties: false, required: ['sections', 'catalogSection', 'standaloneIntro', 'productsInOpening', 'productPage'], properties: {
           productPage: { type: 'string', enum: [...SOURCE_PRODUCT_PAGE_STYLES] },
@@ -48,6 +48,7 @@ export const sourceDesignSchema = {
             section: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, kind: { type: 'string', enum: [...SOURCE_SCENE_KINDS] }, intensity: { type: 'integer', minimum: 1, maximum: 3 },
           } } },
         } },
+        dna: SOURCE_DNA_SCHEMA,
       },
     } },
   },
@@ -65,7 +66,8 @@ function fitProse(text: string, max: number) {
   return (word >= max * 0.5 ? cut.slice(0, word) : cut).trim();
 }
 
-export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false): SourceDesign {
+/** dnaOptions.seed (the store id) seeds field defaults per concept; repairs collects what was fixed in code. */
+export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[] } = {}): SourceDesign {
   const fail = (detail = '') => { throw new BadGatewayException('La propuesta necesita tres composiciones distintas y una dirección de diseño válida.' + (detail ? ' ' + detail : '')); };
   if (!value || !Number.isInteger(value.selected) || value.selected < 0 || value.selected > 2 || (selected !== undefined && value.selected !== selected)
     || !Array.isArray(value.concepts) || value.concepts.length !== 3) return fail();
@@ -113,6 +115,18 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
         || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa entrada válida y hasta dos escenas en sections distintas.`);
       result.story = { promise: story.promise.trim(), eyebrow: story.eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: beat.headline.trim(), media: beat.media })) };
       result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: choreography.entrance, scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
+    }
+    // Planned concepts always carry a DNA; saved ones only when they already had it, so old revisions stay byte-equal.
+    if (requireLayout || concept.dna !== undefined) {
+      // A bad DNA is repaired in code and reported: it never costs the paid planning retry.
+      const { dna, repairs } = normalizeDna(concept.dna, dnaOptions.seed !== undefined ? `${dnaOptions.seed}:${index}` : result.name);
+      // One source for the product page: a DNA product the model chose wins; a defaulted one follows the planned layout.
+      if (result.layout?.productPage) {
+        if (SOURCE_PRODUCT_PAGE_STYLES.includes(concept.dna?.surfaces?.product)) result.layout.productPage = dna.surfaces.product;
+        else dna.surfaces.product = result.layout.productPage;
+      }
+      result.dna = dna;
+      dnaOptions.repairs?.push(...repairs.map(repair => `concepts[${index}].${repair}`));
     }
     return result;
   });
