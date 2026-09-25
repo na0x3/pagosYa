@@ -86,7 +86,8 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
       font: voice(cardEl.querySelector('[data-product-field="name"], h3, h2')).font, pad: image ? Math.round(px(getComputedStyle(image).paddingBottom)) : 0, swatches: cardEl.querySelectorAll('[data-card-swatch]').length, addRadius: add.btnRadius ?? -1, addBorder: add.btnBorder ?? -1,
       addTransform: buttonEl && cardEl.contains(buttonEl) ? `${getComputedStyle(buttonEl).textTransform}/${getComputedStyle(buttonEl).fontVariantCaps}` : 'none', addTracking: buttonEl && cardEl.contains(buttonEl) ? em(getComputedStyle(buttonEl)) : 0 } : null;
     const hoverBefore = buttonEl ? (() => { const st = getComputedStyle(buttonEl); return JSON.stringify([st.transform, st.filter, st.backgroundImage === 'none' ? 'none' : `${st.backgroundSize} ${st.backgroundPosition}`, st.boxShadow]); })() : null;
-    const missingImages = Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && (!i.complete || !i.naturalWidth); }).length;
+    // An image without a source yet is deferred (the card's second photo loads when the shopper reaches the card), not missing.
+    const missingImages = Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return (i.getAttribute('src') || i.getAttribute('srcset')) && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && (!i.complete || !i.naturalWidth); }).length;
     return { dna, type, card, hoverBefore, button: buttonEl ? control(buttonEl) : null, overflow: document.documentElement.scrollWidth > vw + 1, fontsLoaded: document.fonts.status === 'loaded', missingImages };
   }
   if (kind === 'added') {

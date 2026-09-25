@@ -67,6 +67,23 @@ it('records tracking in em and background deltas as lightness (ΔL*), so the sco
   expect(sample.surfaces.cart!.bgDelta).toBeLessThan(10);
 });
 
+it('does not count a deferred second photo (no src until the shopper reaches the card) as a missing image', async () => {
+  const kit = await kitDefaultSnapshot();
+  const files = kit.files.map(f => {
+    if (f.path === 'config.js') {
+      const config = JSON.parse(f.content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;$/, ''));
+      config.data.items = config.data.items.map((item: any) => ({ ...item, imageUrls: [...item.imageUrls, 'assets/p2.svg'] }));
+      config.dna = { version: 1, card: 'second-photo', button: 'pill', cart: 'drawer', added: 'toast', review: 'split' };
+      return { ...f, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};` };
+    }
+    // Authored card CSS commonly sizes every card image, the deferred one included.
+    return f.path === 'index.html' ? { ...f, content: f.content.replace('</head>', '<style>.menu-item img{display:block;width:100%;height:220px}</style></head>') } : f;
+  });
+  const { sample } = await collectStoreSample({ id: 'x', name: 'x', snapshot: { ...kit, files } });
+  expect(sample.quality.missingImages).toBe(0);
+  expect(sample.surfaces.card!.hover).toBe('swap');
+});
+
 it('measures the cart with the product in it when the home page cannot add to the cart', async () => {
   const kit = await kitDefaultSnapshot();
   const noCatalog = { ...kit, files: kit.files.map(f => f.path === 'index.html' ? { ...f, content: f.content.replace('<div data-pagosya-catalog data-pagosya-grid></div>', '') } : f) };
