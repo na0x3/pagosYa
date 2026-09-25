@@ -1558,9 +1558,12 @@
   // photographs or gradients is left alone (its real background is unknown); authored markup outside
   // the commerce slots is never touched.
   const CONTRAST_SLOTS = '[data-pagosya-catalog],[data-pagosya-product-page],[data-pagosya-cart],[data-pagosya-checkout-page],dialog[data-pagosya-product]';
+  // The colour probes are inserted and removed on every pass; the observer ignores them, or each pass would queue the next.
+  const contrastProbe = () => { const probe = document.createElement('span'); probe.hidden = true; probe.setAttribute('data-pagosya-contrast-probe', ''); return probe; };
+  const probeOnly = record => [...record.addedNodes, ...record.removedNodes].every(node => node.nodeType === 1 && node.hasAttribute('data-pagosya-contrast-probe'));
   function readableText(root) {
     if (!root || !root.isConnected) return;
-    const probe = document.createElement('span'); probe.hidden = true; root.append(probe);
+    const probe = contrastProbe(); root.append(probe);
     // Browsers report color-mix() results as color(srgb r g b / a) with 0–1 channels, not rgb().
     const parseColor = value => { const n = (String(value).match(/[\d.]+/g) || []).map(Number); if (n.length < 3) return null; const scale = /^color\(srgb/i.test(value) ? 255 : 1; return [n[0] * scale, n[1] * scale, n[2] * scale, n.length > 3 ? n[3] : 1]; };
     const rgba = value => { probe.style.color = ''; probe.style.color = value; return parseColor(getComputedStyle(probe).color); };
@@ -1641,7 +1644,7 @@
       }
       return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255, 1]);
     };
-    const probe = document.createElement('span'); probe.hidden = true; document.body.append(probe);
+    const probe = contrastProbe(); document.body.append(probe);
     const resolve = value => { probe.style.color = ''; probe.style.color = value; return parse(getComputedStyle(probe).color); };
     const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', 'var(--store-accent-foreground, var(--brand-accent-foreground, #ffffff))', '#000000', '#ffffff'].map(resolve).filter(c => c && c[3] >= .99);
     probe.remove();
@@ -1689,7 +1692,7 @@
   if (typeof MutationObserver === 'function') {
     // The guard also runs right away (a mutation callback runs before the page's next task), so a pay or buy button
     // never shows unreadable, not even for the timer's 120ms; the timer then measures again with the text fixes applied.
-    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) { guardContrastNow(); queueReadableText(); } }).observe(document.body, { childList: true, subtree: true });
+    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && !probeOnly(record) && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) { guardContrastNow(); queueReadableText(); } }).observe(document.body, { childList: true, subtree: true });
     if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
   }
   const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';

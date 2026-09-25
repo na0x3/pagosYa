@@ -17,13 +17,13 @@ let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch({ headless: true }); });
 afterAll(async () => { await browser?.close(); });
 
-async function open(options: { dna?: Record<string, unknown>; css?: string; kit?: string; body?: string; query?: string; cart?: unknown[] }): Promise<Page> {
+async function open(options: { dna?: Record<string, unknown>; css?: string; kit?: string; body?: string; query?: string; cart?: unknown[]; items?: unknown[]; init?: string }): Promise<Page> {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  const config = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Marca', items: [ITEM] }, ...(options.dna ? { dna: options.dna } : {}) };
+  const config = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Marca', items: options.items ?? [ITEM] }, ...(options.dna ? { dna: options.dna } : {}) };
   const served = options.kit === undefined ? '' : validateStoreKitCss(options.kit).css;
   const link = served ? `<link rel="stylesheet" href="data:text/css;base64,${Buffer.from(served).toString('base64')}" data-pagosya-kit="store">` : '';
   await page.setContent(`<!doctype html><html lang="es"><head><style>${options.css ?? ''}</style>${link}</head><body>${options.body ?? CATALOG}</body></html>`);
-  await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_PREVIEW_QUERY=${JSON.stringify(options.query ?? '')};${options.cart ? `window.PAGOSYA_PREVIEW_CART=${JSON.stringify(options.cart)};` : ''}window.PAGOSYA_CONFIG=${JSON.stringify(config)};` });
+  await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_PREVIEW_QUERY=${JSON.stringify(options.query ?? '')};${options.cart ? `window.PAGOSYA_PREVIEW_CART=${JSON.stringify(options.cart)};` : ''}window.PAGOSYA_CONFIG=${JSON.stringify(config)};${options.init ?? ''}` });
   await page.addScriptTag({ content: commerce });
   return page;
 }
@@ -168,5 +168,24 @@ describe('runtime contrast guard: pay and buy buttons and totals read at 4.5:1',
       await guarded(page, 'dialog.cart-drawer .order-total');
       expect(await contrastOf(page, 'dialog.cart-drawer .order-total strong')).toBeGreaterThanOrEqual(4.5);
     } finally { await page.close(); }
+  });
+});
+
+describe('the contrast passes go idle', () => {
+  it('an idle catalog of 200 cards is not measured again and again (the text probe no longer re-triggers the observer)', async () => {
+    // Counts the passes: each one reads the commerce slots once (queueReadableText) and the guarded controls once.
+    const init = `window.__passes=0;const q=Document.prototype.querySelectorAll;Document.prototype.querySelectorAll=function(s){if(String(s).startsWith('[data-pagosya-catalog],'))window.__passes++;return q.call(this,s)};`;
+    const items = Array.from({ length: 200 }, (_, i) => ({ ...ITEM, id: 'p' + i, name: 'Taza ' + i }));
+    for (const css of ['', '.menu-add{background:#c2452e;color:#fff}.menu-item p{color:#eee}']) {
+      const page = await open({ css, items, init });
+      try {
+        await page.waitForSelector('.menu-add');
+        await page.waitForTimeout(800);
+        const before = await page.evaluate(() => (window as unknown as { __passes: number }).__passes);
+        await page.waitForTimeout(2000);
+        const after = await page.evaluate(() => (window as unknown as { __passes: number }).__passes);
+        expect(after - before).toBeLessThanOrEqual(2);
+      } finally { await page.close(); }
+    }
   });
 });
