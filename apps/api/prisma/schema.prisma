@@ -3034,3 +3034,18 @@ model StoreAnalyticsDaily {
   @@unique([storeId, day, type, productId, target])
   @@index([storeId, day])
 }
+
+/// G2 guided growth: a merchant hid an insight ("Ocultar") or put it off ("Recordar en 7 días"). insightId is the
+/// engine's stable id (rule or rule:<product|step|label|host>). No relation to Store (D0/G1 rule).
+model StoreGrowthInsightState {
+  id        String    @id @default(cuid())
+  storeId   String
+  insightId String
+  /// dismissed | snoozed
+  status    String
+  until     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([storeId, insightId])
+}
