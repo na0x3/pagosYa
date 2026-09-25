@@ -148,10 +148,15 @@ export class PaymentIntentsService {
     dto: CreatePaymentIntentDto,
     limitAudience: "merchant" | "buyer" = "buyer",
   ) {
+    // `fx` is the server's conversion snapshot, written only by confirm. It is read
+    // as the price to convert and as the amount counted against limits, so a
+    // caller-supplied one could over- or under-charge a buyer and slip past limits.
+    const { fx: _callerFx, ...metadata } = dto.metadata ?? {};
+    const safeMetadata = dto.metadata ? metadata : undefined;
     if (livemode && dto.amount > 0) {
       // Read the merchant/policy/FX rows through the caller's own tx when it
       // has one open, instead of borrowing a second pooled connection.
-      await this.limits.assertPerPayment(merchantId, { amount: dto.amount, currency: dto.currency ?? "BOB", metadata: dto.metadata ?? null }, limitAudience, tx);
+      await this.limits.assertPerPayment(merchantId, { amount: dto.amount, currency: dto.currency ?? "BOB", metadata: safeMetadata ?? null }, limitAudience, tx);
     }
     const id = `pi_${idPart()}`;
     const clientSecret = `${id}_secret_${secretPart()}`;
@@ -167,7 +172,7 @@ export class PaymentIntentsService {
         customerDocument: dto.customerDocument?.trim() || undefined,
         customerEmail: dto.customerEmail?.trim().toLowerCase() || undefined,
         customerPhone: dto.customerPhone?.trim() || undefined,
-        metadata: dto.metadata as Prisma.InputJsonValue | undefined,
+        metadata: safeMetadata as Prisma.InputJsonValue | undefined,
         clientSecret,
         livemode,
       },

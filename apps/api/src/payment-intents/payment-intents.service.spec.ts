@@ -298,6 +298,22 @@ describe("PaymentIntentsService directed charge recipients", () => {
     });
   });
 
+  it("drops a merchant-supplied fx snapshot, which only confirm may write", async () => {
+    // fx.originalAmount is read as the price to convert (international charge) and as
+    // the size counted against ASFI limits, so a caller must never be able to seed it.
+    const prisma = { paymentIntent: { create: jest.fn().mockImplementation(({ data }) => data) } };
+    const limits = inertLimits();
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), limits as any, { notify: jest.fn() } as any);
+
+    await service.createInTransaction(prisma as any, "merchant_1", true, {
+      amount: 1000,
+      metadata: { orderRef: "A-1", fx: { originalAmount: 100000, originalCurrency: "BOB", rate: 6.96, convertedAt: "2026-09-24T00:00:00.000Z" } },
+    });
+
+    expect(prisma.paymentIntent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ metadata: { orderRef: "A-1" } }) });
+    expect(limits.assertPerPayment).toHaveBeenCalledWith("merchant_1", expect.objectContaining({ metadata: { orderRef: "A-1" } }), "buyer", prisma);
+  });
+
   it("resolves the recipient for an already-issued subscription checkout", async () => {
     const prisma = {
       customerSubscription: {

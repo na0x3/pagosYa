@@ -91,9 +91,9 @@ export class LimitsService {
     } else {
       throw limitExceeded();
     }
-    // fx.originalAmount comes from merchant-controlled metadata; refuse
-    // anything that isn't a positive integer centavo count so a negative or
-    // fractional value can't shrink the monthly reservation while counted.
+    // create() now drops a caller-supplied fx, but intents created before that
+    // may still carry one; refuse anything that isn't a positive integer centavo
+    // count so a negative or fractional value can't shrink the monthly reservation.
     if (!Number.isSafeInteger(amountBob) || amountBob <= 0) throw limitExceeded();
     return { amountBob, fxRate };
   }
