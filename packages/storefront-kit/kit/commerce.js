@@ -2190,6 +2190,8 @@
     }
     el.replaceChildren(root);
   }
+  const reviewTemplate = () => kitTemplate('review', 'reviewTemplateInvalid', root =>
+    root.querySelector('[data-review-slot="summary"]') && root.querySelector('[data-review-slot="fields"]'));
   function renderCart() {
     if (hosted && ready) notifyHostedCart();
     else if (!preview && ready) {
@@ -2257,7 +2259,18 @@
         el.append(note);
       }
       for (const [name, value] of answers) { const field = [...el.querySelectorAll('input,textarea')].find(field => field.name === name); if (field) field.value = value; }
-      if (review) {
+      const reviewLayout = review ? reviewTemplate() : null;
+      if (reviewLayout) {
+        const root = reviewLayout.make();
+        const summary = root.querySelector('[data-review-slot="summary"]'), fields = root.querySelector('[data-review-slot="fields"]');
+        summary.replaceChildren(); fields.replaceChildren();
+        for (const child of [...el.children]) (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note') ? summary : fields).append(child);
+        const feedback = document.createElement('p');
+        feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
+        fields.append(feedback);
+        el.replaceChildren(root);
+        el.classList.add('checkout-review'); el.setAttribute('data-review-template', '');
+      } else if (review) {
         const summary = document.createElement('aside'); summary.className = 'checkout-review__summary';
         summary.innerHTML = `<h2>Tu pedido</h2>${count ? `<p class="checkout-review__count">${count} ${count === 1 ? 'producto' : 'productos'}</p>` : ''}`;
         for (const child of [...el.children]) if (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note')) summary.append(child);

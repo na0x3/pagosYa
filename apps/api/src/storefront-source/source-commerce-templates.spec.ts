@@ -197,3 +197,39 @@ describe('added notice template', () => {
     expect(shop.$('[data-pagosya-cart]').hidden).toBe(baseline.$('[data-pagosya-cart]').hidden);
   });
 });
+
+const REVIEW = `<template data-pagosya-review-template><div class="mi-revision"><div class="columna"><h2>Tu canasta</h2><div data-review-slot="summary">Total: Bs 0</div></div><div data-review-slot="fields"></div></div></template>`;
+
+async function openReview(shop: ReturnType<typeof boot>) {
+  shop.w.location.hash = 'checkout';
+  shop.w.dispatchEvent(new shop.w.HashChangeEvent('hashchange'));
+  await shop.tick();
+}
+
+describe('checkout review template', () => {
+  it('puts lines and totals in the summary slot and every field plus the pay action in the fields slot', async () => {
+    const shop = boot(REVIEW, { cart: [{ id: 'lamp', quantity: 1 }] });
+    await shop.tick();
+    await openReview(shop);
+    const review = shop.$('[data-checkout-review]')!;
+    const summary = review.querySelector('[data-review-slot="summary"]');
+    const fields = review.querySelector('[data-review-slot="fields"]');
+    expect(review.querySelector('.mi-revision')).not.toBeNull();
+    expect(summary.textContent).not.toContain('Bs 0');
+    expect(summary.querySelector('.order-items li')).not.toBeNull();
+    expect(summary.querySelector('.order-total')).not.toBeNull();
+    expect(fields.querySelector('[data-pay],[data-finish-demo]')).not.toBeNull();
+    expect(fields.querySelector('[data-pagosya-checkout-status]')).not.toBeNull();
+    // The pay button still finds its panel: fields stay inside [data-pagosya-cart].
+    expect(fields.querySelector('.checkout-button').closest('[data-pagosya-cart]')).toBe(review);
+    expect(review.querySelector('.checkout-review__summary')).toBeNull();
+  });
+
+  it('falls back to the kit review without a fields slot', async () => {
+    const shop = boot(REVIEW.replace('<div data-review-slot="fields"></div>', ''), { cart: [{ id: 'lamp', quantity: 1 }] });
+    await shop.tick();
+    await openReview(shop);
+    expect(shop.$('[data-checkout-review] .checkout-review__summary')).not.toBeNull();
+    expect(shop.flag('reviewTemplateInvalid')).toBe('true');
+  });
+});
