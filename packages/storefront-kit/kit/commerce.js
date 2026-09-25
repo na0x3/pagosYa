@@ -1607,6 +1607,65 @@
       fillIconSlot(slot, host);
     });
   }
+  /* The pattern placement: a tile behind a section the store marks data-motif-pattern, never behind or around the kit's
+   * catalog, cart, product or checkout. It is a background image (an SVG data URL; every storefront CSP allows img-src
+   * data:), drawn in the section's own text colour at the highest opacity, at most .12, that keeps it under the contrast
+   * floor: the tile against the background at most 1.35:1, every text in the section still 4.5:1 over it. A section whose
+   * background the page cannot compare (a photo, a gradient, an unknown colour syntax), or whose text is already weaker than
+   * that, gets no pattern. Static: nothing moves. */
+  const PATTERN_EXCLUDED = '[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-product],[data-pagosya-product-page],.cart-drawer,.checkout-review,dialog,template';
+  const PATTERN_TILE_LIMIT = 1.35;
+  const motifRgb = value => {
+    const text = String(value || '').trim();
+    if (!text || text === 'transparent') return [0, 0, 0, 0];
+    const n = (text.match(/-?[\d.]+/g) || []).map(Number);
+    return /^rgba?\(/i.test(text) && n.length >= 3 ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null;
+  };
+  const motifLuminance = c => [0, 1, 2].map(i => { const v = c[i] / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+  const motifContrast = (a, b) => { const [x, y] = [motifLuminance(a), motifLuminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+  function patternBackdrop(section) {
+    const layers = [];
+    for (let node = section; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+      const colour = motifRgb(style.backgroundColor);
+      if (!colour) return null;
+      if (colour[3] > 0) layers.push(colour);
+      if (colour[3] >= .99) break;
+    }
+    return layers.reverse().reduce((under, top) => [0, 1, 2].map(i => top[i] * top[3] + under[i] * (1 - top[3])), [255, 255, 255]);
+  }
+  function patternAlpha(ink, back, texts) {
+    for (let step = 12; step >= 4; step--) {
+      const alpha = step / 100, tile = [0, 1, 2].map(i => back[i] + (ink[i] - back[i]) * alpha);
+      if (motifContrast(tile, back) <= PATTERN_TILE_LIMIT && texts.every(text => motifContrast(text, tile) >= 4.5)) return alpha;
+    }
+    return 0;
+  }
+  function placePatterns(root) {
+    const index = packMotif('pattern');
+    if (index < 0 || !root?.querySelectorAll) return;
+    const sections = [...(root.matches?.('[data-motif-pattern]') ? [root] : []), ...root.querySelectorAll('[data-motif-pattern]')];
+    for (const section of sections) {
+      const state = section.getAttribute('data-motif-pattern');
+      if (state === 'placed' || state === 'skipped' || section.closest(PATTERN_EXCLUDED) || section.querySelector(PATTERN_EXCLUDED)) continue;
+      const back = patternBackdrop(section), ink = motifRgb(getComputedStyle(section).color);
+      const texts = [section, ...section.querySelectorAll('*')]
+        .filter(el => [...el.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()))
+        .slice(0, 40).map(el => motifRgb(getComputedStyle(el).color)).filter(colour => colour && colour[3] > 0);
+      const alpha = back && ink && ink[3] > 0 ? patternAlpha(ink, back, texts) : 0;
+      const drawing = alpha ? motifDrawing(MOTIFS[index].svg) : null;
+      const box = drawing ? (drawing.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number) : [];
+      if (!drawing || box.length !== 4 || !(box[2] > 0 && box[3] > 0)) { section.setAttribute('data-motif-pattern', 'skipped'); continue; }
+      drawing.setAttribute('width', String(box[2]));
+      drawing.setAttribute('height', String(box[3]));
+      drawing.setAttribute('color', `rgb(${ink.slice(0, 3).map(Math.round).join(',')})`);
+      drawing.setAttribute('opacity', String(alpha));
+      section.style.setProperty('--pagosya-pattern', `url("data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(drawing))}")`);
+      section.setAttribute('data-motif-pattern-alpha', String(alpha));
+      section.setAttribute('data-motif-pattern', 'placed');
+    }
+  }
   if (MOTIFS.length) {
     const motifStyle = document.createElement('style');
     motifStyle.dataset.pagosyaKit = 'motifs';
@@ -1654,6 +1713,7 @@
     '[data-motif-icon=placed][data-motif-kit]{margin-inline-end:.45em}',
     '.pagosya-motif[data-motif-slot=button]{width:1.15em;height:1.15em;color:inherit}',
     ':root[data-dna-button=split] :is(.product-detail__buy,.product-detail__sticky button)>[data-motif-icon]{display:none}',
+    '[data-motif-pattern=placed]{background-image:var(--pagosya-pattern)!important;background-repeat:repeat!important;background-size:auto!important;background-position:0 0!important}',
   ];
   if (PACK_MOTIFS.length) {
     const packStyle = document.createElement('style');
@@ -1663,8 +1723,8 @@
   }
   /* Store-marked slots are placed once the page is parsed, and again whenever the store's own scripts (React) add or
    * replace them. Only a store with a pack observes anything. */
-  const MOTIF_SLOTS = '[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"])';
-  function placeIdentityMotifs(root) { placeButtonMotifs(root); }
+  const MOTIF_SLOTS = '[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"]),[data-motif-pattern]:not([data-motif-pattern="placed"]):not([data-motif-pattern="skipped"])';
+  function placeIdentityMotifs(root) { placeButtonMotifs(root); placePatterns(root); }
   if (PACK_MOTIFS.length) {
     const startIdentity = () => {
       placeIdentityMotifs(document.body);

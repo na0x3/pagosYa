@@ -250,3 +250,70 @@ describe('button icons in a real browser', () => {
     } finally { await page.close(); }
   });
 });
+
+const HERO = (style: string, extra = '') => `${CATALOG}<section class="hero" data-motif-pattern style="${style}"><h2>Horneados cada mañana</h2><p>Snacks sin conservantes para perros felices.</p>${extra}</section>`;
+
+describe('the pattern placement', () => {
+  it('tiles a marked section with the pack pattern in its own text colour, and never the catalog', () => {
+    const shop = boot({ pack: fixturePack(), body: HERO('background:#fbf6ee;color:#2a1d12').replace('<section data-pagosya-catalog>', '<section data-pagosya-catalog data-motif-pattern>') });
+    const hero = shop.$('.hero');
+    expect(hero.getAttribute('data-motif-pattern')).toBe('placed');
+    const alpha = Number(hero.getAttribute('data-motif-pattern-alpha'));
+    expect(alpha).toBeGreaterThanOrEqual(.04);
+    expect(alpha).toBeLessThanOrEqual(.12);
+    const url = hero.style.getPropertyValue('--pagosya-pattern');
+    expect(url).toMatch(/^url\("data:image\/svg\+xml,/);
+    const drawing = decodeURIComponent(url.slice('url("data:image/svg+xml,'.length, -2));
+    expect(drawing).toContain('color="rgb(42,29,18)"');
+    expect(drawing).toContain(`opacity="${alpha}"`);
+    expect(drawing).not.toMatch(/<script|href/);
+    expect(shop.$('[data-pagosya-catalog]').getAttribute('data-motif-pattern')).toBe('');
+    expect(shop.$('[data-pagosya-catalog]').style.getPropertyValue('--pagosya-pattern')).toBe('');
+  });
+
+  it('does nothing without a pack pattern, and skips a section that holds the catalog', () => {
+    expect(boot({ pack: fixturePack(['card']), body: HERO('background:#fff;color:#222') }).$('.hero').getAttribute('data-motif-pattern')).toBe('');
+    const wrapped = boot({ pack: fixturePack(), body: '<section class="wrap" data-motif-pattern style="background:#fff;color:#222"><div data-pagosya-catalog></div></section><section data-pagosya-cart></section><p data-pagosya-status></p>' });
+    expect(wrapped.$('.wrap').style.getPropertyValue('--pagosya-pattern')).toBe('');
+  });
+});
+
+describe('the pattern in a real browser', () => {
+  async function facts(page: Page) {
+    return page.$eval('.hero', section => {
+      const rgb = (value: string) => (value.match(/[\d.]+/g) || []).map(Number).slice(0, 3);
+      const texts = [section, ...Array.from(section.querySelectorAll('*'))].filter(el => Array.from(el.childNodes).some(node => node.nodeType === 3 && node.textContent!.trim())).map(el => rgb(getComputedStyle(el).color));
+      return { state: section.getAttribute('data-motif-pattern'), alpha: Number(section.getAttribute('data-motif-pattern-alpha') || 0), image: getComputedStyle(section).backgroundImage, back: rgb(getComputedStyle(section).backgroundColor), ink: rgb(getComputedStyle(section).color), texts, animations: section.getAnimations().length };
+    });
+  }
+
+  it.each([
+    ['a light palette', 'background:#fbf6ee;color:#2a1d12', '<p style="color:#8a3b12">Desde 2019</p>'],
+    ['light text on a dark palette', 'background:#151515;color:#f2f2f2', '<p style="color:#f5b041">Desde 2019</p>'],
+  ])('keeps the tile under the contrast floor on %s', async (_name, style, extra) => {
+    const page = await openShop({ pack: fixturePack(), body: HERO(style, extra), width: 390 });
+    try {
+      await page.waitForSelector('.hero[data-motif-pattern="placed"]');
+      const seen = await facts(page);
+      expect(seen.image).toContain('data:image/svg+xml');
+      expect(seen.alpha).toBeGreaterThanOrEqual(.04);
+      expect(seen.alpha).toBeLessThanOrEqual(.12);
+      const tile = seen.back.map((value, i) => value + (seen.ink[i] - value) * seen.alpha);
+      expect(contrastRatio(tile, seen.back)).toBeLessThanOrEqual(1.35);
+      for (const text of seen.texts) expect(contrastRatio(text, tile)).toBeGreaterThanOrEqual(4.5);
+      expect(seen.animations).toBe(0);
+    } finally { await page.close(); }
+  });
+
+  it.each([
+    ['text that is already weak', 'background:#151515;color:#777777'],
+    ['a photo background', 'background:#151515 url(data:image/gif;base64,R0lGODlhAQABAAAAACw=);color:#f2f2f2'],
+    ['a gradient background', 'background:linear-gradient(#ffffff,#eeeeee);color:#222222'],
+  ])('skips a section with %s', async (_name, style) => {
+    const page = await openShop({ pack: fixturePack(), body: HERO(style) });
+    try {
+      await page.waitForSelector('.hero[data-motif-pattern="skipped"]');
+      expect((await facts(page)).image).not.toContain('data:image/svg+xml');
+    } finally { await page.close(); }
+  });
+});
