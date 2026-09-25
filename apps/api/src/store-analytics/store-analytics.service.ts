@@ -147,7 +147,7 @@ export class StoreAnalyticsService {
    * The merchant read API (G2 draws it). Bolivia days, both included; default the last 30; at most 400. Rollups only,
    * so the numbers lag at most one worker tick (15 minutes).
    */
-  async report(merchantId: string, storeId: string, query: { from?: string; to?: string } = {}) {
+  async report(merchantId: string, storeId: string, query: { from?: string; to?: string } = {}, options: { productLimit?: number } = {}) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, checkoutMode: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
     const valid = (day?: string) => {
@@ -171,7 +171,7 @@ export class StoreAnalyticsService {
     const rollup = rows.map(row => ({ ...row, day: row.day.toISOString().slice(0, 10) }));
     const ids = [...new Set(rollup.filter(row => row.productId && row.productId !== ROLLUP_ALL).map(row => row.productId))];
     const names = new Map(ids.length ? (await this.prisma.paymentLink.findMany({ where: { storeId, id: { in: ids } }, select: { id: true, name: true } })).map(product => [product.id, product.name]) : []);
-    return buildAnalyticsReport(rollup, names, from, to, store.checkoutMode);
+    return buildAnalyticsReport(rollup, names, from, to, store.checkoutMode, options);
   }
 
   /** Removes raw events older than 13 calendar months, 5 000 at a time. Rollups are kept (no personal data). */

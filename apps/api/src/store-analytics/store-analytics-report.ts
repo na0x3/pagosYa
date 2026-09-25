@@ -34,7 +34,7 @@ const rate = (part: number, whole: number) => Math.round((part / whole) * 1000) 
  * (a session crossing midnight counts twice). addRate = add sessions per view session, in percent; it can exceed
  * 100 when shoppers add from the card without opening the product.
  */
-export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, string>, from: string, to: string, checkoutMode = 'payment') {
+export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, string>, from: string, to: string, checkoutMode = 'payment', { productLimit = 10 }: { productLimit?: number } = {}) {
   // The store's current mode rules the whole range; an unknown mode is treated as integrated payments.
   const mode = CHECKOUT_MODES.includes(checkoutMode) ? checkoutMode : 'payment';
   const days = daysBetween(from, to);
@@ -74,8 +74,10 @@ export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, strin
   for (const [key, point] of daily) { const total = totals[key.slice(0, key.indexOf('|')) as AnalyticsEventType]; total.count += point.count; total.sessions += point.sessions; }
   const series = Object.fromEntries(ANALYTICS_EVENT_TYPES.map(type => [type, days.map(day => ({ day, ...(daily.get(`${type}|${day}`) || { count: 0, sessions: 0 }) }))])) as Record<AnalyticsEventType, ({ day: string } & Tally)[]>;
   // Ranked by the sessions that viewed, then added: one busy session cannot push a product to the top.
-  const topProducts = [...products].sort(([, a], [, b]) => b.viewSessions - a.viewSessions || b.addSessions - a.addSessions || b.views - a.views).slice(0, 10).map(([productId, p]) => ({
+  // Growth (G2) asks for every product; the read API keeps its ten.
+  const topProducts = [...products].sort(([, a], [, b]) => b.viewSessions - a.viewSessions || b.addSessions - a.addSessions || b.views - a.views).slice(0, productLimit).map(([productId, p]) => ({
     productId, name: names.get(productId) ?? 'Producto eliminado', impressions: p.impressions, cardClicks: p.cardClicks, views: p.views, adds: p.adds,
+    viewSessions: p.viewSessions, addSessions: p.addSessions,
     addRate: p.viewSessions ? rate(p.addSessions, p.viewSessions) : null,
   }));
   let previous: number | null = null;

@@ -37,9 +37,9 @@ describe('buildAnalyticsReport', () => {
 
   it('ranks products by views with card numbers and an add rate, naming deleted ones', () => {
     expect(report.topProducts).toEqual([
-      { productId: 'desk', name: 'Mesa', impressions: 0, cardClicks: 0, views: 9, adds: 0, addRate: 0 },
-      { productId: 'lamp', name: 'Lámpara', impressions: 20, cardClicks: 3, views: 7, adds: 3, addRate: 50 },
-      { productId: 'gone', name: 'Producto eliminado', impressions: 0, cardClicks: 0, views: 0, adds: 1, addRate: null },
+      { productId: 'desk', name: 'Mesa', impressions: 0, cardClicks: 0, views: 9, adds: 0, viewSessions: 8, addSessions: 0, addRate: 0 },
+      { productId: 'lamp', name: 'Lámpara', impressions: 20, cardClicks: 3, views: 7, adds: 3, viewSessions: 6, addSessions: 3, addRate: 50 },
+      { productId: 'gone', name: 'Producto eliminado', impressions: 0, cardClicks: 0, views: 0, adds: 1, viewSessions: 0, addSessions: 1, addRate: null },
     ]);
   });
 
@@ -107,5 +107,11 @@ describe('buildAnalyticsReport', () => {
       row('2026-09-01', 'product_view', 4, 2, { productId: 'browsed' }),
     ], new Map(), '2026-09-01', '2026-09-01');
     expect(ranked.topProducts.map(product => product.productId)).toEqual(['liked', 'added', 'browsed', 'pushed']);
+  });
+
+  it('lists every product when asked (growth reads the whole catalog), ten by default', () => {
+    const many = Array.from({ length: 12 }, (_, index) => row('2026-09-01', 'product_view', 1, 1, { productId: `p${index}` }));
+    expect(buildAnalyticsReport(many, new Map(), '2026-09-01', '2026-09-01').topProducts).toHaveLength(10);
+    expect(buildAnalyticsReport(many, new Map(), '2026-09-01', '2026-09-01', 'payment', { productLimit: 50 }).topProducts).toHaveLength(12);
   });
 });
