@@ -118,13 +118,33 @@ export class BusinessDocumentsService {
 
   async update(merchantId: string, storeId: string, id: string, dto: UpdateBusinessDocumentDto) {
     await this.ownedStore(merchantId, storeId);
-    const doc = await this.load(storeId, id);
-    if (FINAL.includes(doc.status)) throw new ConflictException("Este documento ya no se puede editar");
+    const initial = await this.load(storeId, id);
+    if (FINAL.includes(initial.status)) throw new ConflictException("Este documento ya no se puede editar");
     const customer = await this.customerFields(storeId, dto, dto.businessCustomerId === undefined);
-    const items = dto.items ? await this.pricedItems(storeId, dto.items) : doc.items;
-    const totals = computeTotals(items, dto.discountAmount ?? doc.discountAmount);
+    const pricedItems = dto.items ? await this.pricedItems(storeId, dto.items) : null;
     await this.prisma.$transaction(async (tx) => {
-      if (dto.items) {
+      // Totals come from the row this transaction reads, not from the first read.
+      const doc = await tx.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
+      if (!doc) throw new NotFoundException("Documento no encontrado");
+      if (FINAL.includes(doc.status)) throw new ConflictException("Este documento ya no se puede editar");
+      const totals = computeTotals(pricedItems ?? doc.items, dto.discountAmount ?? doc.discountAmount);
+      // Conditional and written first, so a void, payment or signature landing meanwhile refuses the whole edit.
+      const { count } = await tx.businessDocument.updateMany({
+        where: { id, status: { notIn: FINAL } },
+        data: {
+          ...(dto.title !== undefined && { title: dto.title }),
+          ...(dto.currency !== undefined && { currency: dto.currency }),
+          ...customer,
+          subtotalAmount: totals.subtotalAmount,
+          discountAmount: totals.discountAmount,
+          totalAmount: totals.totalAmount,
+          ...(dto.content !== undefined && { content: dto.content as unknown as Prisma.InputJsonValue }),
+          ...(dto.dueAt !== undefined && { dueAt: dto.dueAt ? new Date(dto.dueAt) : null }),
+          ...(dto.validUntil !== undefined && { validUntil: dto.validUntil ? new Date(dto.validUntil) : null }),
+        },
+      });
+      if (!count) throw new ConflictException("Este documento ya no se puede editar");
+      if (pricedItems) {
         await tx.businessDocumentItem.deleteMany({ where: { documentId: id } });
         await tx.businessDocumentItem.createMany({
           data: totals.items.map((item, position) => ({
@@ -138,20 +158,6 @@ export class BusinessDocumentsService {
           })),
         });
       }
-      await tx.businessDocument.update({
-        where: { id },
-        data: {
-          ...(dto.title !== undefined && { title: dto.title }),
-          ...(dto.currency !== undefined && { currency: dto.currency }),
-          ...customer,
-          subtotalAmount: totals.subtotalAmount,
-          discountAmount: totals.discountAmount,
-          totalAmount: totals.totalAmount,
-          ...(dto.content !== undefined && { content: dto.content as unknown as Prisma.InputJsonValue }),
-          ...(dto.dueAt !== undefined && { dueAt: dto.dueAt ? new Date(dto.dueAt) : null }),
-          ...(dto.validUntil !== undefined && { validUntil: dto.validUntil ? new Date(dto.validUntil) : null }),
-        },
-      });
     });
     return this.view(await this.load(storeId, id));
   }
@@ -170,19 +176,17 @@ export class BusinessDocumentsService {
    */
   async send(merchantId: string, storeId: string, id: string, dto: SendBusinessDocumentDto) {
     const store = await this.ownedStore(merchantId, storeId);
-    const initial = await this.load(storeId, id);
-    if (FINAL.includes(initial.status)) throw new ConflictException("Este documento ya no se puede enviar");
-    const placeholders = findPlaceholders(buildSnapshot(initial));
-    if (placeholders.length) throw new UnprocessableEntityException(`Completa los datos pendientes antes de enviar: ${placeholders.join(", ")}`);
-    if (initial.kind === "INVOICE" && initial.totalAmount <= 0) throw new UnprocessableEntityException("Agrega al menos un ítem con monto para enviar el cobro");
+    // A fast answer from the first read; the transaction re-checks the row it writes.
+    this.assertSendable(await this.load(storeId, id));
 
-    let sent: { version: number; sha256: string; snapshot: DocumentSnapshot; eventId: string } | undefined;
+    let sent: { version: number; sha256: string; snapshot: DocumentSnapshot; eventId: string; to: string | null } | undefined;
     for (let attempt = 0; !sent; attempt += 1) {
       try {
         sent = await this.prisma.$transaction(async (tx) => {
           // Re-read inside the attempt: a concurrent send may have numbered or versioned it.
           const doc = await tx.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
           if (!doc) throw new NotFoundException("Documento no encontrado");
+          this.assertSendable(doc);
           const number = doc.number ?? ((await tx.businessDocument.aggregate({ where: { storeId, kind: doc.kind }, _max: { number: true } }))._max.number ?? 0) + 1;
           const snapshot = buildSnapshot({ ...doc, number });
           const sha256 = snapshotSha256(snapshot);
@@ -190,19 +194,25 @@ export class BusinessDocumentsService {
           const latest = doc.currentVersion
             ? await tx.businessDocumentVersion.findUnique({ where: { documentId_version: { documentId: id, version: doc.currentVersion } } })
             : null;
+          // Every write is conditional on a non-final status, so a void, payment or signature
+          // committed after this read is never overwritten.
+          const notFinal = { id, status: { notIn: FINAL } };
+          const to = doc.customerEmail;
           if (latest && latest.sha256 === sha256) {
-            await tx.businessDocument.update({ where: { id }, data: { sentAt: now } });
+            const { count } = await tx.businessDocument.updateMany({ where: notFinal, data: { sentAt: now } });
+            if (!count) throw new ConflictException("Este documento ya no se puede enviar");
             const event = await tx.businessDocumentEvent.create({ data: { documentId: id, type: "sent", version: doc.currentVersion, data: { resend: true } } });
-            return { version: doc.currentVersion, sha256, snapshot, eventId: event.id };
+            return { version: doc.currentVersion, sha256, snapshot, eventId: event.id, to };
           }
           const version = doc.currentVersion + 1;
           // The number is written first, so a collision fails before anything else is written.
-          await tx.businessDocument.update({ where: { id }, data: { number, status: S.SENT, currentVersion: version, sentAt: now } });
+          const { count } = await tx.businessDocument.updateMany({ where: notFinal, data: { number, status: S.SENT, currentVersion: version, sentAt: now } });
+          if (!count) throw new ConflictException("Este documento ya no se puede enviar");
           await tx.businessDocumentVersion.create({
             data: { documentId: id, version, sha256, content: snapshot as unknown as Prisma.InputJsonValue, sentAt: now },
           });
           const event = await tx.businessDocumentEvent.create({ data: { documentId: id, type: "sent", version, data: { sha256 } } });
-          return { version, sha256, snapshot, eventId: event.id };
+          return { version, sha256, snapshot, eventId: event.id, to };
         });
       } catch (error) {
         if (isUniqueViolation(error) && attempt < 4) continue;
@@ -213,7 +223,7 @@ export class BusinessDocumentsService {
 
     const publicUrl = this.publicUrl(id);
     let emailed = false;
-    const to = initial.customerEmail;
+    const to = sent.to;
     if (dto.email !== false && to) {
       try {
         const pdf = await renderBusinessDocumentPdf({ storeName: store.name, numberLabel: sent.snapshot.numberLabel, version: sent.version, sha256: sent.sha256, snapshot: sent.snapshot });
@@ -329,6 +339,14 @@ export class BusinessDocumentsService {
   }
 
   // ── helpers ───────────────────────────────────────────────────────────
+
+  /** What makes a document sendable, checked on whichever read is about to be written from. */
+  private assertSendable(doc: DocumentWithItems) {
+    if (FINAL.includes(doc.status)) throw new ConflictException("Este documento ya no se puede enviar");
+    const placeholders = findPlaceholders(buildSnapshot(doc));
+    if (placeholders.length) throw new UnprocessableEntityException(`Completa los datos pendientes antes de enviar: ${placeholders.join(", ")}`);
+    if (doc.kind === "INVOICE" && doc.totalAmount <= 0) throw new UnprocessableEntityException("Agrega al menos un ítem con monto para enviar el cobro");
+  }
 
   private async ownedStore(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({

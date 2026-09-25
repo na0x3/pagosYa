@@ -77,6 +77,7 @@ class FakePrisma {
     },
     updateMany: async ({ where, data }: Row) => {
       const rows = this.documents.filter((row) => matches(row, where));
+      rows.forEach((row) => this.saveDocument({ ...row, ...data }));
       rows.forEach((row) => Object.assign(row, data));
       return { count: rows.length };
     },
@@ -185,6 +186,20 @@ describe("BusinessDocumentsService — drafts", () => {
     const created = await service.create("m_1", "store_1", invoice);
     prisma.documents[0].status = "PAID";
     await expect(service.update("m_1", "store_1", created.id, { title: "Nuevo" })).rejects.toThrow(ConflictException);
+  });
+
+  it("refuses an edit when the document is voided between its first read and the transaction", async () => {
+    const { service, prisma } = setup();
+    const created = await service.create("m_1", "store_1", invoice);
+    const original = prisma.$transaction;
+    prisma.$transaction = async (fn) => {
+      prisma.documents[0].status = "VOIDED";
+      return original(fn);
+    };
+    await expect(service.update("m_1", "store_1", created.id, { title: "Nuevo", items: [{ description: "Otro", quantity: 1, unitAmount: 500 }], discountAmount: 0 }))
+      .rejects.toThrow(ConflictException);
+    expect(prisma.documents[0]).toEqual(expect.objectContaining({ status: "VOIDED", title: "Diseño de logo", totalAmount: 3000 }));
+    expect(prisma.items.map((item) => item.description)).toEqual(["Boceto", "Revisión"]);
   });
 
   it("deletes only a document that was never sent", async () => {
@@ -325,6 +340,59 @@ describe("BusinessDocumentsService — send", () => {
     expect(result.emailed).toBe(false);
     expect(result.document.status).toBe("SENT");
     expect(prisma.events.find((event) => event.type === "email_failed")).toEqual(expect.objectContaining({ data: expect.objectContaining({ to: "ana@example.com" }) }));
+  });
+
+  /** Runs `change` after the service's first read and before its transaction, like a concurrent request would. */
+  function raceBeforeTransaction(prisma: FakePrisma, change: () => void) {
+    const original = prisma.$transaction;
+    prisma.$transaction = async (fn) => {
+      change();
+      return original(fn);
+    };
+  }
+
+  it("never sends over a document voided between its first read and the transaction", async () => {
+    const { service, prisma, email } = setup();
+    const created = await service.create("m_1", "store_1", invoice);
+    raceBeforeTransaction(prisma, () => Object.assign(prisma.documents[0], { status: "VOIDED", voidedAt: new Date() }));
+    await expect(service.send("m_1", "store_1", created.id, {})).rejects.toThrow(ConflictException);
+    expect(prisma.documents[0].status).toBe("VOIDED");
+    expect(prisma.versions).toHaveLength(0);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("never re-sends a sent document that was paid between its first read and the transaction", async () => {
+    const { service, prisma, email } = setup();
+    const created = await service.create("m_1", "store_1", invoice);
+    await service.send("m_1", "store_1", created.id, { email: false });
+    raceBeforeTransaction(prisma, () => { prisma.documents[0].status = "PAID"; });
+    await expect(service.send("m_1", "store_1", created.id, {})).rejects.toThrow(ConflictException);
+    expect(prisma.documents[0].status).toBe("PAID");
+    expect(prisma.events.filter((event) => event.type === "sent")).toHaveLength(1);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("validates the row the transaction reads: placeholders, totals and recipient", async () => {
+    const { service, prisma, email } = setup();
+    const withPlaceholder = await service.create("m_1", "store_1", invoice);
+    raceBeforeTransaction(prisma, () => { prisma.documents[0].title = "Cobro a {{cliente}}"; });
+    await expect(service.send("m_1", "store_1", withPlaceholder.id, {})).rejects.toThrow("{{cliente}}");
+    expect(prisma.versions).toHaveLength(0);
+
+    const { service: service2, prisma: prisma2, email: email2 } = setup();
+    const emptied = await service2.create("m_1", "store_1", invoice);
+    raceBeforeTransaction(prisma2, () => Object.assign(prisma2.documents[0], { subtotalAmount: 0, discountAmount: 0, totalAmount: 0 }));
+    await expect(service2.send("m_1", "store_1", emptied.id, {})).rejects.toThrow(UnprocessableEntityException);
+    expect(prisma2.versions).toHaveLength(0);
+
+    const { service: service3, prisma: prisma3, email: email3 } = setup();
+    const readdressed = await service3.create("m_1", "store_1", invoice);
+    raceBeforeTransaction(prisma3, () => { prisma3.documents[0].customerEmail = "nuevo@example.com"; });
+    await service3.send("m_1", "store_1", readdressed.id, {});
+    expect(email3.send.mock.calls[0][0].to).toBe("nuevo@example.com");
+    expect(prisma3.versions[0].content.customer.email).toBe("nuevo@example.com");
+    expect(email.send).not.toHaveBeenCalled();
+    expect(email2.send).not.toHaveBeenCalled();
   });
 
   it("does not email when there is no customer email", async () => {
