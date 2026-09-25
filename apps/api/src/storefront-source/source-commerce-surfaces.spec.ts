@@ -189,6 +189,12 @@ describe('checkout review layout', () => {
     expect(plain?.querySelector('.checkout-review__summary .order-total')).not.toBeNull();
     for (const value of DNA_VALUES.review) expect({ value, html: review(value)?.innerHTML }).toEqual({ value, html: plain.innerHTML });
   });
+  it('the DNA density sets the review column width, proportions and spacing', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const density of DNA_VALUES.density) expect(css).toMatch(new RegExp(`:root\\[data-dna-density=${density}\\]\\{--kit-review-max:[^;]+;--kit-summary-fr:[^;]+;--kit-gap:[^;]+;--kit-pad:`));
+    for (const review of ['split', 'ticket', 'notebook']) expect(rules(css).find(rule => rule.selector === `:root[data-dna-review=${review}] .checkout-review`)?.body).toContain('var(--kit-summary-fr');
+    expect(rules(css).find(rule => rule.selector === ':root[data-dna-review=stacked] .checkout-review')?.body).toContain('max-width:var(--kit-review-max');
+  });
   it('has a layout for every review value, the ticket summary in the second column, and one column on phones', () => {
     const css = dnaCss(boot(DNA).doc);
     for (const value of DNA_VALUES.review) expect(css).toContain(`:root[data-dna-review=${value}] .checkout-review{`);
