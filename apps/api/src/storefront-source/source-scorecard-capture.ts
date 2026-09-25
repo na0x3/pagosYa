@@ -8,7 +8,7 @@ import { kitPath } from '@pagosya/storefront-kit';
 import { currentSourceRuntime } from './source-runtime';
 import { probeSourceShopping, withVisualSandbox } from './source-visual-capture';
 import type { SourceProjectSnapshot } from './source-project';
-import { contrastRatio, relativeLuminance, type QualityFacts, type StoreSample, type SurfaceName, type SurfaceSample } from './source-scorecard';
+import { contrastRatio, lightness, relativeLuminance, type QualityFacts, type StoreSample, type SurfaceName, type SurfaceSample } from './source-scorecard';
 
 const origin = 'https://preview.invalid';
 const VIEWPORTS = [['desktop', 1280], ['mobile', 390]] as const;
@@ -36,17 +36,20 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
   const first = (selector: string) => Array.from(document.querySelectorAll(selector)).find(visible) as HTMLElement | undefined;
   const px = (value: string) => parseFloat(value) || 0;
   const round = (value: number) => Math.round(value * 100) / 100;
+  // Letter-spacing in em (what the DNA sets), so the scorecard can compare it on one visible step.
+  const em = (st: CSSStyleDeclaration) => st.letterSpacing === 'normal' ? 0 : round(px(st.letterSpacing) / (px(st.fontSize) || 16));
   // Capped at half the short side, so 999px and 28px on a 56px pill read the same.
   const radius = (el: Element) => { const s = getComputedStyle(el), r = el.getBoundingClientRect(), cap = Math.min(r.width, r.height) / 2;
     return Math.round(Math.min(cap, Math.max(...[s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].map(v => v.endsWith('%') ? parseFloat(v) * Math.min(r.width, r.height) / 100 : px(v))))); };
   const family = (value: string) => value.split(',')[0].trim().replace(/^["']|["']$/g, '').toLowerCase();
   const control = (el: HTMLElement) => {
     const s = getComputedStyle(el), r = el.getBoundingClientRect(), bg = background(el);
-    return { radius: radius(el), border: px(s.borderTopWidth), bg, color: over(rgba(s.color), bg), transform: s.textTransform, tracking: s.letterSpacing === 'normal' ? 0 : round(px(s.letterSpacing)), font: family(s.fontFamily), height: Math.round(r.height), padRatio: round(px(s.paddingLeft) / r.height) };
+    return { radius: radius(el), border: px(s.borderTopWidth), bg, color: over(rgba(s.color), bg), transform: s.textTransform, tracking: em(s), font: family(s.fontFamily), height: Math.round(r.height), padRatio: round(px(s.paddingLeft) / r.height) };
   };
   const border = (el: Element) => { const st = getComputedStyle(el); return Math.max(...[st.borderTopWidth, st.borderRightWidth, st.borderBottomWidth, st.borderLeftWidth].map(px)); };
   // The facts a DNA button form changes, for a button inside another surface.
   const form = (el: HTMLElement | undefined) => el ? { btnRadius: radius(el), btnBorder: px(getComputedStyle(el).borderTopWidth), btnTransform: getComputedStyle(el).textTransform, btnBg: background(el) } : {};
+  const lstar = (y: number) => y <= 216 / 24389 ? y * 24389 / 27 : 116 * Math.cbrt(y) - 16; // CIE L*, 0..100
   const lum = (rgb: number[]) => { const c = rgb.map(v => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
   // How a panel is painted beyond its colour: a pattern (ruled lines), a cut edge (perforation) or flat; and its border style.
   const paint = (el: Element | null | undefined) => { if (!el) return 'none'; const st = getComputedStyle(el); const mask = st.maskImage || st.webkitMaskImage || 'none'; return mask !== 'none' ? 'perforated' : st.backgroundImage !== 'none' ? 'pattern' : 'flat'; };
@@ -63,7 +66,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     return 'none';
   }
   // The typeface a surface's title or text renders in, and its case (text-transform / small caps).
-  const voice = (el: Element | null | undefined) => el ? { font: family(getComputedStyle(el).fontFamily), titleCase: `${getComputedStyle(el).textTransform}/${getComputedStyle(el).fontVariantCaps}`, titleTracking: getComputedStyle(el).letterSpacing === 'normal' ? 0 : round(px(getComputedStyle(el).letterSpacing)) } : { font: '', titleCase: '', titleTracking: 0 };
+  const voice = (el: Element | null | undefined) => el ? { font: family(getComputedStyle(el).fontFamily), titleCase: `${getComputedStyle(el).textTransform}/${getComputedStyle(el).fontVariantCaps}`, titleTracking: em(getComputedStyle(el)) } : { font: '', titleCase: '', titleTracking: 0 };
   if (kind === 'button-press') { const el = first('.menu-add'); return el ? getComputedStyle(el).transform : null; }
   if (kind === 'button-hover') {
     const el = first('.menu-add');
@@ -81,7 +84,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     const add = buttonEl && cardEl?.contains(buttonEl) ? form(buttonEl) : {};
     const card = cardEl ? { aspect: round(cardEl.getBoundingClientRect().width / cardEl.getBoundingClientRect().height), imageRadius: image ? radius(image) : 0, align: getComputedStyle(cardEl.querySelector('h3, h2, .menu-item__copy') || cardEl).textAlign, images: cardEl.querySelectorAll('img').length,
       font: voice(cardEl.querySelector('[data-product-field="name"], h3, h2')).font, pad: image ? Math.round(px(getComputedStyle(image).paddingBottom)) : 0, swatches: cardEl.querySelectorAll('[data-card-swatch]').length, addRadius: add.btnRadius ?? -1, addBorder: add.btnBorder ?? -1,
-      addTransform: buttonEl && cardEl.contains(buttonEl) ? `${getComputedStyle(buttonEl).textTransform}/${getComputedStyle(buttonEl).fontVariantCaps}` : 'none', addTracking: buttonEl && cardEl.contains(buttonEl) ? round(getComputedStyle(buttonEl).letterSpacing === 'normal' ? 0 : px(getComputedStyle(buttonEl).letterSpacing)) : 0 } : null;
+      addTransform: buttonEl && cardEl.contains(buttonEl) ? `${getComputedStyle(buttonEl).textTransform}/${getComputedStyle(buttonEl).fontVariantCaps}` : 'none', addTracking: buttonEl && cardEl.contains(buttonEl) ? em(getComputedStyle(buttonEl)) : 0 } : null;
     const hoverBefore = buttonEl ? (() => { const st = getComputedStyle(buttonEl); return JSON.stringify([st.transform, st.filter, st.backgroundImage === 'none' ? 'none' : `${st.backgroundSize} ${st.backgroundPosition}`, st.boxShadow]); })() : null;
     const missingImages = Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && (!i.complete || !i.naturalWidth); }).length;
     return { dna, type, card, hoverBefore, button: buttonEl ? control(buttonEl) : null, overflow: document.documentElement.scrollWidth > vw + 1, fontsLoaded: document.fonts.status === 'loaded', missingImages };
@@ -118,7 +121,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
   const box = summary?.getBoundingClientRect(), whole = review.getBoundingClientRect();
   return { columns: s.display.includes('grid') ? s.gridTemplateColumns.split(' ').filter(Boolean).length : 1, summary: position,
     ...voice(summary?.querySelector('h2')), summaryPaint: paint(summary), summaryEdge: summary ? edge(summary) : 'none', pad: summary ? Math.round(px(getComputedStyle(summary).paddingLeft)) : 0, summaryShare: box && whole.width ? round(box.width / whole.width) : 0, width: round(whole.width / vw), radius: summary ? radius(summary) : 0, border: summary ? border(summary) : 0,
-    bgDelta: summary ? round(Math.abs(lum(background(summary)) - lum(background(document.body))) * 1000) / 1000 : 0, ...form(review.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
+    bgDelta: summary ? Math.round(Math.abs(lstar(lum(background(summary))) - lstar(lum(background(document.body)))) * 10) / 10 : 0, ...form(review.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
 }
 
 const luminance = (rgb: Rgb) => Math.round(relativeLuminance(rgb) * 1000) / 1000;
@@ -194,7 +197,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       if (!opened) throw new Error('no cart trigger');
       await page.waitForSelector('dialog.cart-drawer[open]', { timeout: 3000 });
       const cart = await page.evaluate(measureInPage, { kind: 'cart' as const }) as any;
-      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000, border: cart.border, font: cart.font, titleCase: cart.titleCase, titleTracking: cart.titleTracking, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
+      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(lightness(relativeLuminance(cart.bg)) - lightness(relativeLuminance(cart.page))) * 10) / 10, border: cart.border, font: cart.font, titleCase: cart.titleCase, titleTracking: cart.titleTracking, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
       await shot('cart');
       await page.evaluate(() => document.querySelector<HTMLDialogElement>('dialog.cart-drawer[open]')?.close());
     };

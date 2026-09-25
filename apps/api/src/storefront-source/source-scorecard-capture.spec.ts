@@ -55,6 +55,18 @@ it('measures the DNA kit surfaces apart from each other and from the kit default
   expect(first.sample.surfaces.card).toEqual(expect.objectContaining({ addTracking: expect.any(Number), addTransform: expect.stringContaining('/') }));
 });
 
+it('records tracking in em and background deltas as lightness (ΔL*), so the scorecard can quantize them', async () => {
+  const kit = await kitDefaultSnapshot();
+  const withDna = (dna: Record<string, string>) => ({ ...kit, files: kit.files.map(f => f.path === 'config.js' ? { ...f, content: f.content.replace('"demo":true', `"demo":true,"dna":${JSON.stringify({ version: 1, ...dna })}`) } : f) });
+  const { sample } = await collectStoreSample({ id: 'x', name: 'x', snapshot: withDna({ button: 'block', case: 'upper', tracking: 'wide', cart: 'sheet', added: 'toast', review: 'ticket', radius: 'soft', border: 'hairline', frame: 'bleed', card: 'still', hover: 'lift', press: 'none' }) });
+  expect(sample.errors).toEqual([]);
+  expect([sample.surfaces.cart!.titleTracking, sample.surfaces.review!.titleTracking]).toEqual([0.1, 0.14]); // wide .1em; the ticket title's own .14em
+  expect([sample.surfaces.button!.tracking, sample.surfaces.card!.addTracking]).toEqual([0.09, 0.09]); // block: .09em
+  // The sheet is the kit surface tint (5% ink on white): a few L* points, not a ΔY of a few hundredths.
+  expect(sample.surfaces.cart!.bgDelta).toBeGreaterThan(1);
+  expect(sample.surfaces.cart!.bgDelta).toBeLessThan(10);
+});
+
 it('measures the cart with the product in it when the home page cannot add to the cart', async () => {
   const kit = await kitDefaultSnapshot();
   const noCatalog = { ...kit, files: kit.files.map(f => f.path === 'index.html' ? { ...f, content: f.content.replace('<div data-pagosya-catalog data-pagosya-grid></div>', '') } : f) };

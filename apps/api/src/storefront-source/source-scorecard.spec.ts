@@ -14,6 +14,50 @@ describe('surfaceDistance', () => {
   });
 });
 
+describe('perceptual quantization (sub-project 5 review)', () => {
+  it('treats deltas below a visible step as the same', () => {
+    expect(surfaceDistance({ titleTracking: 0.01 }, { titleTracking: 0.03 })).toBe(0); // 0.02em
+    expect(surfaceDistance({ addTracking: 0 }, { addTracking: 0.01 })).toBe(0); // a small number no longer jumps to 1
+    expect(surfaceDistance({ pad: 18 }, { pad: 21 })).toBe(0); // 3px
+    expect(surfaceDistance({ 'm.pad': 0 }, { 'm.pad': 2 })).toBe(0);
+    expect(surfaceDistance({ bgDelta: 1 }, { bgDelta: 3.5 })).toBe(0); // ΔL* 2.5
+    expect(surfaceDistance({ bgLum: 0.9 }, { bgLum: 0.93 })).toBe(0); // ΔL* ≈ 1.2
+    expect(surfaceDistance({ btnBgLum: 0.01 }, { btnBgLum: 0.012 })).toBe(0);
+    expect(surfaceDistance({ radius: 2 }, { radius: 3 })).toBe(0);
+    expect(surfaceDistance({ border: 1 }, { border: 1.25 })).toBe(0);
+  });
+  it('scores visible deltas on a perceptual range, not relative to a tiny value', () => {
+    expect(surfaceDistance({ titleTracking: 0 }, { titleTracking: 0.06 })).toBeCloseTo(0.4);
+    expect(surfaceDistance({ titleTracking: -0.01 }, { titleTracking: 0.2 })).toBe(1);
+    expect(surfaceDistance({ pad: 0 }, { pad: 12 })).toBeCloseTo(0.5);
+    expect(surfaceDistance({ bgDelta: 0 }, { bgDelta: 30 })).toBe(1);
+    expect(surfaceDistance({ bgLum: 0.01 }, { bgLum: 0.03 })).toBeLessThan(0.4); // near-black to dark grey: ΔL* ≈ 11
+    expect(surfaceDistance({ radius: 0 }, { radius: 10 })).toBe(1);
+    expect(surfaceDistance({ addRadius: -1 }, { addRadius: 0 })).toBe(1); // -1 = not present
+  });
+});
+
+describe('kit DNA only', () => {
+  const dna = (button: string, cart: string, added: string, review: string, card: string, frame: string): StoreSample['surfaces'] => ({ page: { 'dna.button': button, 'dna.cart': cart, 'dna.added': added, 'dna.review': review, 'dna.card': card, 'dna.frame': frame, 'dna.hover': 'lift', motionHooks: 3 } });
+  it('reports the distance over the DNA-driven variants and which pairs still share a kit surface', () => {
+    const card = scoreStores([
+      store('a', dna('pill', 'sheet', 'toast', 'split', 'zoom', 'bleed')),
+      store('b', dna('pill', 'drawer', 'ribbon', 'split', 'tilt', 'arch')),
+      store('c', dna('stamp', 'page', 'bubble', 'ticket', 'zoom', 'inset')),
+      store('d', { button: { radius: 1 } }),
+    ], store('kit', {}));
+    expect(card.kitDna.fields).toEqual(['button', 'cart', 'added', 'review', 'card', 'frame']);
+    expect(card.kitDna.measured).toBe(3);
+    expect(card.kitDna.closest).toEqual({ a: 'a', b: 'b', distance: expect.closeTo(4 / 6) });
+    expect(card.kitDna.mean).toBeCloseTo((4 / 6 + 5 / 6 + 1) / 3);
+    expect(card.kitDna.shared).toEqual({ button: [['a', 'b']], cart: [], added: [], review: [['a', 'b']], card: [['a', 'c']], frame: [] });
+    expect(card.kitDna.missing).toEqual(['d']);
+    const markdown = scorecardMarkdown(card, { title: 'T', source: 's', createdAt: 'now' });
+    expect(markdown).toContain('## Kit DNA only');
+    expect(markdown).toContain('| review | 1: A ↔ B |');
+  });
+});
+
 describe('scoreStores', () => {
   const kit = store('kit', { button: { radius: 0, case: 'none' }, cart: { position: 'right', width: 0.3 } });
   it('finds the closest pair and flags stores too close to each other and to the default', () => {

@@ -19,7 +19,9 @@ export type Scorecard = {
   surfaces: Record<SurfaceName, SurfaceScore>;
   stores: Array<{ id: string; name: string; shopping: QualityFacts['shopping']; failures: string[]; tooCloseToStore: SurfaceName[]; tooCloseToDefault: SurfaceName[] }>;
   qualityFailures: number;
+  kitDna: KitDnaScore;
 };
+export type KitDnaScore = { fields: readonly string[]; measured: number; closest: Pair | null; mean: number | null; pairs: Pair[]; shared: Record<string, Array<[string, string]>>; missing: string[] };
 
 /** A store closer than this to another store, on one surface, reads as the same design there. */
 export const MIN_PAIR_DISTANCE = 0.25;
@@ -28,17 +30,66 @@ export const MIN_DEFAULT_DISTANCE = 0.25;
 /** WCAG AA for normal text. */
 export const MIN_BUY_CONTRAST = 4.5;
 
-function valueDistance(a: string | number, b: string | number) {
-  if (a === b) return 0;
-  if (typeof a === 'number' && typeof b === 'number') return Math.min(1, Math.abs(a - b) / Math.max(Math.abs(a), Math.abs(b)));
-  return 1;
+/** CIE L* (0..100) of a relative luminance: lightness as people see it. */
+export function lightness(y: number): number {
+  return y <= 216 / 24389 ? y * 24389 / 27 : 116 * Math.cbrt(y) - 16;
 }
 
-/** 0..1: the mean over shared keys; numbers by capped relative difference, everything else by equality. */
+/** How a numeric fact is compared (sub-project 5 review): a difference under `step` is not visible and counts as the
+ * same; above it, `full` sets an absolute perceptual range (the difference that reads as fully different), otherwise
+ * the difference is relative to the larger value. Keys are matched without the phone prefix (m.). */
+type Scale = { step: number; full?: number; lightness?: true };
+const FACT_SCALES: Array<[RegExp, Scale]> = [
+  [/tracking$/i, { step: 0.03, full: 0.15 }], // em
+  [/^pad$/, { step: 4, full: 24 }], // px
+  [/^bgDelta$/, { step: 3, full: 30 }], // ΔL*, 0..100
+  [/bglum$/i, { step: 3, full: 40, lightness: true }], // relative luminance, compared as L*
+  [/radius$/i, { step: 2 }], // px, capped at half the short side by the collector
+  [/border$/i, { step: 0.5 }], // px
+  [/^height$/, { step: 4 }], // px
+  [/^(width|summaryShare|padRatio|aspect)$/, { step: 0.03 }], // shares and ratios
+  [/^ratio$/, { step: 0.1 }], // type scale
+];
+const scaleOf = (key: string) => FACT_SCALES.find(([pattern]) => pattern.test(key.replace(/^m\./, '')))?.[1];
+
+function valueDistance(key: string, a: string | number, b: string | number) {
+  if (a === b) return 0;
+  if (typeof a !== 'number' || typeof b !== 'number') return 1;
+  if (a === -1 || b === -1) return 1; // -1: the element is not there
+  const scale = scaleOf(key);
+  const delta = scale?.lightness ? Math.abs(lightness(a) - lightness(b)) : Math.abs(a - b);
+  if (scale && delta < scale.step) return 0;
+  if (scale?.full) return Math.min(1, delta / scale.full);
+  return Math.min(1, Math.abs(a - b) / Math.max(Math.abs(a), Math.abs(b)));
+}
+
+/** 0..1: the mean over shared keys; numbers quantized to visible steps (FACT_SCALES), everything else by equality. */
 export function surfaceDistance(a: SurfaceSample, b: SurfaceSample): number {
   const keys = Object.keys(a).filter(key => key in b);
   if (!keys.length) return 1;
-  return keys.reduce((sum, key) => sum + valueDistance(a[key], b[key]), 0) / keys.length;
+  return keys.reduce((sum, key) => sum + valueDistance(key, a[key], b[key]), 0) / keys.length;
+}
+
+/** The DNA-driven kit variants only: button form, cart placement, added style, review layout, card mode and frame.
+ * Read from the DNA the page served (page `dna.*` facts); authored styling and typefaces do not count here. */
+export const KIT_DNA_FIELDS = ['button', 'cart', 'added', 'review', 'card', 'frame'] as const;
+function kitDnaScore(stores: StoreSample[]): KitDnaScore {
+  const dnaOf = (store: StoreSample) => { const page = store.surfaces.page ?? {}; return KIT_DNA_FIELDS.every(field => typeof page[`dna.${field}`] === 'string') ? page : null; };
+  const measured = stores.filter(store => dnaOf(store));
+  const pairs: Pair[] = [];
+  const shared = Object.fromEntries(KIT_DNA_FIELDS.map(field => [field, [] as Array<[string, string]>]));
+  for (let i = 0; i < measured.length; i++) for (let j = i + 1; j < measured.length; j++) {
+    const [a, b] = [dnaOf(measured[i])!, dnaOf(measured[j])!];
+    const same = KIT_DNA_FIELDS.filter(field => a[`dna.${field}`] === b[`dna.${field}`]);
+    for (const field of same) shared[field].push([measured[i].id, measured[j].id]);
+    pairs.push({ a: measured[i].id, b: measured[j].id, distance: 1 - same.length / KIT_DNA_FIELDS.length });
+  }
+  return {
+    fields: KIT_DNA_FIELDS, measured: measured.length, pairs, shared,
+    closest: pairs.reduce<Pair | null>((best, pair) => !best || pair.distance < best.distance ? pair : best, null),
+    mean: pairs.length ? pairs.reduce((sum, pair) => sum + pair.distance, 0) / pairs.length : null,
+    missing: stores.filter(store => !dnaOf(store)).map(store => store.id),
+  };
 }
 
 const present = (sample: SurfaceSample | undefined): sample is SurfaceSample => !!sample && Object.keys(sample).length > 0;
@@ -84,6 +135,7 @@ export function scoreStores(stores: StoreSample[], kitDefault: StoreSample): Sco
   return {
     thresholds: { minPairDistance: MIN_PAIR_DISTANCE, minDefaultDistance: MIN_DEFAULT_DISTANCE, minBuyContrast: MIN_BUY_CONTRAST },
     surfaces, stores: rows, qualityFailures: rows.filter(row => row.failures.length).length,
+    kitDna: kitDnaScore(stores),
   };
 }
 
@@ -113,6 +165,11 @@ export function scorecardMarkdown(card: Scorecard, meta: { title: string; source
     '| Surface | Measured | Closest pair | Distance | Mean | Too close to another store | Too close to the kit default | Missing |',
     '|---|---|---|---|---|---|---|---|',
     ...Object.entries(card.surfaces).map(([surface, score]) => `| ${surface} | ${score.measured} | ${score.closest ? cell(`${name.get(score.closest.a) ?? score.closest.a} ↔ ${name.get(score.closest.b) ?? score.closest.b}`) : '—'} | ${fixed(score.closest?.distance)} | ${fixed(score.mean)} | ${score.tooCloseToStore.length}: ${cell(names(score.tooCloseToStore))} | ${score.tooCloseToDefault.length}: ${cell(names(score.tooCloseToDefault))} | ${cell(names(score.missing))} |`),
+    '', '## Kit DNA only', '',
+    `Distance over the DNA-driven kit variants only (${card.kitDna.fields.join(', ')}): the share of them two stores do not have in common. Authored styling, typefaces and measured sizes do not count.`, '',
+    `Measured: ${card.kitDna.measured}. Closest pair: ${card.kitDna.closest ? `${cell(`${name.get(card.kitDna.closest.a) ?? card.kitDna.closest.a} ↔ ${name.get(card.kitDna.closest.b) ?? card.kitDna.closest.b}`)} at ${fixed(card.kitDna.closest.distance)}` : '—'}. Mean: ${fixed(card.kitDna.mean)}.${card.kitDna.missing.length ? ` No DNA: ${cell(names(card.kitDna.missing))}.` : ''}`, '',
+    '| Kit variant | Pairs that share it |', '|---|---|',
+    ...card.kitDna.fields.map(field => `| ${field} | ${card.kitDna.shared[field].length}: ${cell(card.kitDna.shared[field].map(([a, b]) => `${name.get(a) ?? a} ↔ ${name.get(b) ?? b}`).join('; ') || '—')} |`),
     '', '## Quality', '',
     `${card.qualityFailures} of ${card.stores.length} stores have at least one quality failure.`, '',
     '| Store | Shopping | Failures |', '|---|---|---|',
