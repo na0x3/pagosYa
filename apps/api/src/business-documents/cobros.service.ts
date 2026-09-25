@@ -1,6 +1,6 @@
 import { ConflictException, HttpException, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { BusinessDocumentStatus, MerchantStatus, PaymentIntentStatus } from "@prisma/client";
+import { BusinessDocumentStatus, MerchantStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
@@ -34,6 +34,11 @@ const DUE_REMINDER_OPENS_BEFORE_MS = 15 * HOUR_MS;
 const DUE_REMINDER_MIN_AGE_MS = DAY_MS;
 const OVERDUE_REMINDER_AFTER_MS = 3 * DAY_MS;
 const OVERDUE_REMINDER_UNTIL_MS = 10 * DAY_MS;
+
+/** Events that mean the customer has the link: shared from the dashboard, emailed, or opened. */
+const SHARED_EVENTS = ["shared", "emailed", "viewed"];
+
+class ReminderCooldown extends Error {}
 
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
@@ -140,10 +145,7 @@ export class CobrosService {
     const snapshot = await this.latestSnapshot(id, doc.currentVersion);
     const to = snapshot.customer.email;
     if (!to) throw new UnprocessableEntityException("Este cliente no tiene correo. Recuérdaselo por WhatsApp o agrega su correo y vuelve a enviar el cobro.");
-    const last = await this.prisma.businessDocumentEvent.findFirst({
-      where: { documentId: id, type: "reminded", data: { path: ["channel"], equals: "email" }, at: { gte: new Date(Date.now() - REMINDER_COOLDOWN_MS) } },
-      orderBy: { at: "desc" },
-    });
+    const last = await this.lastEmailReminder(this.prisma, id, new Date());
     if (last) {
       const hours = Math.max(1, Math.ceil((last.at.getTime() + REMINDER_COOLDOWN_MS - Date.now()) / HOUR_MS));
       throw new ConflictException(`Ya le enviaste un recordatorio por correo hace poco. Podrás enviar otro en ${hours} h; mientras tanto, recuérdaselo por WhatsApp.`);
@@ -255,7 +257,7 @@ export class CobrosService {
       const stage = this.reminderStage(doc.dueAt!, doc.sentAt, now);
       if (!stage) continue;
       try {
-        if (await this.sendAutomaticReminder(doc, stage)) sent += 1;
+        if (await this.sendAutomaticReminder(doc, stage, now)) sent += 1;
       } catch (error) {
         this.logger.warn(`Automatic reminder for ${doc.id} failed: ${(error as Error).message}`);
       }
@@ -271,8 +273,15 @@ export class CobrosService {
     return null;
   }
 
-  /** Claimed with a dedupeKey before the email leaves, so two API instances never both send it. */
-  private async sendAutomaticReminder(doc: { id: string; storeId: string; currentVersion: number }, stage: "due" | "overdue") {
+  /**
+   * Claimed with a dedupeKey before the email leaves, so two API instances never both send it.
+   * Nothing is claimed (the next tick retries while the window is open) when the cobro was never
+   * shared, when an email reminder went out in the last 6 hours, or when the store is at its cap.
+   */
+  private async sendAutomaticReminder(doc: { id: string; storeId: string; currentVersion: number }, stage: "due" | "overdue", now: Date) {
+    // "Crear cobro" only freezes the cobro; a customer who never got the link is not reminded of it.
+    const reached = await this.prisma.businessDocumentEvent.findFirst({ where: { documentId: doc.id, type: { in: SHARED_EVENTS } }, select: { id: true } });
+    if (!reached) return false;
     const snapshot = await this.latestSnapshot(doc.id, doc.currentVersion);
     const to = snapshot.customer.email;
     if (!to) return false;
@@ -281,6 +290,8 @@ export class CobrosService {
     let eventId: string;
     try {
       eventId = await this.prisma.$transaction(async (tx) => {
+        // One cooldown for manual and automatic email reminders of the same cobro.
+        if (await this.lastEmailReminder(tx, doc.id, now)) throw new ReminderCooldown();
         await this.documents.assertEmailQuota(tx, doc.storeId);
         const event = await tx.businessDocumentEvent.create({
           data: { documentId: doc.id, type: "reminded", version: doc.currentVersion, dedupeKey: `reminder:${stage}:v${doc.currentVersion}`, data: { channel: "email", automatic: true, stage, to } },
@@ -289,6 +300,7 @@ export class CobrosService {
       });
     } catch (error) {
       if (isUniqueViolation(error)) return false; // already sent for this version
+      if (error instanceof ReminderCooldown) return false; // a reminder went out < 6 h ago: next run
       if (error instanceof HttpException && error.getStatus() === 429) return false; // over the store's cap: next run
       throw error;
     }
@@ -336,6 +348,14 @@ export class CobrosService {
       });
       return false;
     }
+  }
+
+  /** The latest email reminder (manual or automatic) inside the shared cooldown, if any. */
+  private lastEmailReminder(db: Pick<Prisma.TransactionClient, "businessDocumentEvent">, documentId: string, now: Date) {
+    return db.businessDocumentEvent.findFirst({
+      where: { documentId, type: "reminded", data: { path: ["channel"], equals: "email" }, at: { gte: new Date(now.getTime() - REMINDER_COOLDOWN_MS) } },
+      orderBy: { at: "desc" },
+    });
   }
 
   private async openCobro(storeId: string, id: string, refusal: string) {

@@ -281,12 +281,40 @@ describe("CobrosService — customer suggestions", () => {
 
 describe("CobrosService — maintenance (overdue and automatic reminders)", () => {
   const now = new Date("2026-10-10T15:00:00Z");
-  async function cobroDue(setupResult: ReturnType<typeof setup>, dueAt: Date, sentAt: Date, extra: Record<string, unknown> = {}) {
+  async function cobroDue(setupResult: ReturnType<typeof setup>, dueAt: Date, sentAt: Date, extra: Record<string, unknown> = {}, shared = true) {
     const { id } = await sentCobro(setupResult.documents, extra);
     const row = setupResult.prisma.documents.find((doc) => doc.id === id)!;
     Object.assign(row, { dueAt, sentAt });
+    // The merchant shared the link (Crear cobro alone only freezes it).
+    if (shared) await setupResult.cobros.shared("m_1", "store_1", id, { channel: "whatsapp" });
     return row;
   }
+
+  it("never reminds automatically about a cobro nobody shared yet", async () => {
+    const context = setup();
+    await cobroDue(context, new Date(now.getTime() + 8 * HOUR), new Date(now.getTime() - 3 * DAY), {}, false);
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(0);
+    expect(context.email.send).not.toHaveBeenCalled();
+  });
+
+  it.each(["emailed", "viewed"])("reminds once the cobro was %s, even without a share from the dashboard", async (type) => {
+    const context = setup();
+    const row = await cobroDue(context, new Date(now.getTime() + 8 * HOUR), new Date(now.getTime() - 3 * DAY), {}, false);
+    context.prisma.events.push({ id: `e_${type}`, documentId: row.id, type, version: 1, at: new Date(now.getTime() - 2 * DAY), data: {} });
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(1);
+  });
+
+  it("waits out the 6-hour cooldown after a manual email reminder, then sends while its window is open", async () => {
+    const context = setup();
+    const row = await cobroDue(context, new Date(now.getTime() + 8 * HOUR), new Date(now.getTime() - 3 * DAY));
+    context.prisma.events.push({ id: "e_manual", documentId: row.id, type: "reminded", version: 1, at: new Date(now.getTime() - 2 * HOUR), data: { channel: "email", automatic: false } });
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(0);
+    expect(context.email.send).not.toHaveBeenCalled();
+    expect(context.prisma.events.some((event) => event.dedupeKey === "reminder:due:v1")).toBe(false);
+    // A WhatsApp reminder does not count toward the email cooldown.
+    context.prisma.events.find((event) => event.id === "e_manual")!.data = { channel: "whatsapp", automatic: false };
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(1);
+  });
 
   it("marks sent and viewed cobros overdue once their date passed, once per version", async () => {
     const context = setup();
