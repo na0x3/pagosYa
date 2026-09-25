@@ -96,7 +96,8 @@ test('a box on the store\'s own product page is filled cookie by cookie and goes
 
   await page.locator('[data-cart-open]').first().click();
   const cartPanel = page.locator('[data-pagosya-cart]').first();
-  await expect(cartPanel.locator('.order-item strong')).toHaveText('Caja de 4 · Matcha ×2 · Pistacho ×2');
+  await expect(cartPanel.locator('.order-item strong')).toHaveText('Caja de 4');
+  await expect(cartPanel.locator('.order-item__option')).toHaveText('Matcha ×2 · Pistacho ×2');
   const saved = await page.evaluate(() => { const detail = { items: [] as unknown[] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail })); return detail.items; });
   expect(saved).toEqual([{ id: 'box4', extraIds: ['x_matcha', 'x_matcha', 'x_pistacho', 'x_pistacho'], quantity: 1 }]);
   // The two Matcha in the box count against the suggestion's stock too.
