@@ -115,6 +115,9 @@ describe('quality', () => {
       .toEqual(['shopping failed: no cart', 'overflow at 1280', 'fonts not loaded', '2 missing images', 'buy button not measured']);
     expect(qualityFailures({ ...clean, shopping: 'unsupported' })).toEqual([]);
   });
+  it('does not ask for a buy button in a store with nothing to sell', () => {
+    expect(qualityFailures({ ...clean, shopping: 'unsupported', buyContrast: null })).toEqual([]);
+  });
   it('computes WCAG contrast', () => {
     expect(relativeLuminance([255, 255, 255])).toBeCloseTo(1);
     expect(contrastRatio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21);

@@ -50,7 +50,7 @@ export function qualityFailures(q: QualityFacts): string[] {
   if (q.overflow.mobile) failures.push('overflow at 390');
   if (q.fontsLoaded === false) failures.push('fonts not loaded');
   if (q.missingImages) failures.push(`${q.missingImages} missing images`);
-  if (q.buyContrast === null) failures.push('buy button not measured');
+  if (q.buyContrast === null) { if (q.shopping !== 'unsupported') failures.push('buy button not measured'); }
   else if (q.buyContrast < MIN_BUY_CONTRAST) failures.push(`buy button contrast ${q.buyContrast.toFixed(2)} < ${MIN_BUY_CONTRAST}`);
   return failures;
 }
