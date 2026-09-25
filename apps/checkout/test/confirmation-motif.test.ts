@@ -51,6 +51,19 @@ it("never inserts markup that fails the allow-list, or an unknown behaviour", ()
   }
 });
 
+it("does not play when the store turned motion off, and plays for every other mode", async () => {
+  reduce(false);
+  rememberConfirmationMotif({ behavior: "draw", svg: DRAWING, motion: "off" });
+  renderSuccess(order("pi_still"), true);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  expect(motif()).not.toBeNull();
+  expect(motif()!.hasAttribute("data-motif-play")).toBe(false);
+  rememberConfirmationMotif({ behavior: "draw", svg: DRAWING, motion: "subtle" });
+  renderSuccess(order("pi_subtle"), true);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  expect(motif()!.hasAttribute("data-motif-play")).toBe(true);
+});
+
 it("does not play with reduced motion", async () => {
   reduce(true);
   rememberConfirmationMotif({ behavior: "glow", svg: DRAWING });

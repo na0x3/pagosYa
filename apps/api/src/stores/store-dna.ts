@@ -1,9 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 import { SOURCE_DNA_RUNTIME_ENUMS, sourceRuntimeDna, type SourceRuntimeDna } from '../storefront-source/source-dna';
 import { sanitizeRuntimeMotifs } from '../storefront-source/source-motifs';
+import { SOURCE_MOTION_MODES, type SourceMotionMode } from '../storefront-source/source-motion';
 
-/** The order confirmation's DNA motif (sub-project 3): its behaviour and sanitised markup, nothing else. */
-export type StoreConfirmationMotif = { behavior: string; svg: string };
+/** The order confirmation's DNA motif (sub-project 3): its behaviour, sanitised markup and the store's motion mode
+ * (config.motion; the checkout never plays it when that is 'off'), nothing else. */
+export type StoreConfirmationMotif = { behavior: string; svg: string; motion: SourceMotionMode };
 export type StoreLook = { dna: SourceRuntimeDna; confirmationMotif: StoreConfirmationMotif | null };
 
 const CONFIG_PATTERN = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
@@ -34,7 +36,8 @@ export async function publishedStoreLook(prisma: Pick<PrismaClient, '$queryRaw'>
     const rows = await prisma.$queryRaw<Array<{ content: string | null }>>`SELECT f->>'content' AS content FROM "StoreSourceVersion" v, jsonb_array_elements(v.snapshot->'files') f WHERE v."storeId" = ${storeId} AND v.revision = ${revision} AND f->>'path' = 'config.js' LIMIT 1`;
     const config = JSON.parse(rows[0]?.content?.match(CONFIG_PATTERN)?.[1] ?? 'null');
     const motif = sanitizeRuntimeMotifs(config?.motifs).find(entry => entry.placement === 'confirmation');
-    const confirmationMotif = motif ? { behavior: motif.behavior, svg: motif.svg } : null;
+    const motion: SourceMotionMode = SOURCE_MOTION_MODES.includes(config?.motion) ? config.motion : 'subtle'; // what sourceMotionMode reads for a missing value
+    const confirmationMotif = motif ? { behavior: motif.behavior, svg: motif.svg, motion } : null;
     const dna = config?.dna;
     if (!dna || typeof dna !== 'object') return remember({ ...seeded, confirmationMotif });
     const known = Object.entries(SOURCE_DNA_RUNTIME_ENUMS).filter(([name, values]) => values.includes(dna[name])).map(([name]) => [name, dna[name] as string]);

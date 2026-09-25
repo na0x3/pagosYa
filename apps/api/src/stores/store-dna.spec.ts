@@ -61,15 +61,21 @@ describe('publishedStoreLook (sub-project 3: the confirmation motif)', () => {
   it('serves the confirmation motif of the published config with the DNA, from one read', async () => {
     const prisma = config({ dna: { button: 'stamp' }, motifs: [motif({ placement: 'product', trigger: 'hover', behavior: 'glow' }), motif()] });
     const look = await publishedStoreLook(prisma, 'store-1', 3);
-    expect(look).toEqual({ dna: expect.objectContaining({ button: 'stamp' }), confirmationMotif: { behavior: 'draw', svg: drawing } });
+    expect(look).toEqual({ dna: expect.objectContaining({ button: 'stamp' }), confirmationMotif: { behavior: 'draw', svg: drawing, motion: 'subtle' } });
     await expect(publishedStoreDna(prisma, 'store-1', 3)).resolves.toEqual(look!.dna);
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
   it('re-sanitises the markup it serves, and serves none when it cannot be cleaned', async () => {
     const hostile = drawing.replace('<path', '<foreignObject><img src=x onerror="alert(1)"></foreignObject><path onclick="alert(1)"');
-    expect((await publishedStoreLook(config({ motifs: [motif({ svg: hostile })] }), 'store-1', 3))!.confirmationMotif).toEqual({ behavior: 'draw', svg: drawing });
+    expect((await publishedStoreLook(config({ motifs: [motif({ svg: hostile })] }), 'store-1', 3))!.confirmationMotif).toEqual({ behavior: 'draw', svg: drawing, motion: 'subtle' });
     clearStoreDnaCache();
     expect((await publishedStoreLook(config({ motifs: [motif({ svg: '<img src=x onerror=alert(1)>' })] }), 'store-1', 3))!.confirmationMotif).toBeNull();
+  });
+  it("carries the store's motion setting, so the confirmation stays still when the merchant turned motion off", async () => {
+    expect((await publishedStoreLook(config({ motion: 'off', motifs: [motif()] }), 'store-1', 3))!.confirmationMotif).toEqual({ behavior: 'draw', svg: drawing, motion: 'off' });
+    expect((await publishedStoreLook(config({ motion: 'expressive', motifs: [motif()] }), 'store-1', 4))!.confirmationMotif!.motion).toBe('expressive');
+    // An unknown value is not 'off': the default mode (source-motion reads 'subtle').
+    expect((await publishedStoreLook(config({ motion: 'sparkle', motifs: [motif()] }), 'store-1', 5))!.confirmationMotif!.motion).toBe('subtle');
   });
   it('has no confirmation motif without one, for a classic store, or when the read fails', async () => {
     expect((await publishedStoreLook(config({ motifs: [motif({ placement: 'cart', trigger: 'appear' })] }), 'store-1', 3))!.confirmationMotif).toBeNull();

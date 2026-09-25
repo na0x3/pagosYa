@@ -7,11 +7,12 @@ const MOTIF_ATTRIBUTES = ['viewBox', 'preserveAspectRatio', 'width', 'height', '
 const BEHAVIORS = ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-let remembered: { behavior: string; svg: string } | null = null;
+let remembered: { behavior: string; svg: string; still: boolean } | null = null;
 /** The public store JSON carries `confirmationMotif`; the payment flow that follows reads it here. */
 export function rememberConfirmationMotif(value: unknown) {
   const motif = value && typeof value === 'object' ? value as Record<string, unknown> : null;
-  remembered = motif && typeof motif.svg === 'string' && motif.svg.length <= 6144 && BEHAVIORS.includes(motif.behavior as string) ? { behavior: motif.behavior as string, svg: motif.svg } : null;
+  // motion is the store's config.motion: 'off' shows the drawing still.
+  remembered = motif && typeof motif.svg === 'string' && motif.svg.length <= 6144 && BEHAVIORS.includes(motif.behavior as string) ? { behavior: motif.behavior as string, svg: motif.svg, still: motif.motion === 'off' } : null;
 }
 
 function verifiedDrawing(markup: string): SVGSVGElement | null {
@@ -51,5 +52,5 @@ export function mountConfirmationMotif(panel: Element | null) {
   holder.append(svg);
   panel.prepend(holder);
   // purchase is the trigger: it plays once, as the confirmation appears.
-  if (motionAllowed()) setTimeout(() => { if (holder.isConnected) holder.setAttribute('data-motif-play', ''); }, 16);
+  if (!remembered.still && motionAllowed()) setTimeout(() => { if (holder.isConnected) holder.setAttribute('data-motif-play', ''); }, 16);
 }
