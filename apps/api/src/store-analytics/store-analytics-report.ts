@@ -92,6 +92,7 @@ export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, strin
     from, to, granularity: 'day' as const, totals, series, topProducts,
     topCtas: [...ctas].map(([target, cta]) => ({ target, ...cta })).sort((a, b) => b.clicks - a.clicks),
     devices: [...devices].map(([device, d]) => ({ device, ...d })),
+    // Plain host names or 'direct' (store-analytics-input referrerHost); G2 renders them as text only.
     referrers: [...referrers].map(([host, sessions]) => ({ host, sessions })).sort((a, b) => b.sessions - a.sessions).slice(0, 10),
     checkoutSteps,
   };

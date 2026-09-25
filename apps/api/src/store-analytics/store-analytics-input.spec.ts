@@ -87,6 +87,16 @@ describe('referrerHost', () => {
   ])('%s → %s', (value, expected) => {
     expect(referrerHost(value)).toBe(expected);
   });
+
+  // Contract for G2: a referrer (and so every `referrers[].host` the read API returns) is a plain lower-case host name
+  // or 'direct' — letters, digits, dots and hyphens only. G2 must still render it as text, never as HTML or a link.
+  it.each([
+    'https://ex<script>.com/', '<img src=x onerror=alert(1)>.com', 'https://evil.test/"><svg onload=alert(1)>', 'evil.test\u0000.com',
+    'https://bücher.de/', 'data:text/html,<b>x</b>', 'https://[::1]/', 'https://127.0.0.1/', ' https://evil.test ',
+  ])('reduces %j to a plain host name or nothing', value => {
+    const host = referrerHost(value);
+    if (host !== null) expect(host).toMatch(/^[a-z0-9.-]+$/);
+  });
 });
 
 describe('deviceClass', () => {
