@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { runInNewContext } from 'node:vm';
 import { kitPath } from '@pagosya/storefront-kit';
 import { dnaRuntimeConfig, SOURCE_DNA_RUNTIME_ENUMS } from './source-dna';
 import { validDna } from './fixtures/dna';
@@ -30,8 +31,8 @@ describe('design DNA in the storefront runtime', () => {
     expect(boot(dnaRuntimeConfig(validDna()), { productPageStyle: enums.product })).toEqual(enums);
   });
   it('allows exactly the runtime enums the API declares, no more and no fewer', () => {
-    const literal = commerce.match(/const DNA_VALUES = (\{[\s\S]*?\n  \});/)![1];
-    expect(new Function(`return ${literal}`)()).toEqual(SOURCE_DNA_RUNTIME_ENUMS);
+    const literal = commerce.match(/const DNA_VALUES = (\{[\s\S]*?\n {2}\});/)![1];
+    expect(runInNewContext(`(${literal})`)).toEqual(SOURCE_DNA_RUNTIME_ENUMS);
   });
   it('accepts every value the API can send', () => {
     const longest = Math.max(...Object.values(SOURCE_DNA_RUNTIME_ENUMS).map(values => values.length));
