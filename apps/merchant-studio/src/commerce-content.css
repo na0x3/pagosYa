@@ -1,7 +1,45 @@
-.commerce-review-tools { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 18px 0 4px; padding: 12px 0; border-block: 1px solid #aaa79f; }
+.commerce-review-tools { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 18px 0 4px; padding: 12px 0; border-block: 1px solid #e4e4dc; }
 .commerce-review-tools label { flex: 1; max-width: 260px; margin: 0; }
-.commerce-review-tools small { color: #555550; }
+.commerce-review-tools small { color: #61625b; }
 .commerce-review-tools + article { border-top: 0; }
-.commerce-review-tools ~ article { padding: 18px 0; border-bottom: 1px solid #aaa79f; }
+.commerce-review-tools ~ article { padding: 18px 0; border-bottom: 1px solid #e4e4dc; }
 .brand-import [data-review-more] { margin-top: 16px; }
 @media (max-width: 480px) { .commerce-review-tools { align-items: stretch; flex-direction: column; } .commerce-review-tools label { max-width: none; } }
+
+/* Bundles: existing offers as cards, a compact two-column creator and a product picker with photos. */
+.bundle-list { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.bundle-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid #e4e4dc; border-radius: 14px; background: #fff; }
+.bundle-card[data-active=false] { background: #f8f8f2; }
+.bundle-card[data-active=false] .bundle-card-head strong { color: #61625b; }
+.bundle-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bundle-card-head strong { font-size: 15px; }
+.bundle-pill, .bundle-status { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 1.6; }
+.bundle-pill { background: #e6dff4; color: #55416e; }
+.bundle-status { background: #e3f4ea; color: #1f6b3d; }
+.bundle-card[data-active=false] .bundle-status { background: #efefe8; color: #61625b; }
+.bundle-card p { margin: 4px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.bundle-card .bundle-deal { color: #20211e; font-weight: 600; }
+.bundle-card > button { flex: none; }
+.bundle-form { margin-top: 20px; padding: 18px; border: 1px solid #e4e4dc; border-radius: 16px; background: #fcfcf9; }
+.bundle-form h4 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+.bundle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.brand-dialog .bundle-grid label { margin: 0; }
+.bundle-grid [hidden] { display: none; }
+.bundle-suffix { position: relative; display: block; }
+.bundle-suffix > span { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #61625b; font-weight: 500; pointer-events: none; }
+.brand-dialog .bundle-suffix input { padding-right: 32px; }
+.bundle-hint { margin: 12px 0 0; font-size: 13px; }
+.brand-dialog .bundle-products { margin: 14px 0 16px; padding: 4px 12px 6px; background: #fff; }
+.bundle-products legend small { margin-left: 6px; font-weight: 500; color: #61625b; }
+.bundle-product { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #efefe8; }
+.bundle-product:last-child { border-bottom: 0; }
+.brand-dialog .bundle-product > label { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; margin: 0; font-weight: 500; cursor: pointer; }
+.bundle-product img, .bundle-product-blank { flex: none; width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #efefe8; }
+.bundle-product label > span { display: grid; min-width: 0; }
+.bundle-product strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bundle-product small { color: #61625b; font-size: 12px; font-variant-numeric: tabular-nums; }
+.brand-dialog .bundle-product input[type=number] { flex: none; width: 72px; min-height: 36px; padding: 6px 8px; text-align: center; }
+.brand-dialog .bundle-product input[type=number]:disabled { opacity: .35; }
+.bundle-product[data-checked] strong { font-weight: 600; }
+.bundle-form .button--publish { width: 100%; }
+@media (max-width: 520px) { .bundle-grid { grid-template-columns: 1fr; } .bundle-card { align-items: flex-start; flex-direction: column; } }

@@ -1,38 +1,66 @@
-.brand-dialog { box-sizing: border-box; width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; padding: 24px; border: 3px solid var(--ink, #11110f); border-radius: 2px; box-shadow: 8px 8px 0 var(--ink, #11110f); background: var(--paper, #f4f4f5); color: var(--ink, #11110f); font: 14px/1.5 "0xProto Mono", ui-monospace, monospace; }
-.brand-dialog::backdrop { background: rgb(0 0 0 / 40%); }
-.brand-dialog header { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
-.brand-dialog h2 { font-size: 30px; line-height: 1.15; margin: 6px 0 12px; }
-.brand-dialog h3 { font-size: 18px; margin: 0 0 8px; }
+/* Plugin forms share the merchant shell's clean surface: sans type, hairlines, soft depth. */
+.brand-dialog { --dialog-ink: #20211e; --dialog-muted: #61625b; --dialog-line: #e4e4dc; --dialog-field: #d8d9ce; --dialog-soft: #f8f8f2; --dialog-accent: #55416e; --dialog-pad: 28px;
+  box-sizing: border-box; width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto; overflow-x: hidden; padding: 0 var(--dialog-pad); border: 1px solid var(--dialog-line); border-radius: 18px;
+  box-shadow: 0 24px 64px rgb(32 33 30 / 18%), 0 2px 6px rgb(32 33 30 / 6%); background: #fff; color: var(--dialog-ink);
+  font: 14px/1.55 "Avenir Next", Avenir, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.brand-dialog[open] { animation: brand-dialog-in .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes brand-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.985); } }
+@media (prefers-reduced-motion: reduce) { .brand-dialog[open] { animation: none; } }
+.brand-dialog::backdrop { background: rgb(32 33 30 / 38%); backdrop-filter: blur(3px); }
+.brand-dialog > header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 calc(-1 * var(--dialog-pad)); padding: 20px var(--dialog-pad) 16px; background: #fff; border-bottom: 1px solid var(--dialog-line); }
+.brand-dialog h2 { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; }
+.brand-dialog h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; line-height: 1.4; }
+.brand-dialog p { color: var(--dialog-muted); }
+.brand-dialog > header p, .brand-dialog > header small { margin: 2px 0 0; font-size: 13px; }
 .brand-fields { display: grid; gap: 16px; margin: 20px 0; }
-.brand-dialog label { display: grid; gap: 6px; font-weight: 700; }
-.brand-dialog textarea, .brand-dialog input, .brand-dialog select { min-width: 0; width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border: 2px solid var(--ink, #11110f); border-radius: 2px; background: #fff; color: #11110f; }
+.brand-dialog label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--dialog-ink); }
+.brand-dialog textarea, .brand-dialog input, .brand-dialog select { min-width: 0; width: 100%; box-sizing: border-box; min-height: 42px; padding: 9px 12px; font-family: inherit; font-size: 14px; font-weight: 400; line-height: 1.4;
+  border: 1px solid var(--dialog-field); border-radius: 10px; background: #fff; color: var(--dialog-ink); transition: border-color .15s, box-shadow .15s; }
+.brand-dialog input[type=checkbox], .brand-dialog input[type=radio] { width: 18px; min-height: 18px; height: 18px; padding: 0; accent-color: var(--dialog-accent); }
+.brand-dialog input[type=color] { width: 56px; padding: 4px; }
 .brand-dialog textarea { resize: vertical; }
-.brand-dialog textarea::placeholder, .brand-dialog input::placeholder { color: #666660; opacity: 1; }
-.brand-dialog :focus-visible { outline: 3px solid #6366f1; outline-offset: 3px; }
-.brand-dialog button { min-height: 44px; padding: 10px 14px; border: 2px solid var(--ink, #11110f); border-radius: 2px; background: #fff; cursor: pointer; }
-.brand-dialog button:hover:not(:disabled) { background: #eaf2f8; }
-.brand-dialog button:disabled { cursor: wait; opacity: .6; }
-.brand-dialog .button--publish { background: var(--amber, #ffbd59); color: #241804; box-shadow: 4px 4px 0 #11110f; }
-.brand-dialog .button--publish:hover:not(:disabled) { background: var(--amber-hover, #ffab2e); }
-.brand-dialog details { border-top: 2px solid #11110f; }
-.brand-dialog summary { min-height: 48px; padding: 12px 0; font-weight: 700; cursor: pointer; }
-.brand-dialog details[open] > summary { margin-bottom: 12px; }
-.brand-import, .brand-suggestions { margin-top: 24px; padding-top: 20px; border-top: 2px solid #11110f; }
+.brand-dialog textarea:hover, .brand-dialog input:hover, .brand-dialog select:hover { border-color: #b9bab0; }
+.brand-dialog textarea:focus, .brand-dialog input:focus, .brand-dialog select:focus { border-color: var(--dialog-accent); box-shadow: 0 0 0 3px #e6dff4; outline: none; }
+.brand-dialog textarea::placeholder, .brand-dialog input::placeholder { color: #8b8c84; opacity: 1; }
+.brand-dialog :focus-visible { outline: 2px solid var(--dialog-accent); outline-offset: 2px; }
+.brand-dialog button { min-height: 40px; padding: 8px 16px; font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.2; color: var(--dialog-ink);
+  border: 1px solid var(--dialog-field); border-radius: 10px; background: #fff; cursor: pointer; transition: background .15s, border-color .15s; }
+.brand-dialog button:hover:not(:disabled) { background: var(--dialog-soft); border-color: #b9bab0; }
+.brand-dialog button:disabled { cursor: not-allowed; opacity: .55; }
+.brand-dialog > header button { min-height: 36px; padding: 6px 12px; border-color: transparent; color: var(--dialog-muted); font-weight: 500; }
+.brand-dialog .button--publish { background: #f3f36b; border-color: #20211e; color: #20211e; box-shadow: none; }
+.brand-dialog .button--publish:hover:not(:disabled) { background: #eaea59; border-color: #20211e; }
+.brand-dialog fieldset { min-width: 0; margin: 14px 0; padding: 4px 16px 8px; border: 1px solid var(--dialog-line); border-radius: 14px; background: var(--dialog-soft); }
+.brand-dialog legend { padding: 0 6px; margin-left: -6px; font-size: 13px; font-weight: 600; color: var(--dialog-ink); }
+.brand-dialog fieldset > label:has(input[type=checkbox], input[type=radio]) { display: flex; align-items: center; min-height: 44px; padding: 4px 0; border-bottom: 1px solid var(--dialog-line); cursor: pointer; }
+.brand-dialog fieldset > label:last-of-type { border-bottom: 0; }
+.brand-dialog label > span:has(> input[type=checkbox], > input[type=radio]), .brand-dialog label:has(> input[type=checkbox], > input[type=radio]) { display: flex; align-items: center; gap: 10px; }
+.brand-dialog label:has(> input[type=checkbox], > input[type=radio]), .brand-dialog label:has(> span > input[type=checkbox], > span > input[type=radio]) { font-weight: 500; }
+.brand-dialog input[type=checkbox], .brand-dialog input[type=radio] { flex: none; margin: 0; }
+.brand-dialog details { border-top: 1px solid var(--dialog-line); }
+.brand-dialog summary { min-height: 48px; padding: 14px 0; font-weight: 600; cursor: pointer; }
+.brand-dialog details[open] > summary { margin-bottom: 8px; }
+.brand-import, .brand-suggestions { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--dialog-line); }
 .brand-dialog details > .brand-import:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
 .brand-import label { margin: 14px 0; }
-.brand-suggestions article { padding: 18px 0; border-bottom: 1px solid #aaa79f; }
-.brand-suggestions small { display: block; color: #555550; overflow-wrap: anywhere; margin-bottom: 10px; }
-.brand-actions { position: sticky; bottom: -24px; display: grid; gap: 12px; margin-top: 8px; padding: 16px 0 24px; background: var(--paper, #f4f4f5); border-top: 2px solid #11110f; }
-.brand-actions [role=status] { margin: 0; overflow-wrap: anywhere; }
+.brand-dialog .brand-fields label { margin: 0; }
+.brand-dialog:focus-visible, .brand-dialog:focus { outline: none; }
+.brand-suggestions article { padding: 16px 0; border-bottom: 1px solid var(--dialog-line); }
+.brand-suggestions small { display: block; color: var(--dialog-muted); overflow-wrap: anywhere; margin-bottom: 10px; }
+.brand-dialog table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.brand-dialog :is(th, td) { padding: 10px 8px; border-bottom: 1px solid var(--dialog-line); text-align: left; }
+.brand-dialog th { color: var(--dialog-muted); font-weight: 600; font-size: 12px; }
+.brand-actions { position: sticky; bottom: 0; z-index: 2; display: grid; gap: 10px; margin: 12px calc(-1 * var(--dialog-pad)) 0; padding: 16px var(--dialog-pad) 20px; background: #fff; border-top: 1px solid var(--dialog-line); }
+.brand-actions [role=status] { margin: 0; overflow-wrap: anywhere; font-size: 13px; }
 .brand-actions [role=status]:empty { display: none; }
 .brand-actions button { justify-self: stretch; }
-.brand-dialog select { min-height: 44px; }
-@media (max-width: 600px) { .brand-dialog { padding: 16px; box-shadow: 5px 5px 0 #11110f; } .brand-dialog h2 { font-size: 26px; } .brand-actions { bottom: -16px; padding-bottom: 16px; } }
+.brand-dialog > :last-child:not(.brand-actions) { margin-bottom: 24px; }
+@media (max-width: 600px) { .brand-dialog { --dialog-pad: 18px; border-radius: 16px; } .brand-dialog > header { padding-top: 16px; padding-bottom: 12px; } .brand-actions { padding-top: 14px; padding-bottom: 16px; } .brand-dialog h2 { font-size: 18px; } }
 
 /* Catalog arrangement panel — reuses the tokens/classes above; these just
    cover the shapes (radio + explanation, action row) that panel introduces. */
 .arrangement-option { margin: 14px 0; }
-.arrangement-option p { margin: 4px 0 0; color: #555550; font-weight: 400; font-size: 13px; }
+.arrangement-option p { margin: 4px 0 0; color: #61625b; font-weight: 400; font-size: 13px; }
 .arrangement-collection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .arrangement-collection-actions button { min-height: 36px; padding: 6px 10px; }
 .arrangement-product-inactive { opacity: .6; }
