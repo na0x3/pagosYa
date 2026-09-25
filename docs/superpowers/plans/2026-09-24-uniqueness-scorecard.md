@@ -86,7 +86,7 @@ describe('scoreStores', () => {
     const card = scoreStores([
       store('a', { button: { radius: 20, case: 'upper' }, cart: { position: 'right', width: 0.3 } }),
       store('b', { button: { radius: 20, case: 'upper' }, cart: { position: 'bottom', width: 1 } }),
-      store('c', { button: { radius: 2, case: 'none' }, cart: { position: 'left', width: 0.5 } }),
+      store('c', { button: { radius: 0, case: 'none' }, cart: { position: 'left', width: 0.5 } }),
     ], kit);
     expect(card.surfaces.button.closest).toEqual({ a: 'a', b: 'b', distance: 0 });
     expect(card.surfaces.button.tooCloseToStore).toEqual(['a', 'b']);
