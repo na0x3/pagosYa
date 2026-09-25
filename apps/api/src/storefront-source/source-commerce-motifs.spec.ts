@@ -96,13 +96,32 @@ describe('motif slots', () => {
   });
   it('skips markup that fails the allow-list and never inserts it', () => {
     const [entry] = runtime(motif({}));
-    const hostile = [{ ...entry, svg: entry.svg.replace('<title>', '<script>window.pwned=1</script><title>') }, { ...entry, svg: '<img src=x onerror="window.pwned=1">' }, { ...entry, svg: entry.svg.replace('fill="url(#lampara-glow)"', 'fill="url(https://evil.test/a)"') }, { ...entry, behavior: 'explode' }];
+    const hostile = [{ ...entry, svg: entry.svg.replace('<title>', '<script>window.pwned=1</script><title>') }, { ...entry, svg: '<img src=x onerror="window.pwned=1">' }, { ...entry, svg: entry.svg.replace('fill="url(#pym-lampara-glow)"', 'fill="url(https://evil.test/a)"') }, { ...entry, behavior: 'explode' }];
     for (const bad of hostile) {
       const { w, doc } = boot({ body: PRODUCT, query: '?id=lamp', motifs: [bad] });
       expect(doc.querySelector('.pagosya-motif')).toBeNull();
       expect(doc.querySelector('script')).toBeNull();
       expect(w.pwned).toBeUndefined();
     }
+  });
+  it('gives every placed copy its own ids, so each card keeps its own gradient and no id can shadow a page id', () => {
+    const { doc } = boot({ motifs: runtime(motif({ for: 'store', target: 'Luz', placement: 'card', trigger: 'appear' })) });
+    const svgs = [...doc.querySelectorAll('.menu-item .pagosya-motif svg')];
+    expect(svgs).toHaveLength(2);
+    const ids = svgs.flatMap((svg: any) => [...svg.querySelectorAll('[id]')].map((el: any) => el.id));
+    expect(ids.length).toBeGreaterThan(1);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.every(id => id.startsWith('pym-'))).toBe(true);
+    for (const svg of svgs as any[]) {
+      const refs = [...svg.querySelectorAll('*')].flatMap((el: any) => [...el.attributes].map((attr: any) => attr.value.match(/^url\(#(.+)\)$/)?.[1]).filter(Boolean));
+      expect(refs.length).toBeGreaterThan(0);
+      for (const ref of refs) expect(svg.querySelector(`[id="${ref}"]`)).not.toBeNull(); // resolves inside its own copy
+    }
+    // Markup that reached config.js unprefixed (a hand edit the save has not cleaned yet) still cannot take a page id.
+    const [entry] = runtime(motif({}));
+    const product = boot({ body: PRODUCT, query: '?id=lamp', motifs: [{ ...entry, svg: entry.svg.replace('<path d="M32 26v24"/>', '<path id="pagosya-product-title" d="M32 26v24"/>') }] }).doc;
+    expect(product.querySelector('.pagosya-motif svg')).not.toBeNull();
+    expect(product.getElementById('pagosya-product-title').namespaceURI).toBe('http://www.w3.org/1999/xhtml');
   });
   it('verifies against exactly the allow-lists the API sanitiser uses', () => {
     const list = (name: string) => runInNewContext(commerce.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`))![1]);

@@ -1360,6 +1360,21 @@
       if (!matchMedia('(hover: hover)').matches) observeMotif(holder, true);
     } else if (trigger === 'appear' || trigger === 'scroll') observeMotif(holder, trigger === 'appear');
   }
+  /* Each placed copy gets its own ids (the same drawing sits in several cards, and a gradient or mask must resolve inside
+   * its own copy), all under the platform prefix pym-, which no page or kit id uses. A reference to an id the drawing
+   * lacks points nowhere. */
+  let motifCopies = 0;
+  function scopeMotifIds(svg, prefix) {
+    const copy = ++motifCopies;
+    const scoped = id => `${id.startsWith('pym-') ? id : prefix + id}-${copy}`;
+    for (const el of [svg, ...svg.querySelectorAll('*')]) {
+      for (const attr of [...el.attributes]) {
+        const ref = attr.value.trim().match(/^url\(\s*#([A-Za-z][\w-]*)\s*\)$/);
+        if (attr.name === 'id') el.setAttribute('id', scoped(attr.value));
+        else if (ref) el.setAttribute(attr.name, `url(#${scoped(ref[1])})`);
+      }
+    }
+  }
   function motifSlot(index, slot, productId) {
     const motif = MOTIFS[index], drawing = motifDrawing(motif.svg);
     if (!drawing) return null;
@@ -1371,6 +1386,7 @@
     const svg = document.importNode(drawing, true);
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
+    scopeMotifIds(svg, `pym-${/^motifs\/([a-z0-9-]+)\.svg$/.exec(motif.file)?.[1] ?? 'motif'}-`);
     // A behaviour with a labelled part animates that part; a drawing without one animates as a whole.
     const part = { glow: 'light', steam: 'steam' }[motif.behavior];
     if (part && !svg.querySelector(`[data-part="${part}"]`)) svg.setAttribute('data-part', part);

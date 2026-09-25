@@ -32,6 +32,21 @@ function verifiedDrawing(markup: string): SVGSVGElement | null {
   return root as unknown as SVGSVGElement;
 }
 
+/* The drawing's ids (already pym-<slug>- from the API) are scoped to this copy under the platform prefix pym-, which no
+ * checkout id uses, so an id in the drawing never shadows one (#preview-back); url(#id) references follow. */
+let copies = 0;
+function scopeIds(svg: Element) {
+  const copy = ++copies;
+  const scoped = (id: string) => `${id.startsWith('pym-') ? id : `pym-confirmation-${id}`}-${copy}`;
+  for (const el of [svg, ...Array.from(svg.querySelectorAll('*'))]) {
+    for (const attr of Array.from(el.attributes)) {
+      const ref = attr.value.trim().match(/^url\(\s*#([A-Za-z][\w-]*)\s*\)$/);
+      if (attr.name === 'id') el.setAttribute('id', scoped(attr.value));
+      else if (ref) el.setAttribute(attr.name, `url(#${scoped(ref[1])})`);
+    }
+  }
+}
+
 const motionAllowed = () => !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /** Places the remembered motif at the top of the success panel; nothing when there is none or it fails verification. */
@@ -46,6 +61,7 @@ export function mountConfirmationMotif(panel: Element | null) {
   const svg = document.importNode(drawing, true);
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
+  scopeIds(svg);
   const part = ({ glow: 'light', steam: 'steam' } as Record<string, string>)[remembered.behavior];
   if (part && !svg.querySelector(`[data-part="${part}"]`)) svg.setAttribute('data-part', part);
   if (remembered.behavior === 'draw') svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect').forEach(el => el.setAttribute('pathLength', '1'));

@@ -64,6 +64,17 @@ it("does not play when the store turned motion off, and plays for every other mo
   expect(motif()!.hasAttribute("data-motif-play")).toBe(true);
 });
 
+it("prefixes and scopes the drawing's ids, so an id in the drawing never shadows a checkout id such as #preview-back", () => {
+  rememberConfirmationMotif({ behavior: "draw", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g"/></defs><path id="preview-back" d="M4 12l5 5L20 6" stroke="url(#g)"/></svg>' });
+  renderSuccess(order("pi_ids"), true);
+  expect(document.querySelector("#preview-back")?.tagName).toBe("BUTTON");
+  const ids = Array.from(motif()!.querySelectorAll("[id]")).map(el => el.id);
+  expect(ids).toHaveLength(2);
+  expect(ids.every(id => id.startsWith("pym-"))).toBe(true);
+  const ref = motif()!.querySelector("path")!.getAttribute("stroke")!.match(/^url\(#(.+)\)$/)![1];
+  expect(motif()!.querySelector(`[id="${ref}"]`)?.localName).toBe("linearGradient");
+});
+
 it("does not play with reduced motion", async () => {
   reduce(true);
   rememberConfirmationMotif({ behavior: "glow", svg: DRAWING });

@@ -1,4 +1,4 @@
-import { extractSourceMotifs, isSourceMotifFile, motifSlug, sourceMotifConfig, sourceMotifPaths, sourceMotifPrompt, withSanitizedMotifs } from './source-motifs';
+import { extractSourceMotifs, isSourceMotifFile, motifSlug, sanitizeRuntimeMotifs, sourceMotifConfig, sourceMotifPaths, sourceMotifPrompt, withSanitizedMotifs } from './source-motifs';
 import type { SourceDnaMotif } from './source-dna';
 import { LAMP_SVG } from './fixtures/motifs';
 
@@ -46,7 +46,7 @@ describe('extracting the model\'s motif files', () => {
     expect(result.files.map(f => f.path)).toEqual(['index.html']);
     expect(result.motifs.map(f => f.path)).toEqual(['motifs/lampara-luna.svg']);
     expect(result.motifs[0].content).not.toContain('script');
-    expect(result.motifs[0].content).toContain('id="lampara-luna-glow"');
+    expect(result.motifs[0].content).toContain('id="pym-lampara-luna-glow"');
     expect(result.repairs).toEqual([
       'motifs/lampara-luna.svg: removed <script>',
       'motifs/extra.svg: not a DNA motif, dropped',
@@ -77,6 +77,19 @@ describe('the runtime config', () => {
     // purchase only happens on the confirmation; elsewhere it plays when the motif appears.
     expect(sourceMotifConfig([{ ...lamp, trigger: 'purchase' }], files)[0].trigger).toBe('appear');
     expect(sourceMotifConfig([], files)).toEqual([]);
+  });
+});
+
+describe('motif ids', () => {
+  it('carry the platform prefix pym-<slug>-, so a drawing can never reuse a page id such as #preview-back', () => {
+    const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g"/></defs><path id="preview-back" d="M0 0h1" fill="url(#g)" stroke="url(#preview-back)"/></svg>';
+    const [entry] = sanitizeRuntimeMotifs([{ file: 'motifs/preview.svg', for: 'store', target: 'x', behavior: 'glow', trigger: 'appear', placement: 'confirmation', svg: drawing }]);
+    expect(entry.svg).toContain('id="pym-preview-preview-back"');
+    expect(entry.svg).toContain('id="pym-preview-g"');
+    expect(entry.svg).toContain('fill="url(#pym-preview-g)" stroke="url(#pym-preview-preview-back)"');
+    expect([...entry.svg.matchAll(/\bid="([^"]+)"/g)].every(([, id]) => id.startsWith('pym-preview-'))).toBe(true);
+    // Idempotent: a stored, already prefixed drawing is unchanged by the next save.
+    expect(sanitizeRuntimeMotifs([entry])[0].svg).toBe(entry.svg);
   });
 });
 

@@ -43,7 +43,7 @@ export function sourceMotifPrompt(motifs: readonly SourceDnaMotif[] = []): strin
 }
 
 /** Takes every motifs/* path out of the authored files. Declared motif files come back sanitised (ids prefixed with
- * their slug); anything else is dropped. Every change is a no-cost repair note. */
+ * pym-<slug>-); anything else is dropped. Every change is a no-cost repair note. */
 export function extractSourceMotifs<F extends File>(files: F[], motifs: readonly SourceDnaMotif[] = []): { files: F[]; motifs: File[]; repairs: string[] } {
   if (!files.some(file => file.path.startsWith('motifs/'))) return { files, motifs: [], repairs: [] };
   const declared = new Set(sourceMotifPaths(motifs));
@@ -59,7 +59,9 @@ export function extractSourceMotifs<F extends File>(files: F[], motifs: readonly
   return { files: files.filter(file => !file.path.startsWith('motifs/')), motifs: kept, repairs };
 }
 
-const sanitizeFile = (path: string, content: string) => sanitizeMotifSvg(content, { idPrefix: path.slice(7, -4) + '-' });
+/** Every id (and every url(#id) reference) carries the platform prefix pym-<slug>-: no page, kit or checkout id starts
+ * with pym-, so a drawing cannot shadow one (#preview-back), and two motifs never share one. */
+const sanitizeFile = (path: string, content: string) => sanitizeMotifSvg(content, { idPrefix: `pym-${path.slice(7, -4)}-` });
 const known = (key: keyof typeof SOURCE_DNA_MOTIF_ENUMS, value: unknown) => (SOURCE_DNA_MOTIF_ENUMS[key] as readonly string[]).includes(value as string);
 
 /** One runtime entry, or undefined when an enum is unknown or the drawing does not survive the sanitiser. */
