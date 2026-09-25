@@ -55,6 +55,18 @@
   if (hasDna) {
     for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
   }
+  /* DNA motifs (sub-project 3): small line drawings the kit places next to the product title, in a corner of matching
+   * cards and in the cart header, and animates with its own keyframes on the --motion-* tokens. The API sanitised the
+   * markup; it is verified again against the same allow-lists (a test pins them) and imported as nodes, never as HTML.
+   * A store without motifs gets no style, no slot and no attribute. */
+  const MOTIF_ELEMENTS = ['svg', 'g', 'path', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'rect', 'defs', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'mask', 'title', 'desc'];
+  const MOTIF_ATTRIBUTES = ['viewBox', 'preserveAspectRatio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'fx', 'fy', 'fr', 'd', 'points', 'pathLength', 'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'color', 'transform', 'vector-effect', 'clip-path', 'clip-rule', 'mask', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform', 'spreadMethod', 'clipPathUnits', 'maskUnits', 'maskContentUnits', 'class', 'id', 'data-part', 'aria-hidden', 'focusable'];
+  const MOTIF_BEHAVIORS = ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'];
+  const MOTIF_SLOT_TRIGGERS = ['appear', 'scroll', 'hover', 'add-to-cart'];
+  const MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
+    && MOTIF_BEHAVIORS.includes(motif.behavior) && MOTIF_SLOT_TRIGGERS.includes(motif.trigger) && ['product', 'card', 'cart'].includes(motif.placement)
+    && ['store', 'category', 'product'].includes(motif.for) && typeof motif.target === 'string' && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg));
+  let motifObserver = null;
   const hosted = window.PAGOSYA_HOSTED === true;
   // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
   // and the merchant's measurement tags. Those tags exist only after the shopper accepted
@@ -973,6 +985,7 @@
       for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__highlights,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
     }
+    if (MOTIFS.length) placeProductMotif(p);
     watchHighlights();
     watchStickyBar();
     decorateProductReviews();
@@ -1279,6 +1292,167 @@
         target.animate([{ opacity: .65 }, { opacity: 1 }], { duration, easing: settle });
       }
     }
+  }
+  /* DNA motifs: verification, slots, triggers. Every animation is finite, ends at rest and starts only when motion is
+   * allowed; the kit's reduced-motion rule also switches it off in CSS. */
+  function motifDrawing(markup) {
+    let root;
+    try { root = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement; } catch { return null; }
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    if (!root || root.namespaceURI !== SVG_NS || root.localName !== 'svg') return null;
+    for (const el of [root, ...root.querySelectorAll('*')]) {
+      if (el.namespaceURI !== SVG_NS || !MOTIF_ELEMENTS.includes(el.localName)) return null;
+      for (const attr of [...el.attributes]) {
+        if (el === root && attr.name === 'xmlns') continue;
+        const value = attr.value;
+        if (!MOTIF_ATTRIBUTES.includes(attr.name) || /[<>"`\\]|(?:javascript|vbscript|data)\s*:|expression\s*\(/i.test(value)
+          || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
+      }
+    }
+    return root;
+  }
+  const motifText = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  /* A product matches its motif by id, by name, or by its category's name; a store-wide motif matches every product. */
+  function motifMatches(motif, p) {
+    if (!p) return false;
+    if (motif.for === 'store' || p.id === motif.target) return true;
+    const target = motifText(motif.target);
+    const category = (store.categories || []).find(c => c.id === p.categoryId);
+    return Boolean(target) && (motifText(p.name).includes(target) || Boolean(category) && motifText(category.name).includes(target));
+  }
+  const motifMotion = () => config.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function playMotif(holder) {
+    if (!holder.isConnected || !motifMotion()) return;
+    holder.removeAttribute('data-motif-play');
+    void holder.getBoundingClientRect(); // restarts the keyframes when it plays again
+    holder.setAttribute('data-motif-play', '');
+  }
+  function observeMotif(holder, once) {
+    if (typeof IntersectionObserver !== 'function') { playMotif(holder); return; }
+    if (!motifObserver) motifObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        playMotif(entry.target);
+        if (entry.target.hasAttribute('data-motif-once')) motifObserver.unobserve(entry.target);
+      }
+    }, { threshold: .5 });
+    if (once) holder.setAttribute('data-motif-once', '');
+    motifObserver.observe(holder);
+  }
+  /* appear plays once when first seen, scroll each time it comes into view, hover on the card or product (focus too;
+   * appear on a device without hover), add-to-cart from the add handler. */
+  function armMotif(holder, scope) {
+    const trigger = holder.dataset.motifTrigger;
+    if (trigger === 'hover' && scope) {
+      scope.addEventListener('pointerenter', () => playMotif(holder));
+      scope.addEventListener('focusin', () => playMotif(holder));
+      if (!matchMedia('(hover: hover)').matches) observeMotif(holder, true);
+    } else if (trigger === 'appear' || trigger === 'scroll') observeMotif(holder, trigger === 'appear');
+  }
+  function motifSlot(index, slot, productId) {
+    const motif = MOTIFS[index], drawing = motifDrawing(motif.svg);
+    if (!drawing) return null;
+    const holder = document.createElement('span');
+    holder.className = 'pagosya-motif';
+    holder.setAttribute('aria-hidden', 'true');
+    Object.assign(holder.dataset, { motifSlot: slot, motifBehavior: motif.behavior, motifTrigger: motif.trigger, motifIndex: String(index) }, productId ? { motifProduct: productId } : {});
+    holder.style.setProperty('--pagosya-motif-ms', `${motionValue('slow', 560)}ms`);
+    const svg = document.importNode(drawing, true);
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    // A behaviour with a labelled part animates that part; a drawing without one animates as a whole.
+    const part = { glow: 'light', steam: 'steam' }[motif.behavior];
+    if (part && !svg.querySelector(`[data-part="${part}"]`)) svg.setAttribute('data-part', part);
+    if (motif.behavior === 'draw') svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect').forEach(el => el.setAttribute('pathLength', '1'));
+    holder.append(svg);
+    return holder;
+  }
+  /* A motif never covers a price, a purchase control or a total: a placed one that would is removed. A card motif must also
+   * sit inside its card (a card the store made static would anchor the corner elsewhere). */
+  const MOTIF_PROTECTED = '.menu-item__price,.menu-add,[data-product-field="price"],[data-product-add],[data-product-pricing],.product-detail__buy,.checkout-button,.order-total';
+  function guardMotif(holder, scope, contained) {
+    const check = () => {
+      if (!holder.isConnected) return;
+      const box = holder.getBoundingClientRect(), frame = scope.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      if (contained && (box.left < frame.left - 1 || box.right > frame.right + 1 || box.top < frame.top - 1 || box.bottom > frame.bottom + 1)) { holder.remove(); return; }
+      const covers = [...scope.querySelectorAll(MOTIF_PROTECTED)].some(el => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top;
+      });
+      if (covers) holder.remove();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check); else check();
+  }
+  const motifFor = (placement, p) => MOTIFS.findIndex(motif => motif.placement === placement && motifMatches(motif, p));
+  function placeProductMotif(p) {
+    const index = motifFor('product', p), title = detail.querySelector('#pagosya-product-title');
+    if (index < 0 || !title) return;
+    const holder = motifSlot(index, 'product', p.id);
+    if (!holder) return;
+    title.before(holder);
+    armMotif(holder, detail.querySelector('.product-detail__layout'));
+    guardMotif(holder, detail);
+  }
+  function placeCardMotifs(root) {
+    if (!MOTIFS.some(motif => motif.placement === 'card')) return;
+    root.querySelectorAll('.menu-item').forEach(card => {
+      if (card.querySelector(':scope > .pagosya-motif')) return;
+      const control = card.querySelector('[data-add],[data-product]');
+      const link = card.querySelector('a[href*="id="]');
+      const id = card.dataset.productId || control?.dataset.add || control?.dataset.product || (link ? new URL(link.getAttribute('href'), location.href).searchParams.get('id') : null);
+      const p = products().find(item => item.id === id), index = motifFor('card', p);
+      if (index < 0) return;
+      const holder = motifSlot(index, 'card', p.id);
+      if (!holder) return;
+      card.append(holder);
+      armMotif(holder, card);
+      guardMotif(holder, card, true);
+    });
+  }
+  function playMotifs(p) {
+    document.querySelectorAll('.pagosya-motif[data-motif-trigger="add-to-cart"]').forEach(holder => {
+      const motif = MOTIFS[Number(holder.dataset.motifIndex)];
+      if (motif && (holder.dataset.motifProduct ? holder.dataset.motifProduct === p.id : motifMatches(motif, p))) playMotif(holder);
+    });
+  }
+  if (MOTIFS.length) {
+    const motifStyle = document.createElement('style');
+    motifStyle.dataset.pagosyaKit = 'motifs';
+    const ms = factor => `calc(var(--pagosya-motif-ms,560ms)*${factor})`;
+    // The settle curve only: the personality's overshoot curve is kept for transform transitions (glow and steam fade).
+    const settle = 'var(--motion-ease-settle,cubic-bezier(.23,1,.32,1))';
+    const play = behavior => `.pagosya-motif[data-motif-play][data-motif-behavior=${behavior}]`;
+    // Layered !important: the store's own CSS (unlayered) cannot enlarge a slot past 64px or make it catch clicks.
+    motifStyle.textContent = `@layer pagosya-commerce {
+      .pagosya-motif{display:inline-block;box-sizing:border-box;width:48px;height:48px;max-width:64px!important;max-height:64px!important;overflow:visible!important;pointer-events:none!important;line-height:0;vertical-align:middle;flex:none;color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
+      .pagosya-motif>svg{display:block;width:100%;height:100%;max-width:64px!important;max-height:64px!important;overflow:visible;transform-origin:50% 100%}
+      .pagosya-motif svg [data-part]{transform-box:fill-box;transform-origin:50% 100%}
+      .pagosya-motif[data-motif-slot=product]{display:block;width:56px;height:56px;margin:0 0 10px}
+      .pagosya-motif[data-motif-slot=card]{position:absolute;top:10px;right:10px;z-index:2;width:40px;height:40px}
+      .pagosya-motif[data-motif-slot=cart]{width:36px;height:36px;margin-inline:12px auto}
+      @keyframes pagosya-motif-glow{0%{opacity:.2;filter:none}18%{opacity:.85}28%{opacity:.45}55%{opacity:1;filter:drop-shadow(0 0 6px currentColor)}100%{opacity:1;filter:none}}
+      @keyframes pagosya-motif-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+      @keyframes pagosya-motif-sway{0%,100%{transform:rotate(0)}30%{transform:rotate(-6deg)}70%{transform:rotate(5deg)}}
+      @keyframes pagosya-motif-steam{0%{opacity:0;transform:translateY(5px)}55%{opacity:1}100%{opacity:1;transform:none}}
+      @keyframes pagosya-motif-grow{from{transform:scale(.35);opacity:0}to{transform:none;opacity:1}}
+      @keyframes pagosya-motif-bounce{0%,100%{transform:none}35%{transform:translateY(-8px)}65%{transform:translateY(0)}80%{transform:translateY(-3px)}}
+      @keyframes pagosya-motif-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+      @keyframes pagosya-motif-float{0%,100%{transform:none}50%{transform:translateY(-5px)}}
+      ${play('glow')} svg [data-part=light],${play('glow')} svg[data-part=light]{animation:pagosya-motif-glow ${ms(2)} ${settle} 1 backwards}
+      ${play('draw')} svg [pathLength]{stroke-dasharray:1;animation:pagosya-motif-draw ${ms(2.5)} ${settle} 1 backwards}
+      ${play('sway')}>svg{animation:pagosya-motif-sway ${ms(1.5)} ${settle} 3}
+      ${play('steam')} svg [data-part=steam],${play('steam')} svg[data-part=steam]{animation:pagosya-motif-steam ${ms(1.6)} ${settle} 3 backwards}
+      ${play('grow')}>svg{animation:pagosya-motif-grow ${ms(1.2)} ${settle} 1 backwards}
+      ${play('bounce')}>svg{animation:pagosya-motif-bounce ${ms(1.4)} ${settle} 2}
+      ${play('spin')}>svg{transform-origin:50% 50%;animation:pagosya-motif-spin ${ms(4)} linear 1}
+      ${play('float')}>svg{animation:pagosya-motif-float ${ms(2)} ${settle} 2}
+      @media (prefers-reduced-motion: reduce){.pagosya-motif,.pagosya-motif *{animation:none!important;transition:none!important}}
+    }`;
+    document.head.append(motifStyle);
+    const cartIndex = MOTIFS.findIndex(motif => motif.placement === 'cart');
+    const cartHolder = cartIndex < 0 ? null : motifSlot(cartIndex, 'cart');
+    if (cartHolder) { cartDrawer.querySelector('#cart-drawer-title').after(cartHolder); armMotif(cartHolder, cartDrawer); }
   }
   const shoppingStyle = document.createElement('style');
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
@@ -1807,6 +1981,7 @@
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
+      if (MOTIFS.length) placeCardMotifs(el);
     });
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
     if (fullProductPage && !preview) {
@@ -2570,6 +2745,7 @@
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
       cart.set(key, quantity + units); renderCart(); message(`${name} añadido a tu pedido.`); addedFeedback({ ...p, name }, button, event.detail === 0);
+      if (MOTIFS.length) playMotifs(p);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a tu pedido.`;
     }
     if (button.hasAttribute("data-remove")) { const id = button.dataset.remove; const quantity = cart.get(id) || 0; if (quantity > 1) cart.set(id, quantity - 1); else cart.delete(id); renderCart(); message("Pedido actualizado."); }
