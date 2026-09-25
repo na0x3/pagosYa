@@ -119,6 +119,50 @@ test('source studio generates, previews commerce, edits a file, restores and dow
   expect(errors).toEqual([]);
 });
 
+test('a design YAPI saves shows in the preview while the site checks are still running', async ({ page }) => {
+  const first = { revision: 1, label: 'Carta', snapshot: structuredClone(snapshot) };
+  const secondSnapshot = structuredClone(snapshot);
+  const index = secondSnapshot.files.find(f => f.path === 'index.html')!;
+  index.content = index.content.replace('Un buen día<br>empieza aquí.', 'Portada editorial nueva.');
+  expect(index.content).toContain('Portada editorial nueva.');
+  const second = { revision: 2, label: 'Portada editorial', snapshot: secondSnapshot };
+  let versions = [first], revision = 1;
+  const messages: any[] = [];
+  await page.route('**/api/v1/**', async route => {
+    const pathname = new URL(route.request().url()).pathname;
+    let body: any = {};
+    if (pathname.endsWith('/dashboard/login')) body = { token: 'test-session', user: { email: 'test@example.com' } };
+    else if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe-aroma' }];
+    else if (pathname.endsWith('/conversation')) body = { messages };
+    else if (pathname.endsWith('/catalog')) body = structuredClone(snapshotCatalog);
+    else if (pathname.endsWith('/estimate')) body = { model: 'gpt-5.6-terra', reason: 'Ajuste de diseño', maxCredits: 25, estimate: { minCredits: 4, maxCredits: 10 } };
+    // The checks of the new revision take as long as they take: the merchant must not wait for them to see it.
+    else if (pathname.endsWith('/versions/2/checks')) return;
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (/\/versions\/\d+$/.test(pathname)) body = versions.find(v => v.revision === Number(pathname.split('/').at(-1)));
+    else if (pathname.endsWith('/source-project')) body = { revision, versions, nextBefore: null };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    else if (pathname.endsWith('/messages')) {
+      const instruction = route.request().postDataJSON().instruction;
+      revision = 2; versions = [second, first];
+      const userMessage = { id: 'u2', role: 'USER', content: instruction, metadata: {}, createdAt: new Date().toISOString() };
+      const assistantMessage = { id: 'a2', role: 'ASSISTANT', content: 'Cambié la portada.', metadata: { sourceRevision: 2 }, createdAt: new Date().toISOString() };
+      messages.push(userMessage, assistantMessage);
+      body = { userMessage, assistantMessage, revision: second };
+    }
+    await route.fulfill({ json: body });
+  });
+  await page.goto('/?source=1');
+  await page.getByLabel('Correo', { exact: true }).fill('test@example.com');
+  await page.getByLabel('Contraseña').fill('test-password');
+  await page.getByRole('button', { name: 'Entrar al Studio', exact: true }).click();
+  const frame = page.frameLocator('iframe[title="Vista previa del sitio"]');
+  await expect(frame.getByRole('heading', { name: 'Un buen día empieza aquí.' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Indicación para YAPI' }).fill('Haz la portada más editorial');
+  await page.getByRole('button', { name: 'Enviar a YAPI', exact: true }).click();
+  await expect(frame.getByRole('heading', { name: 'Portada editorial nueva.' })).toBeVisible({ timeout: 10000 });
+});
+
 test('preview blocks access to parent session and network requests',async({page})=>{
   await page.goto('/?demo=1');
   const result=await page.evaluate(async()=>{
@@ -217,6 +261,10 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
   await expect(preview.getByRole('button', { name: 'Ver detalle de Café actualizado' })).toBeVisible();
   expect(await popup.evaluate(() => window.opener)).toBeNull();
   await expect(popup.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  // The store fills the tab: no editor toolbar above it.
+  await expect(popup.getByText('Vista previa · Sin cobros', { exact: true })).toHaveCount(0);
+  await expect(popup.getByRole('button', { name: 'Ver tarjeta Comeback' })).toHaveCount(0);
+  await expect(popup.getByLabel('Página de la vista previa')).toHaveCount(0);
   await popup.reload();
   await expect(preview.getByRole('button', { name: 'Ver detalle de Café actualizado' })).toBeVisible();
   await preview.getByRole('button', { name: 'Ver detalle de Café actualizado' }).click();

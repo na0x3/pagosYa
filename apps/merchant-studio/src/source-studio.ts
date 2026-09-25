@@ -214,7 +214,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       } catch { generationSettings.motion = 'subtle'; generationSettings.scrollFeel = 'soft'; }
     }
     draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; scheduleEstimate();
-    if (version) { if (waitForChecks) await runChecks(); else void runChecks(); }
+    // A saved design shows at once; the browser checks load every page at four widths and report when done.
+    if (version) { if (waitForChecks) { render(); await runChecks(); } else void runChecks(); }
   }
   async function boot() {
     stores = await api.listStores();
@@ -287,7 +288,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
         if (result.revision) {
-          await load(result.revision.revision, true); mode = 'preview';
+          mode = 'preview'; await load(result.revision.revision, true);
           toast = checks?.some(row => row.status === 'failed') ? 'Cambios guardados con errores pendientes. Revisa el resultado en el chat.' : checks?.some(row => row.status === 'warning' || row.status === 'skipped') ? 'Diseño comprobado con pasos pendientes. Revisa el resultado en el chat.' : 'Comprobaciones terminadas. Revisa el diseño antes de publicar.';
         }
       } catch (e) {
