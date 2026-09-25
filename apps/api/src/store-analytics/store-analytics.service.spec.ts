@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { StoreAnalyticsService } from './store-analytics.service';
 
@@ -22,14 +22,14 @@ describe('StoreAnalyticsService.ingest', () => {
     expect(prisma.storeAnalyticsEvent.createMany).not.toHaveBeenCalled();
   });
 
-  it('stores the funnel session hash, the device class and the referrer host on page views only', async () => {
+  it('stores the analytics session hash, the device class and the referrer host on page views only', async () => {
     const prisma = fakePrisma();
     const result = await new StoreAnalyticsService(prisma as never).ingest('shop', {
       sessionId: SESSION, referrer: 'https://www.instagram.com/p/abc?igsh=1',
       events: [{ type: 'page_view', path: 'index.html' }, { type: 'cta_click', target: 'hero-cta', path: 'index.html' }],
     }, { userAgent: IPHONE });
     expect(result).toEqual({ accepted: 2 });
-    const hash = createHash('sha256').update(SESSION).digest('hex');
+    const hash = createHmac('sha256', 'development-only-analytics-session-secret-change-me').update(`store-analytics:${SESSION}`).digest('hex');
     expect(prisma.storeAnalyticsEvent.createMany).toHaveBeenCalledWith({ data: [
       { storeId: 's1', sessionHash: hash, type: 'page_view', productId: null, target: null, path: 'index.html', device: 'mobile', referrerHost: 'instagram.com' },
       { storeId: 's1', sessionHash: hash, type: 'cta_click', productId: null, target: 'hero-cta', path: 'index.html', device: 'mobile', referrerHost: null },
@@ -152,5 +152,24 @@ describe('StoreAnalyticsService.ingest origin check', () => {
     const { prisma, service } = make();
     await expect(service.ingest('shop', batch, { origin })).rejects.toThrow(ForbiddenException);
     expect(prisma.storeAnalyticsEvent.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('StoreAnalyticsService.ingest session hash', () => {
+  const hashOf = async (secret?: string) => {
+    const prisma = fakePrisma();
+    await new StoreAnalyticsService(prisma as never, config(secret ? { 'app.analyticsSessionSecret': secret } : {}) as never).ingest('shop', { sessionId: SESSION, events: [{ type: 'page_view' }] });
+    return prisma.storeAnalyticsEvent.createMany.mock.calls[0][0].data[0].sessionHash as string;
+  };
+
+  it('is keyed with its own secret, so raw analytics rows cannot be joined to funnel visits (or orders)', async () => {
+    const funnelHash = createHash('sha256').update(SESSION).digest('hex');
+    const hash = await hashOf('analytics_' + 'f'.repeat(48));
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(hash).not.toBe(funnelHash);
+    expect(hash).toBe(createHmac('sha256', 'analytics_' + 'f'.repeat(48)).update(`store-analytics:${SESSION}`).digest('hex'));
+    // Same session, same secret → same hash (rollups still count sessions); another secret → unrelated.
+    expect(await hashOf('analytics_' + 'f'.repeat(48))).toBe(hash);
+    expect(await hashOf('analytics_' + 'g'.repeat(48))).not.toBe(hash);
   });
 });

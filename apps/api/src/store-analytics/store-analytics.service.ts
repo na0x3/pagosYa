@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
+import { DEVELOPMENT_ANALYTICS_SESSION_SECRET } from '../config/configuration';
 import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
 import { addDays, boliviaDay, boliviaDayStart, dayCount } from './store-analytics-days';
@@ -78,7 +79,9 @@ export class StoreAnalyticsService {
     if (context.gpc || !batch.events.length) return { accepted: 0 };
     const ids = [...new Set(batch.events.map(event => event.productId).filter((id): id is string => !!id))];
     const known = new Set(ids.length ? (await this.prisma.paymentLink.findMany({ where: { storeId: store.id, id: { in: ids } }, select: { id: true } })).map(product => product.id) : []);
-    const sessionHash = createHash('sha256').update(batch.sessionId).digest('hex');
+    // Keyed with the analytics secret (not the funnel's plain sha256): raw rows cannot be joined to funnel visits or orders.
+    const secret = this.config?.get<string>('app.analyticsSessionSecret') ?? DEVELOPMENT_ANALYTICS_SESSION_SECRET;
+    const sessionHash = createHmac('sha256', secret).update(`store-analytics:${batch.sessionId}`).digest('hex');
     const device = deviceClass(context.userAgent);
     const data = batch.events.flatMap(event => {
       const productId = event.productId && known.has(event.productId) ? event.productId : null;
