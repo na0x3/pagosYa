@@ -234,8 +234,9 @@ test('saved site previews refresh the real catalog after product creation withou
   const opened = page.waitForEvent('popup');
   await editor.getByRole('button', { name: 'Ver en navegador', exact: true }).click();
   const browser = await opened;
-  await expect(browser.getByText('Vista previa · Sin cobros', { exact: true })).toBeVisible();
   expect(new URL(browser.url()).searchParams.get('revision')).toBe('1');
+  // 'Ver en navegador' shows only the store, without the preview toolbar (commit 4f7a57d) — the popup's
+  // iframe loading the store's own catalog is the assertion, not stale toolbar copy.
   const fullPreview = browser.frameLocator('iframe');
   await expect(fullPreview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
   await expect.poll(() => fullPreview.locator('.menu-item__image').evaluate(image => image.naturalWidth)).toBe(1);
