@@ -21,8 +21,18 @@ export function businessDocumentLink(metadata: unknown): { documentId: string; v
  * payment the rail already captured. So the status change is a conditional updateMany
  * and the event is a createMany that skips the once-per-payment duplicate.
  *
- * A payment for a cobro that is already closed (voided, or paid by another checkout)
- * changes nothing and is recorded as `payment_after_close`, so the merchant sees it and refunds.
+ * Three outcomes, one event each (keyed `paid:<paymentIntentId>`):
+ * - `paid`: the cobro is open and the payment is exactly the frozen version the customer
+ *   was shown (link version === currentVersion, same amount and currency). Only then PAID.
+ * - `payment_after_close`: the cobro was already voided or paid by another checkout —
+ *   nothing changes, the merchant sees it and refunds.
+ * - `payment_mismatch`: the cobro is open but the payment was for another version (a
+ *   checkout left on screen while the merchant re-sent a change) or another amount or
+ *   currency. The status stays as it is; the merchant reconciles or refunds.
+ *
+ * Lock order: the caller already holds the PaymentIntent row (FOR UPDATE); this takes the
+ * BusinessDocument row. pay() and void() take the document first and never *wait* for a
+ * PaymentIntent lock (SKIP LOCKED), so the two orders can never deadlock.
  */
 export async function markBusinessDocumentPaid(
   tx: Prisma.TransactionClient,
@@ -30,20 +40,31 @@ export async function markBusinessDocumentPaid(
 ): Promise<void> {
   const link = businessDocumentLink(intent.metadata);
   if (!link) return;
-  const doc = await tx.businessDocument.findUnique({ where: { id: link.documentId }, select: { id: true, status: true } });
+  const doc = await tx.businessDocument.findUnique({ where: { id: link.documentId }, select: { id: true, status: true, currentVersion: true } });
   if (!doc) return;
+  const base = { paymentIntentId: intent.id, amount: intent.amount, currency: intent.currency, livemode: intent.livemode, statusBefore: doc.status };
+  const record = (type: "paid" | "payment_after_close" | "payment_mismatch", extra: Record<string, unknown> = {}) =>
+    tx.businessDocumentEvent.createMany({
+      data: [{ documentId: doc.id, type, version: link.version, dedupeKey: `paid:${intent.id}`, data: { ...base, ...extra } as Prisma.InputJsonValue }],
+      skipDuplicates: true,
+    });
+  if (!PAYABLE.includes(doc.status)) {
+    await record("payment_after_close");
+    return;
+  }
+  const latest = await tx.businessDocumentVersion.findUnique({
+    where: { documentId_version: { documentId: doc.id, version: doc.currentVersion } },
+    select: { content: true },
+  });
+  const frozen = latest?.content as { totalAmount?: unknown; currency?: unknown } | undefined;
+  if (link.version !== doc.currentVersion || !frozen || frozen.totalAmount !== intent.amount || frozen.currency !== intent.currency) {
+    await record("payment_mismatch", { currentVersion: doc.currentVersion, expectedAmount: frozen?.totalAmount ?? null, expectedCurrency: frozen?.currency ?? null });
+    return;
+  }
+  // Conditional on status and version: a void or a re-send committed meanwhile wins.
   const { count } = await tx.businessDocument.updateMany({
-    where: { id: doc.id, status: { in: PAYABLE } },
+    where: { id: doc.id, status: { in: PAYABLE }, currentVersion: link.version! },
     data: { status: S.PAID, paidAt: new Date(), paymentIntentId: intent.id },
   });
-  await tx.businessDocumentEvent.createMany({
-    data: [{
-      documentId: doc.id,
-      type: count ? "paid" : "payment_after_close",
-      version: link.version,
-      dedupeKey: `paid:${intent.id}`,
-      data: { paymentIntentId: intent.id, amount: intent.amount, currency: intent.currency, livemode: intent.livemode, statusBefore: doc.status },
-    }],
-    skipDuplicates: true,
-  });
+  await record(count ? "paid" : "payment_after_close");
 }

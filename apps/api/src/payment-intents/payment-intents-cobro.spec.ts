@@ -13,9 +13,11 @@ function harness(metadata: Record<string, unknown>, livemode = true) {
     subscriptionInvoice: { updateMany: jest.fn() },
     appointment: { updateMany: jest.fn() },
     businessDocument: {
-      findUnique: jest.fn().mockResolvedValue({ id: "cdoc1", status: "VIEWED" }),
+      findUnique: jest.fn().mockResolvedValue({ id: "cdoc1", status: "VIEWED", currentVersion: 1 }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    // The frozen version the customer was shown: Bs 30,00, the amount paid.
+    businessDocumentVersion: { findUnique: jest.fn().mockResolvedValue({ content: { totalAmount: 3000, currency: "BOB" } }) },
     businessDocumentEvent: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
   };
   db.$transaction = jest.fn((fn: any) => fn(db));
