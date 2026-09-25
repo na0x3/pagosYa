@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { validDna } from './fixtures/dna';
 import { avoidTakenFingerprint, defaultDna, withSeededDna, dnaFingerprint, dnaRuntimeConfig, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
 
@@ -139,5 +140,24 @@ describe('avoidTakenFingerprint', () => {
       expect(taken.has(dnaFingerprint(result.dna))).toBe(false);
       expect(fields.filter(field => index(result.dna, field) !== index(dna, field))).toHaveLength(2);
     }
+  });
+});
+
+describe('identity libraries (T2b) DNA values', () => {
+  it('accepts the four new button forms', () => {
+    for (const form of ['sticker', 'ticket', 'bubbly', 'brutal']) {
+      const raw = validDna() as any;
+      raw.buttons.form = form;
+      expect(normalizeDna(raw, 'store-1')).toEqual({ dna: raw, repairs: [] });
+      expect(dnaRuntimeConfig(raw).button).toBe(form);
+    }
+  });
+
+  it('never seeds a T2b value, so stores seeded before them keep exactly the DNA they had', () => {
+    const all = Array.from({ length: 50 }, (_, i) => defaultDna(`store-${i}`));
+    expect(createHash('sha256').update(JSON.stringify(all)).digest('hex')).toBe('6b24050e210099c82f1bd48afee26df3daaabc4f1c08a62998b6a02f5d9fa84b');
+    expect(defaultDna('cafe-luna')).toEqual({ version: 1, type: { display: 'bebas-neue', text: 'rubik', case: 'upper', tracking: 'tight' }, shape: { radius: 'none', border: 'hairline', frame: 'inset' }, buttons: { form: 'stamp', hover: 'invert', press: 'pop' }, motion: { personality: 'calm' }, layout: { grammar: 'magazine', density: 'dense' }, surfaces: { cart: 'drawer', added: 'bubble', product: 'dense', review: 'notebook', card: 'zoom' }, motifs: [], signature: '' });
+    const forms = new Set(Array.from({ length: 500 }, (_, i) => defaultDna(`seed-${i}`).buttons.form));
+    for (const form of ['sticker', 'ticket', 'bubbly', 'brutal']) expect(forms.has(form as any)).toBe(false);
   });
 });

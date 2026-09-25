@@ -11,7 +11,7 @@ export const SOURCE_DNA_ENUMS = {
   type: { display: SOURCE_DNA_FONTS, text: SOURCE_DNA_FONTS, case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'] },
   shape: { radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid'] },
   buttons: {
-    form: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split'],
+    form: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split', 'sticker', 'ticket', 'bubbly', 'brutal'],
     hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
   },
   motion: { personality: ['calm', 'snappy', 'playful', 'cinematic'] },
@@ -38,8 +38,12 @@ export type SourceDesignDna = { version: 1 } & { -readonly [G in keyof Enums]: {
 
 // Runtime names are what commerce.js writes as data-dna-<name>; two read better renamed.
 const RUNTIME_NAMES: Record<string, string> = { 'buttons.form': 'button', 'motion.personality': 'motion' };
+/** Identity libraries (T2b) appended these values. The seeded default never picks them: withSeededDna seeds every stored
+ * store without a DNA on each public view, so a new value in the draw would silently restyle stores published long ago. */
+const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'] };
 const FIELDS = Object.entries(SOURCE_DNA_ENUMS).flatMap(([group, keys]) => Object.entries(keys).map(([key, values]) => (
-  { group, key, name: RUNTIME_NAMES[`${group}.${key}`] ?? key, values: values as readonly string[] })));
+  { group, key, name: RUNTIME_NAMES[`${group}.${key}`] ?? key, values: values as readonly string[],
+    seeded: (values as readonly string[]).filter(value => !(NOT_SEEDED[`${group}.${key}`] ?? []).includes(value)) })));
 export const SOURCE_DNA_RUNTIME_ENUMS: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [field.name, field.values]));
 export type SourceRuntimeDna = { version: 1 } & Record<string, string | 1>;
 
@@ -84,7 +88,7 @@ function seededRandom(seed: string) {
 export function defaultDna(seed: string): SourceDesignDna {
   const random = seededRandom(seed);
   const dna: any = { version: 1 };
-  for (const { group, key, values } of FIELDS) (dna[group] ??= {})[key] = values[Math.floor(random() * values.length)];
+  for (const { group, key, seeded } of FIELDS) (dna[group] ??= {})[key] = seeded[Math.floor(random() * seeded.length)];
   return { ...dna, motifs: [], signature: '' };
 }
 
