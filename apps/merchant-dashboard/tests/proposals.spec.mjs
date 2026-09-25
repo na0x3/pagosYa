@@ -320,6 +320,7 @@ for (const width of [390, 1280]) {
       await expect(sheet.locator("[data-proposal-conflict]")).toContainText("Tu cliente aceptó la versión 1");
       await expect(sheet.locator("[data-proposal-accepted-note]")).toContainText("Aceptada por Ana Quispe");
       await expect(editor).toHaveCount(0);
+      if (SHOTS) { await page.waitForTimeout(400); await page.screenshot({ path: `${SHOTS}/dashboard-accepted-conflict-${width}.png` }); }
     });
 
     test("on a sent proposal a new validity waits for 'Enviar versión nueva', and past dates cannot be picked", async ({ page }) => {
