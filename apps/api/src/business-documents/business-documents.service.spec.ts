@@ -277,6 +277,16 @@ describe("BusinessDocumentsService — send", () => {
     expect(prisma.documents[0].number).toBeNull();
   });
 
+  it("refuses to send when the customer fields or the message still hold a placeholder", async () => {
+    const { service, prisma, email } = setup();
+    const customerless = await service.create("m_1", "store_1", { ...invoice, customerName: "{{cliente}}" });
+    await expect(service.send("m_1", "store_1", customerless.id, { email: false })).rejects.toThrow("{{cliente}}");
+    const created = await service.create("m_1", "store_1", invoice);
+    await expect(service.send("m_1", "store_1", created.id, { message: "Nos vemos el {{fecha}}" })).rejects.toThrow("{{fecha}}");
+    expect(prisma.versions).toHaveLength(0);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
   it("refuses to send a cobro with nothing to charge", async () => {
     const { service } = setup();
     const created = await service.create("m_1", "store_1", { kind: "INVOICE", title: "Vacío" });

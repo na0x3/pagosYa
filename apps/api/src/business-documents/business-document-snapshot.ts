@@ -121,13 +121,21 @@ export function snapshotSha256(snapshot: DocumentSnapshot): string {
   return sha256Hex(canonicalJson(snapshot));
 }
 
-/** `{{…}}` left by a template or by AI drafting for data the merchant must still fill in. */
-export function findPlaceholders(snapshot: DocumentSnapshot): string[] {
+/**
+ * `{{…}}` left by a template or by AI drafting for data the merchant must still fill in.
+ * `extra` holds texts sent alongside the snapshot, such as the email message.
+ */
+export function findPlaceholders(snapshot: DocumentSnapshot, extra: Array<string | null | undefined> = []): string[] {
   const texts = [
     snapshot.title,
+    snapshot.customer.name,
+    snapshot.customer.email,
+    snapshot.customer.phone,
+    snapshot.customer.document,
     ...snapshot.items.map((item) => item.description),
-    ...snapshot.blocks.flatMap((block) => [block.title ?? "", block.text ?? "", ...(block.items ?? [])]),
+    ...snapshot.blocks.flatMap((block) => [block.title, block.text, ...(block.items ?? [])]),
+    ...extra,
   ];
-  const found = texts.flatMap((text) => text.match(/\{\{[^{}]{1,80}\}\}/g) ?? []);
+  const found = texts.flatMap((text) => text?.match(/\{\{[^{}]{1,80}\}\}/g) ?? []);
   return [...new Set(found)];
 }

@@ -190,7 +190,7 @@ export class BusinessDocumentsService {
   async send(merchantId: string, storeId: string, id: string, dto: SendBusinessDocumentDto) {
     const store = await this.ownedStore(merchantId, storeId);
     // A fast answer from the first read; the transaction re-checks the row it writes.
-    this.assertSendable(await this.load(storeId, id));
+    this.assertSendable(await this.load(storeId, id), dto.message);
 
     let sent: { version: number; sha256: string; snapshot: DocumentSnapshot; eventId: string; to: string | null } | undefined;
     for (let attempt = 0; !sent; attempt += 1) {
@@ -199,7 +199,7 @@ export class BusinessDocumentsService {
           // Re-read inside the attempt: a concurrent send may have numbered or versioned it.
           const doc = await tx.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
           if (!doc) throw new NotFoundException("Documento no encontrado");
-          this.assertSendable(doc);
+          this.assertSendable(doc, dto.message);
           const number = doc.number ?? ((await tx.businessDocument.aggregate({ where: { storeId, kind: doc.kind }, _max: { number: true } }))._max.number ?? 0) + 1;
           const snapshot = buildSnapshot({ ...doc, number });
           const sha256 = snapshotSha256(snapshot);
@@ -363,9 +363,9 @@ export class BusinessDocumentsService {
   // ── helpers ───────────────────────────────────────────────────────────
 
   /** What makes a document sendable, checked on whichever read is about to be written from. */
-  private assertSendable(doc: DocumentWithItems) {
+  private assertSendable(doc: DocumentWithItems, message?: string) {
     if (FINAL.includes(doc.status)) throw new ConflictException("Este documento ya no se puede enviar");
-    const placeholders = findPlaceholders(buildSnapshot(doc));
+    const placeholders = findPlaceholders(buildSnapshot(doc), [message]);
     if (placeholders.length) throw new UnprocessableEntityException(`Completa los datos pendientes antes de enviar: ${placeholders.join(", ")}`);
     if (doc.kind === "INVOICE" && doc.totalAmount <= 0) throw new UnprocessableEntityException("Agrega al menos un ítem con monto para enviar el cobro");
   }

@@ -97,6 +97,18 @@ describe("findPlaceholders", () => {
     expect(findPlaceholders(snapshot)).toEqual(["{{cliente}}", "{{fecha de inicio}}", "{{ciudad}}"]);
     expect(findPlaceholders(buildSnapshot(base))).toEqual([]);
   });
+
+  it("also finds them in every customer field and in extra texts such as the send message", () => {
+    const snapshot = buildSnapshot({
+      ...base,
+      customerName: "{{nombre del cliente}}",
+      customerEmail: "{{correo}}",
+      customerPhone: "{{teléfono}}",
+      customerDocument: "{{NIT}}",
+    });
+    expect(findPlaceholders(snapshot)).toEqual(["{{nombre del cliente}}", "{{correo}}", "{{teléfono}}", "{{NIT}}"]);
+    expect(findPlaceholders(buildSnapshot(base), ["Te esperamos el {{fecha}}", undefined, null])).toEqual(["{{fecha}}"]);
+  });
 });
 
 describe("documentNumberLabel", () => {
