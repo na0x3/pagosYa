@@ -28,7 +28,7 @@ const PRODUCT = '<main data-pagosya-product-page></main><section data-pagosya-ca
 type Boot = { w: any; doc: any };
 const opened: any[] = [];
 afterEach(() => { while (opened.length) opened.pop()!.close(); });
-function boot(options: { motifs?: unknown; body?: string; query?: string; reduced?: boolean; hover?: boolean; settings?: Record<string, unknown> } = {}): Boot {
+function boot(options: { motifs?: unknown; body?: string; query?: string; reduced?: boolean; hover?: boolean; settings?: Record<string, unknown>; items?: unknown[] } = {}): Boot {
   const dom = new JSDOM(`<html><head></head><body>${options.body ?? CATALOG}</body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
   const w = dom.window;
   w.HTMLElement.prototype.scrollIntoView = () => {};
@@ -37,7 +37,7 @@ function boot(options: { motifs?: unknown; body?: string; query?: string; reduce
   w.HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
   w.PAGOSYA_PREVIEW = true;
   w.PAGOSYA_PREVIEW_QUERY = options.query ?? '';
-  const data = { storeName: 'Luz', items: ITEMS, categories: CATEGORIES };
+  const data = { storeName: 'Luz', items: options.items ?? ITEMS, categories: CATEGORIES };
   w.PAGOSYA_CONFIG = { slug: 'luz', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, dna: { version: 1, motion: 'calm' }, ...(options.motifs !== undefined ? { motifs: options.motifs } : {}), ...options.settings };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
   w.eval(commerce);
@@ -74,6 +74,21 @@ describe('motif slots', () => {
     expect(cards.map((card: any) => !!card.querySelector('.pagosya-motif[data-motif-slot="card"]'))).toEqual([true, false]);
     const everywhere = boot({ motifs: runtime(motif({ for: 'store', target: 'Luz', placement: 'card', trigger: 'appear' })) }).doc;
     expect(everywhere.querySelectorAll('.menu-item .pagosya-motif')).toHaveLength(2);
+  });
+  it('matches a product by whole words of its name or category, accent-insensitive, never inside another word', () => {
+    const item = (id: string, name: string, categoryId = 'x') => ({ id, name, amount: 1000, currency: 'BOB', stock: 5, imageUrls: [], categoryId });
+    const items = [item('choco', 'Chocolate caliente'), item('pastel', 'Pastel'), item('tarta', 'Tarta'), item('verde', 'TÉ VERDE'), item('infusion', 'Infusión de té'), item('empanada', 'Empanada'), item('panes', 'Panes caseros'), item('pan', 'Pan de maíz'), item('lamp', 'Lámpara de mesa'), item('lamps', 'Lamparas colgantes'), item('mesa', 'Mesa', 'luz')];
+    const marked = (target: string) => {
+      const { doc } = boot({ items, motifs: runtime(motif({ target, placement: 'card', trigger: 'appear' })) });
+      return [...doc.querySelectorAll('.menu-item')].filter((card: any) => card.querySelector('.pagosya-motif')).map((card: any) => card.querySelector('[data-add],[data-product]')?.dataset.add ?? card.querySelector('[data-add],[data-product]')?.dataset.product);
+    };
+    expect(marked('té')).toEqual(['verde', 'infusion']);
+    expect(marked('pan')).toEqual(['panes', 'pan']);
+    expect(marked('lámpara')).toEqual(['lamp', 'lamps']);
+    expect(marked('de mesa')).toEqual(['lamp']);
+    // A category name matches by whole words too ('Iluminación' holds the Mesa product).
+    expect(marked('iluminacion')).toEqual(['mesa']);
+    expect(marked('ilumina')).toEqual([]);
   });
   it('puts a cart motif in the cart header', () => {
     const { doc } = boot({ motifs: runtime(motif({ placement: 'cart', trigger: 'add-to-cart' })) });

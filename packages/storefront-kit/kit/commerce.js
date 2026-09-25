@@ -1313,13 +1313,23 @@
     return root;
   }
   const motifText = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const motifWords = value => motifText(value).split(/[^a-z0-9]+/).filter(Boolean);
+  /* The target's words appear in order as whole words (a word also matches its plural, -s/-es): "té" is not inside
+   * "Chocolate caliente", "pan" is not inside "Empanada", "lámpara" matches "Lámpara de mesa" and "Lámparas". */
+  function motifWordsMatch(text, target) {
+    const words = motifWords(text);
+    for (let i = 0; target.length && i + target.length <= words.length; i++) {
+      if (target.every((word, j) => [word, `${word}s`, `${word}es`].includes(words[i + j]))) return true;
+    }
+    return false;
+  }
   /* A product matches its motif by id, by name, or by its category's name; a store-wide motif matches every product. */
   function motifMatches(motif, p) {
     if (!p) return false;
     if (motif.for === 'store' || p.id === motif.target) return true;
-    const target = motifText(motif.target);
+    const target = motifWords(motif.target);
     const category = (store.categories || []).find(c => c.id === p.categoryId);
-    return Boolean(target) && (motifText(p.name).includes(target) || Boolean(category) && motifText(category.name).includes(target));
+    return motifWordsMatch(p.name, target) || Boolean(category) && motifWordsMatch(category.name, target);
   }
   const motifMotion = () => config.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
   function playMotif(holder) {
