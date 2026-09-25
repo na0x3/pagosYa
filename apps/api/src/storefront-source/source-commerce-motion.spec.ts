@@ -185,3 +185,41 @@ describe('kit transitions take the personality in the browser', () => {
     }
   });
 });
+
+describe('motion.js reveals and card hover take the personality', () => {
+  const REVEAL_BODY = `${CATALOG}<main><section style="height:1600px"><p>Inicio</p></section><section><h2 id="reveal">Nuestra historia</h2></section></main>`;
+  const RECORD = `window.__animations=[];const __animate=Element.prototype.animate;Element.prototype.animate=function(k,o){window.__animations.push({id:this.id,keyframes:k,options:o});return __animate.call(this,k,o);};`;
+  async function reveal(motion: 'subtle' | 'expressive', personality?: string) {
+    const page = await open({ dna: personality ? { ...DNA, motion: personality } : undefined, settings: { motion }, body: REVEAL_BODY, runtime: `${RECORD}\n${commerce}\n${motionRuntime}` });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.evaluate(() => document.getElementById('reveal')!.scrollIntoView());
+      await page.waitForFunction(() => (window as any).__animations.some((a: any) => a.id === 'reveal'));
+      const call = await page.evaluate(() => (window as any).__animations.find((a: any) => a.id === 'reveal'));
+      return { duration: call.options.duration, easing: call.options.easing, from: call.keyframes[0].transform };
+    } finally { await page.close(); }
+  }
+  it('keeps today\'s reveals without a personality: 220ms/6px subtle, 280ms/10px expressive', async () => {
+    expect(await reveal('subtle')).toEqual({ duration: 220, easing: 'cubic-bezier(.23,1,.32,1)', from: 'translateY(6px)' });
+    expect(await reveal('expressive')).toEqual({ duration: 280, easing: 'cubic-bezier(.23,1,.32,1)', from: 'translateY(10px)' });
+  });
+  it('expressive reveals take the base duration and the full distance; subtle the fast duration and half; always the settle curve', async () => {
+    expect(await reveal('expressive', 'cinematic')).toEqual({ duration: 520, easing: 'cubic-bezier(.16,1,.3,1)', from: 'translateY(28px)' });
+    expect(await reveal('subtle', 'cinematic')).toEqual({ duration: 260, easing: 'cubic-bezier(.16,1,.3,1)', from: 'translateY(14px)' });
+    expect(await reveal('expressive', 'playful')).toEqual({ duration: 360, easing: 'cubic-bezier(.22,1,.36,1)', from: 'translateY(18px)' });
+  });
+  it('the card photo hover keeps 160ms without a personality and takes the fast token with one', async () => {
+    for (const [personality, duration] of [[undefined, '0.16s'], ['snappy', '0.12s']] as const) {
+      const page = await open({ dna: personality ? { ...DNA, motion: personality } : DNA, settings: { motion: 'subtle' }, runtime: `${commerce}\n${motionRuntime}` });
+      try {
+        await page.waitForSelector('.menu-item__image, .menu-add');
+        const value = await page.evaluate(() => {
+          const img = document.createElement('img'); img.className = 'menu-item__image';
+          (document.querySelector('.menu-item') ?? document.body).append(img);
+          return getComputedStyle(img).transitionDuration;
+        });
+        expect({ personality, value }).toEqual({ personality, value: duration });
+      } finally { await page.close(); }
+    }
+  });
+});
