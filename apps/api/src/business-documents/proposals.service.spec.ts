@@ -514,7 +514,7 @@ describe("ProposalsService — Crear cobro from an accepted proposal", () => {
     expect(new Date(cobro.dueAt!).getTime() - Date.now()).toBeGreaterThan(6 * 86_400_000);
     expect(result.publicUrl).toMatch(/^https:\/\/pay\.example\/d\//);
     expect(ctx.prisma.events.filter((event) => event.documentId === ctx.proposal.id && event.type === "cobro_created")).toEqual([
-      expect.objectContaining({ dedupeKey: "cobro", data: { cobroId: cobro.id } }),
+      expect.objectContaining({ dedupeKey: `cobro:${cobro.id}`, data: { cobroId: cobro.id } }),
     ]);
     expect(ctx.prisma.events.find((event) => event.documentId === cobro.id && event.type === "created")?.data).toEqual({ fromProposal: { documentId: ctx.proposal.id, numberLabel: "PRO-0001" } });
     expect((cobro.content as Array<{ text: string }>)[0].text).toMatch(/^Según la propuesta PRO-0001 aceptada el /);
@@ -546,6 +546,23 @@ describe("ProposalsService — Crear cobro from an accepted proposal", () => {
     const retry = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
     expect(retry.cobro.status).toBe("SENT");
     expect(ctx.prisma.documents.filter((row) => row.kind === "INVOICE")).toHaveLength(1);
+  });
+
+  it("makes a fresh cobro when the merchant deleted the draft one a failed send left behind", async () => {
+    const ctx = await acceptedProposal();
+    const send = jest.spyOn(ctx.documents, "send").mockRejectedValueOnce(new Error("se cortó"));
+    await expect(ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {})).rejects.toThrow("se cortó");
+    send.mockRestore();
+    const orphan = ctx.prisma.documents.find((row) => row.kind === "INVOICE")!;
+    await ctx.documents.remove("m_1", "store_1", orphan.id);
+    const fresh = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    expect(fresh.created).toBe(true);
+    expect(fresh.cobro.id).not.toBe(orphan.id);
+    expect(fresh.cobro.status).toBe("SENT");
+    const again = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    expect(again).toEqual(expect.objectContaining({ created: false, cobro: expect.objectContaining({ id: fresh.cobro.id }) }));
+    expect(ctx.prisma.documents.filter((row) => row.kind === "INVOICE")).toHaveLength(1);
+    expect(ctx.prisma.events.filter((event) => event.documentId === ctx.proposal.id && event.type === "cobro_created").map((event) => event.data.cobroId)).toEqual([orphan.id, fresh.cobro.id]);
   });
 
   it("refuses a proposal that is not accepted, another store's, and one with no priced items", async () => {

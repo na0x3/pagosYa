@@ -330,6 +330,20 @@ for (const width of [390, 1280]) {
       expect(new Date(beforeSend.body.validUntil).getTime()).toBeGreaterThan(Date.now() + 29 * 86_400_000);
     });
 
+    test("'Ver el cobro' makes a fresh cobro when the linked draft was deleted", async ({ page }) => {
+      const api = fakeApi([proposal({ id: "pdoc_acc", number: 4, numberLabel: "PRO-0004", status: "ACCEPTED", title: "Mantenimiento de jardín", events: [
+        { id: "b", type: "sent", version: 1, at: inDays(-3) },
+        { id: "c", type: "accepted", version: 1, at: inDays(-2), data: { name: "Ana Quispe", email: "ana@example.com", version: 1 } },
+        { id: "d", type: "cobro_created", at: inDays(-1), data: { cobroId: "cdoc_deleted" } },
+      ] })]);
+      await openProposals(page, api);
+      await page.locator("[data-proposal-card]").first().click();
+      await page.locator("[data-proposal-sheet]").getByRole("button", { name: "Ver el cobro" }).click();
+      await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "cobros");
+      await expect(page.locator("[data-cobro-sheet] #cobroSheetTitle")).toHaveText("¡Cobro COB-0001 listo!");
+      expect(api.requests.some((request) => request.method === "POST" && request.path === "/stores/store_1/documents/pdoc_acc/cobro")).toBe(true);
+    });
+
     test("the catalog picker only adds products in the proposal's currency", async ({ page }) => {
       const api = fakeApi([proposal({ id: "pdoc_draft", number: null, numberLabel: "Borrador", status: "DRAFT", title: "Página web", currentVersion: 0, publicUrl: null, items: [] })]);
       await openProposals(page, api);

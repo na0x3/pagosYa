@@ -189,9 +189,12 @@ export class ProposalsService {
       await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
       const doc = await tx.businessDocument.findFirst({ where: { id, storeId } });
       if (!doc || doc.kind !== "PROPOSAL") throw new NotFoundException("Propuesta no encontrada");
-      const link = await tx.businessDocumentEvent.findFirst({ where: { documentId: id, type: "cobro_created" } });
-      const existingId = ((link?.data ?? {}) as { cobroId?: string }).cobroId;
-      if (existingId && (await tx.businessDocument.findFirst({ where: { id: existingId, storeId }, select: { id: true } }))) return { cobroId: existingId, created: false };
+      // The newest linked cobro that still exists (a draft left by a failed send may have been deleted).
+      const links = await tx.businessDocumentEvent.findMany({ where: { documentId: id, type: "cobro_created" }, orderBy: { at: "asc" } });
+      for (const link of [...links].reverse()) {
+        const existingId = ((link.data ?? {}) as { cobroId?: string }).cobroId;
+        if (existingId && (await tx.businessDocument.findFirst({ where: { id: existingId, storeId }, select: { id: true } }))) return { cobroId: existingId, created: false };
+      }
       if (doc.status !== S.ACCEPTED) throw new ConflictException("Solo una propuesta aceptada se convierte en cobro.");
       const accepted = await tx.businessDocumentEvent.findFirst({ where: { documentId: id, type: "accepted" } });
       const acceptedBy = (accepted?.data ?? {}) as { name?: string; email?: string; version?: number };
@@ -225,7 +228,8 @@ export class ProposalsService {
           events: { create: [{ type: "created", data: { fromProposal: { documentId: id, numberLabel: snapshot.numberLabel } } }] },
         },
       });
-      await tx.businessDocumentEvent.create({ data: { documentId: id, type: "cobro_created", version: doc.currentVersion, dedupeKey: "cobro", data: { cobroId: cobro.id } } });
+      // One link per cobro: the row lock above keeps two taps from making two; a deleted one can be replaced.
+      await tx.businessDocumentEvent.create({ data: { documentId: id, type: "cobro_created", version: doc.currentVersion, dedupeKey: `cobro:${cobro.id}`, data: { cobroId: cobro.id } } });
       return { cobroId: cobro.id, created: true };
     });
     // Frozen with email off (D1's one-tap create): the dashboard then offers WhatsApp, email and copy.

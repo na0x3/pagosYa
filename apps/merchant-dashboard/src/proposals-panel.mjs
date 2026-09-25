@@ -904,7 +904,7 @@ export function mountProposalsPanel(deps) {
     const events = doc.events || [];
     const lastChanges = [...events].reverse().find((event) => event.type === "changes_requested");
     const accepted = events.find((event) => event.type === "accepted");
-    const cobro = events.find((event) => event.type === "cobro_created");
+    const cobro = [...events].reverse().find((event) => event.type === "cobro_created");
     const editable = ["draft", "sent", "viewed", "changes"].includes(state);
     const open = ["sent", "viewed", "changes"].includes(state);
     const links = doc.publicUrl
@@ -932,7 +932,7 @@ export function mountProposalsPanel(deps) {
           <p class="proposal-hint">Constancia: ${esc(accepted?.data?.email || "")} aceptó la versión ${esc(accepted?.version || doc.currentVersion)}${accepted?.data?.sha256 ? ` (huella ${esc(String(accepted.data.sha256).slice(0, 12))})` : ""}.</p>
           <div class="proposal-note-actions">
             ${cobro
-              ? `<button type="button" class="primary" data-proposal-action="open-cobro" data-cobro-id="${esc(cobro.data?.cobroId || "")}">Ver el cobro</button>`
+              ? `<button type="button" class="primary" data-proposal-action="open-cobro">Ver el cobro</button>`
               : `<button type="button" class="primary" data-proposal-action="cobro">Crear cobro</button>`}
           </div>
           ${cobro ? "" : `<p class="proposal-hint">Crea un cobro con estos mismos ítems y compártelo por WhatsApp: tu cliente paga con QR o tarjeta.</p>`}
@@ -976,17 +976,18 @@ export function mountProposalsPanel(deps) {
     const action = button.dataset.proposalAction;
     if (action === "share") { openShare(doc); return; }
     if (action === "edit") { openEditor(doc); return; }
-    if (action === "open-cobro") { const id = button.dataset.cobroId; await closeSheet(); if (id) deps.openCobro(id, { share: false }); return; }
+
     if (action === "void-ask") { panel.querySelector("[data-proposal-void-confirm]").hidden = false; button.hidden = true; panel.querySelector('[data-proposal-action="void-cancel"]')?.focus(); return; }
     if (action === "void-cancel") { panel.querySelector("[data-proposal-void-confirm]").hidden = true; const ask = panel.querySelector('[data-proposal-action="void-ask"]'); ask.hidden = false; ask.focus(); return; }
     button.disabled = true;
     try {
-      if (action === "cobro") {
-        button.textContent = "Creando el cobro…";
+      if (action === "cobro" || action === "open-cobro") {
+        // Idempotent on the server: the linked cobro, or a fresh one if the merchant deleted a draft.
+        button.textContent = action === "cobro" ? "Creando el cobro…" : "Abriendo el cobro…";
         const result = await deps.api(docPath(doc.id, "/cobro"), { method: "POST", body: JSON.stringify({}) });
         await closeSheet();
         void load();
-        deps.openCobro(result.cobro.id, { share: true });
+        deps.openCobro(result.cobro.id, { share: action === "cobro" || result.created });
         return;
       }
       if (action === "duplicate") {
@@ -1024,7 +1025,7 @@ export function mountProposalsPanel(deps) {
       }
     } catch (error) {
       notify(errorText(error), "bad");
-      button.textContent = { cobro: "Crear cobro", duplicate: "Duplicar" }[action] || button.textContent;
+      button.textContent = { cobro: "Crear cobro", "open-cobro": "Ver el cobro", duplicate: "Duplicar" }[action] || button.textContent;
     } finally {
       button.disabled = false;
     }
