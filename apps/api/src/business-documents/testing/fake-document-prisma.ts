@@ -64,11 +64,16 @@ export class FakePrisma {
   };
   merchants: Row[] = [];
   merchant = { findUnique: async ({ where }: Row) => this.merchants.find((row) => row.id === where.id) ?? null };
-  paymentLink = { count: async ({ where }: Row) => this.paymentLinks.filter((row) => matches(row, where)).length };
+  paymentLink = {
+    count: async ({ where }: Row) => this.paymentLinks.filter((row) => matches(row, where)).length,
+    findMany: async ({ where, take }: Row) => this.paymentLinks.filter((row) => matches(row, where)).slice(0, take ?? undefined),
+  };
+  categories: Row[] = [];
+  category = { findMany: async ({ where, take }: Row) => this.categories.filter((row) => matches(row, where)).slice(0, take ?? undefined) };
   businessDocument = {
     create: async ({ data }: Row) => {
       const { items, events, ...fields } = data;
-      const doc = { id: id("doc"), number: null, status: "DRAFT", currency: "BOB", currentVersion: 0, sentAt: null, viewedAt: null, voidedAt: null, paidAt: null, paymentIntentId: null, autoReminders: true, createdAt: new Date(), updatedAt: new Date(), content: [], ...fields };
+      const doc = { id: id("doc"), number: null, status: "DRAFT", currency: "BOB", customerName: null, customerEmail: null, customerPhone: null, customerDocument: null, businessCustomerId: null, dueAt: null, validUntil: null, currentVersion: 0, sentAt: null, viewedAt: null, voidedAt: null, paidAt: null, paymentIntentId: null, autoReminders: true, createdAt: new Date(), updatedAt: new Date(), content: [], ...fields };
       this.documents.push(doc);
       (items?.create ?? []).forEach((item: Row) => this.items.push({ id: id("item"), documentId: doc.id, paymentLinkId: null, ...item }));
       (events?.create ?? []).forEach((event: Row) => this.events.push({ id: id("evt"), documentId: doc.id, at: new Date(), dedupeKey: null, ...event }));
@@ -149,8 +154,9 @@ export class FakePrisma {
     },
     findMany: async ({ where: { document, ...where } }: Row) => this.events.filter((event) => matches(event, where)
       && (!document || matches(this.documents.find((doc) => doc.id === event.documentId) ?? {}, document))),
-    findFirst: async ({ where, orderBy }: Row) => {
-      const rows = this.events.filter((event) => matches(event, where));
+    findFirst: async ({ where: { document, ...where }, orderBy }: Row) => {
+      const rows = this.events.filter((event) => matches(event, where)
+        && (!document || matches(this.documents.find((doc) => doc.id === event.documentId) ?? {}, document)));
       if (orderBy?.at === "desc") rows.sort((a, b) => b.at - a.at);
       return rows[0] ?? null;
     },
@@ -161,7 +167,8 @@ export class FakePrisma {
       return event;
     },
     count: async ({ where }: Row) => this.events.filter((event) =>
-      (where.type === undefined || event.type === where.type)
+      (where.type === undefined || (typeof where.type === "string" ? event.type === where.type : where.type.in.includes(event.type)))
+      && (!where.documentId || event.documentId === where.documentId)
       && (!where.data?.path || (event.data ?? {})[where.data.path[0]] === where.data.equals)
       && (!where.at?.gte || event.at >= where.at.gte)
       && (!where.document?.storeId || this.documents.find((doc) => doc.id === event.documentId)?.storeId === where.document.storeId)).length,

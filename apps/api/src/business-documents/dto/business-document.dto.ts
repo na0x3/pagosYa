@@ -130,6 +130,9 @@ export class VoidBusinessDocumentDto {
   reason?: string;
 }
 
+export const DOCUMENT_LIST_STATES = ["open", "overdue", "paid", "draft", "accepted", "closed"] as const;
+export type DocumentListState = (typeof DOCUMENT_LIST_STATES)[number];
+
 export class ListBusinessDocumentsQueryDto {
   @ApiPropertyOptional({ enum: BusinessDocumentKind }) @IsOptional() @IsEnum(BusinessDocumentKind)
   kind?: BusinessDocumentKind;
@@ -137,9 +140,12 @@ export class ListBusinessDocumentsQueryDto {
   @ApiPropertyOptional({ enum: BusinessDocumentStatus }) @IsOptional() @IsEnum(BusinessDocumentStatus)
   status?: BusinessDocumentStatus;
 
-  @ApiPropertyOptional({ enum: ["open", "overdue", "paid"], description: "Cobros: open = sent and unpaid (overdue included); overdue = past its due date, computed on the server." })
-  @IsOptional() @IsIn(["open", "overdue", "paid"])
-  state?: "open" | "overdue" | "paid";
+  @ApiPropertyOptional({
+    enum: DOCUMENT_LIST_STATES,
+    description: "Cobros: open = sent and unpaid (overdue included); overdue = past its due date. Proposals: draft, open (sent, still valid), accepted, closed (expired, voided or past validity). Computed on the server.",
+  })
+  @IsOptional() @IsIn(DOCUMENT_LIST_STATES)
+  state?: DocumentListState;
 
   @ApiPropertyOptional({ default: 100, minimum: 1, maximum: 100 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100)
@@ -187,4 +193,75 @@ export class DocumentCustomersQueryDto {
   @ApiPropertyOptional({ description: "Part of a name, email or phone." })
   @IsOptional() @IsString() @MaxLength(80)
   q?: string;
+}
+
+// ── proposals (D2) ────────────────────────────────────────────────────────
+
+export const PROPOSAL_TONES = ["formal", "cercano"] as const;
+
+export class DraftProposalDto {
+  @ApiProperty({ example: "Diseño de logo e identidad para una cafetería que abre en noviembre" })
+  @IsString() @IsSafeText() @Length(10, 2000)
+  brief!: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(120)
+  customerName?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(254)
+  customerEmail?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(40)
+  customerPhone?: string;
+
+  @ApiPropertyOptional({ description: "What the merchant wants to charge, in their words (only these numbers may become prices)." })
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(200)
+  budgetHint?: string;
+
+  @ApiPropertyOptional({ description: "A deadline in the merchant's words or a date." })
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(120)
+  deadline?: string;
+
+  @ApiPropertyOptional({ enum: PROPOSAL_TONES, default: "formal" })
+  @IsOptional() @IsIn(PROPOSAL_TONES)
+  tone?: (typeof PROPOSAL_TONES)[number];
+}
+
+export class RegenerateProposalSectionDto {
+  @ApiProperty({ type: BusinessDocumentBlockDto, description: "The section as the editor has it now." })
+  @ValidateNested() @Type(() => BusinessDocumentBlockDto)
+  block!: BusinessDocumentBlockDto;
+
+  @ApiPropertyOptional({ description: "e.g. \"más breve\", \"menciona el envío\"" })
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(300)
+  instruction?: string;
+}
+
+export class AcceptProposalDto {
+  @ApiProperty({ description: "The name the customer types to accept." })
+  @IsString() @IsSafeText() @Length(2, 120)
+  name!: string;
+
+  @ApiProperty() @IsEmail() @MaxLength(254)
+  email!: string;
+
+  @ApiProperty({ description: "The version the customer read; a newer one must be read first." })
+  @IsInt() @Min(1) @Max(100_000)
+  version!: number;
+}
+
+export class RequestProposalChangesDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsSafeText() @MaxLength(120)
+  name?: string;
+
+  @ApiProperty() @IsEmail() @MaxLength(254)
+  email!: string;
+
+  @ApiProperty() @IsString() @IsSafeText() @Length(3, 2000)
+  message!: string;
+}
+
+export class CreateCobroFromProposalDto {
+  @ApiPropertyOptional({ description: "Defaults to 7 days (end of that day in La Paz)." })
+  @IsOptional() @IsDateString()
+  dueAt?: string;
 }

@@ -37,6 +37,7 @@ import type { AcceptanceContext } from "../legal/terms-acceptance.service";
 import type {
   BusinessDocumentItemDto,
   CreateBusinessDocumentDto,
+  DocumentListState,
   ListBusinessDocumentsQueryDto,
   SendBusinessDocumentDto,
   UpdateBusinessDocumentDto,
@@ -90,10 +91,25 @@ export function paymentFlags(events: Array<{ type: string; data: Prisma.JsonValu
 }
 
 /** The cobros tabs as a filter: "open" includes overdue (money still owed); overdue does not wait for the worker. */
-export function cobroStateWhere(state: "open" | "overdue" | "paid", now: Date): Prisma.BusinessDocumentWhereInput {
+export function cobroStateWhere(state: DocumentListState, now: Date): Prisma.BusinessDocumentWhereInput {
   if (state === "paid") return { status: S.PAID };
   if (state === "open") return { status: { in: PAYABLE } };
+  if (state === "draft") return { status: S.DRAFT };
+  if (state === "closed") return { status: { in: [S.VOIDED, S.EXPIRED] } };
+  if (state === "accepted") return { status: S.ACCEPTED };
   return { OR: [{ status: S.OVERDUE }, { status: { in: [S.SENT, S.VIEWED] }, dueAt: { lt: now } }] };
+}
+
+/** A proposal the customer can still accept or comment on (until its validity passes). */
+export const OPEN_PROPOSAL: BusinessDocumentStatus[] = [S.SENT, S.VIEWED, S.CHANGES_REQUESTED];
+
+/** The proposals tabs: past its validity a proposal is closed at once, without waiting for the worker. */
+export function proposalStateWhere(state: DocumentListState, now: Date): Prisma.BusinessDocumentWhereInput {
+  if (state === "draft") return { status: S.DRAFT };
+  if (state === "accepted") return { status: S.ACCEPTED };
+  if (state === "open") return { status: { in: OPEN_PROPOSAL }, OR: [{ validUntil: null }, { validUntil: { gte: now } }] };
+  if (state === "closed") return { OR: [{ status: { in: [S.EXPIRED, S.VOIDED, S.DECLINED] } }, { status: { in: OPEN_PROPOSAL }, validUntil: { lt: now } }] };
+  return { status: { in: [] } };
 }
 
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
@@ -152,7 +168,7 @@ export class BusinessDocumentsService {
   async list(merchantId: string, storeId: string, query: ListBusinessDocumentsQueryDto) {
     await this.ownedStore(merchantId, storeId);
     const rows = await this.prisma.businessDocument.findMany({
-      where: { storeId, ...(query.kind && { kind: query.kind }), ...(query.status && { status: query.status }), ...(query.state && cobroStateWhere(query.state, new Date())) },
+      where: { storeId, ...(query.kind && { kind: query.kind }), ...(query.status && { status: query.status }), ...(query.state && (query.kind === "PROPOSAL" ? proposalStateWhere : cobroStateWhere)(query.state, new Date())) },
       include: { items: { orderBy: { position: "asc" } }, events: { where: { type: { in: PAYMENT_EVENTS } }, select: { type: true, data: true } } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: query.limit ?? 100,
