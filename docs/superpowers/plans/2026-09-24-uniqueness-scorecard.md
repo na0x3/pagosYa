@@ -218,7 +218,7 @@ it('counts motion hooks in authored files only', () => {
     { path: 'components/home.tsx', content: '<Parallax><Reveal/></Parallax><Marquee/>', encoding: 'utf8' },
     { path: 'motion.js', content: 'IntersectionObserver animate(', encoding: 'utf8' },
     { path: '_compiled/home.js', content: 'Parallax Reveal', encoding: 'utf8' },
-  ])).toBe(9);
+  ])).toBe(7);
 });
 
 it('reads an exported site folder, binaries as base64', async () => {

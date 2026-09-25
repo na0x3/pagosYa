@@ -8,7 +8,7 @@ const origin = 'https://preview.invalid';
 const mime: Record<string, string> = { mp4: 'video/mp4', html: 'text/html', css: 'text/css', js: 'text/javascript', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', woff2: 'font/woff2', ttf: 'font/ttf' };
 
 /** Shared offline renderer: only snapshot bytes, never external APIs or URLs. */
-async function withVisualSandbox<T>(snapshot: SourceProjectSnapshot, query: string, signal: AbortSignal | undefined, probe: boolean, visit: (context: BrowserContext) => Promise<T>): Promise<T> {
+export async function withVisualSandbox<T>(snapshot: SourceProjectSnapshot, query: string, signal: AbortSignal | undefined, probe: boolean, visit: (context: BrowserContext) => Promise<T>): Promise<T> {
   signal?.throwIfAborted();
   const files = new Map(snapshot.files.map(f => [f.path, f]));
   const browser = await chromium.launch({ headless: true, chromiumSandbox: true, timeout: 15000 });
