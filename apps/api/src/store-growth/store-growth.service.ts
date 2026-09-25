@@ -2,6 +2,17 @@ import { StoreFunnelService } from './store-funnel.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { StoreAnalyticsService } from '../store-analytics/store-analytics.service';
+import { storePolicies } from '../stores/store-presentation';
+import { buildGrowthInsights, selectInsights } from './growth-insights';
+import { buildGrowthOverview, growthPeriods } from './growth-overview';
+
+export const GROWTH_PERIODS = [7, 30, 90] as const;
+export type GrowthPeriodDays = typeof GROWTH_PERIODS[number];
+export type InsightAction = 'dismiss' | 'snooze' | 'restore';
+const SNOOZE_MS = 7 * 86_400_000;
+/** Growth reads the whole catalog, bounded like the Store Brain. */
+const GROWTH_PRODUCTS = 500;
 
 export type GrowthOrder = { amount: number; currency: string; partnerId: string | null; partnerCommissionBps: number | null; items: unknown; paymentIntent: { status: string; transactions: { amount: number }[] } };
 export function summarizeGrowth(orders: GrowthOrder[]) {
@@ -35,7 +46,7 @@ export function summarizeGrowth(orders: GrowthOrder[]) {
 
 @Injectable()
 export class StoreGrowthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly analytics: StoreAnalyticsService) {}
   async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, slug: true, contactFormEnabled: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
@@ -94,5 +105,92 @@ export class StoreGrowthService {
     const funnel = await new StoreFunnelService(this.prisma).summary(storeId, since);
     if (funnel.matureCartAdds >= 20 && funnel.cartWithoutCheckout / funnel.matureCartAdds >= .5) suggestions.unshift({ id: 'cart-funnel', title: 'Revisa el paso del pedido al checkout', evidence: `${funnel.cartWithoutCheckout} de ${funnel.matureCartAdds} sesiones que añadieron productos no iniciaron checkout. Solo incluye sesiones con más de 24 horas; es una señal para investigar, no una causa confirmada.`, action: 'Probar el recorrido', view: 'workspace' });
     return { funnel, since: since.toISOString(), until: new Date().toISOString(), truncated, ...summary, suggestions };
+  }
+
+  /**
+   * G2 "Crecimiento": this period and the previous one from the G1 rollups (every product), orders of both, the catalog,
+   * leads and the device split, run through the insights engine. Ownership is checked before anything is read.
+   */
+  async overview(merchantId: string, storeId: string, days: GrowthPeriodDays, now = new Date()) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: {
+      id: true, name: true, checkoutMode: true, status: true, sourcePublicationPaused: true, publicVisibility: true,
+      publishedSourceRevision: true, websitePublishedRevision: true, policies: true, merchant: { select: { status: true } },
+    } });
+    if (!store) throw new NotFoundException('Tienda no encontrada');
+    const period = growthPeriods(now, days);
+    const [current, previous, orders, catalog, paidEver, unread, oldestUnread, leadsInPeriod, devices, states] = await Promise.all([
+      this.analytics.report(merchantId, storeId, { from: period.from, to: period.to }, { productLimit: GROWTH_PRODUCTS }),
+      this.analytics.report(merchantId, storeId, { from: period.previousFrom, to: period.previousTo }, { productLimit: GROWTH_PRODUCTS }),
+      this.prisma.storeOrder.findMany({
+        where: { merchantId, storeId, createdAt: { gte: period.previousStart, lt: period.end }, paymentIntent: { livemode: true } }, orderBy: { createdAt: 'desc' }, take: 10001,
+        select: { createdAt: true, amount: true, currency: true, items: true, paymentIntent: { select: { status: true, transactions: { where: { type: 'REFUND', status: 'SUCCEEDED' }, select: { amount: true } } } } },
+      }),
+      this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, orderBy: { createdAt: 'desc' }, take: GROWTH_PRODUCTS,
+        select: { id: true, name: true, description: true, amount: true, currency: true, stock: true, imageUrls: true, createdAt: true } }),
+      this.prisma.storeOrder.count({ where: { merchantId, storeId, paymentIntent: { status: 'SUCCEEDED', livemode: true } } }),
+      this.prisma.storeLead.count({ where: { merchantId, storeId, status: 'NEW' } }),
+      this.prisma.storeLead.findFirst({ where: { merchantId, storeId, status: 'NEW' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+      this.prisma.storeLead.count({ where: { merchantId, storeId, createdAt: { gte: period.start, lt: period.end } } }),
+      this.deviceConversion(storeId, period.start, period.end),
+      this.prisma.storeGrowthInsightState.findMany({ where: { storeId }, select: { insightId: true, status: true, until: true } }),
+    ]);
+    const products = catalog.map(product => ({
+      id: product.id, name: product.name, stock: product.stock, photos: product.imageUrls.length, amount: product.amount, currency: product.currency, createdAt: product.createdAt,
+      // The Store Brain's rule: an empty description or one that only repeats the name is not a description.
+      hasDescription: Boolean(product.description?.trim() && product.description.trim() !== product.name.trim()),
+    }));
+    const mode = store.checkoutMode;
+    const { unitsSold, paidOrders, ...view } = buildGrowthOverview({ days, mode, period, current, previous, orders: orders.slice(0, 10000), products, devices });
+    const policies = storePolicies(store.policies);
+    const flags = {
+      published: Boolean(store.publishedSourceRevision || store.websitePublishedRevision), paused: store.sourcePublicationPaused,
+      hidden: !store.publicVisibility || store.status !== 'ACTIVE', verified: store.merchant.status === 'ACTIVE',
+    };
+    const all = buildGrowthInsights({
+      days, mode, storeName: store.name, store: { ...flags, policies: { returns: Boolean(policies.returns), delivery: Boolean(policies.delivery) } },
+      report: current, previousReport: previous, products, unitsSold, paidEver,
+      leads: { unread, oldestUnreadAt: oldestUnread?.createdAt ?? null, inPeriod: leadsInPeriod }, devices, periodStart: period.start, now,
+    });
+    return {
+      period: { days, from: period.from, to: period.to, previousFrom: period.previousFrom, previousTo: period.previousTo },
+      checkoutMode: mode, store: { name: store.name, ...flags }, paidOrders, truncated: orders.length > 10000,
+      ...view, ...selectInsights(all, states, now),
+      freshness: 'Las visitas y los clics se actualizan cada 15 minutos y solo cuentan a quienes aceptaron la analítica.',
+    };
+  }
+
+  /**
+   * Visit and add-to-cart sessions per device. The rollups keep the device for page views only, so this reads the raw
+   * events of one store over at most 90 days through the (storeId, createdAt) index; only counts leave the query.
+   */
+  private async deviceConversion(storeId: string, start: Date, end: Date) {
+    return this.prisma.$queryRaw<{ device: string; sessions: number; addSessions: number }[]>`
+      SELECT "device",
+             COUNT(DISTINCT "sessionHash") FILTER (WHERE "type" = 'page_view')::int AS "sessions",
+             COUNT(DISTINCT "sessionHash") FILTER (WHERE "type" = 'add_to_cart')::int AS "addSessions"
+      FROM "StoreAnalyticsEvent"
+      WHERE "storeId" = ${storeId}
+        AND "createdAt" >= (${start.toISOString()}::timestamptz AT TIME ZONE 'UTC')
+        AND "createdAt" < (${end.toISOString()}::timestamptz AT TIME ZONE 'UTC')
+      GROUP BY "device"`;
+  }
+
+  /** "Ocultar" hides an insight for good, "Recordar en 7 días" until then, "restore" shows it again. */
+  async setInsightState(merchantId: string, storeId: string, insightId: string, action: InsightAction, now = new Date()) {
+    await this.owner(merchantId, storeId);
+    if (action === 'restore') {
+      await this.prisma.storeGrowthInsightState.deleteMany({ where: { storeId, insightId } });
+      return { insightId, status: 'active', until: null };
+    }
+    const state = action === 'dismiss' ? { status: 'dismissed', until: null } : { status: 'snoozed', until: new Date(now.getTime() + SNOOZE_MS) };
+    await this.prisma.storeGrowthInsightState.upsert({ where: { storeId_insightId: { storeId, insightId } }, create: { storeId, insightId, ...state }, update: state });
+    return { insightId, ...state };
+  }
+
+  /** "Mostrar ocultas": every dismissed or snoozed insight of this store shows again. */
+  async restoreInsights(merchantId: string, storeId: string) {
+    await this.owner(merchantId, storeId);
+    const { count } = await this.prisma.storeGrowthInsightState.deleteMany({ where: { storeId } });
+    return { restored: count };
   }
 }
