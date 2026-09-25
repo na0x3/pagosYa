@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StoreAnalyticsService } from './store-analytics.service';
 
 const SESSION = '3b241101-e2bb-4255-8caf-4136c566a962';
@@ -54,5 +54,30 @@ describe('StoreAnalyticsService.ingest', () => {
     await expect(service.ingest('shop', { sessionId: SESSION, events: [{ type: 'payment_completed' }] })).resolves.toEqual({ accepted: 0 });
     expect(prisma.storeAnalyticsEvent.createMany).not.toHaveBeenCalled();
     expect(prisma.paymentLink.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('StoreAnalyticsService.report range checks', () => {
+  const service = () => {
+    const prisma = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's1' }) }, storeAnalyticsDaily: { findMany: jest.fn().mockResolvedValue([]) }, paymentLink: { findMany: jest.fn() } };
+    return { prisma, service: new StoreAnalyticsService(prisma as never) };
+  };
+
+  it.each([
+    ['a range of centuries', { from: '0001-01-01', to: '2026-01-01' }],
+    ['a far-future end', { to: '9999-12-31' }],
+    ['a far-future range', { from: '9999-12-01', to: '9999-12-31' }],
+  ])('refuses %s arithmetically, before building any day (400 fast)', async (_name, query) => {
+    const { prisma, service: analytics } = service();
+    const started = Date.now();
+    await expect(analytics.report('m1', 's1', query)).rejects.toThrow(BadRequestException);
+    expect(Date.now() - started).toBeLessThan(50);
+    expect(prisma.storeAnalyticsDaily.findMany).not.toHaveBeenCalled();
+  });
+
+  it('accepts exactly 400 days and refuses 401', async () => {
+    const { service: analytics } = service();
+    await expect(analytics.report('m1', 's1', { from: '2025-01-01', to: '2026-02-04' })).resolves.toMatchObject({ from: '2025-01-01', to: '2026-02-04' });
+    await expect(analytics.report('m1', 's1', { from: '2025-01-01', to: '2026-02-05' })).rejects.toThrow(BadRequestException);
   });
 });

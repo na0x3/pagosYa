@@ -8,9 +8,17 @@ export const boliviaDay = (at: Date): string => new Date(at.getTime() - OFFSET_M
 export const addDays = (day: string, days: number): string => new Date(Date.parse(`${day}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 /** The UTC instant a Bolivia day starts (04:00Z). */
 export const boliviaDayStart = (day: string): Date => new Date(Date.parse(`${day}T00:00:00Z`) + OFFSET_MS);
-/** Every day from `from` to `to`, both included. */
+/**
+ * How many days `from`..`to` spans, both included (≤ 0 when `from` is after `to`), by arithmetic: callers must check a
+ * range with this before listing it. Comparing the strings is not enough: past year 9999 `toISOString` writes
+ * `+010000-01-01`, which sorts before `9999-12-31`.
+ */
+export const dayCount = (from: string, to: string): number => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1;
+/** The most days any list may hold: a report is at most 400 days; this only stops a caller that skipped the check. */
+const MAX_LISTED_DAYS = 1000;
+/** Every day from `from` to `to`, both included, counted by index (never by comparing day strings). */
 export function daysBetween(from: string, to: string): string[] {
-  const days: string[] = [];
-  for (let day = from; day <= to; day = addDays(day, 1)) days.push(day);
-  return days;
+  const count = dayCount(from, to);
+  if (!(count <= MAX_LISTED_DAYS)) throw new RangeError(`A day range may hold at most ${MAX_LISTED_DAYS} days`);
+  return Array.from({ length: Math.max(0, count) }, (_, index) => addDays(from, index));
 }

@@ -5,7 +5,8 @@ import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { StoreAnalyticsService } from './store-analytics.service';
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** YYYY-MM-DD in 2020–2100: no report reaches outside those years, and far-off years never reach date arithmetic. */
+const DAY = /^(?:20[2-9]\d|2100)-\d{2}-\d{2}$/;
 class AnalyticsQuery {
   @IsOptional() @Matches(DAY) from?: string;
   @IsOptional() @Matches(DAY) to?: string;

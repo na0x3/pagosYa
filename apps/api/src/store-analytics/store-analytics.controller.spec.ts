@@ -70,6 +70,10 @@ describe('GET v1/stores/:storeId/analytics', () => {
     ['a malformed date', '?from=yesterday'],
     ['an hourly granularity', '?granularity=hour'],
     ['an unknown parameter', '?limit=5'],
+    ['a year before 2020', '?from=2019-12-01&to=2019-12-31'],
+    ['a year after 2100', '?from=2101-01-01&to=2101-01-02'],
+    ['the probe\'s far-future end (no default start is iterated)', '?to=9999-12-31'],
+    ['the probe\'s whole calendar', '?from=0001-01-01&to=9999-12-31'],
   ])('refuses %s', async (_name, query) => {
     await request(app.getHttpServer()).get(`/v1/stores/s1/analytics${query}`).expect(400);
     expect(findMany).not.toHaveBeenCalled();

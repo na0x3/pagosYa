@@ -2,13 +2,16 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
-import { addDays, boliviaDay, boliviaDayStart, daysBetween } from './store-analytics-days';
+import { addDays, boliviaDay, boliviaDayStart, dayCount } from './store-analytics-days';
 import { buildAnalyticsReport } from './store-analytics-report';
 import { ANALYTICS_RETENTION_MONTHS } from './store-analytics.constants';
 
 export type IngestContext = { userAgent?: string; gpc?: boolean };
 const PRUNE_BATCH = 5000;
 const MAX_REPORT_DAYS = 400;
+/** Report days are real calendar days in these years (the query DTO pins the same bounds). */
+const FIRST_YEAR = 2020;
+const LAST_YEAR = 2100;
 
 /** G1: consented storefront events in, daily rollups out. The funnel (StoreFunnelService) stays as it is. */
 @Injectable()
@@ -80,12 +83,20 @@ export class StoreAnalyticsService {
   async report(merchantId: string, storeId: string, query: { from?: string; to?: string } = {}) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
-    const valid = (day?: string) => { if (!day) return true; const at = Date.parse(`${day}T00:00:00Z`); return !Number.isNaN(at) && new Date(at).toISOString().slice(0, 10) === day; };
-    if (!valid(query.from) || !valid(query.to)) throw new BadRequestException('Usa fechas reales con el formato AAAA-MM-DD');
+    const valid = (day?: string) => {
+      if (!day) return true;
+      const at = Date.parse(`${day}T00:00:00Z`);
+      if (Number.isNaN(at) || new Date(at).toISOString().slice(0, 10) !== day) return false;
+      const year = Number(day.slice(0, 4));
+      return year >= FIRST_YEAR && year <= LAST_YEAR;
+    };
+    if (!valid(query.from) || !valid(query.to)) throw new BadRequestException(`Usa fechas reales entre ${FIRST_YEAR} y ${LAST_YEAR} con el formato AAAA-MM-DD`);
     const to = query.to || boliviaDay(new Date());
     const from = query.from || addDays(to, -29);
-    if (from > to) throw new BadRequestException('La fecha inicial debe ser anterior a la final');
-    if (daysBetween(from, to).length > MAX_REPORT_DAYS) throw new BadRequestException(`Elige un rango de hasta ${MAX_REPORT_DAYS} días`);
+    // Arithmetic, before any day is listed: a long or far-future range never iterates.
+    const days = dayCount(from, to);
+    if (days < 1) throw new BadRequestException('La fecha inicial debe ser anterior a la final');
+    if (days > MAX_REPORT_DAYS) throw new BadRequestException(`Elige un rango de hasta ${MAX_REPORT_DAYS} días`);
     const rows = await this.prisma.storeAnalyticsDaily.findMany({
       where: { storeId, day: { gte: new Date(`${from}T00:00:00Z`), lte: new Date(`${to}T00:00:00Z`) } },
       select: { day: true, type: true, productId: true, target: true, count: true, uniqueSessions: true },
