@@ -89,6 +89,7 @@ motion and, where it fits, a motif from the DNA:
 | Buttons everywhere | add, quantity, remove, checkout, pay |
 | Product cards before opening | one static photo today. Owner requirement (2026-09-24): YAPI chooses per store how a card previews the product, e.g. a second photo on hover, a quick-look, variant swatches that swap the photo, a motif reacting. Touch devices get an equivalent (tap or swipe), never a hover-only feature. |
 | Order confirmation | payment result and Comeback card (`apps/checkout/src/checkout/payment-result.ts`) |
+| Privacy and cookie dialog | platform-owned legal control in the platform's monospace style on every store; keeps its behavior and choices, takes the store's type, color and shape |
 
 The uniqueness scorecard (sub-project 8) measures each of these surfaces
 separately, not just the homepage.
