@@ -1,5 +1,5 @@
 import { SourceConversationFailure } from './source-conversation-failure';
-import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER } from './source-chat.service';
+import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { BadGatewayException } from '@nestjs/common';
@@ -569,4 +569,22 @@ it('keeps the applied template when the adaptation fails, and says so plainly', 
   expect(messages.at(-1).metadata.sourceRevision).toBe(1);
   expect(messages.at(-1).content).toContain('Tu tienda ya tiene la plantilla Tostado');
   expect(messages.at(-1).content).not.toContain('position 12');
+});
+
+it('reworks a template-based store when the merchant asks for a more unique look, as a paid edit', async () => {
+  const { service, projects, dialogue, generation } = setup();
+  projects.version.mockResolvedValue({ snapshot: { brief: { businessType: 'Café', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Plantilla', sitePurpose: 'shop', templateId: 'tostado' } } });
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'Rediseña', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
+  await service.send('m', 's', { ...request, instruction: 'Hazla más única' });
+  const [, , dto, , , , execution] = generation.generate.mock.calls[0];
+  expect(dto.instruction).toContain(TEMPLATE_REWORK_BRIEF);
+  expect(dto.brief.templateId).toBe('tostado');
+  expect(execution?.free).toBeUndefined();
+});
+
+it('treats a rework request on a store without a template as an ordinary edit', async () => {
+  const { service, dialogue, generation } = setup();
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
+  await service.send('m', 's', { ...request, instruction: 'Hazla más única' });
+  expect(generation.generate.mock.calls[0][2].instruction).not.toContain(TEMPLATE_REWORK_BRIEF);
 });
