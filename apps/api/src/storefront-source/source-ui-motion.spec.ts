@@ -16,7 +16,7 @@ const bundles = new Map<string, Promise<string>>();
 
 function bundle(jsx: string): Promise<string> {
   if (!bundles.has(jsx)) bundles.set(jsx, build({
-    stdin: { contents: `import { createRoot } from 'react-dom/client'; import { flushSync } from 'react-dom'; import * as UI from ${JSON.stringify(kitPath('ui.tsx'))};\nconst { EntranceGroup, Reveal, PageEntrance, BrandEntrance, Parallax, SiteHeader } = UI;\nflushSync(() => createRoot(document.getElementById('root')!).render(<>${jsx}</>));`, sourcefile: 'entry.tsx', resolveDir: __dirname, loader: 'tsx' },
+    stdin: { contents: `import { createRoot } from 'react-dom/client'; import { flushSync } from 'react-dom'; import * as UI from ${JSON.stringify(kitPath('ui.tsx'))};\nconst { EntranceGroup, Reveal, PageEntrance, BrandEntrance, SignatureStrokeEntrance, Parallax, SiteHeader } = UI;\nflushSync(() => createRoot(document.getElementById('root')!).render(<>${jsx}</>));`, sourcefile: 'entry.tsx', resolveDir: __dirname, loader: 'tsx' },
     bundle: true, write: false, platform: 'browser', format: 'iife', target: 'es2022', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent',
     plugins: [{ name: 'deps', setup(builder) { builder.onResolve({ filter: /^(react|react-dom|react\/jsx-runtime|react-dom\/client|motion\/react|lenis)$/ }, args => ({ path: require.resolve(args.path) })); } }],
   }).then(result => result.outputFiles[0].text));
@@ -77,25 +77,16 @@ describe('@pagosya/ui motion personality', () => {
     expect(calls.map(c => c.options.delay)).toEqual([0, 40]);
   });
 
-  it('keeps today\'s entrance lengths without a personality: PageEntrance 900ms, BrandEntrance 1000ms', async () => {
-    expect((await run('<PageEntrance variant="curtain" />')).calls.map(c => c.options.duration)).toEqual([900]);
-    expect(new Set((await run('<BrandEntrance name="Marca" />')).calls.map(c => c.options.duration))).toEqual(new Set([1000]));
+  it.each(PERSONALITIES)('%s: the full-screen openings are retired: no veil, no store name over the page, nothing animates', async personality => {
+    const { calls, html } = await run('<BrandEntrance name="Marca" duration={1000} /><PageEntrance variant="wordmark" mark="Marca" /><PageEntrance variant="curtain" /><SignatureStrokeEntrance />', { personality });
+    expect(calls).toEqual([]);
+    expect(html).toBe('<div id="root"></div>');
   });
 
-  it.each(PERSONALITIES)('%s: the opening stays within 1000ms (EntranceGroup and entrances)', async personality => {
-    const { calls } = await run(`${group(12, ' delay={600}')}<BrandEntrance name="Marca" />`, { personality });
-    const entrance = calls.filter(c => c.id.startsWith('g'));
-    expect(entrance).toHaveLength(12);
-    expect(Math.max(...entrance.map(c => Number(c.options.delay) + Number(c.options.duration)))).toBeLessThan(1000);
-    const brand = calls.filter(c => !c.id.startsWith('g')).map(c => Number(c.options.duration));
-    expect(brand.length).toBeGreaterThan(0);
-    for (const ms of brand) { expect(ms).toBeGreaterThanOrEqual(700); expect(ms).toBeLessThanOrEqual(1000); }
-  });
-
-  it('without an author duration the entrance takes the personality\'s slow token, bounded to 700-1000ms', async () => {
-    const lengths = await Promise.all(PERSONALITIES.map(async personality => [personality, [...new Set((await run('<BrandEntrance name="Marca" />', { personality })).calls.map(c => c.options.duration))]]));
-    expect(Object.fromEntries(lengths)).toEqual({ calm: [700], snappy: [700], playful: [700], cinematic: [900] });
-    expect((await run('<BrandEntrance name="Marca" duration={1100} />', { personality: 'snappy' })).calls.map(c => c.options.duration)).toContain(1100);
+  it.each(PERSONALITIES)('%s: the hero copy entrance stays within 1000ms', async personality => {
+    const { calls } = await run(group(12, ' delay={600}'), { personality });
+    expect(calls).toHaveLength(12);
+    expect(Math.max(...calls.map(c => Number(c.options.delay) + Number(c.options.duration)))).toBeLessThan(1000);
   });
   it('multiplies the parallax strength by the personality (cinematic ×1.3), and keeps it without one', async () => {
     expect((await run('<Parallax strength={60}><img alt="" /></Parallax>')).html).toContain('translateY(60px)');
@@ -121,9 +112,9 @@ describe('reduced motion and motion off stop every personality in @pagosya/ui', 
     expect((await run(everything, { personality, motion: 'off', after: openMenu })).calls).toEqual([]);
     expect((await run(everything, { personality, after: openMenu })).calls.length).toBeGreaterThan(0);
   });
-  it('the CSS scroll reveals and entrances stay gated on reduced motion and motion off', () => {
+  it('the CSS scroll reveals stay gated on reduced motion and motion off', () => {
     const css = ui.match(/const UI_CSS = `([\s\S]*?)\n`;/)![1];
     expect(css).toContain('@media (prefers-reduced-motion:no-preference){\n    :root:not([data-ui-motion=off]) .ui-reveal{animation:ui-reveal');
-    expect(css).toMatch(/@media \(prefers-reduced-motion:reduce\)\{[^\n]*\.ui-entrance\{display:none\}/);
+    expect(css).not.toMatch(/\.ui-entrance[{_ ]/);
   });
 });

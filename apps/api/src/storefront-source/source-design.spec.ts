@@ -53,7 +53,7 @@ it('persists a coherent story and bounded choreography for newly planned concept
   }
   const checked = validateSourceDesign(value, 1, true, true);
   expect(checked.concepts[1]).toMatchObject({ story: { primaryAction: 'Ver menú' }, motion: { scrollFeel: 'soft', scenes: expect.any(Array) } });
-  expect(checked.concepts[1].motion).toMatchObject({ mode: 'expressive', entrance: 'wordmark', scenes: [{ intensity: 2 }, { intensity: 2 }] });
+  expect(checked.concepts[1].motion).toMatchObject({ mode: 'expressive', entrance: 'none', scenes: [{ intensity: 2 }, { intensity: 2 }] });
   value.concepts[1].story.beats.reverse();
   expect(() => validateSourceDesign(value, 1, true, true)).toThrow('story.beats');
   value.concepts[1].story.beats.reverse(); value.concepts[1].motion.scenes.push({ section: 'menu', kind: 'sequence', intensity: 1 });

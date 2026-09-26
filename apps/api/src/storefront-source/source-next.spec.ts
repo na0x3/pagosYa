@@ -80,13 +80,13 @@ describe('Next.js storefront compilation', () => {
     files[1].content = files[1].content.replace('<h1 className="text-3xl font-bold">Nuestra carta</h1>', '<p>Nuestra carta</p>');
     expect(() => validateNextSources(files)).toThrow('home necesita un encabezado principal h1 visible');
   });
-  it('keeps the trusted page entrance outside the committed content-section count', () => {
+  it('compiles a store that still mounts a retired entrance, which renders nothing', () => {
     const files = nextStoreFiles();
     files[1].content = files[1].content
       .replace("import Header from './Header';", "import Header from './Header'; import { SignatureStrokeEntrance } from '@pagosya/ui';")
       .replace('<main>', '<main><SignatureStrokeEntrance/>');
     const design: any = { selected: 0, concepts: [{ layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true } }] };
-    expect(nextPageMarkup(files, 'home')).toContain('ui-entrance');
+    expect(nextPageMarkup(files, 'home')).not.toContain('ui-entrance');
     expect(() => validateNextDesign(files, design)).not.toThrow();
   });
   it('compiles Motion and Lottie and preserves animated semantic layout and portable assets', async () => {

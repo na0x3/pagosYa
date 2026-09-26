@@ -14,7 +14,8 @@ export type SourceDesignLayout = { sections: string[]; catalogSection: string; s
 export const SOURCE_STORY_ROLES = ['opening', 'proof', 'offer', 'difference', 'trust', 'action'] as const;
 export const SOURCE_STORY_MEDIA = ['none', 'hero', 'product', 'editorial'] as const;
 export const SOURCE_SCENE_KINDS = ['sequence', 'parallax-stack', 'text-fill', 'scrub-media'] as const;
-export const SOURCE_ENTRANCE_KINDS = ['none', 'stroke', 'letter', 'curtain', 'wordmark'] as const;
+/** Full-screen openings are retired (owner, 2026-09-25): a store opens straight onto its page. */
+export const SOURCE_ENTRANCE_KINDS = ['none'] as const;
 export type SourceStoryPlan = {
   promise: string; eyebrow: string; headline: string; support: string; primaryAction: string;
   beats: Array<{ section: string; role: typeof SOURCE_STORY_ROLES[number]; headline: string; media: typeof SOURCE_STORY_MEDIA[number] }>;
@@ -112,11 +113,11 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       // reproduces the same slip, so the merchant pays the full wait for nothing.
       const offerRole = (beat: any) => beat === offerBeat && !['offer', 'proof'].includes(beat.role) ? 'offer' : beat.role;
       const scenes = choreography.scenes;
-      if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel) || !SOURCE_ENTRANCE_KINDS.includes(choreography.entrance)
+      if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel)
         || !Array.isArray(scenes) || scenes.length > 2 || scenes.some((scene: any) => !result.layout!.sections.includes(scene?.section) || !SOURCE_SCENE_KINDS.includes(scene?.kind) || ![1, 2, 3].includes(scene?.intensity))
-        || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa entrada válida y hasta dos escenas en sections distintas.`);
+        || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa hasta dos escenas en sections distintas.`);
       result.story = { promise: story.promise.trim(), eyebrow: eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: beat.headline.trim(), media: beat.media })) };
-      result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: choreography.entrance, scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
+      result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: 'none', scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
     }
     // Planned concepts always carry a DNA; saved ones only when they already had it, so old revisions stay byte-equal.
     if (requireLayout || concept.dna !== undefined) {
@@ -155,7 +156,7 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       usedSections.add(section);
       usedKinds.add(kind);
     }
-    chosen.motion = { ...motion, mode: 'expressive', scrollFeel: motion.scrollFeel === 'native' ? 'soft' : motion.scrollFeel, entrance: 'wordmark', scenes };
+    chosen.motion = { ...motion, mode: 'expressive', scrollFeel: motion.scrollFeel === 'native' ? 'soft' : motion.scrollFeel, entrance: 'none', scenes };
   }
   const metadata = value.selection;
   const selection = metadata && ['planner', 'forced'].includes(metadata.source)
@@ -313,7 +314,7 @@ Before returning files, review the implementation against the selected concept: 
 /** Stock patterns that make stores look alike; the concept may still argue for one. */
 export const SOURCE_STOCK_PATTERNS = 'Avoid these stock patterns unless the concept argues for one: an uppercase eyebrow above every heading; a centred hero with two buttons; three icon-and-text columns; a generic "Why choose us" block; a testimonial carousel without real reviews.';
 
-export const SOURCE_STORY_MOTION_CONTRACT = `For each concept, commit to story and motion objects before writing code. story turns the page into one coherent argument: a short promise; an optional eyebrow (leave it empty unless the concept argues for a small label), a headline of roughly 3–9 words, one or two supporting sentences and one primary action; then one beat for every layout section in the same order. Each beat states its role, truthful headline and media role. The catalog/principal-content beat must prove or present the offer. Do not repeat the opening headline in later beats or invent claims. motion names the saved choreography: subtle or expressive, native/soft/cinematic scroll feel, one clear branded entrance and up to two section scenes. The selected concept should feel bold: reveal the actual merchant wordmark before the page, then use two different purposeful scene types across different story sections when the layout has at least two sections. A conventional text column beside one static image is not a signature opening; compose scale, cropping, layers and motion into a recognizable first scene. Use scrub-media only with an approved local poster/video and always keep a static mobile/reduced-motion reading order. Use parallax-stack only for approved imagery. Keep motion off commerce controls, forms and long body copy.
+export const SOURCE_STORY_MOTION_CONTRACT = `For each concept, commit to story and motion objects before writing code. story turns the page into one coherent argument: a short promise; an optional eyebrow (leave it empty unless the concept argues for a small label), a headline of roughly 3–9 words, one or two supporting sentences and one primary action; then one beat for every layout section in the same order. Each beat states its role, truthful headline and media role. The catalog/principal-content beat must prove or present the offer. Do not repeat the opening headline in later beats or invent claims. motion names the saved choreography: subtle or expressive, native/soft/cinematic scroll feel, no full-screen entrance (entrance is always none) and up to two section scenes. The selected concept should feel bold: open straight onto the page, then use two different purposeful scene types across different story sections when the layout has at least two sections. A conventional text column beside one static image is not a signature opening; compose scale, cropping, layers and motion into a recognizable first scene. Use scrub-media only with an approved local poster/video and always keep a static mobile/reduced-motion reading order. Use parallax-stack only for approved imagery. Keep motion off commerce controls, forms and long body copy.
 ${SOURCE_STOCK_PATTERNS}`;
 
 /** Layout-only control arm for matched benchmarks. Production generation uses SOURCE_DESIGN_CONTRACT. */
