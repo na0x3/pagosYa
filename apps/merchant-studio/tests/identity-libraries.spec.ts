@@ -25,7 +25,7 @@ body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#fbf6ee;color:#2a1d1
 #catalogo{padding:0 clamp(16px,4vw,48px) 48px}[data-motif-divider]{margin-inline:clamp(16px,4vw,48px)}`;
 const html = `<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body>
 <header><strong>Huellitas</strong><button type="button" data-cart-open>Pedido <b data-cart-count>0</b></button></header>
-<main><section class="hero" data-motif-pattern><h1>Huellitas</h1><p>Snacks horneados para perros felices.</p><a class="cta" href="#catalogo">Ver snacks <span data-motif-icon></span></a><span class="badge" data-motif-sticker>¡Nuevo!</span></section>
+<main><section class="hero" data-motif-pattern><h1>Huellitas</h1><p>Snacks horneados para perros felices.</p><a class="cta" href="#catalogo">Ver snacks <span data-motif-icon></span></a><span class="badge" data-motif-sticker>¡Nuevo!</span><button type="button" class="menu-add" data-add="galleta">Comprar ahora</button></section>
 <div data-motif-divider></div><section id="catalogo"><h2>Snacks</h2><div data-pagosya-catalog></div></section></main>
 <div data-pagosya-cart hidden></div><p data-pagosya-status></p></body></html>`;
 const config = (dna: Record<string, string>) => 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'huellitas', data: { storeName: 'Huellitas', locations: [], categories: [], items: ITEMS },
@@ -54,6 +54,10 @@ for (const width of [1280, 390]) for (const [button, frame] of COMBOS) test(`${b
   await expect(shop.locator('.cta [data-motif-icon="placed"] svg')).toHaveCount(1);
   await expect(shop.locator('[data-motif-divider="placed"] .pagosya-motif')).toHaveCount(1);
   await expect(shop.locator('.badge .pagosya-motif')).toHaveCount(1);
+  // Finding 12: a real kit button visible on the home page itself (not just cart/product), so each button form's
+  // DNA styling (border, shape, case) actually shows in the home screenshot instead of two forms looking
+  // byte-identical.
+  await expect(shop.locator('.hero .menu-add')).toBeVisible();
   expect(await shop.locator('.pagosya-motif:not([aria-hidden="true"])').count()).toBe(0);
   expect(await shop.locator('html').evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await browserPage.screenshot({ path: `${SHOTS}/home-${button}-${frame}-${width}.png` });
@@ -65,6 +69,20 @@ for (const width of [1280, 390]) for (const [button, frame] of COMBOS) test(`${b
   await shop.locator('.menu-item .menu-item__details').first().click();
   await expect(shop.locator('.product-detail__buy [data-motif-icon="placed"] svg')).toBeVisible();
   await browserPage.screenshot({ path: `${SHOTS}/product-${button}-${frame}-${width}.png` });
+});
+
+test('the home screenshot actually differs between button forms sharing a frame (finding 12)', async ({ page: browserPage }) => {
+  // Before finding 12's fix the home page had no visible kit button, so home-brutal-stamp and home-ticket-stamp
+  // were byte-identical: the hero now carries a real .menu-add, so each form's border/shadow/case shows.
+  await browserPage.setViewportSize({ width: 1280, height: 900 });
+  await browserPage.emulateMedia({ reducedMotion: 'reduce' });
+  const ticket = await mount(browserPage, { button: 'ticket', frame: 'stamp' });
+  await expect(ticket.locator('.hero .menu-add')).toBeVisible();
+  const ticketShot = await browserPage.screenshot();
+  const brutal = await mount(browserPage, { button: 'brutal', frame: 'stamp' });
+  await expect(brutal.locator('.hero .menu-add')).toBeVisible();
+  const brutalShot = await browserPage.screenshot();
+  expect(ticketShot.equals(brutalShot)).toBe(false);
 });
 
 for (const width of [1280, 390]) test(`the empty cart draws the pack at ${width}px`, async ({ page: browserPage }) => {
