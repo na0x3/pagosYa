@@ -221,3 +221,4 @@ body.is-logged-in .store-settings-actions button { width: auto; min-width: max-c
 
   body.is-logged-in:not([data-dashboard-view="workspace"]):not([data-dashboard-view="products"]):not([data-dashboard-view="store-settings"]) .workspace-yapi { left:calc(50% + 24px); width:calc(100% - 72px); }
 }
+.store-templates-page .store-resource-frame { height: calc(100dvh - 170px); min-height: 620px; }

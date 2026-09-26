@@ -58,3 +58,5 @@
 .tpl-preview__loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:24px;text-align:center;color:#6a645b;background:#fbfaf7}
 .tpl-preview__loading[hidden]{display:none}
 @media (max-width:560px){.tpl-preview-title{flex-basis:100%;order:-1}.tpl-preview-bar .button--publish{flex:1}.tpl-width button{padding:0 10px}}
+.tpl-page{width:auto;max-height:none;margin:0;border-radius:0;box-shadow:none;background:transparent}
+.tpl-page .tpl-head,.tpl-page .tpl-preview-bar{background:var(--pg-bg,#fbfaf7)}

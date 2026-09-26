@@ -841,6 +841,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     integrations: ["Integraciones", "Conecta las herramientas que tu tienda necesita."],
     products: ["Productos", "Tu catálogo y YAPI: añade productos paso a paso."],
     media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
+    templates: ["Plantillas", "Elige una tienda completa y mírala con tus productos antes de usarla."],
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
@@ -884,7 +885,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     selectMarketingTab(button.dataset.marketingTab); syncStoreResourceViews("marketing");
   });
   function syncStoreResourceViews(view) {
-    for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
+    for (const [kind, id] of [["media", "storeMediaFrame"], ["templates", "storeTemplatesFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
       const frame = document.getElementById(id);
       if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
@@ -904,12 +905,18 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   });
   window.addEventListener("message", event => {
     if (event.origin !== location.origin) return;
-    const frame = ["storeMediaFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
+    const frame = ["storeMediaFrame", "storeTemplatesFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
     if (!frame || frame.dataset.storeId !== currentStoreId || event.data?.storeId !== currentStoreId) return;
     if (event.data.type === "pagosya:workspace" && ["marketing", "integrations", "experiments", "workspace"].includes(event.data.view)) {
       if (!canLeaveMerchantStudio()) return;
       if (event.data.view === "marketing" && ["program", "templates"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
       history.pushState(null, "", `#dashboard-${event.data.view}`); setDashboardView(event.data.view); return;
+    }
+    if (event.data.type === "pagosya:template-applied") {
+      // The design editor reloads on the new revision; the gallery reloads next time the tab opens.
+      const studio = document.getElementById("merchantStudioFrame"); studio.removeAttribute("src"); delete studio.dataset.storeId; delete studio.dataset.ready;
+      frame.removeAttribute("src"); delete frame.dataset.storeId;
+      history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); return;
     }
     if (event.data.type === "pagosya:source-publication-changed") { void refresh(); return; }
     if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(4000, Math.max(340, event.data.height))}px`;
@@ -923,6 +930,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }
   });
   function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
+    // Plantillas reads the store's current revision, which the design editor may have changed: reload it on entry.
+    if (view === "templates") { const templatesFrame = document.getElementById("storeTemplatesFrame"); templatesFrame.removeAttribute("src"); delete templatesFrame.dataset.storeId; }
     syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
     const views = ["workspace", "products", "charge-links", "payments", "compliance"];
