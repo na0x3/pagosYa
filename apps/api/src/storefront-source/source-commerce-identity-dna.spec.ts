@@ -142,4 +142,17 @@ describe('identity frames', () => {
     expect(facts.tape.image.match(/linear-gradient/g)).toHaveLength(4);
     expect(facts['tape-cart'].image.match(/linear-gradient/g)).toHaveLength(4);
   });
+
+  it('gives the stamp frame a pad that reads against a light palette (finding 6)', async () => {
+    const page = await open({ dna: { ...BASE, button: 'pill', frame: 'stamp' }, css: PALETTES.light, items: [{ ...ITEM, imageUrls: [PHOTO] }] });
+    try {
+      await page.waitForSelector('.menu-item .menu-item__image');
+      const facts = await page.$eval('.menu-item .menu-item__image', el => { const s = getComputedStyle(el); return { bg: s.backgroundColor, shadow: s.boxShadow }; });
+      const rgb = (value: string) => (value.match(/[\d.]+/g) || []).map(Number);
+      const pad = rgb(facts.bg), page_bg = rgb('rgb(255, 250, 240)');
+      const distance = pad.slice(0, 3).reduce((sum, value, i) => sum + Math.abs(value - page_bg[i]), 0);
+      expect(distance).toBeGreaterThan(10);
+      expect(facts.shadow).not.toBe('none');
+    } finally { await page.close(); }
+  });
 });

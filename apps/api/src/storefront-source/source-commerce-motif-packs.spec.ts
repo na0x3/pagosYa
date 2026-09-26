@@ -36,7 +36,7 @@ async function openShop(options: { pack?: unknown; css?: string; body?: string; 
   return page;
 }
 
-function boot(options: { pack?: unknown; motifs?: unknown; body?: string; query?: string; cart?: unknown[]; reduced?: boolean; settings?: Record<string, unknown> } = {}) {
+function boot(options: { pack?: unknown; motifs?: unknown; body?: string; query?: string; cart?: unknown[]; reduced?: boolean; settings?: Record<string, unknown>; items?: unknown[] } = {}) {
   const virtualConsole = new VirtualConsole();
   const dom = new JSDOM(`<html><head></head><body>${options.body ?? CATALOG}</body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole });
   const w = dom.window; opened.push(w);
@@ -47,7 +47,7 @@ function boot(options: { pack?: unknown; motifs?: unknown; body?: string; query?
   w.PAGOSYA_PREVIEW = true;
   w.PAGOSYA_PREVIEW_QUERY = options.query ?? '';
   if (options.cart) w.PAGOSYA_PREVIEW_CART = options.cart;
-  const data = { storeName: 'Huellitas', items: ITEMS, categories: [{ id: 'snacks', name: 'Snacks' }] };
+  const data = { storeName: 'Huellitas', items: options.items ?? ITEMS, categories: [{ id: 'snacks', name: 'Snacks' }] };
   w.PAGOSYA_CONFIG = { slug: 'huellitas', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, dna: { version: 1, motion: 'calm' },
     ...(options.pack !== undefined ? { motifPack: options.pack } : {}), ...(options.motifs !== undefined ? { motifs: options.motifs } : {}), ...options.settings };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
@@ -176,6 +176,32 @@ describe('the button placement and the data-motif-icon slot', () => {
     expect(shop.$$('.checkout-button:not(.product-detail__buy) .pagosya-motif')).toHaveLength(0);
   });
 
+  it('marks a store-provided slot inside a checkout or pay button as removed, not left unmarked forever (finding 3)', async () => {
+    const shop = boot({ pack: fixturePack(), body: CATALOG + '<button class="checkout-button" data-pay type="button">Pagar <span data-motif-icon></span></button>' });
+    await shop.tick();
+    const slot = shop.$('.checkout-button [data-motif-icon]');
+    expect(slot.getAttribute('data-motif-icon')).toBe('removed');
+    expect(slot.childNodes).toHaveLength(0);
+  });
+
+  it('never puts a paw on a sold-out card\'s disabled button (finding 8)', async () => {
+    const items = [{ ...ITEMS[0], stock: 0 }, ITEMS[1]];
+    const shop = boot({ pack: fixturePack(), items });
+    await shop.tick();
+    const [soldOutCard, liveCard] = shop.$$('.menu-item');
+    expect(soldOutCard.querySelector('.menu-add').disabled).toBe(true);
+    expect(soldOutCard.querySelector('.menu-add .pagosya-motif')).toBeNull();
+    expect(liveCard.querySelector('.menu-add .pagosya-motif')).not.toBeNull();
+  });
+
+  it('never decorates the sticky bar\'s button: its whole label is replaced by textContent on every update (finding 7)', async () => {
+    const shop = boot({ pack: fixturePack(), body: PRODUCT, query: '?id=galleta' });
+    await shop.tick();
+    const jump = shop.$('[data-product-jump]');
+    expect(jump).not.toBeNull();
+    expect(jump.querySelector('[data-motif-icon]')).toBeNull();
+  });
+
   it('fills a store\'s own slot, skips one inside a <template>, and fills one the store\'s scripts add later', async () => {
     const shop = boot({ pack: fixturePack(), body: CATALOG + '<a class="cta" href="#catalogo">Ver snacks <span data-motif-icon></span></a>' });
     expect(shop.$('.cta [data-motif-icon="placed"] .pagosya-motif')).not.toBeNull();
@@ -267,7 +293,8 @@ describe('the pattern placement', () => {
     expect(drawing).toContain('color="rgb(42,29,18)"');
     expect(drawing).toContain(`opacity="${alpha}"`);
     expect(drawing).not.toMatch(/<script|href/);
-    expect(shop.$('[data-pagosya-catalog]').getAttribute('data-motif-pattern')).toBe('');
+    // Finding 3: a permanently excluded section (it IS the catalog) is marked terminal, not left unmarked forever.
+    expect(shop.$('[data-pagosya-catalog]').getAttribute('data-motif-pattern')).toBe('skipped');
     expect(shop.$('[data-pagosya-catalog]').style.getPropertyValue('--pagosya-pattern')).toBe('');
   });
 
@@ -275,6 +302,18 @@ describe('the pattern placement', () => {
     expect(boot({ pack: fixturePack(['card']), body: HERO('background:#fff;color:#222') }).$('.hero').getAttribute('data-motif-pattern')).toBe('');
     const wrapped = boot({ pack: fixturePack(), body: '<section class="wrap" data-motif-pattern style="background:#fff;color:#222"><div data-pagosya-catalog></div></section><section data-pagosya-cart></section><p data-pagosya-status></p>' });
     expect(wrapped.$('.wrap').style.getPropertyValue('--pagosya-pattern')).toBe('');
+    // Finding 3: an excluded section is marked terminal, not left unmarked to be rescanned on every later mutation.
+    expect(wrapped.$('.wrap').getAttribute('data-motif-pattern')).toBe('skipped');
+  });
+
+  it('checks every text in a section, not just the first 40, and accounts for text alpha and ancestor opacity (finding 9)', () => {
+    // 42 strong-contrast texts, then one that only reads because a naive check ignores its own alpha: at full
+    // strength #2a1d12 reads fine on #fbf6ee, but at 12% alpha it is nearly invisible. It sits after the 40th
+    // text in DOM order, so a truncated check would never see it.
+    const many = Array.from({ length: 42 }, (_, i) => `<span>texto ${i}</span>`).join('');
+    const faint = '<p style="color:#2a1d12;opacity:.12">Casi invisible</p>';
+    const shop = boot({ pack: fixturePack(), body: HERO('background:#fbf6ee;color:#2a1d12', many + faint) });
+    expect(shop.$('.hero').getAttribute('data-motif-pattern')).toBe('skipped');
   });
 });
 
@@ -331,6 +370,9 @@ describe('the divider and sticker placements', () => {
     expect(shop.$('.said').textContent).toBe('Texto');
     expect(shop.$('.said .pagosya-motif')).toBeNull();
     expect(shop.$('hr').childNodes).toHaveLength(0);
+    // Finding 3: an unplaceable divider (content, or an <hr>) is marked terminal too, not left to be rescanned forever.
+    expect(shop.$('.said').getAttribute('data-motif-divider')).toBe('skipped');
+    expect(shop.$('hr').getAttribute('data-motif-divider')).toBe('skipped');
   });
 
   it('leads a sticker\'s own text with the drawing, once, hidden from assistive tech', async () => {
@@ -362,6 +404,106 @@ describe('the divider and sticker placements', () => {
       await page.waitForSelector('[data-motif-sticker="placed"]');
       await page.waitForTimeout(120);
       expect(await page.$$eval('[data-motif-sticker] .pagosya-motif', els => els.length)).toBe(0);
+    } finally { await page.close(); }
+  });
+
+  it('draws the sticker in the host\'s text colour when the accent nearly matches the badge\'s own background (finding 11, real browser)', async () => {
+    const css = ':root{--store-accent:#3a2a1a}';
+    const body = '<header><button data-cart-open>Pedido (<span data-cart-count>0</span>)</button></header><section data-pagosya-cart></section><p data-pagosya-status></p><span data-motif-sticker style="display:inline-block;background:#3a2a1a;color:#f5f0e6;padding:4px 8px">¡Nuevo!</span>';
+    const page = await openShop({ pack: fixturePack(), body, css });
+    try {
+      await page.waitForSelector('[data-motif-sticker="placed"] .pagosya-motif');
+      const colour = await page.$eval('[data-motif-sticker] .pagosya-motif', el => getComputedStyle(el).color);
+      expect(colour).toBe('rgb(245, 240, 230)');
+    } finally { await page.close(); }
+  });
+
+  it('keeps the accent colour on the sticker when it reads fine against the badge (finding 11 regression, real browser)', async () => {
+    const css = ':root{--store-accent:#b4441f}';
+    const body = '<header><button data-cart-open>Pedido (<span data-cart-count>0</span>)</button></header><section data-pagosya-cart></section><p data-pagosya-status></p><span data-motif-sticker style="display:inline-block;background:#ffffff;color:#111111;padding:4px 8px">¡Nuevo!</span>';
+    const page = await openShop({ pack: fixturePack(), body, css });
+    try {
+      await page.waitForSelector('[data-motif-sticker="placed"] .pagosya-motif');
+      const colour = await page.$eval('[data-motif-sticker] .pagosya-motif', el => getComputedStyle(el).color);
+      expect(colour).toBe('rgb(180, 68, 31)');
+    } finally { await page.close(); }
+  });
+});
+
+describe('the MutationObserver batches every match, not just the first (finding 2)', () => {
+  it('places two dividers added under different existing parents in one batch', async () => {
+    const shop = boot({ pack: fixturePack() });
+    await shop.tick();
+    const sectionA = shop.doc.createElement('section'); sectionA.className = 'sec-a';
+    const sectionB = shop.doc.createElement('section'); sectionB.className = 'sec-b';
+    shop.doc.body.append(sectionA, sectionB);
+    await shop.tick();
+    const hostA = shop.doc.createElement('div'); hostA.setAttribute('data-motif-divider', '');
+    const hostB = shop.doc.createElement('div'); hostB.setAttribute('data-motif-divider', '');
+    sectionA.append(hostA);
+    sectionB.append(hostB);
+    await shop.tick();
+    expect(hostA.getAttribute('data-motif-divider')).toBe('placed');
+    expect(hostB.getAttribute('data-motif-divider')).toBe('placed');
+  });
+
+  it('places two store-provided icon slots added under different existing parents in one batch', async () => {
+    const shop = boot({ pack: fixturePack() });
+    await shop.tick();
+    const p1 = shop.doc.createElement('div'); p1.className = 'p1';
+    const p2 = shop.doc.createElement('div'); p2.className = 'p2';
+    shop.doc.body.append(p1, p2);
+    await shop.tick();
+    const a1 = shop.doc.createElement('a'); a1.className = 'cta1'; a1.innerHTML = 'Ver <span data-motif-icon></span>';
+    const a2 = shop.doc.createElement('a'); a2.className = 'cta2'; a2.innerHTML = 'Ver <span data-motif-icon></span>';
+    p1.append(a1); p2.append(a2);
+    await shop.tick();
+    expect(shop.$('.cta1 [data-motif-icon="placed"] .pagosya-motif')).not.toBeNull();
+    expect(shop.$('.cta2 [data-motif-icon="placed"] .pagosya-motif')).not.toBeNull();
+  });
+});
+
+describe('unplaceable hosts never re-trigger a removed kit icon (finding 3, real browser)', () => {
+  it('never re-inserts a removed kit icon on an unrelated mutation elsewhere on the page', async () => {
+    const css = '[data-pagosya-catalog] .menu-add{display:inline-flex!important;align-items:center;justify-content:center;width:36px!important;height:36px!important;min-height:0!important;padding:0!important;overflow:hidden}';
+    const page = await openShop({ pack: fixturePack(), css, width: 390 });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.waitForTimeout(120);
+      expect(await page.$$eval('.menu-add .pagosya-motif', els => els.length)).toBe(0);
+      await page.evaluate(() => {
+        const div = document.createElement('div');
+        div.className = 'unrelated';
+        div.setAttribute('data-motif-divider', '');
+        div.textContent = 'ya tiene contenido';
+        document.body.append(div);
+      });
+      await page.waitForTimeout(150);
+      expect(await page.$$eval('.menu-add .pagosya-motif', els => els.length)).toBe(0);
+      expect(await page.$eval('.unrelated', el => el.getAttribute('data-motif-divider'))).toBe('skipped');
+    } finally { await page.close(); }
+  });
+});
+
+describe('motifRgb and patternBackdrop read what Chromium really reports (finding 10)', () => {
+  it('reads a color-mix() backdrop, which Chromium reports as color(srgb …)', async () => {
+    const style = 'background:color-mix(in srgb, #fbf6ee 80%, white);color:#2a1d12';
+    const page = await openShop({ pack: fixturePack(), body: HERO(style), width: 390 });
+    try {
+      const reported = await page.$eval('.hero', el => getComputedStyle(el).backgroundColor);
+      expect(reported).toMatch(/^color\(srgb/);
+      await page.waitForFunction(() => ['placed', 'skipped'].includes(document.querySelector('.hero')?.getAttribute('data-motif-pattern') || ''));
+      expect(await page.$eval('.hero', el => el.getAttribute('data-motif-pattern'))).toBe('placed');
+    } finally { await page.close(); }
+  });
+
+  it('resolves the real (dark) canvas instead of assuming white when nothing paints an opaque background', async () => {
+    const style = 'background:rgba(20,20,20,.4);color:#f2f2f2';
+    const css = ':root{color-scheme:dark}';
+    const page = await openShop({ pack: fixturePack(), body: HERO(style), css, width: 390 });
+    try {
+      await page.waitForFunction(() => ['placed', 'skipped'].includes(document.querySelector('.hero')?.getAttribute('data-motif-pattern') || ''));
+      expect(await page.$eval('.hero', el => el.getAttribute('data-motif-pattern'))).toBe('placed');
     } finally { await page.close(); }
   });
 });
