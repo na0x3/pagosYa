@@ -23,7 +23,7 @@ a{color:inherit}
 .hl-btn:hover{transform:translateY(-2px);box-shadow:0 8px 0 #d85f1a}
 .hl-hero{overflow-x:clip;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:clamp(24px,5vw,80px);padding:clamp(40px,6vw,96px) clamp(16px,4vw,56px);background:var(--hl-sand)}
 .hl-hero__media{position:relative}
-.hl-hero__media img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:44px}
+.hl-hero__frame{position:relative;aspect-ratio:1;overflow:hidden;border-radius:44px}.hl-hero__media img{width:100%;height:100%;object-fit:cover}
 .hl-paw{position:absolute;width:56px;height:56px;fill:var(--hl-orange)}
 .hl-paw--a{top:-18px;left:-10px;transform:rotate(-20deg)}
 .hl-paw--b{right:-14px;top:30%;fill:var(--hl-navy);transform:rotate(18deg)}
@@ -80,3 +80,6 @@ a{color:inherit}
   .hl-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.hl-btn,.hl-card,.hl-type img{transition:none}}
+
+/* Scroll drift: the photo sits taller than its frame; the paws float the other way. */
+.hl-drift{position:absolute;inset:-8% 0}.hl-drift>div{height:100%}.hl-paws{position:absolute;inset:0;pointer-events:none}.hl-paws>div{height:100%}

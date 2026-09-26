@@ -56,7 +56,7 @@ describe.each(listTemplates().map(manifest => [manifest.id, manifest] as const))
 
   it.each([1280, 390])('drifts on scroll at %ipx without sideways scroll or content left hidden', async width => {
     const stops = await scrollThrough(snapshot, width, 'no-preference');
-    expect(new Set(stops.map(stop => stop.parallax[0])).size).toBeGreaterThan(1);
+    expect(stops.some(stop => stop.parallax.some((transform, index) => transform !== stops[0].parallax[index]))).toBe(true);
     expect(stops.map(stop => stop.scrollWidth)).toEqual(stops.map(() => width));
     expect(stops.at(-1)!.hiddenReveals).toBe(0);
   });

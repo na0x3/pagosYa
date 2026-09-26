@@ -27,8 +27,8 @@ a{color:inherit}
 .ju-lead{margin:0 0 30px;max-width:34ch;color:var(--ju-muted);font-size:20px}
 .ju-btn{display:inline-flex;align-items:center;min-height:58px;padding:0 34px;border:3px solid var(--ju-ink);border-radius:999px;background:var(--ju-red);color:#fff;text-decoration:none;font-weight:800;font-size:18px;box-shadow:0 6px 0 var(--ju-ink);transition:transform .15s,box-shadow .15s}
 .ju-btn:hover{transform:translateY(-2px);box-shadow:0 8px 0 var(--ju-ink)}
-.ju-hero__photo{position:relative;z-index:1;border-radius:52% 48% 46% 54%/48% 42% 58% 52%;overflow:hidden;border:4px solid var(--ju-ink)}
-.ju-hero__photo img{width:100%;aspect-ratio:1;object-fit:cover}
+.ju-hero__photo{position:relative;z-index:1;aspect-ratio:1;border-radius:52% 48% 46% 54%/48% 42% 58% 52%;overflow:hidden;border:4px solid var(--ju-ink)}
+.ju-hero__photo img{width:100%;height:100%;object-fit:cover}
 .ju-small{margin:0 0 14px;font:800 15px var(--ju-sans);text-transform:uppercase;letter-spacing:.12em;text-align:center}
 .ju-ages{padding:0 clamp(16px,4vw,56px)}
 .ju-ages ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
@@ -85,6 +85,10 @@ a{color:inherit}
   .ju-header nav{display:none}
   .ju-cart{margin-left:auto}
   .ju-hero,.ju-values,.ju-pdp__grid{grid-template-columns:1fr}
+  .ju-blob--red{width:150px;height:140px;left:-90px;top:-30px}
   .ju-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.ju-btn,.ju-card{transition:none}}
+
+/* Scroll drift: the photo sits taller than its frame; the colour blobs float the other way. */
+.ju-drift{position:absolute;inset:-8% 0}.ju-drift>div{height:100%}.ju-blobs{position:absolute;inset:0;pointer-events:none}.ju-blobs>div{height:100%}

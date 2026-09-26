@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -17,22 +18,22 @@ export default function Home() {
   return <Shell>
     <main id="contenido">
       <section className="ju-hero">
-        <span className="ju-blob ju-blob--red" aria-hidden="true" /><span className="ju-blob ju-blob--blue" aria-hidden="true" /><span className="ju-blob ju-blob--green" aria-hidden="true" />
+        <Parallax strength={-90} className="ju-blobs"><span className="ju-blob ju-blob--red" aria-hidden="true" /><span className="ju-blob ju-blob--blue" aria-hidden="true" /><span className="ju-blob ju-blob--green" aria-hidden="true" /></Parallax>
         <div className="ju-hero__copy">
           <h1 className="ju-display">Jugar es la mejor forma de aprender</h1>
           <p className="ju-lead">Juguetes elegidos para imaginar, moverse y compartir.</p>
           <a className="ju-btn" href="#juguetes">Ver juguetes</a>
         </div>
-        <div className="ju-hero__photo"><img src={photos.hero} alt={`Juguetes de ${store.name}`} /></div>
+        <div className="ju-hero__photo"><Parallax strength={60} mobileStrength={20} className="ju-drift"><img src={photos.hero} alt={`Juguetes de ${store.name}`} /></Parallax></div>
       </section>
 
       <section id="edades" className="ju-ages" aria-labelledby="ju-ages-title">
         <h2 id="ju-ages-title" className="ju-small">Encuentra por edad</h2>
-        <ul>{ages.map(age => <li key={age}><a href="#juguetes">{age}</a></li>)}</ul>
+        <Reveal><ul>{ages.map(age => <li key={age}><a href="#juguetes">{age}</a></li>)}</ul></Reveal>
       </section>
 
       <section id="juguetes" className="ju-shop" aria-labelledby="ju-shop-title">
-        <h2 id="ju-shop-title" className="ju-title">Juguetes</h2>
+        <Reveal><h2 id="ju-shop-title" className="ju-title">Juguetes</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="ju-card">
             <a className="ju-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -45,15 +46,15 @@ export default function Home() {
       </section>
 
       <section className="ju-values" aria-labelledby="ju-values-title">
-        <img src={photos.juego} alt="Niños jugando" />
-        <div>
+        <Reveal><img src={photos.juego} alt="Niños jugando" /></Reveal>
+        <Reveal delay={120}>
           <h2 id="ju-values-title" className="ju-title ju-title--left">Lo que buscamos en cada juguete</h2>
           <ul>{values.map(item => <li key={item.title} className={`ju-values__${item.color}`}><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul>
-        </div>
+        </Reveal>
       </section>
 
       <section id="preguntas" className="ju-faq" aria-labelledby="ju-faq-title">
-        <h2 id="ju-faq-title" className="ju-title">Preguntas</h2>
+        <Reveal><h2 id="ju-faq-title" className="ju-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

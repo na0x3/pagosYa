@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -22,16 +23,16 @@ export default function Home() {
           <p className="ni-lead">Objetos simples, materiales nobles y piezas que acompañan tu día a día.</p>
           <a className="ni-btn" href="#tienda">Ver la tienda</a>
         </div>
-        <img className="ni-hero__photo" src={photos.hero} alt={`Un ambiente decorado con piezas de ${store.name}`} />
+        <div className="ni-hero__photo"><Parallax strength={80} mobileStrength={30} className="ni-drift"><img src={photos.hero} alt={`Un ambiente decorado con piezas de ${store.name}`} /></Parallax></div>
       </section>
 
       <section id="ambientes" className="ni-rooms" aria-labelledby="ni-rooms-title">
-        <h2 id="ni-rooms-title" className="ni-title">Por ambiente</h2>
-        <ul>{rooms.map(room => <li key={room.name}><a href="#tienda"><img src={photos[room.photo]} alt={room.name} /><span>{room.name}</span></a></li>)}</ul>
+        <Reveal><h2 id="ni-rooms-title" className="ni-title">Por ambiente</h2></Reveal>
+        <Reveal delay={100}><ul>{rooms.map(room => <li key={room.name}><a href="#tienda"><img src={photos[room.photo]} alt={room.name} /><span>{room.name}</span></a></li>)}</ul></Reveal>
       </section>
 
       <section id="tienda" className="ni-shop" aria-labelledby="ni-shop-title">
-        <div className="ni-shop__head"><h2 id="ni-shop-title" className="ni-title">Tienda</h2><p>Todo lo que tenemos, en un solo lugar.</p></div>
+        <Reveal className="ni-shop__head"><h2 id="ni-shop-title" className="ni-title">Tienda</h2><p>Todo lo que tenemos, en un solo lugar.</p></Reveal>
         <template data-pagosya-product-template>
           <article className="ni-card">
             <a className="ni-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -44,15 +45,15 @@ export default function Home() {
       </section>
 
       <section id="materiales" className="ni-materials" aria-labelledby="ni-materials-title">
-        <img src={photos.material} alt="Detalle de los materiales" />
-        <div>
+        <div className="ni-materials__photo"><Parallax strength={70} className="ni-drift ni-drift--deep"><img src={photos.material} alt="Detalle de los materiales" /></Parallax></div>
+        <Reveal delay={120}>
           <h2 id="ni-materials-title" className="ni-title">Materiales que duran</h2>
           <dl>{materials.map(item => <div key={item.title}><dt>{item.title}</dt><dd>{item.body}</dd></div>)}</dl>
-        </div>
+        </Reveal>
       </section>
 
       <section id="ayuda" className="ni-faq" aria-labelledby="ni-faq-title">
-        <h2 id="ni-faq-title" className="ni-title">Ayuda</h2>
+        <Reveal><h2 id="ni-faq-title" className="ni-title">Ayuda</h2></Reveal>
         <div>{faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div>
       </section>
     </main>
