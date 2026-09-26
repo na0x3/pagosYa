@@ -7,7 +7,7 @@ import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
 import { compileNextPreview, nextContentPages, nextProjectScaffold } from './source-next';
 import { sourceCommerceRoutes } from './source-commerce-pages';
-import { sourceRuntimeDna } from './source-dna';
+import { SOURCE_DNA_RUNTIME_ENUMS, sourceRuntimeDna } from './source-dna';
 import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
 import { withSourceFonts } from './source-fonts';
 import { withSourceCommerceDesign } from './source-commerce-design';
@@ -60,6 +60,16 @@ export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readon
   });
 }
 
+/** A template pins the kit surfaces its design depends on (button form, radius, cart…); every value must be one the
+ * kit renders. The rest of the DNA stays seeded by the store id, as for any store. */
+export function templateDna(manifest: Pick<TemplateManifest, 'id' | 'dna'>, storeId: string) {
+  const pinned = manifest.dna ?? {};
+  for (const [name, value] of Object.entries(pinned)) {
+    if (!SOURCE_DNA_RUNTIME_ENUMS[name]?.includes(value)) throw new TypeError(`Plantilla ${manifest.id}: dna.${name} no admite ${value}`);
+  }
+  return { ...sourceRuntimeDna(undefined, storeId), ...pinned };
+}
+
 const TEMPLATE_KIT_FILES = ['build.mjs', 'server.mjs', 'commerce.js', 'product.html', 'checkout.html', 'productos.html', 'coleccion.html', 'commerce-pages.css'];
 const CATEGORY_BUSINESS: Record<TemplateManifest['category'], string> = {
   comida: 'Comida y bebidas', moda: 'Moda', belleza: 'Belleza y cuidado personal', hogar: 'Hogar y decoración', arte: 'Arte y artesanía',
@@ -87,7 +97,7 @@ export async function assembleTemplateRevision(input: {
     .map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
   const demoAssets = templateDemoAssets(manifest, demoSlots);
   const config = {
-    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: sourceRuntimeDna(undefined, input.storeId),
+    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: templateDna(manifest, input.storeId),
     productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
     apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,
   };

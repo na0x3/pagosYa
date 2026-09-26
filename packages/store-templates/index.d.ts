@@ -4,6 +4,8 @@ export interface TemplatePhotoSlot { readonly slot: string; readonly role: Photo
 export interface TemplateManifest {
   readonly id: string; readonly name: string; readonly category: TemplateCategory; readonly description: string;
   readonly tags: readonly string[]; readonly sitePurpose: 'shop'; readonly order: number; readonly photos: readonly TemplatePhotoSlot[];
+  /** Kit surfaces the design depends on, pinned over the store's seeded DNA (e.g. { button: 'block' }). */
+  readonly dna?: Readonly<Record<string, string>>;
 }
 export declare const TEMPLATE_CATEGORIES: readonly TemplateCategory[];
 export declare const PHOTO_ROLES: readonly PhotoRole[];

@@ -11,6 +11,20 @@
   ],
   "sitePurpose": "shop",
   "order": 10,
+  "dna": {
+    "display": "dm-serif-display",
+    "text": "manrope",
+    "case": "none",
+    "radius": "pill",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom"
+  },
   "photos": [
     {
       "slot": "hero",

@@ -37,6 +37,18 @@ describe('assembleTemplateRevision', () => {
     expect(snapshot.files.some(f => f.path === '_compiled/home.js')).toBe(true);
   });
 
+  it('pins the kit surfaces a template declares, over the store-seeded DNA', async () => {
+    const pinned = { ...manifest, dna: { button: 'block', radius: 'none' } } as TemplateManifest;
+    const assembled = await assembleTemplateRevision({ manifest: pinned, source: source(), storeId: 'store-1', slug: 's', publicStore: publicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: false });
+    const config = JSON.parse(assembled.files.find(f => f.path === 'config.js')!.content.match(/window\.PAGOSYA_CONFIG = ([\s\S]*);\n$/)![1]);
+    expect(config.dna).toMatchObject({ button: 'block', radius: 'none' });
+  });
+
+  it('refuses a template DNA value the kit does not know', async () => {
+    const broken = { ...manifest, dna: { button: 'wobbly' } } as TemplateManifest;
+    await expect(assembleTemplateRevision({ manifest: broken, source: source(), storeId: 's', slug: 's', publicStore: publicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: false })).rejects.toThrow(/prueba.*button.*wobbly/);
+  });
+
   it('keeps the store\'s own brief when it has one', async () => {
     const brief = { sitePurpose: 'shop' as const, businessType: 'Cafetería', audience: 'Oficinistas', primaryAction: 'Pedir', visualDirection: 'Cálida' };
     const assembled = await assembleTemplateRevision({ manifest, source: source(), storeId: 's', slug: 's', publicStore: publicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: false, previousBrief: brief });

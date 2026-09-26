@@ -23,6 +23,7 @@ function validate(dir, id) {
   if (!Array.isArray(manifest.tags) || manifest.tags.some(tag => typeof tag !== 'string')) fail(id, 'tags', 'must be a list of words');
   if (manifest.sitePurpose !== 'shop') fail(id, 'sitePurpose', 'must be shop');
   if (!Number.isInteger(manifest.order)) fail(id, 'order', 'must be an integer');
+  if (manifest.dna !== undefined && (!manifest.dna || typeof manifest.dna !== 'object' || Array.isArray(manifest.dna) || Object.entries(manifest.dna).some(([key, value]) => !/^[a-z]+$/.test(key) || typeof value !== 'string'))) fail(id, 'dna', 'must map kit surface names to values');
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
   const slots = new Set();
   for (const photo of manifest.photos) {
@@ -36,7 +37,7 @@ function validate(dir, id) {
       if (statSync(path).size > DEMO_MAX_BYTES) fail(id, `demo ${photo.demo}`, 'is larger than 600 KB');
     }
   }
-  return Object.freeze({ ...manifest, tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
+  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
 }
 
 /** Reads and validates every template under `root`. Throws on the first invalid manifest (a build error, never input). */
