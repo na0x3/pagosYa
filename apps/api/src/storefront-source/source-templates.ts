@@ -104,3 +104,34 @@ export async function assembleTemplateRevision(input: {
   };
   return { label: `Plantilla: ${manifest.name}`.slice(0, 120), brief, files };
 }
+
+/** The demo store Plantillas are checked and previewed with: three products (so every photo slot shows the template's
+ * demo photo), BOB prices, no branches (a branch without a delivery method would stop the simulated checkout). */
+export function templateDemoPublicStore(): SourcePublicStore {
+  const product = (id: string, name: string, amount: number, description: string) => ({ id, name, amount, currency: 'BOB', stock: 12, description, imageUrls: [], variants: [], extras: [], highlights: [] });
+  return ({
+    storeName: 'Tu marca', tagline: 'Hecho con cuidado en Bolivia', checkoutMode: 'payment', creditsEnabled: false, digitalGoodsEnabled: false,
+    shippingEnabled: false, shippingPickupEnabled: false, shippingCarriersEnabled: false, bundlesEnabled: false, logoUrl: null, contactPhone: null,
+    leadCaptureUrl: null, contactFormEnabled: false, contactTitle: null, contactSubtitle: null, categories: [],
+    locations: [],
+    cartRecommendationsEnabled: false, cartRecommendationProductIds: [], bundles: [],
+    items: [
+      product('demo-1', 'Producto estrella', 12900, 'Nuestro favorito: hecho en pequeñas tandas.'),
+      product('demo-2', 'Edición de temporada', 8900, 'Disponible solo por unas semanas.'),
+      product('demo-3', 'El clásico', 5900, 'El que siempre vuelve a pedirse.'),
+    ],
+  }) as unknown as SourcePublicStore;
+}
+
+/** A template applied to the demo store, with the demo catalog's cards showing the template's product demo photos. */
+export async function templateDemoRevision(manifest: TemplateManifest, source: SourceProjectFileDto[]) {
+  const assembled = await assembleTemplateRevision({ manifest, source, storeId: `template-${manifest.id}`, slug: manifest.id, publicStore: templateDemoPublicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), checkoutOrigin: 'https://pagar.pagosya.test', firstRevision: true });
+  const productPhotos = manifest.photos.filter(photo => photo.role === 'product' && photo.demo).map(photo => templateDemoPath(manifest, photo.slot));
+  const files = assembled.files.map(file => {
+    if (file.path !== 'config.js' || !productPhotos.length) return file;
+    const config = JSON.parse(file.content.match(/^window\.PAGOSYA_CONFIG = ([\s\S]*);\n$/)![1]);
+    config.data.items = config.data.items.map((item: { imageUrls: string[] }, index: number) => ({ ...item, imageUrls: [productPhotos[index % productPhotos.length]] }));
+    return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` };
+  });
+  return { ...assembled, files };
+}

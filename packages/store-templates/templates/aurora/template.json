@@ -3,13 +3,44 @@
   "name": "Aurora",
   "category": "belleza",
   "description": "Cosmética y cuidado personal: fotos grandes, mucho aire y una ficha de producto que vende.",
-  "tags": ["minimal", "cosmética", "skincare", "elegante"],
+  "tags": [
+    "minimal",
+    "cosmética",
+    "skincare",
+    "elegante"
+  ],
   "sitePurpose": "shop",
   "order": 10,
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "feature", "role": "product", "demo": "feature.jpg" },
-    { "slot": "ritual", "role": "lifestyle", "demo": "ritual.jpg" },
-    { "slot": "texture", "role": "detail", "demo": "texture.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "feature.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "ritual",
+      "role": "lifestyle",
+      "demo": "ritual.jpg"
+    },
+    {
+      "slot": "texture",
+      "role": "detail",
+      "demo": "texture.jpg"
+    }
   ]
 }
