@@ -1,0 +1,61 @@
+{
+  "id": "taller",
+  "name": "Taller",
+  "category": "servicios",
+  "description": "Oficios y reparaciones: azul marino y naranja de seguridad, precio cerrado por servicio, pasos claros y zonas de cobertura.",
+  "tags": [
+    "servicios",
+    "reparaciones",
+    "técnicos",
+    "confianza"
+  ],
+  "sitePurpose": "shop",
+  "order": 230,
+  "dna": {
+    "display": "bricolage",
+    "text": "rubik",
+    "case": "none",
+    "radius": "soft",
+    "border": "bold",
+    "button": "block",
+    "hover": "lift",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "sheet",
+    "added": "ribbon",
+    "card": "still",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "herramientas",
+      "role": "detail",
+      "demo": "herramientas.jpg"
+    },
+    {
+      "slot": "equipo",
+      "role": "lifestyle",
+      "demo": "equipo.jpg"
+    }
+  ]
+}

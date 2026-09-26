@@ -1,0 +1,61 @@
+{
+  "id": "sesion",
+  "name": "Sesión",
+  "category": "servicios",
+  "description": "Fotógrafos y creativos: serif editorial enorme, portfolio en mosaico a distintas velocidades y paquetes para reservar.",
+  "tags": [
+    "servicios",
+    "fotografía",
+    "portfolio",
+    "editorial"
+  ],
+  "sitePurpose": "shop",
+  "order": 240,
+  "dna": {
+    "display": "instrument-serif",
+    "text": "instrument",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "underline",
+    "hover": "underline-grow",
+    "press": "none",
+    "motion": "cinematic",
+    "cart": "drawer",
+    "added": "inline",
+    "card": "still",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "obra",
+      "role": "lifestyle",
+      "demo": "obra.jpg"
+    },
+    {
+      "slot": "estudio",
+      "role": "lifestyle",
+      "demo": "estudio.jpg"
+    }
+  ]
+}
