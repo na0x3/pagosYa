@@ -4085,6 +4085,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     openSettingsOverlay(currentStoreId, section);
   }
   document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
+  let mcpConnect = null;
+  import("/src/mcp-connect.mjs").then(({ mountMcpConnect }) => {
+    mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
+    if (location.hash === "#dashboard-store-settings" && sessionToken) void mcpConnect.reload();
+  });
+  document.querySelectorAll('[data-dashboard-view="store-settings"]').forEach(link => link.addEventListener("click", () => { if (sessionToken) void mcpConnect?.reload(); }));
   import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {
     storeSettings = mountStoreSettings(document.getElementById("storeSettingsRoot"), {
       api,
