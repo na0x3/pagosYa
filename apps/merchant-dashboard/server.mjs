@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { watch } from "node:fs";
+import { readdirSync, watch } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -19,7 +19,14 @@ const requireFromDashboard = createRequire(import.meta.url);
 const vendorModules = [
   { prefix: "/vendor/blobatar/", dir: path.join(path.dirname(requireFromDashboard.resolve("blobatar/package.json")), "dist"), files: new Set(["internal.js", "expression.js", "motion.css"]) },
   { prefix: "/vendor/blob-characters/", dir: path.dirname(requireFromDashboard.resolve("@pagosya/blob-characters/package.json")), files: new Set(["index.mjs", "render.mjs", "player.mjs", "blob-motion.css"]) },
+  // The login's mesh gradient (src/login-shader.mjs): the package's own ES modules, listed once at startup.
+  paperShadersVendor(),
 ];
+function paperShadersVendor() {
+  const dir = path.join(path.dirname(requireFromDashboard.resolve("@paper-design/shaders")), "");
+  const js = (sub) => readdirSync(path.join(dir, sub)).filter((name) => name.endsWith(".js")).map((name) => (sub ? `${sub}/${name}` : name));
+  return { prefix: "/vendor/paper-shaders/", dir, files: new Set([...js(""), ...js("shaders")]) };
+}
 const PORT = process.env.PORT ?? 4323;
 // Full-page live reload is opt-in. Native file pickers and browser-control
 // helpers can touch local files while a merchant is choosing imagery; treating
@@ -143,7 +150,7 @@ const server = createServer(async (req, res) => {
       res.end(font);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/profile-blob.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/profile-blob.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css", "/src/settings-overlay.mjs", "/src/mcp-connect.mjs", "/src/login-shader.mjs"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
