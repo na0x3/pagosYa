@@ -105,7 +105,7 @@ export async function assembleTemplateRevision(input: {
   return { label: `Plantilla: ${manifest.name}`.slice(0, 120), brief, files };
 }
 
-/** The demo store Plantillas are checked and previewed with: three products (so every photo slot shows the template's
+/** The demo store Plantillas are checked and previewed with: four products (so every photo slot shows the template's
  * demo photo), BOB prices, no branches (a branch without a delivery method would stop the simulated checkout). */
 export function templateDemoPublicStore(): SourcePublicStore {
   const product = (id: string, name: string, amount: number, description: string) => ({ id, name, amount, currency: 'BOB', stock: 12, description, imageUrls: [], variants: [], extras: [], highlights: [] });
@@ -119,6 +119,7 @@ export function templateDemoPublicStore(): SourcePublicStore {
       product('demo-1', 'Producto estrella', 12900, 'Nuestro favorito: hecho en pequeñas tandas.'),
       product('demo-2', 'Edición de temporada', 8900, 'Disponible solo por unas semanas.'),
       product('demo-3', 'El clásico', 5900, 'El que siempre vuelve a pedirse.'),
+      product('demo-4', 'Set para regalar', 19900, 'Una selección lista para sorprender.'),
     ],
   }) as unknown as SourcePublicStore;
 }
