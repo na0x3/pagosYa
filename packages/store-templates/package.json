@@ -1,0 +1,11 @@
+{
+  "name": "@pagosya/store-templates",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plantillas: complete designer-made stores in the React source format YAPI produces, with manifests and demo photos",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

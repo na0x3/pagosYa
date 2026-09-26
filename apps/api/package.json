@@ -24,6 +24,7 @@
     "@nestjs/swagger": "^11.4.7",
     "@nestjs/throttler": "^6.2.1",
     "@pagosya/shared-types": "workspace:*",
+    "@pagosya/store-templates": "workspace:*",
     "@pagosya/storefront-kit": "workspace:*",
     "@prisma/client": "^5.20.0",
     "@types/react": "^19.2.14",

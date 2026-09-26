@@ -77,6 +77,9 @@ importers:
       '@pagosya/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@pagosya/store-templates':
+        specifier: workspace:*
+        version: link:../../packages/store-templates
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
@@ -425,6 +428,9 @@ importers:
       '@pagosya/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@pagosya/store-templates':
+        specifier: workspace:*
+        version: link:../../packages/store-templates
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
@@ -485,6 +491,8 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+
+  packages/store-templates: {}
 
   packages/storefront-kit:
     devDependencies:
