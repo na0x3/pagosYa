@@ -20,18 +20,30 @@ export class SourceTemplatesService {
     return this.registry.listTemplates().map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
   }
 
-  async apply(merchantId: string, storeId: string, templateId: string, revision: number) {
+  /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number) {
     const manifest = this.registry.templateManifest(templateId);
     if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
     const current = await this.projects.current(merchantId, storeId);
-    if (current.revision !== revision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
-    const previous = revision ? await this.projects.version(merchantId, storeId, revision) : null;
+    if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
+    const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
     const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
     const assembled = await assembleTemplateRevision({
       manifest, source: this.registry.templateSourceFiles(manifest.id), storeId, slug: current.slug, publicStore,
-      apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: revision === 0,
+      apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
     });
+    return { current, assembled };
+  }
+
+  /** The template on this store as it would be saved, for the gallery's preview. Nothing is persisted. */
+  async preview(merchantId: string, storeId: string, templateId: string) {
+    const { current, assembled } = await this.assemble(merchantId, storeId, templateId);
+    return this.projects.prepare({ revision: current.revision, ...assembled });
+  }
+
+  async apply(merchantId: string, storeId: string, templateId: string, revision: number) {
+    const { assembled } = await this.assemble(merchantId, storeId, templateId, revision);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     // A first site takes payments, as a first YAPI generation does.
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });

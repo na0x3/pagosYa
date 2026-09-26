@@ -114,6 +114,20 @@ describe('SourceTemplatesService', () => {
     expect((projects.save.mock.calls[0] as any)[2].brief.templateRevision).toBe(4);
   });
 
+  it('previews a template on the store without saving anything', async () => {
+    const { templates, projects } = service(2);
+    (projects as any).prepare = jest.fn(async (input: any) => ({ schemaVersion: 1, brief: input.brief, files: input.files }));
+    const snapshot: any = await templates.preview('m1', 'store-1', 'prueba');
+    expect(projects.save).not.toHaveBeenCalled();
+    expect((projects as any).prepare).toHaveBeenCalledWith(expect.objectContaining({ revision: 2, label: 'Plantilla: Prueba' }));
+    expect(snapshot.files.some((file: any) => file.path === 'config.js')).toBe(true);
+  });
+
+  it('rejects an unknown template in preview', async () => {
+    const { templates } = service(0);
+    await expect(templates.preview('m1', 'store-1', 'nada')).rejects.toThrow('Esa plantilla no existe.');
+  });
+
   it('lists templates without file details', () => {
     const { templates } = service(0);
     templates.registry = { ...templates.registry, listTemplates: () => [manifest] };

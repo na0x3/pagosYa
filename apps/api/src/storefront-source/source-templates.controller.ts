@@ -29,6 +29,13 @@ export class SourceTemplatesListController {
 export class SourceTemplatesApplyController {
   constructor(private readonly templates: SourceTemplatesService) {}
 
+  @Get(':templateId/preview')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @CompileBudget()
+  preview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('templateId') templateId: string) {
+    return this.templates.preview(merchant.id, storeId, templateId);
+  }
+
   @Post(':templateId')
   @Throttle({ default: { limit: 6, ttl: 60_000 } })
   @CompileBudget()
