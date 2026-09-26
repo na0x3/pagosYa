@@ -5,6 +5,9 @@ import { compileNextPreview } from './source-next';
 import { nextStoreFiles } from './fixtures/next-store';
 import { fillTemplatePhotos, templateDemoAssets, templateStoreDataFile } from './source-templates';
 
+// These compile real React stores with esbuild; next to the browser contract suite that takes longer than 5 s.
+jest.setTimeout(60_000);
+
 const manifest: TemplateManifest = {
   id: 'prueba', name: 'Prueba', category: 'comida', description: 'x', tags: [], sitePurpose: 'shop', order: 1,
   photos: [

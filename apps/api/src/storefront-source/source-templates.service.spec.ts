@@ -6,6 +6,9 @@ import { SourceTemplatesService } from './source-templates.service';
 import { SourceProjectsService } from './source-projects.service';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 
+// These compile real React stores with esbuild; next to the browser contract suite that takes longer than 5 s.
+jest.setTimeout(60_000);
+
 const manifest: TemplateManifest = {
   id: 'prueba', name: 'Prueba', category: 'comida', description: 'Una tienda de prueba.', tags: [], sitePurpose: 'shop', order: 1,
   photos: [{ slot: 'hero', role: 'hero' }],
