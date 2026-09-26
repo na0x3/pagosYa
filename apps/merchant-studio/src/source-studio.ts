@@ -412,10 +412,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div><p>${escape(visibleContent)}</p>
       ${!user ? renderBuildProgress(metadata.progress) : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
-      ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || state.revision > 0) : ''}
+      ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || state.revision > 0 || message.id !== latestTemplateChoicesId()) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
       ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
     </article>`;
+  }
+  /** Only YAPI's latest set of Plantilla cards can be chosen; the API rejects older sets. */
+  function latestTemplateChoicesId() {
+    return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.templateChoices)).at(-1)?.id;
   }
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);

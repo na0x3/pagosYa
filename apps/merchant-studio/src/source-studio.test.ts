@@ -85,3 +85,18 @@ it('sends the tapped Plantilla card as the choice', async () => {
   expect(sent.mock.calls[0][1]).toBe('Usar Miga');
   expect(sent.mock.calls[0].at(-1)).toBe('miga');
 });
+
+it('keeps only the latest set of Plantilla cards tappable', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  const set = (ids: string[]) => ids.map(id => ({ id, name: id, reason: 'r' }));
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'a1', role: 'ASSISTANT', content: 'Primeras', createdAt: '2026-09-26', metadata: { templateChoices: set(['tostado', 'miga', 'huella']) } },
+    { id: 'a2', role: 'ASSISTANT', content: 'Otras', createdAt: '2026-09-26', metadata: { templateChoices: set(['huerta', 'flora', 'nido']) } },
+    { id: 'a3', role: 'ASSISTANT', content: 'Sí, Huerta usa fotos grandes.', createdAt: '2026-09-26', metadata: {} },
+  ] } as any);
+  await mountSourceStudio(app);
+  const card = (id: string) => app.querySelector<HTMLButtonElement>(`[data-template-choice="${id}"]`)!;
+  await vi.waitFor(() => expect(card('huerta')).toBeTruthy());
+  expect(card('tostado').disabled).toBe(true);
+  expect(card('huerta').disabled).toBe(false);
+});

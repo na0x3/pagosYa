@@ -1,6 +1,9 @@
 import { SourceConversationFailure } from './source-conversation-failure';
 import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
+import { sourceRequestProfile } from './source-request-profile';
+import { sourceRedesignRequested } from './source-context';
+import { sourceGenerationPlan } from './source-generation-policy';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { BadGatewayException } from '@nestjs/common';
 import * as websiteReference from './source-website-reference';
@@ -587,4 +590,61 @@ it('treats a rework request on a store without a template as an ordinary edit', 
   dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
   await service.send('m', 's', { ...request, instruction: 'Hazla más única' });
   expect(generation.generate.mock.calls[0][2].instruction).not.toContain(TEMPLATE_REWORK_BRIEF);
+});
+
+describe('final review fixes', () => {
+  it('runs the free adaptation on Terra as a scoped palette-and-copy request, never a redesign', async () => {
+    const { service, generation } = firstShop(withCards());
+    generation.generate.mockResolvedValue({ revision: 2, label: 'x' });
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Tostado', templateId: 'tostado', model: 'deepseek-v4-flash' });
+    const dto = generation.generate.mock.calls[0][2];
+    expect(dto.model).toBe('gpt-5.6-terra');
+    expect(dto.instruction).toContain('Pedido actual del comercio:');
+    expect(sourceRedesignRequested(dto.instruction)).toBe(false);
+    expect(sourceRequestProfile(dto.instruction, true).scope).not.toBe('full-redesign');
+    expect(sourceGenerationPlan(dto.model, 1, dto.instruction).maxOutputTokens).toBe(10000);
+  });
+
+  it('still accepts a card after YAPI answered a question in plain text', async () => {
+    const history = [...withCards(), { role: 'USER', content: '¿La segunda tiene fotos grandes?', metadata: {} }, { role: 'ASSISTANT', content: 'Sí, Miga usa fotos grandes.', metadata: { sourceSetup: discovered()[0].metadata.sourceSetup } }];
+    const { service, templates, dialogue } = firstShop(history);
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Miga', templateId: 'miga' });
+    expect(templates.apply).toHaveBeenCalledWith('m', 's', 'miga', 0);
+    const typed = firstShop(history);
+    typed.dialogue.decide.mockResolvedValue({ action: 'reply', reply: 'Perfecto', summary: 'Cafetería', generationInstruction: '', imageUses: [], startFrom: 'template', templates: [], chosenTemplateId: 'huella', rework: false });
+    await typed.service.send('m', 's', { ...request, revision: 0, instruction: 'la tercera' });
+    expect(typed.dialogue.decide.mock.calls[0][1].offeredTemplates.map((offer: any) => offer.id)).toEqual(['tostado', 'miga', 'huella']);
+    expect(typed.templates.apply).toHaveBeenCalledWith('m', 's', 'huella', 0);
+    expect(dialogue.decide).not.toHaveBeenCalled();
+  });
+
+  it('puts the rework brief in the current request, so the generator treats it as a visual change', async () => {
+    const { service, projects, dialogue, generation } = setup();
+    projects.version.mockResolvedValue({ snapshot: { brief: { businessType: 'Café', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Plantilla', sitePurpose: 'shop', templateId: 'tostado' } } });
+    dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'Rediseña', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
+    await service.send('m', 's', { ...request, instruction: 'Hazla más única' });
+    const { instruction } = generation.generate.mock.calls[0][2];
+    expect(instruction.split('Pedido actual del comercio:').at(-1)).toContain(TEMPLATE_REWORK_BRIEF);
+    const profile = sourceRequestProfile(instruction, true);
+    expect(profile.scope).not.toBe('functional-or-content');
+    expect(profile.scope).not.toBe('full-redesign');
+    expect(profile.visualDomains).toEqual(expect.arrayContaining(['typography', 'palette']));
+  });
+
+  it('does not offer a retry that does not exist after a failed adaptation', async () => {
+    const { service, generation, messages } = firstShop(withCards());
+    generation.generate.mockRejectedValue(new Error('boom'));
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Tostado', templateId: 'tostado' });
+    expect(messages.at(-1).content).not.toMatch(/vuelve a intentarlo/i);
+  });
+
+  it('remembers "desde cero" across turns', async () => {
+    const { service, dialogue, generation, messages } = firstShop();
+    dialogue.decide.mockResolvedValueOnce({ action: 'reply', reply: '¿Algo más sobre tus colores?', summary: 'Cafetería', generationInstruction: '', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Desde cero, por favor' });
+    dialogue.decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea', imageUses: [], startFrom: 'unknown', templates: [{ id: 'tostado', reason: 'r' }], chosenTemplateId: '', rework: false });
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Tonos tierra' });
+    expect(generation.generate).toHaveBeenCalledTimes(1);
+    expect(messages.some((message: any) => message.metadata?.templateChoices)).toBe(false);
+  });
 });
