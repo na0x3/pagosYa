@@ -3,19 +3,74 @@
   "name": "Nido",
   "category": "hogar",
   "description": "Decoración y hogar: blanco cálido, madera y mucho aire. Compra por ambientes y una cuadrícula serena.",
-  "tags": ["hogar", "decoración", "minimal", "escandinavo"],
+  "tags": [
+    "hogar",
+    "decoración",
+    "minimal",
+    "escandinavo"
+  ],
   "sitePurpose": "shop",
   "order": 120,
-  "dna": { "display": "epilogue", "text": "newsreader", "case": "none", "radius": "soft", "border": "hairline", "button": "block", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "inline", "card": "zoom" },
+  "dna": {
+    "display": "epilogue",
+    "text": "newsreader",
+    "case": "none",
+    "radius": "soft",
+    "border": "hairline",
+    "button": "block",
+    "hover": "fill",
+    "press": "none",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "inline",
+    "card": "zoom",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "sala", "role": "lifestyle", "demo": "sala.jpg" },
-    { "slot": "dormitorio", "role": "lifestyle", "demo": "dormitorio.jpg" },
-    { "slot": "cocina", "role": "lifestyle", "demo": "cocina.jpg" },
-    { "slot": "exterior", "role": "lifestyle", "demo": "exterior.jpg" },
-    { "slot": "material", "role": "detail", "demo": "material.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "sala",
+      "role": "lifestyle",
+      "demo": "sala.jpg"
+    },
+    {
+      "slot": "dormitorio",
+      "role": "lifestyle",
+      "demo": "dormitorio.jpg"
+    },
+    {
+      "slot": "cocina",
+      "role": "lifestyle",
+      "demo": "cocina.jpg"
+    },
+    {
+      "slot": "exterior",
+      "role": "lifestyle",
+      "demo": "exterior.jpg"
+    },
+    {
+      "slot": "material",
+      "role": "detail",
+      "demo": "material.jpg"
+    }
   ]
 }

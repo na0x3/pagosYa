@@ -1,0 +1,56 @@
+{
+  "id": "ritmo",
+  "name": "Ritmo",
+  "category": "deporte",
+  "description": "Deporte y nutrición: verde bosque, lima neón, titulares gigantes y tarjetas por sabor.",
+  "tags": [
+    "deporte",
+    "fitness",
+    "suplementos",
+    "energía"
+  ],
+  "sitePurpose": "shop",
+  "order": 170,
+  "dna": {
+    "display": "bebas-neue",
+    "text": "rubik",
+    "case": "upper",
+    "radius": "soft",
+    "border": "none",
+    "button": "block",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "sheet",
+    "added": "ribbon",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.png"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "accion",
+      "role": "lifestyle",
+      "demo": "accion.jpg"
+    }
+  ]
+}

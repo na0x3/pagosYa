@@ -24,7 +24,8 @@
     "motion": "snappy",
     "cart": "drawer",
     "added": "ribbon",
-    "card": "zoom"
+    "card": "zoom",
+    "frame": "bleed"
   },
   "photos": [
     {

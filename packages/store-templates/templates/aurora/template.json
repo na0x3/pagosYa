@@ -23,7 +23,8 @@
     "motion": "calm",
     "cart": "drawer",
     "added": "toast",
-    "card": "zoom"
+    "card": "zoom",
+    "frame": "bleed"
   },
   "photos": [
     {

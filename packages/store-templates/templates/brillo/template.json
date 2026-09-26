@@ -3,16 +3,59 @@
   "name": "Brillo",
   "category": "moda",
   "description": "Joyería y accesorios finos: marfil, verde esmeralda, líneas doradas y marcos en arco.",
-  "tags": ["joyería", "lujo", "elegante", "accesorios"],
+  "tags": [
+    "joyería",
+    "lujo",
+    "elegante",
+    "accesorios"
+  ],
   "sitePurpose": "shop",
   "order": 70,
-  "dna": { "display": "instrument-serif", "text": "newsreader", "case": "none", "radius": "pill", "border": "hairline", "button": "outline", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "arch" },
+  "dna": {
+    "display": "instrument-serif",
+    "text": "newsreader",
+    "case": "none",
+    "radius": "pill",
+    "border": "hairline",
+    "button": "outline",
+    "hover": "fill",
+    "press": "none",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "arch"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "regalo", "role": "lifestyle", "demo": "regalo.jpg" },
-    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "regalo",
+      "role": "lifestyle",
+      "demo": "regalo.jpg"
+    },
+    {
+      "slot": "detalle",
+      "role": "detail",
+      "demo": "detalle.jpg"
+    }
   ]
 }

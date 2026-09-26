@@ -3,17 +3,64 @@
   "name": "Chispa",
   "category": "belleza",
   "description": "Colorida y divertida: azul intenso, lima, bordes ondulados y stickers. Para marcas que juegan.",
-  "tags": ["colorido", "divertido", "bienestar", "moderno"],
+  "tags": [
+    "colorido",
+    "divertido",
+    "bienestar",
+    "moderno"
+  ],
   "sitePurpose": "shop",
   "order": 30,
-  "dna": { "display": "young-serif", "text": "outfit", "case": "none", "radius": "pill", "border": "none", "button": "pill", "hover": "lift", "press": "pop", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "zoom" },
+  "dna": {
+    "display": "young-serif",
+    "text": "outfit",
+    "case": "none",
+    "radius": "pill",
+    "border": "none",
+    "button": "pill",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "zoom",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "vida1", "role": "lifestyle", "demo": "vida1.jpg" },
-    { "slot": "vida2", "role": "lifestyle", "demo": "vida2.jpg" },
-    { "slot": "vida3", "role": "detail", "demo": "vida3.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "vida1",
+      "role": "lifestyle",
+      "demo": "vida1.jpg"
+    },
+    {
+      "slot": "vida2",
+      "role": "lifestyle",
+      "demo": "vida2.jpg"
+    },
+    {
+      "slot": "vida3",
+      "role": "detail",
+      "demo": "vida3.jpg"
+    }
   ]
 }

@@ -3,17 +3,64 @@
   "name": "Miga",
   "category": "comida",
   "description": "Panadería y pastelería: amarillo mantequilla, fotos tipo polaroid y un menú de lo recién horneado.",
-  "tags": ["panadería", "pastelería", "cálido", "divertido"],
+  "tags": [
+    "panadería",
+    "pastelería",
+    "cálido",
+    "divertido"
+  ],
   "sitePurpose": "shop",
   "order": 90,
-  "dna": { "display": "shrikhand", "text": "nunito", "case": "none", "radius": "round", "border": "hairline", "button": "bubbly", "hover": "lift", "press": "pop", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "tilt", "frame": "polaroid" },
+  "dna": {
+    "display": "shrikhand",
+    "text": "nunito",
+    "case": "none",
+    "radius": "round",
+    "border": "hairline",
+    "button": "bubbly",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "tilt",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "izq", "role": "hero", "demo": "izq.jpg" },
-    { "slot": "der", "role": "lifestyle", "demo": "der.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "cocina", "role": "lifestyle", "demo": "cocina.jpg" },
-    { "slot": "masa", "role": "detail", "demo": "masa.jpg" }
+    {
+      "slot": "izq",
+      "role": "hero",
+      "demo": "izq.jpg"
+    },
+    {
+      "slot": "der",
+      "role": "lifestyle",
+      "demo": "der.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "cocina",
+      "role": "lifestyle",
+      "demo": "cocina.jpg"
+    },
+    {
+      "slot": "masa",
+      "role": "detail",
+      "demo": "masa.jpg"
+    }
   ]
 }

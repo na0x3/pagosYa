@@ -1,0 +1,56 @@
+{
+  "id": "juguete",
+  "name": "Juguete",
+  "category": "ninos",
+  "description": "Niños y juguetes: colores primarios, formas blandas y compra por edad. Alegre sin ser ruidosa.",
+  "tags": [
+    "niños",
+    "juguetes",
+    "colorido",
+    "divertido"
+  ],
+  "sitePurpose": "shop",
+  "order": 160,
+  "dna": {
+    "display": "bricolage",
+    "text": "outfit",
+    "case": "none",
+    "radius": "pill",
+    "border": "bold",
+    "button": "bubbly",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "tilt",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "juego",
+      "role": "lifestyle",
+      "demo": "juego.jpg"
+    }
+  ]
+}

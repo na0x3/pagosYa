@@ -3,19 +3,74 @@
   "name": "Crunch",
   "category": "comida",
   "description": "Snacks y marcas con actitud: bordes gruesos, sombras duras, colores fuertes y titulares gigantes.",
-  "tags": ["snacks", "neo-brutalista", "colorido", "atrevido"],
+  "tags": [
+    "snacks",
+    "neo-brutalista",
+    "colorido",
+    "atrevido"
+  ],
   "sitePurpose": "shop",
   "order": 50,
-  "dna": { "display": "anton", "text": "figtree", "case": "upper", "radius": "round", "border": "bold", "button": "sticker", "hover": "lift", "press": "sink", "motion": "playful", "cart": "drawer", "added": "stamp", "card": "tilt" },
+  "dna": {
+    "display": "anton",
+    "text": "figtree",
+    "case": "upper",
+    "radius": "round",
+    "border": "bold",
+    "button": "sticker",
+    "hover": "lift",
+    "press": "sink",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "stamp",
+    "card": "tilt",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "feature", "role": "lifestyle", "demo": "feature.jpg" },
-    { "slot": "statement", "role": "detail", "demo": "statement.png" },
-    { "slot": "gente1", "role": "lifestyle", "demo": "gente1.jpg" },
-    { "slot": "gente2", "role": "lifestyle", "demo": "gente2.jpg" },
-    { "slot": "gente3", "role": "lifestyle", "demo": "gente3.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "feature",
+      "role": "lifestyle",
+      "demo": "feature.jpg"
+    },
+    {
+      "slot": "statement",
+      "role": "detail",
+      "demo": "statement.png"
+    },
+    {
+      "slot": "gente1",
+      "role": "lifestyle",
+      "demo": "gente1.jpg"
+    },
+    {
+      "slot": "gente2",
+      "role": "lifestyle",
+      "demo": "gente2.jpg"
+    },
+    {
+      "slot": "gente3",
+      "role": "lifestyle",
+      "demo": "gente3.jpg"
+    }
   ]
 }

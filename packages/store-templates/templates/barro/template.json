@@ -3,16 +3,59 @@
   "name": "Barro",
   "category": "arte",
   "description": "Artesanía y cerámica: formas orgánicas, piedra y oliva, y la historia de quien lo hace a mano.",
-  "tags": ["artesanía", "cerámica", "hecho a mano", "orgánico"],
+  "tags": [
+    "artesanía",
+    "cerámica",
+    "hecho a mano",
+    "orgánico"
+  ],
   "sitePurpose": "shop",
   "order": 130,
-  "dna": { "display": "fraunces", "text": "instrument", "case": "none", "radius": "round", "border": "hairline", "button": "pill", "hover": "lift", "press": "squash", "motion": "calm", "cart": "drawer", "added": "toast", "card": "tilt", "frame": "blob" },
+  "dna": {
+    "display": "fraunces",
+    "text": "instrument",
+    "case": "none",
+    "radius": "round",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "lift",
+    "press": "squash",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "tilt",
+    "frame": "blob"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "manos", "role": "lifestyle", "demo": "manos.jpg" },
-    { "slot": "taller", "role": "detail", "demo": "taller.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "manos",
+      "role": "lifestyle",
+      "demo": "manos.jpg"
+    },
+    {
+      "slot": "taller",
+      "role": "detail",
+      "demo": "taller.jpg"
+    }
   ]
 }
