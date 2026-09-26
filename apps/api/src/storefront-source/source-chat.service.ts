@@ -25,6 +25,7 @@ import { requestsImageChange } from './source-edit-scope';
 import { createSourceProgress } from './source-progress';
 import { listTemplates, templateManifest } from '@pagosya/store-templates';
 import { rankTemplates, type TemplateChoice } from './source-template-ranking';
+import { countTemplateVersions, FREE_TEMPLATE_ADAPTATIONS, templateUntouched } from './source-template-state';
 
 /** Photos kept only as style references never appear on the site; say so instead of omitting them silently. */
 export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, attachedUrls: string[]): string {
@@ -79,15 +80,43 @@ export class SourceChatService {
     return { messages, setup: current.revision ? null : sourceSetupPrompt(draft, store) };
   }
 
+  /** Gallery picks (spec 2026-09-26 templates/settings/MCP §1.3): a YAPI-flow store that is still untouched is
+   * adapted like a card tap; every other pick applies instantly, as before. */
+  async applyTemplate(merchantId: string, storeId: string, templateId: string, revision: number) {
+    const current = await this.projects.current(merchantId, storeId);
+    if (current.revision !== revision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
+    const manifest = templateManifest(templateId);
+    if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
+    const brief = revision ? ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).brief : undefined;
+    const summary = brief?.businessInformation;
+    if (!summary || !templateUntouched(brief, revision)) return { ...(await this.templates.apply(merchantId, storeId, templateId, revision)), adapted: false };
+    const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
+    const userMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'USER', content: `Usar ${manifest.name}`, metadata: { revision } } });
+    const workflow = createSourceProgress(async () => {});
+    const draft: SourceSetupDraft = { ...newSourceSetup(), answers: { context: summary } };
+    const result = await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, { id: manifest.id, name: manifest.name, reason: '' }, draft, [], revision);
+    return { ...result.revision, adapted: result.revision.revision > revision + 1 };
+  }
+
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
-  private async useTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, choice: TemplateChoice, draft: SourceSetupDraft, assetUrls: string[]) {
+  private async useTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, choice: TemplateChoice, draft: SourceSetupDraft, assetUrls: string[], revision: number) {
     await workflow.report('saving');
-    const applied = await this.templates.apply(merchantId, storeId, choice.id, 0);
+    const applied = await this.templates.apply(merchantId, storeId, choice.id, revision);
     const summary = draft.answers?.context || '';
     const imageUses = draft.imageUses || [];
-    const v1 = await this.projects.version(merchantId, storeId, applied.revision);
-    const brief = { ...(v1.snapshot as unknown as SourceProjectSnapshot).brief, sitePurpose: 'shop' as const, businessInformation: summary, templateId: choice.id };
     const cleared = { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined };
+    // Free adaptation: the first pick and up to three swaps (spec 2026-09-26, option a). Counted after this apply.
+    if (!summary || await countTemplateVersions(this.prisma, storeId) > FREE_TEMPLATE_ADAPTATIONS) {
+      await workflow.finish('completed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
+        threadId, channel: 'source', role: 'ASSISTANT',
+        content: `Apliqué la plantilla ${choice.name} con tus productos. Si quieres que use tus textos y colores, pídeme que la adapte.`,
+        metadata: { progress: workflow.value, sourceSetup: cleared, sourceRevision: applied.revision, label: applied.label },
+      } });
+      return { userMessage, assistantMessage, revision: applied };
+    }
+    const v1 = await this.projects.version(merchantId, storeId, applied.revision);
+    const brief = { ...(v1.snapshot as unknown as SourceProjectSnapshot).brief, sitePurpose: 'shop' as const, businessInformation: summary, templateId: choice.id, templateRevision: applied.revision + 1 };
     try {
       const revision = await this.generation.generate(merchantId, storeId, {
         revision: applied.revision, brief, model: TEMPLATE_ADAPTATION_MODEL, maxCredits: TEMPLATE_ADAPTATION_MAX_CREDITS,
@@ -158,7 +187,9 @@ export class SourceChatService {
     if (allAssets.length > 24) throw new BadRequestException(`Esta solicitud reúne ${allAssets.length} imágenes. El máximo es 24 por solicitud.`);
     // A tap is checked before anything is saved: the failure path below records a "request failed" message.
     const tappedChoice = input.templateId ? offeredTemplates(history.messages).find(offer => offer.id === input.templateId) : undefined;
-    if (input.templateId && current.revision) throw new BadRequestException('Tu tienda ya tiene un diseño. Para cambiarlo por una plantilla, usa Mi tienda → Plantillas.');
+    // Cards stay choosable while the store is untouched: its current revision is the one a template produced.
+    const tapBrief = input.templateId && current.revision ? ((await this.projects.version(merchantId, storeId, current.revision)).snapshot as unknown as SourceProjectSnapshot).brief : undefined;
+    if (input.templateId && current.revision && !templateUntouched(tapBrief, current.revision)) throw new BadRequestException('Tu tienda ya tiene un diseño. Para cambiarlo por una plantilla, usa Mi tienda → Plantillas.');
     if (input.templateId && !tappedChoice) throw new BadRequestException('Elige una de las plantillas sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
@@ -198,7 +229,7 @@ export class SourceChatService {
     try {
       const budget = new SourceRequestBudget(input.maxCredits);
       const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
-      if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets);
+      if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets, current.revision);
       if (previous && input.sitePurpose && input.sitePurpose !== sourceSitePurpose((previous.snapshot as unknown as SourceProjectSnapshot)?.brief) && !sourceRedesignRequested(input.instruction)) {
         throw new BadRequestException('Cambiar el tipo de sitio requiere un rediseño explícito. Las ediciones locales conservan el tipo actual.');
       }
@@ -245,9 +276,9 @@ export class SourceChatService {
         decision.reply = 'No pude inspeccionar una de las páginas de referencia. ¿Puedes compartir una captura de pantalla o describir el diseño que te gusta?';
         decision.generationInstruction = '';
       }
-      const typedChoice = !current.revision && decision.chosenTemplateId
+      const typedChoice = (!current.revision || templateUntouched((previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief, current.revision)) && decision.chosenTemplateId
         ? offeredTemplates(history.messages).find(offer => offer.id === decision.chosenTemplateId) : undefined;
-      if (typedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, typedChoice, { ...setupDraft, answers: { context: decision.summary }, imageUses: decision.imageUses }, allAssets);
+      if (typedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, typedChoice, { ...setupDraft, answers: { context: decision.summary }, imageUses: decision.imageUses }, allAssets, current.revision);
       // Photo creation explicitly delegates design with one owned image. Regular
       // chat and legacy quick/buildNow requests retain the discovery questions.
       const discoveryReplies = Math.max(0, Math.min(2, setupDraft.discoveryReplies || 0));

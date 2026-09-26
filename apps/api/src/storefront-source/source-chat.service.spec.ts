@@ -12,6 +12,7 @@ function setup(messages: any[] = []) {
     store: { findFirst: jest.fn().mockResolvedValue({ name: 'Café Aroma', logoUrl: '/v1/uploads/logo.png', _count: { paymentLinks: 3 } }) },
     storeAgentThread: { findUnique: jest.fn().mockImplementation(async () => ({ id: 't1', messages: [...messages].reverse() })), upsert: jest.fn().mockResolvedValue({ id: 't1' }) },
     storeAgentMessage: { create: jest.fn().mockImplementation(async ({data}) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }) },
+    storeSourceVersion: { count: jest.fn().mockResolvedValue(1) },
   };
   const projects: any = { current: jest.fn().mockResolvedValue({ revision: 1 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessType: 'Café Aroma', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Editorial' } } }) };
   const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Carta editorial' }) };
@@ -646,5 +647,54 @@ describe('final review fixes', () => {
     await service.send('m', 's', { ...request, revision: 0, instruction: 'Tonos tierra' });
     expect(generation.generate).toHaveBeenCalledTimes(1);
     expect(messages.some((message: any) => message.metadata?.templateChoices)).toBe(false);
+  });
+});
+
+describe('template swaps before any change', () => {
+  const untouched = (templateRevision: number) => ({ snapshot: { brief: { businessType: 'Café', audience: 'V', primaryAction: 'C', visualDirection: 'P', sitePurpose: 'shop', templateId: 'tostado', templateRevision, businessInformation: 'Cafetería' } } });
+  it('lets a card be tapped again while the store is untouched, and applies on top of the current revision', async () => {
+    const { service, projects, templates } = setup(withCards());
+    projects.current.mockResolvedValue({ revision: 2 }); projects.version.mockResolvedValue(untouched(2));
+    await service.send('m', 's', { ...request, revision: 2, instruction: 'Usar Miga', templateId: 'miga' });
+    expect(templates.apply).toHaveBeenCalledWith('m', 's', 'miga', 2);
+  });
+  it('refuses a card once the merchant edited the store', async () => {
+    const { service, projects, templates } = setup(withCards());
+    projects.current.mockResolvedValue({ revision: 3 }); projects.version.mockResolvedValue(untouched(2));
+    await expect(service.send('m', 's', { ...request, revision: 3, instruction: 'Usar Miga', templateId: 'miga' })).rejects.toThrow('ya tiene un diseño');
+    expect(templates.apply).not.toHaveBeenCalled();
+  });
+  it('adapts for free up to the 4th template version and not after', async () => {
+    for (const [count, adapted] of [[4, true], [5, false]] as const) {
+      const { service, projects, templates, generation, prisma, messages } = setup(withCards());
+      projects.current.mockResolvedValue({ revision: 2 }); projects.version.mockResolvedValue(untouched(2));
+      templates.apply.mockResolvedValue({ revision: 3, label: 'Plantilla: Miga' }); prisma.storeSourceVersion.count.mockResolvedValue(count);
+      generation.generate.mockResolvedValue({ revision: 4, label: 'x' });
+      await service.send('m', 's', { ...request, revision: 2, instruction: 'Usar Miga', templateId: 'miga' });
+      expect(generation.generate).toHaveBeenCalledTimes(adapted ? 1 : 0);
+      if (!adapted) expect(messages.at(-1).content).toContain('pídeme que la adapte');
+    }
+  });
+  it('marks the adapted version as the one the template produced', async () => {
+    const { service, projects, templates, generation } = setup(withCards());
+    projects.current.mockResolvedValue({ revision: 2 }); projects.version.mockResolvedValue(untouched(2));
+    templates.apply.mockResolvedValue({ revision: 3, label: 'Plantilla: Miga' }); generation.generate.mockResolvedValue({ revision: 4, label: 'x' });
+    await service.send('m', 's', { ...request, revision: 2, instruction: 'Usar Miga', templateId: 'miga' });
+    expect(generation.generate.mock.calls[0][2].brief.templateRevision).toBe(4);
+  });
+  it('gallery picks on a YAPI-flow untouched store go through the free adaptation', async () => {
+    const { service, projects, templates, generation } = setup([]);
+    projects.current.mockResolvedValue({ revision: 2 }); projects.version.mockResolvedValue(untouched(2));
+    templates.apply.mockResolvedValue({ revision: 3, label: 'Plantilla: Miga' }); generation.generate.mockResolvedValue({ revision: 4, label: 'x' });
+    const saved = await service.applyTemplate('m', 's', 'miga', 2);
+    expect(generation.generate.mock.calls[0][6]).toEqual({ free: true });
+    expect(saved).toMatchObject({ revision: 4, adapted: true });
+  });
+  it('gallery picks on a store without a YAPI conversation stay instant', async () => {
+    const { service, projects, templates, generation } = setup([]);
+    projects.current.mockResolvedValue({ revision: 5 }); projects.version.mockResolvedValue({ snapshot: { brief: { businessType: 'Café', audience: 'V', primaryAction: 'C', visualDirection: 'P' } } });
+    templates.apply.mockResolvedValue({ revision: 6, label: 'Plantilla: Miga' });
+    await expect(service.applyTemplate('m', 's', 'miga', 5)).resolves.toMatchObject({ revision: 6, adapted: false });
+    expect(generation.generate).not.toHaveBeenCalled();
   });
 });
