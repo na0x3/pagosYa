@@ -43,9 +43,16 @@ export function sourceLinkChecks(snapshot: SourceSnapshot): SourceCheck[] {
   return [...brandChecks, { label: 'Enlaces y secciones internas', status: failures.length ? 'failed' : 'passed', ...(failures.length ? { detail: failures.slice(0, 8).join(' · ') } : {}) }];
 }
 
+/** A store made from a Plantilla still showing the template's demo photos: worth fixing, never a block. */
+export function sourceTemplatePhotoChecks(snapshot: SourceSnapshot): SourceCheck[] {
+  const data = snapshot.files.find(f => f.path === 'components/store-data.tsx')?.content || '';
+  const demo = data.match(/"assets\/template-[a-z0-9-]+\.(?:jpg|png|webp)"/g)?.length || 0;
+  return demo ? [{ label: 'Fotos propias', status: 'warning', detail: `La plantilla todavía muestra ${demo} ${demo === 1 ? 'foto' : 'fotos'} de ejemplo. Cámbialas por fotos de tus productos antes de publicar.` }] : [];
+}
+
 /** Functional diagnostics, never a security attestation or a live payment test. */
 export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: AbortSignal): Promise<SourceCheck[]> {
-  const results = sourceLinkChecks(snapshot);
+  const results = [...sourceLinkChecks(snapshot), ...sourceTemplatePhotoChecks(snapshot)];
   const commerce = !['service', 'portfolio', 'editorial'].includes(snapshot.brief?.sitePurpose || 'shop');
   let designLayout: unknown;
   try {

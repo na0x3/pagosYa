@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sourceCheckResult, type SourceCheck } from './source-checks';
 import { MerchantStudioApi } from './api';
 
@@ -59,4 +59,19 @@ it('noncommerce links cannot use nonexistent cart anchors as exempt application 
   const { sourceLinkChecks } = await import('./source-checks');
   const snapshot = { schemaVersion: 1, brief: { sitePurpose: 'portfolio' as const, businessType: 'Studio', audience: 'Visitors', primaryAction: 'Contact', visualDirection: 'Editorial' }, files: [{ path: 'index.html', content: '<a href="#cart">View work</a>' }] };
   expect(sourceLinkChecks(snapshot)).toContainEqual(expect.objectContaining({ label: 'Enlaces y secciones internas', status: 'failed' }));
+});
+
+describe('template demo photos', () => {
+  const snap = (content: string) => ({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [{ path: 'components/store-data.tsx', content }] }) as any;
+  it('warns, without blocking publication, while a template still shows its demo photos', async () => {
+    const { sourceTemplatePhotoChecks, sourceChecksBlockPublishing } = await import('./source-checks');
+    const rows = sourceTemplatePhotoChecks(snap('export const photos: Record<string, string> = {"hero":"assets/template-aurora-hero.jpg","p1":"https://api.test/v1/uploads/a.jpg","ritual":"assets/template-aurora-ritual.jpg"};'));
+    expect(rows).toEqual([{ label: 'Fotos propias', status: 'warning', detail: 'La plantilla todavía muestra 2 fotos de ejemplo. Cámbialas por fotos de tus productos antes de publicar.' }]);
+    expect(sourceChecksBlockPublishing(rows)).toBe(false);
+  });
+  it('says nothing once every photo is the store\'s own, or for a store not made from a template', async () => {
+    const { sourceTemplatePhotoChecks } = await import('./source-checks');
+    expect(sourceTemplatePhotoChecks(snap('export const photos: Record<string, string> = {"hero":"https://api.test/v1/uploads/a.jpg"};'))).toEqual([]);
+    expect(sourceTemplatePhotoChecks({ ...snap(''), files: [] })).toEqual([]);
+  });
 });
