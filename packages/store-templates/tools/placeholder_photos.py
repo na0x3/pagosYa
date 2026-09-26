@@ -9,7 +9,9 @@ import json, sys
 from PIL import Image, ImageDraw, ImageFilter
 
 def hex_rgb(value):
-    value = value.lstrip('#'); return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+    value = value.lstrip('#')
+    if len(value) == 3: value = ''.join(c * 2 for c in value)
+    return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
 
 def backdrop(size, top, bottom):
     w, h = size; im = Image.new('RGB', size); d = ImageDraw.Draw(im)

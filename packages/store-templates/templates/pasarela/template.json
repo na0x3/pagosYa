@@ -1,0 +1,20 @@
+{
+  "id": "pasarela",
+  "name": "Pasarela",
+  "category": "moda",
+  "description": "Moda editorial: el nombre de tu marca como portada de revista, blanco y negro y un lookbook asimétrico.",
+  "tags": ["moda", "editorial", "revista", "minimal"],
+  "sitePurpose": "shop",
+  "order": 60,
+  "dna": { "display": "bodoni-moda", "text": "libre-caslon-text", "case": "none", "radius": "none", "border": "hairline", "button": "underline", "hover": "underline-grow", "press": "none", "motion": "cinematic", "cart": "overlay", "added": "inline", "card": "zoom" },
+  "photos": [
+    { "slot": "hero1", "role": "hero", "demo": "hero1.jpg" },
+    { "slot": "hero2", "role": "lifestyle", "demo": "hero2.jpg" },
+    { "slot": "hero3", "role": "lifestyle", "demo": "hero3.jpg" },
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "look1", "role": "lifestyle", "demo": "look1.jpg" },
+    { "slot": "look2", "role": "detail", "demo": "look2.jpg" }
+  ]
+}
