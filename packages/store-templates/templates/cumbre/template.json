@@ -1,0 +1,20 @@
+{
+  "id": "cumbre",
+  "name": "Cumbre",
+  "category": "deporte",
+  "description": "Aire libre y aventura: fotos a todo lo ancho, rojo de señal y titulares firmes. Para mochilas, ropa y equipo.",
+  "tags": ["outdoor", "aventura", "ropa", "equipo"],
+  "sitePurpose": "shop",
+  "order": 40,
+  "dna": { "display": "chivo", "text": "figtree", "case": "none", "radius": "none", "border": "hairline", "button": "block", "hover": "fill", "press": "sink", "motion": "snappy", "cart": "drawer", "added": "toast", "card": "zoom" },
+  "photos": [
+    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "banner", "role": "lifestyle", "demo": "banner.jpg" },
+    { "slot": "uso1", "role": "lifestyle", "demo": "uso1.jpg" },
+    { "slot": "uso2", "role": "lifestyle", "demo": "uso2.jpg" },
+    { "slot": "uso3", "role": "detail", "demo": "uso3.jpg" }
+  ]
+}
