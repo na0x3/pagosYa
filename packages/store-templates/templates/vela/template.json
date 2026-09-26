@@ -1,0 +1,18 @@
+{
+  "id": "vela",
+  "name": "Vela",
+  "category": "hogar",
+  "description": "Velas y aromas: ciruela profundo, luz ámbar y un ritual. Para marcas de hogar y bienestar.",
+  "tags": ["velas", "aromas", "bienestar", "cálido"],
+  "sitePurpose": "shop",
+  "order": 190,
+  "dna": { "display": "playfair-display", "text": "lora", "case": "none", "radius": "round", "border": "hairline", "button": "outline", "hover": "fill", "press": "none", "motion": "cinematic", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "bleed" },
+  "photos": [
+    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "ritual", "role": "lifestyle", "demo": "ritual.jpg" },
+    { "slot": "regalo", "role": "detail", "demo": "regalo.jpg" }
+  ]
+}
