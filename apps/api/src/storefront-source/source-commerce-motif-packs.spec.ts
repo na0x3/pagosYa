@@ -26,9 +26,9 @@ afterEach(() => { while (opened.length) opened.pop().close(); });
 let browser: Browser | undefined;
 const chrome = async () => (browser ??= await chromium.launch({ headless: true }));
 afterAll(async () => { await browser?.close(); });
-async function openShop(options: { pack?: unknown; css?: string; body?: string; query?: string; width?: number; dna?: Record<string, unknown>; reduced?: boolean; cart?: unknown[] }): Promise<Page> {
+async function openShop(options: { pack?: unknown; css?: string; body?: string; query?: string; width?: number; dna?: Record<string, unknown>; reduced?: boolean; cart?: unknown[]; items?: unknown[] }): Promise<Page> {
   const page = await (await chrome()).newPage({ viewport: { width: options.width ?? 1280, height: 800 }, reducedMotion: options.reduced ? 'reduce' : 'no-preference' });
-  const config = { slug: 'huellitas', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Huellitas', items: ITEMS, categories: [{ id: 'snacks', name: 'Snacks' }] },
+  const config = { slug: 'huellitas', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Huellitas', items: options.items ?? ITEMS, categories: [{ id: 'snacks', name: 'Snacks' }] },
     dna: options.dna ?? { version: 1, motion: 'calm' }, ...(options.pack ? { motifPack: options.pack } : {}) };
   await page.setContent(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${options.css ?? ''}</style></head><body>${options.body ?? CATALOG}</body></html>`);
   await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_PREVIEW_QUERY=${JSON.stringify(options.query ?? '')};${options.cart ? `window.PAGOSYA_PREVIEW_CART=${JSON.stringify(options.cart)};` : ''}window.PAGOSYA_CONFIG=${JSON.stringify(config)};` });
@@ -505,5 +505,61 @@ describe('motifRgb and patternBackdrop read what Chromium really reports (findin
       await page.waitForFunction(() => ['placed', 'skipped'].includes(document.querySelector('.hero')?.getAttribute('data-motif-pattern') || ''));
       expect(await page.$eval('.hero', el => el.getAttribute('data-motif-pattern'))).toBe('placed');
     } finally { await page.close(); }
+  });
+});
+
+describe('batches layout work and parses each drawing once, instead of once per card (finding 4)', () => {
+  it('parses each pack drawing once no matter how many cards place it (jsdom, DOMParser call count)', async () => {
+    const virtualConsole = new VirtualConsole();
+    const dom = new JSDOM(`<html><head></head><body>${CATALOG}</body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole });
+    const w = dom.window; opened.push(w);
+    w.HTMLElement.prototype.scrollIntoView = () => {};
+    w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+    w.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+    w.HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+    w.PAGOSYA_PREVIEW = true; w.PAGOSYA_PREVIEW_QUERY = '';
+    const items = Array.from({ length: 40 }, (_, i) => ({ id: `p${i}`, name: `Producto ${i}`, amount: 1000 + i, currency: 'BOB', stock: 9, imageUrls: [], categoryId: 'snacks' }));
+    const data = { storeName: 'Huellitas', items, categories: [{ id: 'snacks', name: 'Snacks' }] };
+    const pack = fixturePack();
+    w.PAGOSYA_CONFIG = { slug: 'huellitas', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, dna: { version: 1, motion: 'calm' }, motifPack: pack };
+    w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
+    let parses = 0;
+    const original = w.DOMParser.prototype.parseFromString;
+    w.DOMParser.prototype.parseFromString = function (...args: unknown[]) { parses++; return (original as any).apply(this, args); };
+    w.eval(commerce);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    expect(w.document.querySelectorAll('.menu-item .pagosya-motif[data-motif-slot="card"]')).toHaveLength(40);
+    expect(w.document.querySelectorAll('.menu-add .pagosya-motif[data-motif-slot="button"]').length).toBeGreaterThan(0);
+    // FIXTURE_DRAWINGS carries 5 distinct SVG strings (card/cart/button share one, product shares empty's): one
+    // parse per distinct string, however many cards place it.
+    const distinctDrawings = new Set(pack.motifs.map((motif: { svg: string }) => motif.svg)).size;
+    expect(parses).toBeLessThanOrEqual(distinctDrawings);
+    expect(parses).toBeLessThan(40); // sanity: nowhere near one parse per card
+  });
+
+  it('keeps forced layouts and style recalcs bounded as the catalog grows, not one per card (real browser, Chromium Performance metrics)', async () => {
+    const items = Array.from({ length: 120 }, (_, i) => ({ id: `p${i}`, name: `Producto ${i}`, amount: 1000 + i, currency: 'BOB', stock: 9, imageUrls: [], categoryId: 'snacks' }));
+    async function measure(pack: unknown) {
+      const page = await (await chrome()).newPage({ viewport: { width: 390, height: 800 } });
+      const session = await page.context().newCDPSession(page);
+      await session.send('Performance.enable');
+      const config = { slug: 'huellitas', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Huellitas', items, categories: [{ id: 'snacks', name: 'Snacks' }] }, dna: { version: 1, motion: 'calm' }, ...(pack ? { motifPack: pack } : {}) };
+      await page.setContent(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${CATALOG}</body></html>`);
+      await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_PREVIEW_QUERY='';window.PAGOSYA_CONFIG=${JSON.stringify(config)};` });
+      await page.addScriptTag({ content: commerce });
+      try {
+        await page.waitForSelector('.menu-item');
+        await page.waitForTimeout(200);
+        const metrics = await session.send('Performance.getMetrics') as { metrics: Array<{ name: string; value: number }> };
+        const get = (name: string) => metrics.metrics.find(m => m.name === name)?.value ?? 0;
+        return { layouts: get('LayoutCount'), recalcs: get('RecalcStyleCount') };
+      } finally { await page.close(); }
+    }
+    const withoutPack = await measure(undefined);
+    const withPack = await measure(fixturePack());
+    // Batched phases (finding 4), not one forced layout per one of the 120 cards: the difference stays a small,
+    // bounded number of phases, however many cards are on the page.
+    expect(withPack.layouts - withoutPack.layouts).toBeLessThan(30);
+    expect(withPack.recalcs - withoutPack.recalcs).toBeLessThan(40);
   });
 });

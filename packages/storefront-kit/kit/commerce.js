@@ -63,6 +63,33 @@
   const MOTIF_ATTRIBUTES = ['viewBox', 'preserveAspectRatio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'fx', 'fy', 'fr', 'd', 'points', 'pathLength', 'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'color', 'transform', 'vector-effect', 'clip-path', 'clip-rule', 'mask', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform', 'spreadMethod', 'clipPathUnits', 'maskUnits', 'maskContentUnits', 'class', 'id', 'data-part', 'aria-hidden', 'focusable'];
   const MOTIF_BEHAVIORS = ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'];
   const MOTIF_SLOT_TRIGGERS = ['appear', 'scroll', 'hover', 'add-to-cart'];
+  function parseMotifDrawing(markup) {
+    let root;
+    try { root = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement; } catch { return null; }
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    if (!root || root.namespaceURI !== SVG_NS || root.localName !== 'svg') return null;
+    for (const el of [root, ...root.querySelectorAll('*')]) {
+      if (el.namespaceURI !== SVG_NS || !MOTIF_ELEMENTS.includes(el.localName)) return null;
+      for (const attr of [...el.attributes]) {
+        if (el === root && attr.name === 'xmlns') continue;
+        const value = attr.value;
+        if (!MOTIF_ATTRIBUTES.includes(attr.name) || /[<>"`\\]|(?:javascript|vbscript|data)\s*:|expression\s*\(/i.test(value)
+          || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
+      }
+    }
+    root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
+    return root;
+  }
+  // Every distinct drawing string is parsed and sanitised once (finding 4): a public catalog can place the same
+  // drawing on well over a hundred cards, and DOMParser is not cheap. Every call after the first for the same
+  // markup clones the cached, already-sanitised element; callers may freely mutate their own clone. Defined here,
+  // ahead of AI_MOTIFS/PACK_MOTIFS below (both call motifDrawing while filtering, at module-evaluation time).
+  const motifDrawingCache = new Map();
+  function motifDrawing(markup) {
+    if (!motifDrawingCache.has(markup)) motifDrawingCache.set(markup, parseMotifDrawing(markup));
+    const cached = motifDrawingCache.get(markup);
+    return cached ? cached.cloneNode(true) : null;
+  }
   const AI_MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
     && MOTIF_BEHAVIORS.includes(motif.behavior) && MOTIF_SLOT_TRIGGERS.includes(motif.trigger) && ['product', 'card', 'cart'].includes(motif.placement)
     && ['store', 'category', 'product'].includes(motif.for) && typeof motif.target === 'string' && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg));
@@ -1387,23 +1414,6 @@
   }
   /* DNA motifs: verification, slots, triggers. Every animation is finite, ends at rest and starts only when motion is
    * allowed; the kit's reduced-motion rule also switches it off in CSS. */
-  function motifDrawing(markup) {
-    let root;
-    try { root = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement; } catch { return null; }
-    const SVG_NS = 'http://www.w3.org/2000/svg';
-    if (!root || root.namespaceURI !== SVG_NS || root.localName !== 'svg') return null;
-    for (const el of [root, ...root.querySelectorAll('*')]) {
-      if (el.namespaceURI !== SVG_NS || !MOTIF_ELEMENTS.includes(el.localName)) return null;
-      for (const attr of [...el.attributes]) {
-        if (el === root && attr.name === 'xmlns') continue;
-        const value = attr.value;
-        if (!MOTIF_ATTRIBUTES.includes(attr.name) || /[<>"`\\]|(?:javascript|vbscript|data)\s*:|expression\s*\(/i.test(value)
-          || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
-      }
-    }
-    root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
-    return root;
-  }
   const motifText = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const motifWords = value => motifText(value).split(/[^a-z0-9]+/).filter(Boolean);
   /* The target's words appear in order as whole words (a word also matches its plural, -s/-es): "té" is not inside
@@ -1561,42 +1571,61 @@
   // every quantity/selection change, which would silently wipe any icon placed here (finding 7).
   const KIT_ICON_BUTTONS = '.menu-add,.product-detail__buy';
   const NO_ICON = '.checkout-button:not(.product-detail__buy),[data-pay],[data-checkout],[data-finish-demo],template *';
-  function fillIconSlot(slot, button) {
+  /* Batched across every slot in one placeButtonMotifs pass (finding 4): a public catalog can hold well over a
+   * hundred cards, and filling each icon slot one at a time — read, insert, then its own rAF of read/write/read/
+   * write — forces a synchronous layout per card. Every phase below (read, then write, then, in the rAF, read,
+   * write, read, write, read, write) runs once for every prepared slot before the next phase starts, so the whole
+   * batch costs one forced layout per phase instead of one per slot. */
+  function fillIconSlots(entries) {
     const index = packMotif('button');
-    if (index < 0 || slot.getAttribute('data-motif-icon') === 'placed') return;
-    const holder = motifSlot(index, 'button');
-    if (!holder) return;
-    const before = button.getBoundingClientRect();
-    const spareX = button.scrollWidth - button.clientWidth, spareY = button.scrollHeight - button.clientHeight;
-    slot.replaceChildren(holder);
-    slot.setAttribute('data-motif-icon', 'placed');
-    slot.setAttribute('aria-hidden', 'true');
-    armMotif(holder, button);
+    if (index < 0 || !entries.length) return;
+    const prepared = [];
+    for (const { slot, button } of entries) {
+      if (slot.getAttribute('data-motif-icon') === 'placed') continue;
+      const holder = motifSlot(index, 'button');
+      if (holder) prepared.push({ slot, button, holder });
+    }
+    if (!prepared.length) return;
+    for (const entry of prepared) { // read: the "before" box and spare overflow room, before any insertion
+      entry.before = entry.button.getBoundingClientRect();
+      entry.spareX = entry.button.scrollWidth - entry.button.clientWidth;
+      entry.spareY = entry.button.scrollHeight - entry.button.clientHeight;
+    }
+    for (const entry of prepared) { // write: insert every holder
+      entry.slot.replaceChildren(entry.holder);
+      entry.slot.setAttribute('data-motif-icon', 'placed');
+      entry.slot.setAttribute('aria-hidden', 'true');
+      armMotif(entry.holder, entry.button);
+    }
     const check = () => {
-      if (!holder.isConnected) return;
-      const after = button.getBoundingClientRect();
-      if (!after.width) return; // nothing laid out to measure
-      const box = holder.getBoundingClientRect();
-      const wraps = before.height > 0 && after.height > before.height + 1;
+      const live = prepared.filter(entry => entry.holder.isConnected);
+      if (!live.length) return;
+      for (const entry of live) { entry.after = entry.button.getBoundingClientRect(); entry.box = entry.holder.getBoundingClientRect(); } // read
       // A flex button can hide true overflow by shrinking its other content instead of growing: measure with every
       // child's shrink neutralised (a same-frame, no-paint probe), then put every value straight back.
-      const kids = [...button.children], shrinks = kids.map(kid => kid.style.flexShrink);
-      kids.forEach(kid => { kid.style.flexShrink = '0'; });
-      const overflows = button.scrollWidth - button.clientWidth > Math.max(0, spareX) + 1 || button.scrollHeight - button.clientHeight > Math.max(0, spareY) + 1;
-      kids.forEach((kid, i) => { kid.style.flexShrink = shrinks[i]; });
-      const scope = button.closest('.menu-item,[data-custom-product],[data-pagosya-product],.product-detail__sticky') || button;
-      const onPrice = [...scope.querySelectorAll(MOTIF_PRICES)].some(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; });
-      if (!wraps && !overflows && !onPrice) return;
-      holder.remove();
-      // Mark terminal (never remove the slot itself, kit-owned or not): a removed slot element would leave no
-      // trace for the KIT_ICON_BUTTONS guard below, so the next unrelated mutation re-inserts and re-removes it
-      // forever (finding 3's icon flash).
-      slot.setAttribute('data-motif-icon', 'removed');
+      for (const entry of live) { entry.kids = [...entry.button.children]; entry.shrinks = entry.kids.map(kid => kid.style.flexShrink); entry.kids.forEach(kid => { kid.style.flexShrink = '0'; }); } // write
+      for (const entry of live) entry.overflows = entry.button.scrollWidth - entry.button.clientWidth > Math.max(0, entry.spareX) + 1 || entry.button.scrollHeight - entry.button.clientHeight > Math.max(0, entry.spareY) + 1; // read
+      for (const entry of live) entry.kids.forEach((kid, i) => { kid.style.flexShrink = entry.shrinks[i]; }); // write (restore)
+      for (const entry of live) { // read: price overlap
+        const scope = entry.button.closest('.menu-item,[data-custom-product],[data-pagosya-product],.product-detail__sticky') || entry.button;
+        entry.onPrice = [...scope.querySelectorAll(MOTIF_PRICES)].some(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left < entry.box.right && r.right > entry.box.left && r.top < entry.box.bottom && r.bottom > entry.box.top; });
+      }
+      for (const entry of live) { // write: remove any that wrap, overflow or cover a price
+        if (!entry.after.width) continue; // nothing laid out to measure
+        const wraps = entry.before.height > 0 && entry.after.height > entry.before.height + 1;
+        if (!wraps && !entry.overflows && !entry.onPrice) continue;
+        entry.holder.remove();
+        // Mark terminal (never remove the slot itself, kit-owned or not): a removed slot element would leave no
+        // trace for the KIT_ICON_BUTTONS guard below, so the next unrelated mutation re-inserts and re-removes it
+        // forever (finding 3's icon flash).
+        entry.slot.setAttribute('data-motif-icon', 'removed');
+      }
     };
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check); else check();
   }
   function placeButtonMotifs(root) {
     if (packMotif('button') < 0 || !root?.querySelectorAll) return;
+    const entries = [];
     root.querySelectorAll(KIT_ICON_BUTTONS).forEach(button => {
       // A disabled button (sold out, or a card the kit marked sold out) never gets a paw (finding 8).
       if (button.matches(NO_ICON) || button.disabled || button.closest('[data-sold-out],.sold-out') || button.querySelector(':scope > [data-motif-icon]')) return;
@@ -1604,15 +1633,18 @@
       slot.setAttribute('data-motif-icon', '');
       slot.setAttribute('data-motif-kit', '');
       button.insertBefore(slot, button.firstChild);
-      fillIconSlot(slot, button);
+      entries.push({ slot, button });
     });
     root.querySelectorAll('[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"])').forEach(slot => {
-      if (slot.closest('template')) return;
+      // A slot the loop above just created (data-motif-kit) is already queued in entries and still reads
+      // data-motif-icon="" until fillIconSlots's write phase runs below: skip it here, or it would be queued twice.
+      if (slot.closest('template') || slot.hasAttribute('data-motif-kit')) return;
       const host = slot.closest('button,a,[role="button"]') || slot;
       // Mark terminal (finding 3): a slot inside an excluded host is never left unmarked to be rescanned forever.
       if (host.matches(NO_ICON) || host.disabled || host.closest('[data-sold-out],.sold-out')) { slot.setAttribute('data-motif-icon', 'removed'); return; }
-      fillIconSlot(slot, host);
+      entries.push({ slot, button: host });
     });
+    fillIconSlots(entries);
   }
   /* The pattern placement: a tile behind a section the store marks data-motif-pattern, never behind or around the kit's
    * catalog, cart, product or checkout. It is a background image (an SVG data URL; every storefront CSP allows img-src
