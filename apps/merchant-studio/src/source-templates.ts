@@ -19,8 +19,9 @@ export function renderTemplateGallery(templates: TemplateSummary[], state: Galle
   const off = state.busy ? 'disabled' : '';
   const shown = templates.filter(template => !state.category || template.category === state.category);
   const chosen = templates.find(template => template.id === state.selected);
-  const chip = (value: string, text: string) => `<button type="button" class="tpl-chip" data-template-category="${escape(value)}" aria-pressed="${state.category === value}" ${off}>${escape(text)}</button>`;
-  return `<header class="tpl-head"><div><h2>Plantillas</h2><p>Tiendas completas, listas para tus productos. Elige una y cambia fotos y textos cuando quieras.</p></div><button type="button" class="button" data-template-close>Cerrar</button></header>
+  const count = (category: string) => templates.filter(template => !category || template.category === category).length;
+  const chip = (value: string, text: string) => `<button type="button" class="tpl-chip" data-template-category="${escape(value)}" aria-pressed="${state.category === value}" ${off}>${escape(text)} <span>${count(value)}</span></button>`;
+  return `<header class="tpl-head"><div><h2>Elige una plantilla</h2><p>Tiendas completas con tus productos. Mira cómo queda la tuya antes de elegir.</p></div><button type="button" class="tpl-close" data-template-close aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     ${state.error ? `<p class="tpl-error" role="alert">${escape(state.error)}</p>` : ''}
     ${chosen ? `<section class="tpl-confirm" data-template-confirm aria-live="polite">
       <img src="${escape(state.previewBase)}plantillas/${escape(chosen.id)}.webp" alt="" aria-hidden="true">
@@ -30,7 +31,7 @@ export function renderTemplateGallery(templates: TemplateSummary[], state: Galle
     <nav class="tpl-chips" aria-label="Categorías">${chip('', 'Todas')}${templateCategories(templates).map(category => chip(category, label(category))).join('')}</nav>
     <ul class="tpl-grid">${shown.map(template => `<li class="tpl-card" data-template-card="${escape(template.id)}">
       <button type="button" class="tpl-card__pick" data-template-pick="${escape(template.id)}" ${off} aria-label="Ver ${escape(template.name)}">
-        <span class="tpl-card__frame"><img src="${escape(state.previewBase)}plantillas/${escape(template.id)}.webp" alt="Vista previa de ${escape(template.name)}" loading="lazy"></span>
+        <span class="tpl-card__frame"><img class="tpl-card__desk" src="${escape(state.previewBase)}plantillas/${escape(template.id)}.webp" alt="" loading="lazy"><img class="tpl-card__phone" src="${escape(state.previewBase)}plantillas/${escape(template.id)}-mobile.webp" alt="" loading="lazy"></span>
         <span class="tpl-card__meta"><strong>${escape(template.name)}</strong><small>${escape(label(template.category))}</small></span>
         <span class="tpl-card__desc">${escape(template.description)}</span>
       </button>

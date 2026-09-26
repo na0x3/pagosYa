@@ -17,7 +17,7 @@ describe('Plantillas gallery', () => {
   it('offers one chip per category present, after Todas', () => {
     expect(templateCategories(templates)).toEqual(['belleza', 'deporte']);
     const chips = [...render().querySelectorAll('[data-template-category]')].map(chip => chip.textContent);
-    expect(chips).toEqual(['Todas', 'Belleza', 'Deporte y aire libre']);
+    expect(chips.map(chip => chip?.replace(/\s+/g, ' ').trim())).toEqual(['Todas 3', 'Belleza 1', 'Deporte y aire libre 2']);
   });
 
   it('shows every template as a card with its preview, escaping names', () => {
@@ -49,6 +49,19 @@ describe('Plantillas gallery', () => {
     const root = render({ selected: 'aurora', busy: true, error: 'El proyecto cambió.' });
     expect([...root.querySelectorAll('button')].filter(button => !button.hasAttribute('data-template-close')).every(button => (button as HTMLButtonElement).disabled)).toBe(true);
     expect(root.querySelector('[role="alert"]')!.textContent).toBe('El proyecto cambió.');
+  });
+});
+
+describe('gallery look', () => {
+  it('shows a phone capture on every card', () => {
+    const card = render().querySelector('[data-template-pick="aurora"]')!;
+    expect(card.querySelector('.tpl-card__desk')!.getAttribute('src')).toBe('/plantillas/aurora.webp');
+    expect(card.querySelector('.tpl-card__phone')!.getAttribute('src')).toBe('/plantillas/aurora-mobile.webp');
+  });
+  it('titles the dialog as a choice, with an icon close button', () => {
+    const root = render();
+    expect(root.querySelector('h2')!.textContent).toBe('Elige una plantilla');
+    expect(root.querySelector('[data-template-close]')!.getAttribute('aria-label')).toBe('Cerrar');
   });
 });
 
