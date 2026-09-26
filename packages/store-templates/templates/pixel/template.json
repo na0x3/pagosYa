@@ -1,0 +1,17 @@
+{
+  "id": "pixel",
+  "name": "Pixel",
+  "category": "tecnologia",
+  "description": "Tecnología y gadgets: modo oscuro, brillos violeta y cian, cuadrícula tipo bento y tarjetas de vidrio.",
+  "tags": ["tecnología", "gadgets", "oscuro", "futurista"],
+  "sitePurpose": "shop",
+  "order": 110,
+  "dna": { "display": "unbounded", "text": "sora", "case": "none", "radius": "round", "border": "hairline", "button": "pill", "hover": "shine", "press": "squash", "motion": "cinematic", "cart": "sheet", "added": "toast", "card": "zoom" },
+  "photos": [
+    { "slot": "hero", "role": "hero", "demo": "hero.png" },
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+  ]
+}

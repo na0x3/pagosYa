@@ -1,0 +1,77 @@
+@font-face{font-family:'Epilogue';src:url(assets/epilogue.ttf) format('truetype');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Newsreader';src:url(assets/newsreader.ttf) format('truetype');font-weight:200 800;font-display:swap}
+:root{--ni-paper:#faf8f4;--ni-sand:#efe9e0;--ni-ink:#232220;--ni-muted:#77726a;--ni-line:#e2dcd2;--ni-oak:#b89a74;--ni-sage:#8a9a7e;--ni-sans:'Epilogue',system-ui,sans-serif;--ni-serif:'Newsreader',Georgia,serif;
+  --store-background:var(--ni-paper);--store-foreground:var(--ni-ink);--store-accent:var(--ni-ink);--store-accent-foreground:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ni-paper);color:var(--ni-ink);font:16px/1.65 var(--ni-sans)}
+img{display:block;max-width:100%}
+a{color:inherit}
+.ni-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:32px;padding:20px clamp(16px,5vw,80px);background:var(--ni-paper)}
+.ni-logo{font:600 20px var(--ni-sans);letter-spacing:.04em;text-decoration:none;max-width:44vw;overflow-wrap:anywhere}
+.ni-header nav{display:flex;gap:28px;flex:1;font-size:14px;color:var(--ni-muted)}
+.ni-header nav a{text-decoration:none}
+.ni-header nav a:hover{color:var(--ni-ink)}
+.ni-cart{min-height:44px;padding:0;border:0;background:none;color:var(--ni-ink);font:500 14px var(--ni-sans);cursor:pointer}
+.ni-display{margin:0 0 22px;font:300 clamp(46px,6.2vw,96px)/1 var(--ni-sans);letter-spacing:-.04em;text-wrap:balance}
+.ni-display em{font:italic 400 1.02em var(--ni-serif);letter-spacing:-.02em;color:var(--ni-oak)}
+.ni-title{margin:0;font:300 clamp(32px,3.8vw,54px)/1.05 var(--ni-sans);letter-spacing:-.035em}
+.ni-lead{margin:0 0 30px;max-width:38ch;color:var(--ni-muted);font:400 19px/1.55 var(--ni-serif)}
+.ni-btn{display:inline-flex;align-items:center;min-height:50px;padding:0 28px;background:var(--ni-ink);color:#fff;text-decoration:none;font-weight:500;font-size:14px;letter-spacing:.04em}
+.ni-btn:hover{background:#000}
+.ni-hero{display:grid;grid-template-columns:1fr 1.05fr;align-items:end;gap:clamp(24px,5vw,96px);padding:clamp(24px,4vw,56px) clamp(16px,5vw,80px) clamp(72px,9vw,140px)}
+.ni-hero__copy{padding-bottom:clamp(8px,4vw,64px)}
+.ni-hero__photo{width:100%;aspect-ratio:11/15;object-fit:cover;border-radius:4px}
+.ni-rooms{padding:0 clamp(16px,5vw,80px) clamp(72px,9vw,140px)}
+.ni-rooms ul{list-style:none;margin:32px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,1.6vw,20px)}
+.ni-rooms a{display:grid;gap:12px;text-decoration:none}
+.ni-rooms img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;transition:opacity .3s}
+.ni-rooms a:hover img{opacity:.85}
+.ni-rooms span{font:italic 400 22px var(--ni-serif)}
+.ni-shop{padding:clamp(72px,9vw,140px) clamp(16px,5vw,80px);background:#fff}
+.ni-shop__head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:48px}
+.ni-shop__head p{margin:0;color:var(--ni-muted);font-family:var(--ni-serif);font-style:italic}
+.ni-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:64px clamp(20px,3vw,48px)}
+.ni-card{display:flex;flex-direction:column;gap:10px}
+.ni-card__media{display:block;aspect-ratio:4/5;background:var(--ni-sand);overflow:hidden;border-radius:4px}
+.ni-card__media img{width:100%;height:100%;object-fit:cover;transition:transform 1s cubic-bezier(.2,.7,.2,1)}
+.ni-card:hover .ni-card__media img{transform:scale(1.04)}
+.ni-card__row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:6px}
+.ni-card__name{margin:0;font:500 17px/1.3 var(--ni-sans)}
+.ni-card__price{color:var(--ni-muted);white-space:nowrap}
+.ni-card__desc{margin:0;color:var(--ni-muted);font:15px/1.5 var(--ni-serif);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ni-card__add{align-self:flex-start;margin-top:auto;min-height:44px;padding:0 18px;border:1px solid var(--ni-ink);background:none;color:var(--ni-ink);font:500 13px var(--ni-sans);letter-spacing:.04em;cursor:pointer;transition:background .2s,color .2s}
+.ni-card__add:hover{background:var(--ni-ink);color:#fff}
+.ni-materials{display:grid;grid-template-columns:1.2fr 1fr;gap:clamp(24px,5vw,96px);align-items:center;padding:clamp(72px,9vw,140px) clamp(16px,5vw,80px)}
+.ni-materials img{width:100%;aspect-ratio:7/5;object-fit:cover;border-radius:4px}
+.ni-materials dl{margin:32px 0 0;display:grid}
+.ni-materials dl div{padding:18px 0;border-top:1px solid var(--ni-line)}
+.ni-materials dt{font-weight:600}
+.ni-materials dd{margin:4px 0 0;color:var(--ni-muted);font-family:var(--ni-serif)}
+.ni-faq{display:grid;grid-template-columns:minmax(200px,320px) 1fr;gap:clamp(24px,5vw,96px);padding:0 clamp(16px,5vw,80px) clamp(72px,9vw,140px)}
+.ni-faq details{border-top:1px solid var(--ni-line);padding:18px 0}
+.ni-faq details:last-child{border-bottom:1px solid var(--ni-line)}
+.ni-faq summary{cursor:pointer;font-weight:500}
+.ni-faq p{margin:8px 0 0;color:var(--ni-muted);font-family:var(--ni-serif)}
+.ni-footer{display:grid;justify-items:start;gap:8px;padding:64px clamp(16px,5vw,80px) 36px;background:var(--ni-sand)}
+.ni-footer__name{margin:0;font:300 clamp(40px,7vw,96px)/1 var(--ni-sans);letter-spacing:-.05em;overflow-wrap:anywhere}
+.ni-footer__line{margin:0;color:var(--ni-muted);font:italic 18px var(--ni-serif)}
+.ni-footer nav{display:flex;flex-wrap:wrap;gap:10px 24px;margin-top:18px;font-size:14px}
+.ni-footer nav a{text-decoration:none}
+.ni-footer__legal{margin:18px 0 0;color:var(--ni-muted);font-size:13px}
+.ni-status:empty{display:none}
+.ni-page{padding:clamp(24px,4vw,56px) clamp(16px,5vw,80px) clamp(56px,7vw,96px);min-height:60vh}
+.ni-pdp__crumbs{font-size:13px;color:var(--ni-muted);margin-bottom:16px}
+.ni-pdp__grid{display:grid;grid-template-columns:1.2fr 1fr;gap:clamp(24px,5vw,96px);align-items:start}
+.ni-pdp__info{display:grid;gap:16px;position:sticky;top:96px}
+.ni-pdp__title h1,.ni-pdp__title h2{margin:0;font:300 clamp(34px,3.8vw,56px)/1.05 var(--ni-sans);letter-spacing:-.035em}
+.ni-pdp__price{font-size:19px}
+.ni-pdp__desc{color:var(--ni-muted);font-family:var(--ni-serif)}
+@media (max-width:900px){
+  .ni-header nav{display:none}
+  .ni-cart{margin-left:auto}
+  .ni-hero,.ni-materials,.ni-faq,.ni-pdp__grid{grid-template-columns:1fr}
+  .ni-rooms ul{grid-template-columns:1fr 1fr}
+  .ni-shop__head{flex-direction:column}
+  .ni-pdp__info{position:static}
+}
+@media (prefers-reduced-motion:reduce){.ni-card__media img,.ni-rooms img,.ni-card__add{transition:none}}

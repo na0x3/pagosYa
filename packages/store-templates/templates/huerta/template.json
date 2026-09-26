@@ -1,0 +1,18 @@
+{
+  "id": "huerta",
+  "name": "Huerta",
+  "category": "comida",
+  "description": "Orgánico y de temporada: verde hoja, papel natural y una canasta semanal. Para productores y mercados.",
+  "tags": ["orgánico", "mercado", "natural", "fresco"],
+  "sitePurpose": "shop",
+  "order": 100,
+  "dna": { "display": "young-serif", "text": "figtree", "case": "none", "radius": "round", "border": "hairline", "button": "pill", "hover": "fill", "press": "squash", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom" },
+  "photos": [
+    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "campo", "role": "lifestyle", "demo": "campo.jpg" },
+    { "slot": "canasta", "role": "detail", "demo": "canasta.jpg" }
+  ]
+}
