@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -45,25 +46,25 @@ export default function Home() {
       </section>
 
       <section id="beneficios" className="so-benefits" aria-labelledby="so-benefits-title">
-        <h2 id="so-benefits-title" className="so-title">Por qué te va a gustar</h2>
-        <ul>{benefits.map((item, index) => <li key={item.title}><span aria-hidden="true">{['◐', '◆', '●'][index]}</span><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul>
+        <Reveal><h2 id="so-benefits-title" className="so-title">Por qué te va a gustar</h2></Reveal>
+        <Reveal delay={80}><ul>{benefits.map((item, index) => <li key={item.title}><span aria-hidden="true">{['◐', '◆', '●'][index]}</span><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul></Reveal>
       </section>
 
       <section id="uso" className="so-how" aria-labelledby="so-how-title">
-        <img src={photos.uso} alt="El producto en uso" />
-        <div>
+        <div className="so-how__photo"><Parallax strength={120} mobileStrength={50} className="so-drift"><img src={photos.uso} alt="El producto en uso" /></Parallax></div>
+        <Reveal delay={80}>
           <h2 id="so-how-title" className="so-title so-title--left">Así de fácil</h2>
           <ol>{steps.map((step, index) => <li key={step.title}><span>{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
-        </div>
+        </Reveal>
       </section>
 
       <section id="preguntas" className="so-faq" aria-labelledby="so-faq-title">
-        <h2 id="so-faq-title" className="so-title">Preguntas</h2>
+        <Reveal><h2 id="so-faq-title" className="so-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
 
       <section className="so-cta" aria-labelledby="so-cta-title">
-        <h2 id="so-cta-title">¿Listo para probarlo?</h2>
+        <Reveal><h2 id="so-cta-title">¿Listo para probarlo?</h2></Reveal>
         <a className="so-btn" href="#comprar">Comprar ahora</a>
       </section>
     </main>

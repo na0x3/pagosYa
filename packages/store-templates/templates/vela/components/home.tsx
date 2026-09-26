@@ -1,3 +1,4 @@
+import { Parallax, Reveal, ScrollScale } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -24,11 +25,11 @@ export default function Home() {
           <a className="ve-btn" href="#coleccion">Descubrir los aromas</a>
           <ul className="ve-notes" aria-label="Familias de aromas">{notes.map(note => <li key={note}>{note}</li>)}</ul>
         </div>
-        <img className="ve-hero__photo" src={photos.hero} alt={`Vela de ${store.name}`} />
+        <div className="ve-hero__photo"><Parallax strength={60} mobileStrength={14} className="ve-drift"><img src={photos.hero} alt={`Vela de ${store.name}`} /></Parallax></div>
       </section>
 
       <section id="coleccion" className="ve-shop" aria-labelledby="ve-shop-title">
-        <h2 id="ve-shop-title" className="ve-title">La colección</h2>
+        <Reveal><h2 id="ve-shop-title" className="ve-title">La colección</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="ve-card">
             <a className="ve-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -41,24 +42,24 @@ export default function Home() {
       </section>
 
       <section id="ritual" className="ve-ritual" aria-labelledby="ve-ritual-title">
-        <img src={photos.ritual} alt="Una vela encendida" />
-        <div>
+        <ScrollScale from={0.86}><img src={photos.ritual} alt="Una vela encendida" /></ScrollScale>
+        <Reveal delay={120}>
           <h2 id="ve-ritual-title" className="ve-title ve-title--light">El ritual</h2>
           <ol>{ritual.map((step, index) => <li key={step.title}><span>{['I', 'II', 'III'][index]}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
-        </div>
+        </Reveal>
       </section>
 
       <section id="regalos" className="ve-gift" aria-labelledby="ve-gift-title">
-        <div>
+        <Reveal>
           <h2 id="ve-gift-title" className="ve-title ve-title--left">Un regalo que se enciende</h2>
           <p>Elige dos o tres aromas y los enviamos juntos, con tu nota.</p>
           <a className="ve-btn ve-btn--plum" href="#coleccion">Armar un regalo</a>
-        </div>
-        <img src={photos.regalo} alt="Set de regalo" />
+        </Reveal>
+        <Reveal delay={120}><img src={photos.regalo} alt="Set de regalo" /></Reveal>
       </section>
 
       <section id="preguntas" className="ve-faq" aria-labelledby="ve-faq-title">
-        <h2 id="ve-faq-title" className="ve-title">Preguntas</h2>
+        <Reveal><h2 id="ve-faq-title" className="ve-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

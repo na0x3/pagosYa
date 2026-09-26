@@ -23,7 +23,7 @@ a{color:inherit}
 .ve-notes{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:34px 0 0;padding:0}
 .ve-notes li{padding:6px 14px;border:1px solid #ffffff33;border-radius:999px;color:#e9dde2;font-size:14px}
 .ve-hero{display:grid;grid-template-columns:1.1fr 1fr;align-items:center;gap:clamp(24px,5vw,80px);padding:clamp(48px,6vw,96px) clamp(16px,4vw,56px);background:radial-gradient(circle at 75% 45%,#6b3c50,var(--ve-night) 60%)}
-.ve-hero__photo{width:100%;aspect-ratio:13/15;object-fit:cover;border-radius:200px 200px 24px 24px}
+.ve-hero__photo{position:relative;aspect-ratio:13/15;overflow:hidden;border-radius:200px 200px 24px 24px}.ve-hero__photo img{width:100%;height:100%;object-fit:cover}
 .ve-title{margin:0 0 36px;font:400 clamp(38px,4.6vw,64px)/1.02 var(--ve-serif);text-align:center;text-wrap:balance}
 .ve-title--light{color:var(--ve-cream);text-align:left;margin-bottom:24px}
 .ve-title--left{text-align:left;margin-bottom:16px}
@@ -77,3 +77,6 @@ a{color:inherit}
   .ve-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.ve-card__media img{transition:none}}
+
+/* Scroll drift: the photo sits taller than its frame so the drift never shows an edge. */
+.ve-drift{position:absolute;inset:-15% 0}.ve-drift>div{height:100%}

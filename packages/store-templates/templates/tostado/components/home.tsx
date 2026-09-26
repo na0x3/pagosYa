@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -22,15 +23,15 @@ export default function Home() {
           <p className="tv-lead">Granos seleccionados, tostados cada semana y enviados a tu puerta. Elige el tuyo.</p>
           <a className="tv-btn" href="#cafes">Comprar café</a>
         </div>
-        <img className="tv-hero__photo" src={photos.hero} alt={`Café de ${store.name}`} />
+        <div className="tv-hero__photo"><Parallax strength={150} mobileStrength={50} className="tv-drift"><img src={photos.hero} alt={`Café de ${store.name}`} /></Parallax></div>
       </section>
 
       <section id="cafes" className="tv-row" aria-labelledby="tv-cafes">
-        <div className="tv-row__intro">
+        <Reveal className="tv-row__intro">
           <h2 id="tv-cafes" className="tv-title">Nuestros cafés</h2>
           <p>Cada uno con su origen y su perfil. Desliza para verlos todos.</p>
           <a className="tv-btn tv-btn--small" href="#cafes-lista">Ver todos</a>
-        </div>
+        </Reveal>
         <div className="tv-rail" id="cafes-lista">
           <template data-pagosya-product-template>
             <article className="tv-card">
@@ -45,25 +46,25 @@ export default function Home() {
       </section>
 
       <section id="origen" className="tv-split" aria-labelledby="tv-origen">
-        <div className="tv-split__copy">
+        <Reveal className="tv-split__copy">
           <p className="tv-kicker">Del origen a tu taza</p>
           <h2 id="tv-origen" className="tv-title">Así llega tu café</h2>
           <ol className="tv-steps">{steps.map((step, index) => <li key={step.title}><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
-        </div>
-        <img className="tv-split__photo" src={photos.origen} alt="Origen del café" />
+        </Reveal>
+        <div className="tv-split__photo"><Parallax strength={200} className="tv-drift tv-drift--deep"><img src={photos.origen} alt="Origen del café" /></Parallax></div>
       </section>
 
       <section id="suscripcion" className="tv-sub" aria-labelledby="tv-sub">
-        <img src={photos.taza} alt="" aria-hidden="true" />
-        <div>
+        <Reveal><img src={photos.taza} alt="" aria-hidden="true" /></Reveal>
+        <Reveal delay={80}>
           <h2 id="tv-sub" className="tv-title">Nunca te quedes sin café</h2>
           <p>Pídenos tu café de siempre cada vez que se te acabe. Lo tostamos y te lo enviamos esa misma semana.</p>
           <a className="tv-btn" href="#cafes">Elegir mi café</a>
-        </div>
+        </Reveal>
       </section>
 
       <section id="preguntas" className="tv-faq" aria-labelledby="tv-faq">
-        <h2 id="tv-faq" className="tv-title">Preguntas</h2>
+        <Reveal><h2 id="tv-faq" className="tv-title">Preguntas</h2></Reveal>
         <div>{faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div>
       </section>
     </main>

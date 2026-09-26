@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -22,11 +23,11 @@ export default function Home() {
           <ul className="ri-perks">{perks.map(perk => <li key={perk}>{perk}</li>)}</ul>
           <a className="ri-btn" href="#productos">Comprar ahora</a>
         </div>
-        <div className="ri-hero__product"><img src={photos.hero} alt={`Producto de ${store.name}`} /></div>
+        <div className="ri-hero__product"><Parallax strength={150} mobileStrength={50} className="ri-hero__float"><img src={photos.hero} alt={`Producto de ${store.name}`} /></Parallax></div>
       </section>
 
       <section id="productos" className="ri-shop" aria-labelledby="ri-shop-title">
-        <h2 id="ri-shop-title" className="ri-title">Elige tu sabor</h2>
+        <Reveal><h2 id="ri-shop-title" className="ri-title">Elige tu sabor</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="ri-card">
             <a className="ri-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -40,15 +41,15 @@ export default function Home() {
       </section>
 
       <section id="uso" className="ri-use" aria-labelledby="ri-use-title">
-        <img src={photos.accion} alt="Entrenamiento" />
-        <div>
+        <Reveal><img src={photos.accion} alt="Entrenamiento" /></Reveal>
+        <Reveal delay={80}>
           <h2 id="ri-use-title" className="ri-title ri-title--left">Así de simple</h2>
           <ol>{steps.map((step, index) => <li key={step.title}><span>{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
-        </div>
+        </Reveal>
       </section>
 
       <section id="preguntas" className="ri-faq" aria-labelledby="ri-faq-title">
-        <h2 id="ri-faq-title" className="ri-title">Preguntas</h2>
+        <Reveal><h2 id="ri-faq-title" className="ri-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

@@ -76,3 +76,6 @@ a{color:inherit}
   .ri-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.ri-btn,.ri-card__media img{transition:none}}
+
+/* The product floats up through the glow as the page scrolls. */
+.ri-hero__float,.ri-hero__float>div{width:100%;display:grid;place-items:center}

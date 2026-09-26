@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -12,7 +13,7 @@ export default function Home() {
     <main id="contenido">
       <div className="pa-mast" aria-hidden="true">{store.name}</div>
       <section className="pa-hero">
-        <figure className="pa-hero__main"><img src={photos.hero1} alt={`Colección de ${store.name}`} /></figure>
+        <figure className="pa-hero__main"><Parallax strength={60} mobileStrength={14} className="pa-drift"><img src={photos.hero1} alt={`Colección de ${store.name}`} /></Parallax></figure>
         <div className="pa-hero__side">
           <div className="pa-hero__copy">
             <p className="pa-kicker">Temporada actual</p>
@@ -24,7 +25,7 @@ export default function Home() {
       </section>
 
       <section id="coleccion" className="pa-shop" aria-labelledby="pa-shop-title">
-        <header className="pa-shop__head"><h2 id="pa-shop-title" className="pa-title">La colección</h2><p>Piezas pensadas para combinarse entre sí.</p></header>
+        <Reveal><header className="pa-shop__head"><h2 id="pa-shop-title" className="pa-title">La colección</h2><p>Piezas pensadas para combinarse entre sí.</p></header></Reveal>
         <template data-pagosya-product-template>
           <article className="pa-card">
             <a className="pa-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -35,16 +36,16 @@ export default function Home() {
         <div className="pa-grid" data-pagosya-catalog />
       </section>
 
-      <blockquote className="pa-quote"><p>“Vestirse bien es una forma de <em>cuidarse</em>.”</p></blockquote>
+      <blockquote className="pa-quote"><Reveal><p>“Vestirse bien es una forma de <em>cuidarse</em>.”</p></Reveal></blockquote>
 
       <section id="lookbook" className="pa-look" aria-labelledby="pa-look-title">
-        <h2 id="pa-look-title" className="pa-title">Lookbook</h2>
-        <figure className="pa-look__wide"><img src={photos.look1} alt="Look de la temporada" /><figcaption>Look 1 — Para el día</figcaption></figure>
-        <figure className="pa-look__tall"><img src={photos.look2} alt="Accesorio de temporada" /><figcaption>Look 2 — Los detalles</figcaption></figure>
+        <Reveal className="pa-look__head"><h2 id="pa-look-title" className="pa-title">Lookbook</h2></Reveal>
+        <Parallax strength={20}><figure className="pa-look__wide"><img src={photos.look1} alt="Look de la temporada" /><figcaption>Look 1 — Para el día</figcaption></figure></Parallax>
+        <Parallax strength={60}><figure className="pa-look__tall"><img src={photos.look2} alt="Accesorio de temporada" /><figcaption>Look 2 — Los detalles</figcaption></figure></Parallax>
       </section>
 
       <section id="preguntas" className="pa-faq" aria-labelledby="pa-faq-title">
-        <h2 id="pa-faq-title" className="pa-title">Preguntas</h2>
+        <Reveal><h2 id="pa-faq-title" className="pa-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>
