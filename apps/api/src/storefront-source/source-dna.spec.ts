@@ -76,7 +76,9 @@ describe('design DNA', () => {
       Object.values(schema.properties).forEach(strict);
     };
     strict(SOURCE_DNA_SCHEMA);
-    expect(SOURCE_DNA_SCHEMA.properties.buttons.properties.form.enum).toEqual([...SOURCE_DNA_ENUMS.buttons.form]);
+    // Ruling (spec §2.6, "Nothing is chosen in T2 itself"): the planner's schema offers only the pre-T4 forms/frames.
+    expect(SOURCE_DNA_SCHEMA.properties.buttons.properties.form.enum).toEqual((SOURCE_DNA_ENUMS.buttons.form as readonly string[]).filter(v => !['sticker', 'ticket', 'bubbly', 'brutal'].includes(v)));
+    expect(SOURCE_DNA_SCHEMA.properties.shape.properties.frame.enum).toEqual((SOURCE_DNA_ENUMS.shape.frame as readonly string[]).filter(v => !['blob', 'stamp', 'tape'].includes(v)));
     expect(SOURCE_DNA_SCHEMA.properties.motifs.maxItems).toBe(3);
   });
 
@@ -170,5 +172,32 @@ describe('identity libraries (T2b) DNA values', () => {
     }
     const frames = new Set(Array.from({ length: 500 }, (_, i) => defaultDna(`seed-${i}`).shape.frame));
     for (const frame of ['blob', 'stamp', 'tape']) expect(frames.has(frame as any)).toBe(false);
+  });
+
+  it('keeps the new button forms and frames out of the planner schema until T4 (finding 5 ruling, spec §2.6)', () => {
+    const forms = SOURCE_DNA_SCHEMA.properties.buttons.properties.form.enum;
+    const frames = SOURCE_DNA_SCHEMA.properties.shape.properties.frame.enum;
+    for (const form of ['sticker', 'ticket', 'bubbly', 'brutal']) expect(forms).not.toContain(form);
+    for (const frame of ['blob', 'stamp', 'tape']) expect(frames).not.toContain(frame);
+    // Everything else about the schema is untouched: same field, same order, minus the T2b tail.
+    expect(forms).toEqual(['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split']);
+    expect(frames).toEqual(['bleed', 'inset', 'rounded', 'arch', 'polaroid']);
+  });
+
+  it('never nudges an existing button form onto a not-yet-seeded T2b value, even wrapping at the enum boundary (finding 5: "pill −1 must not land on brutal, split +1 not on sticker")', () => {
+    const NEW_FORMS = ['sticker', 'ticket', 'bubbly', 'brutal'];
+    for (let i = 0; i < 80; i++) {
+      const dna = defaultDna(`fingerprint-nudge-check-${i}`);
+      const taken = [dnaFingerprint(dna)];
+      const result = avoidTakenFingerprint(dna, taken, `nudge-seed-${i}`);
+      expect(NEW_FORMS).not.toContain(result.dna.buttons.form);
+    }
+    // The literal boundary the finding names: pill (index 0) moved by -1 wraps to the last PRE-T2b form (split),
+    // never past it into the T2b tail (brutal); split (index 7) moved by +1 wraps back to pill, never to sticker.
+    const pillForm = SOURCE_DNA_ENUMS.buttons.form[0], splitForm = SOURCE_DNA_ENUMS.buttons.form[7];
+    expect([pillForm, splitForm]).toEqual(['pill', 'split']);
+    const seededForms = SOURCE_DNA_SCHEMA.properties.buttons.properties.form.enum;
+    expect(seededForms[(seededForms.indexOf(pillForm) - 1 + seededForms.length) % seededForms.length]).toBe('split');
+    expect(seededForms[(seededForms.indexOf(splitForm) + 1) % seededForms.length]).toBe('pill');
   });
 });
