@@ -108,6 +108,12 @@ describe('SourceTemplatesService', () => {
     expect(prisma.store.update).not.toHaveBeenCalled();
   });
 
+  it('records which revision the template produced', async () => {
+    const { templates, projects } = service(3);
+    await templates.apply('m1', 'store-1', 'prueba', 3);
+    expect((projects.save.mock.calls[0] as any)[2].brief.templateRevision).toBe(4);
+  });
+
   it('lists templates without file details', () => {
     const { templates } = service(0);
     templates.registry = { ...templates.registry, listTemplates: () => [manifest] };
