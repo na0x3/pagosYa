@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -23,14 +24,14 @@ export default function Home() {
           <a className="fl-btn" href="#tienda">Elegir las mías</a>
         </div>
         <div className="fl-hero__arches">
-          <img src={photos.hero1} alt={`Planta de ${store.name}`} />
-          <img src={photos.hero2} alt="Una planta en su maceta" />
-          <img src={photos.hero3} alt="Flores de temporada" />
+          <Parallax strength={40} mobileStrength={30}><img src={photos.hero1} alt={`Planta de ${store.name}`} /></Parallax>
+          <Parallax strength={80} mobileStrength={40}><img src={photos.hero2} alt="Una planta en su maceta" /></Parallax>
+          <Parallax strength={50} mobileStrength={20}><img src={photos.hero3} alt="Flores de temporada" /></Parallax>
         </div>
       </section>
 
       <section id="tienda" className="fl-shop" aria-labelledby="fl-shop-title">
-        <h2 id="fl-shop-title" className="fl-title">Para cada rincón</h2>
+        <Reveal><h2 id="fl-shop-title" className="fl-title">Para cada rincón</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="fl-card">
             <a className="fl-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -43,21 +44,21 @@ export default function Home() {
       </section>
 
       <section id="cuidados" className="fl-care" aria-labelledby="fl-care-title">
-        <h2 id="fl-care-title" className="fl-title">Cuidarlas es fácil</h2>
-        <ul>{care.map(item => <li key={item.title}>{item.icon}<h3>{item.title}</h3><p>{item.body}</p></li>)}</ul>
+        <Reveal><h2 id="fl-care-title" className="fl-title">Cuidarlas es fácil</h2></Reveal>
+        <Reveal delay={100}><ul>{care.map(item => <li key={item.title}>{item.icon}<h3>{item.title}</h3><p>{item.body}</p></li>)}</ul></Reveal>
       </section>
 
       <section id="envios" className="fl-gift" aria-labelledby="fl-gift-title">
-        <img src={photos.ramo} alt="Ramo de flores" />
-        <div>
+        <Reveal><img src={photos.ramo} alt="Ramo de flores" /></Reveal>
+        <Reveal delay={120}>
           <h2 id="fl-gift-title" className="fl-title fl-title--left">Llegan como si las hubieras llevado tú</h2>
           <p>Las preparamos el mismo día, con una nota si quieres regalarlas.</p>
           <a className="fl-btn fl-btn--dark" href="#tienda">Enviar un regalo</a>
-        </div>
+        </Reveal>
       </section>
 
       <section id="preguntas" className="fl-faq" aria-labelledby="fl-faq-title">
-        <h2 id="fl-faq-title" className="fl-title">Preguntas</h2>
+        <Reveal><h2 id="fl-faq-title" className="fl-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

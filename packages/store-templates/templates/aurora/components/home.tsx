@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -16,7 +17,7 @@ export default function Home() {
   return <Shell>
     <main id="contenido">
       <section className="au-hero">
-        <div className="au-hero__media"><img src={photos.hero} alt={`Productos de ${store.name}`} /></div>
+        <div className="au-hero__media"><Parallax strength={60} mobileStrength={30} className="au-drift"><img src={photos.hero} alt={`Productos de ${store.name}`} /></Parallax></div>
         <div className="au-hero__copy">
           <p className="au-eyebrow">Nueva temporada</p>
           <h1 className="au-display">Tu piel, en su mejor versión.</h1>
@@ -26,11 +27,11 @@ export default function Home() {
       </section>
 
       <section id="tienda" className="au-shop" aria-labelledby="au-shop-title">
-        <div className="au-shop__head">
+        <Reveal className="au-shop__head">
           <p className="au-eyebrow">Tienda</p>
           <h2 id="au-shop-title" className="au-title">Los esenciales</h2>
           <p className="au-muted">Todo lo que ofrecemos, listo para agregar a tu bolsa.</p>
-        </div>
+        </Reveal>
         <template data-pagosya-product-template>
           <article className="au-card">
             <a className="au-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -45,21 +46,21 @@ export default function Home() {
       </section>
 
       <section id="rutina" className="au-ritual" aria-labelledby="au-ritual-title">
-        <img className="au-ritual__photo" src={photos.ritual} alt="Rutina de cuidado" />
-        <div className="au-ritual__copy">
+        <Reveal><img className="au-ritual__photo" src={photos.ritual} alt="Rutina de cuidado" /></Reveal>
+        <Reveal className="au-ritual__copy" delay={120}>
           <p className="au-eyebrow">Rutina</p>
           <h2 id="au-ritual-title" className="au-title">Tres pasos, cada día</h2>
           <ol className="au-steps">{steps.map((step, index) => <li key={step.title}><span className="au-steps__n">{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
-        </div>
+        </Reveal>
       </section>
 
       <section className="au-texture" aria-label="Textura">
-        <img src={photos.texture} alt="" aria-hidden="true" />
-        <p className="au-statement">Texturas ligeras que se sienten bien desde la primera vez.</p>
+        <Parallax strength={90} className="au-drift au-drift--deep"><img src={photos.texture} alt="" aria-hidden="true" /></Parallax>
+        <Reveal><p className="au-statement">Texturas ligeras que se sienten bien desde la primera vez.</p></Reveal>
       </section>
 
       <section id="preguntas" className="au-faq" aria-labelledby="au-faq-title">
-        <h2 id="au-faq-title" className="au-title">Preguntas frecuentes</h2>
+        <Reveal><h2 id="au-faq-title" className="au-title">Preguntas frecuentes</h2></Reveal>
         {questions.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

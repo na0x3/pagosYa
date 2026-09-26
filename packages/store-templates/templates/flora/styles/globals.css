@@ -22,7 +22,7 @@ a{color:inherit}
 .fl-hero{display:grid;grid-template-columns:1fr 1.15fr;align-items:center;gap:clamp(24px,5vw,80px);padding:clamp(48px,6vw,96px) clamp(16px,4vw,56px) clamp(64px,8vw,120px);background:var(--fl-green)}
 .fl-hero__arches{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(10px,1.4vw,18px);align-items:end}
 .fl-hero__arches img{width:100%;aspect-ratio:10/13;object-fit:cover;border-radius:999px 999px 18px 18px}
-.fl-hero__arches img:nth-child(2){transform:translateY(-36px)}
+.fl-hero__arches>:nth-child(2){position:relative;top:-36px}
 .fl-title{margin:0 0 36px;font:400 clamp(36px,4.4vw,62px)/1.02 var(--fl-serif);color:var(--fl-green);text-align:center;text-wrap:balance}
 .fl-title--left{text-align:left;margin-bottom:16px}
 .fl-shop{padding:clamp(64px,8vw,112px) clamp(16px,4vw,56px)}
@@ -71,6 +71,7 @@ a{color:inherit}
   .fl-header nav{display:none}
   .fl-cart{margin-left:auto}
   .fl-hero,.fl-gift,.fl-pdp__grid{grid-template-columns:1fr}
+  .fl-hero__arches{margin-top:40px}
   .fl-care ul{grid-template-columns:1fr}
   .fl-pdp__info{position:static}
 }

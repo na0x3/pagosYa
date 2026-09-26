@@ -23,8 +23,8 @@ a{color:inherit}
 .ch-hero__panel{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(40px,6vw,96px) clamp(16px,5vw,80px);color:#fff}
 .ch-display{margin:0 0 18px;font:400 clamp(44px,5.8vw,84px)/1.02 var(--ch-serif);text-wrap:balance}
 .ch-lead{margin:0 0 30px;max-width:38ch;font-size:19px;color:#dfe5ff}
-.ch-hero__media{position:relative;min-height:360px}
-.ch-hero__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ch-hero__media{position:relative;min-height:360px;overflow:hidden}
+.ch-hero__media img{width:100%;height:100%;object-fit:cover}
 .ch-hero__wave{position:absolute;z-index:1;left:-1px;top:0;height:100%;width:clamp(28px,4vw,64px);fill:var(--ch-blue)}
 .ch-btn{display:inline-flex;align-items:center;min-height:50px;padding:0 30px;border-radius:999px;background:var(--ch-ink);color:#fff;text-decoration:none;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:14px;transition:transform .2s}
 .ch-btn:hover{transform:translateY(-2px)}
@@ -67,7 +67,7 @@ a{color:inherit}
 .ch-wild{padding:clamp(64px,8vw,112px) clamp(16px,4vw,56px) 0}
 .ch-wild__strip{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:clamp(12px,2vw,24px)}
 .ch-wild__strip img{width:100%;height:clamp(240px,30vw,420px);object-fit:cover;border-radius:22px}
-.ch-wild__strip img:nth-child(2){margin-top:40px}
+.ch-wild__strip>:nth-child(2){margin-top:40px}
 .ch-faq{max-width:760px;margin:0 auto;padding:clamp(64px,8vw,112px) clamp(16px,4vw,56px)}
 .ch-faq details{border-bottom:2px solid var(--ch-ink);padding:18px 0}
 .ch-faq summary{cursor:pointer;font-weight:700;font-size:18px}
@@ -98,8 +98,11 @@ a{color:inherit}
   .ch-tiles{grid-template-columns:repeat(3,1fr);gap:10px}
   .ch-tile span{font-size:11px;letter-spacing:.08em}
   .ch-wild__strip{grid-template-columns:1fr 1fr}
-  .ch-wild__strip img:first-child{grid-column:1/-1}
-  .ch-wild__strip img:nth-child(2){margin-top:0}
+  .ch-wild__strip>:first-child{grid-column:1/-1}
+  .ch-wild__strip>:nth-child(2){margin-top:0}
   .ch-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.ch-marquee__track,.ch-sticker{animation:none}.ch-btn,.ch-tile img,.ch-card__media img{transition:none}}
+
+/* Scroll drift: the photo sits taller than its frame so the drift never shows an edge. */
+.ch-drift{position:absolute;inset:-8% 0}.ch-drift>div{height:100%}

@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -28,17 +29,17 @@ export default function Home() {
         </div>
         <div className="ch-hero__media">
           <svg className="ch-hero__wave" viewBox="0 0 80 800" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H40 C80 100 0 200 40 300 C80 400 0 500 40 600 C80 700 0 750 40 800 H0 Z" /></svg>
-          <img src={photos.hero} alt={`Productos de ${store.name}`} />
+          <Parallax strength={60} mobileStrength={20} className="ch-drift"><img src={photos.hero} alt={`Productos de ${store.name}`} /></Parallax>
         </div>
       </section>
 
       <section className="ch-cats" aria-labelledby="ch-cats-title">
-        <h2 id="ch-cats-title" className="ch-title ch-center">Explora</h2>
-        <ul className="ch-tiles">{tiles.map(tile => <li key={tile.label}><a href="#productos" className={`ch-tile ch-tile--${tile.tone}`}><img src={photos[tile.photo]} alt={tile.label} /><span>{tile.label}</span></a></li>)}</ul>
+        <Reveal><h2 id="ch-cats-title" className="ch-title ch-center">Explora</h2></Reveal>
+        <Reveal delay={100}><ul className="ch-tiles">{tiles.map(tile => <li key={tile.label}><a href="#productos" className={`ch-tile ch-tile--${tile.tone}`}><img src={photos[tile.photo]} alt={tile.label} /><span>{tile.label}</span></a></li>)}</ul></Reveal>
       </section>
 
       <section id="productos" className="ch-shop" aria-labelledby="ch-shop-title">
-        <h2 id="ch-shop-title" className="ch-title">Elige tus favoritos</h2>
+        <Reveal><h2 id="ch-shop-title" className="ch-title">Elige tus favoritos</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="ch-card">
             <a className="ch-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -59,23 +60,27 @@ export default function Home() {
             <text><textPath href="#ch-circle">HECHO CON CARIÑO ✦ HECHO CON CARIÑO ✦</textPath></text>
             <text x="60" y="68" textAnchor="middle" className="ch-sticker__face">☺</text>
           </svg>
-          <h2 id="ch-cloud-title" className="ch-cloud__text">Creemos en el poder de lo simple.</h2>
+          <Reveal><h2 id="ch-cloud-title" className="ch-cloud__text">Creemos en el poder de lo simple.</h2></Reveal>
           <a className="ch-btn ch-btn--lime ch-btn--small" href="#productos">Conócenos</a>
         </div>
       </section>
 
       <section className="ch-promise" aria-labelledby="ch-promise-title">
         <h2 id="ch-promise-title" className="ch-eyebrow">Nuestra promesa</h2>
-        <ul>{promises.map(item => <li key={item.title}><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul>
+        <Reveal delay={100}><ul>{promises.map(item => <li key={item.title}><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul></Reveal>
       </section>
 
       <section className="ch-wild" aria-labelledby="ch-wild-title">
-        <h2 id="ch-wild-title" className="ch-title ch-center">En el día a día</h2>
-        <div className="ch-wild__strip"><img src={photos.vida1} alt="Nuestros productos en uso" /><img src={photos.vida2} alt="Un momento con nuestros productos" /><img src={photos.vida3} alt="Detalle de un producto" /></div>
+        <Reveal><h2 id="ch-wild-title" className="ch-title ch-center">En el día a día</h2></Reveal>
+        <div className="ch-wild__strip">
+          <Parallax strength={30}><img src={photos.vida1} alt="Nuestros productos en uso" /></Parallax>
+          <Parallax strength={-40}><img src={photos.vida2} alt="Un momento con nuestros productos" /></Parallax>
+          <Parallax strength={50}><img src={photos.vida3} alt="Detalle de un producto" /></Parallax>
+        </div>
       </section>
 
       <section id="preguntas" className="ch-faq" aria-labelledby="ch-faq-title">
-        <h2 id="ch-faq-title" className="ch-title ch-center">Preguntas</h2>
+        <Reveal><h2 id="ch-faq-title" className="ch-title ch-center">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -16,7 +17,7 @@ export default function Home() {
   return <Shell>
     <main id="contenido">
       <section className="cu-hero">
-        <img src={photos.hero} alt={`Equipo de ${store.name} en la montaña`} />
+        <Parallax strength={120} mobileStrength={50} className="cu-drift"><img src={photos.hero} alt={`Equipo de ${store.name} en la montaña`} /></Parallax>
         <div className="cu-hero__copy">
           <p className="cu-kicker">Temporada nueva</p>
           <h1 className="cu-display">Hecho para salir.</h1>
@@ -25,7 +26,7 @@ export default function Home() {
       </section>
 
       <section id="novedades" className="cu-shop" aria-labelledby="cu-new">
-        <div className="cu-shop__head"><h2 id="cu-new" className="cu-title">Novedades de temporada</h2><a href="#coleccion" className="cu-more">Ver todo</a></div>
+        <Reveal className="cu-shop__head"><h2 id="cu-new" className="cu-title">Novedades de temporada</h2><a href="#coleccion" className="cu-more">Ver todo</a></Reveal>
         <template data-pagosya-product-template>
           <article className="cu-card">
             <a className="cu-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /><span className="cu-card__tag">Edición limitada</span></a>
@@ -39,20 +40,20 @@ export default function Home() {
       </section>
 
       <section id="coleccion" className="cu-banner" aria-labelledby="cu-banner-title">
-        <img src={photos.banner} alt="" aria-hidden="true" />
-        <div className="cu-banner__copy">
+        <Parallax strength={160} className="cu-drift cu-drift--deep"><img src={photos.banner} alt="" aria-hidden="true" /></Parallax>
+        <Reveal className="cu-banner__copy">
           <h2 id="cu-banner-title" className="cu-banner__title">Lo que llevas, te acompaña.</h2>
           <a className="cu-btn" href="#novedades">Ver la colección</a>
-        </div>
+        </Reveal>
       </section>
 
       <section id="usos" className="cu-uses" aria-labelledby="cu-uses-title">
-        <h2 id="cu-uses-title" className="cu-title cu-center">Para cada salida</h2>
+        <Reveal><h2 id="cu-uses-title" className="cu-title cu-center">Para cada salida</h2></Reveal>
         <ul>{uses.map(use => <li key={use.title}><a href="#novedades"><img src={photos[use.photo]} alt={use.title} /><h3>{use.title}</h3><p>{use.body}</p></a></li>)}</ul>
       </section>
 
       <section id="preguntas" className="cu-faq" aria-labelledby="cu-faq-title">
-        <h2 id="cu-faq-title" className="cu-title">Preguntas frecuentes</h2>
+        <Reveal><h2 id="cu-faq-title" className="cu-title">Preguntas frecuentes</h2></Reveal>
         <div>{faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div>
       </section>
     </main>

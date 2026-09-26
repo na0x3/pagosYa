@@ -1,3 +1,4 @@
+import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { store, photos } from './store-data';
 
@@ -26,12 +27,12 @@ export default function Home() {
           <p className="cr-lead">Recién hecho, con ingredientes reales y un crujido que se escucha. Pide y compártelo (o no).</p>
           <a className="cr-btn" href="#productos">Pedir ahora</a>
         </div>
-        <div className="cr-hero__card"><img src={photos.hero} alt={`Producto de ${store.name}`} /><span className="cr-sticker" aria-hidden="true">¡Nuevo!</span></div>
+        <Parallax strength={50} mobileStrength={20} className="cr-hero__float"><div className="cr-hero__card"><img src={photos.hero} alt={`Producto de ${store.name}`} /><span className="cr-sticker" aria-hidden="true">¡Nuevo!</span></div></Parallax>
       </section>
       <div className="cr-band" aria-hidden="true"><div className="cr-band__track">{ticker.map((text, index) => <span key={index}>{text} •</span>)}</div></div>
 
       <section id="productos" className="cr-shop" aria-labelledby="cr-shop-title">
-        <h2 id="cr-shop-title" className="cr-title">Elige tu sabor</h2>
+        <Reveal><h2 id="cr-shop-title" className="cr-title">Elige tu sabor</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="cr-card">
             <a className="cr-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -47,18 +48,18 @@ export default function Home() {
 
       <Wave from="#fff" to="#6045d8" />
       <section className="cr-feature" aria-labelledby="cr-feature-title">
-        <div>
+        <Reveal>
           <h2 id="cr-feature-title" className="cr-title cr-title--light">Hecho para compartir</h2>
           <p>Una bolsa, varias manos. Pide para la oficina, la casa o el camino.</p>
           <ul className="cr-chips">{chips.map(chip => <li key={chip}>{chip}</li>)}</ul>
-        </div>
-        <img className="cr-feature__photo" src={photos.feature} alt="Nuestro producto servido" />
+        </Reveal>
+        <Reveal delay={120}><img className="cr-feature__photo" src={photos.feature} alt="Nuestro producto servido" /></Reveal>
       </section>
       <Wave from="#6045d8" to="#ffb6d9" />
 
       <section className="cr-statement" aria-label="Frase de la marca">
         <p className="cr-statement__line">No dejes</p>
-        <img className="cr-statement__product" src={photos.statement} alt="" aria-hidden="true" />
+        <Parallax strength={-80} className="cr-statement__float"><img className="cr-statement__product" src={photos.statement} alt="" aria-hidden="true" /></Parallax>
         <p className="cr-statement__line cr-statement__line--outline">ni las</p>
         <p className="cr-statement__line">migas</p>
       </section>
@@ -66,12 +67,12 @@ export default function Home() {
       <div className="cr-strip" aria-label="Nuestros clientes"><img src={photos.gente1} alt="Compartiendo nuestros productos" /><img src={photos.gente2} alt="Un plato con nuestros productos" /><img src={photos.gente3} alt="Un momento con nuestros productos" /></div>
 
       <section id="preguntas" className="cr-faq" aria-labelledby="cr-faq-title">
-        <h2 id="cr-faq-title" className="cr-title">Preguntas</h2>
+        <Reveal><h2 id="cr-faq-title" className="cr-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
 
       <section className="cr-cta" aria-labelledby="cr-cta-title">
-        <h2 id="cr-cta-title" className="cr-cta__title">¿Qué esperas?</h2>
+        <Reveal><h2 id="cr-cta-title" className="cr-cta__title">¿Qué esperas?</h2></Reveal>
         <a className="cr-btn cr-btn--big" href="#productos">Pedir el mío</a>
       </section>
     </main>

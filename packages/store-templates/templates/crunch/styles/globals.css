@@ -25,7 +25,7 @@ a{color:inherit}
 .cr-blob{position:absolute;border:3px solid var(--cr-ink);border-radius:50%;background:#b8e3f8}
 .cr-blob--a{width:180px;height:180px;left:-60px;top:-60px}
 .cr-blob--b{width:220px;height:220px;right:-70px;bottom:-90px}
-.cr-hero__card{position:relative;z-index:1;justify-self:center;width:min(100%,520px);border:4px solid var(--cr-ink);border-radius:22px;overflow:hidden;box-shadow:10px 10px 0 var(--cr-ink);transform:rotate(3deg)}
+.cr-hero__float{position:relative;z-index:1;justify-self:center;width:min(100%,520px)}.cr-hero__card{position:relative;border:4px solid var(--cr-ink);border-radius:22px;overflow:hidden;box-shadow:10px 10px 0 var(--cr-ink);transform:rotate(3deg)}
 .cr-hero__card img{width:100%;aspect-ratio:1;object-fit:cover}
 .cr-sticker{position:absolute;top:18px;right:18px;display:grid;place-items:center;width:92px;height:92px;border:3px solid var(--cr-ink);border-radius:50%;background:var(--cr-yellow);font:400 20px var(--cr-display);text-transform:uppercase;transform:rotate(-12deg)}
 .cr-band{overflow:hidden;background:var(--cr-ink);color:var(--cr-cream);border-block:3px solid var(--cr-ink)}
@@ -90,3 +90,6 @@ a{color:inherit}
   .cr-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.cr-band__track{animation:none}.cr-btn,.cr-card{transition:none}}
+
+/* The cut-out product rises against the statement as it scrolls past. */
+.cr-statement__float{position:absolute;inset:0;z-index:1;pointer-events:none}.cr-statement__float>div{height:100%}

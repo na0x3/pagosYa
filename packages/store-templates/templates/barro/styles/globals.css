@@ -20,7 +20,7 @@ a{color:inherit}
 .ba-btn{display:inline-flex;align-items:center;min-height:52px;padding:0 28px;border-radius:999px;background:var(--ba-charcoal);color:var(--ba-stone);text-decoration:none;font-weight:700}
 .ba-btn:hover{background:var(--ba-olive)}
 .ba-hero{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:clamp(24px,5vw,80px);padding:clamp(40px,6vw,96px) clamp(16px,4vw,56px)}
-.ba-hero__blob{border-radius:58% 42% 55% 45%/45% 55% 45% 55%;overflow:hidden;aspect-ratio:1}
+.ba-hero__blob{position:relative;border-radius:58% 42% 55% 45%/45% 55% 45% 55%;overflow:hidden;aspect-ratio:1}
 .ba-hero__blob img{width:100%;height:100%;object-fit:cover}
 .ba-title{margin:0;font:400 clamp(34px,4vw,56px)/1.05 var(--ba-serif);font-variation-settings:'SOFT' 100;letter-spacing:-.02em;text-wrap:balance}
 .ba-title--light{color:var(--ba-stone)}
@@ -37,9 +37,9 @@ a{color:inherit}
 .ba-card__add{margin-top:auto;min-height:42px;padding:0 20px;border:1px solid var(--ba-charcoal);border-radius:999px;background:none;color:var(--ba-charcoal);font:600 14px var(--ba-sans);cursor:pointer}
 .ba-card__add:hover{background:var(--ba-charcoal);color:var(--ba-stone)}
 .ba-process{position:relative;display:grid;gap:32px;padding:clamp(64px,8vw,120px) clamp(16px,4vw,56px);color:var(--ba-stone);overflow:hidden}
-.ba-process>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ba-process .ba-drift img{width:100%;height:100%;object-fit:cover}
 .ba-process::after{content:'';position:absolute;inset:0;background:#262522c7}
-.ba-process>*:not(img){position:relative;z-index:1}
+.ba-process>*:not(.ba-drift){position:relative;z-index:1}
 .ba-process ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(16px,3vw,40px)}
 .ba-process li span{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--ba-stone);border-radius:50%;font:400 20px var(--ba-serif)}
 .ba-process h3{margin:14px 0 4px;font:400 24px var(--ba-serif)}
@@ -77,3 +77,6 @@ a{color:inherit}
   .ba-pdp__info{position:static}
 }
 @media (prefers-reduced-motion:reduce){.ba-card__media{transition:none}}
+
+/* Scroll drift: the photo sits taller than its frame so the drift never shows an edge. */
+.ba-drift{position:absolute;inset:-8% 0}.ba-drift>div{height:100%}.ba-drift--deep{inset:-14% 0}
