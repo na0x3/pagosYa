@@ -2,7 +2,7 @@ import { createDirectEditor } from './source-direct-editor';
 import { createSourceDesignJobs } from './source-design-jobs';
 import { createSourceVisualTools } from './source-visual-tools';
 import { renderInspiration } from './source-inspiration';
-import { openTemplateGallery } from './source-templates';
+import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { merchantSafeText } from './source-merchant-copy';
@@ -252,7 +252,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     timer = window.setTimeout(poll, 500);
     return () => { controller.abort(); window.clearTimeout(timer); };
   }
-  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[]) {
+  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string) {
     if (!text.trim() && assets.length) text = 'Te comparto estas imágenes para el sitio.';
     if (!text.trim() || busy || dirty() || historical()) return;
     chatExpanded = true;
@@ -282,7 +282,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId);
         stopProgress();
         succeeded = true; pendingSubmission = null; generating = false;
         productPhoto = false;
@@ -412,6 +412,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div><p>${escape(visibleContent)}</p>
       ${!user ? renderBuildProgress(metadata.progress) : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
+      ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || state.revision > 0) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
       ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
     </article>`;
@@ -644,6 +645,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       instruction = button.dataset.suggestion || ''; const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) field.value = instruction; scheduleEstimate(); focusComposer();
     }));
     app.querySelectorAll<HTMLButtonElement>('[data-clarification]').forEach(button => button.addEventListener('click', () => void send(button.dataset.clarification || '')));
+    app.querySelectorAll<HTMLButtonElement>('[data-template-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.templateName || ''}`, undefined, undefined, button.dataset.templateChoice)));
     app.querySelector('[data-action="open-upload"]')?.addEventListener('click', () => app.querySelector<HTMLInputElement>('[data-image-input]')?.click());
     app.querySelector('[data-image-input]')?.addEventListener('change', event => {
       const files = Array.from((event.target as HTMLInputElement).files || []);
@@ -664,7 +666,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-file')?.addEventListener('change', event => { filePath = (event.target as HTMLSelectElement).value; draft = null; render(); });
     app.querySelector('#source-code')?.addEventListener('input', event => {
       draft = (event.target as HTMLTextAreaElement).value;
-      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
+      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
       app.querySelector<HTMLButtonElement>('#source-save')!.disabled = busy || !dirty() || historical();
       app.querySelector<HTMLButtonElement>('#source-discard')!.disabled = busy || !dirty();
     });

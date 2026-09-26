@@ -23,3 +23,11 @@
 .tpl-confirm__actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 @media (max-width:560px){.tpl-confirm{grid-template-columns:1fr}.tpl-confirm img{max-width:160px}}
 @media (prefers-reduced-motion:reduce){.tpl-card__frame{transition:none}}
+.tpl-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.tpl-choice{display:grid;gap:4px;align-content:start;min-width:0;padding:6px;border:1px solid #d9d2c6;border-radius:12px;background:#fff;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.tpl-choice img{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:top;border-radius:8px}
+.tpl-choice strong{font-size:14px}
+.tpl-choice span{font-size:12px;color:#6a645b}
+.tpl-choice:hover:not(:disabled),.tpl-choice:focus-visible{border-color:#1d1b18}
+.tpl-choice:disabled{cursor:default;opacity:.6}
+@media (max-width:560px){.tpl-choices{grid-template-columns:1fr}.tpl-choice{grid-template-columns:72px 1fr;align-items:center;column-gap:10px}.tpl-choice img{grid-row:span 2}}

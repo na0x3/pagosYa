@@ -71,3 +71,17 @@ it('discards cancelled checks when another revision loads', async () => {
   await vi.waitFor(() => expect(publish().disabled).toBe(false));
   expect(record).toHaveBeenCalledTimes(1);
 });
+
+it('sends the tapped Plantilla card as the choice', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'a1', role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', createdAt: '2026-09-26', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'Café' }, { id: 'miga', name: 'Miga', reason: 'Pan' }, { id: 'huerta', name: 'Huerta', reason: 'Verde' }] } },
+  ] } as any);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'Usar Miga' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } } as any);
+  await mountSourceStudio(app);
+  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-template-choice="miga"]'); expect(found).toBeTruthy(); return found!; });
+  card.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalled());
+  expect(sent.mock.calls[0][1]).toBe('Usar Miga');
+  expect(sent.mock.calls[0].at(-1)).toBe('miga');
+});

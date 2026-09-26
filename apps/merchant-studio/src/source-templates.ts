@@ -37,6 +37,16 @@ export function renderTemplateGallery(templates: TemplateSummary[], state: Galle
     </li>`).join('')}</ul>`;
 }
 
+export type TemplateChoice = { id: string; name: string; reason: string };
+
+/** YAPI's three suggestions (spec 2026-09-26): the card itself is the choice, no separate button. */
+export function renderTemplateChoices(choices: TemplateChoice[], previewBase: string, off: boolean): string {
+  return `<div class="tpl-choices">${choices.map(choice => `<button type="button" class="tpl-choice" data-template-choice="${escape(choice.id)}" data-template-name="${escape(choice.name)}" ${off ? 'disabled' : ''}>
+    <img src="${escape(previewBase)}plantillas/${escape(choice.id)}.webp" alt="" loading="lazy">
+    <strong>${escape(choice.name)}</strong><span>${escape(choice.reason)}</span>
+  </button>`).join('')}</div>`;
+}
+
 /** Opens the gallery; `applied` receives the new revision once the template is saved. */
 export async function openTemplateGallery(api: MerchantStudioApi, options: { storeId: string; revision: number; hasSite: boolean; applied: (revision: number) => Promise<void> }) {
   const dialog = document.createElement('dialog'); dialog.className = 'tpl-dialog'; dialog.setAttribute('aria-label', 'Plantillas');
