@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { renderTemplateChoices, renderTemplateGallery, templateCategories, type TemplateSummary } from './source-templates';
+import { renderTemplateChoices, renderTemplateGallery, renderTemplatePreview, templateCategories, type TemplateSummary } from './source-templates';
 
 const templates: TemplateSummary[] = [
   { id: 'aurora', name: 'Aurora', category: 'belleza', description: 'Cosmética minimal.', tags: [], order: 10 },
@@ -62,6 +62,22 @@ describe('gallery look', () => {
     const root = render();
     expect(root.querySelector('h2')!.textContent).toBe('Elige una plantilla');
     expect(root.querySelector('[data-template-close]')!.getAttribute('aria-label')).toBe('Cerrar');
+  });
+});
+
+describe('template preview', () => {
+  const state = (hasSite: boolean, width: 'desktop' | 'phone') => ({ category: '', selected: 'cumbre', busy: false, error: '', hasSite, previewBase: '/', width });
+  it('shows the chosen template with navigation, width toggle and apply', () => {
+    const root = document.createElement('div');
+    root.innerHTML = renderTemplatePreview(templates[1], state(true, 'desktop'));
+    for (const selector of ['[data-template-prev]', '[data-template-next]', '[data-template-apply]', '[data-template-back]', '[data-template-width]', 'iframe.tpl-preview__frame']) expect(root.querySelector(selector)).toBeTruthy();
+    expect(root.textContent).toContain('queda guardado en el historial');
+  });
+  it('drops the history note while the store is untouched', () => {
+    const root = document.createElement('div');
+    root.innerHTML = renderTemplatePreview(templates[1], state(false, 'phone'));
+    expect(root.textContent).not.toContain('historial');
+    expect(root.querySelector('.tpl-preview')!.classList.contains('tpl-preview--phone')).toBe(true);
   });
 });
 

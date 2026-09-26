@@ -412,10 +412,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div><p>${escape(visibleContent)}</p>
       ${!user ? renderBuildProgress(metadata.progress) : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
-      ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || state.revision > 0 || message.id !== latestTemplateChoicesId()) : ''}
+      ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || (state.revision > 0 && !templateUntouched()) || message.id !== latestTemplateChoicesId()) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
       ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
     </article>`;
+  }
+  /** Untouched: the current revision is the one a template produced, so another template can replace it freely. */
+  function templateUntouched() {
+    const brief = version?.snapshot?.brief;
+    return Boolean(brief?.templateId && version?.revision === state.revision && brief.templateRevision === state.revision);
   }
   /** Only YAPI's latest set of Plantilla cards can be chosen; the API rejects older sets. */
   function latestTemplateChoicesId() {
@@ -570,7 +575,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
     app.querySelectorAll('[data-open-templates]').forEach(button => button.addEventListener('click', () => {
       if (busy || !storeId || dirty() || historical()) return;
-      void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version), applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla aplicada. Cambia fotos y textos cuando quieras.'; render(); } });
+      void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version) && !templateUntouched(), applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla aplicada. Cambia fotos y textos cuando quieras.'; render(); } });
     }));
     app.querySelector('#source-recommendations')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openRecommendations(api, storeId); } });
     app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });

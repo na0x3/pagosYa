@@ -382,7 +382,11 @@ export class MerchantStudioApi {
     return this.request(`/store-templates`);
   }
 
-  applyTemplate(storeId: string, templateId: string, revision: number): Promise<SourceRevision> {
+  templatePreview(storeId: string, templateId: string): Promise<import("@pagosya/storefront-preview").SourceSnapshot> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}/preview`);
+  }
+
+  applyTemplate(storeId: string, templateId: string, revision: number): Promise<SourceRevision & { adapted?: boolean }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}`, { method: "POST", body: JSON.stringify({ revision }) });
   }
 

@@ -100,3 +100,18 @@ it('keeps only the latest set of Plantilla cards tappable', async () => {
   expect(card('tostado').disabled).toBe(true);
   expect(card('huerta').disabled).toBe(false);
 });
+
+it('keeps YAPI template cards choosable while the store is untouched, and not after an edit', async () => {
+  for (const [templateRevision, enabled] of [[2, true], [1, false]] as const) {
+    const touched = { ...version, snapshot: { ...version.snapshot, brief: { ...version.snapshot.brief, templateId: 'tostado', templateRevision } } } as any;
+    vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(touched);
+    vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 2, versions: [touched], nextBefore: null });
+    vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+      { id: 'a1', role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', createdAt: '2026-09-26', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'r' }, { id: 'miga', name: 'Miga', reason: 'r' }, { id: 'huerta', name: 'Huerta', reason: 'r' }] } },
+    ] } as any);
+    app.replaceChildren();
+    await mountSourceStudio(app);
+    const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-template-choice="miga"]'); expect(found).toBeTruthy(); return found!; });
+    await vi.waitFor(() => expect(card.disabled).toBe(!enabled));
+  }
+});

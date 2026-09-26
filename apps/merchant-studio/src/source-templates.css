@@ -39,3 +39,22 @@
 .tpl-choice:hover:not(:disabled),.tpl-choice:focus-visible{border-color:#1d1b18}
 .tpl-choice:disabled{cursor:default;opacity:.6}
 @media (max-width:560px){.tpl-choices{grid-template-columns:1fr}.tpl-choice{grid-template-columns:72px 1fr;align-items:center;column-gap:10px}.tpl-choice img{grid-row:span 2}}
+.tpl-preview-bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0;padding:14px clamp(16px,3vw,32px);background:#fbfaf7;border-bottom:1px solid #e8e3da}
+.tpl-back{min-height:38px;padding:0 12px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+.tpl-back:hover{background:#f1ece4}
+.tpl-preview-title{display:flex;align-items:baseline;gap:10px;min-width:0;margin-right:auto}
+.tpl-preview-title strong{font-size:20px;letter-spacing:-.01em}
+.tpl-preview-title small{padding:3px 8px;border-radius:999px;background:#efe9df;color:#5d574f;font-size:12px;font-weight:600}
+.tpl-preview-nav,.tpl-width{display:flex;gap:4px;padding:3px;border:1px solid #e0d9ce;border-radius:999px;background:#fff}
+.tpl-preview-nav button,.tpl-width button{min-width:38px;min-height:34px;padding:0 12px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+.tpl-preview-nav button{font-size:20px;line-height:1}
+.tpl-width button[aria-pressed=true]{background:#1d1b18;color:#fff}
+.tpl-preview-nav button:hover:not(:disabled),.tpl-width button:hover:not([aria-pressed=true]):not(:disabled){background:#f1ece4}
+.tpl-preview-note{margin-top:12px;color:#6a645b;font-size:14px}
+.tpl-preview{position:relative;margin-top:12px;margin-bottom:28px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid #e8e3da;box-shadow:0 18px 40px -28px #0008}
+.tpl-preview__frame{display:block;width:100%;height:min(72vh,820px);border:0;background:#fff}
+.tpl-preview--phone{width:min(390px,100%);margin-inline:auto;border:10px solid #1d1b18;border-radius:34px}
+.tpl-preview--phone .tpl-preview__frame{height:min(74vh,780px)}
+.tpl-preview__loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:24px;text-align:center;color:#6a645b;background:#fbfaf7}
+.tpl-preview__loading[hidden]{display:none}
+@media (max-width:560px){.tpl-preview-title{flex-basis:100%;order:-1}.tpl-preview-bar .button--publish{flex:1}.tpl-width button{padding:0 10px}}
