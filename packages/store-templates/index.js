@@ -4,7 +4,7 @@
 const { readdirSync, readFileSync, statSync, existsSync } = require('node:fs');
 const { join, extname } = require('node:path');
 
-const TEMPLATE_CATEGORIES = Object.freeze(['comida', 'moda', 'belleza', 'hogar', 'arte', 'tecnologia', 'mascotas', 'ninos', 'deporte', 'servicios', 'producto-unico']);
+const TEMPLATE_CATEGORIES = Object.freeze(['comida', 'moda', 'belleza', 'hogar', 'arte', 'tecnologia', 'mascotas', 'ninos', 'deporte', 'servicios', 'libros', 'producto-unico']);
 const PHOTO_ROLES = Object.freeze(['hero', 'product', 'lifestyle', 'detail']);
 const DEMO_MAX_BYTES = 600 * 1024;
 const ID = /^[a-z0-9-]{2,40}$/;

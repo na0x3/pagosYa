@@ -27,7 +27,13 @@ run('captures the Plantillas gallery previews', async () => {
         await page.setViewportSize({ width, height: 900 });
         await page.goto('https://preview.invalid/index.html', { waitUntil: 'load' });
         await page.evaluate(async () => { await document.fonts.ready; });
-        await page.waitForTimeout(600);
+        await page.waitForTimeout(400);
+        // Catalog photos load lazily; the capture is taller than the viewport, so load and decode every image first.
+        await page.evaluate(async () => {
+          for (const img of Array.from(document.images)) img.loading = 'eager';
+          await Promise.all(Array.from(document.images).map(img => img.complete && img.naturalWidth ? img.decode().catch(() => {}) : new Promise(done => { img.addEventListener('load', done, { once: true }); img.addEventListener('error', done, { once: true }); setTimeout(done, 4000); })));
+        });
+        await page.waitForTimeout(300);
         const png = await page.screenshot({ type: 'png', fullPage: true, clip: { x: 0, y: 0, width, height }, animations: 'disabled' });
         await sharp(png).resize({ width: out }).webp({ quality: 78 }).toFile(join(OUT, `${manifest.id}${suffix}.webp`));
         await page.close();

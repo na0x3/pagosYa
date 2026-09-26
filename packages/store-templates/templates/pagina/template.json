@@ -1,0 +1,71 @@
+{
+  "id": "pagina",
+  "name": "Página",
+  "category": "libros",
+  "description": "Librería con alma: papel crema, rojo de encuadernación, libros que parecen libros y recomendaciones de la casa.",
+  "tags": [
+    "libros",
+    "librería",
+    "editorial",
+    "cálido"
+  ],
+  "sitePurpose": "shop",
+  "order": 195,
+  "dna": {
+    "display": "libre-caslon-text",
+    "text": "figtree",
+    "case": "none",
+    "radius": "soft",
+    "border": "hairline",
+    "button": "block",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "still",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "lectura",
+      "role": "lifestyle",
+      "demo": "lectura.jpg"
+    },
+    {
+      "slot": "local1",
+      "role": "lifestyle",
+      "demo": "local1.jpg"
+    },
+    {
+      "slot": "local2",
+      "role": "lifestyle",
+      "demo": "local2.jpg"
+    },
+    {
+      "slot": "pila",
+      "role": "detail",
+      "demo": "pila.jpg"
+    }
+  ]
+}
