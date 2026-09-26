@@ -3,6 +3,7 @@ import { fitEmbeddedDialogs } from "./embedded-dialogs";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const params = new URLSearchParams(location.search);
 async function mount() {
+  if (params.get('library') === 'settings') return (await import('./source-settings-page')).mountSettingsPage(app, params.get('section') as 'brand' | 'shipping' | 'domain');
   if (['marketing','integrations','experiments'].includes(params.get('library') || '')) return (await import('./source-business-workspace')).mountBusinessWorkspace(app);
   if (params.has('library')) return (await import('./source-library')).mountSourceLibrary(app);
   if (params.has('productGuide')) return (await import('./source-product-guide')).mountProductGuide(app);

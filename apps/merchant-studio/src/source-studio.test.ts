@@ -115,3 +115,19 @@ it('keeps YAPI template cards choosable while the store is untouched, and not af
     await vi.waitFor(() => expect(card.disabled).toBe(!enabled));
   }
 });
+
+it('sends the brand, shipping and domain shortcuts to the matching Ajustes section when embedded', async () => {
+  history.replaceState(null, '', '/studio/?source=1&embedded=1&store=s1');
+  // Embedded means framed by the dashboard: give this window a separate parent.
+  const post = vi.fn();
+  const realParent = window.parent;
+  Object.defineProperty(window, 'parent', { value: { postMessage: post }, configurable: true });
+  await mountSourceStudio(app);
+  for (const [id, section] of [['source-brand', 'brand'], ['source-shipping', 'shipping'], ['source-domain', 'domain']] as const) {
+    const button = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>(`#${id}`); expect(found).toBeTruthy(); return found!; });
+    button.click();
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: 'pagosya:workspace', view: 'store-settings', section }), location.origin);
+  }
+  Object.defineProperty(window, 'parent', { value: realParent, configurable: true });
+  history.replaceState(null, '', '/');
+});

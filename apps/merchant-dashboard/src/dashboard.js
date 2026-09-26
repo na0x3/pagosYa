@@ -960,11 +960,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       pendingStudioAction = null; return;
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
-    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments"].includes(event.data.view)) {
+    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments", "store-settings"].includes(event.data.view)) {
       if (event.data.view === "marketing" && event.data.tab === "program") selectMarketingTab("program");
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
       document.getElementById("dashboardWorkspace").scrollIntoView({ block: "start" });
+      if (event.data.view === "store-settings" && event.data.section && currentStoreId) void openSettingsSection(event.data.section);
     }
   });
 
@@ -4076,6 +4077,14 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   // The settings page lives under "Tu tienda" rather than a top-level entry of
   // its own: everything it edits is scoped to the selected store.
+  /** Marca, envíos y dominio: the Studio's own panels, shown over the dashboard. */
+  async function openSettingsSection(section) {
+    if (!currentStoreId) return;
+    sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
+    const { openSettingsOverlay } = await import("/src/settings-overlay.mjs");
+    openSettingsOverlay(currentStoreId, section);
+  }
+  document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
   import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {
     storeSettings = mountStoreSettings(document.getElementById("storeSettingsRoot"), {
       api,

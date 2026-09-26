@@ -571,15 +571,15 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelectorAll<HTMLButtonElement>('[data-business-view]').forEach(button => button.onclick = () => { if (!busy && !dirty()) notifyParent({type:'pagosya:workspace',view:button.dataset.businessView}); });
     app.querySelector('#source-retention')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({ type: 'pagosya:workspace', view: 'marketing', tab: 'program' }); else void openRetention(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
-    app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
-    app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
+    app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'shipping'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
+    app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'domain'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
     app.querySelectorAll('[data-open-templates]').forEach(button => button.addEventListener('click', () => {
       if (busy || !storeId || dirty() || historical()) return;
       void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version) && !templateUntouched(), applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla aplicada. Cambia fotos y textos cuando quieras.'; render(); } });
     }));
     app.querySelector('#source-recommendations')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openRecommendations(api, storeId); } });
     app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });
-    app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openBrandProfile(api, storeId); } });
+    app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'brand'}); else void openBrandProfile(api, storeId); } });
     const on = (id: string, fn: () => void) => app.querySelector(`#${id}`)?.addEventListener('click', fn);
 
     app.querySelector('.source-publication-details')?.addEventListener('toggle', event => { const details = event.target as HTMLDetailsElement; if (details.isConnected) publicationOpen = details.open; });
