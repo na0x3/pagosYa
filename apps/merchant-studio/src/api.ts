@@ -378,6 +378,14 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${target}/restore`, { method: "POST", body: JSON.stringify({ revision }) });
   }
 
+  listTemplates(): Promise<import("./source-templates").TemplateSummary[]> {
+    return this.request(`/store-templates`);
+  }
+
+  applyTemplate(storeId: string, templateId: string, revision: number): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}`, { method: "POST", body: JSON.stringify({ revision }) });
+  }
+
   saveSource(storeId: string, body: { revision: number; label: string; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; files: import("@pagosya/storefront-preview").SourceFile[] }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project`, { method: "PUT", body: JSON.stringify(body) });
   }

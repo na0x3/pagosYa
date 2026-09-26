@@ -2,6 +2,7 @@ import { createDirectEditor } from './source-direct-editor';
 import { createSourceDesignJobs } from './source-design-jobs';
 import { createSourceVisualTools } from './source-visual-tools';
 import { renderInspiration } from './source-inspiration';
+import { openTemplateGallery } from './source-templates';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { merchantSafeText } from './source-merchant-copy';
@@ -418,7 +419,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);
     return `<details class="source-store-menu source-disclosure"><summary>Mi tienda</summary><nav class="source-disclosure-panel" aria-label="Herramientas de mi tienda">
-      <section><h2>Diseño y contenido</h2><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
+      <section><h2>Diseño y contenido</h2><button data-open-templates ${disabled(locked || !storeId || historical() || dirty())}>Plantillas</button><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
       <section><h2>Marketing</h2><button id="source-retention" ${unavailable}>Correos, Comeback y promociones</button>${embedded ? `<button data-business-view="integrations" ${unavailable}>Integraciones</button><button data-business-view="experiments" ${unavailable}>Pruebas A/B</button>` : ''}</section>
       <section><h2>Configuración</h2><button id="source-shipping" ${unavailable}>Envíos y retiro</button><button id="source-domain" ${unavailable}>Tu propio dominio</button><button id="source-arrangement" ${unavailable}>Cómo se ven tus productos</button><button id="source-recommendations" ${unavailable}>Recomendaciones</button></section>
       <section><h2>Productos</h2><button id="source-digital" ${unavailable}>Archivos digitales</button></section>
@@ -562,6 +563,10 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
     app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
+    app.querySelectorAll('[data-open-templates]').forEach(button => button.addEventListener('click', () => {
+      if (busy || !storeId || dirty() || historical()) return;
+      void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version), applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla aplicada. Cambia fotos y textos cuando quieras.'; render(); } });
+    }));
     app.querySelector('#source-recommendations')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openRecommendations(api, storeId); } });
     app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openBrandProfile(api, storeId); } });
