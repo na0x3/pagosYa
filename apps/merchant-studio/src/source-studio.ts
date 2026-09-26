@@ -1,6 +1,4 @@
 import { createDirectEditor } from './source-direct-editor';
-import { createSourceDesignJobs } from './source-design-jobs';
-import { createSourceVisualTools } from './source-visual-tools';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
@@ -83,9 +81,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   });
   let liveCatalog: JsonRecord | null = null;
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
-  const mountVisualTools = createSourceVisualTools(api);
   const directEditor = createDirectEditor(api);
-  const mountDesignJobs = createSourceDesignJobs(api);
   const loadPreviewImages = createPreviewImageLoader(API_BASE_URL);
   let previewRender = 0;
   let previewNavigation: Partial<PreviewNavigation> = {};
@@ -477,7 +473,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
             ${error ? `<p class="auth-error" role="alert">${escape(merchantSafeText(error))}</p>${retrySubmission ? `<button type="button" class="button button--secondary" id="source-retry-message" ${disabled(locked || historical() || Boolean(instruction.trim()) || assets.length > 0)}>Reintentar mensaje</button>` : ''}` : ''}
             ${!storeId ? '<section class="remote-empty-state"><strong>No hay una tienda todavía.</strong><p>Crea una tienda en el dashboard para comenzar.</p></section>' : ''}
           </div>
-          <div class="source-compose-area">${version ? '<div class="source-canvas-tools"><div data-source-visual-tools></div><div data-source-design-jobs></div></div>' : ''}${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
+          <div class="source-compose-area">${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
           ${renderStudioComposer({ busy: locked || historical() || !storeId, source: true, instruction, attachments: productPhoto ? '' : attachmentBatch(), suggestions: setup || productPhoto ? [] : version ? [
             { label: 'Crear producto', action: 'create-product' },
             { label: 'Rediseñar sitio', instruction: 'Rediseña todo mi sitio con una dirección visual nueva basada en mi negocio, mis fotos y mis referencias. Conserva los productos y los datos confirmados.' },
@@ -512,13 +508,6 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       pending: value => { visualEditPending = value; render(); },
       saved: async () => { await load(); toast = 'Cambio visual guardado.'; render(); },
       prepare: text => { visualEditing = false; instruction = text; render(); focusComposer(); scheduleEstimate(); },
-    });
-    const designHost = app.querySelector<HTMLElement>('[data-source-design-jobs]');
-    if (designHost && version) mountDesignJobs(designHost, { storeId, version, page, locked: busy || dirty(), historical: historical(), saved: () => action(async () => { await load(); toast = 'Mejora guardada. Revisa el resultado antes de publicarlo.'; }) });
-    const visualHost = app.querySelector<HTMLElement>('[data-source-visual-tools]');
-    if (visualHost && version) mountVisualTools(visualHost, { storeId, version, page, settings: generationSettings, locked: busy || dirty(), historical: historical(),
-      prepare: text => { instruction = [instruction.trim(), text].filter(Boolean).join('\n\n'); const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) { field.value = instruction; field.focus(); } scheduleEstimate(); },
-      saved: () => action(async () => { await load(); toast = 'Usos guardados. YAPI los tendrá en cuenta en los próximos cambios.'; }),
     });
 
     const stream = app.querySelector<HTMLElement>('[data-agent-stream]');

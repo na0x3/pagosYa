@@ -131,3 +131,9 @@ it('sends the brand, shipping and domain shortcuts to the matching Ajustes secti
   Object.defineProperty(window, 'parent', { value: realParent, configurable: true });
   history.replaceState(null, '', '/');
 });
+
+it('shows no visual-resources or design-improvement tools above the YAPI composer', async () => {
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('#agent-command')).toBeTruthy());
+  expect(app.querySelector('.source-canvas-tools, [data-source-visual-tools], [data-source-design-jobs]')).toBeNull();
+});
