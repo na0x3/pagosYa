@@ -1,0 +1,61 @@
+{
+  "id": "aro",
+  "name": "Aro",
+  "category": "moda",
+  "description": "Joyería fina para todos los días: blanco cálido y dorado, serif elegante, fotos de cerca sobre la piel y regalos listos.",
+  "tags": [
+    "joyería",
+    "oro",
+    "elegante",
+    "regalos"
+  ],
+  "sitePurpose": "shop",
+  "order": 280,
+  "dna": {
+    "display": "playfair-display",
+    "text": "manrope",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "block",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "mano",
+      "role": "lifestyle",
+      "demo": "mano.jpg"
+    },
+    {
+      "slot": "caja",
+      "role": "lifestyle",
+      "demo": "caja.jpg"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "id": "raiz",
+  "name": "Raíz",
+  "category": "hogar",
+  "description": "Hogar hecho a mano con propósito: tonos tierra, serif cálida, valores del comercio justo e historias de quien hace cada pieza.",
+  "tags": [
+    "hogar",
+    "artesanal",
+    "comercio justo",
+    "tierra"
+  ],
+  "sitePurpose": "shop",
+  "order": 250,
+  "dna": {
+    "display": "young-serif",
+    "text": "chivo",
+    "case": "none",
+    "radius": "soft",
+    "border": "hairline",
+    "button": "block",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "inset"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "artesana",
+      "role": "lifestyle",
+      "demo": "artesana.jpg"
+    },
+    {
+      "slot": "taller",
+      "role": "lifestyle",
+      "demo": "taller.jpg"
+    }
+  ]
+}
