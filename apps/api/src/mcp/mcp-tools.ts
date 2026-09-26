@@ -58,17 +58,20 @@ const SOURCE_FORMAT = 'A pagosYa store is React source: components/*.tsx (home, 
 
 export function buildMcpServer(deps: McpDeps, merchantId: string): McpServer {
   const server = new McpServer({ name: 'pagosya', version: '1.0.0' });
+  // registerTool's generics over zod shapes exceed the compiler's instantiation depth in this project (TS2589);
+  // the SDK still validates every call against the zod schema at runtime.
+  const register = server.registerTool.bind(server) as unknown as (name: string, config: { description: string; inputSchema?: Record<string, z.ZodTypeAny> }, handler: (args: any) => Promise<unknown>) => void;
   const storeId = z.string().min(1).describe('A store id from list_stores.');
   const run = (notFound?: string) => <A>(handler: (args: A) => Promise<{ content: unknown[] }>) => async (args: A) => {
     try { return await handler(args) as any; } catch (error) { return mcpError(error, notFound) as any; }
   };
 
-  server.registerTool('list_stores', { description: 'List this merchant\'s pagosYa stores with their current design revision and whether a design is published.' },
+  register('list_stores', { description: 'List this merchant\'s pagosYa stores with their current design revision and whether a design is published.' },
     run()(async () => json((await deps.stores.listForMerchant(merchantId)).map(store => ({
       id: store.id, name: store.name, slug: store.slug, revision: store.sourceProject?.revision ?? 0, published: Boolean(store.publishedSourceRevision),
     })))));
 
-  server.registerTool('get_store', { description: 'One store: current design revision, the Plantilla it came from, product count and publication state.', inputSchema: { storeId } },
+  register('get_store', { description: 'One store: current design revision, the Plantilla it came from, product count and publication state.', inputSchema: { storeId } },
     run()(async ({ storeId: id }: { storeId: string }) => {
       const current = await deps.projects.current(merchantId, id);
       const store = (await deps.stores.listForMerchant(merchantId)).find(entry => entry.id === id);
@@ -78,25 +81,25 @@ export function buildMcpServer(deps: McpDeps, merchantId: string): McpServer {
         sitePurpose: brief?.sitePurpose ?? null, productCount: Array.isArray(products) ? products.length : undefined, published: Boolean(store?.publishedSourceRevision) });
     }));
 
-  server.registerTool('list_products', { description: 'Products of a store: name, price in minor units (amount, centavos), stock, options and photos.', inputSchema: { storeId } },
+  register('list_products', { description: 'Products of a store: name, price in minor units (amount, centavos), stock, options and photos.', inputSchema: { storeId } },
     run()(async ({ storeId: id }: { storeId: string }) => json(await deps.products.listForStore(merchantId, id))));
 
   const productShape = z.record(z.string(), z.unknown()).describe('Product fields as in the pagosYa dashboard: name (required on create), amount (integer, minor units: 5000 = Bs 50.00), currency (default BOB), description, imageUrls, tags, stock, variants, extras, categoryId, discountPercent.');
-  server.registerTool('create_product', { description: 'Create a product in a store. Validated like the dashboard form.', inputSchema: { storeId, product: productShape } },
+  register('create_product', { description: 'Create a product in a store. Validated like the dashboard form.', inputSchema: { storeId, product: productShape } },
     run()(async ({ storeId: id, product }: { storeId: string; product: unknown }) => json(await deps.products.create(merchantId, id, await validated(CreatePaymentLinkDto, product)))));
 
-  server.registerTool('update_product', { description: 'Update some fields of an existing product (ids from list_products).', inputSchema: { storeId, productId: z.string().min(1), product: productShape } },
+  register('update_product', { description: 'Update some fields of an existing product (ids from list_products).', inputSchema: { storeId, productId: z.string().min(1), product: productShape } },
     run('No encontré ese producto.')(async ({ storeId: id, productId, product }: { storeId: string; productId: string; product: unknown }) =>
       json(await deps.products.update(merchantId, id, productId, await validated(UpdatePaymentLinkDto, product)))));
 
-  server.registerTool('list_templates', { description: 'The Plantillas: complete designer-made stores a store can start from (id, name, category, description).' },
+  register('list_templates', { description: 'The Plantillas: complete designer-made stores a store can start from (id, name, category, description).' },
     run()(async () => json(deps.templates.list().map(({ id, name, category, description }) => ({ id, name, category, description })))));
 
-  server.registerTool('apply_template', { description: `Replace the store's design with a Plantilla filled with its products, as a new revision (earlier revisions stay in the history). ${SOURCE_FORMAT}`,
+  register('apply_template', { description: `Replace the store's design with a Plantilla filled with its products, as a new revision (earlier revisions stay in the history). ${SOURCE_FORMAT}`,
     inputSchema: { storeId, templateId: z.string().min(1), revision: z.number().int().min(0).describe('The store\'s current revision (from get_store).') } },
     run()(async ({ storeId: id, templateId, revision }: { storeId: string; templateId: string; revision: number }) => json(await deps.templates.apply(merchantId, id, templateId, revision))));
 
-  server.registerTool('get_design_files', { description: `The current design's text files (path + content); images and other binary files are listed by path. ${SOURCE_FORMAT}`, inputSchema: { storeId } },
+  register('get_design_files', { description: `The current design's text files (path + content); images and other binary files are listed by path. ${SOURCE_FORMAT}`, inputSchema: { storeId } },
     run()(async ({ storeId: id }: { storeId: string }) => {
       const current = await deps.projects.current(merchantId, id);
       if (!current.revision) return json({ revision: 0, files: [], binaryPaths: [], note: 'This store has no design yet: apply a Plantilla with apply_template first.' });
@@ -106,11 +109,11 @@ export function buildMcpServer(deps: McpDeps, merchantId: string): McpServer {
         binaryPaths: snapshot.files.filter(file => file.encoding === 'base64').map(file => file.path) });
     }));
 
-  server.registerTool('write_design_files', { description: `Save changed text files (1-20) as one new design revision. It goes through the same validation, compile and commerce checks as the pagosYa code editor; errors come back as messages. Only existing text files can be changed. ${SOURCE_FORMAT}`,
+  register('write_design_files', { description: `Save changed text files (1-20) as one new design revision. It goes through the same validation, compile and commerce checks as the pagosYa code editor; errors come back as messages. Only existing text files can be changed. ${SOURCE_FORMAT}`,
     inputSchema: { storeId, revision: z.number().int().min(1).describe('The revision the files were read from.'), files: z.array(z.object({ path: z.string().min(1), content: z.string() })).min(1).max(20) } },
     run()(async ({ storeId: id, revision, files }: { storeId: string; revision: number; files: Array<{ path: string; content: string }> }) => json(await deps.projects.editFiles(merchantId, id, { revision, files }))));
 
-  server.registerTool('screenshot_store', { description: 'A PNG of the current design rendered in pagosYa\'s sandbox, top of the page, at laptop (1280) or phone (390) width.',
+  register('screenshot_store', { description: 'A PNG of the current design rendered in pagosYa\'s sandbox, top of the page, at laptop (1280) or phone (390) width.',
     inputSchema: { storeId, width: z.union([z.literal(1280), z.literal(390)]).default(1280), page: z.string().default('index.html').describe('An HTML page of the design, e.g. index.html.') } },
     run()(async ({ storeId: id, width, page }: { storeId: string; width: 1280 | 390; page: string }) => {
       const current = await deps.projects.current(merchantId, id);
