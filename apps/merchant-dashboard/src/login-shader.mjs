@@ -1,11 +1,13 @@
-/** The login page's animated mesh gradient: the component the owner chose (@paper-design/shaders-react's
- * MeshGradient) rendered with the framework-free @paper-design/shaders, since this dashboard has no React. */
+/** The login page's animated mesh gradient (@paper-design/shaders' MeshGradient, framework-free since this dashboard
+ * has no React). The owner found the component's four mid-blues streaky, so it is tuned toward a deep navy field with
+ * one light-blue glow and film grain. */
 
 export const LOGIN_GRADIENT = {
-  colors: ["hsl(216, 90%, 27%)", "hsl(243, 68%, 36%)", "hsl(205, 91%, 64%)", "hsl(211, 61%, 57%)"],
-  distortion: 0.8, swirl: 0.1, offsetX: 0, offsetY: 0, scale: 1, rotation: 0,
-  // Calmer than the component's default of 1: it sits beside a form.
-  speed: 0.35,
+  colors: ["hsl(222, 70%, 7%)", "hsl(216, 78%, 14%)", "hsl(210, 70%, 24%)", "hsl(198, 85%, 72%)"],
+  distortion: 0.55, swirl: 0.06, offsetX: 0.35, offsetY: 0.3, scale: 1.25, rotation: 0,
+  grainOverlay: 0.28,
+  // A slow drift: it sits behind a form.
+  speed: 0.18,
 };
 
 /** @param {boolean} reducedMotion */
@@ -18,7 +20,7 @@ export const loginShaderSpeed = (reducedMotion) => (reducedMotion ? 0 : LOGIN_GR
 export function meshGradientUniforms(params, toColor) {
   return {
     u_colors: params.colors.map(toColor), u_colorsCount: params.colors.length,
-    u_distortion: params.distortion, u_swirl: params.swirl, u_grainMixer: 0, u_grainOverlay: 0,
+    u_distortion: params.distortion, u_swirl: params.swirl, u_grainMixer: 0, u_grainOverlay: params.grainOverlay ?? 0,
     u_fit: 0, u_scale: params.scale, u_rotation: params.rotation, u_offsetX: params.offsetX, u_offsetY: params.offsetY,
     u_originX: 0.5, u_originY: 0.5, u_worldWidth: 0, u_worldHeight: 0,
   };

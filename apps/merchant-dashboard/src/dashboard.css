@@ -2080,18 +2080,19 @@
      la otra. El bloque anterior apilaba un póster, cuatro cuadrados de colores
      flotando y la URL de la API a la vista del comerciante. */
   .login-split {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    min-height: 100dvh; background: #161616; color: #f2f2ef;
+    position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    min-height: 100dvh; background: hsl(222 70% 7%); color: #f2f2ef;
   }
   /* The login fills the window: no page padding, no dashboard top bar behind it. */
-  body.is-logged-out { padding: 0; background: #161616; }
+  body.is-logged-out { padding: 0; background: hsl(222 70% 7%); }
   body.is-logged-out .topbar { display: none; }
   .login-card input:-webkit-autofill, .login-card input:-webkit-autofill:hover, .login-card input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #f2f2ef; caret-color: #f2f2ef; -webkit-box-shadow: 0 0 0 1000px #1f1f1f inset; transition: background-color 9999s; }
+    -webkit-text-fill-color: #f2f2ef; caret-color: #f2f2ef; -webkit-box-shadow: 0 0 0 1000px hsl(222 35% 11%) inset; transition: background-color 9999s; }
   /* Left: the owner's mesh gradient (src/login-shader.mjs); the CSS gradient shows until WebGL paints, or without it. */
-  .login-hero { position: relative; display: grid; align-items: center; overflow: hidden; isolation: isolate;
-    background: radial-gradient(90% 70% at 85% 100%, hsl(205 91% 64%), transparent 70%), radial-gradient(80% 60% at 10% 10%, hsl(243 68% 36%), transparent 70%), hsl(216 90% 27%); }
-  .login-hero-shader { position: absolute; inset: 0; z-index: -1; }
+  /* The gradient covers the whole window, behind both halves; the CSS gradient shows until WebGL paints, or without it. */
+  .login-hero { display: grid; align-items: center; }
+  .login-hero-shader { position: absolute; inset: 0; z-index: -1; overflow: hidden;
+    background: radial-gradient(70% 60% at 92% 96%, hsl(198 85% 72% / .85), transparent 70%), radial-gradient(60% 55% at 70% 80%, hsl(210 70% 24%), transparent 75%), hsl(222 70% 7%); }
   .login-hero-shader canvas { display: block; width: 100%; height: 100%; }
   .login-hero-copy { display: grid; gap: 18px; width: min(560px, 100%); margin: 0 auto; padding: clamp(28px, 6vw, 72px); color: #fff; }
   .login-hero-copy h1 { margin: 0; font-size: clamp(2rem, 3.4vw, 2.9rem); font-weight: 700; line-height: 1.08; letter-spacing: -.035em; text-wrap: balance; }
@@ -2103,15 +2104,18 @@
   .login-hero-cards span { color: #ffffffc2; font-size: .9rem; line-height: 1.4; }
 
   /* Right: sign-in on a dark panel. */
-  .login-pane { position: relative; display: grid; grid-template-rows: 1fr auto; gap: 18px; padding: clamp(24px, 4vw, 48px); background: #161616; }
-  .login-card { display: grid; align-content: center; gap: 14px; justify-self: center; align-self: center; width: min(100%, 400px); }
+  .login-pane { position: relative; display: grid; grid-template-rows: 1fr auto; gap: 18px; padding: clamp(24px, 4vw, 48px); }
+  .login-card { display: grid; align-content: center; gap: 14px; justify-self: center; align-self: center; width: min(100%, 440px);
+    padding: clamp(24px, 3vw, 40px); border: 1px solid #ffffff1f; border-radius: 24px;
+    background: hsl(222 40% 6% / .72); backdrop-filter: blur(20px) saturate(1.15); -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    box-shadow: 0 30px 80px -30px #000c; }
   .login-brand { justify-self: center; display: block; margin-bottom: 8px; }
   .login-brand img { display: block; width: 56px; height: 56px; border-radius: 12px; }
   .login-card h2 { margin: 0; color: #fff; font-size: 1.9rem; font-weight: 700; letter-spacing: -.03em; text-align: center; }
   .login-sub { margin: -4px 0 14px; color: #a3a3a0; font-size: .95rem; text-align: center; }
   .login-field { display: grid; gap: 6px; }
   .login-field label { margin: 0; color: #c9c9c5; font-size: .78rem; font-weight: 600; text-transform: none; letter-spacing: 0; }
-  .login-card input { width: 100%; min-width: 0; min-height: 50px; padding: 0 16px; border: 1px solid #2e2e2c; border-radius: 12px; background: #1f1f1f; color: #f2f2ef; }
+  .login-card input { width: 100%; min-width: 0; min-height: 50px; padding: 0 16px; border: 1px solid #ffffff21; border-radius: 12px; background: #ffffff0d; color: #f2f2ef; }
   .login-card input::placeholder { color: #6f6f6b; }
   .login-card input:focus { outline: 2px solid hsl(205 91% 64%); outline-offset: 1px; border-color: transparent; }
   .login-card .password-visibility-toggle { color: #a3a3a0; }
@@ -2128,12 +2132,12 @@
   .login-dev { margin-top: 4px; border-top: 1px solid #2e2e2c; padding-top: 10px; }
   .login-dev summary { color: #6f6f6b; font-size: .74rem; cursor: var(--pg-hand-cursor, pointer); }
   .login-dev label { display: block; margin: 10px 0 5px; font-size: .72rem; color: #a3a3a0; }
-  .login-foot { margin: 0; color: #6f6f6b; font-size: .72rem; line-height: 1.5; text-align: center; }
+  .login-foot { margin: 0; color: #ffffff80; font-size: .72rem; line-height: 1.5; text-align: center; }
   .login-foot code { font-size: .7rem; color: #a3a3a0; }
 
   @media (max-width: 860px) {
     .login-split { grid-template-columns: 1fr; min-height: 100dvh; }
-    .login-hero { min-height: 190px; }
+    .login-hero { min-height: 0; }
     .login-hero-copy { padding: 28px 20px; gap: 8px; }
     .login-hero-copy h1 { font-size: 1.7rem; }
     .login-hero-cards { display: none; }

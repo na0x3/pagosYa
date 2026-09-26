@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { LOGIN_GRADIENT, meshGradientUniforms, loginShaderSpeed } from "../src/login-shader.mjs";
 
-test("the login gradient uses the four blues and the component's settings", () => {
-  assert.deepEqual(LOGIN_GRADIENT.colors, ["hsl(216, 90%, 27%)", "hsl(243, 68%, 36%)", "hsl(205, 91%, 64%)", "hsl(211, 61%, 57%)"]);
+test("the login gradient is mostly deep navy with one light-blue glow and film grain", () => {
+  assert.equal(LOGIN_GRADIENT.colors.length, 4);
+  // Three dark blues and a single light one, so the light reads as a glow instead of bright streaks.
+  const lightness = LOGIN_GRADIENT.colors.map((color) => Number(/(\d+)%\)$/.exec(color)[1]));
+  assert.equal(lightness.filter((value) => value < 30).length, 3);
+  assert.equal(lightness.filter((value) => value >= 60).length, 1);
   const uniforms = meshGradientUniforms(LOGIN_GRADIENT, (color) => [color.length, 0, 0, 1]);
   assert.equal(uniforms.u_colorsCount, 4);
-  assert.equal(uniforms.u_colors.length, 4);
-  assert.equal(uniforms.u_distortion, 0.8);
-  assert.equal(uniforms.u_swirl, 0.1);
-  assert.equal(uniforms.u_scale, 1);
+  assert.ok(uniforms.u_grainOverlay > 0);
   assert.equal(uniforms.u_fit, 0);
 });
 
