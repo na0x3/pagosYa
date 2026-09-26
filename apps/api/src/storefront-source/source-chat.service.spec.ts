@@ -1,5 +1,5 @@
 import { SourceConversationFailure } from './source-conversation-failure';
-import { SourceChatService, referenceOnlyNotice } from './source-chat.service';
+import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION } from './source-chat.service';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { BadGatewayException } from '@nestjs/common';
 import * as websiteReference from './source-website-reference';
@@ -11,7 +11,8 @@ function setup(messages: any[] = []) {
   };
   const projects: any = { current: jest.fn().mockResolvedValue({ revision: 1 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessType: 'Café Aroma', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Editorial' } } }) };
   const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Carta editorial' }) };
-  const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Café de especialidad, estilo cálido y editorial.', generationInstruction: request.instruction, imageUses: [] }) };
+  // Existing first-site tests exercise the from-scratch path; the template path sets startFrom explicitly.
+  const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Café de especialidad, estilo cálido y editorial.', generationInstruction: request.instruction, imageUses: [], startFrom: 'scratch' }) };
   return { service: new SourceChatService(prisma, projects, generation, dialogue), prisma, projects, generation, dialogue, messages };
 }
 const request = { revision: 1, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
@@ -252,9 +253,9 @@ describe('Conversational first-site setup', () => {
     dialogue.decide.mockResolvedValueOnce({action:'reply',reply:'Entendido, es una foto de café. ¿La usamos en la portada?',summary,generationInstruction:'',imageUses});
     await service.send('m','s',{revision:0,instruction:'No es mi logo, es el café que vendo',assetUrls:[photo]});
     expect((await service.conversation('m','s')).setup?.prompt).toContain('foto de café');
-    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary,generationInstruction:'Crear el sitio usando la foto del café en la portada y un nombre de texto.',imageUses});
+    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary,generationInstruction:'Crear el sitio usando la foto del café en la portada y un nombre de texto.',imageUses,startFrom:'scratch'});
     await service.send('m','s',{revision:0,instruction:'Sí, usa esa foto en la portada'});
-    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary,generationInstruction:'Crear el sitio usando la foto del café en la portada y un nombre de texto.',imageUses});
+    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary,generationInstruction:'Crear el sitio usando la foto del café en la portada y un nombre de texto.',imageUses,startFrom:'scratch'});
     generation.generate.mockRejectedValueOnce(new Error('timeout'));
     await expect(service.send('m','s',{revision:0,instruction:'Sí, empieza sin más preguntas',model:'gpt-5.6-luna',maxCredits:8})).rejects.toThrow('timeout');
     await service.send('m','s',{revision:0,instruction:'Inténtalo de nuevo',model:'gpt-5.6-luna',maxCredits:8});
@@ -285,7 +286,7 @@ describe('Conversational first-site setup', () => {
     await service.send('m','s',{revision:0,instruction:'Vendo café a vecinos',setupAction:'generate'});
     expect(generation.generate).not.toHaveBeenCalled();
     expect((await service.conversation('m','s')).setup?.prompt).toContain('estilo');
-    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café de barrio, tonos crema.',generationInstruction:'Crear la tienda de café.',imageUses:[]});
+    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café de barrio, tonos crema.',generationInstruction:'Crear la tienda de café.',imageUses:[],startFrom:'scratch'});
     await service.send('m','s',{revision:0,instruction:'Tonos crema, crea el sitio',model:'gpt-5.6-luna',maxCredits:8});
     expect(generation.generate.mock.calls[0][2]).toMatchObject({model:'gpt-5.6-luna',maxCredits:8});
   });
@@ -348,7 +349,7 @@ describe('Image batches for existing-site edits', () => {
     dialogue.decide.mockResolvedValueOnce({action:'reply',reply:'¿Tienes fotos de productos?',summary:'Logo recibido.',generationInstruction:'',imageUses:[]});
     await service.send('m','s',{revision:0,instruction:'Este es mi logo',assetUrls:['/v1/uploads/a.png']});
     await service.send('m','s',{revision:0,instruction:'Estas son las fotos, crea el sitio',assetUrls:selected});
-    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café con fotos.',generationInstruction:'Crear tienda',imageUses:[]});
+    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café con fotos.',generationInstruction:'Crear tienda',imageUses:[],startFrom:'scratch'});
     await service.send('m','s',{revision:0,instruction:'Usa crema y verde'});
     expect(generation.generate.mock.calls[0][2].assetUrls).toEqual(['/v1/uploads/a.png',...selected]);
   });
@@ -464,4 +465,55 @@ describe('referenceOnlyNotice', () => {
     expect(referenceOnlyNotice([{ url: photo(1), role: 'reference' }], [])).toBe('');
     expect(referenceOnlyNotice([{ url: '/v1/uploads/clip.mp4', role: 'reference' }], ['/v1/uploads/clip.mp4'])).toBe('');
   });
+});
+
+const discovered = () => [{ role: 'ASSISTANT', content: '¿Qué estilo quieres?', metadata: { sourceSetup: { step: 'conversation', answers: { context: 'Cafetería de especialidad en Santa Cruz' }, assetUrls: [], imageUses: [], discoveryReplies: 2, sitePurpose: 'shop' } } }];
+const firstShop = (messages: any[] = discovered()) => { const env = setup(messages); env.projects.current.mockResolvedValue({ revision: 0 }); return env; };
+
+it('asks whether to start from a template in the second discovery question of a new shop', async () => {
+  const { service, projects, dialogue, messages } = setup([{ role: 'ASSISTANT', content: '¿Qué ofreces?', metadata: { sourceSetup: { step: 'conversation', answers: {}, assetUrls: [], imageUses: [], discoveryReplies: 1, sitePurpose: 'shop' } } }]);
+  projects.current.mockResolvedValue({ revision: 0 });
+  dialogue.decide.mockResolvedValue({ action: 'reply', reply: '¿Qué estilo y colores quieres?', summary: 'Cafetería', generationInstruction: '', imageUses: [] });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Vendo café de especialidad' });
+  expect(messages.at(-1).content).toContain(TEMPLATE_QUESTION);
+});
+
+it('offers three Plantillas instead of generating the first shop', async () => {
+  const { service, dialogue, generation, messages } = firstShop();
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería de especialidad', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'unknown', templates: [{ id: 'tostado', reason: 'Hecha para café' }], chosenTemplateId: '', rework: false });
+  const result = await service.send('m', 's', { ...request, revision: 0, instruction: 'Elige tú' });
+  expect(generation.generate).not.toHaveBeenCalled();
+  expect((result as { revision?: unknown }).revision).toBeUndefined();
+  const choices = messages.at(-1).metadata.templateChoices;
+  expect(choices).toHaveLength(3);
+  expect(choices[0]).toEqual({ id: 'tostado', name: 'Tostado', reason: 'Hecha para café' });
+  expect(messages.at(-1).metadata.sourceSetup.answers.context).toBe('Cafetería de especialidad');
+});
+
+it('generates from scratch when the merchant asks for it', async () => {
+  const { service, dialogue, generation } = firstShop();
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Mejor desde cero' });
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+});
+
+it('offers a fresh set when the merchant keeps talking instead of choosing', async () => {
+  const offered = [...discovered(), { role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'r' }], sourceSetup: discovered()[0].metadata.sourceSetup } }];
+  const { service, dialogue, generation, messages } = firstShop(offered);
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería verde', generationInstruction: 'x', imageUses: [], startFrom: 'template', templates: [{ id: 'huerta', reason: 'Verde' }], chosenTemplateId: '', rework: false });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Que sea más verde' });
+  expect(generation.generate).not.toHaveBeenCalled();
+  expect(messages.at(-1).metadata.templateChoices[0].id).toBe('huerta');
+  expect(dialogue.decide.mock.calls[0][1].offeredTemplates).toEqual([{ id: 'tostado', name: 'Tostado' }]);
+});
+
+it('keeps service sites and existing designs on today\'s path', async () => {
+  const serviceSite = firstShop([{ ...discovered()[0], metadata: { sourceSetup: { ...discovered()[0].metadata.sourceSetup, sitePurpose: 'service' } } }]);
+  serviceSite.dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Estudio', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: false });
+  await serviceSite.service.send('m', 's', { ...request, revision: 0, instruction: 'Diseña' });
+  expect(serviceSite.generation.generate).toHaveBeenCalledTimes(1);
+  const existing = setup();
+  existing.dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'x', imageUses: [], startFrom: 'template', templates: [{ id: 'tostado', reason: 'r' }], chosenTemplateId: '', rework: false });
+  await existing.service.send('m', 's', { ...request, instruction: 'Cambia el título' });
+  expect(existing.generation.generate).toHaveBeenCalledTimes(1);
 });

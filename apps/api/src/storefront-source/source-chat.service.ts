@@ -21,6 +21,8 @@ import { inspectSourceWebsite, sourceWebsiteReferenceUrls, sourceWebsiteReferenc
 import { honorImageContent } from './source-image-intent';
 import { requestsImageChange } from './source-edit-scope';
 import { createSourceProgress } from './source-progress';
+import { listTemplates, templateManifest } from '@pagosya/store-templates';
+import { rankTemplates, type TemplateChoice } from './source-template-ranking';
 
 /** Photos kept only as style references never appear on the site; say so instead of omitting them silently. */
 export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, attachedUrls: string[]): string {
@@ -29,6 +31,16 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
   if (!count) return '';
   const all = count === attached.size;
   return ` ${all ? (count === 1 ? 'Usé tu foto' : `Usé tus ${count} fotos`) : count === 1 ? 'Usé 1 de tus fotos' : `Usé ${count} de tus fotos`} solo como referencia de estilo, así que no ${count === 1 ? 'aparece' : 'aparecen'} en la tienda (por ejemplo, porque ${count === 1 ? 'muestra' : 'muestran'} otra marca). Si quieres mostrarlas, dime «usa estas fotos en la tienda»; para tus productos, añádelos con su foto en Productos.`;
+}
+
+export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
+const TEMPLATE_CHOICES_REPLY = 'Elegí estas 3 plantillas para tu negocio. Toca la que más te guste o dime cuál prefieres, y la adapto a tu tienda con tus productos.';
+
+/** The cards on the latest assistant message; a choice is only valid against these. */
+function offeredTemplates(messages: Array<{ role: string; metadata?: unknown }>): TemplateChoice[] {
+  const last = [...messages].reverse().find(message => message.role === 'ASSISTANT');
+  const choices = (last?.metadata as { templateChoices?: TemplateChoice[] } | undefined)?.templateChoices;
+  return Array.isArray(choices) ? choices : [];
 }
 
 @Injectable()
@@ -159,6 +171,7 @@ export class SourceChatService {
         storeId, model: input.model, instruction: input.instruction, productPhoto, buildNow: ['generate', 'quick'].includes(input.setupAction || ''),
         revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [], knowledge: await loadStoreKnowledge(this.prisma, merchantId, storeId).catch(() => null),
         messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
+        offeredTemplates: offeredTemplates(history.messages).map(({ id, name }) => ({ id, name })),
       })) };
       const correctedUses = honorImageContent(input.instruction, input.assetUrls?.length ? input.assetUrls : allAssets, decision.imageUses);
       if (JSON.stringify(correctedUses) !== JSON.stringify(decision.imageUses)) {
@@ -194,12 +207,24 @@ export class SourceChatService {
         decision.action = 'reply';
         decision.generationInstruction = '';
       }
+      const newShop = !productPhoto && !current.revision && sitePurpose === 'shop';
+      // The second discovery question (discoveryReplies === 1) always offers the choice, whatever the model wrote.
+      if (newShop && discoveryReplies === 1 && decision.action === 'reply' && !decision.reply.includes(TEMPLATE_QUESTION)) {
+        decision.reply = `${decision.reply}\n\n${TEMPLATE_QUESTION}`;
+      }
+      let templateChoices: TemplateChoice[] | undefined;
+      if (newShop && decision.action === 'generate' && decision.startFrom !== 'scratch') {
+        templateChoices = rankTemplates(decision.summary, listTemplates(), decision.templates);
+        decision.action = 'reply';
+        decision.reply = TEMPLATE_CHOICES_REPLY;
+        decision.generationInstruction = '';
+      }
       setupDraft = { sitePurpose, pendingCatalogRequest: pendingCatalogRequest(catalogInstruction, !current.revision, setupDraft.pendingCatalogRequest), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined };
       if (decision.action === 'reply') {
         await workflow.finish('completed');
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
           threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: decision.reply,
-          metadata: { sourceSetup: setupDraft, progress: workflow.value },
+          metadata: { sourceSetup: setupDraft, progress: workflow.value, ...(templateChoices ? { templateChoices } : {}) },
         } });
         return { userMessage, assistantMessage, setup: current.revision ? null : sourceSetupPrompt(setupDraft, store) };
       }
