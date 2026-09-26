@@ -26,6 +26,7 @@ enum ApiKeyMode {
 enum ApiKeyType {
   PUBLISHABLE
   SECRET
+  MCP
 }
 
 enum PaymentMethodType {

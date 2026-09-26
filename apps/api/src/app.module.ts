@@ -1,3 +1,4 @@
+import { McpModule } from './mcp/mcp.module';
 import { CommercePlatformModule } from './commerce-platform/commerce-platform.module';
 import { Module } from "@nestjs/common";
 import * as path from "path";
@@ -117,6 +118,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     OperationsModule,
     CommercePlatformModule,
     InboxModule,
+    McpModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
