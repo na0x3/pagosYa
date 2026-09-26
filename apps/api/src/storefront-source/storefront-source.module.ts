@@ -21,12 +21,14 @@ import { SourceGenerationService } from "./source-generation.service";
 import { SourceConversationService } from "./source-conversation.service";
 import { SourceChatService } from "./source-chat.service";
 import { MerchantThrottlerGuard } from "./source-compile-budget";
+import { SourceTemplatesApplyController, SourceTemplatesListController } from "./source-templates.controller";
+import { SourceTemplatesService } from "./source-templates.service";
 
 /** AI-generated storefront source projects (Studio): YAPI chat, generation, design jobs,
  * visual review, and publishing. See docs/ARCHITECTURE.md for the pipeline. */
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule],
-  controllers: [SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController],
-  providers: [MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService],
+  controllers: [SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController],
+  providers: [MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService],
 })
 export class StorefrontSourceModule {}

@@ -49,7 +49,7 @@ import { merchantFacingSourceFailure, repairDiagnostic } from './source-validati
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { applySourceKitCss, SOURCE_KIT_CSS_DIRECTION, SOURCE_KIT_CSS_DIRECTION_NEXT, SOURCE_KIT_CSS_PATH } from './source-kit-css';
 import { extractSourceMotifs, isSourceMotifFile, sourceMotifConfig, sourceMotifPaths, sourceMotifPrompt } from './source-motifs';
-import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
 import { readFile } from "node:fs/promises";
@@ -58,6 +58,7 @@ import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
 import { PublicStoresService } from "../stores/public-stores.service";
+import { sourcePublicApiUrl, sourceStoreConfigData } from "./source-store-config";
 import { SourceProjectsService } from "./source-projects.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
@@ -237,18 +238,8 @@ export class SourceGenerationService {
     const { apiKey } = provider;
     const brand = await this.brands?.get(merchantId, storeId);
     const publicStore = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
-    const apiBaseUrl = process.env.PUBLIC_API_URL || `http://localhost:${this.config.get<number>("app.port") || 3001}/v1`;
-    const apiUrl = new URL(apiBaseUrl);
-    if (!/^https?:$/.test(apiUrl.protocol) || apiUrl.username || apiUrl.password) throw new ServiceUnavailableException("PUBLIC_API_URL no es una URL pública válida.");
-    if (this.config.get<string>("app.environment") === "production" && apiUrl.protocol !== "https:") throw new ServiceUnavailableException("PUBLIC_API_URL debe usar HTTPS en producción.");
-    const data = {
-      storeName: publicStore.storeName, creditsEnabled: publicStore.creditsEnabled, digitalGoodsEnabled: publicStore.digitalGoodsEnabled, shippingEnabled: publicStore.shippingEnabled, shippingPickupEnabled: publicStore.shippingPickupEnabled, shippingCarriersEnabled: publicStore.shippingCarriersEnabled, bundlesEnabled: publicStore.bundlesEnabled, logoUrl: publicStore.logoUrl, tagline: publicStore.tagline, checkoutMode: dto.revision === 0 ? "payment" : publicStore.checkoutMode,
-      contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
-      contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
-      categories: publicStore.categories, locations: publicStore.locations,
-      cartRecommendationsEnabled: publicStore.cartRecommendationsEnabled, cartRecommendationProductIds: publicStore.cartRecommendationProductIds, bundles: publicStore.bundles,
-      items: publicStore.items.map((item) => ({ ...item, imageUrls: item.imageUrls.map((url) => new URL(url, apiUrl).href), variants: item.variants?.map(variant => ({ ...variant, ...(variant.imageUrl ? { imageUrl: new URL(variant.imageUrl, apiUrl).href } : {}) })), extras: item.extras?.map(extra => ({ ...extra, ...(extra.imageUrl ? { imageUrl: new URL(extra.imageUrl, apiUrl).href } : {}) })) })),
-    };
+    const apiUrl = sourcePublicApiUrl(this.config);
+    const data = sourceStoreConfigData(publicStore, apiUrl, dto.revision === 0);
     const assets: SourceProjectFileDto[] = [];
     const assetLegend: Array<{ original: string; path: string }> = [];
     const images: Array<{ type: "input_image"; image_url: string; detail: "auto" }> = [];

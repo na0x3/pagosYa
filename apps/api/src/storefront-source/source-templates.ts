@@ -1,8 +1,19 @@
 /** Plantillas (spec 2026-09-25-plantillas-design.md): the per-store pieces a template needs at apply time. A template's
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
+import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templates';
-import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { kitPath } from '@pagosya/storefront-kit';
+import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
+import { compileNextPreview, nextContentPages, nextProjectScaffold } from './source-next';
+import { sourceCommerceRoutes } from './source-commerce-pages';
+import { sourceRuntimeDna } from './source-dna';
+import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
+import { withSourceFonts } from './source-fonts';
+import { withSourceCommerceDesign } from './source-commerce-design';
+import { withSourceMotion } from './source-motion';
+import { buildSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
+import { sourceStoreConfigData, type SourcePublicStore } from './source-store-config';
 
 export const TEMPLATE_STORE_DATA_PATH = 'components/store-data.tsx';
 
@@ -47,4 +58,49 @@ export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readon
     const photo = templateDemoPhoto(manifest.id, slot);
     return photo ? [{ path: templateDemoPath(manifest, slot), content: photo.bytes.toString('base64'), encoding: 'base64' as const }] : [];
   });
+}
+
+const TEMPLATE_KIT_FILES = ['build.mjs', 'server.mjs', 'commerce.js', 'product.html', 'checkout.html', 'productos.html', 'coleccion.html', 'commerce-pages.css'];
+const CATEGORY_BUSINESS: Record<TemplateManifest['category'], string> = {
+  comida: 'Comida y bebidas', moda: 'Moda', belleza: 'Belleza y cuidado personal', hogar: 'Hogar y decoración', arte: 'Arte y artesanía',
+  tecnologia: 'Tecnología', mascotas: 'Mascotas', ninos: 'Niños y juguetes', deporte: 'Deporte y aire libre', servicios: 'Servicios', 'producto-unico': 'Un producto estrella',
+};
+
+/**
+ * A complete store revision from a template, built with the same pieces a YAPI generation saves
+ * (source-generation.service.ts, the `saveInput` block): authored source + platform-written store-data, the Next
+ * scaffold, the kit runtime, brand.css, config.js with the store's data and a DNA seeded by the store id, the visual
+ * system manifest, and fonts, assets, commerce pages and motion applied by the shared helpers. No AI call.
+ */
+export async function assembleTemplateRevision(input: {
+  manifest: TemplateManifest; source: SourceProjectFileDto[]; storeId: string; slug: string; publicStore: SourcePublicStore;
+  apiUrl: URL; checkoutOrigin?: string; firstRevision: boolean; previousBrief?: SourceProjectBriefDto;
+}): Promise<{ label: string; brief: SourceProjectBriefDto; files: SourceProjectFileDto[] }> {
+  const { manifest } = input;
+  const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
+  const { photos, demoSlots } = fillTemplatePhotos(manifest, data.items);
+  const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '' }, photos);
+  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH), storeData];
+  const compiled = await compileNextPreview(authored, 'shop');
+  const scaffold = [...compiled, ...nextProjectScaffold(input.slug, nextContentPages(authored, 'shop'))];
+  const kitFiles = await Promise.all(TEMPLATE_KIT_FILES.filter(path => !scaffold.some(file => file.path === path))
+    .map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
+  const demoAssets = templateDemoAssets(manifest, demoSlots);
+  const config = {
+    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: sourceRuntimeDna(undefined, input.storeId),
+    productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
+    apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,
+  };
+  const visualSystem = buildSourceVisualSystem('auto', sourceAssetInventory(demoAssets));
+  const files = await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
+    ...authored, ...scaffold, ...kitFiles, ...demoAssets,
+    { path: 'brand.css', content: '/* No confirmed brand tokens. */' },
+    { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, authored), null, 2) + '\n' },
+    { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
+  ]))), 'auto');
+  const brief = input.previousBrief ?? {
+    sitePurpose: 'shop' as const, businessType: CATEGORY_BUSINESS[manifest.category], audience: `Clientes de ${data.storeName}`.slice(0, 500),
+    primaryAction: 'Comprar en línea', visualDirection: `Plantilla ${manifest.name}: ${manifest.description}`.slice(0, 2000),
+  };
+  return { label: `Plantilla: ${manifest.name}`.slice(0, 120), brief, files };
 }
