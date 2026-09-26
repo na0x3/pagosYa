@@ -108,10 +108,10 @@ export async function assembleTemplateRevision(input: {
     { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, authored), null, 2) + '\n' },
     { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
   ]))), 'auto');
-  const brief = input.previousBrief ?? {
+  const brief = { ...(input.previousBrief ?? {
     sitePurpose: 'shop' as const, businessType: CATEGORY_BUSINESS[manifest.category], audience: `Clientes de ${data.storeName}`.slice(0, 500),
     primaryAction: 'Comprar en línea', visualDirection: `Plantilla ${manifest.name}: ${manifest.description}`.slice(0, 2000),
-  };
+  }), templateId: manifest.id };
   return { label: `Plantilla: ${manifest.name}`.slice(0, 120), brief, files };
 }
 

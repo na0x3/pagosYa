@@ -573,6 +573,16 @@ describe('Independent source generation',()=>{
     expect(JSON.parse(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'design-direction.json').content))
       .toMatchObject(designModule.validateSourceDesign(design(), 0, true, true, { seed: 's' }));
   });
+  it('saves a free run with zero credits whatever the provider usage', async () => {
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockRestore();
+    const { service, projects } = setup();
+    const response = (value: any, outputTokens: number) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: outputTokens }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }));
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ concepts: design().concepts }, 500))
+      .mockResolvedValueOnce(response({ label: 'Built', files: files(), design: { selected: 2, concepts: [] } }, 1000));
+    const result = await service.generate('m', 's', input, undefined, [], undefined, { free: true });
+    expect(result.generation.credits).toBe(0);
+    expect(projects.save.mock.calls[0][3].data.credits).toBe(0);
+  });
   it('repairs a disguised extra hero against the same committed concept before saving', async () => {
     const { service, projects } = setup();
     const response = (source: any) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'Menu', files: source }) }] }] }));

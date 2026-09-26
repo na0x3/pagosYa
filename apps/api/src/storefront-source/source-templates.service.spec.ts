@@ -52,10 +52,14 @@ describe('assembleTemplateRevision', () => {
     await expect(assembleTemplateRevision({ manifest: broken, source: source(), storeId: 's', slug: 's', publicStore: publicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: false })).rejects.toThrow(/prueba.*button.*wobbly/);
   });
 
-  it('keeps the store\'s own brief when it has one', async () => {
+  it('keeps the store\'s own brief when it has one, marked with the template it came from', async () => {
     const brief = { sitePurpose: 'shop' as const, businessType: 'Cafetería', audience: 'Oficinistas', primaryAction: 'Pedir', visualDirection: 'Cálida' };
     const assembled = await assembleTemplateRevision({ manifest, source: source(), storeId: 's', slug: 's', publicStore: publicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: false, previousBrief: brief });
-    expect(assembled.brief).toEqual(brief);
+    expect(assembled.brief).toEqual({ ...brief, templateId: manifest.id });
+  });
+  it('marks a first site\'s default brief with the template', async () => {
+    const assembled = await assembleTemplateRevision({ manifest, source: source(), storeId: 's', slug: 's', publicStore: publicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: true });
+    expect(assembled.brief.templateId).toBe(manifest.id);
   });
 
   it('ignores a store-data file shipped inside a template', async () => {
