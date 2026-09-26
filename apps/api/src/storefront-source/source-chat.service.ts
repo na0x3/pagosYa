@@ -5,6 +5,8 @@ import { BadRequestException, ConflictException, HttpException, Injectable, NotF
 import { PrismaService } from '../prisma/prisma.service';
 import { SourceProjectsService } from './source-projects.service';
 import { SourceGenerationService } from './source-generation.service';
+import { SourceTemplatesService } from './source-templates.service';
+import type { StoreAgentMessage } from '@prisma/client';
 import { SourceConversationService, type SourceConversationDecision } from './source-conversation.service';
 import { createHash } from 'node:crypto';
 import { SourceRequestBudget } from './source-request-budget';
@@ -34,6 +36,9 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 }
 
 export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
+export const TEMPLATE_ADAPTATION_MAX_CREDITS = 20;
+export const TEMPLATE_UNIQUE_OFFER = 'Si quieres que se vea más única, dímelo y la rediseño.';
+const TEMPLATE_ADAPTATION_BRIEF = 'Adapta esta tienda, creada desde una plantilla, al negocio descrito en el contexto acordado. Reescribe todos los textos visibles para este negocio, en el idioma del comercio. Si el comercio confirmó colores de marca, aplícalos a la paleta. Quita las secciones que no correspondan a este negocio. Conserva el diseño de la plantilla: estructura, orden de secciones, tipografías, marcos de fotos, componentes y composición. No rediseñes.';
 const TEMPLATE_CHOICES_REPLY = 'Elegí estas 3 plantillas para tu negocio. Toca la que más te guste o dime cuál prefieres, y la adapto a tu tienda con tus productos.';
 
 /** The cards on the latest assistant message; a choice is only valid against these. */
@@ -45,7 +50,7 @@ function offeredTemplates(messages: Array<{ role: string; metadata?: unknown }>)
 
 @Injectable()
 export class SourceChatService {
-  constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService) {}
+  constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService) {}
 
   private async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, logoUrl: true, _count: { select: { paymentLinks: true } }, paymentLinks: { where: { status: 'ACTIVE' }, take: 50, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, amount: true, currency: true, variants: true, stock: true, imageUrls: true } } } });
@@ -65,6 +70,39 @@ export class SourceChatService {
     const { messages } = await this.history(storeId);
     const draft = this.setupDraft(messages);
     return { messages, setup: current.revision ? null : sourceSetupPrompt(draft, store) };
+  }
+
+  /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
+  private async useTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, choice: TemplateChoice, draft: SourceSetupDraft, assetUrls: string[], model?: SendSourceMessageDto['model']) {
+    await workflow.report('saving');
+    const applied = await this.templates.apply(merchantId, storeId, choice.id, 0);
+    const summary = draft.answers?.context || '';
+    const imageUses = draft.imageUses || [];
+    const v1 = await this.projects.version(merchantId, storeId, applied.revision);
+    const brief = { ...(v1.snapshot as unknown as SourceProjectSnapshot).brief, sitePurpose: 'shop' as const, businessInformation: summary, templateId: choice.id };
+    const cleared = { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined };
+    try {
+      const revision = await this.generation.generate(merchantId, storeId, {
+        revision: applied.revision, brief, model, maxCredits: TEMPLATE_ADAPTATION_MAX_CREDITS,
+        instruction: `${sourceRequestExecutionPrompt(TEMPLATE_ADAPTATION_BRIEF, true)}\n\nContexto acordado:\n${summary}\nUso de las imágenes (respetar estos roles):\n${JSON.stringify(imageUses)}`,
+        assetUrls: assetUrls.filter(url => !imageUses.some(use => use.url === url && use.role === 'unused')),
+      }, new SourceRequestBudget(TEMPLATE_ADAPTATION_MAX_CREDITS), imageUses, workflow.report, { free: true });
+      await workflow.finish('completed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
+        threadId, channel: 'source', role: 'ASSISTANT',
+        content: `Apliqué la plantilla ${choice.name} y la adapté a tu negocio: textos, colores y secciones. Revisa el resultado en la vista previa. ${TEMPLATE_UNIQUE_OFFER}`,
+        metadata: { progress: workflow.value, sourceSetup: cleared, sourceRevision: revision.revision, label: revision.label },
+      } });
+      return { userMessage, assistantMessage, revision };
+    } catch {
+      await workflow.finish('completed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
+        threadId, channel: 'source', role: 'ASSISTANT',
+        content: `No pude adaptar la plantilla a tu negocio en este momento. Tu tienda ya tiene la plantilla ${choice.name} con tus productos; pídeme los cambios que quieras o vuelve a intentarlo.`,
+        metadata: { progress: workflow.value, sourceSetup: cleared, sourceRevision: applied.revision, label: applied.label, adaptationFailed: true },
+      } });
+      return { userMessage, assistantMessage, revision: applied };
+    }
   }
 
   private setupDraft(messages: Array<{ metadata?: unknown }>): SourceSetupDraft {
@@ -111,6 +149,10 @@ export class SourceChatService {
       ? input.assetUrls?.length ? input.assetUrls : pendingBatches.at(-1) || rememberedAssets
       : [...rememberedAssets, ...pendingBatches.flat(), ...(input.assetUrls || [])])];
     if (allAssets.length > 24) throw new BadRequestException(`Esta solicitud reúne ${allAssets.length} imágenes. El máximo es 24 por solicitud.`);
+    // A tap is checked before anything is saved: the failure path below records a "request failed" message.
+    const tappedChoice = input.templateId ? offeredTemplates(history.messages).find(offer => offer.id === input.templateId) : undefined;
+    if (input.templateId && current.revision) throw new BadRequestException('Tu tienda ya tiene un diseño. Para cambiarlo por una plantilla, usa Mi tienda → Plantillas.');
+    if (input.templateId && !tappedChoice) throw new BadRequestException('Elige una de las plantillas sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId: thread.id, channel: 'source', role: 'USER', content: input.instruction.trim(),
@@ -149,6 +191,7 @@ export class SourceChatService {
     try {
       const budget = new SourceRequestBudget(input.maxCredits);
       const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
+      if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets, input.model);
       if (previous && input.sitePurpose && input.sitePurpose !== sourceSitePurpose((previous.snapshot as unknown as SourceProjectSnapshot)?.brief) && !sourceRedesignRequested(input.instruction)) {
         throw new BadRequestException('Cambiar el tipo de sitio requiere un rediseño explícito. Las ediciones locales conservan el tipo actual.');
       }
@@ -195,6 +238,9 @@ export class SourceChatService {
         decision.reply = 'No pude inspeccionar una de las páginas de referencia. ¿Puedes compartir una captura de pantalla o describir el diseño que te gusta?';
         decision.generationInstruction = '';
       }
+      const typedChoice = !current.revision && decision.chosenTemplateId
+        ? offeredTemplates(history.messages).find(offer => offer.id === decision.chosenTemplateId) : undefined;
+      if (typedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, typedChoice, { ...setupDraft, answers: { context: decision.summary }, imageUses: decision.imageUses }, allAssets, input.model);
       // Photo creation explicitly delegates design with one owned image. Regular
       // chat and legacy quick/buildNow requests retain the discovery questions.
       const discoveryReplies = Math.max(0, Math.min(2, setupDraft.discoveryReplies || 0));

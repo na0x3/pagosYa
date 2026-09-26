@@ -1,7 +1,7 @@
 import { SOURCE_MOTION_MODES, SOURCE_SCROLL_FEELS, type SourceMotionMode, type SourceScrollFeel } from '../source-motion';
 import { IsInt, Min, Max, IsIn as IsModelIn } from 'class-validator';
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../source-generation-policy';
-import { IsIn, IsUUID, ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsUUID, ArrayMaxSize, IsArray, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { SourceProjectRevisionDto } from './save-source-project.dto';
 export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsIn(['shop', 'service', 'portfolio', 'editorial']) sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
@@ -17,4 +17,6 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsArray() @ArrayMaxSize(8) @IsString({ each: true }) @MaxLength(500, { each: true }) browserReview?: string[];
   @IsOptional() @IsIn(['conversation', 'logo', 'brand', 'audience', 'business', 'products', 'delivery', 'colors', 'review']) setupStep?: string;
   @IsOptional() @IsIn(['generate', 'restart', 'quick', 'product-photo']) setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo';
+  /** A Plantilla card the merchant tapped in YAPI's message (spec 2026-09-26); must be one the last message offered. */
+  @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) templateId?: string;
 }

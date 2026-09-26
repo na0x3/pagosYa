@@ -1,5 +1,6 @@
 import { SourceConversationFailure } from './source-conversation-failure';
-import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION } from './source-chat.service';
+import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER } from './source-chat.service';
+import { SourceRequestBudget } from './source-request-budget';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { BadGatewayException } from '@nestjs/common';
 import * as websiteReference from './source-website-reference';
@@ -13,7 +14,8 @@ function setup(messages: any[] = []) {
   const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Carta editorial' }) };
   // Existing first-site tests exercise the from-scratch path; the template path sets startFrom explicitly.
   const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Café de especialidad, estilo cálido y editorial.', generationInstruction: request.instruction, imageUses: [], startFrom: 'scratch' }) };
-  return { service: new SourceChatService(prisma, projects, generation, dialogue), prisma, projects, generation, dialogue, messages };
+  const templates: any = { apply: jest.fn().mockResolvedValue({ revision: 1, label: 'Plantilla: Tostado' }) };
+  return { service: new SourceChatService(prisma, projects, generation, dialogue, templates), prisma, projects, generation, dialogue, templates, messages };
 }
 const request = { revision: 1, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
 it('retains the selected website purpose across discovery and sends it into the first generation', async () => {
@@ -516,4 +518,55 @@ it('keeps service sites and existing designs on today\'s path', async () => {
   existing.dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'x', imageUses: [], startFrom: 'template', templates: [{ id: 'tostado', reason: 'r' }], chosenTemplateId: '', rework: false });
   await existing.service.send('m', 's', { ...request, instruction: 'Cambia el título' });
   expect(existing.generation.generate).toHaveBeenCalledTimes(1);
+});
+
+const withCards = () => [...discovered(), { role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'r' }, { id: 'miga', name: 'Miga', reason: 'r' }, { id: 'huella', name: 'Huella', reason: 'r' }], sourceSetup: discovered()[0].metadata.sourceSetup } }];
+
+it('applies a tapped card, then adapts it for free with the conversation summary', async () => {
+  const { service, templates, generation, dialogue, messages } = firstShop(withCards());
+  generation.generate.mockResolvedValue({ revision: 2, label: 'Tostado adaptada' });
+  const result: any = await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Tostado', templateId: 'tostado' });
+  expect(dialogue.decide).not.toHaveBeenCalled();
+  expect(templates.apply).toHaveBeenCalledWith('m', 's', 'tostado', 0);
+  const [, , dto, budget, , , execution] = generation.generate.mock.calls[0];
+  expect(dto).toMatchObject({ revision: 1, maxCredits: TEMPLATE_ADAPTATION_MAX_CREDITS, brief: { templateId: 'tostado', sitePurpose: 'shop', businessInformation: 'Cafetería de especialidad en Santa Cruz' } });
+  expect(dto.instruction).toContain('Cafetería de especialidad en Santa Cruz');
+  expect(dto.instruction).toMatch(/conserva el diseño de la plantilla/i);
+  expect(budget).toBeInstanceOf(SourceRequestBudget);
+  expect(execution).toEqual({ free: true });
+  expect(result.revision.revision).toBe(2);
+  expect(messages.at(-1).content).toContain(TEMPLATE_UNIQUE_OFFER);
+  expect(messages.at(-1).metadata.sourceRevision).toBe(2);
+});
+
+it('applies a card the merchant names in words', async () => {
+  const { service, templates, dialogue } = firstShop(withCards());
+  dialogue.decide.mockResolvedValue({ action: 'reply', reply: 'Perfecto', summary: 'Cafetería', generationInstruction: '', imageUses: [], startFrom: 'template', templates: [], chosenTemplateId: 'miga', rework: false });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'la segunda' });
+  expect(templates.apply).toHaveBeenCalledWith('m', 's', 'miga', 0);
+});
+
+it('rejects a card that was not offered on the latest message, before saving anything', async () => {
+  const { service, templates, generation, prisma } = firstShop(withCards());
+  await expect(service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Pixel', templateId: 'pixel' })).rejects.toThrow('Elige una de las plantillas sugeridas');
+  expect(templates.apply).not.toHaveBeenCalled();
+  expect(generation.generate).not.toHaveBeenCalled();
+  expect(prisma.storeAgentMessage.create).not.toHaveBeenCalled();
+});
+
+it('rejects a second tap once the store has a design', async () => {
+  const { service, projects, templates } = setup(withCards());
+  projects.current.mockResolvedValue({ revision: 2 });
+  await expect(service.send('m', 's', { ...request, revision: 2, instruction: 'Usar Tostado', templateId: 'tostado' })).rejects.toThrow('ya tiene un diseño');
+  expect(templates.apply).not.toHaveBeenCalled();
+});
+
+it('keeps the applied template when the adaptation fails, and says so plainly', async () => {
+  const { service, generation, messages } = firstShop(withCards());
+  generation.generate.mockRejectedValue(new BadGatewayException('upstream 502 invalid json at position 12'));
+  const result: any = await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Tostado', templateId: 'tostado' });
+  expect(result.revision.revision).toBe(1);
+  expect(messages.at(-1).metadata.sourceRevision).toBe(1);
+  expect(messages.at(-1).content).toContain('Tu tienda ya tiene la plantilla Tostado');
+  expect(messages.at(-1).content).not.toContain('position 12');
 });
