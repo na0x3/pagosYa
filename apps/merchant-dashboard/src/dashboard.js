@@ -4565,6 +4565,20 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }
   });
 
+  // The login's mesh gradient runs only while the login is on screen.
+  let disposeLoginShader = null;
+  function startLoginShader() {
+    if (disposeLoginShader) return;
+    disposeLoginShader = () => {};
+    const host = document.querySelector("[data-login-shader]");
+    if (!host) return;
+    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
+      const dispose = await mountLoginShader(host);
+      if (document.body.classList.contains("is-logged-out")) disposeLoginShader = dispose; else dispose();
+    });
+  }
+  function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
+
   function showLoggedOut() {
     const studioFrame = document.getElementById("merchantStudioFrame");
     studioFrame.removeAttribute("src"); delete studioFrame.dataset.storeId;
@@ -4578,12 +4592,14 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     loginFormEl.style.display = "grid";
     loggedInBarEl.style.display = "none";
     appEl.style.display = "none";
+    startLoginShader();
   }
 
   function showLoggedIn() {
     document.body.classList.remove("is-logged-out");
     document.body.classList.add("is-logged-in");
     loginFormEl.style.display = "none";
+    stopLoginShader();
     loggedInBarEl.style.display = "flex";
     applyProfileIdentity();
     // The blob seed and the saved variation come from the sessions list; fetch it now, not only when the menu opens.
@@ -4646,10 +4662,11 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
         },
       });
       window.google.accounts.id.renderButton(document.getElementById("merchantGoogleButton"), {
-        theme: "outline",
+        theme: "filled_black",
         size: "large",
-        shape: "rectangular",
+        shape: "pill",
         text: "continue_with",
+        locale: "es",
         logo_alignment: "left",
         width: 320,
       });

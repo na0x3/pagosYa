@@ -409,6 +409,9 @@ importers:
       '@pagosya/variant-editor':
         specifier: workspace:*
         version: link:../../packages/variant-editor
+      '@paper-design/shaders':
+        specifier: 0.0.81
+        version: 0.0.81
       blobatar:
         specifier: 2.7.0
         version: 2.7.0(react@19.2.6)
@@ -2681,6 +2684,9 @@ packages:
 
   '@oxc-project/types@0.130.0':
     resolution: {integrity: sha512-ibD2usx9JRu7f5pu2tMKMI4cpA4NgXJQoYRP4pQ7Pxmn1l6k/53qWtQWZayhYy3X4QZkt90Ot+mJEaeXouio6Q==}
+
+  '@paper-design/shaders@0.0.81':
+    resolution: {integrity: sha512-jeGdyjMscZ2bxmQdo8lhwUufHUf4iq3s1ayjh8PXU7Go42Rw8E3I0It1FZdc3HuWt5J82m//DRWaxsRqRfA4Gg==}
 
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
@@ -10165,6 +10171,8 @@ snapshots:
       fastq: 1.20.1
 
   '@oxc-project/types@0.130.0': {}
+
+  '@paper-design/shaders@0.0.81': {}
 
   '@paralleldrive/cuid2@2.3.1':
     dependencies:

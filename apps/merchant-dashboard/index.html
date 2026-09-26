@@ -8,7 +8,7 @@
 <meta name="description" content="Administra tu tienda, catálogo, cobros, desembolsos y facturación local desde pagosYa.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#eee7dc">
-<script type="importmap">{"imports":{"@pagosya/blob-characters":"/vendor/blob-characters/index.mjs","blobatar/internal":"/vendor/blobatar/internal.js","blobatar/expression":"/vendor/blobatar/expression.js"}}</script>
+<script type="importmap">{"imports":{"@paper-design/shaders":"/vendor/paper-shaders/index.js","@pagosya/blob-characters":"/vendor/blob-characters/index.mjs","blobatar/internal":"/vendor/blobatar/internal.js","blobatar/expression":"/vendor/blobatar/expression.js"}}</script>
 <link rel="stylesheet" href="/vendor/blobatar/motion.css">
 <link rel="stylesheet" href="/vendor/blob-characters/blob-motion.css">
 <link rel="stylesheet" href="/src/dashboard.css">
@@ -88,15 +88,24 @@
   </div>
 
   <form class="login-split" id="loginForm">
+    <aside class="login-hero" aria-labelledby="loginHeroTitle">
+      <div class="login-hero-shader" data-login-shader aria-hidden="true"></div>
+      <div class="login-hero-copy">
+        <h1 id="loginHeroTitle">Tu tienda está a un mensaje de distancia.</h1>
+        <p>Cuéntale a YAPI qué vendes; pagosYa hace el resto.</p>
+        <ul class="login-hero-cards">
+          <li><strong>2 minutos</strong><span>de un mensaje a una tienda que cobra</span></li>
+          <li><strong>21 plantillas</strong><span>listas para tus productos</span></li>
+          <li><strong>Tu propia IA</strong><span>conecta Claude, Codex o Cursor</span></li>
+          <li><strong>Cobra en Bolivia</strong><span>QR y tarjeta, en bolivianos</span></li>
+        </ul>
+      </div>
+    </aside>
     <div class="login-pane">
-      <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-mark.png" alt="" width="36" height="36"><span>pagosYa</span></a>
       <div class="login-card">
+        <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-mark.png" alt="" width="56" height="56"></a>
         <h2 id="loginTitle">Bienvenido de vuelta</h2>
         <p class="login-sub">Entra a tu panel de comercio para continuar.</p>
-        <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
-          <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
-          <div class="merchant-login-divider"><span>o</span></div>
-        </div>
         <div class="login-field">
           <label for="email">Correo</label>
           <input id="email" type="email" placeholder="dueno@tienda-ejemplo.bo" autocomplete="email" required>
@@ -113,6 +122,10 @@
         </div>
         <button class="primary login-submit" id="login" type="submit">Continuar</button>
         <button class="login-forgot" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
+        <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
+          <div class="merchant-login-divider"><span>o</span></div>
+          <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
+        </div>
         <details class="login-dev">
           <summary>Opciones de desarrollo</summary>
           <label for="apiBase">URL base de la API</label>
@@ -121,14 +134,6 @@
       </div>
       <p class="login-foot">El acceso se crea desde tu integración con <code>POST /v1/dashboard/signup</code>, nunca desde esta página.</p>
     </div>
-    <aside class="login-scene" aria-hidden="true">
-      <div class="login-scene-sky"></div>
-      <img class="login-scene-mark" src="/assets/pagosya-mark.png" alt="" width="128" height="128">
-      <div class="login-scene-prompt">
-        <span>Cuéntale a YAPI qué quieres vender</span>
-        <i aria-hidden="true">↑</i>
-      </div>
-    </aside>
   </form>
 
   <div class="panel forgot-panel" id="forgotForm" style="display:none">
