@@ -3,9 +3,26 @@ export type BuildProgress = { status: 'running' | 'completed' | 'failed'; starte
 
 const SHOT = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/;
 /** YAPI's own steps inside a stage: paths, counts and screenshots of its draft — never code or reasoning. */
+const EDIT = /^(?:Editó|Escribió) (.+)$/;
+function renderDetail(detail: { label: string; thumbnail?: unknown }) {
+  return `<li>${escape(detail.label)}${typeof detail.thumbnail === 'string' && SHOT.test(detail.thumbnail) ? `<img class="build-shot" alt="" src="${detail.thumbnail}">` : ''}</li>`;
+}
 function renderDetails(details: unknown): string {
   if (!Array.isArray(details) || !details.length) return '';
-  return `<ul class="build-details">${details.filter(detail => detail && typeof detail.label === 'string').slice(-60).map(detail => `<li>${escape(detail.label)}${typeof detail.thumbnail === 'string' && SHOT.test(detail.thumbnail) ? `<img class="build-shot" alt="" src="${detail.thumbnail}">` : ''}</li>`).join('')}</ul>`;
+  const rows = details.filter(detail => detail && typeof detail.label === 'string').slice(-60) as Array<{ label: string; thumbnail?: unknown }>;
+  // Consecutive file edits read as one step, "Editó 3 archivos", that opens to the list.
+  const groups: Array<{ label: string; thumbnail?: unknown } | Array<{ label: string }>> = [];
+  for (const row of rows) {
+    const last = groups.at(-1);
+    if (EDIT.test(row.label) && Array.isArray(last)) last.push(row);
+    else groups.push(EDIT.test(row.label) ? [row] : row);
+  }
+  return `<ul class="build-details">${groups.map(group => {
+    if (!Array.isArray(group)) return renderDetail(group);
+    if (group.length === 1) return renderDetail(group[0]);
+    const files = new Set(group.map(row => row.label.match(EDIT)![1])).size;
+    return `<li><details class="build-edits"><summary>Editó ${files} ${files === 1 ? 'archivo' : 'archivos'}</summary><ul>${group.map(renderDetail).join('')}</ul></details></li>`;
+  }).join('')}</ul>`;
 }
 
 export function renderBuildProgress(value: unknown, live = false): string {

@@ -15,4 +15,15 @@ describe('the agent steps in the build progress', () => {
     expect(html).toContain('&lt;img src=x');
     expect(html).not.toContain('javascript:');
   });
+  it('folds consecutive file edits into one collapsible line that counts the files', () => {
+    const html = renderBuildProgress({ status: 'running', startedAt: 0, updatedAt: 1, steps: [{ stage: 'building', label: 'Construyendo', startedAt: 0, status: 'running', details: [
+      { label: 'Leyó components/home.tsx' },
+      { label: 'Editó components/home.tsx' }, { label: 'Editó styles/globals.css' }, { label: 'Editó components/home.tsx' }, { label: 'Escribió components/Hero.tsx' },
+      { label: 'Verificó: todo en orden' },
+    ] }] });
+    expect(html).toContain('<details class="build-edits"><summary>Editó 3 archivos</summary>');
+    expect(html.match(/Editó components\/home\.tsx/g)).toHaveLength(2);
+    expect(html).toContain('Leyó components/home.tsx');
+    expect(html).toContain('Verificó: todo en orden');
+  });
 });
