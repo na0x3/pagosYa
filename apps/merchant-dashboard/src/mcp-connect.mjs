@@ -1,6 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
 
-/** Ajustes → Conecta tu IA (spec 2026-09-26 templates/settings/MCP §3.3): MCP keys and client setup. */
+/** Sidebar → Conecta tu IA (spec 2026-09-26 templates/settings/MCP §3.3): MCP keys and client setup. */
 
 /** @param {string} apiBase */
 export function mcpEndpoint(apiBase) {
@@ -30,7 +30,7 @@ export function mountMcpConnect(root, deps) {
     const active = keys.filter((key) => !key.revokedAt);
     const endpoint = mcpEndpoint(deps.apiBase());
     const snippets = created ? mcpClientSnippets(endpoint, created.fullKey) : null;
-    root.innerHTML = `<div class="editor-section-head"><h3 id="mcpConnectTitle">Conecta tu IA</h3><p>Usa Claude, Codex o Cursor con tu tienda. Tu IA puede diseñar y cargar productos; publicar y cobrar siguen siendo tuyos.</p></div>
+    root.innerHTML = `<div class="editor-section-head"><h3 id="mcpConnectTitle">Claves de acceso</h3><p>Crea una clave para cada IA o computadora. Puedes revocarla cuando quieras.</p></div>
       ${message ? `<p class="mcp-message" role="status">${esc(message)}</p>` : ""}
       ${created ? `<div class="mcp-created"><p><strong>Tu clave nueva.</strong> Cópiala ahora: no la volverás a ver.</p>
         <div class="mcp-copy"><code>${esc(created.fullKey)}</code><button type="button" data-mcp-copy="${esc(created.fullKey)}">Copiar</button></div>
@@ -60,6 +60,6 @@ export function mountMcpConnect(root, deps) {
   });
   const revoke = (id) => run(async () => { await deps.api(`/mcp/keys/${encodeURIComponent(id)}`, { method: "DELETE" }); confirming = ""; message = "Clave revocada."; keys = await deps.api("/mcp/keys"); });
   render();
-  // Loaded when Ajustes opens, after sign-in.
+  // Loaded when the Conecta tu IA page opens, after sign-in.
   return { reload: load };
 }

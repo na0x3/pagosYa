@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="/src/contracts.css">
 </head>
 <body>
+<div class="dashboard-backdrop" data-dashboard-shader aria-hidden="true"></div>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
   <div class="topbar">
     <!-- The bird now sits at the top of the sidebar; the topbar carries no
@@ -103,7 +104,7 @@
     </aside>
     <div class="login-pane">
       <div class="login-card">
-        <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-mark.png" alt="" width="56" height="56"></a>
+        <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-star-yellow.png" alt="" width="56" height="56"></a>
         <h2 id="loginTitle">Bienvenido de vuelta</h2>
         <p class="login-sub">Entra a tu panel de comercio para continuar.</p>
         <div class="login-field">
@@ -205,6 +206,7 @@
             <summary class="dashboard-nav-button dashboard-nav-summary" title="Negocio"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/></svg></span>Negocio<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
             <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
           </details>
+          <a class="dashboard-nav-button" href="#dashboard-connect-ai" data-dashboard-view="connect-ai"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></svg></span>Conecta tu IA</a>
           <a class="dashboard-nav-button" href="#dashboard-store-settings" data-dashboard-view="store-settings"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Ajustes</a>
         </nav>
         <span class="mobile-nav-hint" aria-hidden="true">Desliza para ver más →</span>
@@ -897,8 +899,11 @@
             <li><div><strong>Dominio</strong><span>Tu propia dirección web para la tienda.</span></div><button type="button" class="settings-more-open" data-settings-open="domain">Configurar</button></li>
           </ul>
         </section>
-        <section class="store-editor-section mcp-connect" id="mcpConnectRoot" aria-labelledby="mcpConnectTitle"></section>
       </div>
+    </section>
+
+    <section class="block" id="connectAiSection" data-dashboard-page="connect-ai">
+      <div class="panel mcp-connect" id="mcpConnectRoot" aria-labelledby="mcpConnectTitle"></div>
     </section>
 
     <section class="block" id="inboxSection" data-dashboard-page="inbox">
@@ -1034,7 +1039,7 @@
   </dialog>
 
 <aside class="workspace-yapi" aria-label="YAPI, asistente de tu tienda">
-  <div class="workspace-yapi-heading"><strong>✳ YAPI</strong><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
+  <div class="workspace-yapi-heading"><img class="workspace-yapi-star" src="/assets/pagosya-star-yellow.png" alt="YAPI" width="28" height="28"><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
   <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar hoy?" required></textarea><button class="primary" type="submit">Abrir con YAPI ↗</button></form>
   <p class="workspace-yapi-status" id="workspaceYapiStatus" role="status"></p>
 </aside>

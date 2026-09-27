@@ -830,6 +830,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   initDashboardSections();
   const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
+  // Conecta tu IA; mounted by a dynamic import further down, so it may still be null here.
+  let mcpConnect = null;
   const DASHBOARD_VIEW_COPY = {
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
     growth: ["Crecimiento", "Qué pasa en tu tienda y qué hacer ahora para vender más."],
@@ -848,6 +850,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
+    "connect-ai": ["Conecta tu IA", "Usa Claude, Codex o Cursor con tu tienda. Tu IA diseña y carga productos; publicar y cobrar siguen siendo tuyos."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
@@ -1014,6 +1017,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
+    if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
     }
@@ -4098,12 +4102,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     openSettingsOverlay(currentStoreId, section);
   }
   document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
-  let mcpConnect = null;
   import("/src/mcp-connect.mjs").then(({ mountMcpConnect }) => {
     mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
-    if (location.hash === "#dashboard-store-settings" && sessionToken) void mcpConnect.reload();
+    if (document.body.dataset.dashboardView === "connect-ai" && sessionToken) void mcpConnect.reload();
   });
-  document.querySelectorAll('[data-dashboard-view="store-settings"]').forEach(link => link.addEventListener("click", () => { if (sessionToken) void mcpConnect?.reload(); }));
   import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {
     storeSettings = mountStoreSettings(document.getElementById("storeSettingsRoot"), {
       api,
@@ -4591,6 +4593,19 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     });
   }
   function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
+  // Signed in, the same gradient sits behind every page; only one of the two runs at a time.
+  let disposeDashboardShader = null;
+  function startDashboardShader() {
+    if (disposeDashboardShader) return;
+    disposeDashboardShader = () => {};
+    const host = document.querySelector("[data-dashboard-shader]");
+    if (!host) return;
+    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
+      const dispose = await mountLoginShader(host, { still: true });
+      if (document.body.classList.contains("is-logged-in")) disposeDashboardShader = dispose; else dispose();
+    });
+  }
+  function stopDashboardShader() { disposeDashboardShader?.(); disposeDashboardShader = null; }
 
   function showLoggedOut() {
     const studioFrame = document.getElementById("merchantStudioFrame");
@@ -4605,6 +4620,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     loginFormEl.style.display = "grid";
     loggedInBarEl.style.display = "none";
     appEl.style.display = "none";
+    stopDashboardShader();
     startLoginShader();
   }
 
@@ -4613,10 +4629,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.body.classList.add("is-logged-in");
     loginFormEl.style.display = "none";
     stopLoginShader();
+    startDashboardShader();
     loggedInBarEl.style.display = "flex";
     applyProfileIdentity();
     // The blob seed and the saved variation come from the sessions list; fetch it now, not only when the menu opens.
     loadProfileSessions(false).catch(() => undefined);
+    if (document.body.dataset.dashboardView === "connect-ai") void mcpConnect?.reload();
   }
 
   function loadGoogleIdentity() {

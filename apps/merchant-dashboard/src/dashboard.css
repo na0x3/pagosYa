@@ -2488,3 +2488,5 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
 .mcp-copy code, .mcp-endpoint code { overflow-wrap: anywhere; font-size: .85rem; }
 .mcp-client pre { max-width: 100%; overflow-x: auto; padding: 10px; border-radius: 8px; background: #1d1b18; color: #f4f1ea; font-size: .8rem; }
 .mcp-endpoint { font-size: .85rem; opacity: .8; }
+/* The YAPI dock is signed with the pagosYa star instead of a text badge. */
+.workspace-yapi-star { display: block; flex: none; width: 28px; height: 28px; object-fit: contain; }
