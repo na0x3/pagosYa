@@ -41,10 +41,11 @@ export class ExtensionsService {
   private view(manifest: ExtensionManifest, row: Row | null, slug: string) {
     const settings = readSettings(manifest, row?.settings);
     const secrets = this.secretsOf(row);
+    // A field the server normalizes gets no browser pattern: the raw text a merchant pastes is not what gets checked.
     return {
       kind: 'extension' as const, id: manifest.id, name: manifest.name, category: manifest.category, categoryLabel: CATEGORY_LABELS[manifest.category], tier: manifest.tier,
       logo: manifest.logo, summary: manifest.summary, description: manifest.description, docsUrl: manifest.docsUrl ?? null,
-      fields: manifest.settings.map(field => ({ key: field.key, label: field.label, type: field.type, help: field.help ?? null, where: field.where ?? null, placeholder: field.placeholder ?? null, required: Boolean(field.required), pattern: field.pattern?.source ?? null, options: field.options ?? [] })),
+      fields: manifest.settings.map(field => ({ key: field.key, label: field.label, type: field.type, help: field.help ?? null, where: field.where ?? null, placeholder: field.placeholder ?? null, required: Boolean(field.required), pattern: field.normalize ? null : field.pattern?.source ?? null, options: field.options ?? [] })),
       secrets: (manifest.secrets ?? []).map(secret => ({ key: secret.key, label: secret.label, help: secret.help ?? null, configured: Boolean(secrets?.[secret.key]) })),
       installed: Boolean(row), enabled: Boolean(row?.enabled), configured: Boolean(row) && secrets !== null && isConfigured(manifest, settings, secrets), settings,
       lastError: secrets === null ? UNREADABLE : row?.lastError ?? null,

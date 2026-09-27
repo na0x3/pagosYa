@@ -71,4 +71,13 @@ describe('ExtensionsService', () => {
     expect(view.feed).toMatchObject({ url: expect.stringMatching(/\/stores\/public\/cafe\/feeds\/feed\.xml$/), skipped: { noPhoto: 2, noPrice: 1 } });
     expect(feeds.summary).toHaveBeenCalledWith('cafe');
   });
+
+  // The server normalizes before it checks (upper-cases IDs, pulls content="…" out of a pasted tag), so a
+  // browser checking the raw text against the same pattern would refuse what the server accepts.
+  it('sends no browser pattern for a field whose input the server normalizes', async () => {
+    const normalized: ExtensionManifest = { ...withToken, id: 'normalized', settings: [{ key: 'id', label: 'ID', type: 'text', required: true, pattern: /^G-[A-Z0-9]{4,20}$/i, normalize: value => value.trim().toUpperCase() }, { key: 'code', label: 'Código', type: 'text', pattern: /^[0-9]{4}$/ }], secrets: [] };
+    const prisma: any = { store: { findFirst: jest.fn(async () => ({ id: 's', slug: 'cafe' })) }, storeExtension: { findMany: jest.fn(async () => []) } };
+    const [view] = (await new ExtensionsService(prisma, {} as any, { get: () => undefined } as any, [normalized]).list('m', 's')).extensions;
+    expect(view.fields.map(field => field.pattern)).toEqual([null, '^[0-9]{4}$']);
+  });
 });
