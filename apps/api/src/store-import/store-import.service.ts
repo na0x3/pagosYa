@@ -1,20 +1,29 @@
 import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type StoreImport } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { SourceChatService } from '../storefront-source/source-chat.service';
+import type { SourceProgress } from '../storefront-source/source-progress';
+import { CreateStoreDto } from '../stores/dto/create-store.dto';
 import { StoresService } from '../stores/stores.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { writeImport } from './import-writer';
 import { copyPhotos } from './photo-copier';
 import { readShopifyCsv } from './shopify-csv';
-import { buildPreview, mapArticle, mapProduct, type ImportProduct } from './shopify-mapping';
+import { buildPreview, mapArticle, mapProduct, MAX_PHOTOS, photoSources, storeName, type ImportProduct } from './shopify-mapping';
 import { readShopifyStore, ShopifyReadError } from './shopify-reader';
 import type { ShopifyStoreData } from './shopify-types';
 
 const LEASE_MS = 5 * 60_000;
+/** An import whose worker died this many times (its lease expired each time) would most likely kill the next one too. */
+export const MAX_IMPORT_ATTEMPTS = 3;
 export const MAX_FREE_BUILD_TRIES = 2;
 const DESIGN_STALE_MS = 15 * 60_000;
+
+/** Another worker took over this import after its lease expired: this one stops without writing anything. */
+class LeaseLost extends Error {}
 
 /** Shopify → pagosYa import (spec 2026-09-27): preview, confirm, retry; the worker calls claim() and run(). */
 @Injectable()
@@ -25,7 +34,17 @@ export class StoreImportService {
     const merchant = await this.prisma.merchant.findUnique({ where: { id: row.merchantId }, select: { importBuildUsedAt: true } });
     const tries = (await this.prisma.storeImport.findMany({ where: { merchantId: row.merchantId }, select: { designTries: true } }).catch(() => [])).reduce((sum, item) => sum + (item.designTries ?? 0), 0);
     const { data: _data, photos: _photos, leaseToken: _lease, leaseUntil: _until, exchangeRateMilli: _rate, excluded: _excluded, ...rest } = row;
-    return { ...rest, freeBuildAvailable: !merchant?.importBuildUsedAt && tries < MAX_FREE_BUILD_TRIES };
+    return { ...rest, freeBuildAvailable: !merchant?.importBuildUsedAt && tries < MAX_FREE_BUILD_TRIES, designSteps: row.designStatus === 'RUNNING' ? await this.designSteps(row) : null };
+  }
+
+  /** YAPI's own steps for the build under way, as the Studio shows them: labels and states, never prompts or code. */
+  private async designSteps(row: StoreImport) {
+    if (!row.storeId) return null;
+    const message = await this.prisma.storeAgentMessage.findFirst({ where: { role: 'USER', channel: 'source', thread: { storeId: row.storeId }, metadata: { path: ['requestId'], equals: row.id } },
+      orderBy: { createdAt: 'desc' }, select: { metadata: true } }).catch(() => null);
+    const steps = (message?.metadata as { progress?: SourceProgress } | undefined)?.progress?.steps;
+    if (!Array.isArray(steps) || !steps.length) return null;
+    return steps.map(step => ({ label: step.label, status: step.status, detail: step.status === 'running' ? step.details?.at(-1)?.label ?? null : null }));
   }
 
   private async owned(merchantId: string, id: string) {
@@ -61,6 +80,7 @@ export class StoreImportService {
     // myshopify domain, so mitienda.com and www.mitienda.com are one store; a CSV without an address never matches
     // anything, or two different stores' files would merge into one (final review, Critical #2 and Important #8).
     const sourceHost = data.shopDomain || data.host;
+    data = { ...data, name: storeName(data.name) };
     const previous = reusable ? await this.prisma.storeImport.findFirst({ where: { merchantId, sourceHost, storeId: { not: null } }, orderBy: { createdAt: 'desc' } }) : null;
     const row = await this.prisma.storeImport.create({ data: { merchantId, source, sourceHost, storeId: previous?.storeId ?? null,
       data: data as unknown as Prisma.InputJsonValue, preview: buildPreview(data) as unknown as Prisma.InputJsonValue } });
@@ -82,11 +102,13 @@ export class StoreImportService {
   async retry(merchantId: string, id: string) {
     const row = await this.owned(merchantId, id);
     if (row.status !== 'FAILED') throw new BadRequestException('Solo se puede reintentar una importación que falló.');
-    await this.prisma.storeImport.updateMany({ where: { id, status: 'FAILED' }, data: { status: 'QUEUED', error: null } });
+    await this.prisma.storeImport.updateMany({ where: { id, status: 'FAILED' }, data: { status: 'QUEUED', error: null, attempts: 0 } });
     return this.get(merchantId, id);
   }
 
   async claim() {
+    await this.prisma.storeImport.updateMany({ where: { status: 'RUNNING', leaseUntil: { lt: new Date() }, attempts: { gte: MAX_IMPORT_ATTEMPTS } },
+      data: { status: 'FAILED', error: 'La importación se interrumpió varias veces y la detuvimos. Puedes reintentarla; si vuelve a pasar, sube el CSV de Shopify.', leaseToken: null } });
     const row = await this.prisma.storeImport.findFirst({ where: { OR: [{ status: 'QUEUED' }, { status: 'RUNNING', leaseUntil: { lt: new Date() } }] }, orderBy: { updatedAt: 'asc' } });
     if (!row) return null;
     const leaseToken = randomUUID();
@@ -94,19 +116,31 @@ export class StoreImportService {
     return changed.count ? this.prisma.storeImport.findUniqueOrThrow({ where: { id: row.id } }) : null;
   }
 
-  private checkpoint(row: StoreImport, data: Prisma.StoreImportUncheckedUpdateManyInput) {
-    return this.prisma.storeImport.updateMany({ where: { id: row.id, leaseToken: row.leaseToken }, data: { ...data, leaseUntil: new Date(Date.now() + LEASE_MS) } });
+  private async checkpoint(row: StoreImport, data: Prisma.StoreImportUncheckedUpdateManyInput) {
+    const changed = await this.prisma.storeImport.updateMany({ where: { id: row.id, leaseToken: row.leaseToken }, data: { ...data, leaseUntil: new Date(Date.now() + LEASE_MS) } });
+    if (!changed.count) throw new LeaseLost();
   }
 
-  /** Photos first (slow, per-photo failures are warnings), then the whole catalog in one transaction: never a half-written store. */
+  /** The store name through the same rules as a store created in the dashboard. */
+  private async storeDto(name: string) {
+    const dto = plainToInstance(CreateStoreDto, { name: storeName(name) });
+    if ((await validate(dto)).length) throw new BadRequestException('El nombre de tu tienda no es válido. Cámbialo en Shopify o sube el CSV con otro nombre.');
+    return dto;
+  }
+
+  /** Photos earlier imports into this store already copied: a re-import reuses them instead of uploading them again. */
+  private async earlierPhotos(row: StoreImport) {
+    if (!row.storeId) return {};
+    const rows = await this.prisma.storeImport.findMany({ where: { storeId: row.storeId, status: 'COMPLETED', id: { not: row.id } }, orderBy: { createdAt: 'asc' }, select: { photos: true } });
+    return Object.assign({}, ...rows.map(item => item.photos as Record<string, string>)) as Record<string, string>;
+  }
+
+  /** Photos first (slow, per-photo failures are warnings), then the store and its whole catalog in one transaction: never a
+   * half-written store, and never an empty one left behind by a failed import. */
   async run(row: StoreImport) {
     try {
       const data = row.data as unknown as ShopifyStoreData;
-      let storeId = row.storeId;
-      if (!storeId) {
-        storeId = (await this.stores.create(row.merchantId, { name: data.name.slice(0, 120) } as never)).id;
-        await this.checkpoint(row, { storeId });
-      }
+      const dto = await this.storeDto(data.name);
       const excluded = new Set(row.excluded);
       const warnings: string[] = [];
       const products: ImportProduct[] = [];
@@ -114,21 +148,33 @@ export class StoreImportService {
         const mapped = mapProduct(product, data.currency === 'BOB' ? null : row.exchangeRateMilli, data.stockKnown);
         if ('problem' in mapped) warnings.push(mapped.problem); else products.push(mapped.product);
       }
-      const sources = products.flatMap(product => [...product.imageSources, ...product.variants.map(variant => variant.imageSource).filter((src): src is string => Boolean(src))]);
-      await this.checkpoint(row, { progress: { stage: 'photos', done: 0, total: new Set(sources).size } });
+      const sources = products.flatMap(photoSources);
+      await this.checkpoint(row, { progress: { stage: 'photos', done: 0, total: Math.min(new Set(sources).size, MAX_PHOTOS) } });
       const copied = await copyPhotos(sources, { storeHost: data.host, done: row.photos as Record<string, string>, save: (buffer, mime) => this.uploads.saveBuffer(buffer, mime),
+        reuse: { urls: await this.earlierPhotos(row), exists: url => this.uploads.exists(url.split('/').pop() ?? '') },
         onProgress: async (done, total) => { if (done % 10 === 0 || done === total) await this.checkpoint(row, { progress: { stage: 'photos', done, total } }); } });
       await this.checkpoint(row, { photos: copied.urls, progress: { stage: 'catalog' } });
       if (copied.failed.length) warnings.push(`${copied.failed.length} ${copied.failed.length === 1 ? 'foto no se pudo copiar' : 'fotos no se pudieron copiar'}; los productos se crearon sin ellas.`);
-      const summary = await this.prisma.$transaction(tx => writeImport(tx, {
-        storeId: storeId!, sourceHost: data.host, authorName: data.name, stockKnown: data.stockKnown,
-        products: products.map(product => ({ ...product, imageUrls: product.imageSources.map(src => copied.urls[src]).filter(Boolean), variantImageUrls: product.variants.map(variant => variant.imageSource ? copied.urls[variant.imageSource] : undefined) })),
-        collections: data.collections.map(collection => ({ externalId: collection.handle, title: collection.title, productExternalIds: collection.productHandles.filter(handle => !excluded.has(handle)) })),
-        articles: data.articles.map(mapArticle),
-      }), { timeout: 120_000 });
-      if (summary.skippedRedirects) warnings.push(`${summary.skippedRedirects} enlaces viejos no se redirigieron: se alcanzó el límite de 500 redirecciones.`);
-      await this.checkpoint(row, { status: 'COMPLETED', summary: { ...summary, warnings } as unknown as Prisma.InputJsonValue, progress: { stage: 'done' }, completedAt: new Date(), leaseToken: null });
+      if (copied.skipped) warnings.push(`${copied.skipped.toLocaleString('es-BO')} ${copied.skipped === 1 ? 'foto no se copió' : 'fotos no se copiaron'}: el límite es ${MAX_PHOTOS.toLocaleString('es-BO')} fotos por importación.`);
+      await this.prisma.$transaction(async tx => {
+        // The lease is checked where the catalog is written, and the row stays locked until commit: a worker that lost
+        // its lease writes nothing, and the one that took it over cannot claim the row in between.
+        const owned = await tx.storeImport.updateMany({ where: { id: row.id, leaseToken: row.leaseToken }, data: { leaseUntil: new Date(Date.now() + LEASE_MS) } });
+        if (!owned.count) throw new LeaseLost();
+        const current = await tx.storeImport.findUniqueOrThrow({ where: { id: row.id }, select: { storeId: true } });
+        const storeId = current.storeId ?? (await this.stores.create(row.merchantId, dto, tx)).id;
+        const summary = await writeImport(tx, {
+          storeId, sourceHost: data.host, authorName: dto.name, stockKnown: data.stockKnown,
+          products: products.map(product => ({ ...product, imageUrls: product.imageSources.map(src => copied.urls[src]).filter(Boolean), variantImageUrls: product.variants.map(variant => variant.imageSource ? copied.urls[variant.imageSource] : undefined) })),
+          collections: data.collections.map(collection => ({ externalId: collection.handle, title: collection.title, productExternalIds: collection.productHandles.filter(handle => !excluded.has(handle)) })),
+          articles: data.articles.map(mapArticle),
+        });
+        if (summary.skippedRedirects) warnings.push(`${summary.skippedRedirects} enlaces viejos no se redirigieron: se alcanzó el límite de 500 redirecciones.`);
+        if (summary.invalidRedirects) warnings.push(`${summary.invalidRedirects} ${summary.invalidRedirects === 1 ? 'enlace viejo no se redirigió: su dirección' : 'enlaces viejos no se redirigieron: su dirección'} en Shopify usa caracteres que no podemos redirigir.`);
+        await tx.storeImport.update({ where: { id: row.id }, data: { storeId, status: 'COMPLETED', summary: { ...summary, warnings } as unknown as Prisma.InputJsonValue, progress: { stage: 'done' }, completedAt: new Date(), leaseToken: null } });
+      }, { timeout: 120_000 });
     } catch (error) {
+      if (error instanceof LeaseLost) return;
       const message = error instanceof BadRequestException || error instanceof ShopifyReadError ? (error as Error).message : 'No pudimos terminar la importación. Si reintentas, nada se duplicará.';
       await this.prisma.storeImport.updateMany({ where: { id: row.id, leaseToken: row.leaseToken }, data: { status: 'FAILED', error: message, leaseToken: null } });
     }

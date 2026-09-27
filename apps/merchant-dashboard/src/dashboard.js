@@ -3,7 +3,7 @@ import { ANIMATIONS, mountBlob } from "@pagosya/blob-characters";
 import { ADVENTURE_LEVELS, companionBlobHtml, companionBlobUri, companionSeed } from "/src/companions.mjs";
 import { normalizeVariation, profileBlobHtml, profileBlobUri, randomVariation, variationChoices } from "/src/profile-blob.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
-import { countsLine, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
+import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
@@ -1591,6 +1591,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       document.getElementById("shopifyImportBar").value = view.progress?.total ? view.progress.done / view.progress.total : 0;
     }
     if (step === "failed") document.getElementById("shopifyImportError").textContent = view.error || "La importación falló.";
+    if (step === "building") document.getElementById("shopifyImportDesignSteps").innerHTML = designStepItems(view.designSteps)
+      .map(item => `<li data-state="${esc(item.state)}"><span>${esc(item.label)}</span>${item.detail ? `<small>${esc(item.detail)}</small>` : ""}</li>`).join("");
     shopifyImportDialog.querySelectorAll("[data-import-summary]").forEach(list => { list.innerHTML = summaryLines(view.summary).map(line => `<li>${esc(line)}</li>`).join(""); });
     if (step === "design") {
       shopifyImportDialog.querySelectorAll("[data-free]").forEach(badge => { badge.hidden = !view.freeBuildAvailable; });

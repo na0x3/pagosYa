@@ -24,14 +24,18 @@ export const httpsTransport: PublicTransport = (url, address, limits) => new Pro
 });
 
 /** Public HTTPS only, every hop re-validated (spec 2026-09-27 §4): `mitienda.com` → `www.` → `*.myshopify.com` is normal. */
-export async function fetchPublic(raw: string | URL, options: { accept: string; maxBytes: number; timeoutMs?: number; maxRedirects?: number },
+export async function fetchPublic(raw: string | URL, options: { accept: string; maxBytes: number; timeoutMs?: number; maxRedirects?: number; allowHost?: (hostname: string) => boolean },
   deps: { resolve?: typeof publicBrandAddresses; transport?: PublicTransport } = {}): Promise<PublicResponse> {
   const resolve = deps.resolve ?? publicBrandAddresses, transport = deps.transport ?? httpsTransport;
   const maxRedirects = options.maxRedirects ?? 3;
   let current = String(raw);
   for (let hop = 0; ; hop++) {
     let url: URL; let addresses: { address: string }[];
-    try { url = publicBrandUrl(current); addresses = await resolve(url); }
+    try { url = publicBrandUrl(current); }
+    catch { throw new PublicFetchError('blocked', 'Not a public HTTPS address'); }
+    // allowHost holds on every hop, so a redirect cannot take the request to a host the caller did not allow.
+    if (options.allowHost && !options.allowHost(url.hostname)) throw new PublicFetchError('blocked', 'Host not allowed');
+    try { addresses = await resolve(url); }
     catch { throw new PublicFetchError('blocked', 'Not a public HTTPS address'); }
     let response: Awaited<ReturnType<PublicTransport>>;
     try { response = await transport(url, addresses[0].address, { accept: options.accept, maxBytes: options.maxBytes, timeoutMs: options.timeoutMs ?? 10_000 }); }

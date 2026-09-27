@@ -25,7 +25,7 @@ harness.describeDb('writeImport (real Postgres, real migrations)', () => {
 
   it('creates everything once, unpublished pages, and Shopify redirects', async () => {
     const summary = await db.$transaction(tx => writeImport(tx, input(5000)));
-    expect(summary).toEqual({ products: { created: 2, updated: 0 }, collections: 1, articles: 1, redirects: 3, skippedRedirects: 0 });
+    expect(summary).toEqual({ products: { created: 2, updated: 0 }, collections: 1, articles: 1, redirects: 3, skippedRedirects: 0, invalidRedirects: 0 });
     const croquetas = await db.paymentLink.findFirstOrThrow({ where: { storeId, name: 'Producto croquetas' } });
     expect(croquetas).toMatchObject({ amount: 5000, currency: 'BOB', imageUrls: ['/v1/uploads/a.jpg'], shippingWeightGrams: 500 });
     expect((croquetas.variants as any[]).map(v => v.name)).toEqual(['S', 'M']);
@@ -73,5 +73,33 @@ harness.describeDb('writeImport (real Postgres, real migrations)', () => {
     const summary = await db.$transaction(tx => writeImport(tx, { ...input(5500), products: [...input(5500).products, product('nuevo', 100)] }));
     expect(await db.storeRedirect.count({ where: { storeId } })).toBe(500);
     expect(summary.skippedRedirects).toBe(1);
+  });
+
+  const freshStore = async (slug: string) => (await db.store.create({ data: { merchantId: (await db.store.findUniqueOrThrow({ where: { id: storeId } })).merchantId, name: 'Otra', slug: `${slug}-${harness.databaseName}` } })).id;
+
+  it('re-import leaves an imported collection as the merchant arranged it; only new products join, at the end', async () => {
+    const other = await freshStore('colecciones');
+    const at = (products: ReturnType<typeof product>[], members: string[]) => ({ ...input(5000), storeId: other, products, collections: [{ externalId: 'perros', title: 'Perros', productExternalIds: members }] });
+    await db.$transaction(tx => writeImport(tx, at([product('croquetas', 5000), product('collar', 3000)], ['croquetas', 'collar'])));
+    const collection = await db.collection.findFirstOrThrow({ where: { storeId: other } });
+    const croquetas = await db.paymentLink.findFirstOrThrow({ where: { storeId: other, name: 'Producto croquetas' } });
+    const mine = await db.paymentLink.create({ data: { storeId: other, name: 'Mío', amount: 100, currency: 'BOB' } });
+    await db.collection.update({ where: { id: collection.id }, data: { name: 'Mis perros' } });
+    await db.collectionProduct.deleteMany({ where: { collectionId: collection.id } });
+    await db.collectionProduct.createMany({ data: [{ collectionId: collection.id, paymentLinkId: mine.id, sortOrder: 0 }, { collectionId: collection.id, paymentLinkId: croquetas.id, sortOrder: 1 }] });
+
+    await db.$transaction(tx => writeImport(tx, at([product('croquetas', 5000), product('collar', 3000), product('correa', 900)], ['collar', 'croquetas', 'correa'])));
+    const after = await db.collection.findUniqueOrThrow({ where: { id: collection.id }, include: { products: { orderBy: { sortOrder: 'asc' } } } });
+    const correa = await db.paymentLink.findFirstOrThrow({ where: { storeId: other, name: 'Producto correa' } });
+    expect(after.name).toBe('Mis perros');
+    expect(after.products.map(p => p.paymentLinkId)).toEqual([mine.id, croquetas.id, correa.id]);
+  });
+
+  it('redirects handles with capitals or accents under one lower-case key, and counts the ones it cannot redirect', async () => {
+    const other = await freshStore('acentos');
+    const summary = await db.$transaction(tx => writeImport(tx, { ...input(5000), storeId: other, collections: [], products: [product('Café-Molido', 5000), product('con_guion_bajo', 100)] }));
+    const cafe = await db.paymentLink.findFirstOrThrow({ where: { storeId: other, name: 'Producto Café-Molido' } });
+    expect(await db.storeRedirect.findUnique({ where: { storeId_fromPath: { storeId: other, fromPath: '/products/café-molido' } } })).toMatchObject({ toPath: `/p/${cafe.id}` });
+    expect(summary).toMatchObject({ redirects: 1, invalidRedirects: 1 });
   });
 });

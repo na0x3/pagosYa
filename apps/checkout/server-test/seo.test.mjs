@@ -243,6 +243,7 @@ test('old Shopify links on a custom domain 301 to the imported product and colle
     res.setHeader('Content-Type', 'application/json');
     if (req.url.startsWith('/stores/public/domain')) return res.end(JSON.stringify({ slug: 'cafe' }));
     if (req.url === '/stores/public/cafe/redirect?path=%2Fproducts%2Fgrano') return res.end(JSON.stringify({ location: '/p/abc' }));
+    if (req.url === `/stores/public/cafe/redirect?path=${encodeURIComponent('/Products/Café')}`) return res.end(JSON.stringify({ location: '/p/cafe' }));
     res.writeHead(404).end();
   }); backend.listen(0, '127.0.0.1'); await once(backend, 'listening');
   const middleware = createStorefrontSeo({ apiBase: `http://127.0.0.1:${backend.address().port}`, checkoutOrigin: 'https://shop.example', template: async () => '<head></head>' });
@@ -253,6 +254,9 @@ test('old Shopify links on a custom domain 301 to the imported product and colle
     assert.deepEqual(await head('/products/grano'), { status: 301, location: '/p/abc' });
     assert.deepEqual(await head('/collections/cafes/products/grano?ref=ig'), { status: 301, location: '/p/abc?ref=ig' });
     assert.equal((await head('/products/otro')).status, 404);
+    // Capitals and accents reach the API decoded; it reduces them to the key the import stored.
+    assert.deepEqual(await head('/Products/Caf%C3%A9'), { status: 301, location: '/p/cafe' });
+    assert.equal((await head('/products/%E0%A4%A')).status, 404);
   } finally {
     backend.closeAllConnections(); frontend.closeAllConnections(); backend.close(); frontend.close();
   }

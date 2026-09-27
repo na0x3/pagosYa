@@ -29,6 +29,11 @@ export function progressLabel(progress) {
   return "En cola…";
 }
 
+/** YAPI's own steps while it designs the imported store (the Studio's labels); the running one carries its latest detail. */
+export function designStepItems(steps) {
+  return (Array.isArray(steps) ? steps : []).map(step => ({ label: String(step.label || ""), state: step.status, detail: step.status === "running" && step.detail ? String(step.detail) : "" }));
+}
+
 export function parseExchangeRate(text) {
   const value = Number(String(text).trim().replace(",", "."));
   return Number.isFinite(value) && value > 0 ? Math.round(value * 1000) / 1000 : null;

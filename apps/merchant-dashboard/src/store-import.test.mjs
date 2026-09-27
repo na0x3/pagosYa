@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { countsLine, importStep, parseExchangeRate, progressLabel } from './store-import.mjs';
+import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel } from './store-import.mjs';
 
 test('the dialog step follows the import and its design build', () => {
   assert.equal(importStep({ status: 'REVIEW' }), 'review');
@@ -37,4 +37,15 @@ test('the import summary says what was created or updated and repeats every warn
   ]);
   assert.deepEqual(summaryLines({ products: { created: 0, updated: 5 }, collections: 0, articles: 0, redirects: 0, warnings: [] }), ['Actualizamos precios y fotos de 5 productos.']);
   assert.deepEqual(summaryLines(null), []);
+});
+
+test('the building panel lists YAPI steps with the running one’s latest detail', () => {
+  assert.deepEqual(designStepItems([
+    { label: 'Interpretando tu pedido', status: 'completed', detail: 'viejo' },
+    { label: 'Construyendo los cambios', status: 'running', detail: 'Editando la portada' },
+  ]), [
+    { label: 'Interpretando tu pedido', state: 'completed', detail: '' },
+    { label: 'Construyendo los cambios', state: 'running', detail: 'Editando la portada' },
+  ]);
+  assert.deepEqual(designStepItems(null), []);
 });

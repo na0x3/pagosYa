@@ -62,10 +62,11 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
     // bare — same page/collection params as the /s/ forms above, just resolved off this host.
     const customHostRoute = customHost ? /^\/(?:p\/([^/]+)|(productos)|c\/([^/]+))?\/?$/.exec(url.pathname) : null;
     // Links from a store imported from Shopify (spec 2026-09-27): /products/<h>, /collections/<h>, /collections/<c>/products/<h>.
-    if (customHost && /^\/(?:collections\/[a-z0-9-]+\/)?(?:products|collections)\/[a-z0-9-]+\/?$/.test(url.pathname)) {
+    // Handles may carry capitals or accents (/products/Caf%C3%A9); the API reduces them to the key the import stored.
+    if (customHost && /^\/(?:collections\/[^/]+\/)?(?:products|collections)\/[^/]+\/?$/i.test(url.pathname)) {
       try {
         const domain = await get(`/stores/public/domain?hostname=${encodeURIComponent(url.hostname)}`, 'json', 300_000);
-        const shopifyPath = url.pathname.replace(/\/$/, '').replace(/^\/collections\/[a-z0-9-]+(?=\/products\/)/, '');
+        const shopifyPath = decodeURIComponent(url.pathname).replace(/\/$/, '').replace(/^\/collections\/[^/]+(?=\/products\/)/i, '');
         const target = await get(`/stores/public/${encodeURIComponent(domain.slug)}/redirect?path=${encodeURIComponent(shopifyPath)}`, 'json', 60_000);
         if (typeof target?.location === 'string' && /^\/(?:p|c)\/[\w-]+$/.test(target.location)) {
           response.writeHead(301, { Location: target.location + url.search, 'Cache-Control': 'public, max-age=3600' });

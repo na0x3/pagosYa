@@ -27,6 +27,13 @@ describe('fetchPublic', () => {
     await expect(fetchPublic('https://shop.example/', { accept: '*/*', maxBytes: 10 }, { resolve: privateResolve, transport: loop })).rejects.toMatchObject({ code: 'blocked' });
   });
 
+  it('holds allowHost on every hop, so a redirect cannot leave the allowed hosts', async () => {
+    const away: PublicTransport = jest.fn(async () => reply(302, { location: 'https://elsewhere.example/a.png' }));
+    await expect(fetchPublic('https://cdn.shopify.com/a.png', { accept: '*/*', maxBytes: 10, allowHost: host => host === 'cdn.shopify.com' }, { resolve, transport: away })).rejects.toMatchObject({ code: 'blocked' });
+    expect(away).toHaveBeenCalledTimes(1);
+    expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
   it('turns a transport failure into unreachable', async () => {
     const broken: PublicTransport = jest.fn(async () => { throw new Error('ECONNRESET'); });
     await expect(fetchPublic('https://shop.example/', { accept: '*/*', maxBytes: 10 }, { resolve, transport: broken })).rejects.toMatchObject({ code: 'unreachable' });

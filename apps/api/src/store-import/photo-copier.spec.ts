@@ -25,3 +25,33 @@ describe('copyPhotos', () => {
     expect(Object.keys(result.urls)).toEqual(['https://mitienda.com/good.png']);
   });
 });
+
+describe('copyPhotos, minor fixes', () => {
+  const save = async () => ({ url: '/v1/uploads/n.png' });
+
+  it('reuses an earlier import\'s copy while its file exists, and downloads it again when it does not', async () => {
+    const fetch = jest.fn(async () => ok()) as any;
+    const exists = jest.fn(async (url: string) => url === '/v1/uploads/kept.png');
+    const result = await copyPhotos(['https://cdn.shopify.com/a.png', 'https://cdn.shopify.com/b.png'],
+      { storeHost: 'x.com', done: {}, save, fetch, reuse: { urls: { 'https://cdn.shopify.com/a.png': '/v1/uploads/kept.png', 'https://cdn.shopify.com/b.png': '/v1/uploads/gone.png' }, exists } });
+    expect(result.urls).toEqual({ 'https://cdn.shopify.com/a.png': '/v1/uploads/kept.png', 'https://cdn.shopify.com/b.png': '/v1/uploads/n.png' });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('says how many photos went past the limit, and only lets every redirect hop stay on Shopify or the store', async () => {
+    const fetch = jest.fn(async () => ok()) as any;
+    const sources = Array.from({ length: 3002 }, (_, i) => `https://cdn.shopify.com/${i}.png`);
+    const result = await copyPhotos(sources, { storeHost: 'x.com', done: {}, save, fetch, concurrency: 50 });
+    expect(result.skipped).toBe(2);
+    expect(fetch).toHaveBeenCalledTimes(3000);
+    const { allowHost } = fetch.mock.calls[0][1];
+    expect([allowHost('cdn.shopify.com'), allowHost('x.com'), allowHost('evil.example')]).toEqual([true, true, false]);
+  });
+
+  it('stops every worker when progress cannot be saved (the lease was lost)', async () => {
+    const fetch = jest.fn(async () => ok()) as any;
+    const sources = Array.from({ length: 40 }, (_, i) => `https://cdn.shopify.com/${i}.png`);
+    await expect(copyPhotos(sources, { storeHost: 'x.com', done: {}, save, fetch, onProgress: () => { throw new Error('lease'); } })).rejects.toThrow('lease');
+    expect(fetch.mock.calls.length).toBeLessThanOrEqual(4);
+  });
+});

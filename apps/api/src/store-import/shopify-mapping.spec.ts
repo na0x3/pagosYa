@@ -1,4 +1,4 @@
-import { buildPreview, htmlToText, mapArticle, mapProduct, toCentavos } from './shopify-mapping';
+import { buildPreview, htmlToText, mapArticle, mapProduct, storeName, toCentavos } from './shopify-mapping';
 import type { ShopifyProduct, ShopifyStoreData } from './shopify-types';
 
 const base: ShopifyProduct = { handle: 'croquetas', title: 'Croquetas', bodyHtml: '<p>Hola &amp; <b>chau</b></p><script>alert(1)</script><p>Dos<br>líneas</p>', productType: 'Alimento', tags: ['perros'],
@@ -14,6 +14,28 @@ describe('Shopify → pagosYa mapping', () => {
     expect(toCentavos('50.00', null)).toBe(5000);
     expect(toCentavos('10', 6960)).toBe(6960);
     expect(toCentavos('abc', null)).toBeNull();
+  });
+
+  it('converts with whole-number arithmetic, rounding half a centavo up', () => {
+    // As doubles, 1.005 × 100 is 100.49999… and 0.145 × 100 is 14.499…: both used to lose a centavo.
+    expect(toCentavos('1.005', null)).toBe(101);
+    expect(toCentavos('0.145', null)).toBe(15);
+    expect(toCentavos('19.99', 6960)).toBe(13913);
+    expect(toCentavos('1.15', 6865)).toBe(789);
+    expect(toCentavos('9999999999999999', null)).toBeNull();
+  });
+
+  it('cleans the store name the way the store form requires', () => {
+    expect(storeName('  Mi\u202Etienda \n de  ropa ')).toBe('Mitienda de ropa');
+    expect(storeName('\u0000')).toBe('Mi tienda');
+    expect(storeName('x'.repeat(200))).toHaveLength(120);
+  });
+
+  it('warns in the review when the store has more photos than an import copies', () => {
+    const many = { ...base, images: Array.from({ length: 10 }, (_, i) => `https://cdn.shopify.com/${i}.jpg`) };
+    const products = Array.from({ length: 301 }, (_, i) => ({ ...many, handle: `p${i}`, images: many.images.map(src => `${src}?p=${i}`) }));
+    const preview = buildPreview({ host: 'x.com', origin: 'https://x.com/', name: 'X', currency: 'BOB', products, collections: [], articles: [], truncated: false, stockKnown: false, warnings: [] });
+    expect(preview.warnings).toContainEqual(expect.stringContaining('3.010 fotos; copiaremos las primeras 3.000'));
   });
 
   it('maps a single-variant product with its discount, weight, stock and photos', () => {

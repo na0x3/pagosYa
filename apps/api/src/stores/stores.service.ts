@@ -71,7 +71,8 @@ export class StoresService {
     };
   }
   /** Stores keep independent catalogs and designs under the authenticated merchant. */
-  async create(merchantId: string, dto: CreateStoreDto) {
+  /** `db` lets a caller create the store inside its own transaction (the Shopify import writes store and catalog at once). */
+  async create(merchantId: string, dto: CreateStoreDto, db: Prisma.TransactionClient = this.prisma) {
     if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
     const animations = (dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }]).map(normalizeAnimationMedia);
     const contentOrder = dto.contentOrder
@@ -84,7 +85,7 @@ export class StoresService {
           ];
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        return await this.prisma.store.create({
+        return await db.store.create({
           data: {
             merchantId,
             slug: slugPart(),

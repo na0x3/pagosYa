@@ -18,6 +18,13 @@ const UNSAFE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066
 const safe = (value: string) => value.replace(UNSAFE, '');
 // The product form's limits (CreatePaymentLinkDto): name 120, description 500, 6 tags of 24.
 const NAME_MAX = 120, DESCRIPTION_MAX = 500, TAGS_MAX = 6, TAG_MAX = 24;
+export const MAX_PHOTOS = 3000;
+
+/** The store name as CreateStoreDto accepts it: no invisible characters, one line, at most 120 characters. */
+export const storeName = (value: string) => safe(value).replace(/\s+/g, ' ').trim().slice(0, NAME_MAX).trim() || 'Mi tienda';
+
+/** Every photo an import copies for this product: its gallery, then its variants' photos. */
+export const photoSources = (product: ImportProduct) => [...product.imageSources, ...product.variants.flatMap(variant => variant.imageSource ? [variant.imageSource] : [])];
 
 /** Shopify HTML is never stored (spec 2026-09-27 §4): block elements become paragraphs, everything else plain text. */
 export function htmlToText(html: string): string {
@@ -34,11 +41,16 @@ export function htmlToText(html: string): string {
     .replace(/\n{3,}/g, '\n\n').trim().slice(0, 20_000);
 }
 
-/** Shopify prices are decimal strings in the store's currency; rateMilli converts to bolivianos (Bs per unit × 1000). */
+/** Shopify prices are decimal strings in the store's currency; rateMilli converts to bolivianos (Bs per unit × 1000).
+ * Integer arithmetic only: no price may land a centavo off because of the nearest binary double. */
 export function toCentavos(price: string, rateMilli: number | null): number | null {
-  if (!/^\d+(\.\d+)?$/.test(price.trim())) return null;
-  const value = Number(price) * (rateMilli ? rateMilli / 1000 : 1);
-  return Number.isFinite(value) ? Math.round(value * 100) : null;
+  const match = /^(\d{1,15})(?:\.(\d{1,15}))?$/.exec(price.trim());
+  if (!match || (rateMilli !== null && !Number.isSafeInteger(rateMilli))) return null;
+  const fraction = match[2] ?? '';
+  // centavos = digits / 10^d × rate / 1000 × 100 = digits × rate / (10 × 10^d), rounded half up.
+  const numerator = BigInt(match[1] + fraction) * BigInt(rateMilli ?? 1000), denominator = 10n * 10n ** BigInt(fraction.length);
+  const centavos = (2n * numerator + denominator) / (2n * denominator);
+  return centavos <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(centavos) : null;
 }
 
 export function mapProduct(product: ShopifyProduct, rateMilli: number | null, stockKnown: boolean): { product: ImportProduct } | { problem: string } {
@@ -95,6 +107,8 @@ export function buildPreview(data: ShopifyStoreData): ImportPreview {
   if (onSale) warnings.push(`${onSale} ${onSale === 1 ? 'producto estaba en oferta' : 'productos estaban en oferta'} en Shopify: se importa${onSale === 1 ? '' : 'n'} con el precio de oferta. Crea la oferta en pagosYa si quieres mostrar el precio anterior.`);
   const truncated = mapped.filter(product => product.descriptionTruncated).length;
   if (truncated) warnings.push(`${truncated} ${truncated === 1 ? 'descripción se acortó' : 'descripciones se acortaron'} a 500 caracteres, el límite de pagosYa.`);
+  const photos = new Set(mapped.flatMap(photoSources)).size;
+  if (photos > MAX_PHOTOS) warnings.push(`Tu tienda tiene ${photos.toLocaleString('es-BO')} fotos; copiaremos las primeras ${MAX_PHOTOS.toLocaleString('es-BO')} y el resto de los productos quedará sin foto.`);
   const problems = products.filter(product => product.problem).length;
   if (problems) warnings.push(`${problems} ${problems === 1 ? 'producto tiene un problema y no se importará' : 'productos tienen problemas y no se importarán'}.`);
   return { name: data.name, currency: data.currency, needsExchangeRate: data.currency !== 'BOB', warnings, products,

@@ -3,12 +3,12 @@ import { collectionSlug } from '../collections/collection-slug';
 import { normalizeProductVariants, totalVariantStock, type ProductVariant } from '../payment-links/product-variants';
 import type { ProductVariantDto } from '../payment-links/dto/create-payment-link.dto';
 import type { ImportArticle, ImportProduct } from './shopify-mapping';
+import { shopifyRedirectPath } from './shopify-path';
 
 export type ImportCollection = { externalId: string; title: string; productExternalIds: string[] };
-export type ImportSummary = { products: { created: number; updated: number }; collections: number; articles: number; redirects: number; skippedRedirects: number };
+export type ImportSummary = { products: { created: number; updated: number }; collections: number; articles: number; redirects: number; skippedRedirects: number; invalidRedirects: number };
 type WritableProduct = ImportProduct & { imageUrls: string[]; variantImageUrls: Array<string | undefined> };
 const REDIRECT_CAP = 500;
-const SHOPIFY_PATH = /^\/(?:products|collections)\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Writes one import inside the caller's transaction (spec 2026-09-27 §4). StoreImportLink makes a re-import update, never duplicate. */
 export async function writeImport(tx: Prisma.TransactionClient, input: { storeId: string; sourceHost: string; authorName: string; stockKnown: boolean; products: WritableProduct[]; collections: ImportCollection[]; articles: ImportArticle[] }): Promise<ImportSummary> {
@@ -30,8 +30,9 @@ export async function writeImport(tx: Prisma.TransactionClient, input: { storeId
     return created.id;
   };
 
-  const summary: ImportSummary = { products: { created: 0, updated: 0 }, collections: 0, articles: 0, redirects: 0, skippedRedirects: 0 };
+  const summary: ImportSummary = { products: { created: 0, updated: 0 }, collections: 0, articles: 0, redirects: 0, skippedRedirects: 0, invalidRedirects: 0 };
   const productIds = new Map<string, string>();
+  const createdIds = new Set<string>();
   for (const product of input.products) {
     const existingId = linked('PRODUCT', product.externalId);
     const existing = existingId ? await tx.paymentLink.findFirst({ where: { id: existingId, storeId } }) : null;
@@ -55,7 +56,7 @@ export async function writeImport(tx: Prisma.TransactionClient, input: { storeId
       ? await tx.paymentLink.update({ where: { id: existing.id }, data: { ...prices, stock } })
       : await tx.paymentLink.create({ data: { storeId, currency: 'BOB', ...prices, stock,
         name: product.name, description: product.description || null, tags: product.tags, categoryId: await categoryId(product.categoryName), shippingWeightGrams: product.shippingWeightGrams } });
-    if (existing) summary.products.updated++; else summary.products.created++;
+    if (existing) summary.products.updated++; else { summary.products.created++; createdIds.add(saved.id); }
     productIds.set(product.externalId, saved.id);
     await link('PRODUCT', product.externalId, saved.id, product.skus);
   }
@@ -65,13 +66,13 @@ export async function writeImport(tx: Prisma.TransactionClient, input: { storeId
   for (const [index, collection] of input.collections.entries()) {
     const existingId = linked('COLLECTION', collection.externalId);
     const existing = existingId ? await tx.collection.findFirst({ where: { id: existingId, storeId } }) : null;
-    const saved = existing
-      ? await tx.collection.update({ where: { id: existing.id }, data: { name: collection.title } })
-      : await tx.collection.create({ data: { storeId, name: collection.title, slug: collectionSlug(collection.externalId, taken), sortOrder: index } });
+    const saved = existing ?? await tx.collection.create({ data: { storeId, name: collection.title, slug: collectionSlug(collection.externalId, taken), sortOrder: index } });
     taken.add(saved.slug);
-    await tx.collectionProduct.deleteMany({ where: { collectionId: saved.id } });
-    const members = [...new Set(collection.productExternalIds.map(id => productIds.get(id)).filter((id): id is string => Boolean(id)))];
-    await tx.collectionProduct.createMany({ data: members.map((paymentLinkId, sortOrder) => ({ collectionId: saved.id, paymentLinkId, sortOrder })) });
+    // A collection already imported is the merchant's now: its name, products and order stay as they left them. Only
+    // products this import created join it, after the ones already there (spec §1: a re-import updates prices and photos).
+    const members = [...new Set(collection.productExternalIds.map(id => productIds.get(id)).filter((id): id is string => typeof id === 'string' && (!existing || createdIds.has(id))))];
+    const last = existing ? (await tx.collectionProduct.aggregate({ where: { collectionId: saved.id }, _max: { sortOrder: true } }))._max.sortOrder ?? -1 : -1;
+    await tx.collectionProduct.createMany({ data: members.map((paymentLinkId, index) => ({ collectionId: saved.id, paymentLinkId, sortOrder: last + 1 + index })), skipDuplicates: true });
     collectionSlugs.set(collection.externalId, saved.slug);
     summary.collections++;
     await link('COLLECTION', collection.externalId, saved.id);
@@ -94,15 +95,18 @@ export async function writeImport(tx: Prisma.TransactionClient, input: { storeId
 
   // Collections first: fewer, and they carry more links from outside. Targets are generated /p/ and /c/ paths,
   // which no fromPath can start with, so no cycle is possible.
-  const wanted = [
-    ...[...collectionSlugs].map(([handle, slug]) => ({ fromPath: `/collections/${handle}`, toPath: `/c/${slug}` })),
-    ...[...productIds].map(([handle, id]) => ({ fromPath: `/products/${handle}`, toPath: `/p/${id}` })),
-  ].filter(redirect => SHOPIFY_PATH.test(redirect.fromPath) && redirect.fromPath.length <= 200);
+  const candidates = [
+    ...[...collectionSlugs].map(([handle, slug]) => ({ fromPath: shopifyRedirectPath('collections', handle), toPath: `/c/${slug}` })),
+    ...[...productIds].map(([handle, id]) => ({ fromPath: shopifyRedirectPath('products', handle), toPath: `/p/${id}` })),
+  ];
+  const wanted = candidates.filter((redirect): redirect is { fromPath: string; toPath: string } => Boolean(redirect.fromPath));
+  summary.invalidRedirects = candidates.length - wanted.length;
   const existingPaths = new Set((await tx.storeRedirect.findMany({ where: { storeId }, select: { fromPath: true } })).map(row => row.fromPath));
   let room = REDIRECT_CAP - existingPaths.size;
   for (const redirect of wanted) {
     if (!existingPaths.has(redirect.fromPath)) { if (room <= 0) { summary.skippedRedirects++; continue; } room--; }
     await tx.storeRedirect.upsert({ where: { storeId_fromPath: { storeId, fromPath: redirect.fromPath } }, create: { storeId, ...redirect }, update: { toPath: redirect.toPath } });
+    existingPaths.add(redirect.fromPath);
     summary.redirects++;
   }
   return summary;

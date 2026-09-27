@@ -163,6 +163,16 @@ body.is-logged-in #storeRows .store-create-tile:hover { background: var(--pg-sur
 .shopify-import-choices button em { font-style: normal; font-size: 11px; font-weight: 700; }
 .shopify-import-choices button:disabled { opacity: .5; cursor: not-allowed; }
 .shopify-import progress { width: 100%; }
+.shopify-import-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 13px; }
+.shopify-import-steps li { display: grid; grid-template-columns: 16px 1fr; column-gap: 8px; color: var(--pg-text-muted); }
+.shopify-import-steps li::before { content: "○"; text-align: center; }
+.shopify-import-steps li[data-state="completed"]::before { content: "✓"; color: var(--pg-success); }
+.shopify-import-steps li[data-state="failed"]::before { content: "↻"; }
+.shopify-import-steps li[data-state="running"] { color: var(--pg-text); font-weight: 600; }
+.shopify-import-steps li[data-state="running"]::before { content: "●"; color: var(--pg-accent); animation: shopify-import-step 1.2s ease-in-out infinite alternate; }
+.shopify-import-steps small { grid-column: 2; font-size: 12px; font-weight: 400; color: var(--pg-text-muted); overflow-wrap: anywhere; }
+@keyframes shopify-import-step { from { opacity: 1; } to { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .shopify-import-steps li[data-state="running"]::before { animation: none; } }
 .shopify-import-next { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; }
 .create-store-dialog #createStoreForm { display: grid; gap: 20px; margin: 0; }
 .create-store-dialog h2 { margin: 0 0 8px; font: 800 24px/1.2 Arial,sans-serif; letter-spacing: -.6px; }
