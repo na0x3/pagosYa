@@ -1,7 +1,7 @@
 /**
  * Compares the agent and single YAPI engines on real builds. Spends real provider money; never saves or publishes
  * (each run is a candidate generation that returns the snapshot instead of storing it).
- * Usage: npx tsx scripts/evaluate-yapi-agent.ts --merchant <id> --store <id> --engine agent|single --runs 3 --instruction "…" --i-accept-costs
+ * Usage (ts-node keeps the decorator metadata Nest needs): npx ts-node --transpile-only scripts/evaluate-yapi-agent.ts --merchant <id> --store <id> --engine agent|single --runs 3 [--credits 200] --instruction "…" --i-accept-costs
  */
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
@@ -17,6 +17,8 @@ async function main() {
   if (!process.argv.includes('--i-accept-costs')) throw new Error('This spends real provider credits. Re-run with --i-accept-costs.');
   const [merchantId, storeId, engine, instruction] = [arg('merchant'), arg('store'), arg('engine'), arg('instruction')];
   const runs = Number(arg('runs') || 1);
+  // Studio's default per-request limit (mode A builds cost more than the old 50).
+  const credits = Number(arg('credits') || 200);
   if (!merchantId || !storeId || !instruction || (engine !== 'agent' && engine !== 'single')) throw new Error('Missing --merchant, --store, --instruction or --engine agent|single.');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   const config = app.get(ConfigService);
@@ -31,8 +33,9 @@ async function main() {
     const brief = snapshot.brief;
     const started = Date.now();
     try {
-      const result: any = await generation.generate(merchantId, storeId, { revision: current.revision, brief, instruction, maxCredits: 50 } as any, new SourceRequestBudget(50), [], undefined, { candidate: true, free: true, evaluate: true, snapshot });
+      const result: any = await generation.generate(merchantId, storeId, { revision: current.revision, brief, instruction, maxCredits: credits } as any, new SourceRequestBudget(credits), [], undefined, { candidate: true, free: true, evaluate: true, snapshot });
       rows.push({ run, status: 'ok', seconds: Math.round((Date.now() - started) / 1000), credits: result.generation?.credits ?? 0, modelCalls: result.generation?.attempts?.length ?? 0 });
+      console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {
       rows.push({ run, status: 'failed', seconds: Math.round((Date.now() - started) / 1000), credits: 0, modelCalls: 0, error: (error as Error).message.slice(0, 160) });
     }

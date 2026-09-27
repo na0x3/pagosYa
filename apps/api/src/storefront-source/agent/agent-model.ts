@@ -27,6 +27,10 @@ export function openAiAgentModel(input: { endpoint: string; apiKey: string; mode
         body: JSON.stringify(sourceProviderBody({ model: input.model, instructions, input: transcript, tools, tool_choice: 'auto', parallel_tool_calls: false, reasoning: { effort: input.reasoningEffort }, max_output_tokens: reserved.outputTokens, store: false, include: ['reasoning.encrypted_content'], ...(input.promptCacheKey ? { prompt_cache_key: input.promptCacheKey } : {}) })),
       });
       body = await response.json().catch(() => null);
+    } catch (error) {
+      if (input.signal?.aborted) throw error;
+      const cause = (error as { cause?: { code?: string; message?: string } })?.cause;
+      throw new Error(`No se pudo contactar al proveedor de IA (${cause?.code || cause?.message || (error as Error).message}).`);
     } finally {
       reserved.settle(body?.usage);
       const ok = Boolean(response?.ok && (body?.status === 'completed' || body?.status === 'incomplete'));

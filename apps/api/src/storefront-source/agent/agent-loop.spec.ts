@@ -41,11 +41,18 @@ describe('runAgent', () => {
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], now: () => (t += 200_000), model: scripted([{ calls: [call('list_files', {})] }]) });
     expect(result).toEqual({ status: 'limit' });
   });
-  it('retries a failing model call once, then fails with its message', async () => {
+  it('retries a failing model call twice with a pause before each retry, then fails with its message', async () => {
     let calls = 0;
-    const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], model: async () => { calls++; throw new Error('provider down'); } });
-    expect(calls).toBe(2);
+    const pauses: number[] = [];
+    const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], sleep: async ms => { pauses.push(ms); }, model: async () => { calls++; throw new Error('provider down'); } });
+    expect(calls).toBe(3);
+    expect(pauses).toEqual([2000, 6000]);
     expect(result).toEqual({ status: 'failed', reason: 'provider down' });
+  });
+  it('carries on when a retry succeeds', async () => {
+    let calls = 0;
+    const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], limits: { toolCalls: 1 }, sleep: async () => {}, model: async () => { if (++calls < 3) throw new Error('blip'); return { calls: [{ name: 'list_files', arguments: '{}', callId: 'r1' }] }; } });
+    expect(result).toEqual({ status: 'limit' });
   });
   it('treats running out of credits as a limit, without a retry', async () => {
     let calls = 0;

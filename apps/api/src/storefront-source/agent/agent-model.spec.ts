@@ -37,4 +37,8 @@ describe('openAiAgentModel', () => {
     await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('respondió 500');
     expect(onTurn).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAILED' }));
   });
+  it('explains a network failure in Spanish with its cause, never the bare runtime message', async () => {
+    const { model } = make(async () => { throw Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }) }); });
+    await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('No se pudo contactar al proveedor de IA (ECONNRESET)');
+  });
 });
