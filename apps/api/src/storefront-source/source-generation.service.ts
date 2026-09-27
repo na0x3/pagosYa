@@ -523,6 +523,97 @@ export class SourceGenerationService {
         // The one exception to the art direction above: the DNA's own motifs, drawn as sanitised files.
         if (chosen.dna?.motifs.length) taskPrompt += `\n${sourceMotifPrompt(chosen.dna.motifs)} The ART DIRECTION rule against invented drawings still holds everywhere else.`;
       }
+      // Everything a model response must pass before it may be saved: code-only repairs, motif extraction, scope and
+      // artwork guards, layout baseline, kit CSS, presentation/visual-system/TypeScript validation, compilation, upload
+      // bundling and preflight. Shared by the single engine's attempts and the agent's finish gate.
+      const acceptCandidate = async () => {
+        if (useNext) {
+          generated.files = repairNextSharedComponentReferences(generated.files);
+          // A name imported from a local file that does not export it points to the file (or @pagosya/ui) that does.
+          const imports = repairNextMisdirectedImports(generated.files);
+          generated.files = imports.files;
+          autoRepairs.push(...imports.repairs);
+          // Plumbing mounts are inserted in code; a paid repair for them would buy nothing.
+          const mounts = repairNextCommerceMounts(generated.files, sitePurpose);
+          generated.files = mounts.files;
+          autoRepairs.push(...mounts.repairs);
+          // Missing alt text and filled commerce slots have one right answer; fixing them here keeps a paid
+          // repair from trading one finding for another until the attempts run out.
+          const markup = repairNextAuthoredMarkup(generated.files);
+          generated.files = markup.files;
+          autoRepairs.push(...markup.repairs);
+        }
+        await progress?.('validating');
+        const declaredMotifs = designMotifs(committedDesign ?? previousDesign);
+        const motifs = extractSourceMotifs(generated.files, declaredMotifs);
+        generated.files = motifs.files;
+        motifFiles = [...motifFiles.filter(file => !motifs.motifs.some(motif => motif.path === file.path)), ...motifs.motifs];
+        autoRepairs.push(...motifs.repairs);
+        validateSourceArtwork(oldFiles, generated.files, dto.instruction, sourceMotifPaths(declaredMotifs));
+        if (previous) validateSourceEditScope(oldFiles, generated.files, dto.instruction, sectionScope);
+        // This platform-owned floor is applied before React compilation and
+        // before every browser gate. Local edits keep untouched styles byte
+        // stable; the runtime still supplies the floor to older revisions.
+        const stylesheetChanged = generated.files.some(file => /(?:^|\/)styles(?:\/globals)?\.css$/i.test(file.path)
+          && file.content !== oldFiles.find(previousFile => previousFile.path === file.path)?.content);
+        if (!editExisting || redesign || migrating || stylesheetChanged) generated.files = applySourceLayoutBaseline(generated.files);
+        // Give the bounded repair all independent failures, not only the first one.
+        generated.files = relaxSourceTracking(generated.files, editExisting ? oldFiles : []);
+        // Validated free-CSS layer (sub-project 7): kit CSS and every stylesheet's protected elements are repaired, never failed.
+        const kitCss = applySourceKitCss(generated.files, { next: useNext });
+        generated.files = kitCss.files;
+        autoRepairs.push(...kitCss.repairs);
+        const validationErrors: string[] = [];
+        for (const check of [
+          () => validateSourcePresentation(generated.files, editExisting ? oldFiles : []),
+          () => { if (!editExisting || redesign || migrating) { validateSourceVisualSystem(generated.files); validateSourceStyleTokens(generated.files, brand?.revision ? brandStyles(brand.data, fontPaths) : ''); } },
+          () => { if (useNext) validateNextSources(generated.files, sitePurpose); },
+        ]) {
+          try { check(); } catch (error) { validationErrors.push(error instanceof Error ? error.message : 'Invalid source'); }
+        }
+        if (validationErrors.length) throw new BadGatewayException(validationErrors.join('\n'));
+        if (committedDesign) generated.design = adoptTrailingDesignSections(committedDesign, useNext ? nextPageMarkup(generated.files, 'home') : generated.files.find(file => file.path === 'index.html')?.content || '');
+        else delete generated.design;
+        if (useNext) { compiledNext = await compileNextPreview(generated.files, sitePurpose); if (generated.design) validateNextDesign(generated.files, generated.design, sitePurpose); }
+        else {
+          validateGeneratedSource(generated.files, sitePurpose);
+          if (generated.design) validateSourceDesignImplementation(generated.design, generated.files, sitePurpose);
+        }
+        await this.bundleAuthoredUploads(merchantId, generated.files, assets);
+        // Check the same asset set the save carries forward: new uploads plus previously bundled assets.
+        const preflightAssets = [...assets, ...retainedAssets.filter(file => !assets.some(asset => asset.path === file.path) && !generated.files.some(generatedFile => generatedFile.path === file.path))];
+        let preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...motifFiles, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));
+        // Mechanical contract failures are repaired in place. Spending a paid
+        // round-trip on a missing alt attribute helps nobody, and the model's
+        // second answer would not be better informed than ours.
+        const contractRepair = repairSourceContracts(generated.files, {
+          knownPaths: new Set(preflightFiles.map(file => file.path)),
+          // The merchant's own description of the photo, resolved through the
+          // legend that maps a bundled path back to its upload.
+          altFor: source => {
+            const bundled = source.replace(/^\/+/, '');
+            const original = assetLegend.find(asset => asset.path === bundled)?.original;
+            const description = original ? imageUses.find(use => use.url === original)?.description : undefined;
+            return description?.trim() ? description.trim().slice(0, 160) : undefined;
+          },
+        });
+        if (contractRepair.repairs.length) {
+          generated.files = contractRepair.files;
+          autoRepairs.push(...contractRepair.repairs);
+          preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...motifFiles, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));
+        }
+        const preflight = validateSourcePreflight(preflightFiles, {
+          requiredImagePaths: requestsImageContent(dto.instruction) ? assetLegend.filter(asset => !sourceVideo(asset.path) && imageUses.some(use => use.url === asset.original && !['reference', 'unused', 'unknown'].includes(use.role))).map(asset => asset.path) : [],
+          catalogImagePaths: [
+            ...data.items.flatMap(item => item.imageUrls),
+            ...products.flatMap(product => product.imageUrls || []),
+            ...products.flatMap(product => product.variants?.flatMap(variant => variant.imageUrl ? [variant.imageUrl] : []) || []),
+            ...productOperations.flatMap(operation => operation.changes?.imageUrls || []),
+            ...productOperations.flatMap(operation => operation.variantOperations?.flatMap(variant => variant.changes?.imageUrl ? [variant.changes.imageUrl] : []) || []),
+          ].map(url => assetLegend.find(asset => asset.original === url)?.path || url),
+        });
+        unusedImagePaths = preflight.unusedImagePaths;
+      };
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
       for (let index = 0; index < sourceAttemptLimit; index++) {
         await progress?.(index ? 'repairing' : 'building');
@@ -605,92 +696,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               if ([...((generated as any).edits || []), ...((generated as any).files || [])].some((change: any) => context.omitted.includes(change?.path))) throw new BadGatewayException('La edición intentó cambiar una página fuera del contexto solicitado.');
               generated.files = applySourceEdits(oldFiles || [], generated, { allowUnchanged: products.length > 0 || productOperations.length > 0, replaceablePaths, ...(useNext ? { appendPaths: ['styles/globals.css'] } : {}), ...(targetedEditPaths ? { allowedEditPaths: targetedEditPaths } : {}) });
             }
-            if (useNext) {
-              generated.files = repairNextSharedComponentReferences(generated.files);
-              // A name imported from a local file that does not export it points to the file (or @pagosya/ui) that does.
-              const imports = repairNextMisdirectedImports(generated.files);
-              generated.files = imports.files;
-              autoRepairs.push(...imports.repairs);
-              // Plumbing mounts are inserted in code; a paid repair for them would buy nothing.
-              const mounts = repairNextCommerceMounts(generated.files, sitePurpose);
-              generated.files = mounts.files;
-              autoRepairs.push(...mounts.repairs);
-              // Missing alt text and filled commerce slots have one right answer; fixing them here keeps a paid
-              // repair from trading one finding for another until the attempts run out.
-              const markup = repairNextAuthoredMarkup(generated.files);
-              generated.files = markup.files;
-              autoRepairs.push(...markup.repairs);
-            }
-            await progress?.('validating');
-            const declaredMotifs = designMotifs(committedDesign ?? previousDesign);
-            const motifs = extractSourceMotifs(generated.files, declaredMotifs);
-            generated.files = motifs.files;
-            motifFiles = [...motifFiles.filter(file => !motifs.motifs.some(motif => motif.path === file.path)), ...motifs.motifs];
-            autoRepairs.push(...motifs.repairs);
-            validateSourceArtwork(oldFiles, generated.files, dto.instruction, sourceMotifPaths(declaredMotifs));
-            if (previous) validateSourceEditScope(oldFiles, generated.files, dto.instruction, sectionScope);
-            // This platform-owned floor is applied before React compilation and
-            // before every browser gate. Local edits keep untouched styles byte
-            // stable; the runtime still supplies the floor to older revisions.
-            const stylesheetChanged = generated.files.some(file => /(?:^|\/)styles(?:\/globals)?\.css$/i.test(file.path)
-              && file.content !== oldFiles.find(previousFile => previousFile.path === file.path)?.content);
-            if (!editExisting || redesign || migrating || stylesheetChanged) generated.files = applySourceLayoutBaseline(generated.files);
-            // Give the bounded repair all independent failures, not only the first one.
-            generated.files = relaxSourceTracking(generated.files, editExisting ? oldFiles : []);
-            // Validated free-CSS layer (sub-project 7): kit CSS and every stylesheet's protected elements are repaired, never failed.
-            const kitCss = applySourceKitCss(generated.files, { next: useNext });
-            generated.files = kitCss.files;
-            autoRepairs.push(...kitCss.repairs);
-            const validationErrors: string[] = [];
-            for (const check of [
-              () => validateSourcePresentation(generated.files, editExisting ? oldFiles : []),
-              () => { if (!editExisting || redesign || migrating) { validateSourceVisualSystem(generated.files); validateSourceStyleTokens(generated.files, brand?.revision ? brandStyles(brand.data, fontPaths) : ''); } },
-              () => { if (useNext) validateNextSources(generated.files, sitePurpose); },
-            ]) {
-              try { check(); } catch (error) { validationErrors.push(error instanceof Error ? error.message : 'Invalid source'); }
-            }
-            if (validationErrors.length) throw new BadGatewayException(validationErrors.join('\n'));
-            if (committedDesign) generated.design = adoptTrailingDesignSections(committedDesign, useNext ? nextPageMarkup(generated.files, 'home') : generated.files.find(file => file.path === 'index.html')?.content || '');
-            else delete generated.design;
-            if (useNext) { compiledNext = await compileNextPreview(generated.files, sitePurpose); if (generated.design) validateNextDesign(generated.files, generated.design, sitePurpose); }
-            else {
-              validateGeneratedSource(generated.files, sitePurpose);
-              if (generated.design) validateSourceDesignImplementation(generated.design, generated.files, sitePurpose);
-            }
-            await this.bundleAuthoredUploads(merchantId, generated.files, assets);
-            // Check the same asset set the save carries forward: new uploads plus previously bundled assets.
-            const preflightAssets = [...assets, ...retainedAssets.filter(file => !assets.some(asset => asset.path === file.path) && !generated.files.some(generatedFile => generatedFile.path === file.path))];
-            let preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...motifFiles, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));
-            // Mechanical contract failures are repaired in place. Spending a paid
-            // round-trip on a missing alt attribute helps nobody, and the model's
-            // second answer would not be better informed than ours.
-            const contractRepair = repairSourceContracts(generated.files, {
-              knownPaths: new Set(preflightFiles.map(file => file.path)),
-              // The merchant's own description of the photo, resolved through the
-              // legend that maps a bundled path back to its upload.
-              altFor: source => {
-                const bundled = source.replace(/^\/+/, '');
-                const original = assetLegend.find(asset => asset.path === bundled)?.original;
-                const description = original ? imageUses.find(use => use.url === original)?.description : undefined;
-                return description?.trim() ? description.trim().slice(0, 160) : undefined;
-              },
-            });
-            if (contractRepair.repairs.length) {
-              generated.files = contractRepair.files;
-              autoRepairs.push(...contractRepair.repairs);
-              preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...motifFiles, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));
-            }
-            const preflight = validateSourcePreflight(preflightFiles, {
-              requiredImagePaths: requestsImageContent(dto.instruction) ? assetLegend.filter(asset => !sourceVideo(asset.path) && imageUses.some(use => use.url === asset.original && !['reference', 'unused', 'unknown'].includes(use.role))).map(asset => asset.path) : [],
-              catalogImagePaths: [
-                ...data.items.flatMap(item => item.imageUrls),
-                ...products.flatMap(product => product.imageUrls || []),
-                ...products.flatMap(product => product.variants?.flatMap(variant => variant.imageUrl ? [variant.imageUrl] : []) || []),
-                ...productOperations.flatMap(operation => operation.changes?.imageUrls || []),
-                ...productOperations.flatMap(operation => operation.variantOperations?.flatMap(variant => variant.changes?.imageUrl ? [variant.changes.imageUrl] : []) || []),
-              ].map(url => assetLegend.find(asset => asset.original === url)?.path || url),
-            });
-            unusedImagePaths = preflight.unusedImagePaths;
+            await acceptCandidate();
             attempt.status = 'COMPLETED';
             break;
           } catch (error) {
