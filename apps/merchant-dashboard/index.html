@@ -476,8 +476,49 @@
             <header><h2 id="createStoreTitle">Crea otra tienda</h2><p>Un nuevo espacio para tu negocio, dentro de tu perfil.</p></header>
             <div><label for="createStoreName">Nombre de tu tienda</label><input id="createStoreName" name="name" placeholder="Mi Tienda de Ropa" required maxlength="120"></div>
             <p id="createStoreError" role="alert" hidden></p>
+            <p class="faint">¿Vienes de Shopify? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>
             <footer><button class="ghost" id="cancelCreateStore" type="button">Cancelar</button><button class="primary" type="submit">Crear tienda</button></footer>
           </form>
+        </dialog>
+        <dialog id="shopifyImportDialog" class="create-store-dialog shopify-import-dialog" aria-labelledby="shopifyImportTitle">
+          <div class="shopify-import" data-step="start">
+            <header><h2 id="shopifyImportTitle">Trae tu tienda de Shopify</h2><p>Importamos tus productos, fotos, colecciones y páginas. Nada se publica sin que lo decidas.</p></header>
+            <section data-panel="start">
+              <form id="shopifyImportUrlForm"><label for="shopifyImportUrl">Dirección de tu tienda</label><input id="shopifyImportUrl" name="url" placeholder="mitienda.com" required maxlength="300" autocomplete="url"><p id="shopifyImportUrlError" role="alert" hidden></p><button class="primary" type="submit">Revisar</button></form>
+              <details id="shopifyImportCsv"><summary>¿Tu tienda tiene contraseña? Sube el CSV de Shopify</summary>
+                <form id="shopifyImportCsvForm"><p class="faint">En Shopify: Productos → Exportar → "Todos los productos" → CSV para Excel, Numbers u otros.</p>
+                  <label for="shopifyImportCsvName">Nombre de tu tienda</label><input id="shopifyImportCsvName" name="name" required maxlength="120">
+                  <label for="shopifyImportCsvFile">Archivo CSV</label><input id="shopifyImportCsvFile" name="file" type="file" accept=".csv,text/csv" required>
+                  <button class="primary" type="submit">Revisar archivo</button></form></details>
+              <footer><button class="ghost" type="button" data-close>Cancelar</button></footer>
+            </section>
+            <section data-panel="review" hidden>
+              <p id="shopifyImportCounts" class="shopify-import-counts"></p>
+              <ul id="shopifyImportWarnings" class="shopify-import-warnings"></ul>
+              <p class="faint">No se importan clientes, pedidos, cupones ni apps de Shopify.</p>
+              <label id="shopifyImportRateRow" class="shopify-import-rate" hidden>1 <span id="shopifyImportCurrency"></span> = <input id="shopifyImportRate" inputmode="decimal" size="6" aria-label="Bolivianos por unidad"> Bs</label>
+              <ul id="shopifyImportProducts" class="shopify-import-products"></ul>
+              <p id="shopifyImportConfirmError" role="alert" hidden></p>
+              <footer><button class="ghost" type="button" data-close>Cancelar</button><button class="primary" type="button" id="shopifyImportConfirm">Importar</button></footer>
+            </section>
+            <section data-panel="importing" hidden><p id="shopifyImportProgress" role="status" aria-live="polite"></p><progress id="shopifyImportBar" max="1" value="0"></progress><p class="faint">Puedes cerrar esta ventana; la importación sigue.</p></section>
+            <section data-panel="failed" hidden><p id="shopifyImportError" role="alert"></p><footer><button class="ghost" type="button" data-close>Cerrar</button><button class="primary" type="button" id="shopifyImportRetry">Reintentar</button></footer></section>
+            <section data-panel="design" hidden>
+              <p>¿Cómo quieres que se vea tu tienda nueva?</p>
+              <div class="shopify-import-choices">
+                <button type="button" data-design="same"><strong>Igual que mi Shopify</strong><span>YAPI la recrea con tu estilo actual.</span><em data-free>Gratis la primera vez</em></button>
+                <button type="button" data-design="redesign"><strong>Rediseño con mi marca</strong><span>Un diseño nuevo con tu logo, colores y fotos.</span><em data-free>Gratis la primera vez</em></button>
+                <button type="button" data-design="template"><strong>Elegir plantilla</strong><span>Sin IA, al instante.</span></button>
+              </div>
+              <p id="shopifyImportDesignError" role="alert" hidden></p>
+            </section>
+            <section data-panel="building" hidden><p role="status" aria-live="polite">YAPI está diseñando tu tienda. Puedes cerrar esta ventana; verás el resultado al volver a abrirla.</p></section>
+            <section data-panel="done" hidden>
+              <p><strong>Tu tienda está lista para revisar.</strong></p>
+              <ol class="shopify-import-next"><li>Revisa el diseño y publícalo.</li><li>Conecta tu dominio (cambia los DNS que hoy apuntan a Shopify).</li><li>Revisa el stock y configura tus envíos.</li><li>No canceles Shopify hasta que tu dominio apunte aquí.</li></ol>
+              <footer><button class="primary" type="button" id="shopifyImportOpen">Ver mi tienda</button></footer>
+            </section>
+          </div>
         </dialog>
         <p class="faint" id="checkoutOriginRow" style="margin:10px 0 0">
           Página de pago:

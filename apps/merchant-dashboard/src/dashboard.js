@@ -3,6 +3,7 @@ import { ANIMATIONS, mountBlob } from "@pagosya/blob-characters";
 import { ADVENTURE_LEVELS, companionBlobHtml, companionBlobUri, companionSeed } from "/src/companions.mjs";
 import { normalizeVariation, profileBlobHtml, profileBlobUri, randomVariation, variationChoices } from "/src/profile-blob.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
+import { countsLine, importStep, parseExchangeRate, progressLabel } from "/src/store-import.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
@@ -1558,6 +1559,120 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.getElementById("createStoreName").focus();
   }
   document.getElementById("cancelCreateStore").addEventListener("click", () => document.getElementById("createStoreDialog").close());
+
+  // Traer mi tienda de Shopify (spec 2026-09-27): paste the address or the CSV, review, import, then pick the look.
+  const shopifyImportDialog = document.getElementById("shopifyImportDialog");
+  let shopifyImport = null, shopifyImportTimer = null;
+  const showShopifyImportMessage = (id, message) => { const box = document.getElementById(id); box.textContent = message || ""; box.hidden = !message; };
+
+  function showShopifyImportPanel(step) {
+    shopifyImportDialog.querySelector(".shopify-import").dataset.step = step;
+    shopifyImportDialog.querySelectorAll("[data-panel]").forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
+  }
+
+  function renderShopifyImport(view) {
+    shopifyImport = view;
+    const step = importStep(view);
+    showShopifyImportPanel(step);
+    if (step === "review") {
+      const preview = view.preview;
+      document.getElementById("shopifyImportCounts").textContent = countsLine(preview.counts);
+      document.getElementById("shopifyImportWarnings").innerHTML = preview.warnings.map(warning => `<li>${esc(warning)}</li>`).join("");
+      document.getElementById("shopifyImportRateRow").hidden = !preview.needsExchangeRate;
+      document.getElementById("shopifyImportCurrency").textContent = preview.currency;
+      document.getElementById("shopifyImportProducts").innerHTML = preview.products.map(product => `<li><label><input type="checkbox" value="${esc(product.externalId)}" ${product.problem ? "disabled" : "checked"}>${product.image ? `<img src="${esc(product.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : "<span></span>"}<span>${esc(product.name)}</span><span class="faint">${esc(product.price)} ${esc(preview.currency)}</span>${product.problem ? `<em>${esc(product.problem)}</em>` : ""}</label></li>`).join("");
+      showShopifyImportMessage("shopifyImportConfirmError", "");
+    }
+    if (step === "importing") {
+      document.getElementById("shopifyImportProgress").textContent = progressLabel(view.progress);
+      document.getElementById("shopifyImportBar").value = view.progress?.total ? view.progress.done / view.progress.total : 0;
+    }
+    if (step === "failed") document.getElementById("shopifyImportError").textContent = view.error || "La importación falló.";
+    if (step === "design") {
+      shopifyImportDialog.querySelectorAll("[data-free]").forEach(badge => { badge.hidden = !view.freeBuildAvailable; });
+      // "Igual que mi Shopify" needs the live store to look at; a CSV alone has no address.
+      shopifyImportDialog.querySelectorAll('[data-design="same"], [data-design="redesign"]').forEach(button => {
+        button.disabled = !view.freeBuildAvailable || (button.dataset.design === "same" && view.source === "SHOPIFY_CSV");
+      });
+      showShopifyImportMessage("shopifyImportDesignError", view.designError);
+    }
+    clearTimeout(shopifyImportTimer);
+    if ((step === "importing" || step === "building") && shopifyImportDialog.open) shopifyImportTimer = setTimeout(async () => {
+      try { renderShopifyImport(await api(`/store-imports/${view.id}`)); } catch { renderShopifyImport(view); }
+    }, 2000);
+  }
+
+  function openShopifyImport() {
+    if (!canLeaveMerchantStudio()) return;
+    document.getElementById("createStoreDialog").close();
+    shopifyImportDialog.showModal();
+    // Reopening shows where the last import is (importing, YAPI building, done); a finished one starts fresh.
+    if (shopifyImport && importStep(shopifyImport) !== "done") renderShopifyImport(shopifyImport);
+    else { shopifyImport = null; showShopifyImportPanel("start"); showShopifyImportMessage("shopifyImportUrlError", ""); document.getElementById("shopifyImportUrl").focus(); }
+  }
+  document.querySelector("[data-open-shopify-import]").addEventListener("click", openShopifyImport);
+  shopifyImportDialog.addEventListener("close", () => clearTimeout(shopifyImportTimer));
+  shopifyImportDialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => shopifyImportDialog.close()));
+
+  document.getElementById("shopifyImportUrlForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    showShopifyImportMessage("shopifyImportUrlError", "");
+    setButtonBusy(submit, true, "Leyendo tu tienda…");
+    try { renderShopifyImport(await api("/store-imports/shopify", { method: "POST", body: JSON.stringify({ url: document.getElementById("shopifyImportUrl").value }) })); }
+    catch (err) {
+      if (err.code === "protected") document.getElementById("shopifyImportCsv").open = true;
+      showShopifyImportMessage("shopifyImportUrlError", err.serverMessage || err.message);
+    } finally { setButtonBusy(submit, false, "Revisar"); }
+  });
+
+  document.getElementById("shopifyImportCsvForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    const file = document.getElementById("shopifyImportCsvFile").files[0];
+    if (!file) return;
+    setButtonBusy(submit, true, "Leyendo el archivo…");
+    try { renderShopifyImport(await api("/store-imports/shopify-csv", { method: "POST", body: JSON.stringify({ csv: await file.text(), name: document.getElementById("shopifyImportCsvName").value }) })); }
+    catch (err) { showShopifyImportMessage("shopifyImportUrlError", err.serverMessage || err.message); }
+    finally { setButtonBusy(submit, false, "Revisar archivo"); }
+  });
+
+  document.getElementById("shopifyImportConfirm").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    const excluded = [...document.querySelectorAll("#shopifyImportProducts input:not(:checked):not(:disabled)")].map(input => input.value);
+    const rate = shopifyImport.preview.needsExchangeRate ? parseExchangeRate(document.getElementById("shopifyImportRate").value) : null;
+    if (shopifyImport.preview.needsExchangeRate && !rate) {
+      showShopifyImportMessage("shopifyImportConfirmError", `Escribe cuántos bolivianos vale 1 ${shopifyImport.preview.currency}.`);
+      document.getElementById("shopifyImportRate").focus();
+      return;
+    }
+    setButtonBusy(button, true, "Importando…");
+    try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/confirm`, { method: "POST", body: JSON.stringify({ excluded, ...(rate ? { exchangeRate: rate } : {}) }) })); }
+    catch (err) { showShopifyImportMessage("shopifyImportConfirmError", err.message); }
+    finally { setButtonBusy(button, false, "Importar"); }
+  });
+
+  document.getElementById("shopifyImportRetry").addEventListener("click", async () => {
+    try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/retry`, { method: "POST" })); }
+    catch (err) { document.getElementById("shopifyImportError").textContent = err.message; }
+  });
+
+  async function openImportedStore(view = "workspace") {
+    shopifyImportDialog.close();
+    selectStore(shopifyImport.storeId);
+    await refresh();
+    history.pushState(null, "", "#dashboard-workspace");
+    setDashboardView(view);
+  }
+
+  shopifyImportDialog.querySelectorAll("[data-design]").forEach(button => button.addEventListener("click", async () => {
+    if (button.dataset.design === "template") return openImportedStore("templates");
+    showShopifyImportMessage("shopifyImportDesignError", "");
+    try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/design`, { method: "POST", body: JSON.stringify({ option: button.dataset.design }) })); }
+    catch (err) { showShopifyImportMessage("shopifyImportDesignError", err.message); }
+  }));
+
+  document.getElementById("shopifyImportOpen").addEventListener("click", () => openImportedStore());
   document.getElementById("storeLibrarySearch").addEventListener("input", () => renderStoreRows(lastStores));
   document.getElementById("storeLibraryStatus").addEventListener("change", () => renderStoreRows(lastStores));
   document.getElementById("sidebarStorePicker").addEventListener("change", async event => {
@@ -2304,7 +2419,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const statusFor = store => store.status === "ARCHIVED" ? "archived" : (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
     const visible = stores.filter(store => (!search || store.name.toLocaleLowerCase().includes(search)) && (!filter || statusFor(store) === filter));
     document.getElementById("storeLibraryCount").textContent = `${visible.length} de ${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}`;
-    document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button>` + visible.map(store => {
+    document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button><button class="store-create-tile" id="openShopifyImport" type="button"><span aria-hidden="true">↧</span><strong>Traer mi tienda de Shopify</strong><small>Productos, fotos y páginas</small></button>` + visible.map(store => {
       const revision = store.sourceProject?.revision || store.publishedSourceRevision;
       const cover = store.bannerUrl || store.heroSlides?.[0]?.imageUrl || store.publicityImageUrl;
       const preview = revision ? `<iframe src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
@@ -2316,6 +2431,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       </article>`;
     }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
     document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
+    document.getElementById("openShopifyImport").addEventListener("click", openShopifyImport);
     document.querySelectorAll(".store-card-menu").forEach(menu => menu.addEventListener("click", event => event.stopPropagation()));
 
     document.querySelectorAll(".store-row").forEach((row) => {
@@ -4066,6 +4182,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
         ? "El servidor no pudo completar esta operación. Tus cambios siguen aquí; vuelve a intentarlo en unos segundos."
         : responseMessage || res.statusText || "No pudimos completar la solicitud.");
       error.status = res.status;
+      // A machine-readable reason some routes add (e.g. the Shopify import's "protected").
+      if (typeof body?.code === "string") error.code = body.code;
       error.retryable = res.status === 408 || res.status === 425 || res.status === 429 || res.status >= 500;
       throw error;
     }
