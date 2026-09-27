@@ -49,3 +49,7 @@
 .source-build-canvas .yapi-stage__scene { margin-bottom: 26px; }
 .source-build-canvas .yapi-stage__status { font-size: 17px; margin: 22px 0 10px; }
 .source-build-canvas .yapi-stage__meta { font-size: 13px; }
+.build-details { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .25rem; font-size: .78rem; opacity: .85; }
+.build-shot { display: block; width: 160px; max-width: 100%; margin-top: .25rem; border-radius: 8px; border: 1px solid rgb(255 255 255 / 12%); }
+.build-edits summary{cursor:pointer}
+.build-edits ul{list-style:none;margin:.25rem 0 0;padding-left:.75rem;display:grid;gap:.15rem}

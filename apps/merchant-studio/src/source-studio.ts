@@ -1,12 +1,15 @@
+import { composeActionMode } from './source-studio-actions';
+import { renderDirectionChoices, type DirectionChoice } from './source-directions';
 import { createDirectEditor } from './source-direct-editor';
-import { createSourceDesignJobs } from './source-design-jobs';
-import { createSourceVisualTools } from './source-visual-tools';
 import { renderInspiration } from './source-inspiration';
+import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { merchantSafeText } from './source-merchant-copy';
 import { renderBuildStage, mountBuildStage, type BuildStageState } from './source-build-stage';
 import { mountFace, renderFaceMark } from './source-face';
+import { mountStarField } from './source-star-field';
+import { codeTickerLines, mountCodeTicker } from './source-code-ticker';
 import './source-build-progress.css';
 import { renderStoreReadiness } from './store-readiness';
 import { openRetention } from './retention';
@@ -48,7 +51,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let checks: SourceCheck[] | null = null, checksKey = '', checking = false;
   let checkAbort: AbortController | null = null;
   let setup: SourceSetup | null = null;
-  const generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
+  const generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 200, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
   try {
     const raw = localStorage.getItem(SOURCE_MODEL_STORAGE);
     const saved = raw?.startsWith('{') ? JSON.parse(raw) as { model?: string; at?: number } : { model: raw ?? undefined, at: 0 };
@@ -82,9 +85,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   });
   let liveCatalog: JsonRecord | null = null;
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
-  const mountVisualTools = createSourceVisualTools(api);
   const directEditor = createDirectEditor(api);
-  const mountDesignJobs = createSourceDesignJobs(api);
   const loadPreviewImages = createPreviewImageLoader(API_BASE_URL);
   let previewRender = 0;
   let previewNavigation: Partial<PreviewNavigation> = {};
@@ -117,9 +118,17 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let stores: MerchantStore[] = [], storeId = '', state: SourceState = { revision: 0, versions: [], nextBefore: null }, version: SourceVersion | null = null;
   let messages: AgentMessage[] = [], assets: Attachment[] = [];
   let busy = false, generating = false, loading = true, error = '', toast = '', instruction = '';
+  // The agent's latest clean draft while it builds (sub-project 3): the store appears in the preview as YAPI works.
+  let liveDraft: { at: number; snapshot: SourceVersion['snapshot'] } | null = null;
   let pendingSubmission: { text: string; imageCount: number; hasVideo: boolean } | null = null;
   let buildStage: { update(state: BuildStageState): void; destroy(): void } | null = null;
   let idleFace: { destroy(): void } | null = null;
+  // YAPI's stars play over the whole Studio until a site exists (source-star-field.ts). The layer lives on <body>,
+  // outside what render() replaces, so the stars keep their flight across re-renders.
+  let starField: { destroy(): void } | null = null;
+  // The code YAPI "types" while it builds (source-code-ticker.ts): created once per build and moved into each
+  // re-rendered chat, so the typing never restarts mid-build.
+  let codeTicker: { element: HTMLElement; destroy(): void } | null = null;
   let retrySubmission: RetrySubmission | null = null;
   let toastTimer: number | undefined;
   let mode = 'preview', mobile = false, page = 'index.html', filePath = 'index.html', draft: string | null = null;
@@ -137,7 +146,19 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (!embedded || event.origin !== location.origin || event.source !== window.parent) return;
     if (event.data?.type !== 'pagosya:studio-action' || event.data.storeId !== storeId || loading) return;
     const action = event.data.action;
+    if (action === 'compose' && typeof event.data.text === 'string' && composeActionMode({ text: event.data.text, origin: event.data.origin }, { busy, blocked: dirty() || historical() }) === 'send') {
+      // Asked from the YAPI box on another tab ("hazme una tienda"): YAPI starts working right away.
+      chatExpanded = true;
+      notifyParent({ type: 'pagosya:studio-action-received', storeId });
+      void send(event.data.text.slice(0, 12000));
+      return;
+    }
     if (action === 'compose' && typeof event.data.text === 'string') {
+      if (busy && event.data.origin !== 'growth') {
+        toast = 'YAPI está trabajando. Tu mensaje quedó listo para enviarlo después.';
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 6000);
+      }
       instruction = [instruction.trim(), event.data.text.slice(0, 12000)].filter(Boolean).join('\n\n').slice(0, 12000);
       // A suggestion from the dashboard's Crecimiento view: say where it came from; the merchant still sends it.
       if (event.data.origin === 'growth') {
@@ -168,6 +189,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     } catch { /* A saved preview remains usable offline; generation fetches the current catalog again. */ }
   }
   function previewSnapshot() {
+    if (generating && liveDraft) return liveDraft.snapshot;
     return { ...version!.snapshot, files: version!.snapshot.files.map(f => {
       if (f.path === filePath && draft !== null) return { ...f, content: draft };
       if (f.path !== 'config.js' || !liveCatalog || historical()) return f;
@@ -193,7 +215,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       error = e instanceof Error ? e.message : 'No pudimos completar la solicitud.';
       if (e instanceof ApiError && e.status === 401) { sessionStorage.removeItem(SESSION_STORAGE_KEY); api.setToken(''); clearAssets(); notifyParent({ type: 'pagosya:session-expired' }); }
     } finally {
-      busy = false; loading = false; generating = false; render();
+      busy = false; loading = false; generating = false; liveDraft = null; render();
       window.clearTimeout(toastTimer);
       if (toast) toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 4000);
     }
@@ -245,13 +267,22 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const result = await api.sourceProgress(selectedStore, requestId, controller.signal);
         if (controller.signal.aborted || storeId !== selectedStore) return;
         if (result.progress) { buildProgress = result.progress; updateBuildProgress(); }
+        const draft = await api.sourceDraftPreview(selectedStore, liveDraft?.at, controller.signal);
+        if (!controller.signal.aborted && storeId === selectedStore && generating && draft.at && draft.files) {
+          // Photos the saved revision already has are not resent; keep them from the current version.
+          const saved = version?.snapshot.files.filter(file => file.encoding === 'base64' && !draft.files!.some(next => next.path === file.path)) || [];
+          const hadDraft = Boolean(liveDraft);
+          liveDraft = { at: draft.at, snapshot: { ...(version?.snapshot ?? {}), files: [...draft.files, ...saved] } as SourceVersion['snapshot'] };
+          const frame = app.querySelector<HTMLIFrameElement>('.is-live-draft iframe');
+          if (hadDraft && frame) void renderPreview(frame); else render();
+        }
       } catch { /* Status availability must not interrupt the build request. */ }
       if (!controller.signal.aborted) timer = window.setTimeout(poll, 1500);
     };
     timer = window.setTimeout(poll, 500);
     return () => { controller.abort(); window.clearTimeout(timer); };
   }
-  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[]) {
+  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string) {
     if (!text.trim() && assets.length) text = 'Te comparto estas imágenes para el sitio.';
     if (!text.trim() || busy || dirty() || historical()) return;
     chatExpanded = true;
@@ -281,9 +312,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId);
         stopProgress();
-        succeeded = true; pendingSubmission = null; generating = false;
+        succeeded = true; pendingSubmission = null; generating = false; liveDraft = null;
         productPhoto = false;
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
@@ -320,7 +351,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       } finally {
         stopProgress();
         if (assets !== submittedAssets) submittedAssets.forEach(asset => URL.revokeObjectURL(asset.src));
-        pendingSubmission = null; generating = false; scheduleEstimate();
+        pendingSubmission = null; generating = false; liveDraft = null; scheduleEstimate();
         if (usage !== null) await api.sourceUsage(storeId).then(result => { usage = result.runs; aiUsage = result.aiUsage || []; }).catch(() => { usage = null; });
       }
     });
@@ -411,14 +442,28 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div><p>${escape(visibleContent)}</p>
       ${!user ? renderBuildProgress(metadata.progress) : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
+      ${!user && Array.isArray(metadata.directionChoices) ? renderDirectionChoices(metadata.directionChoices as DirectionChoice[], busy || dirty() || historical() || state.revision > 0 || message.id !== latestDirectionChoicesId()) : ''}
+      ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || (state.revision > 0 && !templateUntouched()) || message.id !== latestTemplateChoicesId()) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
       ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
     </article>`;
   }
+  /** Untouched: the current revision is the one a template produced, so another template can replace it freely. */
+  function templateUntouched() {
+    const brief = version?.snapshot?.brief;
+    return Boolean(brief?.templateId && version?.revision === state.revision && brief.templateRevision === state.revision);
+  }
+  /** Only YAPI's latest set of Plantilla cards can be chosen; the API rejects older sets. */
+  function latestTemplateChoicesId() {
+    return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.templateChoices)).at(-1)?.id;
+  }
+  function latestDirectionChoicesId() {
+    return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.directionChoices)).at(-1)?.id;
+  }
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);
     return `<details class="source-store-menu source-disclosure"><summary>Mi tienda</summary><nav class="source-disclosure-panel" aria-label="Herramientas de mi tienda">
-      <section><h2>Diseño y contenido</h2><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
+      <section><h2>Diseño y contenido</h2><button data-open-templates ${disabled(locked || !storeId || historical() || dirty())}>Plantillas</button><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
       <section><h2>Marketing</h2><button id="source-retention" ${unavailable}>Correos, Comeback y promociones</button>${embedded ? `<button data-business-view="integrations" ${unavailable}>Integraciones</button><button data-business-view="experiments" ${unavailable}>Pruebas A/B</button>` : ''}</section>
       <section><h2>Configuración</h2><button id="source-shipping" ${unavailable}>Envíos y retiro</button><button id="source-domain" ${unavailable}>Tu propio dominio</button><button id="source-arrangement" ${unavailable}>Cómo se ven tus productos</button><button id="source-recommendations" ${unavailable}>Recomendaciones</button></section>
       <section><h2>Productos</h2><button id="source-digital" ${unavailable}>Archivos digitales</button></section>
@@ -461,12 +506,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || generating || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
           <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div>
             ${messages.length ? messages.map(chatMessage).join('') : `<section class="conversation-welcome">${renderFaceMark({ size: 30 })}<strong>Tu sitio empieza con una conversación.</strong><p data-setup-prompt>${escape(setup?.prompt || `Antes de crear el sitio de ${store?.name || 'tu negocio'}, aclaremos tu negocio y el estilo que buscas. ¿Qué vendes y a quién quieres llegar?`)}</p></section>`}
-            ${generating ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request><p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta">${renderFaceMark({ thinking: true })}<strong>YAPI</strong></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div></article>` : ''}
+            ${generating ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request><p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta">${renderFaceMark({ thinking: true })}<strong>YAPI</strong></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div><div data-build-code></div></article>` : ''}
             ${dirty() ? '<p class="source-chat-hint">Guarda o descarta la edición de código antes de pedir otro cambio.</p>' : ''}
             ${error ? `<p class="auth-error" role="alert">${escape(merchantSafeText(error))}</p>${retrySubmission ? `<button type="button" class="button button--secondary" id="source-retry-message" ${disabled(locked || historical() || Boolean(instruction.trim()) || assets.length > 0)}>Reintentar mensaje</button>` : ''}` : ''}
             ${!storeId ? '<section class="remote-empty-state"><strong>No hay una tienda todavía.</strong><p>Crea una tienda en el dashboard para comenzar.</p></section>' : ''}
           </div>
-          <div class="source-compose-area">${version ? '<div class="source-canvas-tools"><div data-source-visual-tools></div><div data-source-design-jobs></div></div>' : ''}${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
+          <div class="source-compose-area">${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
           ${renderStudioComposer({ busy: locked || historical() || !storeId, source: true, instruction, attachments: productPhoto ? '' : attachmentBatch(), suggestions: setup || productPhoto ? [] : version ? [
             { label: 'Crear producto', action: 'create-product' },
             { label: 'Rediseñar sitio', instruction: 'Rediseña todo mi sitio con una dirección visual nueva basada en mi negocio, mis fotos y mis referencias. Conserva los productos y los datos confirmados.' },
@@ -478,7 +523,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
           <header class="canvas-toolbar">${storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-visual-edit" aria-pressed="${visualEditing}" ${disabled(locked || !version || historical())}>Editar diseño</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked, checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : generating ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : generating && liveDraft ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">Borrador en vivo · YAPI sigue trabajando</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : generating ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
@@ -494,6 +539,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     idleFace?.destroy();
     const idleStage = app.querySelector<HTMLElement>('.inspiration-stage [data-face]');
     idleFace = idleStage ? mountFace(idleStage) : null;
+    if (!version && !starField) starField = mountStarField(document.body);
+    if (version && starField) { starField.destroy(); starField = null; }
+    const codeHost = app.querySelector<HTMLElement>('[data-build-code]');
+    if (codeHost && codeTicker) codeHost.append(codeTicker.element);
+    else if (codeHost) codeTicker = mountCodeTicker(codeHost, codeTickerLines({ files: version?.snapshot.files, storeName: stores.find(s => s.id === storeId)?.name, items: Array.isArray(liveCatalog?.items) ? liveCatalog!.items as any[] : [] }));
+    else if (codeTicker) { codeTicker.destroy(); codeTicker = null; }
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {
       storeId, version, locked: busy || dirty() || historical(),
@@ -502,13 +553,6 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       saved: async () => { await load(); toast = 'Cambio visual guardado.'; render(); },
       prepare: text => { visualEditing = false; instruction = text; render(); focusComposer(); scheduleEstimate(); },
     });
-    const designHost = app.querySelector<HTMLElement>('[data-source-design-jobs]');
-    if (designHost && version) mountDesignJobs(designHost, { storeId, version, page, locked: busy || dirty(), historical: historical(), saved: () => action(async () => { await load(); toast = 'Mejora guardada. Revisa el resultado antes de publicarlo.'; }) });
-    const visualHost = app.querySelector<HTMLElement>('[data-source-visual-tools]');
-    if (visualHost && version) mountVisualTools(visualHost, { storeId, version, page, settings: generationSettings, locked: busy || dirty(), historical: historical(),
-      prepare: text => { instruction = [instruction.trim(), text].filter(Boolean).join('\n\n'); const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) { field.value = instruction; field.focus(); } scheduleEstimate(); },
-      saved: () => action(async () => { await load(); toast = 'Usos guardados. YAPI los tendrá en cuenta en los próximos cambios.'; }),
-    });
 
     const stream = app.querySelector<HTMLElement>('[data-agent-stream]');
     if (stream && productForm) { stream.append(productForm.element); stream.scrollTop = oldScroll; }
@@ -516,7 +560,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const editor = app.querySelector<HTMLTextAreaElement>('#source-code');
     if (editor) editor.value = draft ?? version!.snapshot.files.find(f => f.path === filePath)?.content ?? '';
     const frame = app.querySelector<HTMLIFrameElement>('iframe');
-    if (frame && version) void renderPreview(frame);
+    if (frame && (version || (generating && liveDraft))) void renderPreview(frame);
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
@@ -560,11 +604,15 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelectorAll<HTMLButtonElement>('[data-business-view]').forEach(button => button.onclick = () => { if (!busy && !dirty()) notifyParent({type:'pagosya:workspace',view:button.dataset.businessView}); });
     app.querySelector('#source-retention')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({ type: 'pagosya:workspace', view: 'marketing', tab: 'program' }); else void openRetention(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
-    app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
-    app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
+    app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'shipping'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
+    app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'domain'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
+    app.querySelectorAll('[data-open-templates]').forEach(button => button.addEventListener('click', () => {
+      if (busy || !storeId || dirty() || historical()) return;
+      void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version) && !templateUntouched(), applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla aplicada. Cambia fotos y textos cuando quieras.'; render(); } });
+    }));
     app.querySelector('#source-recommendations')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openRecommendations(api, storeId); } });
     app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });
-    app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openBrandProfile(api, storeId); } });
+    app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'brand'}); else void openBrandProfile(api, storeId); } });
     const on = (id: string, fn: () => void) => app.querySelector(`#${id}`)?.addEventListener('click', fn);
 
     app.querySelector('.source-publication-details')?.addEventListener('toggle', event => { const details = event.target as HTMLDetailsElement; if (details.isConnected) publicationOpen = details.open; });
@@ -639,6 +687,8 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       instruction = button.dataset.suggestion || ''; const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) field.value = instruction; scheduleEstimate(); focusComposer();
     }));
     app.querySelectorAll<HTMLButtonElement>('[data-clarification]').forEach(button => button.addEventListener('click', () => void send(button.dataset.clarification || '')));
+    app.querySelectorAll<HTMLButtonElement>('[data-template-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.templateName || ''}`, undefined, undefined, button.dataset.templateChoice)));
+    app.querySelectorAll<HTMLButtonElement>('[data-direction-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.directionName || ''}`, undefined, undefined, undefined, button.dataset.directionChoice)));
     app.querySelector('[data-action="open-upload"]')?.addEventListener('click', () => app.querySelector<HTMLInputElement>('[data-image-input]')?.click());
     app.querySelector('[data-image-input]')?.addEventListener('change', event => {
       const files = Array.from((event.target as HTMLInputElement).files || []);
@@ -659,7 +709,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-file')?.addEventListener('change', event => { filePath = (event.target as HTMLSelectElement).value; draft = null; render(); });
     app.querySelector('#source-code')?.addEventListener('input', event => {
       draft = (event.target as HTMLTextAreaElement).value;
-      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
+      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
       app.querySelector<HTMLButtonElement>('#source-save')!.disabled = busy || !dirty() || historical();
       app.querySelector<HTMLButtonElement>('#source-discard')!.disabled = busy || !dirty();
     });

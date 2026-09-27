@@ -1,0 +1,61 @@
+{
+  "id": "encaje",
+  "name": "Encaje",
+  "category": "moda",
+  "description": "Moda romántica de inspiración vintage: rosa empolvado y crema, serif clásica, arcos y ornamentos florales.",
+  "tags": [
+    "moda",
+    "vintage",
+    "romántico",
+    "femenino"
+  ],
+  "sitePurpose": "shop",
+  "order": 290,
+  "dna": {
+    "display": "libre-caslon-text",
+    "text": "nunito",
+    "case": "none",
+    "radius": "round",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "arch"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "detalle",
+      "role": "detail",
+      "demo": "detalle.jpg"
+    },
+    {
+      "slot": "jardin",
+      "role": "lifestyle",
+      "demo": "jardin.jpg"
+    }
+  ]
+}

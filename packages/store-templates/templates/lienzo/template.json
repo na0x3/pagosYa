@@ -1,0 +1,56 @@
+{
+  "id": "lienzo",
+  "name": "Lienzo",
+  "category": "arte",
+  "description": "Arte e impresiones: blanco de galería, obras con paspartú y fichas tipo museo.",
+  "tags": [
+    "arte",
+    "galería",
+    "impresiones",
+    "minimal"
+  ],
+  "sitePurpose": "shop",
+  "order": 180,
+  "dna": {
+    "display": "instrument-serif",
+    "text": "space-mono",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "underline",
+    "hover": "underline-grow",
+    "press": "none",
+    "motion": "calm",
+    "cart": "overlay",
+    "added": "inline",
+    "card": "still",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "obra",
+      "role": "hero",
+      "demo": "obra.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "estudio",
+      "role": "lifestyle",
+      "demo": "estudio.jpg"
+    }
+  ]
+}

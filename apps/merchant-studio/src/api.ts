@@ -309,8 +309,13 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}) }) });
+  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}) }) });
+  }
+
+  /** The agent's latest clean draft while it builds; files only when newer than `since`. */
+  sourceDraftPreview(storeId: string, since?: number, signal?: AbortSignal): Promise<{ at: number | null; files?: Array<{ path: string; content: string; encoding?: string }> }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/draft-preview${since !== undefined ? `?since=${since}` : ''}`, { signal });
   }
 
   sourceProgress(storeId: string, requestId: string, signal?: AbortSignal): Promise<{ progress: BuildProgress | null }> {
@@ -376,6 +381,18 @@ export class MerchantStudioApi {
 
   restoreSource(storeId: string, target: number, revision: number): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${target}/restore`, { method: "POST", body: JSON.stringify({ revision }) });
+  }
+
+  listTemplates(): Promise<import("./source-templates").TemplateSummary[]> {
+    return this.request(`/store-templates`);
+  }
+
+  templatePreview(storeId: string, templateId: string): Promise<import("@pagosya/storefront-preview").SourceSnapshot> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}/preview`);
+  }
+
+  applyTemplate(storeId: string, templateId: string, revision: number): Promise<SourceRevision & { adapted?: boolean }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}`, { method: "POST", body: JSON.stringify({ revision }) });
   }
 
   saveSource(storeId: string, body: { revision: number; label: string; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; files: import("@pagosya/storefront-preview").SourceFile[] }): Promise<SourceRevision> {

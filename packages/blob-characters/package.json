@@ -1,0 +1,25 @@
+{
+  "name": "@pagosya/blob-characters",
+  "version": "0.1.0",
+  "private": true,
+  "description": "pagosYa's blob characters: Blobatar rendering plus a small animation player (expressions + body motion)",
+  "type": "module",
+  "main": "index.mjs",
+  "types": "index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "default": "./index.mjs" },
+    "./blob-motion.css": "./blob-motion.css",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs && tsc --noEmit --strict --target es2022 --lib es2022,dom --module esnext --moduleResolution bundler test/types.check.ts",
+    "typecheck": "tsc --noEmit --strict --target es2022 --lib es2022,dom --module esnext --moduleResolution bundler test/types.check.ts"
+  },
+  "dependencies": {
+    "blobatar": "2.7.0"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.3"
+  }
+}

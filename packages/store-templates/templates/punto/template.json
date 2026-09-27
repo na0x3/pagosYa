@@ -1,0 +1,61 @@
+{
+  "id": "punto",
+  "name": "Punto",
+  "category": "tecnologia",
+  "description": "Tecnología minimalista: blanco, negro y un punto rojo, trama de puntos y fichas técnicas en mono.",
+  "tags": [
+    "tecnología",
+    "minimal",
+    "gadgets",
+    "monocromo"
+  ],
+  "sitePurpose": "shop",
+  "order": 200,
+  "dna": {
+    "display": "space-grotesk",
+    "text": "instrument",
+    "case": "none",
+    "radius": "pill",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "detalle",
+      "role": "detail",
+      "demo": "detalle.jpg"
+    },
+    {
+      "slot": "calle",
+      "role": "lifestyle",
+      "demo": "calle.jpg"
+    }
+  ]
+}

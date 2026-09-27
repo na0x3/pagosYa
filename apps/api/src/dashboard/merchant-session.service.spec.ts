@@ -2,6 +2,7 @@ import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { createHash } from "node:crypto";
 import { MerchantSessionService } from "./merchant-session.service";
+import { profileBlobSeed } from "./profile-blob-seed";
 
 function makeFakePrisma() {
   const prisma: any = {
@@ -336,6 +337,7 @@ describe("MerchantSessionService active-session management", () => {
       profiles: [{ profileName: "Dueño", profileAvatarId: 2 }],
       currentSessionId: "session_current",
       canManageSessions: true,
+      blobSeed: profileBlobSeed("user_1"),
       sessions: [{
         id: "session_current",
         profileName: "Dueño",
@@ -425,6 +427,27 @@ describe("MerchantSessionService active-session management", () => {
       4,
     )).rejects.toThrow(ForbiddenException);
     expect(prisma.merchantSession.update).not.toHaveBeenCalled();
+  });
+
+  it("accepts any blob variation from 1 to 999, including the old animal ids 1–4", async () => {
+    for (const variation of [1, 4, 5, 999]) {
+      const prisma = makeFakePrisma();
+      prisma.merchantSession.findFirst
+        .mockResolvedValueOnce({ id: "session_main", isPrimary: true })
+        .mockResolvedValueOnce({ id: "session_main", isPrimary: true });
+      prisma.merchantSession.update.mockResolvedValue({ id: "session_main", profileName: "Ana", profileAvatarId: variation, isPrimary: true });
+      await new MerchantSessionService(prisma as any).updateSessionIdentity("user_1", "session_main", "dash_main", "Ana", variation);
+      expect(prisma.merchantSession.update).toHaveBeenCalledWith(expect.objectContaining({ data: { profileName: "Ana", profileAvatarId: variation } }));
+    }
+  });
+
+  it("refuses variations outside 1–999 before looking up any session", async () => {
+    for (const variation of [0, -1, 1000, 2.5, Number.NaN]) {
+      const prisma = makeFakePrisma();
+      await expect(new MerchantSessionService(prisma as any).updateSessionIdentity("user_1", "session_main", "dash_main", "Ana", variation))
+        .rejects.toThrow("El avatar del perfil no es válido");
+      expect(prisma.merchantSession.findFirst).not.toHaveBeenCalled();
+    }
   });
 });
 

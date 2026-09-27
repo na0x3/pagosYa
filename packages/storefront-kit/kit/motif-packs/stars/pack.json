@@ -1,0 +1,67 @@
+{
+  "id": "stars",
+  "version": 1,
+  "name": "Estrellas y luna",
+  "topics": {
+    "es": [
+      "estrella",
+      "estrellas",
+      "luna",
+      "noche",
+      "astrología",
+      "sueño",
+      "mágico"
+    ],
+    "en": [
+      "star",
+      "stars",
+      "moon",
+      "night",
+      "astrology",
+      "dream",
+      "magic"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "glow"
+    }
+  ]
+}

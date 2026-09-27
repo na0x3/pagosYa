@@ -72,6 +72,8 @@ export interface SiatConfig {
 export interface AppConfig {
   domainCommerce: DomainCommerceConfig;
   sourceFramework: 'next' | 'static';
+  /** YAPI engine: the tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) or the single JSON call. */
+  yapiEngine: 'agent' | 'single';
   sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
@@ -344,6 +346,7 @@ export default (): { app: AppConfig } => {
       forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE !== "false",
     },
     sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
+    yapiEngine: process.env.YAPI_ENGINE === 'agent' || process.env.YAPI_ENGINE === 'single' ? process.env.YAPI_ENGINE : environment === 'development' ? 'agent' : 'single',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
     openAi: {

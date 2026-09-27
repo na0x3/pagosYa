@@ -8,8 +8,8 @@
     display: ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald', 'syne', 'unbounded', 'space-grotesk', 'dm-serif-display', 'playfair-display', 'epilogue', 'sora', 'manrope', 'newsreader', 'young-serif', 'rubik', 'space-mono', 'big-shoulders-display', 'bebas-neue', 'anton', 'chivo', 'lora', 'libre-caslon-text', 'outfit', 'figtree', 'familjen-grotesk', 'bitter', 'nunito', 'shrikhand', 'bodoni-moda'],
     text: ['bricolage', 'fraunces', 'instrument', 'instrument-serif', 'oswald', 'syne', 'unbounded', 'space-grotesk', 'dm-serif-display', 'playfair-display', 'epilogue', 'sora', 'manrope', 'newsreader', 'young-serif', 'rubik', 'space-mono', 'big-shoulders-display', 'bebas-neue', 'anton', 'chivo', 'lora', 'libre-caslon-text', 'outfit', 'figtree', 'familjen-grotesk', 'bitter', 'nunito', 'shrikhand', 'bodoni-moda'],
     case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'],
-    radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid'],
-    button: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split'], hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
+    radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid', 'blob', 'stamp', 'tape'],
+    button: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split', 'sticker', 'ticket', 'bubbly', 'brutal'], hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
     motion: ['calm', 'snappy', 'playful', 'cinematic'], grammar: ['editorial', 'grid', 'collage', 'index', 'poster', 'magazine', 'brutalist'], density: ['airy', 'balanced', 'dense'],
     cart: ['drawer', 'sheet', 'page', 'overlay'], added: ['toast', 'ribbon', 'bubble', 'inline', 'stamp'], product: ['editorial', 'dense', 'image-led', 'story-led'],
     review: ['split', 'stacked', 'ticket', 'notebook'], card: ['still', 'second-photo', 'swatch-swap', 'zoom', 'quick-look', 'tilt'],
@@ -63,9 +63,50 @@
   const MOTIF_ATTRIBUTES = ['viewBox', 'preserveAspectRatio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'fx', 'fy', 'fr', 'd', 'points', 'pathLength', 'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'color', 'transform', 'vector-effect', 'clip-path', 'clip-rule', 'mask', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform', 'spreadMethod', 'clipPathUnits', 'maskUnits', 'maskContentUnits', 'class', 'id', 'data-part', 'aria-hidden', 'focusable'];
   const MOTIF_BEHAVIORS = ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'];
   const MOTIF_SLOT_TRIGGERS = ['appear', 'scroll', 'hover', 'add-to-cart'];
-  const MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
+  function parseMotifDrawing(markup) {
+    let root;
+    try { root = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement; } catch { return null; }
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    if (!root || root.namespaceURI !== SVG_NS || root.localName !== 'svg') return null;
+    for (const el of [root, ...root.querySelectorAll('*')]) {
+      if (el.namespaceURI !== SVG_NS || !MOTIF_ELEMENTS.includes(el.localName)) return null;
+      for (const attr of [...el.attributes]) {
+        if (el === root && attr.name === 'xmlns') continue;
+        const value = attr.value;
+        if (!MOTIF_ATTRIBUTES.includes(attr.name) || /[<>"`\\]|(?:javascript|vbscript|data)\s*:|expression\s*\(/i.test(value)
+          || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
+      }
+    }
+    root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
+    return root;
+  }
+  // Every distinct drawing string is parsed and sanitised once (finding 4): a public catalog can place the same
+  // drawing on well over a hundred cards, and DOMParser is not cheap. Every call after the first for the same
+  // markup clones the cached, already-sanitised element; callers may freely mutate their own clone. Defined here,
+  // ahead of AI_MOTIFS/PACK_MOTIFS below (both call motifDrawing while filtering, at module-evaluation time).
+  const motifDrawingCache = new Map();
+  function motifDrawing(markup) {
+    if (!motifDrawingCache.has(markup)) motifDrawingCache.set(markup, parseMotifDrawing(markup));
+    const cached = motifDrawingCache.get(markup);
+    return cached ? cached.cloneNode(true) : null;
+  }
+  const AI_MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
     && MOTIF_BEHAVIORS.includes(motif.behavior) && MOTIF_SLOT_TRIGGERS.includes(motif.trigger) && ['product', 'card', 'cart'].includes(motif.placement)
     && ['store', 'category', 'product'].includes(motif.for) && typeof motif.target === 'string' && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg));
+  /* Identity libraries (T2a): one drawn motif pack, at most 8 placements, one drawing each. The API sanitised the markup
+   * (config.motifPack, re-sanitised on every save); it is verified again here with the same lists. Pack motifs are
+   * store-wide; the store's own targeted motifs above keep precedence in the slots both can fill. A store without a
+   * pack gets nothing new: no entry, no style, no observer. */
+  const MOTIF_PACK_PLACEMENTS = ['button', 'pattern', 'divider', 'sticker', 'empty', 'product', 'card', 'cart'];
+  const MOTIF_PACK_TRIGGERS = { product: 'appear', card: 'hover', cart: 'add-to-cart', button: 'hover', pattern: 'none', divider: 'scroll', sticker: 'appear', empty: 'appear' };
+  const MOTIF_PACK = config.motifPack && typeof config.motifPack === 'object' && typeof config.motifPack.id === 'string'
+    && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(config.motifPack.id) && Array.isArray(config.motifPack.motifs) ? config.motifPack : null;
+  const PACK_MOTIFS = (MOTIF_PACK ? MOTIF_PACK.motifs : []).slice(0, 8).filter((motif, index, all) => motif && typeof motif === 'object'
+    && MOTIF_PACK_PLACEMENTS.includes(motif.placement) && all.findIndex(other => other && other.placement === motif.placement) === index
+    && MOTIF_BEHAVIORS.includes(motif.behavior) && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg))
+    .map(motif => ({ file: '', for: 'store', target: '', behavior: motif.behavior, trigger: MOTIF_PACK_TRIGGERS[motif.placement], placement: motif.placement, svg: motif.svg, pack: true }));
+  const MOTIFS = [...AI_MOTIFS, ...PACK_MOTIFS];
+  const packMotif = placement => MOTIFS.findIndex(motif => motif.pack && motif.placement === placement);
   let motifObserver = null;
   const hosted = window.PAGOSYA_HOSTED === true;
   // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
@@ -1049,7 +1090,7 @@
       for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__highlights,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
     }
-    if (MOTIFS.length) placeProductMotif(p);
+    if (MOTIFS.length) { placeProductMotif(p); placeButtonMotifs(detail); }
     watchHighlights();
     watchStickyBar();
     decorateProductReviews();
@@ -1373,23 +1414,6 @@
   }
   /* DNA motifs: verification, slots, triggers. Every animation is finite, ends at rest and starts only when motion is
    * allowed; the kit's reduced-motion rule also switches it off in CSS. */
-  function motifDrawing(markup) {
-    let root;
-    try { root = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement; } catch { return null; }
-    const SVG_NS = 'http://www.w3.org/2000/svg';
-    if (!root || root.namespaceURI !== SVG_NS || root.localName !== 'svg') return null;
-    for (const el of [root, ...root.querySelectorAll('*')]) {
-      if (el.namespaceURI !== SVG_NS || !MOTIF_ELEMENTS.includes(el.localName)) return null;
-      for (const attr of [...el.attributes]) {
-        if (el === root && attr.name === 'xmlns') continue;
-        const value = attr.value;
-        if (!MOTIF_ATTRIBUTES.includes(attr.name) || /[<>"`\\]|(?:javascript|vbscript|data)\s*:|expression\s*\(/i.test(value)
-          || /url\s*\(/i.test(value) && !/^url\(\s*#[A-Za-z][\w-]*\s*\)$/.test(value.trim())) return null;
-      }
-    }
-    root.removeAttribute('transform'); // a root transform would move the drawing out of its slot
-    return root;
-  }
   const motifText = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const motifWords = value => motifText(value).split(/[^a-z0-9]+/).filter(Boolean);
   /* The target's words appear in order as whole words (a word also matches its plural, -s/-es): "té" is not inside
@@ -1523,6 +1547,231 @@
       if (motif && (holder.dataset.motifProduct ? holder.dataset.motifProduct === p.id : motifMatches(motif, p))) playMotif(holder);
     });
   }
+  /* The empty placement: the kit's own empty cart line shows the pack drawing. A store's cart template shows it only where
+   * it asks, in an element marked data-motif-empty inside its "empty" slot: the template owns that state's design. */
+  function placeEmptyMotif(el) {
+    const index = packMotif('empty');
+    if (index < 0) return;
+    const asked = [...el.querySelectorAll('[data-cart-slot="empty"] [data-motif-empty]')];
+    const hosts = asked.length ? asked : [...el.querySelectorAll('.order-items > li.order-empty')];
+    for (const host of hosts) {
+      if (host.querySelector(':scope > .pagosya-motif[data-motif-slot="empty"]')) continue;
+      const holder = motifSlot(index, 'empty');
+      if (!holder) return;
+      host.prepend(holder);
+      armMotif(holder, host);
+    }
+  }
+  /* The button placement and the data-motif-icon slot (T2a/T2b): the pack's small drawing beside the label of the add and
+   * buy buttons, and inside any element a store marks data-motif-icon (its own calls to action). Never on the cart's
+   * checkout or pay buttons, never over a price, and never at the cost of the label: an icon that would wrap the label or
+   * overflow its button is taken out again (the slot says "removed", so it is not retried). */
+  const MOTIF_PRICES = '.menu-item__price,[data-product-field="price"],[data-product-pricing],.product-detail__buy-total,.order-total';
+  // The sticky bar's jump button is excluded on purpose: updateStickyBar() sets its whole label with textContent on
+  // every quantity/selection change, which would silently wipe any icon placed here (finding 7).
+  const KIT_ICON_BUTTONS = '.menu-add,.product-detail__buy';
+  const NO_ICON = '.checkout-button:not(.product-detail__buy),[data-pay],[data-checkout],[data-finish-demo],template *';
+  /* Batched across every slot in one placeButtonMotifs pass (finding 4): a public catalog can hold well over a
+   * hundred cards, and filling each icon slot one at a time — read, insert, then its own rAF of read/write/read/
+   * write — forces a synchronous layout per card. Every phase below (read, then write, then, in the rAF, read,
+   * write, read, write, read, write) runs once for every prepared slot before the next phase starts, so the whole
+   * batch costs one forced layout per phase instead of one per slot. */
+  function fillIconSlots(entries) {
+    const index = packMotif('button');
+    if (index < 0 || !entries.length) return;
+    const prepared = [];
+    for (const { slot, button } of entries) {
+      if (slot.getAttribute('data-motif-icon') === 'placed') continue;
+      const holder = motifSlot(index, 'button');
+      if (holder) prepared.push({ slot, button, holder });
+    }
+    if (!prepared.length) return;
+    for (const entry of prepared) { // read: the "before" box and spare overflow room, before any insertion
+      entry.before = entry.button.getBoundingClientRect();
+      entry.spareX = entry.button.scrollWidth - entry.button.clientWidth;
+      entry.spareY = entry.button.scrollHeight - entry.button.clientHeight;
+    }
+    for (const entry of prepared) { // write: insert every holder
+      entry.slot.replaceChildren(entry.holder);
+      entry.slot.setAttribute('data-motif-icon', 'placed');
+      entry.slot.setAttribute('aria-hidden', 'true');
+      armMotif(entry.holder, entry.button);
+    }
+    const check = () => {
+      const live = prepared.filter(entry => entry.holder.isConnected);
+      if (!live.length) return;
+      for (const entry of live) { entry.after = entry.button.getBoundingClientRect(); entry.box = entry.holder.getBoundingClientRect(); } // read
+      // A flex button can hide true overflow by shrinking its other content instead of growing: measure with every
+      // child's shrink neutralised (a same-frame, no-paint probe), then put every value straight back.
+      for (const entry of live) { entry.kids = [...entry.button.children]; entry.shrinks = entry.kids.map(kid => kid.style.flexShrink); entry.kids.forEach(kid => { kid.style.flexShrink = '0'; }); } // write
+      for (const entry of live) entry.overflows = entry.button.scrollWidth - entry.button.clientWidth > Math.max(0, entry.spareX) + 1 || entry.button.scrollHeight - entry.button.clientHeight > Math.max(0, entry.spareY) + 1; // read
+      for (const entry of live) entry.kids.forEach((kid, i) => { kid.style.flexShrink = entry.shrinks[i]; }); // write (restore)
+      for (const entry of live) { // read: price overlap
+        const scope = entry.button.closest('.menu-item,[data-custom-product],[data-pagosya-product],.product-detail__sticky') || entry.button;
+        entry.onPrice = [...scope.querySelectorAll(MOTIF_PRICES)].some(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left < entry.box.right && r.right > entry.box.left && r.top < entry.box.bottom && r.bottom > entry.box.top; });
+      }
+      for (const entry of live) { // write: remove any that wrap, overflow or cover a price
+        if (!entry.after.width) continue; // nothing laid out to measure
+        const wraps = entry.before.height > 0 && entry.after.height > entry.before.height + 1;
+        if (!wraps && !entry.overflows && !entry.onPrice) continue;
+        entry.holder.remove();
+        // Mark terminal (never remove the slot itself, kit-owned or not): a removed slot element would leave no
+        // trace for the KIT_ICON_BUTTONS guard below, so the next unrelated mutation re-inserts and re-removes it
+        // forever (finding 3's icon flash).
+        entry.slot.setAttribute('data-motif-icon', 'removed');
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check); else check();
+  }
+  function placeButtonMotifs(root) {
+    if (packMotif('button') < 0 || !root?.querySelectorAll) return;
+    const entries = [];
+    root.querySelectorAll(KIT_ICON_BUTTONS).forEach(button => {
+      // A disabled button (sold out, or a card the kit marked sold out) never gets a paw (finding 8).
+      if (button.matches(NO_ICON) || button.disabled || button.closest('[data-sold-out],.sold-out') || button.querySelector(':scope > [data-motif-icon]')) return;
+      const slot = document.createElement('span');
+      slot.setAttribute('data-motif-icon', '');
+      slot.setAttribute('data-motif-kit', '');
+      button.insertBefore(slot, button.firstChild);
+      entries.push({ slot, button });
+    });
+    root.querySelectorAll('[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"])').forEach(slot => {
+      // A slot the loop above just created (data-motif-kit) is already queued in entries and still reads
+      // data-motif-icon="" until fillIconSlots's write phase runs below: skip it here, or it would be queued twice.
+      if (slot.closest('template') || slot.hasAttribute('data-motif-kit')) return;
+      const host = slot.closest('button,a,[role="button"]') || slot;
+      // Mark terminal (finding 3): a slot inside an excluded host is never left unmarked to be rescanned forever.
+      if (host.matches(NO_ICON) || host.disabled || host.closest('[data-sold-out],.sold-out')) { slot.setAttribute('data-motif-icon', 'removed'); return; }
+      entries.push({ slot, button: host });
+    });
+    fillIconSlots(entries);
+  }
+  /* The pattern placement: a tile behind a section the store marks data-motif-pattern, never behind or around the kit's
+   * catalog, cart, product or checkout. It is a background image (an SVG data URL; every storefront CSP allows img-src
+   * data:), drawn in the section's own text colour at the highest opacity, at most .12, that keeps it under the contrast
+   * floor: the tile against the background at most 1.35:1, every text in the section still 4.5:1 over it. A section whose
+   * background the page cannot compare (a photo, a gradient, an unknown colour syntax), or whose text is already weaker than
+   * that, gets no pattern. Static: nothing moves. */
+  const PATTERN_EXCLUDED = '[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-product],[data-pagosya-product-page],.cart-drawer,.checkout-review,dialog,template';
+  const PATTERN_TILE_LIMIT = 1.35;
+  // Chromium reports a color-mix() background as color(srgb r g b / a) (0-1 channels), not rgb(): reused by
+  // guardContrast's own parser below (finding 10).
+  const motifRgb = value => {
+    const text = String(value || '').trim();
+    if (!text || text === 'transparent') return [0, 0, 0, 0];
+    const n = (text.match(/-?[\d.]+/g) || []).map(Number);
+    if (n.length < 3) return null;
+    if (/^color\(srgb/i.test(text)) return [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : 1];
+    return /^rgba?\(/i.test(text) ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null;
+  };
+  const motifLuminance = c => [0, 1, 2].map(i => { const v = c[i] / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+  const motifContrast = (a, b) => { const [x, y] = [motifLuminance(a), motifLuminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+  // The real page canvas (guardContrast's own Canvas resolution, reused here): a Canvas keyword resolves dark
+  // under color-scheme: dark, so a translucent backdrop with nothing opaque behind it must not assume white
+  // (finding 10).
+  function motifCanvas() {
+    if (typeof document === 'undefined' || !document.body) return [255, 255, 255, 1];
+    const probe = document.createElement('span');
+    probe.hidden = true; probe.style.color = 'Canvas';
+    document.body.append(probe);
+    const c = motifRgb(getComputedStyle(probe).color);
+    probe.remove();
+    return c && c[3] >= .99 ? c : [255, 255, 255, 1];
+  }
+  const motifOverTile = (colour, strength, base) => [0, 1, 2].map(i => colour[i] * strength + base[i] * (1 - strength));
+  function patternBackdrop(section) {
+    const layers = [];
+    for (let node = section; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+      const colour = motifRgb(style.backgroundColor);
+      if (!colour) return null;
+      if (colour[3] > 0) layers.push(colour);
+      if (colour[3] >= .99) break;
+    }
+    return layers.reverse().reduce((under, top) => [0, 1, 2].map(i => top[i] * top[3] + under[i] * (1 - top[3])), motifCanvas());
+  }
+  function patternAlpha(ink, back, texts) {
+    for (let step = 12; step >= 4; step--) {
+      const alpha = step / 100, tile = [0, 1, 2].map(i => back[i] + (ink[i] - back[i]) * alpha);
+      if (motifContrast(tile, back) <= PATTERN_TILE_LIMIT && texts.every(text => motifContrast(motifOverTile(text.colour, text.strength, tile), tile) >= 4.5)) return alpha;
+    }
+    return 0;
+  }
+  function placePatterns(root) {
+    const index = packMotif('pattern');
+    if (index < 0 || !root?.querySelectorAll) return;
+    const sections = [...(root.matches?.('[data-motif-pattern]') ? [root] : []), ...root.querySelectorAll('[data-motif-pattern]')];
+    for (const section of sections) {
+      const state = section.getAttribute('data-motif-pattern');
+      if (state === 'placed' || state === 'skipped') continue;
+      // Mark terminal (finding 3): a section that wraps the kit's own catalog/cart/etc never becomes placeable, so
+      // it is never left unmarked to be rescanned on every later, unrelated mutation.
+      if (section.closest(PATTERN_EXCLUDED) || section.querySelector(PATTERN_EXCLUDED)) { section.setAttribute('data-motif-pattern', 'skipped'); continue; }
+      const back = patternBackdrop(section), ink = motifRgb(getComputedStyle(section).color);
+      // A text element that (or whose own ancestor up to the section) paints its own opaque background sits on that
+      // colour, not on the tile: a filled badge or button inside a patterned section is not part of this check.
+      const sitsOnTile = el => { for (let node = el; node && node !== section; node = node.parentElement) { const colour = motifRgb(getComputedStyle(node).backgroundColor); if (colour && colour[3] >= .99) return false; } return true; };
+      // Every text in the section is checked (finding 9: no more slice(0,40)), and each one's real, on-tile
+      // strength accounts for its own alpha and any ancestor opacity between it and the section — a semi-transparent
+      // text reads far weaker than its raw ink colour once composited over the tile.
+      const opacityAbove = el => { let factor = 1; for (let node = el; node && node !== section; node = node.parentElement) factor *= parseFloat(getComputedStyle(node).opacity ?? '1') || 0; return factor; };
+      const texts = [section, ...section.querySelectorAll('*')]
+        .filter(el => [...el.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && sitsOnTile(el))
+        .map(el => { const colour = motifRgb(getComputedStyle(el).color); return colour ? { colour, strength: colour[3] * opacityAbove(el) } : null; })
+        .filter(text => text && text.strength > 0);
+      const alpha = back && ink && ink[3] > 0 ? patternAlpha(ink, back, texts) : 0;
+      const drawing = alpha ? motifDrawing(MOTIFS[index].svg) : null;
+      const box = drawing ? (drawing.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number) : [];
+      if (!drawing || box.length !== 4 || !(box[2] > 0 && box[3] > 0)) { section.setAttribute('data-motif-pattern', 'skipped'); continue; }
+      drawing.setAttribute('width', String(box[2]));
+      drawing.setAttribute('height', String(box[3]));
+      drawing.setAttribute('color', `rgb(${ink.slice(0, 3).map(Math.round).join(',')})`);
+      drawing.setAttribute('opacity', String(alpha));
+      section.style.setProperty('--pagosya-pattern', `url("data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(drawing))}")`);
+      section.setAttribute('data-motif-pattern-alpha', String(alpha));
+      section.setAttribute('data-motif-pattern', 'placed');
+    }
+  }
+  /* Divider and sticker placements. An empty element marked data-motif-divider becomes a decorative separator (hairlines
+   * either side of the drawing); an element with content is the store's own and is left alone. A badge marked
+   * data-motif-sticker ("¡Nuevo!") keeps its text; the drawing leads it and comes off a price it would cover. */
+  const markedHosts = (root, attribute) => [...(root.matches?.(`[${attribute}]`) ? [root] : []), ...root.querySelectorAll(`[${attribute}]`)]
+    .filter(host => host.getAttribute(attribute) !== 'placed' && host.getAttribute(attribute) !== 'skipped' && !host.closest('template'));
+  function placeDividers(root) {
+    const index = packMotif('divider');
+    if (index < 0 || !root?.querySelectorAll) return;
+    for (const host of markedHosts(root, 'data-motif-divider')) {
+      // Mark terminal (finding 3): a divider with its own content (or an <hr>, which can hold none) never becomes
+      // placeable, so it is never left unmarked to be rescanned on every later, unrelated mutation.
+      if (/^(?:HR|IMG|INPUT|BR)$/.test(host.tagName) || host.childElementCount || host.textContent.trim()) { host.setAttribute('data-motif-divider', 'skipped'); continue; }
+      const holder = motifSlot(index, 'divider');
+      if (!holder) return;
+      host.append(holder);
+      host.setAttribute('data-motif-divider', 'placed');
+      host.setAttribute('aria-hidden', 'true');
+      if (!host.hasAttribute('role')) host.setAttribute('role', 'presentation');
+      armMotif(holder, host);
+      guardMotif(holder, document.body);
+    }
+  }
+  function placeStickers(root) {
+    const index = packMotif('sticker');
+    if (index < 0 || !root?.querySelectorAll) return;
+    for (const host of markedHosts(root, 'data-motif-sticker')) {
+      const holder = motifSlot(index, 'sticker');
+      if (!holder) return;
+      host.prepend(holder);
+      host.setAttribute('data-motif-sticker', 'placed');
+      armMotif(holder, host);
+      guardMotif(holder, document.body);
+      // A sticker drawn in the store's accent nearly disappears when the accent is close to the badge's own
+      // background (a filled badge painted in the accent colour): fall back to the badge's own text colour, which
+      // is presumably already readable against it (finding 11).
+      const back = patternBackdrop(host), accent = motifRgb(getComputedStyle(holder).color);
+      if (back && accent && accent[3] > 0 && motifContrast(accent, back) < 1.5) holder.style.color = getComputedStyle(host).color;
+    }
+  }
   if (MOTIFS.length) {
     const motifStyle = document.createElement('style');
     motifStyle.dataset.pagosyaKit = 'motifs';
@@ -1561,6 +1810,49 @@
     const cartIndex = MOTIFS.findIndex(motif => motif.placement === 'cart');
     const cartHolder = cartIndex < 0 ? null : motifSlot(cartIndex, 'cart');
     if (cartHolder) { cartDrawer.querySelector('#cart-drawer-title').after(cartHolder); armMotif(cartHolder, cartDrawer); }
+  }
+  /* Pack placements' own rules, written only for a store with a pack: a store without one keeps exactly the styles it had.
+   * Later placements add their rules to this list. */
+  const PACK_CSS = [
+    '.pagosya-motif[data-motif-slot=empty]{display:block!important;width:64px;height:64px;margin:0 0 12px}',
+    '[data-motif-icon=placed]{display:inline-flex;vertical-align:middle;line-height:0}',
+    '[data-motif-icon=placed][data-motif-kit]{margin-inline-end:.45em}',
+    '.pagosya-motif[data-motif-slot=button]{width:1.15em;height:1.15em;color:inherit}',
+    ':root[data-dna-button=split] :is(.product-detail__buy,.product-detail__sticky button)>[data-motif-icon]{display:none}',
+    ':root[data-dna-button=bubbly] .pagosya-motif[data-motif-slot=button]{width:1.35em;height:1.35em}',
+    '[data-motif-pattern=placed]{background-image:var(--pagosya-pattern)!important;background-repeat:repeat!important;background-size:auto!important;background-position:0 0!important}',
+    '[data-motif-divider=placed]{display:flex;align-items:center;gap:16px;margin-block:clamp(16px,4vw,40px);color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}',
+    '[data-motif-divider=placed]::before,[data-motif-divider=placed]::after{content:"";flex:1;height:1px;background:currentColor;opacity:.35}',
+    '.pagosya-motif[data-motif-slot=divider]{width:64px;height:24px}',
+    '[data-motif-sticker=placed]{display:inline-flex;align-items:center;gap:.35em}',
+    '.pagosya-motif[data-motif-slot=sticker]{width:1.7em;height:1.7em}',
+  ];
+  if (PACK_MOTIFS.length) {
+    const packStyle = document.createElement('style');
+    packStyle.dataset.pagosyaKit = 'motif-pack';
+    packStyle.textContent = `@layer pagosya-commerce {\n${PACK_CSS.join('\n')}\n}`;
+    document.head.append(packStyle);
+  }
+  /* Store-marked slots are placed once the page is parsed, and again whenever the store's own scripts (React) add or
+   * replace them. Only a store with a pack observes anything. */
+  const MOTIF_SLOTS = '[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"]),[data-motif-pattern]:not([data-motif-pattern="placed"]):not([data-motif-pattern="skipped"]),[data-motif-divider]:not([data-motif-divider="placed"]):not([data-motif-divider="skipped"]),[data-motif-sticker]:not([data-motif-sticker="placed"])';
+  function placeIdentityMotifs(root) { placeButtonMotifs(root); placePatterns(root); placeDividers(root); placeStickers(root); }
+  if (PACK_MOTIFS.length) {
+    const startIdentity = () => {
+      placeIdentityMotifs(document.body);
+      if (typeof MutationObserver !== 'function') return;
+      new MutationObserver(records => {
+        // Every distinct parent that gained a match in this batch is placed once (finding 2): stopping at the
+        // first match dropped every other host added under a different parent in the same task.
+        const parents = new Set();
+        for (const record of records) for (const node of record.addedNodes) {
+          if (node.nodeType !== 1 || node.classList?.contains('pagosya-motif')) continue;
+          if (node.matches?.(MOTIF_SLOTS) || node.querySelector?.(MOTIF_SLOTS)) parents.add(node.parentElement || node);
+        }
+        for (const parent of parents) placeIdentityMotifs(parent);
+      }).observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) startIdentity(); else document.addEventListener('DOMContentLoaded', startIdentity, { once: true });
   }
   const shoppingStyle = document.createElement('style');
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
@@ -2090,7 +2382,7 @@
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
-      if (MOTIFS.length) placeCardMotifs(el);
+      if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     observeCards();
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
@@ -2306,6 +2598,7 @@
       if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
       const panelTemplate = review ? null : cartTemplate();
       if (panelTemplate) applyCartTemplate(el, !count, panelTemplate);
+      if (!count && PACK_MOTIFS.length) placeEmptyMotif(el);
       if (hosted) secureFields(el, ['shippingAddress', 'creditCode'], 'Tu dirección y tu saldo se piden en el formulario seguro de pagosYa al continuar.');
       if (previewOptions) {
         const note = document.createElement('p'); note.className = 'order-note';
@@ -2470,6 +2763,23 @@
      * forms alike, and the tag notch is dropped so nothing clips the ring. The store's own focus style still wins. */
     `:root[data-dna-button] ${buttons}:focus-visible:not(:disabled){outline:3px solid var(--kit-ink);outline-offset:2px;box-shadow:0 0 0 2px var(--kit-paper),var(--kit-btn-shadow);clip-path:none}`,
   ];
+  /* Per-form details of the T2b forms that a token cannot carry: press, the ticket notches (unmasked on focus), weight,
+   * and the bubbly form's larger pack icon (the icon's base size sits in the lower pagosya-commerce layer). */
+  const TICKET_MASK = 'radial-gradient(circle at 0 50%,#0000 .5em,#000 calc(.5em + .5px)) 0 0/51% 100% no-repeat,radial-gradient(circle at 100% 50%,#0000 .5em,#000 calc(.5em + .5px)) 100% 0/51% 100% no-repeat';
+  const dnaIdentityButtonRules = buttons => [
+    `:root[data-dna-button=sticker] ${buttons}:active:not(:disabled){transform:translate(3px,3px);box-shadow:1px 1px 0 var(--kit-ink)}`,
+    `:root[data-dna-button=ticket] ${buttons}{-webkit-mask:${TICKET_MASK};mask:${TICKET_MASK}}`,
+    `:root[data-dna-button=ticket] ${buttons}:focus-visible:not(:disabled){-webkit-mask:none;mask:none}`,
+    `:root[data-dna-button=bubbly] ${buttons}{font-weight:700}`,
+    `:root[data-dna-button=bubbly] ${buttons}:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 -1px 0 color-mix(in srgb,#000 18%,transparent)}`,
+    `:root[data-dna-button=brutal] ${buttons}{font-weight:800}`,
+    `:root[data-dna-button=brutal] ${buttons}:active:not(:disabled){transform:translate(2px,2px)}`,
+  ];
+  /* Identity frames (T2b): the photos frames apply to, the stamp's perforated edge and the tape's translucent corners. */
+  const FRAMED_PHOTOS = ':is(.menu-item :is(.menu-item__image,.menu-item__image-alt),.order-item__photo)';
+  const STAMP_MASK = 'radial-gradient(4px,#0000 97%,#000) round -6px -6px/12px 12px,linear-gradient(#000 0 0) no-repeat 50%/calc(100% - 12px) calc(100% - 12px)';
+  const TAPE = 'color-mix(in srgb,var(--kit-accent) 40%,transparent)';
+  const TAPE_CORNERS = `linear-gradient(135deg,${TAPE} 0 13px,#0000 13px),linear-gradient(225deg,${TAPE} 0 13px,#0000 13px),linear-gradient(45deg,${TAPE} 0 13px,#0000 13px),linear-gradient(315deg,${TAPE} 0 13px,#0000 13px)`;
   const DNA_CSS = [
     /* Tokens. Colours stay the store's own (--store-*, then --brand-*, then legacy names). */
     `:root{--kit-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));--kit-paper:var(--store-background,var(--brand-background,var(--paper,#fff)));--kit-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--kit-ink))));--kit-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--kit-paper)));--kit-surface:var(--store-surface,var(--brand-surface,color-mix(in srgb,var(--kit-ink) 5%,var(--kit-paper))));--kit-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--kit-ink) 18%,var(--kit-paper))));--kit-radius:var(--store-radius,var(--brand-radius,0px));--kit-radius-panel:var(--kit-radius);--kit-border:1px;--kit-photo-radius:var(--kit-radius);--kit-photo-pad:0px;--kit-photo-bg:transparent;--kit-photo-shadow:none;--kit-ease:var(--motion-ease-settle,cubic-bezier(.23,1,.32,1))}`,
@@ -2489,6 +2799,11 @@
     ':root[data-dna-frame=rounded]{--kit-photo-radius:18px;--kit-photo-pad:0px}',
     ':root[data-dna-frame=arch]{--kit-photo-radius:999px 999px 8px 8px / 42% 42% 8px 8px;--kit-photo-pad:0px}',
     ':root[data-dna-frame=polaroid]{--kit-photo-radius:2px;--kit-photo-pad:6px 6px 22px;--kit-photo-bg:#fff;--kit-photo-shadow:0 6px 18px -8px #0006}',
+    ':root[data-dna-frame=blob]{--kit-photo-radius:58% 42% 55% 45% / 45% 55% 45% 55%;--kit-photo-pad:0px}',
+    // A pad mixed toward white nearly vanishes against a light palette (finding 6): --kit-surface already reads as a
+    // distinct tint against --kit-paper on any palette, and a hairline ring keeps the perforated edge legible too.
+    ':root[data-dna-frame=stamp]{--kit-photo-radius:0px;--kit-photo-pad:8px;--kit-photo-bg:var(--kit-surface);--kit-photo-shadow:inset 0 0 0 1px var(--kit-line)}',
+    ':root[data-dna-frame=tape]{--kit-photo-radius:2px;--kit-photo-pad:8px;--kit-photo-bg:color-mix(in srgb,var(--kit-paper) 82%,#fff);--kit-photo-shadow:0 6px 16px -10px #0007}',
     /* Button forms. Filled forms use the store's accent pair; open forms take currentColor, so they read on any card. */
     dnaForm('pill', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:999px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.7em 1.6em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
     dnaForm('block', '--kit-btn-invert-bg:var(--kit-paper);--kit-btn-invert-fg:var(--kit-ink);--kit-btn-radius:0px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-ink);--kit-btn-fg:var(--kit-paper);--kit-btn-case:uppercase;--kit-btn-tracking:.09em;--kit-btn-pad:.9em 1.5em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
@@ -2498,12 +2813,19 @@
     dnaForm('outline', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:var(--kit-radius);--kit-btn-border:1.5px solid currentColor;--kit-btn-bg:transparent;--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.7em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
     dnaForm('ghost', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:var(--kit-radius);--kit-btn-border:0 solid transparent;--kit-btn-bg:color-mix(in srgb,currentColor 11%,transparent);--kit-btn-fg:inherit;--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.75em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
     dnaForm('split', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:var(--kit-radius);--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.75em 1.2em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    /* Identity libraries (T2b). Sticker: an offset hard shadow in the ink. Ticket: notched ends (a mask, dropped on focus so
+     * the ring shows). Bubbly: soft and round with a shaded lip; the pack icon shows a little larger. Brutal: thick ink
+     * border on flat accent. All four fill with the store's accent pair, so a pay button reads the way pill does. */
+    dnaForm('sticker', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:min(var(--kit-radius),12px);--kit-btn-border:2px solid var(--kit-ink);--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:var(--kit-type-case,none);--kit-btn-caps:var(--kit-type-caps,normal);--kit-btn-tracking:var(--kit-type-tracking,0);--kit-btn-pad:.7em 1.5em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:4px 4px 0 var(--kit-ink)'),
+    dnaForm('ticket', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:4px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:uppercase;--kit-btn-tracking:.08em;--kit-btn-pad:.75em 1.8em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
+    dnaForm('bubbly', '--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent);--kit-btn-radius:999px;--kit-btn-border:0 solid transparent;--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:none;--kit-btn-tracking:.01em;--kit-btn-pad:.8em 1.7em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:inset 0 -3px 0 color-mix(in srgb,#000 18%,transparent),0 6px 14px -8px color-mix(in srgb,var(--kit-accent) 70%,transparent)'),
+    dnaForm('brutal', '--kit-btn-invert-bg:var(--kit-ink);--kit-btn-invert-fg:var(--kit-paper);--kit-btn-radius:0px;--kit-btn-border:3px solid var(--kit-ink);--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-case:uppercase;--kit-btn-tracking:.04em;--kit-btn-pad:.75em 1.4em;--kit-btn-decor:none;--kit-btn-clip:none;--kit-btn-shadow:0 0 #0000'),
     /* Open forms keep a primary pay, checkout or buy button filled with the store's accent pair: it must read as the next step. */
     ':root:is([data-dna-button=underline],[data-dna-button=ghost],[data-dna-button=outline],[data-dna-button=stamp]) :where(.checkout-button,.product-detail__sticky button){--kit-btn-bg:var(--kit-accent);--kit-btn-fg:var(--kit-on-accent);--kit-btn-invert-bg:var(--kit-on-accent);--kit-btn-invert-fg:var(--kit-accent)}',
     /* Split: the price (or the arrow) sits in its own cell. */
     ':root[data-dna-button=split] .checkout-button{display:flex;justify-content:space-between;gap:0}',
     ':root[data-dna-button=split] .checkout-button>svg{box-sizing:content-box;padding-left:1em;margin-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}',
-    ...dnaButtonRules(KIT_BUTTONS, KIT_STEPPERS),
+    ...dnaButtonRules(KIT_BUTTONS, KIT_STEPPERS), ...dnaIdentityButtonRules(KIT_BUTTONS),
     ':root[data-dna-press=squash]{--kit-press:scale(.97,.9)}:root[data-dna-press=sink]{--kit-press:translateY(2px)}:root[data-dna-press=pop]{--kit-press:scale(1.06)}:root[data-dna-press=none]{--kit-press:translate(0)}',
     /* Cart: right drawer (today's place, restyled), bottom sheet, full page or centred card. */
     ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}:root[data-dna-cart] .cart-drawer__grip{display:none}',
@@ -2552,7 +2874,10 @@
     '@container(max-width:700px){:root[data-dna-review] .checkout-review{grid-template-columns:minmax(0,1fr)}:root[data-dna-review] :is(.checkout-review__summary,.checkout-review__fields){grid-column:auto;grid-row:auto;position:static}}',
     /* Catalog cards: framing, and how the card previews the product (hover, keyboard focus, long press on touch). */
     ':root[data-dna-frame=bleed]{--kit-photo-round:min(var(--kit-radius),28px)}:root[data-dna-frame=inset]{--kit-photo-round:min(var(--kit-radius),24px)}:root[data-dna-frame=rounded]{--kit-photo-round:18px}:root[data-dna-frame=arch]{--kit-photo-round:50% 50% 8px 8px / 42% 42% 8px 8px}:root[data-dna-frame=polaroid]{--kit-photo-round:2px}',
+    ':root[data-dna-frame=blob]{--kit-photo-round:58% 42% 55% 45% / 45% 55% 45% 55%}:root[data-dna-frame=stamp]{--kit-photo-round:0px}:root[data-dna-frame=tape]{--kit-photo-round:2px}',
     ':root[data-dna-frame] .menu-item :is(.menu-item__image,.menu-item__image-alt){box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background-color:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
+    `:root[data-dna-frame=stamp] ${FRAMED_PHOTOS}{-webkit-mask:${STAMP_MASK};mask:${STAMP_MASK}}`,
+    `:root[data-dna-frame=tape] ${FRAMED_PHOTOS}{background-image:${TAPE_CORNERS};background-repeat:no-repeat;background-size:30px 30px;background-position:0 0,100% 0,0 100%,100% 100%}`,
     ':root[data-dna-card=second-photo] .menu-item__image-alt{position:absolute;z-index:0;top:0;left:0;width:100%;height:auto;object-fit:cover;opacity:0;pointer-events:none;transition:opacity var(--motion-base,320ms) var(--kit-ease)}',
     '@media(hover:hover){:root[data-dna-card=second-photo] .menu-item:hover .menu-item__image-alt{opacity:1}}:root[data-dna-card=second-photo] .menu-item:is(:focus-within,[data-previewing]) .menu-item__image-alt{opacity:1}',
     ':root[data-dna-card=swatch-swap] .menu-item__swatches{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0}',
@@ -2568,7 +2893,7 @@
   ];
   const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added,:root[data-dna-card] .menu-item,:root[data-dna-card] .menu-item :is(.menu-item__image,.menu-item__image-alt,.menu-item__quick-look){transition:none}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:none}}`;
   const DNA_PAGE_CSS = [
-    ...dnaButtonRules(PAGE_BUTTONS, PAGE_STEPPERS),
+    ...dnaButtonRules(PAGE_BUTTONS, PAGE_STEPPERS), ...dnaIdentityButtonRules(PAGE_BUTTONS),
     ':root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy{display:flex;justify-content:space-between;gap:0}',
     '@media(min-width:481px){:root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy-total:not(:empty){display:inline-block;margin-left:1em;padding-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}:root[data-dna-button=split] [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:none}}',
   ];

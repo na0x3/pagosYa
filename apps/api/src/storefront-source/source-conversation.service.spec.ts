@@ -305,6 +305,33 @@ describe('Source conversation interpretation', () => {
     await expect(service.decide('merchant',input())).rejects.toThrow('2 MB');
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it('offers every Plantilla by id in the instructions and requires the template fields', async () => {
+    const { service } = setup();
+    respond({ ...reply(), startFrom: 'template', templates: [{ id: 'tostado', reason: 'Café de especialidad' }], chosenTemplateId: '', rework: false });
+    const result = await service.decide('merchant', { ...input(), offeredTemplates: [{ id: 'miga', name: 'Miga' }] });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.instructions).toContain('- tostado: Tostado');
+    expect(body.text.format.schema.required).toEqual(expect.arrayContaining(['startFrom', 'templates', 'chosenTemplateId', 'rework']));
+    expect(body.text.format.schema.properties.chosenTemplateId.enum).toEqual(expect.arrayContaining(['tostado', '']));
+    expect(JSON.parse(body.input[0].content[2].text).offeredTemplates).toEqual([{ id: 'miga', name: 'Miga' }]);
+    expect(result).toMatchObject({ startFrom: 'template', templates: [{ id: 'tostado', reason: 'Café de especialidad' }], chosenTemplateId: '', rework: false });
+  });
+
+  it('knows which Plantilla the store started from and its look, so a new style can be recognised as a rework', async () => {
+    const { service } = setup();
+    respond({ ...reply(), startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
+    const startedFrom = { id: 'pausa', name: 'Pausa', description: 'Estudio de pilates: tonos cálidos, arcos suaves', untouched: true };
+    await service.decide('merchant', { ...input(), startedFromTemplate: startedFrom });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(JSON.parse(body.input[0].content[2].text).startedFromTemplate).toEqual(startedFrom);
+    expect(body.instructions).toContain('startedFromTemplate');
+  });
+
+  it('defaults the template fields when a provider omits or garbles them', async () => {
+    const { service } = setup();
+    respond({ ...reply(), startFrom: 'maybe', templates: 'tostado', rework: 'yes' });
+    expect(await service.decide('merchant', input())).toMatchObject({ startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: false });
+  });
 });
 
 

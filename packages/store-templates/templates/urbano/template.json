@@ -1,0 +1,66 @@
+{
+  "id": "urbano",
+  "name": "Urbano",
+  "category": "moda",
+  "description": "Streetwear y drops: negro, concreto y naranja neón, mayúsculas enormes y etiquetas en mono.",
+  "tags": [
+    "streetwear",
+    "urbano",
+    "oscuro",
+    "lanzamientos"
+  ],
+  "sitePurpose": "shop",
+  "order": 80,
+  "dna": {
+    "display": "big-shoulders-display",
+    "text": "space-mono",
+    "case": "upper",
+    "radius": "none",
+    "border": "bold",
+    "button": "brutal",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "sheet",
+    "added": "ribbon",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "look1",
+      "role": "lifestyle",
+      "demo": "look1.jpg"
+    },
+    {
+      "slot": "look2",
+      "role": "lifestyle",
+      "demo": "look2.jpg"
+    },
+    {
+      "slot": "look3",
+      "role": "detail",
+      "demo": "look3.jpg"
+    }
+  ]
+}

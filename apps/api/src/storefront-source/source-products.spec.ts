@@ -69,6 +69,16 @@ describe('harmless price slips', () => {
 describe('product changes are bound to the products and fields the merchant named (audit F2)', () => {
   const catalog = [{ id: 'a', name: 'Café' }, { id: 'b', name: 'Té de coca' }, { id: 'c', name: 'Funda de cojín' }, { id: 'd', name: 'Funda de sofá' }];
   const op = (productId: string, fields: Record<string, unknown> = {}, action = 'update') => ({ action, productId, name: null, description: null, amount: null, currency: null, priceText: null, imageUrls: null, imagePositions: null, tags: null, stock: null, color: null, ...fields });
+  it('during a generation, drops the operations nobody asked for instead of failing the whole attempt', () => {
+    const lenient = { dropUnrequested: true };
+    // No product request at all (a design request, or creating the store): every operation is ignored.
+    expect(requestedSourceProductOperations([op('a', { description: 'Tostado' })], 'Haz la tienda más cálida', catalog, new Set(), lenient)).toEqual([]);
+    // A request that names Café: the stray change to Té de coca is dropped, Café's goes through.
+    expect(requestedSourceProductOperations([op('a', { description: 'Tostado medio' }), op('b', { description: 'Otro' })], 'Cambia la descripción del producto Café: tostado medio', catalog, new Set(), lenient))
+      .toEqual([expect.objectContaining({ action: 'update', productId: 'a' })]);
+    // Asked for a change but only the wrong product came back: still an error the retry must fix.
+    expect(() => requestedSourceProductOperations([op('b', {}, 'delete')], 'Elimina el producto Café', catalog, new Set(), lenient)).toThrow('Nombra el producto');
+  });
   it('rejects deleting a product other than the one the merchant asked to delete', () => {
     expect(() => requestedSourceProductOperations([op('b', {}, 'delete')], 'Elimina el producto Café', catalog, new Set())).toThrow('Nombra el producto');
     expect(requestedSourceProductOperations([op('a', {}, 'delete')], 'Elimina el producto Café', catalog, new Set())).toEqual([{ action: 'delete', productId: 'a' }]);

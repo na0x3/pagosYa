@@ -12,6 +12,10 @@ export type SourceSetupDraft = {
   discoveryReplies?: number;
   websiteReferences?: SourceWebsiteReference[];
   pendingCatalogRequest?: string;
+  /** The merchant's answer to the template question, kept across turns (spec 2026-09-26). */
+  startFrom?: 'template' | 'scratch';
+  /** The design direction chosen for a from-scratch build (sub-project 2), reused if that build is retried. */
+  directionId?: string;
 };
 export const newSourceSetup = (): SourceSetupDraft => ({ step: 'conversation', answers: {}, assetUrls: [], imageUses: [] });
 

@@ -221,3 +221,67 @@ body.is-logged-in .store-settings-actions button { width: auto; min-width: max-c
 
   body.is-logged-in:not([data-dashboard-view="workspace"]):not([data-dashboard-view="products"]):not([data-dashboard-view="store-settings"]) .workspace-yapi { left:calc(50% + 24px); width:calc(100% - 72px); }
 }
+.store-templates-page .store-resource-frame { height: calc(100dvh - 170px); min-height: 620px; }
+
+/* The login's navy mesh (src/login-shader.mjs) sits behind every signed-in page; the CSS gradient shows until WebGL paints, or without it. */
+.dashboard-backdrop { display: none; }
+body.is-logged-in .dashboard-backdrop { display: block; position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  background: radial-gradient(70% 60% at 92% 96%, hsl(198 85% 72% / .85), transparent 70%), radial-gradient(60% 55% at 70% 80%, hsl(210 70% 24%), transparent 75%), hsl(222 70% 7%); }
+.dashboard-backdrop canvas { display: block; width: 100%; height: 100%; }
+html:has(> body.is-logged-in) { background: hsl(222 70% 7%); color-scheme: dark; }
+/* Dark glass over the gradient: surfaces are translucent navy, text is light; the yellow brand stays for actions. */
+body.is-logged-in {
+  color-scheme: dark; background: transparent; color: var(--pg-text);
+  --pg-bg: hsl(222 45% 7% / .72); --pg-surface: hsl(222 42% 9% / .66);
+  --pg-text: #f1f2f4; --pg-text-muted: #aeb5c3; --pg-text-faint: #939bab;
+  --pg-border: #ffffff1f; --pg-border-strong: #ffffff3d; --bento-keyline: #ffffff29;
+  --bento-card: var(--pg-surface); --bento-paper: #ffffff0d; --bento-ink: #f1f2f4;
+  --pg-accent: #c4b5fd; --pg-accent-soft: #ffffff14;
+  --pg-success: #7ee2ab; --pg-success-soft: #7ee2ab1f; --pg-warning: #f5c86a; --pg-warning-soft: #f5c86a1f; --pg-error: #ff9b91; --pg-error-soft: #ff9b911f;
+  --pg-shadow: 0 18px 40px -24px #000; --bento-shadow-sm: none; --bento-shadow-md: none; --bento-shadow-lg: 0 18px 40px -24px #000;
+  --pg-focus-ring: #f3f36b59; --pg-retro-grid: transparent; --pg-retro-glow: transparent; --pg-retro-shade: transparent;
+}
+body.is-logged-in :is(.panel,.card) { -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15); }
+body.is-logged-in :is(input,select,textarea) { background-color: #ffffff0d; color: var(--pg-text); border-color: var(--pg-border-strong); }
+body.is-logged-in :is(input,textarea)::placeholder { color: var(--pg-text-faint); }
+body.is-logged-in > .topbar, body.is-logged-in[data-dashboard-view="workspace"] > .topbar { border-bottom-color: #ffffff14; background: rgb(17 17 17 / .6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+body.is-logged-in .workspace-title { color: #fff; }
+body.is-logged-in .workspace-description { color: #ffffffbf; }
+body.is-logged-in .workspace-yapi { background: rgb(17 17 17 / .78); border-color: #ffffff29; color: var(--pg-text); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+
+/* Near-black rail. */
+body.is-logged-in .dashboard-sidebar { border-right: 1px solid #ffffff14; background: #111; color: #ededea; }
+body.is-logged-in .dashboard-nav { border-top-color: #ffffff1a; }
+body.is-logged-in .dashboard-nav-button { color: #ededea; }
+body.is-logged-in .dashboard-nav-button:hover { background: #ffffff12; color: #fff; }
+body.is-logged-in .dashboard-nav-group > .dashboard-nav-button:not(.dashboard-nav-summary) { color: #a3a39c; }
+body.is-logged-in .dashboard-nav-button[aria-current="page"],
+body.is-logged-in .dashboard-nav-group > .dashboard-nav-button:not(.dashboard-nav-summary)[aria-current="page"] { background: #ffffff1a; color: #fff; border-color: #ffffff24; }
+body.is-logged-in .dashboard-nav-button:focus-visible { outline: 2px solid var(--pg-brand); outline-offset: 2px; }
+body.is-logged-in .ai-setup-launch { background: #ffffff12; color: var(--pg-brand); border-color: #ffffff24; }
+body.is-logged-in .ai-setup-launch:hover { background: #ffffff1f; }
+
+/* Dark-theme details: raised controls are a lighter glass; sheets stay opaque; bright poster cards keep dark ink. */
+body.is-logged-in { --pg-surface-raised: #ffffff0f; }
+body.is-logged-in :is(.cobros-view, .proposals-view, .proposal-sheet-layer, .contracts-view, .contract-sheet-layer) {
+  --cobro-soft: #ffffff0d; --prop-soft: #ffffff0d; --prop-ai: #c4b5fd; --prop-ai-soft: #c4b5fd1f;
+  --con-ink: #f1f2f4; --con-good: #7ee2ab; --con-good-soft: #7ee2ab1f; --con-paper: #ffffff0d;
+}
+body.is-logged-in :is(.cobro-sheet, .proposal-sheet, .contract-sheet) { background: hsl(222 38% 10%); }
+body.is-logged-in :is(.cobro-sheet-head, .cobro-sheet-foot, .proposal-sheet-head, .proposal-sheet-foot) { background: hsl(222 34% 13%); }
+body.is-logged-in :is(.card:nth-child(3n+1), .dashboard-workspace > .cards > .card:nth-child(1), .charge-links-banner) { --pg-text: #20211e; --pg-text-muted: #45463f; --pg-text-faint: #45463f; --bento-ink: #20211e; color: #20211e; }
+body.is-logged-in .charge-links-routes a { background: #ffffffd9; }
+body.is-logged-in :is(.growth-skeleton, .cobros-skeleton, .proposals-skeleton) span { background: linear-gradient(90deg, #ffffff0a, #ffffff1a, #ffffff0a); background-size: 200% 100%; }
+body.is-logged-in .dashboard-nav-button[aria-current="page"] .dashboard-nav-icon { color: var(--pg-brand); }
+body.is-logged-in :is(.proposals-steps span, .contract-step-number, .cobro-step legend span) { color: #20211e; }
+/* Growth on the dark glass: its soft fills and status colours come from the dark palette, and the "ink badge" pieces
+   (active period, step numbers, undo bar) flip to white chips with navy ink instead of reusing the now-light text colour. */
+body.is-logged-in .growth-view { --g-soft: #ffffff14; --g-good: #7ee2ab; --g-good-soft: #7ee2ab1f; --g-bad: #ffb47a; --g-bad-soft: #ffb47a1f; --g-urgent: #ff9b91; --g-urgent-soft: #ff9b911f; }
+body.is-logged-in .growth-period button[aria-pressed="true"],
+body.is-logged-in .growth-step-number { background: #fff; color: hsl(222 70% 10%); }
+body.is-logged-in .growth-onboarding li.is-done .growth-step-number { background: var(--g-good); color: hsl(222 70% 10%); }
+body.is-logged-in .growth-onboarding li { background: #ffffff0d; border-color: var(--pg-border); }
+body.is-logged-in .growth-onboarding li.is-done { border-color: #7ee2ab59; }
+body.is-logged-in .growth-undo { background: #ffffff1a; color: var(--pg-text); }
+/* A checked source option turns yellow: its text keeps dark ink. */
+body.is-logged-in .debt-source-option:has(input:checked) { color: #20211e; }

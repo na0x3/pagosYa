@@ -1,0 +1,61 @@
+{
+  "id": "huella",
+  "name": "Huella",
+  "category": "mascotas",
+  "description": "Mascotas: mandarina y azul marino, huellitas, compra por perro o gato y consejos útiles.",
+  "tags": [
+    "mascotas",
+    "perros",
+    "gatos",
+    "alegre"
+  ],
+  "sitePurpose": "shop",
+  "order": 150,
+  "dna": {
+    "display": "rubik",
+    "text": "nunito",
+    "case": "none",
+    "radius": "round",
+    "border": "none",
+    "button": "bubbly",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "perros",
+      "role": "lifestyle",
+      "demo": "perros.jpg"
+    },
+    {
+      "slot": "gatos",
+      "role": "lifestyle",
+      "demo": "gatos.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    }
+  ]
+}

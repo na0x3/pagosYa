@@ -1,0 +1,66 @@
+{
+  "id": "leaves",
+  "version": 1,
+  "name": "Hojas y brotes",
+  "topics": {
+    "es": [
+      "planta",
+      "plantas",
+      "hoja",
+      "vivero",
+      "jardín",
+      "huerto",
+      "natural"
+    ],
+    "en": [
+      "plant",
+      "plants",
+      "leaf",
+      "nursery",
+      "garden",
+      "green"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}

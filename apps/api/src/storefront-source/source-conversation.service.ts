@@ -1,3 +1,4 @@
+import { listTemplates } from '@pagosya/store-templates';
 import { sourceSitePurpose, sourceSitePurposePrompt } from './source-site-purpose';
 import { sourceWebsiteReferenceContext, sourceWebsiteReferenceCaptures } from './source-website-reference';
 import { STORE_KNOWLEDGE_RULES, type StoreKnowledge } from '../store-knowledge/store-knowledge';
@@ -33,6 +34,11 @@ export type SourceConversationDecision = {
   summary: string;
   generationInstruction: string;
   imageUses: SourceImageUse[];
+  /** YAPI from Plantillas (spec 2026-09-26): set by decide(); optional so older callers and fixtures stay valid. */
+  startFrom?: 'template' | 'scratch' | 'unknown';
+  templates?: Array<{ id: string; reason: string }>;
+  chosenTemplateId?: string;
+  rework?: boolean;
 };
 type ConversationInput = {
   catalog?: unknown[];
@@ -41,6 +47,8 @@ type ConversationInput = {
   model?: SourceModelChoice;
   budget?: SourceRequestBudget;
   site?: ReturnType<typeof sourceSiteContext>;
+  /** The Plantilla the store's design came from, its look, and whether the merchant has changed it since. */
+  startedFromTemplate?: { id: string; name: string; description: string; untouched: boolean } | null;
   instruction: string;
   buildNow: boolean;
   productPhoto?: boolean;
@@ -51,12 +59,22 @@ type ConversationInput = {
   assetUrls: string[];
   /** Failed/warning rows from the editor's browser check, as shown to the merchant beside the chat. */
   browserReview?: string[];
+  /** The Plantilla cards on YAPI's latest message, so "la segunda" resolves to an id. */
+  offeredTemplates?: Array<{ id: string; name: string }>;
 };
 
 const imageRoles = ['logo', 'product', 'business', 'background', 'team', 'reference', 'unknown', 'unused'];
+const templateIds = listTemplates().map(template => template.id);
+/** The same for every merchant, so it sits in the cached instructions. */
+export const SOURCE_TEMPLATE_CATALOG = `Plantillas: complete designer-made shops a NEW shop can start from. Exact ids:
+${listTemplates().map(template => `- ${template.id}: ${template.name} (${template.category}; ${template.tags.join(', ')}) — ${template.description}`).join('\n')}
+startFrom: for a new shop, "template" when the merchant wants to start from a Plantilla or leaves the choice to you, "scratch" when they ask for a design from scratch ("desde cero", "algo propio"), otherwise "unknown".
+templates: when action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
+chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".
+rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template (startedFromTemplate in the context, with that template's look) settles on a visual direction or style different from that look (for example "moderna y clínica" on Pausa, a warm natural pilates template); otherwise false.`;
 const decisionSchema = {
   type: 'object', additionalProperties: false,
-  required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses'],
+  required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework'],
   properties: {
     action: { type: 'string', enum: ['reply', 'generate'] },
     reply: { type: 'string' }, summary: { type: 'string' }, generationInstruction: { type: 'string' },
@@ -64,6 +82,13 @@ const decisionSchema = {
       type: 'object', additionalProperties: false, required: ['url', 'role', 'description'],
       properties: { url: { type: 'string' }, role: { type: 'string', enum: imageRoles }, description: { type: 'string' } },
     } },
+    startFrom: { type: 'string', enum: ['template', 'scratch', 'unknown'] },
+    templates: { type: 'array', maxItems: 3, items: {
+      type: 'object', additionalProperties: false, required: ['id', 'reason'],
+      properties: { id: { type: 'string', enum: templateIds }, reason: { type: 'string' } },
+    } },
+    chosenTemplateId: { type: 'string', enum: [...templateIds, ''] },
+    rework: { type: 'boolean' },
   },
 };
 
@@ -141,7 +166,9 @@ export class SourceConversationService {
       businessKnowledge: input.knowledge || null,
       websiteReferences: sourceWebsiteReferenceContext(input.draft.websiteReferences || []),
       existingSite: input.site || null,
+      startedFromTemplate: input.startedFromTemplate || null,
       browserReview: input.browserReview || [],
+      offeredTemplates: input.offeredTemplates || [],
     };
     // Constrain returned annotations to this request's owned batch, not old
     // uploads that appear in conversational history.
@@ -162,7 +189,7 @@ export class SourceConversationService {
     const signal = AbortSignal.timeout(SOURCE_CONVERSATION_TIMEOUT_MS);
     for (let attempt = 0; attempt < 2; attempt++) {
       const estimatedInput = 2500 + Math.ceil((SOURCE_CONVERSATION_INSTRUCTIONS.length + JSON.stringify(context).length + JSON.stringify(confirmedBrand).length + JSON.stringify(schema).length) / 2) + (inspect.filter(url => !sourceVideo(url)).length + referenceCaptures.length) * 3000;
-      const instructions = SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + '\n' + sourceSitePurposePrompt(sourceSitePurpose(input.draft)) + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : '');
+      const instructions = SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + '\n' + SOURCE_TEMPLATE_CATALOG + '\n' + sourceSitePurposePrompt(sourceSitePurpose(input.draft)) + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : '');
       const allocation = input.budget?.reserve(model, estimatedInput, 5000);
       const started = Date.now(); let responseBody: any = null; let status = 'FAILED';
       let httpStatus: number | undefined, requestId: string | undefined, diagnostic: ConversationDiagnostic | undefined;
@@ -204,6 +231,12 @@ export class SourceConversationService {
         const uses = new Map(input.draft.imageUses.filter(use => allowed.has(use.url)).map(use => [use.url, use]));
         for (const use of decision.imageUses) uses.set(use.url, use);
         decision.imageUses = urls.map(url => uses.get(url) || { url, role: 'unknown', description: '' });
+        // Template intent degrades to "not said"; it never fails the conversation.
+        decision.startFrom = decision.startFrom === 'template' || decision.startFrom === 'scratch' ? decision.startFrom : 'unknown';
+        decision.templates = Array.isArray(decision.templates) ? decision.templates
+          .filter(item => item && typeof item.id === 'string' && typeof item.reason === 'string').slice(0, 3) : [];
+        decision.chosenTemplateId = typeof decision.chosenTemplateId === 'string' ? decision.chosenTemplateId : '';
+        decision.rework = decision.rework === true;
         status = 'COMPLETED';
         return decision;
       } catch (error) {

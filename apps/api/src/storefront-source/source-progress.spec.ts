@@ -23,3 +23,24 @@ it('does not let unavailable progress storage fail a build', async () => {
   await workflow.finish('failed');
   expect(workflow.value.steps.at(-1)?.status).toBe('failed');
 });
+
+describe('agent step details', () => {
+  it('attach to the running step and keep only the last eight thumbnails', async () => {
+    const saved: any[] = [];
+    const progress = createSourceProgress(async value => saved.push(value));
+    await progress.report('building');
+    for (let i = 0; i < 10; i++) await progress.report.detail!({ label: `Tomó una captura (${i})`, thumbnail: 'data:image/jpeg;base64,AAAA' });
+    const details = progress.value.steps[0].details!;
+    expect(details).toHaveLength(10);
+    expect(details.filter(d => d.thumbnail)).toHaveLength(8);
+    expect(details[0].thumbnail).toBeUndefined();
+    expect(saved.at(-1).steps[0].details).toHaveLength(10);
+  });
+  it('are ignored once the work has finished', async () => {
+    const progress = createSourceProgress(async () => undefined);
+    await progress.report('building');
+    await progress.finish('completed');
+    await progress.report.detail!({ label: 'tarde' });
+    expect(progress.value.steps[0].details).toBeUndefined();
+  });
+});

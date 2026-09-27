@@ -110,3 +110,18 @@ describe("ApiKeyService lifecycle", () => {
     }));
   });
 });
+
+describe("MCP keys", () => {
+  it("issues mk_live_ keys that verify only as MCP keys", async () => {
+    const prisma = prismaMock();
+    let stored: any;
+    prisma.apiKey.create.mockImplementation(async ({ data }: any) => { stored = { id: "k1", createdAt: new Date(), revokedAt: null, ...data }; return stored; });
+    const service = new ApiKeyService(prisma as any);
+    const issued = await service.issue("merchant_1", ApiKeyType.MCP, ApiKeyMode.LIVE, "Claude");
+    expect(issued.fullKey).toMatch(/^mk_live_[0-9A-Za-z]{32}$/);
+    prisma.apiKey.findMany.mockImplementation(async ({ where }: any) => (where.type === ApiKeyType.MCP && where.keyPrefix === stored.keyPrefix ? [{ ...stored, merchant: { id: "merchant_1" } }] : []));
+    await expect(service.verify(issued.fullKey, ApiKeyType.MCP)).resolves.toMatchObject({ id: "k1" });
+    await expect(service.verify(issued.fullKey, ApiKeyType.SECRET)).resolves.toBeNull();
+    await expect(service.verify("sk_live_" + "a".repeat(32), ApiKeyType.MCP)).resolves.toBeNull();
+  });
+});

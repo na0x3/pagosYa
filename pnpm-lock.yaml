@@ -50,6 +50,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.864.0
         version: 3.1106.0
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.0
+        version: 1.30.0(supports-color@10.2.2)(zod@3.25.76)
       '@nest-lab/throttler-storage-redis':
         specifier: 1.2.0
         version: 1.2.0(@nestjs/common@11.2.1(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@11.2.1)(@nestjs/throttler@6.5.0(@nestjs/common@11.2.1(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@11.2.1)(reflect-metadata@0.2.2))(ioredis@5.7.0(supports-color@10.2.2))(reflect-metadata@0.2.2)
@@ -77,6 +80,9 @@ importers:
       '@pagosya/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@pagosya/store-templates':
+        specifier: workspace:*
+        version: link:../../packages/store-templates
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
@@ -164,6 +170,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.24
@@ -394,9 +403,18 @@ importers:
 
   apps/merchant-dashboard:
     dependencies:
+      '@pagosya/blob-characters':
+        specifier: workspace:*
+        version: link:../../packages/blob-characters
       '@pagosya/variant-editor':
         specifier: workspace:*
         version: link:../../packages/variant-editor
+      '@paper-design/shaders':
+        specifier: 0.0.81
+        version: 0.0.81
+      blobatar:
+        specifier: 2.7.0
+        version: 2.7.0(react@19.2.6)
     devDependencies:
       '@pagosya/storefront-kit':
         specifier: workspace:*
@@ -419,6 +437,9 @@ importers:
       '@pagosya/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@pagosya/store-templates':
+        specifier: workspace:*
+        version: link:../../packages/store-templates
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
@@ -448,6 +469,19 @@ importers:
         specifier: ^1.55.0
         version: 1.62.1
 
+  packages/blob-characters:
+    dependencies:
+      blobatar:
+        specifier: 2.7.0
+        version: 2.7.0(react@19.2.6)
+    devDependencies:
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1(supports-color@10.2.2)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   packages/sdk-node:
     dependencies:
       '@pagosya/shared-types':
@@ -466,6 +500,8 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+
+  packages/store-templates: {}
 
   packages/storefront-kit:
     devDependencies:
@@ -2649,6 +2685,9 @@ packages:
   '@oxc-project/types@0.130.0':
     resolution: {integrity: sha512-ibD2usx9JRu7f5pu2tMKMI4cpA4NgXJQoYRP4pQ7Pxmn1l6k/53qWtQWZayhYy3X4QZkt90Ot+mJEaeXouio6Q==}
 
+  '@paper-design/shaders@0.0.81':
+    resolution: {integrity: sha512-jeGdyjMscZ2bxmQdo8lhwUufHUf4iq3s1ayjh8PXU7Go42Rw8E3I0It1FZdc3HuWt5J82m//DRWaxsRqRfA4Gg==}
+
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
 
@@ -4032,6 +4071,17 @@ packages:
   blake3-wasm@2.1.5:
     resolution: {integrity: sha512-F1+K8EbfOZE49dtoPtmxUQrpXaBIl3ICvasLh+nJta0xkz+9kF/7uet9fLnwKqhDrmj6g+6K3Tw9yQPUg2ka5g==}
 
+  blobatar@2.7.0:
+    resolution: {integrity: sha512-tL1p2J3dXE/Z9U/ITwHqU7HBHmTH+Am+hif1J1hWAhvFT1VYC2HG+eXtN7081yuY+L2lrp9bs/VaF7dVH3S2jw==}
+    peerDependencies:
+      react: '>=18'
+      vue: '>=3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      vue:
+        optional: true
+
   body-parser@1.20.6:
     resolution: {integrity: sha512-p5tAzS57i5MV9fZFDj9LeIiTZEufbSe2eDozP+ElheSUq1m74CRq1jI4mYNDdVs9vQztXFLuk/Gd6BWTdwRJ5g==}
     engines: {node: '>= 0.8', npm: 1.2.8000 || >= 1.4.16}
@@ -4333,10 +4383,6 @@ packages:
 
   cookiejar@2.1.4:
     resolution: {integrity: sha512-LDx6oHrK+PhzLKJU9j5S7/Y3jM/mUHvD/DeI1WQmJn652iPC5Y4TBzC9l+5OMOXlyTTA+SmVUPm0HQUwpD5Jqw==}
-
-  cors@2.8.5:
-    resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
-    engines: {node: '>= 0.10'}
 
   cors@2.8.6:
     resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
@@ -9900,7 +9946,7 @@ snapshots:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
-      cors: 2.8.5
+      cors: 2.8.6
       cross-spawn: 7.0.6
       eventsource: 3.0.7
       eventsource-parser: 3.1.0
@@ -10125,6 +10171,8 @@ snapshots:
       fastq: 1.20.1
 
   '@oxc-project/types@0.130.0': {}
+
+  '@paper-design/shaders@0.0.81': {}
 
   '@paralleldrive/cuid2@2.3.1':
     dependencies:
@@ -11494,6 +11542,10 @@ snapshots:
 
   blake3-wasm@2.1.5: {}
 
+  blobatar@2.7.0(react@19.2.6):
+    optionalDependencies:
+      react: 19.2.6
+
   body-parser@1.20.6(supports-color@10.2.2):
     dependencies:
       bytes: 3.1.2
@@ -11783,11 +11835,6 @@ snapshots:
   cookie@1.1.1: {}
 
   cookiejar@2.1.4: {}
-
-  cors@2.8.5:
-    dependencies:
-      object-assign: 4.1.1
-      vary: 1.1.2
 
   cors@2.8.6:
     dependencies:

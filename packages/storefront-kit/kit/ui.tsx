@@ -233,17 +233,8 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-overlay-menu nav a{font-family:var(--ui-display-font);font-size:clamp(32px,8vw,128px);line-height:1.05;color:inherit;text-decoration:none;display:flex;align-items:baseline;justify-content:space-between;gap:20px;overflow-wrap:anywhere;border-bottom:1px solid color-mix(in srgb,currentColor 25%,transparent);padding-block:12px}
 .ui-overlay-menu nav a span{font-size:.55em;flex-shrink:0}
 .ui-overlay-menu :focus-visible,.ui-overlay-trigger:focus-visible{outline:2px solid currentColor;outline-offset:6px}
-.ui-entrance{position:fixed;inset:0;z-index:80;overflow:hidden;display:grid;place-items:center;pointer-events:none}
-.ui-entrance__veil{position:absolute;inset:0;background:var(--ui-ink)}
-.ui-entrance[data-variant=curtain] .ui-entrance__veil{background:var(--ui-accent)}
-.ui-entrance__mark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--ui-display-font);font-weight:var(--ui-display-weight);font-size:max(140vw,140vh);line-height:1;color:var(--ui-accent);text-transform:lowercase;user-select:none}
-.ui-entrance[data-variant=curtain] .ui-entrance__mark{color:var(--ui-on-accent)}
-.ui-entrance[data-variant=wordmark] .ui-entrance__veil{background:var(--ui-ink)}
-.ui-entrance[data-variant=wordmark] .ui-entrance__mark{position:relative;top:auto;left:auto;max-width:min(90vw,1200px);padding-inline:5vw;transform:none;color:var(--ui-accent);font-size:clamp(48px,12vw,180px);line-height:.88;text-align:center;text-transform:none;overflow-wrap:anywhere}
-.ui-entrance__signature{position:absolute;width:min(76vw,900px);height:auto;color:var(--ui-accent);overflow:visible}.ui-entrance__signature path{fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-@media (prefers-reduced-motion:reduce){.ui-marquee__track{animation:none}.ui-button,.ui-card__media img{transition:none}.ui-entrance{display:none}}
+@media (prefers-reduced-motion:reduce){.ui-marquee__track{animation:none}.ui-button,.ui-card__media img{transition:none}}
 :root[data-ui-motion=off] .ui-marquee__track{animation:none}
-:root[data-ui-motion=off] .ui-entrance{display:none}
 `;
 
 /* ------------------------------------------------------------------ motion */
@@ -368,118 +359,23 @@ function readUiEase(): string {
   return getComputedStyle(document.documentElement).getPropertyValue('--ui-ease').trim() || EASE_FALLBACK;
 }
 
-const ENTRANCE_VEIL_KEYFRAMES: Keyframe[] = [{ opacity: 1 }, { opacity: 1, offset: 0.2 }, { opacity: 0, offset: 0.55 }, { opacity: 0 }];
-const ENTRANCE_LETTER_KEYFRAMES: Keyframe[] = [
-  { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1 },
-  { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1, offset: 0.2 },
-  { transform: 'translate(-20%,-15%) scale(1.1) rotate(14deg)', opacity: 1, offset: 0.65 },
-  { transform: 'translate(6%,55%) scale(1.2) rotate(26deg)', opacity: 0 },
-];
-const ENTRANCE_WORDMARK_KEYFRAMES: Keyframe[] = [
-  { transform: 'translateY(24px) scale(.96)', opacity: 0, letterSpacing: '.08em' },
-  { transform: 'translateY(0) scale(1)', opacity: 1, letterSpacing: '-.03em', offset: 0.28 },
-  { transform: 'translateY(0) scale(1)', opacity: 1, letterSpacing: '-.03em', offset: 0.58 },
-  { transform: 'translateY(-18px) scale(1.035)', opacity: 0, letterSpacing: '-.03em' },
-];
-
-
-function PageEntranceRun({ variant, mark, duration, onDone }: { variant: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark: string; duration: number; onDone: () => void }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const markRef = useRef<HTMLSpanElement>(null);
-  const veilRef = useRef<HTMLDivElement>(null);
-  const strokeRef = useRef<SVGPathElement>(null);
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let done = false;
-    const finish = () => { if (done) return; done = true; onDone(); };
-    const anims: Animation[] = [];
-    if (typeof root.animate === 'function') {
-      const easing = readUiEase();
-      if (veilRef.current) anims.push(veilRef.current.animate(variant === 'curtain' ? [{ transform: 'translateY(0%)' }, { transform: 'translateY(-100%)' }] : ENTRANCE_VEIL_KEYFRAMES, { duration, easing, fill: 'forwards' }));
-      const glyph = markRef.current;
-      if (variant === 'letter' && glyph && typeof glyph.animate === 'function') {
-        anims.push(glyph.animate(ENTRANCE_LETTER_KEYFRAMES, { duration, easing: 'ease-in-out', fill: 'forwards' }));
-      }
-      if (variant === 'wordmark' && glyph && typeof glyph.animate === 'function') {
-        anims.push(glyph.animate(ENTRANCE_WORDMARK_KEYFRAMES, { duration, easing, fill: 'forwards' }));
-      }
-      const stroke = strokeRef.current;
-      if (variant === 'stroke' && stroke && typeof stroke.animate === 'function') {
-        anims.push(stroke.animate([
-          { strokeDashoffset: 1, opacity: 1 },
-          { strokeDashoffset: 0, opacity: 1, offset: 0.72 },
-          { strokeDashoffset: 0, opacity: 0 },
-        ], { duration, easing, fill: 'forwards' }));
-      }
-      Promise.all(anims.map(a => a.finished.catch(() => {}))).then(finish);
-    } else {
-      finish();
-    }
-    const cancelNow = () => { anims.forEach(a => a.cancel()); finish(); };
-    window.addEventListener('keydown', cancelNow);
-    window.addEventListener('pointerdown', cancelNow);
-    window.addEventListener('wheel', cancelNow, { passive: true });
-    window.addEventListener('touchstart', cancelNow, { passive: true });
-    return () => {
-      done = true;
-      anims.forEach(a => a.cancel());
-      window.removeEventListener('keydown', cancelNow);
-      window.removeEventListener('pointerdown', cancelNow);
-      window.removeEventListener('wheel', cancelNow);
-      window.removeEventListener('touchstart', cancelNow);
-    };
-  }, [variant, duration, onDone]);
-  return <div ref={rootRef} className="ui-entrance" data-variant={variant} aria-hidden="true">
-    <div ref={veilRef} className="ui-entrance__veil" />
-    {variant === 'letter' || variant === 'wordmark' ? <span ref={markRef} className="ui-entrance__mark">{mark}</span> : null}
-    {variant === 'stroke' ? <svg className="ui-entrance__signature" viewBox="0 0 1000 360" aria-hidden="true"><path ref={strokeRef} pathLength="1" strokeDasharray="1" strokeDashoffset="1" d="M36 245 C142 58 272 65 338 186 C394 288 476 312 528 174 C575 49 702 57 728 169 C747 251 832 284 964 87" /></svg> : null}
-  </div>;
-}
-
 /**
- * A once-per-visit marketing moment: a color veil gives way to an oversized letter sweeping out
- * to reveal the real page underneath. Purely decorative — the page beneath is always real and
- * interactive, since the overlay is `pointer-events:none` and never delays content.
+ * Full-screen openings (a letter sweep, a curtain, a signature stroke, the store name flashed in the middle) are retired:
+ * the owner asked for stores to open straight onto the page. The components stay exported so every store already
+ * written with them still compiles; they render nothing.
  */
-export function PageEntrance({ variant = 'letter', mark = 'a', duration }: { variant?: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark?: string; duration?: number }) {
-  return <Entrance variant={variant} mark={mark} duration={duration} fallback={900} />;
+export function PageEntrance(_props: { variant?: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark?: string; duration?: number }) {
+  return null;
 }
 
-/** An author's duration keeps its bounds; without one the store's motion personality sets it, within the 1000ms opening. */
-function Entrance({ variant, mark, duration, fallback }: { variant: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark: string; duration?: number; fallback: number }) {
-  const enabled = useUiMotion();
-  const [epoch, setEpoch] = useState(0);
-  const started = useRef(false);
-  const ms = duration !== undefined ? clamp(duration, 400, 1400, fallback) : clamp(motionToken('slow', fallback), 700, 1000, fallback);
-  const onDone = useCallback(() => setEpoch(0), []);
-  const glyph = (mark || 'a').trim().slice(0, variant === 'wordmark' ? 48 : 2) || 'a';
-
-  useEffect(() => {
-    if (!enabled) { setEpoch(0); return; }
-    if (started.current) return;
-    started.current = true;
-    if (window.scrollY <= 0 && typeof Element.prototype.animate === 'function') setEpoch(1);
-  }, [enabled]);
-
-  useEffect(() => {
-    const onReplay = () => { if (enabled && window.scrollY <= 0 && typeof Element.prototype.animate === 'function') setEpoch(e => e + 1); };
-    window.addEventListener('pagosya:replay-motion', onReplay);
-    return () => window.removeEventListener('pagosya:replay-motion', onReplay);
-  }, [enabled]);
-
-  if (!enabled || epoch === 0) return null;
-  return <PageEntranceRun key={epoch} variant={variant} mark={glyph} duration={ms} onDone={onDone} />;
+/** Retired with PageEntrance: renders nothing. */
+export function BrandEntrance(_props: { name: string; duration?: number }) {
+  return null;
 }
 
-/** A clear once-per-visit brand reveal using the merchant's actual wordmark. */
-export function BrandEntrance({ name, duration }: { name: string; duration?: number }) {
-  return <Entrance variant="wordmark" mark={name} duration={duration} fallback={1000} />;
-}
-
-/** A decorative brand stroke that reveals the page and cancels on the shopper's first input. */
-export function SignatureStrokeEntrance({ duration }: { duration?: number }) {
-  return <Entrance variant="stroke" mark="a" duration={duration} fallback={1000} />;
+/** Retired with PageEntrance: renders nothing. */
+export function SignatureStrokeEntrance(_props: { duration?: number }) {
+  return null;
 }
 
 /**

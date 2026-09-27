@@ -72,6 +72,37 @@ describe('local source edits', () => {
     expect(() => applySourceEdits(previous, { edits: [], files: [{ path: 'STYLES.CSS', content: 'body{}' }] })).toThrow('existente');
     expect(() => applySourceEdits(previous, { files: previous })).toThrow('puntuales');
   });
+  describe('a whole small file sent back with a local change (templates keep shared chrome in short files like Shell.tsx)', () => {
+    const shell = ['import type { ReactNode } from \'react\';', 'import { store } from \'./store-data\';', '', 'export function Header() {',
+      '  return <header className="pa-header">', '    <a className="pa-logo" href="index.html">{store.name}</a>', '    <button type="button" data-cart-open>Carrito</button>',
+      '  </header>;', '}', '', 'export default function Shell({ children }: { children: ReactNode }) {', '  return <div className="pa">',
+      '    <p className="pa-announce">Envíos a todo el país</p>', '    <Header />', '    {children}', '  </div>;', '}'].join('\n');
+    const files = [{ path: 'components/Shell.tsx', content: shell }, { path: 'components/home.tsx', content: 'export default function Home() { return <main /> }' }];
+    const ambience = shell.replace('Envíos a todo el país', 'Tu momento de calma empieza aquí').replace('className="pa"', 'className="pa pa--calm"');
+
+    it('is accepted as the local edit it is when most of the file is kept, whether sent as a whole-file search or in files', () => {
+      for (const output of [
+        { edits: [{ path: 'components/Shell.tsx', search: shell, replacement: ambience }], files: [] },
+        { edits: [], files: [{ path: 'components/Shell.tsx', content: ambience }] },
+      ]) {
+        const updated = applySourceEdits(files, output);
+        expect(updated.find(f => f.path === 'components/Shell.tsx')!.content).toBe(ambience);
+        expect(updated.find(f => f.path === 'components/home.tsx')).toEqual(files[1]);
+      }
+    });
+
+    it('is still rejected when it replaces most of the file, and when the same path is also patched', () => {
+      const rewrite = 'export default function Shell({ children }) {\n  return <section className="new">{children}</section>;\n}';
+      expect(() => applySourceEdits(files, { edits: [{ path: 'components/Shell.tsx', search: shell, replacement: rewrite }], files: [] })).toThrow('por completo');
+      expect(() => applySourceEdits(files, { edits: [], files: [{ path: 'components/Shell.tsx', content: rewrite }] })).toThrow('existente');
+      expect(() => applySourceEdits(files, { edits: [{ path: 'components/Shell.tsx', search: 'Carrito', replacement: 'Bolsa' }], files: [{ path: 'components/Shell.tsx', content: ambience }] })).toThrow('existente');
+    });
+
+    it('never lets a whole file slip past a narrow feature scope', () => {
+      expect(() => applySourceEdits(files, { edits: [], files: [{ path: 'components/Shell.tsx', content: ambience }] }, { allowedEditPaths: ['components/home.tsx'] })).toThrow('alcance autorizado');
+    });
+  });
+
   it('rejects ambiguous, nonexistent, reserved and empty replacements without mutating the original', () => {
     const before = JSON.stringify(previous);
     for (const edit of [

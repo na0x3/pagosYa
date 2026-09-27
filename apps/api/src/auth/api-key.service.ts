@@ -33,7 +33,7 @@ export class ApiKeyService {
 
   /** e.g. "sk_test", "pk_live" — narrows candidate lookup without ever storing/comparing the raw secret. */
   private prefixFor(type: ApiKeyType, mode: ApiKeyMode): string {
-    const kind = type === ApiKeyType.SECRET ? "sk" : "pk";
+    const kind = type === ApiKeyType.SECRET ? "sk" : type === ApiKeyType.MCP ? "mk" : "pk";
     const env = mode === ApiKeyMode.TEST ? "test" : "live";
     return `${kind}_${env}`;
   }
@@ -121,7 +121,7 @@ export class ApiKeyService {
 
   /** Looks up an ApiKey by its prefix, then verifies the full presented key against the stored hash. */
   async verify(presentedKey: string, expectedType: ApiKeyType) {
-    if (!/^(?:sk|pk)_(?:test|live)_[0-9A-Za-z]{32}$/.test(presentedKey)) return null;
+    if (!/^(?:sk|pk|mk)_(?:test|live)_[0-9A-Za-z]{32}$/.test(presentedKey)) return null;
     const parts = presentedKey.split("_");
     const keyPrefix = parts.slice(0, 2).join("_");
 

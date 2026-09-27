@@ -1,0 +1,65 @@
+{
+  "id": "balloons",
+  "version": 1,
+  "name": "Fiestas y globos",
+  "topics": {
+    "es": [
+      "fiesta",
+      "fiestas",
+      "globo",
+      "globos",
+      "decoración de fiestas",
+      "evento",
+      "eventos"
+    ],
+    "en": [
+      "party",
+      "balloon",
+      "balloons",
+      "celebration",
+      "event"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}

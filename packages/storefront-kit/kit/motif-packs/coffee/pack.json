@@ -1,0 +1,65 @@
+{
+  "id": "coffee",
+  "version": 1,
+  "name": "Café y vapor",
+  "topics": {
+    "es": [
+      "café",
+      "cafetería",
+      "grano",
+      "granos",
+      "espresso",
+      "tostado",
+      "barista"
+    ],
+    "en": [
+      "coffee",
+      "coffee shop",
+      "bean",
+      "roastery",
+      "barista"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "steam"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}

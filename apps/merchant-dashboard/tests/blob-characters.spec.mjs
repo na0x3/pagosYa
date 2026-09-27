@@ -1,0 +1,316 @@
+import { expect, test } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+
+// B1 blob characters. Login and route mocking mirror rewards.spec.mjs, plus /dashboard/sessions (with the API's
+// blobSeed) and the progress-celebration endpoints. Screenshots land in tmp/blob-shots/ to be looked at.
+const SHOTS = "../../tmp/blob-shots";
+mkdirSync(SHOTS, { recursive: true });
+const BLOB_SEED = "blobSeedTest0001";
+const store = {
+  id: "store_1", merchantId: "merchant_1", slug: "store_1", name: "Primera", websiteRevision: 0, websitePublishedRevision: 0, websiteDraft: null, status: "ACTIVE",
+  backgroundColor: "#f8fafc", backgroundMode: "solid", backgroundGradientStart: "#f8fafc", backgroundGradientEnd: "#e0e7ff", backgroundGradientAngle: 135,
+  heroSlides: [], contentOrder: ["hero", "about", "gallery", "products", "links"], experienceStyle: "editorial-grid", motionDuoEnabled: false,
+  motionExperience: "clarity-marquee", motionExperiences: ["clarity-marquee"], animations: [], editorialGallery: [], links: [], customDomains: [],
+  checkoutMode: "payment", contactPhone: null, contactEmail: null, contactFormEnabled: false, contactFormEmail: null, locationMapUrl: null,
+  locationDescription: null, locationHighlight: null, locations: [], leadCaptureUrl: null, cartRecommendationsEnabled: true, cartRecommendationProductIds: [],
+  showLowStockToCustomers: false,
+};
+const segments = ["STICKER_COMMON", "XP_25", "AI_CREDITS_5", "TIP", "XP_50", "RESPIN", "STICKER_RARE", "XP_200", "AI_CREDITS_25"];
+const idleBoard = { position: 0, rollsUsed: 0, rollsAvailable: 0, salesUntilNextRoll: 10, lapsCompleted: 0, tiles: Array(24).fill("STICKER_COMMON") };
+const rewardsState = (board = idleBoard) => ({
+  wheel: { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments },
+  board, bonusXp: 0, stickers: [], aiCreditBalance: 0, aiCreditsThisMonth: 0, aiCreditMonthlyCap: 50,
+});
+const session = (overrides = {}) => ({ id: "session_current", profileName: "Dueño", profileAvatarId: 1, isPrimary: true, current: true, createdAt: "2026-09-25T12:00:00.000Z", expiresAt: "2026-09-26T12:00:00.000Z", ...overrides });
+
+async function openDashboard(page, options = {}) {
+  const state = { sessions: options.sessions ?? [session()], patches: [] };
+  const blobSeed = "blobSeed" in options ? options.blobSeed : BLOB_SEED;
+  await page.addInitScript(() => {
+    sessionStorage.setItem("pagosya_merchant_session", "dash_test");
+    sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
+  });
+  if (options.localAvatar !== undefined) await page.addInitScript((value) => localStorage.setItem("pagosya_merchant_avatar:merchant@example.com", value), options.localAvatar);
+  await page.route("http://localhost:3001/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace("/v1", "");
+    const json = (body, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    if (path === "/dashboard/sessions" && request.method() === "GET") {
+      return json({ limit: 3, active: state.sessions.length, profiles: [], currentSessionId: "session_current", canManageSessions: true, ...(blobSeed ? { blobSeed } : {}), sessions: state.sessions });
+    }
+    if (path.startsWith("/dashboard/sessions/") && request.method() === "PATCH") {
+      const id = path.split("/").pop();
+      const body = request.postDataJSON();
+      state.patches.push({ id, ...body });
+      state.sessions = state.sessions.map((entry) => (entry.id === id ? { ...entry, ...body } : entry));
+      return json({ session: { id, ...body, isPrimary: id === "session_current" } });
+    }
+    if (path === "/dashboard/daily-login-reward") return json({ awarded: false, totalStars: 1, wheelAvailable: false });
+    if (path === "/dashboard/rewards") { if (options.rewardsGate) await options.rewardsGate; return json(options.rewards ?? rewardsState()); }
+    if (path === "/dashboard/progress-celebrations") return json({ newlyUnlockedLevels: options.unlockLevels ?? [] });
+    if (path === "/dashboard/progress-celebrations/acknowledge") return json({ acknowledged: true });
+    if (path.startsWith("/dashboard/limits")) return json({ level: 1, levelName: "Persona", liveEnabled: true, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, used: 0, month: "2026-09", resetsAt: "2026-10-01T04:00:00.000Z" });
+    if (path.startsWith("/dashboard/terms")) return json({ current: null, upcoming: null, acceptedVersion: null, needsAcceptance: false });
+    let body = [];
+    if (path === "/stores") body = [store];
+    else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
+    else if (path === "/merchants/kyc") body = { status: "APPROVED" };
+    else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
+    else if (path === "/merchants/balance") body = { payableBalance: 0, currency: "BOB", balances: [] };
+    else if (path === "/merchants/international_payments") body = { status: "OFF", settlementMode: "AGGREGATOR", feeBps: 590, fxRateAvailable: true, usdPayoutAccountOnFile: false, note: null };
+    else if (path === "/merchants/finances") body = { totalRevenue: 0, paymentCount: options.sales ?? 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" };
+    return json(body);
+  });
+  await page.goto(options.hash ?? "/");
+  await expect(page.locator("#app")).toBeVisible();
+  return state;
+}
+
+test("the dashboard serves Blobatar and the blob module as browser modules, and nothing else from those folders", async ({ page }) => {
+  await page.route("http://localhost:3001/v1/**", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.goto("/");
+  const html = await page.evaluate(async () => (await import("/src/profile-blob.mjs")).profileBlobHtml({ blobSeed: "s", variation: 2, name: "Ana" }));
+  expect(html).toContain("<title>Ana</title>");
+  for (const path of ["/vendor/blobatar/react.js", "/vendor/blobatar/index.js", "/vendor/blob-characters/package.json", "/vendor/blob-characters/test/render.test.mjs"]) {
+    expect((await page.request.get(path)).status(), path).toBe(404);
+  }
+  expect((await page.request.get("/vendor/blob-characters/blob-motion.css")).headers()["content-type"]).toContain("text/css");
+});
+
+for (const width of [390, 1280]) test(`the profile editor shows your blob, offers three more and saves "Otra variación" at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  const state = await openDashboard(page);
+  await expect(page.locator("#profileTriggerAvatar svg.profile-blob")).toHaveAttribute("aria-hidden", "true");
+  await page.locator("#profileMenuTrigger").click();
+  const picture = page.locator("#profileMenuAvatar svg");
+  await expect(picture).toHaveAttribute("role", "img");
+  await expect(picture.locator("title")).toHaveText("Dueño");
+  const options = page.locator("#profileAvatarOptions [data-profile-avatar]");
+  await expect(options).toHaveCount(4);
+  await expect(options.first()).toHaveAttribute("data-profile-avatar", "1");
+  await expect(options.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(options.nth(1)).toHaveAttribute("aria-label", /^Variación \d+$/);
+  await page.screenshot({ path: `${SHOTS}/profile-editor-${width}.png` });
+  const before = await page.locator("#profileTriggerAvatar").innerHTML();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  const saved = state.patches[0].profileAvatarId;
+  expect(Number.isInteger(saved) && saved >= 1 && saved <= 999 && saved !== 1).toBe(true);
+  expect(state.patches[0]).toMatchObject({ id: "session_current", profileName: "Dueño" });
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${saved}"]`)).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("#profileTriggerAvatar").innerHTML()).not.toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe(String(saved));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("an old animal avatar id is kept as that blob variation; a broken stored value never breaks the picture", async ({ page }) => {
+  const state = await openDashboard(page, { sessions: [session({ profileAvatarId: 3 })], localAvatar: "not-a-number" });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator('#profileAvatarOptions [data-profile-avatar="3"]')).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe("3");
+  expect(state.patches).toEqual([]);
+});
+
+test("the account page avatar is decorative (the heading already names the person) and stays in sync with a new variation", async ({ page }) => {
+  const state = await openDashboard(page, { hash: "/#dashboard-account" });
+  const avatar = page.locator("#accountAvatar svg");
+  await expect.poll(() => avatar.count()).toBeGreaterThan(0);
+  await expect(avatar).toHaveAttribute("aria-hidden", "true");
+  expect(await avatar.locator("title").count()).toBe(0);
+  const before = await page.locator("#accountAvatar").innerHTML();
+  await page.locator("#profileMenuTrigger").click();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  expect(await page.locator("#accountAvatar").innerHTML()).not.toBe(before);
+});
+
+test("a profile with no name is still named: the picture falls back to the name from the email", async ({ page }) => {
+  await openDashboard(page, { sessions: [session({ profileName: "" })] });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileMenuAvatar svg title")).toHaveText("Merchant");
+});
+
+test("without a seed from the API the picture keeps its place and its name, and nothing breaks", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openDashboard(page, { blobSeed: null });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileMenuAvatar .blob-avatar-pending")).toHaveAttribute("aria-label", "Dueño");
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  expect(errors).toEqual([]);
+});
+
+test("a full profile menu (three sessions and an open edit form) renders only static blobs, each on a plate", async ({ page }) => {
+  await openDashboard(page, { sessions: [
+    session(),
+    session({ id: "s2", profileName: "Ana", profileAvatarId: 3, isPrimary: false, current: false }),
+    session({ id: "s3", profileName: "Luis", profileAvatarId: 998, isPrimary: false, current: false }),
+  ] });
+  await page.locator("#profileMenuTrigger").click();
+  await page.locator('[data-edit-session="s2"]').click();
+  await expect(page.locator('[data-session-edit-form="s2"] [data-edit-avatar]')).toHaveCount(4);
+  await expect(page.locator('[data-session-edit-form="s2"] [data-edit-avatar="3"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#profileMenu svg.blob-figure")).toHaveCount(12);
+  expect(await page.locator("#profileMenu .mo-root").count()).toBe(0);
+  expect(await page.locator("#profileMenu svg.blob-figure:not(:has(.blob-plate))").count()).toBe(0);
+});
+
+test("a successful save keeps its new variation even when the refresh after it fails, and shows no avatar error", async ({ page }) => {
+  const state = await openDashboard(page);
+  let failNextSessionsGet = false;
+  await page.route("http://localhost:3001/v1/dashboard/sessions", async (route) => {
+    if (route.request().method() !== "GET" || !failNextSessionsGet) return route.fallback();
+    return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "boom" }) });
+  });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  failNextSessionsGet = true;
+  const before = await page.locator("#profileTriggerAvatar").innerHTML();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  const saved = state.patches[0].profileAvatarId;
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${saved}"]`)).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("#profileTriggerAvatar").innerHTML()).not.toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe(String(saved));
+  expect(await page.locator(".profile-session-state", { hasText: "No pudimos guardar el avatar" }).count()).toBe(0);
+});
+
+test("a rejected save rolls back to the previous variation and shows the error", async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  await page.route("http://localhost:3001/v1/dashboard/sessions/session_current", async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    return route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ message: "No se pudo guardar" }) });
+  });
+  const before = await page.locator("#profileTriggerAvatar").innerHTML();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect(page.locator(".profile-session-state", { hasText: "No pudimos guardar el avatar" })).toBeVisible();
+  await expect(page.locator('#profileAvatarOptions [data-profile-avatar="1"]')).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("#profileTriggerAvatar").innerHTML()).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe("1");
+  expect(state.patches).toEqual([]);
+});
+
+test('rapid double-clicks on "Otra variación" send only one PATCH while a save is pending', async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  await page.evaluate(() => {
+    const button = document.getElementById("profileAvatarShuffle");
+    button.click();
+    button.click();
+  });
+  await expect.poll(() => state.patches.length).toBe(1);
+  await page.waitForTimeout(200);
+  expect(state.patches.length).toBe(1);
+});
+
+test("choosing a variation with the keyboard keeps focus on it, through the busy state and the sessions refresh that follows", async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  const options = page.locator("#profileAvatarOptions [data-profile-avatar]");
+  await expect(options).toHaveCount(4);
+  await options.nth(1).focus();
+  const targetVariation = await options.nth(1).getAttribute("data-profile-avatar");
+  await page.keyboard.press("Enter");
+  // The busy window (native `disabled` would blur a focused element to <body> here).
+  await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-profile-avatar"))).toBe(targetVariation);
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${targetVariation}"]`)).toHaveAttribute("aria-pressed", "true");
+  // Settle through the post-save sessions refresh (renderProfileAvatar runs again under the focused button).
+  await expect.poll(() => state.patches.length).toBe(1);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => document.activeElement?.getAttribute("data-profile-avatar"))).toBe(targetVariation);
+});
+
+test('"Otra variación" keeps focus on the shuffle button through the busy state', async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  await page.locator("#profileAvatarShuffle").focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("profileAvatarShuffle");
+  await expect.poll(() => state.patches.length).toBe(1);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => document.activeElement?.id)).toBe("profileAvatarShuffle");
+});
+
+for (const width of [390, 1280]) test(`Progreso shows the level's blob companion at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await openDashboard(page, { sales: 3, hash: "/#dashboard-progress" });
+  await expect(page.locator("#gamificationLevelTitle")).toHaveText("Capibara");
+  const hero = page.locator("#gamificationHeroBlob");
+  await expect(hero.locator("svg.blob-figure")).toBeVisible();
+  await expect(hero).toHaveAttribute("data-blob-expression", "sleepy");
+  await expect(page.locator("#topbarXpBlob svg.blob-figure")).toHaveCount(1);
+  await expect(page.locator("#gamificationToastMessage")).toContainText("Capi encontró");
+  await expect(page.locator("#gamificationToastBlob svg.blob-figure")).toHaveCount(1);
+  expect(await page.locator("#gamificationSection .mo-root").count()).toBeLessThanOrEqual(1);
+  expect(await hero.locator("svg").evaluate((svg) => getComputedStyle(svg).filter)).toContain("drop-shadow");
+  await page.screenshot({ path: `${SHOTS}/levels-${width}.png` });
+  // The companion grid stays hidden in the product; it is unhidden here only so all 8 blobs can be reviewed.
+  await page.evaluate(() => { document.getElementById("gamificationCompanions").closest("section").hidden = false; });
+  await expect(page.locator("#gamificationCompanions svg.blob-figure")).toHaveCount(8);
+  await page.locator("#gamificationCompanions").screenshot({ path: `${SHOTS}/companions-${width}.png` });
+});
+
+test("reaching a level opens the celebration: the new companion hops, celebrates, then rests on its own mood", async ({ page }) => {
+  await openDashboard(page, { sales: 3, unlockLevels: [1] });
+  await expect(page.locator("#birdUnlockDialog")).toBeVisible();
+  await expect(page.locator("#birdUnlockTitle")).toHaveText("¡Capi llegó!");
+  const blob = page.locator("#birdUnlockBlob");
+  await expect(blob).toHaveAttribute("data-blob-motion", /hop|celebrate/);
+  await expect(blob).toHaveAttribute("data-blob-expression", /surprised|happy/);
+  await page.screenshot({ path: `${SHOTS}/unlock-1280.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: `${SHOTS}/unlock-390.png` });
+  await expect(blob).toHaveAttribute("data-blob-expression", "sleepy", { timeout: 5000 });
+  expect(await blob.getAttribute("data-blob-motion")).toBeNull();
+});
+
+test("with reduced motion the celebration shows the happy blob at once and never moves it", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openDashboard(page, { sales: 3, unlockLevels: [1] });
+  const blob = page.locator("#birdUnlockBlob");
+  await expect(blob).toHaveAttribute("data-blob-expression", "happy");
+  expect(await blob.getAttribute("data-blob-motion")).toBeNull();
+  expect(await blob.locator(".mo-bob").evaluate((node) => getComputedStyle(node).animationName)).toBe("none");
+  await expect(blob).toHaveAttribute("data-blob-expression", "sleepy", { timeout: 5000 });
+  expect(await blob.getAttribute("data-blob-motion")).toBeNull();
+});
+
+for (const width of [390, 1280]) test(`the dice board runner is your own blob at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await openDashboard(page, { rewards: rewardsState({ ...idleBoard, rollsAvailable: 1, salesUntilNextRoll: 4 }) });
+  const modal = page.locator("#rewardsBoardModal");
+  await expect(modal).toBeVisible();
+  // Wait out the modal's fade-in before shooting, so the screenshot never lands mid-animation.
+  await modal.evaluate((node) => Promise.all(node.getAnimations({ subtree: true }).map((animation) => animation.finished)));
+  const token = page.locator("#rewardsBoardToken");
+  // Only the profile blob has a plate; the companion stand-in has none.
+  await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).toContain(encodeURIComponent('class="blob-plate"'));
+  await page.screenshot({ path: `${SHOTS}/dice-board-${width}.png` });
+});
+
+test("the blob seed arriving never shows the dice board's \"couldn't load\" hint; only the runner image updates", async ({ page }) => {
+  let releaseRewards;
+  const rewardsGate = new Promise((resolve) => { releaseRewards = resolve; });
+  await openDashboard(page, { rewardsGate });
+  // Sessions (and the blobSeed inside them) resolve without waiting on the gate; rewards stays pending.
+  await page.waitForTimeout(300);
+  expect(await page.locator("#rewardsBoardHint").textContent()).not.toBe("No pudimos cargar el tablero.");
+  expect(await page.locator("#rewardsBoardToken").evaluate((node) => node.style.backgroundImage)).toContain(encodeURIComponent('class="blob-plate"'));
+  releaseRewards();
+  await expect(page.locator("#rewardsBoardHint")).not.toHaveText("No pudimos cargar el tablero.");
+});
+
+test("selecting a new variation repaints the dice-board runner", async ({ page }) => {
+  const state = await openDashboard(page);
+  const token = page.locator("#rewardsBoardToken");
+  await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).not.toBe("");
+  const before = await token.evaluate((node) => node.style.backgroundImage);
+  await page.locator("#profileMenuTrigger").click();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).not.toBe(before);
+});

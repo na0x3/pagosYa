@@ -1,0 +1,64 @@
+{
+  "id": "chili",
+  "version": 1,
+  "name": "Picante",
+  "topics": {
+    "es": [
+      "ají",
+      "picante",
+      "chile",
+      "salsa",
+      "salsas",
+      "llajua",
+      "tacos"
+    ],
+    "en": [
+      "chili",
+      "spicy",
+      "hot sauce",
+      "salsa"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "glow"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}

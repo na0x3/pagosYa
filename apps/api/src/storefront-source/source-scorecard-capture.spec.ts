@@ -132,3 +132,16 @@ it('counts the store\'s own --motion-* token uses, not the kit\'s or compiled ou
   ];
   expect(staticMotionTokens(files as any)).toBe(4);
 });
+
+it('renders the identity button forms and frames, reads them from the page, and keeps the buy contrast', async () => {
+  const kit = await kitDefaultSnapshot();
+  const withDna = (dna: Record<string, string>) => ({ ...kit, files: kit.files.map(f => f.path === 'config.js' ? { ...f, content: f.content.replace('"demo":true', `"demo":true,"dna":${JSON.stringify({ version: 1, ...dna })}`) } : f) });
+  const combos = [{ button: 'sticker', frame: 'blob' }, { button: 'ticket', frame: 'stamp' }, { button: 'bubbly', frame: 'tape' }, { button: 'brutal', frame: 'stamp' }];
+  const samples = await Promise.all(combos.map((dna, i) => collectStoreSample({ id: `t2b-${i}`, name: dna.button, snapshot: withDna({ ...dna, cart: 'drawer', added: 'toast', review: 'split', card: 'still' }) })));
+  samples.forEach(({ sample }, i) => {
+    expect(sample.errors).toEqual([]);
+    expect(sample.surfaces.page).toEqual(expect.objectContaining({ 'dna.button': combos[i].button, 'dna.frame': combos[i].frame }));
+    expect(sample.quality.buyContrast).toBeGreaterThanOrEqual(4.5);
+    expect(sample.quality.overflow).toEqual({ desktop: false, mobile: false });
+  });
+});

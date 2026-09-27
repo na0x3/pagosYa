@@ -12,7 +12,8 @@ import { escapeHtml as esc } from "./html.mjs";
  *   storeId()            active store id
  *   signedIn()           whether a merchant session exists
  *   currentXp()          total XP as the dashboard currently shows it
- *   companionAsset()     image of the companion that walks the board
+ *   runnerImage()        data URI of the blob that walks the board (the merchant's own)
+ *   celebrateCompanion() plays the Progreso companion's "cheer"
  *   rerender(announce)   re-render the gamification view after a grant
  *   burstConfetti(anchor, options), playTouchSound(kind), audioContext()
  */
@@ -194,11 +195,8 @@ export function mountRewardsPanel(deps) {
     window.setTimeout(async () => {
       luckWheelSpinning = false;
       document.getElementById("luckWheel").classList.remove("is-spinning");
-      // "Fiesta": a playful variant of a tip where the companion dances.
-      if (result.grant.kind === "TIP" && Math.random() < .3) {
-        const hero = document.getElementById("gamificationHeroImage");
-        hero?.classList.remove("is-dancing"); void hero?.offsetWidth; hero?.classList.add("is-dancing");
-      }
+      // "Fiesta": a playful variant of a tip where the companion celebrates.
+      if (result.grant.kind === "TIP" && Math.random() < .3) deps.celebrateCompanion();
       await announceRewardGrant(result.grant, previousXp, document.querySelector(".luck-wheel-stage"));
       renderLuckWheelAlbum(result.grant.sticker?.isNew ? result.grant.sticker.id : null);
     }, duration + 60);
@@ -238,6 +236,16 @@ export function mountRewardsPanel(deps) {
     token.style.gridRow = String(row); token.style.gridColumn = String(col); token.dataset.tile = String(index);
   }
 
+  /**
+   * Only the dice-board runner token's image, from the merchant's current blob. Safe to call whenever
+   * the blob seed or the chosen variation changes, even before the board itself has ever loaded (unlike
+   * renderBoard, it never touches the "couldn't load" hint or the roll button).
+   */
+  function refreshRunner() {
+    const token = document.getElementById("rewardsBoardToken");
+    if (token) token.style.backgroundImage = `url("${deps.runnerImage()}")`;
+  }
+
   async function renderRewardsBoard() {
     const board = document.getElementById("rewardsBoard");
     if (!board) return;
@@ -259,10 +267,9 @@ export function mountRewardsPanel(deps) {
         board.appendChild(tile);
       });
     }
-    const token = document.getElementById("rewardsBoardToken");
-    token.style.backgroundImage = `url(${deps.companionAsset()})`;
+    refreshRunner();
     if (rewardsBoardRolling) return;
-    placeBoardToken(token, state.position, boardTileCoords);
+    placeBoardToken(document.getElementById("rewardsBoardToken"), state.position, boardTileCoords);
     button.disabled = state.rollsAvailable <= 0;
     const kicker = document.getElementById("rewardsBoardKicker");
     if (kicker) kicker.textContent = state.rollsAvailable > 1 ? `¡Tus ventas te dieron ${state.rollsAvailable.toLocaleString("es-BO")} tiros de dado!` : "¡Completaste 10 ventas! Ganaste un tiro de dado.";
@@ -309,6 +316,8 @@ export function mountRewardsPanel(deps) {
     state: () => rewardsState,
     reset: () => { rewardsState = null; },
     renderWheel: renderLuckWheel,
+    renderBoard: renderRewardsBoard,
+    refreshRunner,
     openWheelModal: openLuckWheelModal,
   };
 }

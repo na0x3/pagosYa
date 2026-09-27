@@ -20,6 +20,9 @@
     "vite": "^5.4.8"
   },
   "dependencies": {
-    "@pagosya/variant-editor": "workspace:*"
+    "@pagosya/blob-characters": "workspace:*",
+    "@pagosya/variant-editor": "workspace:*",
+    "@paper-design/shaders": "0.0.81",
+    "blobatar": "2.7.0"
   }
 }

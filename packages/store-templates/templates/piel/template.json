@@ -1,0 +1,61 @@
+{
+  "id": "piel",
+  "name": "Piel",
+  "category": "moda",
+  "description": "Básicos y ropa cómoda: tonos piel, mayúsculas condensadas, fotos grandes y una guía de tonos y talles inclusivos.",
+  "tags": [
+    "moda",
+    "básicos",
+    "inclusivo",
+    "neutro"
+  ],
+  "sitePurpose": "shop",
+  "order": 270,
+  "dna": {
+    "display": "oswald",
+    "text": "familjen-grotesk",
+    "case": "upper",
+    "radius": "none",
+    "border": "hairline",
+    "button": "block",
+    "hover": "invert",
+    "press": "none",
+    "motion": "cinematic",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "tonos",
+      "role": "detail",
+      "demo": "tonos.jpg"
+    },
+    {
+      "slot": "juntas",
+      "role": "lifestyle",
+      "demo": "juntas.jpg"
+    }
+  ]
+}

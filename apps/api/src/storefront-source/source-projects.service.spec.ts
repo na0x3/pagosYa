@@ -104,6 +104,25 @@ describe("Private source project revisions", () => {
     await expect(service.editFile("m1", "s1", { revision: 2, path: binary.path, content: "bad" })).rejects.toThrow("texto");
   });
 
+  it("saves several text files as one revision with editFiles, and refuses unknown, binary, empty or oversized batches", async () => {
+    const { service } = setup();
+    const binary = { path: "assets/photo.png", content: Buffer.from("asset bytes").toString("base64"), encoding: "base64" as const };
+    const site = { path: "site.js", content: 'document.title = "Café";' };
+    await service.save("m1", "s1", { ...input(), files: [...input().files, site, binary] });
+    const saved = await service.editFiles("m1", "s1", { revision: 1, files: [{ path: "README.md", content: "Docs" }, { path: "site.js", content: 'document.title = "Pan";' }] });
+    expect(saved.revision).toBe(2);
+    expect(saved.label).toBe("Edición de 2 archivos");
+    const files = ((await service.version("m1", "s1", 2)).snapshot as any).files;
+    expect(files.find((f: any) => f.path === "README.md").content).toBe("Docs");
+    expect(files.find((f: any) => f.path === "site.js").content).toBe('document.title = "Pan";');
+    expect(files).toEqual(expect.arrayContaining([binary]));
+    await expect(service.editFiles("m1", "s1", { revision: 2, files: [{ path: "nope.js", content: "x" }] })).rejects.toThrow("Selecciona un archivo de texto existente.");
+    await expect(service.editFiles("m1", "s1", { revision: 2, files: [{ path: binary.path, content: "x" }] })).rejects.toThrow("texto");
+    await expect(service.editFiles("m1", "s1", { revision: 2, files: [] })).rejects.toThrow("1 y 20");
+    await expect(service.editFiles("m1", "s1", { revision: 2, files: Array.from({ length: 21 }, () => ({ path: "README.md", content: "x" })) })).rejects.toThrow("1 y 20");
+    await expect(service.editFiles("m1", "s1", { revision: 1, files: [{ path: "README.md", content: "stale" }] })).rejects.toBeInstanceOf(ConflictException);
+  });
+
   // The Código tab writes straight into these files, so the classic projects get the
   // same refusals the React ones already get from validateNextSources.
   it("refuses hostile classic source on save and on a hand edit, without stranding the revision", async () => {

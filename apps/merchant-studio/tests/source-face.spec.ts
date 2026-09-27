@@ -55,7 +55,9 @@ test('the face is a light yellow, and carries no controls of its own', async ({ 
   await expect(page.locator('[data-face]')).toHaveAttribute('data-color', 'amarillo');
   // A pause button and a voice button both lived under it; ambient artwork
   // should not ask to be operated, and nothing here is a control.
-  await expect(page.locator('.source-inspiration button')).toHaveCount(1);
+  await expect(page.locator('.inspiration-stage button')).toHaveCount(0);
+  // The invitation beside it offers the two ways to start: a template or a photo.
+  await expect(page.getByRole('button', { name: 'Elegir una plantilla' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Crear tienda desde una foto/ })).toBeVisible();
   // It is decoration, so it is not announced either.
   await expect(page.locator('[data-face]')).toHaveAttribute('aria-hidden', 'true');

@@ -1,0 +1,61 @@
+{
+  "id": "paso",
+  "name": "Paso",
+  "category": "moda",
+  "description": "Calzado cómodo y natural: crema y salvia, formas redondeadas, materiales explicados y 30 días para probar.",
+  "tags": [
+    "calzado",
+    "zapatillas",
+    "natural",
+    "amigable"
+  ],
+  "sitePurpose": "shop",
+  "order": 260,
+  "dna": {
+    "display": "sora",
+    "text": "sora",
+    "case": "none",
+    "radius": "round",
+    "border": "none",
+    "button": "pill",
+    "hover": "lift",
+    "press": "squash",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "zoom",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "material",
+      "role": "detail",
+      "demo": "material.jpg"
+    },
+    {
+      "slot": "caminar",
+      "role": "lifestyle",
+      "demo": "caminar.jpg"
+    }
+  ]
+}

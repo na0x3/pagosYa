@@ -8,6 +8,9 @@
 <meta name="description" content="Administra tu tienda, catálogo, cobros, desembolsos y facturación local desde pagosYa.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#eee7dc">
+<script type="importmap">{"imports":{"@paper-design/shaders":"/vendor/paper-shaders/index.js","@pagosya/blob-characters":"/vendor/blob-characters/index.mjs","blobatar/internal":"/vendor/blobatar/internal.js","blobatar/expression":"/vendor/blobatar/expression.js"}}</script>
+<link rel="stylesheet" href="/vendor/blobatar/motion.css">
+<link rel="stylesheet" href="/vendor/blob-characters/blob-motion.css">
 <link rel="stylesheet" href="/src/dashboard.css">
 <link rel="stylesheet" href="/src/workspace-design.css">
 <link rel="stylesheet" href="/src/cobros.css">
@@ -16,13 +19,14 @@
 <link rel="stylesheet" href="/src/contracts.css">
 </head>
 <body>
+<div class="dashboard-backdrop" data-dashboard-shader aria-hidden="true"></div>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
   <div class="topbar">
     <!-- The bird now sits at the top of the sidebar; the topbar carries no
          second brand lockup. Kept as the page's only h1 for the outline. -->
     <h1 class="sr-only">pagosYa · Panel de Comercio</h1>
     <a class="topbar-xp" id="topbarXp" href="#dashboard-progress" data-dashboard-view="progress" hidden>
-      <span class="topbar-xp-avatar" aria-hidden="true"><img id="topbarXpImage" src="/assets/profile-1.png?v=3" alt=""></span>
+      <span class="topbar-xp-avatar" aria-hidden="true"><span class="topbar-xp-blob" id="topbarXpBlob"></span></span>
       <span class="topbar-xp-body">
         <span class="topbar-xp-line"><strong id="topbarXpLevel">Nivel 1 · Perdiz</strong><span class="topbar-xp-next" id="topbarXpNext">100 XP para Capibara</span></span>
         <span class="topbar-xp-track" id="topbarXpTrack" role="progressbar" aria-label="Experiencia para el siguiente nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topbarXpFill"></span></span>
@@ -37,7 +41,7 @@
       </div>
       <div class="profile-menu" id="profileMenu" popover aria-label="Perfil y sesión">
         <div class="profile-menu-head">
-          <span class="profile-menu-main-avatar" id="profileMenuAvatar" aria-hidden="true"></span>
+          <span class="profile-menu-main-avatar" id="profileMenuAvatar"></span>
           <div class="profile-identity">
             <strong id="profileDisplayName">Mi perfil</strong>
             <span id="loggedInAs"></span>
@@ -48,12 +52,8 @@
         </div>
         <fieldset class="profile-avatar-picker">
           <legend>Avatar del perfil</legend>
-          <div class="profile-avatar-options">
-            <button class="profile-avatar-option" type="button" data-profile-avatar="1" aria-label="Elegir la perdiz"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="2" aria-label="Elegir el capibara"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="3" aria-label="Elegir el oso hormiguero"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="4" aria-label="Elegir la vizcacha"></button>
-          </div>
+          <div class="profile-avatar-options" id="profileAvatarOptions"></div>
+          <button class="ghost profile-avatar-shuffle" id="profileAvatarShuffle" type="button">Otra variación</button>
         </fieldset>
         <section class="profile-sessions" aria-labelledby="profileSessionsTitle">
           <div class="profile-sessions-head">
@@ -89,15 +89,24 @@
   </div>
 
   <form class="login-split" id="loginForm">
+    <aside class="login-hero" aria-labelledby="loginHeroTitle">
+      <div class="login-hero-shader" data-login-shader aria-hidden="true"></div>
+      <div class="login-hero-copy">
+        <h1 id="loginHeroTitle">Tu tienda está a un mensaje de distancia.</h1>
+        <p>Cuéntale a YAPI qué vendes; pagosYa hace el resto.</p>
+        <ul class="login-hero-cards">
+          <li><strong>2 minutos</strong><span>de un mensaje a una tienda que cobra</span></li>
+          <li><strong>21 plantillas</strong><span>listas para tus productos</span></li>
+          <li><strong>Tu propia IA</strong><span>conecta Claude, Codex o Cursor</span></li>
+          <li><strong>Cobra en Bolivia</strong><span>QR y tarjeta, en bolivianos</span></li>
+        </ul>
+      </div>
+    </aside>
     <div class="login-pane">
-      <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-mark.png" alt="" width="36" height="36"><span>pagosYa</span></a>
       <div class="login-card">
+        <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-star-yellow.png" alt="" width="56" height="56"></a>
         <h2 id="loginTitle">Bienvenido de vuelta</h2>
         <p class="login-sub">Entra a tu panel de comercio para continuar.</p>
-        <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
-          <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
-          <div class="merchant-login-divider"><span>o</span></div>
-        </div>
         <div class="login-field">
           <label for="email">Correo</label>
           <input id="email" type="email" placeholder="dueno@tienda-ejemplo.bo" autocomplete="email" required>
@@ -114,6 +123,10 @@
         </div>
         <button class="primary login-submit" id="login" type="submit">Continuar</button>
         <button class="login-forgot" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
+        <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
+          <div class="merchant-login-divider"><span>o</span></div>
+          <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
+        </div>
         <details class="login-dev">
           <summary>Opciones de desarrollo</summary>
           <label for="apiBase">URL base de la API</label>
@@ -122,14 +135,6 @@
       </div>
       <p class="login-foot">El acceso se crea desde tu integración con <code>POST /v1/dashboard/signup</code>, nunca desde esta página.</p>
     </div>
-    <aside class="login-scene" aria-hidden="true">
-      <div class="login-scene-sky"></div>
-      <img class="login-scene-mark" src="/assets/pagosya-mark.png" alt="" width="128" height="128">
-      <div class="login-scene-prompt">
-        <span>Cuéntale a YAPI qué quieres vender</span>
-        <i aria-hidden="true">↑</i>
-      </div>
-    </aside>
   </form>
 
   <div class="panel forgot-panel" id="forgotForm" style="display:none">
@@ -173,8 +178,8 @@
             <summary class="dashboard-nav-button dashboard-nav-summary" title="Tu tienda"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/></svg></span>Tu tienda<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
             <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Mi tienda</a>
             <a class="dashboard-nav-button" href="#dashboard-workspace" data-dashboard-view="workspace"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Diseñar sitio</a>
+            <a class="dashboard-nav-button" href="#dashboard-templates" data-dashboard-view="templates"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>Plantillas</a>
             <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
-            <a class="dashboard-nav-button" href="#dashboard-store-settings" data-dashboard-view="store-settings"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Ajustes</a>
             <a class="dashboard-nav-button" href="#dashboard-media" data-dashboard-view="media"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span>Medios</a>
           </details>
           <details class="dashboard-nav-group" data-nav-group="cobrar">
@@ -201,6 +206,8 @@
             <summary class="dashboard-nav-button dashboard-nav-summary" title="Negocio"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/></svg></span>Negocio<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
             <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
           </details>
+          <a class="dashboard-nav-button" href="#dashboard-connect-ai" data-dashboard-view="connect-ai"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></svg></span>Conecta tu IA</a>
+          <a class="dashboard-nav-button" href="#dashboard-store-settings" data-dashboard-view="store-settings"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Ajustes</a>
         </nav>
         <span class="mobile-nav-hint" aria-hidden="true">Desliza para ver más →</span>
         <button class="ai-setup-launch" type="button" id="aiSetupLaunch" aria-label="Diseñar con YAPI" title="Diseñar con YAPI">
@@ -266,7 +273,7 @@
     <div id="internationalPaymentsCard" data-dashboard-page="overview"></div>
 
     <section class="gamification-summary" id="gamificationSummary" data-dashboard-page="overview" aria-labelledby="gamificationSummaryTitle">
-      <div class="gamification-summary-character"><img id="gamificationSummaryImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
+      <div class="gamification-summary-character"><span class="gamification-blob" id="gamificationSummaryBlob" aria-hidden="true"></span></div>
       <div class="gamification-summary-copy">
         <div class="gamification-summary-title"><h3 id="gamificationSummaryTitle">Tu negocio gana experiencia</h3><strong id="gamificationSummaryXp">0 XP</strong></div>
         <p class="gamification-summary-speech" id="gamificationSummarySpeech">Cada venta y cada visita empujan tu tienda al siguiente nivel.</p>
@@ -395,7 +402,7 @@
 
     <section class="gamification-board" id="gamificationSection" data-dashboard-page="progress" aria-labelledby="adventureMapTitle">
       <div class="gamification-hero">
-        <div class="gamification-character-stage"><img id="gamificationHeroImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
+        <div class="gamification-character-stage"><span class="gamification-blob" id="gamificationHeroBlob" aria-hidden="true"></span></div>
         <div class="gamification-hero-copy">
           <div class="gamification-level-line"><h3 id="gamificationLevelTitle">Semilla</h3><span class="gamification-level-number" id="gamificationLevelNumber">Nivel 1 de 4</span></div>
           <p class="gamification-speech" id="gamificationSpeech" aria-live="polite">¡Tu tienda ya está en marcha! Cada visita suma y cada venta te hace avanzar más rápido.</p>
@@ -598,6 +605,7 @@
     </div></div></section>
     <section class="block store-library-page" data-dashboard-page="integrations"><iframe id="storeIntegrationsFrame" title="Integraciones de la tienda" class="store-resource-frame"></iframe><p data-resource-empty="integrations" hidden>Selecciona una tienda para ver sus integraciones.</p></section>
     <section class="block store-library-page" data-dashboard-page="experiments"><iframe id="storeExperimentsFrame" title="Pruebas A/B de la tienda" class="store-resource-frame"></iframe><p data-resource-empty="experiments" hidden>Selecciona una tienda para comparar diseños.</p></section>
+    <section class="block store-library-page store-templates-page" data-dashboard-page="templates"><iframe id="storeTemplatesFrame" title="Plantillas" class="store-resource-frame"></iframe><p data-resource-empty="templates" hidden>Selecciona una tienda para elegir una plantilla.</p></section>
     <section class="block store-library-page" data-dashboard-page="media"><iframe id="storeMediaFrame" title="Medios de la tienda" class="store-resource-frame"></iframe><p data-resource-empty="media" hidden>Selecciona una tienda para ver sus medios.</p></section>
     <section class="block" id="paymentLinksSection" data-dashboard-page="products">
       <div class="panel">
@@ -761,7 +769,7 @@
 
     <section class="account-workspace" id="accountSection" data-dashboard-page="account">
       <header class="account-identity">
-        <span class="account-identity-avatar" id="accountAvatar" aria-hidden="true"></span>
+        <span class="account-identity-avatar" id="accountAvatar"></span>
         <div class="account-identity-copy">
           <p class="account-eyebrow">Tu cuenta</p>
           <h2 id="accountName">Mi perfil</h2>
@@ -883,7 +891,19 @@
           </div>
         </div>
         <div id="storeSettingsRoot"></div>
+        <section class="store-editor-section settings-more" aria-labelledby="settingsMoreTitle">
+          <div class="editor-section-head"><h3 id="settingsMoreTitle">Marca, envíos y dominio</h3><p>Más ajustes de la tienda seleccionada.</p></div>
+          <ul class="settings-more-list">
+            <li><div><strong>Marca</strong><span>Colores, tipografías y el tono de tu marca.</span></div><button type="button" class="settings-more-open" data-settings-open="brand">Configurar</button></li>
+            <li><div><strong>Envíos y retiro</strong><span>Tarifas de envío y puntos de retiro.</span></div><button type="button" class="settings-more-open" data-settings-open="shipping">Configurar</button></li>
+            <li><div><strong>Dominio</strong><span>Tu propia dirección web para la tienda.</span></div><button type="button" class="settings-more-open" data-settings-open="domain">Configurar</button></li>
+          </ul>
+        </section>
       </div>
+    </section>
+
+    <section class="block" id="connectAiSection" data-dashboard-page="connect-ai">
+      <div class="panel mcp-connect" id="mcpConnectRoot" aria-labelledby="mcpConnectTitle"></div>
     </section>
 
     <section class="block" id="inboxSection" data-dashboard-page="inbox">
@@ -959,13 +979,13 @@
   </section>
 
   <div class="gamification-toast" id="gamificationToast" role="status" aria-live="polite" hidden>
-    <img id="gamificationToastImage" src="/assets/gamification-1.png" alt="">
+    <span class="gamification-toast-blob" id="gamificationToastBlob" aria-hidden="true"></span>
     <div class="gamification-toast-copy"><strong id="gamificationToastTitle">¡Tu negocio avanzó!</strong><span id="gamificationToastMessage"></span></div>
     <button class="gamification-toast-close" id="gamificationToastClose" type="button" aria-label="Cerrar felicitación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
   <dialog class="bird-unlock-dialog" id="birdUnlockDialog" aria-labelledby="birdUnlockTitle" aria-describedby="birdUnlockSpeech">
     <div class="bird-unlock-layout">
-      <div class="bird-unlock-stage"><img id="birdUnlockImage" src="/assets/gamification-1.png" alt=""></div>
+      <div class="bird-unlock-stage"><span class="bird-unlock-blob" id="birdUnlockBlob" aria-hidden="true"></span></div>
       <div class="bird-unlock-copy">
         <h2 id="birdUnlockTitle">¡Nuevo compañero!</h2>
         <span class="bird-unlock-level" id="birdUnlockLevel">Nivel desbloqueado</span>
@@ -992,12 +1012,8 @@
           </label>
           <div class="session-profile-avatar-field">
             <label id="sessionProfileAvatarLabel">Avatar</label>
-            <div class="session-profile-avatars" role="group" aria-labelledby="sessionProfileAvatarLabel">
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="1" aria-label="Elegir la perdiz"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="2" aria-label="Elegir el capibara"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="3" aria-label="Elegir el oso hormiguero"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="4" aria-label="Elegir la vizcacha"></button>
-            </div>
+            <div class="session-profile-avatars" id="sessionProfileAvatars" role="group" aria-labelledby="sessionProfileAvatarLabel"></div>
+            <button class="ghost session-profile-avatar-shuffle" id="sessionProfileAvatarShuffle" type="button">Otra variación</button>
           </div>
         </div>
         <p class="session-profile-error" id="sessionProfileError" role="alert" hidden></p>
@@ -1023,7 +1039,7 @@
   </dialog>
 
 <aside class="workspace-yapi" aria-label="YAPI, asistente de tu tienda">
-  <div class="workspace-yapi-heading"><strong>✳ YAPI</strong><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
+  <div class="workspace-yapi-heading"><img class="workspace-yapi-star" src="/assets/pagosya-star-yellow.png" alt="YAPI" width="28" height="28"><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
   <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar hoy?" required></textarea><button class="primary" type="submit">Abrir con YAPI ↗</button></form>
   <p class="workspace-yapi-status" id="workspaceYapiStatus" role="status"></p>
 </aside>

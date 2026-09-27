@@ -9,9 +9,9 @@ export const SOURCE_DNA_FONTS = SOURCE_FONT_IDS;
 
 export const SOURCE_DNA_ENUMS = {
   type: { display: SOURCE_DNA_FONTS, text: SOURCE_DNA_FONTS, case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'] },
-  shape: { radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid'] },
+  shape: { radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid', 'blob', 'stamp', 'tape'] },
   buttons: {
-    form: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split'],
+    form: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split', 'sticker', 'ticket', 'bubbly', 'brutal'],
     hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
   },
   motion: { personality: ['calm', 'snappy', 'playful', 'cinematic'] },
@@ -38,20 +38,30 @@ export type SourceDesignDna = { version: 1 } & { -readonly [G in keyof Enums]: {
 
 // Runtime names are what commerce.js writes as data-dna-<name>; two read better renamed.
 const RUNTIME_NAMES: Record<string, string> = { 'buttons.form': 'button', 'motion.personality': 'motion' };
+/** Identity libraries (T2b) appended these values. The seeded default never picks them: withSeededDna seeds every stored
+ * store without a DNA on each public view, so a new value in the draw would silently restyle stores published long ago. */
+const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'], 'shape.frame': ['blob', 'stamp', 'tape'] };
 const FIELDS = Object.entries(SOURCE_DNA_ENUMS).flatMap(([group, keys]) => Object.entries(keys).map(([key, values]) => (
-  { group, key, name: RUNTIME_NAMES[`${group}.${key}`] ?? key, values: values as readonly string[] })));
+  { group, key, name: RUNTIME_NAMES[`${group}.${key}`] ?? key, values: values as readonly string[],
+    seeded: (values as readonly string[]).filter(value => !(NOT_SEEDED[`${group}.${key}`] ?? []).includes(value)) })));
 export const SOURCE_DNA_RUNTIME_ENUMS: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [field.name, field.values]));
 export type SourceRuntimeDna = { version: 1 } & Record<string, string | 1>;
+/** The seeded (T4-gated) values per field, keyed "group.key": what defaultDna draws from, what the planner's schema
+ * offers, and what avoidTakenFingerprint's nudge lands on. A DNA that already carries a not-yet-seeded value (an
+ * existing store) still validates and renders — normalizeDna and the runtime check against the full SOURCE_DNA_ENUMS
+ * below, never this map. */
+const SEEDED_BY_FIELD: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [`${field.group}.${field.key}`, field.seeded]));
 
 const enumSchema = (values: readonly string[]) => ({ type: 'string', enum: [...values] });
-/** Strict structured-output fragment: every property required, no extra keys. */
+/** Strict structured-output fragment: every property required, no extra keys. Spec §2.6 ("Nothing is chosen in T2
+ * itself"): the new button forms and frames (NOT_SEEDED above) stay out of what the planner can choose until T4. */
 export const SOURCE_DNA_SCHEMA = {
   type: 'object', additionalProperties: false, required: ['version', ...Object.keys(SOURCE_DNA_ENUMS), 'motifs', 'signature'],
   properties: {
     version: { type: 'integer', enum: [1] },
     ...Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS).map(([group, keys]) => [group, {
       type: 'object', additionalProperties: false, required: Object.keys(keys),
-      properties: Object.fromEntries(Object.entries(keys).map(([key, values]) => [key, enumSchema(values)])),
+      properties: Object.fromEntries(Object.entries(keys).map(([key, values]) => [key, enumSchema(SEEDED_BY_FIELD[`${group}.${key}`] ?? values)])),
     }])) as { [G in keyof Enums]: { type: 'object'; additionalProperties: false; required: string[]; properties: { [K in keyof Enums[G]]: { type: 'string'; enum: string[] } } } },
     motifs: { type: 'array', maxItems: MAX_MOTIFS, items: {
       type: 'object', additionalProperties: false, required: ['for', 'target', 'meaning', 'behavior', 'trigger', 'placement'],
@@ -84,7 +94,7 @@ function seededRandom(seed: string) {
 export function defaultDna(seed: string): SourceDesignDna {
   const random = seededRandom(seed);
   const dna: any = { version: 1 };
-  for (const { group, key, values } of FIELDS) (dna[group] ??= {})[key] = values[Math.floor(random() * values.length)];
+  for (const { group, key, seeded } of FIELDS) (dna[group] ??= {})[key] = seeded[Math.floor(random() * seeded.length)];
   return { ...dna, motifs: [], signature: '' };
 }
 
@@ -140,7 +150,9 @@ export function avoidTakenFingerprint(dna: SourceDesignDna, taken: readonly stri
   if (!takenSet.has(original)) return { dna };
   const random = seededRandom(seed);
   const order = MUTABLE_FINGERPRINT_FIELDS.map(field => ({ field, rank: random() })).sort((a, b) => a.rank - b.rank).map(entry => entry.field);
-  const valuesOf = ([group, key]: typeof order[number]) => (SOURCE_DNA_ENUMS[group] as Record<string, readonly string[]>)[key];
+  // Spec §2.6: the nudge only moves a freshly planned DNA (already schema-validated, so never carrying a
+  // not-yet-seeded value) to another seeded value — never onto a T2b form/frame ahead of T4.
+  const valuesOf = ([group, key]: typeof order[number]) => SEEDED_BY_FIELD[`${group}.${key}`];
   const valueOf = (value: SourceDesignDna, [group, key]: typeof order[number]) => (value[group] as Record<string, string>)[key];
   for (const [first, second] of [[order[0], order[1]], [order[0], order[2]], [order[1], order[2]]]) {
     const firstValues = valuesOf(first), secondValues = valuesOf(second);

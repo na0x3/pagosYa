@@ -52,6 +52,14 @@ it('ignores artwork instructions in model-generated history', () => {
   expect(requestsArtwork('Añade ilustraciones a la preparación')).toBe(true);
   expect(requestsArtwork('Sin dibujos ni ilustraciones')).toBe(false);
 });
+it('lets a Plantilla demo photo give way to the merchant’s own photos, while the merchant’s photos stay protected', () => {
+  const storeData = (photos: Record<string, string>) => ({ path: 'components/store-data.tsx', content: `export const photos: Record<string, string> = ${JSON.stringify(photos)};\n` });
+  const before = [storeData({ hero: 'assets/template-pausa-hero.jpg', p1: '/v1/uploads/merchant-a.jpg' })];
+  const demoReplaced = [storeData({ hero: '/v1/uploads/merchant-b.jpg', p1: '/v1/uploads/merchant-a.jpg' })];
+  expect(() => validateSourceEditScope(before, demoReplaced, 'sisi porfa')).not.toThrow();
+  const merchantDropped = [storeData({ hero: 'assets/template-pausa-hero.jpg', p1: '/v1/uploads/merchant-b.jpg' })];
+  expect(() => validateSourceEditScope(before, merchantDropped, 'sisi porfa')).toThrow('foto');
+});
 it('preserves media even in general visual refinements, unless replacement was explicitly requested', () => {
   const before = nextStoreFiles(), after = nextStoreFiles();
   after[1].content = after[1].content.replace('/assets/sample.png', '/assets/new.png');

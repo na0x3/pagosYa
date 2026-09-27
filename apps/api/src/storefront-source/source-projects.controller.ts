@@ -58,6 +58,13 @@ export class SourceProjectsController {
     return this.chat.send(merchant.id, storeId, input);
   }
 
+  @Get('draft-preview')
+  @Header('Cache-Control', 'private, no-store')
+  draftPreview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('since') since?: string) {
+    const after = since !== undefined && /^\d{1,15}$/.test(since) ? Number(since) : undefined;
+    return this.chat.draftPreview(merchant.id, storeId, after);
+  }
+
   @Get('progress')
   @Header('Cache-Control', 'private, no-store')
   progress(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('requestId', new ParseUUIDPipe()) requestId: string) {

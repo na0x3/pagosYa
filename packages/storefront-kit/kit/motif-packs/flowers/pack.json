@@ -1,0 +1,66 @@
+{
+  "id": "flowers",
+  "version": 1,
+  "name": "Flores",
+  "topics": {
+    "es": [
+      "flor",
+      "flores",
+      "florería",
+      "ramo",
+      "ramos",
+      "tulipán",
+      "rosas"
+    ],
+    "en": [
+      "flower",
+      "flowers",
+      "florist",
+      "bouquet",
+      "tulip",
+      "roses"
+    ]
+  },
+  "motifs": [
+    {
+      "placement": "button",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "pattern",
+      "file": "pattern.svg",
+      "behavior": "float"
+    },
+    {
+      "placement": "divider",
+      "file": "divider.svg",
+      "behavior": "grow"
+    },
+    {
+      "placement": "sticker",
+      "file": "sticker.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "empty",
+      "file": "empty.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "product",
+      "file": "empty.svg",
+      "behavior": "sway"
+    },
+    {
+      "placement": "card",
+      "file": "button.svg",
+      "behavior": "bounce"
+    },
+    {
+      "placement": "cart",
+      "file": "button.svg",
+      "behavior": "bounce"
+    }
+  ]
+}

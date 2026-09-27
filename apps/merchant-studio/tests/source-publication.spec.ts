@@ -32,8 +32,9 @@ test('the design panels stay mounted beside the preview',async({page})=>{
   const publication=page.locator('.canvas-toolbar .source-publication-details > summary');
   await expect(publication).toBeVisible();
   await expect(publication).toHaveAttribute('aria-label','Publicación y pruebas');
-  await expect(page.locator('.source-canvas-tools').getByRole('button',{name:'Recursos visuales'})).toBeVisible();
-  await expect(page.locator('.source-canvas-tools').getByRole('button',{name:'Mejorar diseño'})).toBeVisible();
+  // The composer carries no visual-resources or design-improvement tools (removed at the owner's request, 2026-09-26).
+  await expect(page.getByRole('button',{name:'Recursos visuales'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Mejorar diseño'})).toHaveCount(0);
   await publication.click();
   await expect(page.getByRole('checkbox',{name:'Formulario de contacto'})).toBeVisible();
   await expect(page.getByText('Comparar dos diseños',{exact:true})).toBeVisible();

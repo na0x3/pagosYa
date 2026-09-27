@@ -18,7 +18,7 @@
 
 /* weekly */
 .growth-weekly { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 16px; border: 2px solid var(--g-line); border-radius: 14px; background: var(--g-brand); box-shadow: 4px 4px 0 var(--g-line); }
-.growth-weekly-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #fff; border: 2px solid var(--g-line); }
+.growth-weekly-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--pg-surface-raised, #fff); border: 2px solid var(--g-line); }
 .growth-weekly-icon svg, .growth-empty-icon svg, .growth-all-clear svg, .growth-do svg, .growth-share svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .growth-weekly h3 { font-weight: 800; font-size: 13px; line-height: 1.2; font-family: inherit; text-transform: uppercase; letter-spacing: 1px; }
 .growth-weekly p { margin-top: 4px; font-size: 15px; line-height: 1.5; }
@@ -149,8 +149,8 @@
 .growth-onboarding li.is-done .growth-step-number { background: var(--g-good); }
 .growth-onboarding .primary { min-height: 44px; padding: 0 18px; font-weight: 800; }
 .growth-share { display: grid; gap: 8px; width: 100%; }
-.growth-share code { display: block; padding: 8px 10px; border-radius: 8px; background: #fff; border: 1px solid var(--pg-border, #d8d9ce); font-size: 13px; overflow-wrap: anywhere; }
-.growth-share .ghost { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 2px solid var(--g-line); border-radius: 8px; background: #fff; color: var(--pg-text); font-weight: 700; font-size: 14px; line-height: 1; font-family: inherit; text-decoration: none; }
+.growth-share code { display: block; padding: 8px 10px; border-radius: 8px; background: var(--pg-surface-raised, #fff); border: 1px solid var(--pg-border, #d8d9ce); font-size: 13px; overflow-wrap: anywhere; }
+.growth-share .ghost { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 2px solid var(--g-line); border-radius: 8px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font-weight: 700; font-size: 14px; line-height: 1; font-family: inherit; text-decoration: none; }
 
 /* loading and errors */
 .growth-skeleton { display: grid; gap: 12px; }

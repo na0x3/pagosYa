@@ -169,13 +169,24 @@ export class SourceProjectsService {
   }
 
   async editFile(merchantId: string, storeId: string, input: EditSourceFileDto) {
+    return this.editFiles(merchantId, storeId, { revision: input.revision, files: [{ path: input.path, content: input.content }] });
+  }
+
+  /** Several text files as one revision (the code editor sends one; the MCP server sends a batch). */
+  async editFiles(merchantId: string, storeId: string, input: { revision: number; files: Array<{ path: string; content: string }> }) {
+    if (!input.files.length || input.files.length > 20) throw new BadRequestException('Edita entre 1 y 20 archivos a la vez.');
     const version = await this.version(merchantId, storeId, input.revision);
     const snapshot = version.snapshot as unknown as SourceProjectSnapshot;
-    if (isNextSource(snapshot.files) && !nextSourceFile(input.path)) throw new BadRequestException('Edita los componentes React o styles/globals.css; los archivos compilados se actualizan automáticamente.');
-    const file = snapshot.files.find((entry) => entry.path === input.path);
-    if (!file || file.encoding === "base64") throw new BadRequestException("Selecciona un archivo de texto existente.");
-    return this.save(merchantId, storeId, { revision: input.revision, label: `Edición de ${input.path}`.slice(0, 120), brief: snapshot.brief,
-      files: snapshot.files.map((entry) => entry.path === input.path ? { ...entry, content: input.content } : entry) });
+    const edits = new Map<string, string>();
+    for (const edit of input.files) {
+      if (isNextSource(snapshot.files) && !nextSourceFile(edit.path)) throw new BadRequestException('Edita los componentes React o styles/globals.css; los archivos compilados se actualizan automáticamente.');
+      const file = snapshot.files.find((entry) => entry.path === edit.path);
+      if (!file || file.encoding === "base64") throw new BadRequestException("Selecciona un archivo de texto existente.");
+      edits.set(edit.path, edit.content);
+    }
+    const label = edits.size === 1 ? `Edición de ${[...edits.keys()][0]}` : `Edición de ${edits.size} archivos`;
+    return this.save(merchantId, storeId, { revision: input.revision, label: label.slice(0, 120), brief: snapshot.brief,
+      files: snapshot.files.map((entry) => edits.has(entry.path) ? { ...entry, content: edits.get(entry.path)! } : entry) });
   }
 
   async visualFields(merchantId: string, storeId: string, revision: number) {

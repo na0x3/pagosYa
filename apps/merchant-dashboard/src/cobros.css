@@ -67,7 +67,7 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-sub { margin: 6px 0 0; color: var(--pg-text-muted); font-size: 14px; overflow-wrap: anywhere; }
 .cobro-sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px 20px; display: grid; gap: 14px; align-content: start; overscroll-behavior: contain; }
 .cobro-sheet-foot { display: flex; align-items: center; gap: 14px; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); background: var(--pg-surface, #fff); border-top: 2px solid var(--cobro-line, #20211e); }
-.cobro-icon-button { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 10px; background: #fff; color: var(--pg-text); cursor: pointer; }
+.cobro-icon-button { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 10px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); cursor: pointer; }
 .cobro-icon-button:hover { border-color: var(--cobro-line, #20211e); }
 .cobro-success-mark { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 0 8px; border-radius: 14px; background: #dff3e6; color: #16603a; border: 2px solid #16603a; }
 .cobro-success-mark svg { width: 24px; height: 24px; stroke-width: 2.6; }
@@ -80,12 +80,12 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-step legend span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--pg-brand, #f3f36b); border: 2px solid var(--cobro-line, #20211e); font-size: 12px; }
 .cobro-step legend small { color: var(--pg-text-muted); font-weight: 600; }
 .cobro-step label { display: block; margin-bottom: 4px; color: var(--pg-text-muted); font-size: 13px; font-weight: 600; }
-.cobro-step input:not([type="radio"]):not([type="checkbox"]), .cobro-step textarea, .cobro-share input, .cobro-catalog input { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: #fff; color: var(--pg-text); font: inherit; font-size: 16px; }
+.cobro-step input:not([type="radio"]):not([type="checkbox"]), .cobro-step textarea, .cobro-share input, .cobro-catalog input { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font: inherit; font-size: 16px; }
 .cobro-step textarea { min-height: 64px; resize: vertical; }
 .cobro-step :is(input, textarea):focus, .cobro-share input:focus, .cobro-catalog input:focus { outline: none; border-color: var(--pg-accent, #55416e); box-shadow: 0 0 0 3px var(--pg-accent-soft, #e6dff4); }
 .cobro-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cobro-customer { position: relative; }
-.cobro-suggestions { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); max-height: 260px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; background: #fff; border: 2px solid var(--cobro-line, #20211e); border-radius: 10px; box-shadow: 4px 4px 0 #20211e; }
+.cobro-suggestions { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); max-height: 260px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; background: var(--pg-surface-raised, #fff); border: 2px solid var(--cobro-line, #20211e); border-radius: 10px; box-shadow: 4px 4px 0 #20211e; }
 .cobro-suggestions li { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; }
 .cobro-suggestions li:hover { background: var(--pg-accent-soft, #e6dff4); }
 .cobro-suggestions li span:last-child { display: grid; min-width: 0; }
@@ -98,20 +98,20 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-line-desc { grid-area: desc; }
 .cobro-line:has(.cobro-line-remove) .cobro-line-desc { padding-right: 48px; }
 .cobro-line-remove { position: absolute; top: 2px; right: 0; width: 40px; height: 40px; }
-.cobro-line-qty { grid-area: qty; display: inline-flex; align-items: center; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: #fff; overflow: hidden; width: max-content; }
+.cobro-line-qty { grid-area: qty; display: inline-flex; align-items: center; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: var(--pg-surface-raised, #fff); overflow: hidden; width: max-content; }
 .cobro-line-qty button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 18px; font-weight: 700; cursor: pointer; color: var(--pg-text); }
 .cobro-line-qty input { width: 48px !important; min-width: 0 !important; min-height: 40px !important; border: 0 !important; border-radius: 0 !important; text-align: center; padding: 0 !important; box-shadow: none !important; }
 .cobro-line-price { grid-area: price; display: flex; align-items: center; gap: 6px; justify-self: end; }
 .cobro-line-price span { color: var(--pg-text-muted); font-weight: 700; font-size: 14px; }
 .cobro-line-price input { width: 132px !important; min-width: 0 !important; text-align: right; font-variant-numeric: tabular-nums; }
 .cobro-item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.cobro-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 2px solid var(--cobro-line, #20211e); border-radius: 8px; background: #fff; color: var(--pg-text); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.cobro-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 2px solid var(--cobro-line, #20211e); border-radius: 8px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
 .cobro-secondary:hover { background: var(--pg-accent-soft, #e6dff4); }
 .cobro-secondary.is-danger { color: var(--pg-error, #a52a22); border-color: var(--pg-error, #a52a22); }
 .cobro-catalog { display: grid; gap: 8px; padding: 10px; border-radius: 10px; background: var(--cobro-soft); }
 .cobro-catalog[hidden] { display: none; }
 .cobro-catalog-list { display: grid; gap: 6px; max-height: 240px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
-.cobro-catalog-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: #fff; color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.cobro-catalog-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: var(--pg-surface-raised, #fff); color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
 .cobro-catalog-list button:hover { border-color: var(--cobro-line, #20211e); }
 .cobro-catalog-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cobro-catalog-list button strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -120,7 +120,7 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-preset { position: relative; margin: 0 !important; }
 /* Visually hidden but still a real, focusable radio (the pill is its label). */
 .cobro-preset input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.cobro-preset span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 999px; background: #fff; color: var(--pg-text); font-size: 14px; font-weight: 700; cursor: pointer; }
+.cobro-preset span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 999px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font-size: 14px; font-weight: 700; cursor: pointer; }
 .cobro-preset input:checked + span { background: var(--pg-brand, #f3f36b); border-color: var(--cobro-line, #20211e); }
 .cobro-preset input:focus-visible + span { outline: 3px solid var(--pg-accent, #55416e); outline-offset: 2px; }
 .cobro-custom-date[hidden] { display: none; }
@@ -144,7 +144,7 @@ body.cobro-sheet-open { overflow: hidden; }
 
 /* share */
 .cobro-share { display: grid; gap: 10px; }
-.cobro-share-option { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 68px; padding: 12px 14px; border: 2px solid var(--cobro-line, #20211e); border-radius: 12px; background: #fff; color: var(--pg-text); font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+.cobro-share-option { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 68px; padding: 12px 14px; border: 2px solid var(--cobro-line, #20211e); border-radius: 12px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
 .cobro-share-option:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--cobro-line, #20211e); }
 .cobro-share-option.is-form { cursor: default; align-items: flex-start; }
 .cobro-share-option.is-form:hover { transform: none; box-shadow: none; }
@@ -165,11 +165,11 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .cobro-detail-actions .primary { min-height: 40px; padding: 0 16px; font-weight: 800; }
 .cobro-remind { position: relative; }
-.cobro-remind-menu { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: grid; min-width: 220px; padding: 6px; background: #fff; border: 2px solid var(--cobro-line, #20211e); border-radius: 10px; box-shadow: 4px 4px 0 #20211e; }
+.cobro-remind-menu { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: grid; min-width: 220px; padding: 6px; background: var(--pg-surface-raised, #fff); border: 2px solid var(--cobro-line, #20211e); border-radius: 10px; box-shadow: 4px 4px 0 #20211e; }
 .cobro-remind-menu[hidden] { display: none; }
 .cobro-remind-menu :is(a, button) { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--pg-text); font: inherit; font-size: 14px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
 .cobro-remind-menu :is(a, button):hover { background: var(--pg-accent-soft, #e6dff4); }
-.cobro-detail-block { display: grid; gap: 8px; padding: 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 12px; background: #fff; }
+.cobro-detail-block { display: grid; gap: 8px; padding: 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 12px; background: var(--pg-surface-raised, #fff); }
 .cobro-detail-block h3 { margin: 0; font-size: 14px; }
 .cobro-detail-items { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
 .cobro-detail-items li, .cobro-detail-line { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-size: 14px; }
@@ -178,7 +178,7 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-detail-line.is-total { padding-top: 8px; border-top: 1px dashed var(--pg-border, #d8d9ce); font-weight: 700; }
 .cobro-timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .cobro-timeline li { position: relative; display: flex; justify-content: space-between; gap: 12px; padding: 8px 0 8px 20px; font-size: 14px; border-left: 2px solid var(--pg-border, #d8d9ce); margin-left: 5px; }
-.cobro-timeline li::before { content: ""; position: absolute; left: -7px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid var(--pg-text-muted, #61625b); }
+.cobro-timeline li::before { content: ""; position: absolute; left: -7px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: var(--pg-surface-raised, #fff); border: 2px solid var(--pg-text-muted, #61625b); }
 .cobro-timeline li.is-good::before { background: #16603a; border-color: #16603a; }
 .cobro-timeline li.is-warning::before { background: #e88a1a; border-color: #8a3b00; }
 .cobro-timeline li.is-bad::before { background: var(--pg-error, #a52a22); border-color: var(--pg-error, #a52a22); }
@@ -199,7 +199,7 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobros-attention { background: #fff1dc; color: #6b2f00; border-color: #8a3b00; }
 .cobros-attention > div { display: grid; gap: 8px; min-width: 0; }
 .cobros-attention-links { display: flex; flex-wrap: wrap; gap: 6px; }
-.cobros-attention-links .cobro-secondary { min-height: 36px; padding: 0 10px; font-size: 13px; border-color: #8a3b00; color: #6b2f00; background: #fff; }
+.cobros-attention-links .cobro-secondary { min-height: 36px; padding: 0 10px; font-size: 13px; border-color: #8a3b00; color: #6b2f00; background: var(--pg-surface-raised, #fff); }
 .cobros-summary dd span { display: block; }
 .cobros-summary dd span.is-extra { margin-top: 2px; font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--pg-text-muted); }
 .cobros-test-note { display: flex; align-items: center; gap: 8px; margin: 0; color: #1f3d7a; font-size: 13px; font-weight: 600; }
@@ -219,7 +219,7 @@ body.cobro-sheet-open { overflow: hidden; }
 
 /* discard question over the sheet */
 .cobro-discard { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(248, 248, 242, .88); }
-.cobro-discard-card { display: grid; gap: 10px; width: min(360px, 100%); padding: 18px; background: #fff; border: 2px solid var(--cobro-line, #20211e); border-radius: 14px; box-shadow: 4px 4px 0 #20211e; }
+.cobro-discard-card { display: grid; gap: 10px; width: min(360px, 100%); padding: 18px; background: var(--pg-surface-raised, #fff); border: 2px solid var(--cobro-line, #20211e); border-radius: 14px; box-shadow: 4px 4px 0 #20211e; }
 .cobro-discard-card h3 { margin: 0; font-size: 18px; }
 .cobro-discard-card p { margin: 0; color: var(--pg-text-muted); font-size: 14px; }
 .cobro-discard-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
@@ -230,15 +230,15 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-alert { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 2px solid #8a3b00; border-radius: 12px; background: #fff1dc; color: #6b2f00; font-size: 14px; }
 .cobro-alert > div { display: grid; gap: 6px; justify-items: start; }
 .cobro-alert p { margin: 0; line-height: 1.5; }
-.cobro-mark-paid { display: grid; gap: 8px; padding: 14px; border: 2px solid var(--cobro-line, #20211e); border-radius: 12px; background: #fff; }
+.cobro-mark-paid { display: grid; gap: 8px; padding: 14px; border: 2px solid var(--cobro-line, #20211e); border-radius: 12px; background: var(--pg-surface-raised, #fff); }
 .cobro-mark-paid[hidden] { display: none; }
 .cobro-mark-paid fieldset { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
 .cobro-mark-paid legend { padding: 0; margin-bottom: 6px; font-weight: 800; font-size: 14px; }
 .cobro-mark-paid > label { color: var(--pg-text-muted); font-size: 13px; font-weight: 600; }
-.cobro-mark-paid input:not([type="radio"]) { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: #fff; color: var(--pg-text); font: inherit; font-size: 16px; }
+.cobro-mark-paid input:not([type="radio"]) { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font: inherit; font-size: 16px; }
 .cobro-mark-paid-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .cobro-mark-paid-actions .primary { min-height: 40px; padding: 0 16px; font-weight: 800; }
-.cobro-detail-toggle { padding: 12px 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 12px; background: #fff; }
+.cobro-detail-toggle { padding: 12px 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 12px; background: var(--pg-surface-raised, #fff); }
 
 /* toast */
 .cobros-toast { position: fixed; z-index: 4200; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: min(520px, calc(100vw - 32px)); margin: 0; padding: 12px 16px; border: 2px solid var(--bento-keyline, #20211e); border-radius: 12px; background: #20211e; color: #fff; font-size: 14px; font-weight: 700; box-shadow: 4px 4px 0 rgba(0,0,0,.25); }

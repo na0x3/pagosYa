@@ -202,6 +202,20 @@ describe("store analytics daily cap", () => {
   });
 });
 
+describe("YAPI engine", () => {
+  const saved = { engine: process.env.YAPI_ENGINE, env: process.env.NODE_ENV };
+  afterEach(() => { for (const [key, value] of [["YAPI_ENGINE", saved.engine], ["NODE_ENV", saved.env]] as const) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
+  it("uses the agent in development and the single call elsewhere unless YAPI_ENGINE says otherwise", () => {
+    delete process.env.YAPI_ENGINE;
+    process.env.NODE_ENV = "development";
+    expect(configuration().app.yapiEngine).toBe("agent");
+    process.env.NODE_ENV = "test";
+    expect(configuration().app.yapiEngine).toBe("single");
+    process.env.YAPI_ENGINE = "agent";
+    expect(configuration().app.yapiEngine).toBe("agent");
+  });
+});
+
 describe("source framework default", () => {
   const saved = process.env.SOURCE_FRAMEWORK;
   afterEach(() => { if (saved === undefined) delete process.env.SOURCE_FRAMEWORK; else process.env.SOURCE_FRAMEWORK = saved; });

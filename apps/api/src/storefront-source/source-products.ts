@@ -194,18 +194,25 @@ export function requestedSourceProductOperations(
   instruction: string,
   currentItems: SourceCatalogItem[],
   allowedImages: Set<string>,
+  options: { dropUnrequested?: boolean } = {},
 ): SourceProductOperation[] {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > 6) throw new BadRequestException('Puedes cambiar o eliminar hasta 6 productos por mensaje.');
   const current = operationRequest(instruction);
   if (value.length && !hasProductMutationRequest(current) && !((sourceOptionRequest(current) || sourceSubscriptionRequest(current)) && /\b(?:add|agrega|añade|crea|ofrece|configura|activa|offer|enable|update|change|cambia|actualiza|pon|set|remove|delete|elimina|quita|stock|agotad[oa]s?|sold out)\b/i.test(current))) {
+    // A generation that volunteers product changes nobody asked for loses them, not the whole attempt.
+    if (options.dropUnrequested) return [];
     throw new BadRequestException('Solo cambio productos cuando lo pides explícitamente en el mensaje actual.');
   }
   const byId = new Map(currentItems.map(item => [item.id, item]));
   const named = productsNamedIn(current, currentItems);
   const existingImages = new Set(currentItems.flatMap(item => (item.imageUrls || []).map(canonicalUploadUrl)));
   const acceptedImages = new Set([...allowedImages, ...existingImages].map(canonicalUploadUrl));
-  return value.map(raw => {
+  // During a generation, changes to products the merchant did not name are dropped; if nothing named is left the
+  // request still fails, so the merchant (or the retry) hears which product to name.
+  const kept = options.dropUnrequested ? value.filter(raw => raw && typeof raw === 'object' && named.has((raw as any).productId)) : value;
+  const operations = kept.length || !options.dropUnrequested ? kept : value.slice(0, 1);
+  return operations.map(raw => {
     if (!raw || typeof raw !== 'object' || typeof (raw as any).productId !== 'string' || !byId.has((raw as any).productId)) {
       throw new BadRequestException('Selecciona un producto existente de esta tienda para cambiarlo o eliminarlo.');
     }

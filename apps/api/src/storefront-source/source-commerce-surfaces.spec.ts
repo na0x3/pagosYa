@@ -144,9 +144,10 @@ describe('focus ring', () => {
       expect(ring.body).toMatch(/outline:3px solid var\(--kit-ink\)/);
       expect(ring.body).toMatch(/box-shadow:0 0 0 \d+px var\(--kit-paper\)/);
       expect(ring.body).toContain('clip-path:none');
-      // No hover declaration for :focus-visible comes after the ring (it would replace the halo).
+      // No later :focus-visible rule sets outline or box-shadow again (it would replace the halo). A form detail may still
+      // adjust something else on focus (the ticket form drops its notch mask so the ring is never clipped).
       const index = all.indexOf(ring);
-      const later = all.slice(index + 1).filter(rule => rule.selector.includes(':focus-visible') && rule.selector.includes(ring.selector.includes('.menu-add') ? '.menu-add' : '.product-detail__buy'));
+      const later = all.slice(index + 1).filter(rule => rule.selector.includes(':focus-visible') && rule.selector.includes(ring.selector.includes('.menu-add') ? '.menu-add' : '.product-detail__buy') && /(^|;)\s*(outline|box-shadow):/.test(rule.body));
       expect(later.map(rule => rule.selector)).toEqual([]);
     }
   });

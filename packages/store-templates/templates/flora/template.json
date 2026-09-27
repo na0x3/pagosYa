@@ -1,0 +1,66 @@
+{
+  "id": "flora",
+  "name": "Flora",
+  "category": "hogar",
+  "description": "Plantas y flores: verde profundo, rosa suave, arcos botánicos y una guía de cuidados.",
+  "tags": [
+    "plantas",
+    "flores",
+    "botánico",
+    "fresco"
+  ],
+  "sitePurpose": "shop",
+  "order": 140,
+  "dna": {
+    "display": "dm-serif-display",
+    "text": "figtree",
+    "case": "none",
+    "radius": "pill",
+    "border": "none",
+    "button": "pill",
+    "hover": "fill",
+    "press": "squash",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "arch"
+  },
+  "photos": [
+    {
+      "slot": "hero1",
+      "role": "hero",
+      "demo": "hero1.jpg"
+    },
+    {
+      "slot": "hero2",
+      "role": "lifestyle",
+      "demo": "hero2.jpg"
+    },
+    {
+      "slot": "hero3",
+      "role": "lifestyle",
+      "demo": "hero3.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "ramo",
+      "role": "detail",
+      "demo": "ramo.jpg"
+    }
+  ]
+}

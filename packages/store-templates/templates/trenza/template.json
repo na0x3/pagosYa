@@ -1,0 +1,61 @@
+{
+  "id": "trenza",
+  "name": "Trenza",
+  "category": "tecnologia",
+  "description": "Accesorios de tecnología con estilo de vida: arena, arcilla y oliva, fotos cálidas y materiales nobles.",
+  "tags": [
+    "tecnología",
+    "accesorios",
+    "cálido",
+    "estilo de vida"
+  ],
+  "sitePurpose": "shop",
+  "order": 210,
+  "dna": {
+    "display": "outfit",
+    "text": "figtree",
+    "case": "none",
+    "radius": "round",
+    "border": "none",
+    "button": "pill",
+    "hover": "lift",
+    "press": "squash",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "casa",
+      "role": "lifestyle",
+      "demo": "casa.jpg"
+    },
+    {
+      "slot": "viaje",
+      "role": "lifestyle",
+      "demo": "viaje.jpg"
+    }
+  ]
+}

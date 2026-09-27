@@ -1,0 +1,62 @@
+{
+  "id": "tostado",
+  "name": "Tostado",
+  "category": "comida",
+  "description": "Café de especialidad: papel cálido, títulos en mayúsculas y un carrusel de productos con notas de sabor.",
+  "tags": [
+    "café",
+    "tostaduría",
+    "editorial",
+    "moderno"
+  ],
+  "sitePurpose": "shop",
+  "order": 20,
+  "dna": {
+    "display": "oswald",
+    "text": "instrument",
+    "case": "upper",
+    "tracking": "wide",
+    "radius": "none",
+    "border": "hairline",
+    "button": "block",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "ribbon",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "origen",
+      "role": "lifestyle",
+      "demo": "origen.jpg"
+    },
+    {
+      "slot": "taza",
+      "role": "detail",
+      "demo": "taza.jpg"
+    }
+  ]
+}

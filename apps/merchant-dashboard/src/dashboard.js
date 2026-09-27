@@ -1,5 +1,7 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
-import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
+import { ANIMATIONS, mountBlob } from "@pagosya/blob-characters";
+import { ADVENTURE_LEVELS, companionBlobHtml, companionBlobUri, companionSeed } from "/src/companions.mjs";
+import { normalizeVariation, profileBlobHtml, profileBlobUri, randomVariation, variationChoices } from "/src/profile-blob.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
@@ -38,6 +40,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   const profileMenuTriggerEl = document.getElementById("profileMenuTrigger");
   const profileTriggerAvatarEl = document.getElementById("profileTriggerAvatar");
   const profileMenuAvatarEl = document.getElementById("profileMenuAvatar");
+  const profileAvatarOptionsEl = document.getElementById("profileAvatarOptions");
+  const accountAvatarEl = document.getElementById("accountAvatar");
+  const sessionProfileAvatarsEl = document.getElementById("sessionProfileAvatars");
   const profileDisplayNameEl = document.getElementById("profileDisplayName");
   const profileSessionsEl = document.getElementById("profileSessions");
   const profileSessionCountEl = document.getElementById("profileSessionCount");
@@ -55,6 +60,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
   const PROFILE_AVATAR_STORAGE_PREFIX = "pagosya_merchant_avatar:";
+  // B1: the API's one-way blob seed, cached per email so the picture paints at once on the next load.
+  const PROFILE_BLOB_SEED_STORAGE_PREFIX = "pagosya_merchant_blob_seed:";
+  let currentBlobSeed = "";
+  let profileVariationChoices = [];
+  let loginVariationChoices = [];
+  let editingVariationChoices = [];
   let selectedProfileAvatar = 1;
   let currentProfileName = "";
   let selectedLoginAvatar = 1;
@@ -70,11 +81,30 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   function readProfileAvatar() {
     try {
-      const stored = Number(localStorage.getItem(profileAvatarStorageKey()));
-      return stored >= 1 && stored <= 4 ? stored : 1;
+      return normalizeVariation(localStorage.getItem(profileAvatarStorageKey()));
     } catch {
       return 1;
     }
+  }
+
+  function blobSeedStorageKey() {
+    return PROFILE_BLOB_SEED_STORAGE_PREFIX + String(emailEl.value || "default").trim().toLocaleLowerCase("es");
+  }
+
+  function readBlobSeed() {
+    try { return localStorage.getItem(blobSeedStorageKey()) || ""; } catch { return ""; }
+  }
+
+  /** Takes the blob seed from a /dashboard/sessions answer; an answer without one changes nothing. */
+  function rememberBlobSeed(seed) {
+    if (typeof seed !== "string" || !seed || seed === currentBlobSeed) return;
+    currentBlobSeed = seed;
+    try { localStorage.setItem(blobSeedStorageKey(), seed); } catch {}
+    renderProfileAvatar();
+    setLoginAvatar(selectedLoginAvatar);
+    // Only the runner token's image, never the whole board: renderBoard() can briefly show "No pudimos
+    // cargar el tablero." when sessions arrive before rewards has loaded, and this fires before that.
+    rewards.refreshRunner();
   }
 
   function profileNameFromEmail(email) {
@@ -83,29 +113,51 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     return localPart.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("es"));
   }
 
-  function renderProfileAvatar() {
-    const markup = profileAvatarHtml(selectedProfileAvatar);
-    profileTriggerAvatarEl.innerHTML = markup;
-    profileMenuAvatarEl.innerHTML = markup;
-    document.querySelectorAll("[data-profile-avatar]").forEach((button) => {
-      const avatarId = Number(button.dataset.profileAvatar);
-      button.innerHTML = profileAvatarHtml(avatarId);
-      button.setAttribute("aria-pressed", String(avatarId === selectedProfileAvatar));
+  /**
+   * Renders a row of variation-option buttons by updating existing <button> elements in place rather
+   * than rebuilding them with `innerHTML`, so a re-render while one of them holds keyboard focus (a
+   * save in flight, a menu refresh under a focused user) never drops focus to <body>.
+   */
+  function renderVariationOptionButtons(container, className, dataAttr, variations, selected) {
+    const buttons = Array.from(container.children);
+    while (buttons.length < variations.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = className;
+      container.appendChild(button);
+      buttons.push(button);
+    }
+    while (buttons.length > variations.length) buttons.pop().remove();
+    variations.forEach((variation, index) => {
+      const button = buttons[index];
+      button.dataset[dataAttr] = String(variation);
+      button.setAttribute("aria-label", `Variación ${variation}`);
+      button.setAttribute("aria-pressed", String(variation === selected));
+      button.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true });
     });
   }
 
+  function renderProfileAvatar() {
+    const name = currentProfileName || profileNameFromEmail(emailEl.value);
+    // The trigger button carries its own label, so its blob is decorative; the menu head is the named picture.
+    profileTriggerAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
+    profileMenuAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, name });
+    if (!profileVariationChoices.includes(selectedProfileAvatar)) profileVariationChoices = variationChoices(selectedProfileAvatar);
+    renderVariationOptionButtons(profileAvatarOptionsEl, "profile-avatar-option", "profileAvatar", profileVariationChoices, selectedProfileAvatar);
+    // The account page has its own heading naming the person, so its picture stays decorative here too.
+    if (accountAvatarEl) accountAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
+  }
+
   function setLoginAvatar(avatarId) {
-    selectedLoginAvatar = avatarId >= 1 && avatarId <= 4 ? avatarId : 1;
-    document.querySelectorAll("[data-login-avatar]").forEach((button) => {
-      const optionId = Number(button.dataset.loginAvatar);
-      button.innerHTML = profileAvatarHtml(optionId);
-      button.setAttribute("aria-pressed", String(optionId === selectedLoginAvatar));
-    });
+    selectedLoginAvatar = normalizeVariation(avatarId);
+    if (!loginVariationChoices.includes(selectedLoginAvatar)) loginVariationChoices = variationChoices(selectedLoginAvatar);
+    renderVariationOptionButtons(sessionProfileAvatarsEl, "session-profile-avatar-option", "loginAvatar", loginVariationChoices, selectedLoginAvatar);
   }
 
   function applyProfileIdentity() {
     const email = emailEl.value || "tu cuenta del panel";
     selectedProfileAvatar = readProfileAvatar();
+    currentBlobSeed = readBlobSeed();
     profileDisplayNameEl.textContent = currentProfileName || profileNameFromEmail(email);
     loggedInAsEl.textContent = email;
     profileMenuTriggerEl.setAttribute("aria-label", `Abrir perfil de ${email}`);
@@ -114,33 +166,77 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   function applyCurrentSessionIdentity(session) {
     if (!session) return;
-    selectedProfileAvatar = Number(session.profileAvatarId) || 1;
+    selectedProfileAvatar = normalizeVariation(session.profileAvatarId);
     currentProfileName = session.profileName || profileNameFromEmail(emailEl.value);
     profileDisplayNameEl.textContent = currentProfileName;
     try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
     renderProfileAvatar();
   }
 
-  document.querySelectorAll("[data-profile-avatar]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const previousAvatar = selectedProfileAvatar;
-      selectedProfileAvatar = Number(button.dataset.profileAvatar);
-      try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
+  // Guards selectProfileVariation against overlapping requests: while a save is in flight, the
+  // option buttons and the shuffle button are marked aria-disabled (the click handlers below re-check
+  // this flag, which is what actually blocks a second call — native `disabled` would do that too, but
+  // it also blurs a focused element to <body> immediately, so aria-disabled is used instead).
+  let profileVariationSaveInFlight = false;
+
+  function setProfileAvatarControlsBusy(busy) {
+    profileAvatarOptionsEl.querySelectorAll("[data-profile-avatar]").forEach((button) => button.setAttribute("aria-disabled", String(busy)));
+    const shuffleButton = document.getElementById("profileAvatarShuffle");
+    if (shuffleButton) shuffleButton.setAttribute("aria-disabled", String(busy));
+  }
+
+  async function selectProfileVariation(variation) {
+    if (profileVariationSaveInFlight) return;
+    const previousAvatar = selectedProfileAvatar;
+    selectedProfileAvatar = normalizeVariation(variation);
+    try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
+    renderProfileAvatar();
+    rewards.refreshRunner();
+    const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
+    if (!currentSession) return;
+    profileVariationSaveInFlight = true;
+    setProfileAvatarControlsBusy(true);
+    try {
+      await updateProfileSession(currentSession.id, currentSession.profileName, selectedProfileAvatar);
+    } catch (error) {
+      selectedProfileAvatar = previousAvatar;
+      try { localStorage.setItem(profileAvatarStorageKey(), String(previousAvatar)); } catch {}
       renderProfileAvatar();
-      const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
-      if (!currentSession) return;
-      try {
-        await updateProfileSession(currentSession.id, currentSession.profileName, selectedProfileAvatar);
-        await loadProfileSessions(false);
-      } catch (error) {
-        selectedProfileAvatar = previousAvatar;
-        renderProfileAvatar();
-        profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
-      }
-    });
+      rewards.refreshRunner();
+      profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
+      profileVariationSaveInFlight = false;
+      setProfileAvatarControlsBusy(false);
+      return;
+    }
+    // The save already succeeded; a refresh that fails afterwards keeps the new variation and shows no error
+    // (calling loadProfileSessions here would overwrite the menu with its own "couldn't load" message).
+    try {
+      const payload = await api("/dashboard/sessions");
+      renderProfileSessions(payload);
+    } catch { /* save succeeded; nothing to roll back */ }
+    profileVariationSaveInFlight = false;
+    setProfileAvatarControlsBusy(false);
+  }
+  profileAvatarOptionsEl.addEventListener("click", (event) => {
+    if (profileVariationSaveInFlight) return;
+    const button = event.target.closest("[data-profile-avatar]");
+    if (button) void selectProfileVariation(Number(button.dataset.profileAvatar));
   });
-  document.querySelectorAll("[data-login-avatar]").forEach((button) => {
-    button.addEventListener("click", () => setLoginAvatar(Number(button.dataset.loginAvatar)));
+  // "Otra variación": a fresh blob, saved at once, with three new alternatives beside it.
+  document.getElementById("profileAvatarShuffle").addEventListener("click", () => {
+    if (profileVariationSaveInFlight) return;
+    const next = randomVariation(profileVariationChoices);
+    profileVariationChoices = variationChoices(next);
+    void selectProfileVariation(next);
+  });
+  sessionProfileAvatarsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-login-avatar]");
+    if (button) setLoginAvatar(Number(button.dataset.loginAvatar));
+  });
+  document.getElementById("sessionProfileAvatarShuffle").addEventListener("click", () => {
+    const next = randomVariation(loginVariationChoices);
+    loginVariationChoices = variationChoices(next);
+    setLoginAvatar(next);
   });
   renderProfileAvatar();
   setLoginAvatar(1);
@@ -166,6 +262,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const limit = Number(payload?.limit) || 3;
     const active = Number.isFinite(Number(payload?.active)) ? Number(payload.active) : sessions.length;
     lastProfileSessionsPayload = { ...payload, limit, active, sessions };
+    rememberBlobSeed(payload?.blobSeed);
     profileSessionCountEl.textContent = `${active} / ${limit}`;
     if (!sessions.length) {
       profileSessionsEl.innerHTML = '<p class="profile-session-state">No se encontraron sesiones activas.</p>';
@@ -175,7 +272,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     applyCurrentSessionIdentity(sessions.find((session) => session.current));
     profileSessionsEl.innerHTML = sessions.map((session) => `<div class="profile-session-row">
       <div class="profile-session-person">
-        <span class="profile-session-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span>
+        <span class="profile-session-avatar" aria-hidden="true">${profileBlobHtml({ blobSeed: currentBlobSeed, variation: session.profileAvatarId, decorative: true })}</span>
         <div class="profile-session-copy"><strong>${esc(session.profileName || "Sin nombre")}</strong><small>Inicio: ${esc(formatSessionDate(session.createdAt))}${session.isPrimary ? " · Principal" : ""}</small></div>
       </div>
       <div class="profile-session-actions">
@@ -183,9 +280,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
         ${(session.current || payload.canManageSessions) ? `<button class="profile-session-action" type="button" data-edit-session="${esc(session.id)}" aria-label="Cambiar nombre de ${esc(session.profileName || "esta sesión")}" title="Cambiar nombre y avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button>` : ""}
         ${!session.current && payload.canManageSessions ? `<button class="profile-session-action" type="button" data-revoke-session="${esc(session.id)}" aria-label="Cerrar la sesión de ${esc(session.profileName || "este perfil")}" title="Cerrar esta sesión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>` : ""}
       </div>
-      ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${Number(session.profileAvatarId) || 1}">
+      ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${normalizeVariation(session.profileAvatarId)}">
         <label>Nombre del perfil<input name="profileName" value="${esc(session.profileName || "")}" maxlength="32" autocomplete="off" required></label>
-        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${[1, 2, 3, 4].map((avatarId) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${avatarId}" aria-label="Elegir avatar ${avatarId}" aria-pressed="${avatarId === Number(session.profileAvatarId)}">${profileAvatarHtml(avatarId)}</button>`).join("")}</div>
+        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${editingVariationChoices.map((variation) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === normalizeVariation(session.profileAvatarId)}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("")}</div>
         <div class="profile-session-edit-actions"><button class="ghost" type="button" data-cancel-session-edit>Cancelar</button><button class="primary" type="submit">Guardar</button></div>
       </form>` : ""}
     </div>`).join("");
@@ -216,6 +313,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   }
 
   function renderSessionProfileChoices(payload, currentSession) {
+    rememberBlobSeed(payload?.blobSeed);
     const seen = new Set();
     const choices = (payload?.profiles?.length ? payload.profiles : payload?.sessions || []).filter((session) => {
       const name = String(session.profileName || "").trim();
@@ -226,13 +324,13 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       return true;
     });
     sessionProfileExistingEl.hidden = choices.length === 0;
-    sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${Number(session.profileAvatarId) || 1}" aria-pressed="false">
-      <span class="session-profile-choice-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span><span>${esc(session.profileName)}</span>
+    sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${normalizeVariation(session.profileAvatarId)}" aria-pressed="false">
+      <span class="session-profile-choice-avatar" aria-hidden="true">${profileBlobHtml({ blobSeed: currentBlobSeed, variation: session.profileAvatarId, decorative: true })}</span><span>${esc(session.profileName)}</span>
     </button>`).join("");
 
     const isUnassigned = !currentSession?.profileName || currentSession.profileName === "Seleccionar perfil";
     sessionProfileNameEl.value = isUnassigned ? "" : currentSession.isPrimary ? profileNameFromEmail(emailEl.value) : currentSession.profileName;
-    setLoginAvatar(Number(currentSession?.profileAvatarId) || 1);
+    setLoginAvatar(currentSession?.profileAvatarId);
   }
 
   async function chooseProfileForNewLogin(loginResult) {
@@ -312,6 +410,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const editButton = event.target.closest("[data-edit-session]");
     if (editButton) {
       editingProfileSessionId = editButton.dataset.editSession;
+      const editing = lastProfileSessionsPayload?.sessions?.find((session) => session.id === editingProfileSessionId);
+      editingVariationChoices = variationChoices(editing?.profileAvatarId);
       renderProfileSessions(lastProfileSessionsPayload);
       profileSessionsEl.querySelector(`[data-session-edit-form="${CSS.escape(editingProfileSessionId)}"] input`)?.focus();
       return;
@@ -405,7 +505,11 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     storeId: () => currentStoreId,
     signedIn: () => !!sessionToken,
     currentXp: () => (lastFinances ? gamificationState(lastFinances).xp : 0),
-    companionAsset: () => ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)].asset,
+    // The dice-board runner is the merchant's own blob; the level's companion stands in until the API sends the seed.
+    runnerImage: () => (currentBlobSeed
+      ? profileBlobUri(currentBlobSeed, selectedProfileAvatar)
+      : companionBlobUri(ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)])),
+    celebrateCompanion: () => { if (heroBlob) void heroBlob.play(ANIMATIONS.cheer); },
     rerender: (announce) => { if (lastFinances) renderGamification(lastFinances, { announce }); },
     burstConfetti,
     playTouchSound: playAdventureTouchSound,
@@ -726,6 +830,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   initDashboardSections();
   const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
+  // Conecta tu IA; mounted by a dynamic import further down, so it may still be null here.
+  let mcpConnect = null;
   const DASHBOARD_VIEW_COPY = {
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
     growth: ["Crecimiento", "Qué pasa en tu tienda y qué hacer ahora para vender más."],
@@ -737,12 +843,14 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     integrations: ["Integraciones", "Conecta las herramientas que tu tienda necesita."],
     products: ["Productos", "Tu catálogo y YAPI: añade productos paso a paso."],
     media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
+    templates: ["Plantillas", "Elige una tienda completa y mírala con tus productos antes de usarla."],
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
+    "connect-ai": ["Conecta tu IA", "Usa Claude, Codex o Cursor con tu tienda. Tu IA diseña y carga productos; publicar y cobrar siguen siendo tuyos."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
@@ -780,7 +888,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     selectMarketingTab(button.dataset.marketingTab); syncStoreResourceViews("marketing");
   });
   function syncStoreResourceViews(view) {
-    for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
+    for (const [kind, id] of [["media", "storeMediaFrame"], ["templates", "storeTemplatesFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
       const frame = document.getElementById(id);
       if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
@@ -800,15 +908,24 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   });
   window.addEventListener("message", event => {
     if (event.origin !== location.origin) return;
-    const frame = ["storeMediaFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
+    const frame = ["storeMediaFrame", "storeTemplatesFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
     if (!frame || frame.dataset.storeId !== currentStoreId || event.data?.storeId !== currentStoreId) return;
     if (event.data.type === "pagosya:workspace" && ["marketing", "integrations", "experiments", "workspace"].includes(event.data.view)) {
       if (!canLeaveMerchantStudio()) return;
       if (event.data.view === "marketing" && ["program", "templates"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
       history.pushState(null, "", `#dashboard-${event.data.view}`); setDashboardView(event.data.view); return;
     }
+    if (event.data.type === "pagosya:template-applied") {
+      // The design editor reloads on the new revision; the gallery reloads next time the tab opens.
+      const studio = document.getElementById("merchantStudioFrame"); studio.removeAttribute("src"); delete studio.dataset.storeId; delete studio.dataset.ready;
+      frame.removeAttribute("src"); delete frame.dataset.storeId;
+      history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); return;
+    }
     if (event.data.type === "pagosya:source-publication-changed") { void refresh(); return; }
-    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(4000, Math.max(340, event.data.height))}px`;
+    // A previewed template takes the whole screen beside the sidebar (dashboard.css, body.template-focus).
+    if (event.data.type === "pagosya:template-focus" && frame.id === "storeTemplatesFrame") { document.body.classList.toggle("template-focus", Boolean(event.data.open)); return; }
+    // The template gallery is one long page of cards; other resource pages stay capped.
+    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(frame.id === "storeTemplatesFrame" ? 30000 : 4000, Math.max(340, event.data.height))}px`;
     if (event.data.type === "pagosya:product-guide-ready") {
       frame.dataset.ready = "true";
       if (frame.dataset.pendingProduct) { frame.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId:currentStoreId, product:JSON.parse(frame.dataset.pendingProduct), ...(frame.dataset.pendingStep ? { step: frame.dataset.pendingStep } : {})}, location.origin); delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
@@ -819,6 +936,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }
   });
   function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
+    // Plantillas reads the store's current revision, which the design editor may have changed: reload it on entry.
+    if (view === "templates") { const templatesFrame = document.getElementById("storeTemplatesFrame"); templatesFrame.removeAttribute("src"); delete templatesFrame.dataset.storeId; }
+    document.body.classList.remove("template-focus");
     syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
     const views = ["workspace", "products", "charge-links", "payments", "compliance"];
@@ -856,11 +976,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       pendingStudioAction = null; return;
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
-    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments"].includes(event.data.view)) {
+    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments", "store-settings"].includes(event.data.view)) {
       if (event.data.view === "marketing" && event.data.tab === "program") selectMarketingTab("program");
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
       document.getElementById("dashboardWorkspace").scrollIntoView({ block: "start" });
+      if (event.data.view === "store-settings" && event.data.section && currentStoreId) void openSettingsSection(event.data.section);
     }
   });
 
@@ -896,6 +1017,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
+    if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
     }
@@ -935,12 +1057,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (!button || button.disabled || !lastFinances) return;
     try { localStorage.setItem(gamificationCompanionKey(), button.dataset.companionSelect); } catch {}
     renderGamification(lastFinances, { announce: false });
-  });
-  document.getElementById("gamificationRunnerPicker")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-runner-select]");
-    if (!button || !lastFinances) return;
-    try { localStorage.setItem(gamificationRunnerKey(), button.dataset.runnerSelect); } catch {}
-    renderAdventureRunner();
   });
   document.getElementById("adventureLevelNodes")?.addEventListener("click", (event) => {
     const node = event.target.closest("[data-adventure-level-index]");
@@ -1403,9 +1519,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const nameEl = document.getElementById("accountName");
     const profileName = document.getElementById("profileDisplayName")?.textContent?.trim();
     nameEl.textContent = profileName && profileName !== "Mi perfil" ? profileName : email.split("@")[0] || "Mi perfil";
-    const avatar = document.getElementById("accountAvatar");
-    const menuAvatar = document.getElementById("profileMenuAvatar");
-    if (avatar && menuAvatar) avatar.innerHTML = menuAvatar.innerHTML;
+    // The avatar itself is kept in sync by renderProfileAvatar (decorative here: the heading above already names the person).
 
     document.getElementById("accountKycValue").textContent = KYC_LABELS[kyc?.status] || kyc?.status || "—";
     document.getElementById("accountInvoicingValue").textContent = invoicing?.cuis ? "Activa" : "Sin configurar";
@@ -2498,10 +2612,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     return `pagosya_gamification_snapshot_${gamificationStorageScope()}`;
   }
 
-  function gamificationRunnerKey() {
-    return `pagosya_gamification_runner_${gamificationStorageScope()}`;
-  }
-
   function adventureDebugXpKey() {
     return `pagosya_adventure_debug_xp_${gamificationStorageScope()}`;
   }
@@ -2522,14 +2632,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       if (Number.isInteger(stored) && stored >= 0 && stored <= levelIndex && stored < ADVENTURE_LEVELS.length) return stored;
     } catch {}
     return levelIndex;
-  }
-
-  function selectedGamificationRunner() {
-    try {
-      const stored = Number(localStorage.getItem(gamificationRunnerKey()));
-      if (Number.isInteger(stored) && stored >= 0 && stored < GAMIFICATION_RUNNERS.length) return stored;
-    } catch {}
-    return 0;
   }
 
   function storedStringList(key) {
@@ -2714,17 +2816,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     else if (restoreFocus) guide.focus();
   }
 
-  function renderAdventureRunner(state = lastAdventureState) {
-    const runnerIndex = selectedGamificationRunner();
-    const runner = GAMIFICATION_RUNNERS[runnerIndex];
-    document.getElementById("gamificationRunnerPicker").innerHTML = GAMIFICATION_RUNNERS.map((entry, index) => `<button class="adventure-runner-option" type="button" data-runner-select="${index}" aria-pressed="${index === runnerIndex}" aria-label="Elegir a ${esc(entry.name)} para las celebraciones" title="${esc(entry.name)}">
-      <span class="gamification-runner-face">${profileAvatarHtml(index + 1)}</span><span><strong>${esc(entry.name)}</strong><span>${esc(entry.description)}</span></span>
-    </button>`).join("");
-    const currentLevel = state?.currentLevel || ADVENTURE_LEVELS[0];
-    document.getElementById("adventurePlayerFace").innerHTML = `<img class="profile-avatar-image" src="${esc(currentLevel.asset)}" alt="">`;
-    document.getElementById("adventurePlayer").setAttribute("aria-label", `${currentLevel.name}, tu nivel actual, está viajando hacia ${state?.nextLevel?.name || "la guía final"}. ${runner.name} es tu compañero de celebraciones.`);
-  }
-
   const JOURNEY_NODE_Y = [350, 235, 365, 205, 325, 245, 380, 220, 345, 235, 375, 210, 330, 250, 370, 205];
   let journeySoundTimer = null;
   let journeySoundEnabled = false;
@@ -2792,13 +2883,13 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       if (stage.type === "start") return `<button class="journey-node is-start is-completed" type="button" data-world-stage-index="${index}" style="left:${position.x}px;top:${position.y}px"><span class="journey-node-platform"><span class="journey-start-flag"></span></span><span class="journey-node-copy"><strong>Comienza aquí</strong><small>Comparte tu tienda</small></span><span class="journey-node-badge">✓</span></button>`;
       if (stage.type === "reward") { const reward = ADVENTURE_REWARDS[stage.rewardIndex]; return `<button class="journey-node is-reward is-${status}" type="button" data-world-stage-index="${index}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(reward.title)}, ${status === "earned" ? "ganada" : "bloqueada"}"><span class="journey-node-platform"><span class="journey-reward-gem" aria-hidden="true">${esc(reward.icon)}</span></span><span class="journey-node-copy"><strong>${status === "earned" ? esc(reward.title) : "Recompensa misteriosa"}</strong><small>${status === "earned" ? "Ganada" : esc(reward.requirementCopy)}</small></span><span class="journey-node-badge">${status === "earned" ? "✓" : "🔒"}</span></button>`; }
       const level = ADVENTURE_LEVELS[stage.levelIndex]; const isSelected = selected === stage.levelIndex;
-      return `<button class="journey-node is-${status}${isSelected ? " is-selected" : ""}" type="button" data-world-stage-index="${index}" data-journey-companion="${stage.levelIndex}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(level.character)}, ${status === "locked" ? `bloqueado hasta ${level.xpRequired} XP` : `${level.rarity}, desbloqueado`}" aria-disabled="${status === "locked"}"><span class="journey-node-platform"><span class="journey-node-art"><img src="${esc(level.asset)}" alt="${esc(level.alt)}" loading="${status === "locked" ? "lazy" : "eager"}" decoding="async"></span></span><span class="journey-node-copy"><strong>${status === "locked" ? "???" : esc(level.character)}</strong><small>${status === "locked" ? `${level.xpRequired.toLocaleString("es-BO")} XP` : esc(level.rarity)}</small></span><span class="journey-node-badge">${status === "completed" ? "✓" : status === "current" ? "AHORA" : "🔒"}</span></button>`;
+      return `<button class="journey-node is-${status}${isSelected ? " is-selected" : ""}" type="button" data-world-stage-index="${index}" data-journey-companion="${stage.levelIndex}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(level.character)}, ${status === "locked" ? `bloqueado hasta ${level.xpRequired} XP` : `${level.rarity}, desbloqueado`}" aria-disabled="${status === "locked"}"><span class="journey-node-platform"><span class="journey-node-art">${companionBlobHtml(level)}</span></span><span class="journey-node-copy"><strong>${status === "locked" ? "???" : esc(level.character)}</strong><small>${status === "locked" ? `${level.xpRequired.toLocaleString("es-BO")} XP` : esc(level.rarity)}</small></span><span class="journey-node-badge">${status === "completed" ? "✓" : status === "current" ? "AHORA" : "🔒"}</span></button>`;
     }).join("");
     const route = journeyPathData(positions); ["journeyRouteShadow","journeyRouteBase","journeyRouteProgressShadow","journeyRouteProgress"].forEach((id) => document.getElementById(id).setAttribute("d", route)); return positions;
   }
   function renderJourneyCompanions(state) {
     const selected = selectedGamificationCompanion(state.currentLevelIndex);
-    document.getElementById("gamificationRunnerPicker").innerHTML = ADVENTURE_LEVELS.slice(0, state.currentLevelIndex + 1).map((level, index) => `<button class="journey-companion-option" type="button" data-journey-companion="${index}" aria-pressed="${index === selected}" aria-label="Elegir a ${esc(level.character)}" title="${esc(level.character)} · ${esc(level.rarity)}"><img src="${esc(level.asset)}" alt=""></button>`).join("");
+    document.getElementById("gamificationRunnerPicker").innerHTML = ADVENTURE_LEVELS.slice(0, state.currentLevelIndex + 1).map((level, index) => `<button class="journey-companion-option" type="button" data-journey-companion="${index}" aria-pressed="${index === selected}" aria-label="Elegir a ${esc(level.character)}" title="${esc(level.character)} · ${esc(level.rarity)}">${companionBlobHtml(level)}</button>`).join("");
   }
   function ensureJourneyMarkup() {
     const root = document.getElementById("animalAdventure"); if (!root || root.querySelector(".journey-shell")) return;
@@ -2839,7 +2930,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const positions = renderJourneyNodes(state, commerceState);
     renderJourneyCompanions(state);
     const selected = ADVENTURE_LEVELS[selectedGamificationCompanion(state.currentLevelIndex)];
-    document.getElementById("adventurePlayerFace").innerHTML = `<img src="${esc(selected.asset)}" alt="" loading="eager" decoding="async">`;
+    document.getElementById("adventurePlayerFace").innerHTML = companionBlobHtml(selected);
     const path = document.getElementById("journeyRouteBase");
     const progress = journeyPathProgress(state);
     const totalLength = path.getTotalLength();
@@ -2912,7 +3003,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     activeGamificationAnnouncement = gamificationAnnouncementQueue.shift();
     const { companion, title, message, achievementId } = activeGamificationAnnouncement;
     const toast = document.getElementById("gamificationToast");
-    document.getElementById("gamificationToastImage").src = companion.asset;
+    paintBlob(document.getElementById("gamificationToastBlob"), `${companion.id}:happy`, companionBlobHtml(companion, { expression: "happy" }));
     document.getElementById("gamificationToastTitle").textContent = title;
     document.getElementById("gamificationToastMessage").textContent = message;
     toast.dataset.kind = achievementId ? "achievement" : "progress";
@@ -2937,6 +3028,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     showNextGamificationAnnouncement();
   }
 
+  let unlockBlob = null;
   function showNextBirdUnlock() {
     const dialog = document.getElementById("birdUnlockDialog");
     const blockingDialog = document.querySelector("dialog[open]:not(#birdUnlockDialog)");
@@ -2949,8 +3041,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       return;
     }
     const { level, storeName, storeId, levelIndex } = pending;
-    document.getElementById("birdUnlockImage").src = level.asset;
-    document.getElementById("birdUnlockImage").alt = level.alt;
+    unlockBlob?.destroy();
+    unlockBlob = mountBlob(document.getElementById("birdUnlockBlob"), { seed: companionSeed(level), look: level.look, expression: level.expression });
     document.getElementById("birdUnlockTitle").textContent = `¡${level.character} llegó!`;
     document.getElementById("birdUnlockLevel").textContent = `Nivel ${level.id} · ${level.name}`;
     document.getElementById("birdUnlockSpeech").textContent = `¡Felicidades! Has llegado al nivel ${level.id}. ${storeName} va muy bien; cada venta y cada visita cuentan. Desde ahora ${level.character} te acompaña. ¡Sigue así!`;
@@ -2958,6 +3050,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       dialog.showModal();
       birdUnlockQueue.shift();
       document.getElementById("birdUnlockContinue").focus();
+      void unlockBlob.play(ANIMATIONS.unlock);
       progressAcknowledgementChain = progressAcknowledgementChain.then(() => acknowledgeBirdUnlock(storeId, levelIndex));
     } catch {
       // Keep the unlock pending locally and on the server so a later render can retry it.
@@ -3063,7 +3156,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const bar = document.getElementById("topbarXp");
     const scope = gamificationStorageScope();
     const nextCopy = state.nextLevel ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para nivel ${state.levelIndex + 2}` : "Nivel máximo";
-    document.getElementById("topbarXpImage").src = companion.asset;
+    paintBlob(document.getElementById("topbarXpBlob"), String(companion.id), companionBlobHtml(companion));
     document.getElementById("topbarXpLevel").textContent = `Nivel ${state.levelIndex + 1} · ${state.level.name}`;
     document.getElementById("topbarXpNext").textContent = nextCopy;
     const track = document.getElementById("topbarXpTrack");
@@ -3113,6 +3206,23 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }
   }
 
+  // B1: repaint a static blob only when what it shows changed, so the 60-second refresh does not churn the DOM.
+  function paintBlob(element, key, markup) {
+    if (!element || element.dataset.blobKey === key) return;
+    element.dataset.blobKey = key;
+    element.innerHTML = markup;
+  }
+
+  // The Progreso hero is the one animated companion on the page (idle on hover, "cheer" on a Fiesta tip).
+  let heroBlob = null;
+  let heroBlobLevel = null;
+  function mountHeroBlob(companion) {
+    const host = document.getElementById("gamificationHeroBlob");
+    if (!host || (heroBlob && heroBlobLevel === companion.id)) return;
+    heroBlob?.destroy();
+    heroBlob = mountBlob(host, { seed: companionSeed(companion), look: companion.look, expression: companion.expression, animate: "hover" });
+    heroBlobLevel = companion.id;
+  }
 
   function renderGamification(finances, { announce = true } = {}) {
     const state = gamificationState(finances);
@@ -3127,15 +3237,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para ${state.nextLevel.name}`
       : "Nivel máximo alcanzado";
 
-    const imageTargets = [
-      ["gamificationSummaryImage", `${companion.character}, compañero de progreso`],
-      ["gamificationHeroImage", companion.alt],
-    ];
-    imageTargets.forEach(([id, alt]) => {
-      const image = document.getElementById(id);
-      image.src = companion.asset;
-      image.alt = alt;
-    });
+    paintBlob(document.getElementById("gamificationSummaryBlob"), `${companion.id}:hover`, companionBlobHtml(companion, { animate: "hover" }));
+    mountHeroBlob(companion);
 
     document.getElementById("gamificationSummaryXp").textContent = `${state.xp.toLocaleString("es-BO")} XP`;
     document.getElementById("gamificationSummarySpeech").textContent = speech;
@@ -3172,7 +3275,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       const buttonLabel = isLocked ? `Se abre en nivel ${index + 1}` : isSelected ? "Acompañándote" : `Elegir a ${entry.character}`;
       return `<article class="gamification-companion${isLocked ? " is-locked" : ""}${isSelected ? " is-selected" : ""}">
         ${isLocked ? `<span class="gamification-companion-lock">Nivel ${index + 1}</span>` : ""}
-        <div class="gamification-companion-art"><img src="${entry.asset}" alt="${esc(entry.alt)}"></div>
+        <div class="gamification-companion-art">${companionBlobHtml(entry, { expression: isLocked ? "sleepy" : entry.expression })}</div>
         <div class="gamification-companion-copy"><strong>${esc(entry.character)} · ${esc(entry.name)}</strong><span>${esc(entry.description)}</span><button type="button" data-companion-select="${index}" aria-pressed="${isSelected}"${isLocked ? " disabled" : ""}>${esc(buttonLabel)}</button></div>
       </article>`;
     }).join("");
@@ -3183,11 +3286,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (activeGamificationAnnouncement?.achievementId) {
       document.querySelector(`[data-achievement-id="${activeGamificationAnnouncement.achievementId}"]`)?.classList.add("is-unlocking");
     }
-    const runner = GAMIFICATION_RUNNERS[selectedGamificationRunner()];
     achievementIds.forEach((achievementId) => {
       const achievement = state.stars.find((star) => star.id === achievementId);
       if (!achievement) return;
-      showGamificationToast(runner, "¡Logro desbloqueado!", `${runner.name} encontró “${achievement.title}”. ${achievement.description}`, achievement.id, gamificationStorageScope());
+      showGamificationToast(companion, "¡Logro desbloqueado!", `${companion.character} encontró “${achievement.title}”. ${achievement.description}`, achievement.id, gamificationStorageScope());
     });
     if (celebration) showGamificationToast(companion, celebration.title, celebration.message);
   }
@@ -3992,6 +4094,18 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   // The settings page lives under "Tu tienda" rather than a top-level entry of
   // its own: everything it edits is scoped to the selected store.
+  /** Marca, envíos y dominio: the Studio's own panels, shown over the dashboard. */
+  async function openSettingsSection(section) {
+    if (!currentStoreId) return;
+    sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
+    const { openSettingsOverlay } = await import("/src/settings-overlay.mjs");
+    openSettingsOverlay(currentStoreId, section);
+  }
+  document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
+  import("/src/mcp-connect.mjs").then(({ mountMcpConnect }) => {
+    mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
+    if (document.body.dataset.dashboardView === "connect-ai" && sessionToken) void mcpConnect.reload();
+  });
   import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {
     storeSettings = mountStoreSettings(document.getElementById("storeSettingsRoot"), {
       api,
@@ -4466,6 +4580,33 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }
   });
 
+  // The login's mesh gradient runs only while the login is on screen.
+  let disposeLoginShader = null;
+  function startLoginShader() {
+    if (disposeLoginShader) return;
+    disposeLoginShader = () => {};
+    const host = document.querySelector("[data-login-shader]");
+    if (!host) return;
+    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
+      const dispose = await mountLoginShader(host);
+      if (document.body.classList.contains("is-logged-out")) disposeLoginShader = dispose; else dispose();
+    });
+  }
+  function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
+  // Signed in, the same gradient sits behind every page; only one of the two runs at a time.
+  let disposeDashboardShader = null;
+  function startDashboardShader() {
+    if (disposeDashboardShader) return;
+    disposeDashboardShader = () => {};
+    const host = document.querySelector("[data-dashboard-shader]");
+    if (!host) return;
+    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
+      const dispose = await mountLoginShader(host, { still: true });
+      if (document.body.classList.contains("is-logged-in")) disposeDashboardShader = dispose; else dispose();
+    });
+  }
+  function stopDashboardShader() { disposeDashboardShader?.(); disposeDashboardShader = null; }
+
   function showLoggedOut() {
     const studioFrame = document.getElementById("merchantStudioFrame");
     studioFrame.removeAttribute("src"); delete studioFrame.dataset.storeId;
@@ -4474,18 +4615,26 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.body.classList.remove("is-logged-in");
     document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
     currentProfileName = "";
+    currentBlobSeed = "";
     if (profileMenuEl.matches(":popover-open")) profileMenuEl.hidePopover();
     loginFormEl.style.display = "grid";
     loggedInBarEl.style.display = "none";
     appEl.style.display = "none";
+    stopDashboardShader();
+    startLoginShader();
   }
 
   function showLoggedIn() {
     document.body.classList.remove("is-logged-out");
     document.body.classList.add("is-logged-in");
     loginFormEl.style.display = "none";
+    stopLoginShader();
+    startDashboardShader();
     loggedInBarEl.style.display = "flex";
     applyProfileIdentity();
+    // The blob seed and the saved variation come from the sessions list; fetch it now, not only when the menu opens.
+    loadProfileSessions(false).catch(() => undefined);
+    if (document.body.dataset.dashboardView === "connect-ai") void mcpConnect?.reload();
   }
 
   function loadGoogleIdentity() {
@@ -4544,10 +4693,11 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
         },
       });
       window.google.accounts.id.renderButton(document.getElementById("merchantGoogleButton"), {
-        theme: "outline",
+        theme: "filled_black",
         size: "large",
-        shape: "rectangular",
+        shape: "pill",
         text: "continue_with",
+        locale: "es",
         logo_alignment: "left",
         width: 320,
       });

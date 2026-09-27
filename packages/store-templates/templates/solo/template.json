@@ -1,0 +1,57 @@
+{
+  "id": "solo",
+  "name": "Solo",
+  "category": "producto-unico",
+  "description": "Una tienda para un producto estrella: galería grande, ficha de compra completa y todo lo que convence.",
+  "tags": [
+    "producto único",
+    "DTC",
+    "conversión",
+    "moderno"
+  ],
+  "sitePurpose": "shop",
+  "order": 5,
+  "dna": {
+    "display": "familjen-grotesk",
+    "text": "figtree",
+    "case": "none",
+    "radius": "round",
+    "border": "hairline",
+    "button": "block",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "still",
+    "frame": "bleed",
+    "product": "dense"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "vista2",
+      "role": "product",
+      "demo": "vista2.jpg"
+    },
+    {
+      "slot": "vista3",
+      "role": "product",
+      "demo": "vista3.jpg"
+    },
+    {
+      "slot": "vista4",
+      "role": "detail",
+      "demo": "vista4.jpg"
+    },
+    {
+      "slot": "uso",
+      "role": "lifestyle",
+      "demo": "uso.jpg"
+    }
+  ]
+}

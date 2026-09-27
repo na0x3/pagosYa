@@ -7,6 +7,7 @@ import { GoogleIdentityService } from "../auth/google-identity.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { boliviaDayKey } from "../rewards/reward-policy";
 import { countStoreSales, gameXpForStore, wheelSpinsToday } from "../rewards/reward-queries";
+import { MAX_PROFILE_VARIATION, profileBlobSeed } from "./profile-blob-seed";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
@@ -315,6 +316,7 @@ export class MerchantSessionService {
       profiles,
       currentSessionId: currentSession?.id ?? null,
       canManageSessions: currentSession?.isPrimary ?? false,
+      blobSeed: profileBlobSeed(merchantUserId),
       sessions: sessions.map((session) => ({
         id: session.id,
         profileName: session.profileName,
@@ -362,7 +364,7 @@ export class MerchantSessionService {
     const normalizedName = profileName.trim().replace(/\s+/g, " ");
     if (!normalizedName) throw new BadRequestException("El nombre del perfil es obligatorio");
     if (normalizedName.length > 32) throw new BadRequestException("El nombre del perfil no puede superar 32 caracteres");
-    if (!Number.isInteger(profileAvatarId) || profileAvatarId < 1 || profileAvatarId > 4) {
+    if (!Number.isInteger(profileAvatarId) || profileAvatarId < 1 || profileAvatarId > MAX_PROFILE_VARIATION) {
       throw new BadRequestException("El avatar del perfil no es válido");
     }
 

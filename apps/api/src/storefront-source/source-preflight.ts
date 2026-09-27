@@ -112,7 +112,10 @@ export function validateSourcePreflight(
     if (masksPageWideOverflow(file.content)) missing.push(`${file.path}: do not mask page-wide horizontal overflow`);
     for (const match of file.content.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/gi)) {
       const target = cleanReference(match[1]);
-      if (/(?:^|\/)assets\//i.test(target) && !findPath(file.path, target)) missing.push(`${file.path}: missing local asset ${target}`);
+      // compileNextPreview serves styles/globals.css from the site root and rewrites url(assets/…) to /assets/…,
+      // so that stylesheet's assets/ references resolve from the root (every Plantilla writes its fonts this way).
+      const reference = file.path === 'styles/globals.css' && /^(?:\.\/)?assets\//i.test(target) ? `/${target.replace(/^\.\//, '')}` : target;
+      if (/(?:^|\/)assets\//i.test(target) && !findPath(file.path, reference)) missing.push(`${file.path}: missing local asset ${target}`);
     }
   }
 
