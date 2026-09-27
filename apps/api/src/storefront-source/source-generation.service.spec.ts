@@ -636,6 +636,17 @@ describe('Independent source generation',()=>{
     expect(savedFiles.find((file: any) => file.path === 'site.js')?.content).toBe(replacement[2].content);
     expect(savedFiles.some((file: any) => file.path === 'visual-system.json')).toBe(true);
   });
+  it('lets the caller authorize a redesign when the words do not say so (a template rework from the chat)', async () => {
+    const { service, projects } = setup();
+    const previous = files(); previous[1].content += '/*' + 'old style '.repeat(1500) + '*/';
+    projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: { files: previous } });
+    const replacement = files(); replacement[1].content = 'body { color: #0b3; }';
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'Moderna y clínica', edits: [], appends: [], files: replacement }) }] }], usage: { input_tokens: 1000, output_tokens: 1000 } })));
+    await service.generate('m', 's', { ...input, revision: 1, instruction: 'sisi porfa' }, undefined, [], undefined, { redesign: true });
+    expect(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'styles.css')?.content).toContain('body { color: #0b3; }');
+    const prompt = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input.map((part: any) => part.content.map((c: any) => c.text).join('')).join('');
+    expect(prompt).toContain('"styles.css"');
+  });
   it('generates and repairs entirely through DeepSeek with only its key configured', async () => {
     const { service, config, projects } = setup();
     config.get.mockImplementation((key: string) => ({ 'app.deepSeek.apiKey': 'deepseek-test-key', 'app.openAi.enabled': false, 'app.environment': 'test', 'app.sourceFramework': 'static', 'app.checkoutOrigin': 'http://localhost:5174' }[key]));

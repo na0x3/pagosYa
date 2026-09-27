@@ -584,6 +584,8 @@ it('reworks a template-based store when the merchant asks for a more unique look
   expect(dto.instruction).toContain(TEMPLATE_REWORK_BRIEF);
   expect(dto.brief.templateId).toBe('tostado');
   expect(execution?.free).toBeUndefined();
+  // Reworking a template restyles every file; as a local edit it could only fail (rewrites rejected, output cut short).
+  expect(execution?.redesign).toBe(true);
 });
 
 it('treats a rework request on a store without a template as an ordinary edit', async () => {
@@ -591,6 +593,7 @@ it('treats a rework request on a store without a template as an ordinary edit', 
   dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
   await service.send('m', 's', { ...request, instruction: 'Hazla más única' });
   expect(generation.generate.mock.calls[0][2].instruction).not.toContain(TEMPLATE_REWORK_BRIEF);
+  expect(generation.generate.mock.calls[0][6]?.redesign).toBeFalsy();
 });
 
 describe('final review fixes', () => {

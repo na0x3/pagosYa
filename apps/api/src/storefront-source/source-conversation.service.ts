@@ -69,7 +69,7 @@ ${listTemplates().map(template => `- ${template.id}: ${template.name} (${templat
 startFrom: for a new shop, "template" when the merchant wants to start from a Plantilla or leaves the choice to you, "scratch" when they ask for a design from scratch ("desde cero", "algo propio"), otherwise "unknown".
 templates: when action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
 chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".
-rework: true only when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"); otherwise false.`;
+rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template settles on a visual direction or style different from that template's (for example "moderna y clínica" on a warm, natural template); otherwise false.`;
 const decisionSchema = {
   type: 'object', additionalProperties: false,
   required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework'],
