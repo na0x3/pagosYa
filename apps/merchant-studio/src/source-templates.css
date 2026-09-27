@@ -95,3 +95,18 @@ html.tpl-page-doc.tpl-focus,html.tpl-page-doc.tpl-focus body{height:100%;overflo
 .tpl-page .tpl-preview-note{animation-delay:.04s}.tpl-page .tpl-preview{animation-delay:.08s}
 @keyframes tpl-enter{from{opacity:0;transform:translateY(14px)}}
 @media (prefers-reduced-motion:reduce){.tpl-page .tpl-preview-bar,.tpl-page .tpl-preview-note,.tpl-page .tpl-preview{animation:none}}
+/* Design direction cards (sub-project 2): a mini hero in each direction's own palette. */
+.dir-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.dir-choice{display:grid;gap:4px;align-content:start;min-width:0;padding:6px;border:1px solid #d9d2c6;border-radius:12px;background:#fff;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.dir-choice:hover:not(:disabled){border-color:#1f1d1a}
+.dir-choice:disabled{opacity:.55;cursor:default}
+.dir-choice__hero{position:relative;display:grid;align-content:start;gap:6px;aspect-ratio:4/5;padding:10px;border-radius:8px;overflow:hidden}
+.dir-choice__headline{font-size:clamp(16px,2.2vw,22px);font-weight:800;line-height:.95;text-transform:uppercase;letter-spacing:-.01em}
+.dir-choice__band{height:22%;border-radius:6px}
+.dir-choice__cta{justify-self:start;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.dir-choice__swatches{position:absolute;left:10px;bottom:10px;display:flex;gap:4px}
+.dir-choice__swatches i{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1px rgb(0 0 0 / 15%)}
+.dir-choice strong{font-size:14px}
+.dir-choice span:not([class]){font-size:12px;color:#6a645b}
+.dir-choice small{font-size:11px;color:#8a8378}
+@media (max-width:520px){.dir-choices{grid-template-columns:1fr}.dir-choice__hero{aspect-ratio:16/9}}

@@ -19,4 +19,6 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsIn(['generate', 'restart', 'quick', 'product-photo']) setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo';
   /** A Plantilla card the merchant tapped in YAPI's message (spec 2026-09-26); must be one the last message offered. */
   @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) templateId?: string;
+  /** A design direction card the merchant tapped (sub-project 2); only valid against the last set YAPI offered. */
+  @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) directionId?: string;
 }

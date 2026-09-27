@@ -1,3 +1,4 @@
+import { renderDirectionChoices, type DirectionChoice } from './source-directions';
 import { createDirectEditor } from './source-direct-editor';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
@@ -256,7 +257,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     timer = window.setTimeout(poll, 500);
     return () => { controller.abort(); window.clearTimeout(timer); };
   }
-  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string) {
+  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string) {
     if (!text.trim() && assets.length) text = 'Te comparto estas imágenes para el sitio.';
     if (!text.trim() || busy || dirty() || historical()) return;
     chatExpanded = true;
@@ -286,7 +287,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId);
         stopProgress();
         succeeded = true; pendingSubmission = null; generating = false;
         productPhoto = false;
@@ -416,6 +417,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div><p>${escape(visibleContent)}</p>
       ${!user ? renderBuildProgress(metadata.progress) : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
+      ${!user && Array.isArray(metadata.directionChoices) ? renderDirectionChoices(metadata.directionChoices as DirectionChoice[], busy || dirty() || historical() || state.revision > 0 || message.id !== latestDirectionChoicesId()) : ''}
       ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || (state.revision > 0 && !templateUntouched()) || message.id !== latestTemplateChoicesId()) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
       ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
@@ -429,6 +431,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   /** Only YAPI's latest set of Plantilla cards can be chosen; the API rejects older sets. */
   function latestTemplateChoicesId() {
     return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.templateChoices)).at(-1)?.id;
+  }
+  function latestDirectionChoicesId() {
+    return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.directionChoices)).at(-1)?.id;
   }
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);
@@ -658,6 +663,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     }));
     app.querySelectorAll<HTMLButtonElement>('[data-clarification]').forEach(button => button.addEventListener('click', () => void send(button.dataset.clarification || '')));
     app.querySelectorAll<HTMLButtonElement>('[data-template-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.templateName || ''}`, undefined, undefined, button.dataset.templateChoice)));
+    app.querySelectorAll<HTMLButtonElement>('[data-direction-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.directionName || ''}`, undefined, undefined, undefined, button.dataset.directionChoice)));
     app.querySelector('[data-action="open-upload"]')?.addEventListener('click', () => app.querySelector<HTMLInputElement>('[data-image-input]')?.click());
     app.querySelector('[data-image-input]')?.addEventListener('change', event => {
       const files = Array.from((event.target as HTMLInputElement).files || []);
@@ -678,7 +684,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-file')?.addEventListener('change', event => { filePath = (event.target as HTMLSelectElement).value; draft = null; render(); });
     app.querySelector('#source-code')?.addEventListener('input', event => {
       draft = (event.target as HTMLTextAreaElement).value;
-      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
+      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
       app.querySelector<HTMLButtonElement>('#source-save')!.disabled = busy || !dirty() || historical();
       app.querySelector<HTMLButtonElement>('#source-discard')!.disabled = busy || !dirty();
     });

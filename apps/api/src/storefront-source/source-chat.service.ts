@@ -1,3 +1,4 @@
+import { DESIGN_DIRECTIONS, directionBrief, rankDirections, type DesignDirection } from './source-directions';
 import { loadStoreKnowledge } from '../store-knowledge/store-knowledge';
 import { continuedCatalogRequest, pendingCatalogRequest } from './source-catalog-request';
 import { SourceConversationFailure, safeConversationDiagnostic } from './source-conversation-failure';
@@ -53,6 +54,16 @@ const TEMPLATE_CHOICES_REPLY = 'Elegí estas 3 plantillas para tu negocio. Toca 
 function offeredTemplates(messages: Array<{ role: string; metadata?: unknown }>): TemplateChoice[] {
   const last = [...messages].reverse().find(message => message.role === 'ASSISTANT' && Array.isArray((message.metadata as { templateChoices?: unknown } | undefined)?.templateChoices));
   const choices = (last?.metadata as { templateChoices?: TemplateChoice[] } | undefined)?.templateChoices;
+  return Array.isArray(choices) ? choices : [];
+}
+
+const normalizeText = (text: string) => text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const DIRECTION_CHOICES_REPLY = 'Antes de construir tu tienda desde cero, elige una dirección visual. Toca la que más te guste o dime cuál prefieres, y la construyo completa.';
+
+/** The latest set of design directions YAPI offered; a tap is only valid against these. */
+function offeredDirections(messages: Array<{ role: string; metadata?: unknown }>): DesignDirection[] {
+  const last = [...messages].reverse().find(message => message.role === 'ASSISTANT' && Array.isArray((message.metadata as { directionChoices?: unknown } | undefined)?.directionChoices));
+  const choices = (last?.metadata as { directionChoices?: DesignDirection[] } | undefined)?.directionChoices;
   return Array.isArray(choices) ? choices : [];
 }
 
@@ -191,6 +202,9 @@ export class SourceChatService {
     const tapBrief = input.templateId && current.revision ? ((await this.projects.version(merchantId, storeId, current.revision)).snapshot as unknown as SourceProjectSnapshot).brief : undefined;
     if (input.templateId && current.revision && !templateUntouched(tapBrief, current.revision)) throw new BadRequestException('Tu tienda ya tiene un diseño. Para cambiarlo por una plantilla, usa Mi tienda → Plantillas.');
     if (input.templateId && !tappedChoice) throw new BadRequestException('Elige una de las plantillas sugeridas en el último mensaje de YAPI.');
+    // Directions are checked against the offered set, then read from the catalog so a stale card cannot inject values.
+    const tappedDirection = input.directionId && offeredDirections(history.messages).some(offer => offer.id === input.directionId) ? DESIGN_DIRECTIONS.find(direction => direction.id === input.directionId) : undefined;
+    if (input.directionId && (!tappedDirection || current.revision)) throw new BadRequestException('Elige una de las direcciones sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId: thread.id, channel: 'source', role: 'USER', content: input.instruction.trim(),
@@ -303,18 +317,38 @@ export class SourceChatService {
         decision.reply = `${decision.reply}\n\n${TEMPLATE_QUESTION}`;
       }
       let templateChoices: TemplateChoice[] | undefined;
-      if (newShop && decision.action === 'generate' && startFrom !== 'scratch') {
+      let directionChoices: DesignDirection[] | undefined;
+      // YAPI asks one question before a from-scratch build, once per conversation. A tap answers it; a typed reply that
+      // names a direction answers it too; otherwise, or when the merchant asked to build now, YAPI decides boldly.
+      const offeredSet = offeredDirections(history.messages);
+      const namedDirection = offeredSet.length ? offeredSet.find(offer => normalizeText(input.instruction).includes(normalizeText(offer.name))) : undefined;
+      const buildNow = input.setupAction === 'quick' || input.setupAction === 'generate'
+        || /sin (?:m[aá]s )?preguntas|elige t[uú]|t[uú] eliges|decide t[uú]|t[uú] decides|como (?:t[uú] )?quieras|hazlo ya|empieza ya/i.test(input.instruction);
+      const chosenDirection = tappedDirection
+        ?? (setupDraft.directionId && newShop && decision.action === 'generate' ? DESIGN_DIRECTIONS.find(direction => direction.id === setupDraft.directionId) : undefined)
+        ?? (newShop && startFrom === 'scratch' && decision.action === 'generate' && (offeredSet.length || buildNow)
+          ? DESIGN_DIRECTIONS.find(direction => direction.id === (namedDirection ?? offeredSet[0] ?? rankDirections(decision.summary)[0]).id) : undefined);
+      if (chosenDirection) {
+        decision.action = 'generate';
+        decision.generationInstruction = `${decision.generationInstruction || 'Crea la tienda completa desde cero.'}\n${directionBrief(chosenDirection)}`;
+      } else if (newShop && decision.action === 'generate' && startFrom === 'scratch') {
+        directionChoices = rankDirections(decision.summary);
+        decision.action = 'reply';
+        decision.reply = DIRECTION_CHOICES_REPLY;
+        decision.generationInstruction = '';
+      }
+      if (!chosenDirection && newShop && decision.action === 'generate' && startFrom !== 'scratch') {
         templateChoices = rankTemplates(decision.summary, listTemplates(), decision.templates);
         decision.action = 'reply';
         decision.reply = TEMPLATE_CHOICES_REPLY;
         decision.generationInstruction = '';
       }
-      setupDraft = { sitePurpose, pendingCatalogRequest: pendingCatalogRequest(catalogInstruction, !current.revision, setupDraft.pendingCatalogRequest), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined, ...(startFrom ? { startFrom } : {}) };
+      setupDraft = { sitePurpose, pendingCatalogRequest: pendingCatalogRequest(catalogInstruction, !current.revision, setupDraft.pendingCatalogRequest), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined, ...(startFrom ? { startFrom } : {}), ...(chosenDirection ? { directionId: chosenDirection.id } : setupDraft.directionId ? { directionId: setupDraft.directionId } : {}) };
       if (decision.action === 'reply') {
         await workflow.finish('completed');
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
           threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: decision.reply,
-          metadata: { sourceSetup: setupDraft, progress: workflow.value, ...(templateChoices ? { templateChoices } : {}) },
+          metadata: { sourceSetup: setupDraft, progress: workflow.value, ...(templateChoices ? { templateChoices } : {}), ...(directionChoices ? { directionChoices } : {}) },
         } });
         return { userMessage, assistantMessage, setup: current.revision ? null : sourceSetupPrompt(setupDraft, store) };
       }

@@ -83,7 +83,21 @@ it('sends the tapped Plantilla card as the choice', async () => {
   card.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalled());
   expect(sent.mock.calls[0][1]).toBe('Usar Miga');
-  expect(sent.mock.calls[0].at(-1)).toBe('miga');
+  expect(sent.mock.calls[0][9]).toBe('miga');
+});
+
+it('sends the tapped design direction as the choice', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'a1', role: 'ASSISTANT', content: 'Elige una dirección', createdAt: '2026-09-27', metadata: { directionChoices: [{ id: 'retro-americana', name: 'Retro americana', description: 'd', palette: { background: '#f6ecd6', surface: '#efd9a7', ink: '#2b1d14', accent: '#b5441b' }, fonts: { display: 'bebas-neue', text: 'rubik' } }] } },
+  ] } as any);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'Usar Retro americana' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } } as any);
+  await mountSourceStudio(app);
+  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
+  card.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalled());
+  expect(sent.mock.calls[0][1]).toBe('Usar Retro americana');
+  expect(sent.mock.calls[0].at(-1)).toBe('retro-americana');
 });
 
 it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {

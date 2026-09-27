@@ -1,3 +1,4 @@
+import { rankDirections } from './source-directions';
 import { SourceConversationFailure } from './source-conversation-failure';
 import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
@@ -98,7 +99,7 @@ describe('Website design references in chat', () => {
     await service.send('m', 's', initial);
     await service.send('m', 's', { ...initial, instruction: 'Vendo café a vecinos' });
     generation.generate.mockRejectedValueOnce(new Error('generation failed'));
-    const build = { ...initial, instruction: 'Usa rojo y crema' };
+    const build = { ...initial, instruction: 'Usa rojo y crema', setupAction: 'generate' as const };
     await expect(service.send('m', 's', build)).rejects.toThrow('generation failed');
     await service.send('m', 's', build);
     expect(inspect).toHaveBeenCalledTimes(1);
@@ -122,7 +123,7 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     await service.send('m', 's', initial);
     expect(dialogue.decide.mock.calls[0][1]).not.toHaveProperty('theme');
     await service.send('m', 's', { ...request, revision: 0, instruction: 'Vendo cuadernos' });
-    await service.send('m', 's', { ...request, revision: 0, instruction: 'Genera la tienda usando mis fotos' });
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Genera la tienda usando mis fotos', setupAction: 'generate' });
     expect(generation.generate.mock.calls[0][2]).not.toHaveProperty('themeId');
     expect(messages.filter(message => message.role === 'USER').slice(1).every(message => !('themeId' in message.metadata))).toBe(true);
   });
@@ -300,7 +301,7 @@ describe('Conversational first-site setup', () => {
     expect(generation.generate).not.toHaveBeenCalled();
     expect((await service.conversation('m','s')).setup?.prompt).toContain('estilo');
     dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café de barrio, tonos crema.',generationInstruction:'Crear la tienda de café.',imageUses:[],startFrom:'scratch'});
-    await service.send('m','s',{revision:0,instruction:'Tonos crema, crea el sitio',model:'gpt-5.6-luna',maxCredits:8});
+    await service.send('m','s',{revision:0,instruction:'Tonos crema, crea el sitio',model:'gpt-5.6-luna',maxCredits:8,setupAction:'generate'});
     expect(generation.generate.mock.calls[0][2]).toMatchObject({model:'gpt-5.6-luna',maxCredits:8});
   });
   it('restarts without losing the visible conversation or requiring AI', async () => {
@@ -363,7 +364,7 @@ describe('Image batches for existing-site edits', () => {
     await service.send('m','s',{revision:0,instruction:'Este es mi logo',assetUrls:['/v1/uploads/a.png']});
     await service.send('m','s',{revision:0,instruction:'Estas son las fotos, crea el sitio',assetUrls:selected});
     dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café con fotos.',generationInstruction:'Crear tienda',imageUses:[],startFrom:'scratch'});
-    await service.send('m','s',{revision:0,instruction:'Usa crema y verde'});
+    await service.send('m','s',{revision:0,instruction:'Usa crema y verde',setupAction:'generate'});
     expect(generation.generate.mock.calls[0][2].assetUrls).toEqual(['/v1/uploads/a.png',...selected]);
   });
   it('rejects an actual oversized selected batch before persisting or generating', async () => {
@@ -503,11 +504,41 @@ it('offers three Plantillas instead of generating the first shop', async () => {
   expect(messages.at(-1).metadata.sourceSetup.answers.context).toBe('Cafetería de especialidad');
 });
 
-it('generates from scratch when the merchant asks for it', async () => {
-  const { service, dialogue, generation } = firstShop();
-  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+it('offers three named design directions before building a shop from scratch', async () => {
+  const { service, dialogue, generation, messages } = firstShop();
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Hamburguesería retro estilo diner', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
   await service.send('m', 's', { ...request, revision: 0, instruction: 'Mejor desde cero' });
+  expect(generation.generate).not.toHaveBeenCalled();
+  const choices = messages.at(-1).metadata.directionChoices;
+  expect(choices).toHaveLength(3);
+  expect(choices[0]).toMatchObject({ id: 'retro-americana', name: 'Retro americana', palette: expect.any(Object), fonts: expect.any(Object) });
+  expect(messages.at(-1).content).toMatch(/direcci/i);
+});
+
+it('builds from scratch with the direction the merchant tapped', async () => {
+  const offered = [...discovered(), { role: 'ASSISTANT', content: 'Elige una dirección', metadata: { directionChoices: rankDirections('Hamburguesería retro'), sourceSetup: { ...discovered()[0].metadata.sourceSetup, startFrom: 'scratch' } } }];
+  const { service, dialogue, generation } = firstShop(offered);
+  dialogue.decide.mockResolvedValue({ action: 'reply', reply: '¿Algo más?', summary: 'Hamburguesería retro', generationInstruction: '', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Retro americana', directionId: 'retro-americana' });
   expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(generation.generate.mock.calls[0][2].instruction).toContain('Dirección visual elegida por el comercio (obligatoria): «Retro americana»');
+});
+
+it('keeps the chosen direction when a failed build is retried, without asking again', async () => {
+  const offered = [...discovered(), { role: 'ASSISTANT', content: 'Elige una dirección', metadata: { directionChoices: rankDirections('Hamburguesería retro'), sourceSetup: { ...discovered()[0].metadata.sourceSetup, startFrom: 'scratch' } } }];
+  const { service, dialogue, generation, messages } = firstShop(offered);
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Hamburguesería retro', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+  generation.generate.mockRejectedValueOnce(new Error('timeout'));
+  await expect(service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Nocturno neón', directionId: 'neon-nocturno' })).rejects.toThrow('timeout');
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Inténtalo de nuevo' });
+  expect(generation.generate).toHaveBeenCalledTimes(2);
+  expect(generation.generate.mock.calls[1][2].instruction).toContain('«Nocturno neón»');
+  expect(messages.filter((message: any) => message.metadata?.directionChoices)).toHaveLength(1);
+});
+
+it('refuses a direction that was not offered', async () => {
+  const { service } = firstShop();
+  await expect(service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Lujo', directionId: 'lujo-sobrio' })).rejects.toThrow('direcciones sugeridas');
 });
 
 it('offers a fresh set when the merchant keeps talking instead of choosing', async () => {
@@ -664,7 +695,9 @@ describe('final review fixes', () => {
     await service.send('m', 's', { ...request, revision: 0, instruction: 'Desde cero, por favor' });
     dialogue.decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea', imageUses: [], startFrom: 'unknown', templates: [{ id: 'tostado', reason: 'r' }], chosenTemplateId: '', rework: false });
     await service.send('m', 's', { ...request, revision: 0, instruction: 'Tonos tierra' });
-    expect(generation.generate).toHaveBeenCalledTimes(1);
+    // A remembered "desde cero" leads to the one direction question, never to Plantilla cards.
+    expect(generation.generate).not.toHaveBeenCalled();
+    expect(messages.at(-1).metadata.directionChoices).toHaveLength(3);
     expect(messages.some((message: any) => message.metadata?.templateChoices)).toBe(false);
   });
 });
