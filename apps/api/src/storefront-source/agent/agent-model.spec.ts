@@ -4,6 +4,16 @@ import { openAiAgentModel } from './agent-model';
 const make = (fetchImpl: any, onTurn = jest.fn()) => ({ onTurn, model: openAiAgentModel({ endpoint: 'https://api.openai.com/v1/responses', apiKey: 'k', model: 'gpt-5.6-terra', providerName: 'OpenAI', budget: new SourceRequestBudget(50), maxOutputTokens: 4000, reasoningEffort: 'medium', onTurn, fetchImpl }) });
 
 describe('openAiAgentModel', () => {
+  it('marks an exhausted credit limit as an agent limit and sends the prompt cache key', async () => {
+    const fetchImpl = jest.fn(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [] })));
+    const cached = openAiAgentModel({ endpoint: 'e', apiKey: 'k', model: 'gpt-5.6-terra', providerName: 'OpenAI', budget: new SourceRequestBudget(50), maxOutputTokens: 2000, reasoningEffort: 'low', promptCacheKey: 'agent-key', fetchImpl: fetchImpl as any });
+    await cached({ instructions: 'x', transcript: [], tools: [] as any });
+    expect(JSON.parse((fetchImpl.mock.calls[0] as any)[1].body).prompt_cache_key).toBe('agent-key');
+    const broke = openAiAgentModel({ endpoint: 'e', apiKey: 'k', model: 'gpt-5.6-sol', providerName: 'OpenAI', budget: new SourceRequestBudget(1), maxOutputTokens: 2000, reasoningEffort: 'low', fetchImpl: fetchImpl as any });
+    await expect(broke({ instructions: 'x'.repeat(40_000), transcript: [], tools: [] as any })).rejects.toMatchObject({ agentLimit: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it('sends the tools, maps function calls and reports the turn', async () => {
     const output = [
       { type: 'function_call', call_id: 'c1', name: 'read_file', arguments: '{"path":"components/home.tsx"}' },

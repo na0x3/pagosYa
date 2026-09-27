@@ -47,6 +47,12 @@ describe('runAgent', () => {
     expect(calls).toBe(2);
     expect(result).toEqual({ status: 'failed', reason: 'provider down' });
   });
+  it('treats running out of credits as a limit, without a retry', async () => {
+    let calls = 0;
+    const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], model: async () => { calls++; throw Object.assign(new Error('sin créditos'), { agentLimit: true }); } });
+    expect(calls).toBe(1);
+    expect(result).toEqual({ status: 'limit', reason: 'credits' });
+  });
   it('reminds once after a turn without tool calls, then fails', async () => {
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], model: scripted([{ calls: [], text: 'hola' }]) });
     expect(result.status).toBe('failed');

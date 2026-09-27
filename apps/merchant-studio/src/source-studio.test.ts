@@ -86,6 +86,14 @@ it('sends the tapped Plantilla card as the choice', async () => {
   expect(sent.mock.calls[0].at(-1)).toBe('miga');
 });
 
+it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
+  await mountSourceStudio(app);
+  const limit = await vi.waitFor(() => { const found = app.querySelector<HTMLInputElement>('#source-credit-limit'); expect(found).toBeTruthy(); return found!; });
+  expect(limit.value).toBe('200');
+});
+
 it('types the store’s code in the chat while YAPI builds, and removes it when the build ends', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [

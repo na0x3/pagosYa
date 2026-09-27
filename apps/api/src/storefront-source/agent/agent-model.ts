@@ -11,10 +11,12 @@ function estimateInputTokens(value: unknown) {
 }
 
 /** One Responses API call per agent turn: one credit reservation, settled with the provider's usage. */
-export function openAiAgentModel(input: { endpoint: string; apiKey: string; model: string; providerName: string; budget: SourceRequestBudget; maxOutputTokens: number; reasoningEffort: string; signal?: AbortSignal; onTurn?: (turn: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => void | Promise<void>; fetchImpl?: typeof fetch }): AgentModel {
+export function openAiAgentModel(input: { endpoint: string; apiKey: string; model: string; providerName: string; budget: SourceRequestBudget; maxOutputTokens: number; reasoningEffort: string; promptCacheKey?: string; signal?: AbortSignal; onTurn?: (turn: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => void | Promise<void>; fetchImpl?: typeof fetch }): AgentModel {
   const fetchImpl = input.fetchImpl ?? fetch;
   return async ({ instructions, transcript, tools }) => {
-    const reserved = input.budget.reserve(input.model, estimateInputTokens({ instructions, transcript, tools }), input.maxOutputTokens, 1024);
+    let reserved: ReturnType<SourceRequestBudget['reserve']>;
+    try { reserved = input.budget.reserve(input.model, estimateInputTokens({ instructions, transcript, tools }), input.maxOutputTokens, 1024); }
+    catch (error) { throw Object.assign(error as Error, { agentLimit: true }); }
     const started = Date.now();
     let response: Response | undefined;
     let body: any = null;
@@ -22,7 +24,7 @@ export function openAiAgentModel(input: { endpoint: string; apiKey: string; mode
       response = await fetchImpl(input.endpoint, {
         method: 'POST', signal: input.signal,
         headers: { Authorization: `Bearer ${input.apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(sourceProviderBody({ model: input.model, instructions, input: transcript, tools, tool_choice: 'auto', parallel_tool_calls: false, reasoning: { effort: input.reasoningEffort }, max_output_tokens: reserved.outputTokens, store: false, include: ['reasoning.encrypted_content'] })),
+        body: JSON.stringify(sourceProviderBody({ model: input.model, instructions, input: transcript, tools, tool_choice: 'auto', parallel_tool_calls: false, reasoning: { effort: input.reasoningEffort }, max_output_tokens: reserved.outputTokens, store: false, include: ['reasoning.encrypted_content'], ...(input.promptCacheKey ? { prompt_cache_key: input.promptCacheKey } : {}) })),
       });
       body = await response.json().catch(() => null);
     } finally {

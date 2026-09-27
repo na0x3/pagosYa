@@ -69,6 +69,13 @@ describe('generate() with the agent engine', () => {
     expect(result.candidate.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('Tu calma');
     expect(projects.save).not.toHaveBeenCalled();
   });
+  it('names the credit limit when it stops a run before the draft is clean', async () => {
+    const { service, projects, brief } = await setup();
+    // One turn that reports a huge bill leaves no room for the next reservation.
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 240_000, output_tokens: 100 }, output: [{ type: 'function_call', call_id: `c${callId++}`, name: 'edit_file', arguments: JSON.stringify({ path: 'components/home.tsx', search: 'para tu cuerpo', replacement: 'para tu mente' }) }] })));
+    await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50))).rejects.toThrow('límite de créditos');
+    expect(projects.save).not.toHaveBeenCalled();
+  });
   it('keeps the single engine when the switch says single', async () => {
     const { service, projects, brief } = await setup('single');
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [] })));

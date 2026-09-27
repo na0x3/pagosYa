@@ -646,6 +646,8 @@ export class SourceGenerationService {
         const toolbox = new AgentToolbox({ workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, gate });
         const agentModel = openAiAgentModel({
           endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: plan.reasoningEffort, signal,
+          // Every turn resends the growing transcript; a stable key lets the provider bill that prefix at the cached rate.
+          promptCacheKey: sourcePromptCacheKey('agent', stablePrompt, storeId),
           onTurn: async ({ body, durationMs, status }) => {
             attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}) });
             await this.metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
@@ -654,7 +656,7 @@ export class SourceGenerationService {
         execution?.onDispatch?.();
         const outcome = await runAgent({ model: agentModel, toolbox, signal, instructions: agentInstructions(stablePrompt, sitePurpose, isNew), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
         const accepted = outcome.status === 'finished' || outcome.status === 'limit' && toolbox.draftIsClean() && await gate(workspace.files()) === null;
-        if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
+        if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
         if (editExisting && !workspace.changedPaths().length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
         autoRepairs.push(...toolbox.repairs);
         const summary = toolbox.finished?.summary.trim() || 'Cambios de YAPI';

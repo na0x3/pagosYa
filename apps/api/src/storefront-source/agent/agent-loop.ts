@@ -21,8 +21,10 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
     if (toolCalls >= limits.toolCalls || now() - started >= limits.wallMs) return { status: 'limit' };
     let turn: AgentModelTurn;
     try { turn = await ask(); }
-    catch {
+    catch (error) {
       if (input.signal?.aborted) return { status: 'failed', reason: 'cancelled' };
+      // The merchant's credit limit is a limit like the step count: the caller saves a clean draft, retrying buys nothing.
+      if ((error as { agentLimit?: boolean })?.agentLimit) return { status: 'limit', reason: 'credits' };
       try { turn = await ask(); } catch (error) { return { status: 'failed', reason: (error as Error).message }; }
     }
     if (!turn.calls.length) {
