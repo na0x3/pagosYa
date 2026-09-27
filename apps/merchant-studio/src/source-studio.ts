@@ -1,3 +1,4 @@
+import { composeActionMode } from './source-studio-actions';
 import { renderDirectionChoices, type DirectionChoice } from './source-directions';
 import { createDirectEditor } from './source-direct-editor';
 import { renderInspiration } from './source-inspiration';
@@ -145,7 +146,19 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (!embedded || event.origin !== location.origin || event.source !== window.parent) return;
     if (event.data?.type !== 'pagosya:studio-action' || event.data.storeId !== storeId || loading) return;
     const action = event.data.action;
+    if (action === 'compose' && typeof event.data.text === 'string' && composeActionMode({ text: event.data.text, origin: event.data.origin }, { busy, blocked: dirty() || historical() }) === 'send') {
+      // Asked from the YAPI box on another tab ("hazme una tienda"): YAPI starts working right away.
+      chatExpanded = true;
+      notifyParent({ type: 'pagosya:studio-action-received', storeId });
+      void send(event.data.text.slice(0, 12000));
+      return;
+    }
     if (action === 'compose' && typeof event.data.text === 'string') {
+      if (busy && event.data.origin !== 'growth') {
+        toast = 'YAPI está trabajando. Tu mensaje quedó listo para enviarlo después.';
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 6000);
+      }
       instruction = [instruction.trim(), event.data.text.slice(0, 12000)].filter(Boolean).join('\n\n').slice(0, 12000);
       // A suggestion from the dashboard's Crecimiento view: say where it came from; the merchant still sends it.
       if (event.data.origin === 'growth') {
