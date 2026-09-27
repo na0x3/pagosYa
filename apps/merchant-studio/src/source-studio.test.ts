@@ -86,6 +86,22 @@ it('sends the tapped Plantilla card as the choice', async () => {
   expect(sent.mock.calls[0].at(-1)).toBe('miga');
 });
 
+it('types the store’s code in the chat while YAPI builds, and removes it when the build ends', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'a1', role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', createdAt: '2026-09-26', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'Café' }, { id: 'miga', name: 'Miga', reason: 'Pan' }, { id: 'huerta', name: 'Huerta', reason: 'Verde' }] } },
+  ] } as any);
+  let finish: (value: any) => void = () => {};
+  vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
+  await mountSourceStudio(app);
+  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-template-choice="miga"]'); expect(found).toBeTruthy(); return found!; });
+  card.click();
+  const ticker = await vi.waitFor(() => { const found = app.querySelector('[data-build-code] .code-ticker'); expect(found).toBeTruthy(); return found!; });
+  expect(ticker.getAttribute('aria-hidden')).toBe('true');
+  finish({ userMessage: { id: 'u', role: 'USER', content: 'Usar Miga' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } });
+  await vi.waitFor(() => expect(app.querySelector('.code-ticker')).toBeNull());
+});
+
 it('keeps only the latest set of Plantilla cards tappable', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   const set = (ids: string[]) => ids.map(id => ({ id, name: id, reason: 'r' }));
