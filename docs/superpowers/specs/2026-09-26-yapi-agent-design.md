@@ -114,3 +114,32 @@ guards run before saving.
 
 Development first with `app.yapiEngine=agent`; the owner compares with the evaluation script; production switch is
 a config change. The single-call engine stays until the agent's success rate holds.
+
+## Sub-projects 2–6 as built (2026-09-27)
+
+The owner asked for all six to be finished overnight without questions ("take decisions yourself"). What was built,
+and the decisions taken:
+
+2. **Direction choice** — `source-directions.ts`: a curated catalog of 10 bold directions (palette with AAA ink
+   contrast, font pair from the catalog), ranked for the business by keywords, so offering them costs no model call.
+   A new shop built from scratch gets one question with three cards (mini hero in the direction's palette); a tap
+   (`directionId`, checked against the last offer) or a typed name answers it. YAPI asks once per conversation: a
+   later reply without a name, "Construir ahora", or phrases like "sin más preguntas" / "elige tú" let YAPI pick. The
+   choice is kept in the setup draft so a retried build keeps it. Plantilla flows are unchanged.
+3. **Progressive preview** — every clean draft the agent verifies or photographs is kept in memory per store
+   (`agent-draft-previews.ts`, 15-minute expiry, cleared when the run ends) and served to the owner through
+   `GET …/source-project/draft-preview?since=`; photos from the saved revision are not resent. Studio polls it with
+   the build progress and shows the draft with a "Borrador en vivo" badge until the saved revision loads.
+4. **Bold design system** — the agent brief for new stores and redesigns carries section recipes (offer hero with
+   price, story, product spotlight with quantity, comparison, trust, true stats, FAQ, closing band, rich footer) and a
+   large two-tone type scale; a committed concept's section IDs still win; local edits keep a narrow brief.
+5. **Transparent chat** — steps with screenshot thumbnails, consecutive file edits folded into "Editó N archivos",
+   and the final summary with the sections built (Tasks 8–9 plus `source-build-progress.ts`).
+6. **From any tab** — a message in the dashboard's YAPI box opens Diseñar sitio and is sent straight away (it was
+   only placed in the composer before), so "hazme una tienda" starts the build; Crecimiento suggestions still wait for
+   review, and nothing is sent while YAPI is busy or edits are unsaved.
+
+Also fixed on the way: every edit of a store made from a Plantilla failed the save preflight (fonts referenced as
+`url(assets/…)` from `styles/globals.css` were resolved under `styles/`), costing an attempt and a repair each time.
+Credits: Studio now offers 200 credits per request by default, running out of credits is a limit (a clean draft is
+saved), and agent turns use a prompt cache key.
