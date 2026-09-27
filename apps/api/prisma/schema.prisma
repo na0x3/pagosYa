@@ -924,6 +924,7 @@ model Store {
   boardState                   BoardState?
   imports                      StoreImport[]
   importLinks                  StoreImportLink[]
+  extensions                   StoreExtension[]
 
   @@index([merchantId, createdAt])
 }
@@ -3107,4 +3108,51 @@ model StoreImportLink {
   updatedAt  DateTime @updatedAt
 
   @@id([storeId, sourceHost, kind, externalId])
+}
+
+// Spec 2026-09-27 extensions framework: one row per store and installed extension.
+model StoreExtension {
+  id          String    @id @default(cuid())
+  storeId     String
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  extensionId String
+  enabled     Boolean   @default(true)
+  settings    Json      @default("{}")
+  secrets     String? // "v1.<keyId>.<iv>.<tag>.<ciphertext>" (SecretBox); never returned by the API
+  lastError   String?
+  lastErrorAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([storeId, extensionId])
+}
+
+// Written in the same transaction as the change it describes (outbox).
+model StoreEvent {
+  id         String              @id @default(cuid())
+  storeId    String
+  type       String // order.paid | order.status_changed | refund.succeeded
+  payload    Json
+  createdAt  DateTime            @default(now())
+  deliveries ExtensionDelivery[]
+
+  @@index([storeId, createdAt])
+}
+
+model ExtensionDelivery {
+  id            String     @id @default(cuid())
+  eventId       String
+  event         StoreEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  storeId       String
+  extensionId   String
+  status        String     @default("PENDING") // PENDING | RUNNING | DONE | FAILED
+  attempts      Int        @default(0)
+  nextAttemptAt DateTime   @default(now())
+  leaseToken    String?
+  leaseUntil    DateTime?
+  lastError     String?
+  doneAt        DateTime?
+
+  @@unique([eventId, extensionId])
+  @@index([status, nextAttemptAt])
 }

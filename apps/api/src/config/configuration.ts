@@ -97,6 +97,7 @@ export interface AppConfig {
   /** Per-store ceiling on storefront analytics events stored per Bolivia day (STORE_ANALYTICS_DAILY_CAP). */
   storeAnalyticsDailyCap: number;
   operationsEncryptionKey: string;
+  extensionsEncryptionKey: string;
   corsOrigins: string[];
   exposeDocs: boolean;
   trustProxy: false | number | string;
@@ -216,6 +217,7 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
   requireSecret("DOCUMENT_LINK_SECRET", app.documentLinkSecret);
   requireSecret("ANALYTICS_SESSION_SECRET", app.analyticsSessionSecret);
   requireSecret("OPERATIONS_ENCRYPTION_KEY", app.operationsEncryptionKey);
+  requireSecret("EXTENSIONS_ENCRYPTION_KEY", app.extensionsEncryptionKey);
   requireHttps("CHECKOUT_ORIGIN", app.checkoutOrigin);
   requireHttps("CONSUMER_DASHBOARD_ORIGIN", app.consumerDashboardOrigin);
   requireHttps("MERCHANT_DASHBOARD_ORIGIN", app.merchantDashboardOrigin);
@@ -287,6 +289,7 @@ export default (): { app: AppConfig } => {
     documentEmailsPerDay: parseBoundedInteger("DOCUMENT_EMAILS_PER_DAY", process.env.DOCUMENT_EMAILS_PER_DAY, 200, 1, 100_000),
     storeAnalyticsDailyCap: parseBoundedInteger("STORE_ANALYTICS_DAILY_CAP", process.env.STORE_ANALYTICS_DAILY_CAP, 50_000, 1, 10_000_000),
     operationsEncryptionKey: process.env.OPERATIONS_ENCRYPTION_KEY ?? "development-only-operations-key",
+    extensionsEncryptionKey: process.env.EXTENSIONS_ENCRYPTION_KEY ?? "development-only-extensions-key",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,
     // they call the API server-to-server.
