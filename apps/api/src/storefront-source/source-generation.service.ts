@@ -660,7 +660,7 @@ export class SourceGenerationService {
         let outcome: Awaited<ReturnType<typeof runAgent>>;
         let accepted: boolean;
         try {
-          outcome = await runAgent({ model: agentModel, toolbox, signal, instructions: agentInstructions(stablePrompt, sitePurpose, isNew), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
+          outcome = await runAgent({ model: agentModel, toolbox, signal, instructions: agentInstructions(stablePrompt, sitePurpose, isNew, isNew || redesign), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
           accepted = outcome.status === 'finished' || outcome.status === 'limit' && toolbox.draftIsClean() && await gate(workspace.files()) === null;
         } finally { agentDraftPreviews.clear(storeId); }
         if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
