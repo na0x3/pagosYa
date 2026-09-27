@@ -120,6 +120,15 @@ it('shows the store appearing while YAPI builds, from its latest clean draft, an
   await vi.waitFor(() => expect(app.querySelector('.is-live-draft')).toBeNull());
 });
 
+it('keeps the canvas toolbar to preview, code, ZIP and browser — no Editar diseño', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('#source-code-tab')).toBeTruthy());
+  expect(app.querySelector('#source-visual-edit')).toBeNull();
+  expect(app.querySelector('#source-open-browser')).toBeTruthy();
+});
+
 it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
