@@ -2536,3 +2536,25 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
 .connect-ai-hero h2 { margin: 0 0 4px; }
 .connect-ai-hero p { margin: 0; max-width: 60ch; }
 .connect-ai-hero .connect-ai-card__button { padding: 0 20px; background: #ffd23f; border-color: #ffd23f; color: #1a1a1a; }
+/* Resource frames show the dashboard's own background through them (no white canvas behind the Studio pages). */
+.store-resource-frame { background: transparent; color-scheme: dark; }
+
+/* The sidebar card fits the sidebar's width, whatever its padding. */
+.connect-ai-card, .connect-ai-card * { box-sizing: border-box; }
+.connect-ai-card { width: auto; max-width: calc(100% - 20px); margin: 12px 10px 8px; overflow: hidden; }
+.connect-ai-card .connect-ai-logo { width: 26px; height: 26px; font-size: 12px; }
+.connect-ai-card .connect-ai-card__link { margin: 0 4px; }
+.connect-ai-card__button { width: 100%; padding: 0 12px; }
+.connect-ai-hero .connect-ai-card__button { width: auto; }
+/* No light panels left on the dark dashboard: the luck wheel's copy side and the session profile picker. */
+body.is-logged-in .luck-wheel { background: rgb(12 18 32 / 72%); color: #f1f1f0; border-color: rgb(255 255 255 / 14%); }
+body.is-logged-in .luck-wheel-copy, body.is-logged-in .luck-wheel-copy h3 { color: #f1f1f0; }
+body.is-logged-in .luck-wheel-copy > p, body.is-logged-in .luck-wheel-copy small { color: #b9b9b6; }
+body.is-logged-in .luck-wheel-kicker { color: #ffb38a; }
+.session-profile-dialog { background: #141517; color: #f1f1f0; border-color: rgb(255 255 255 / 14%); }
+.session-profile-choice { background: rgb(255 255 255 / 5%); border-color: rgb(255 255 255 / 14%); color: #f1f1f0; }
+.session-profile-choice[aria-pressed="true"] { background: rgb(255 210 63 / 14%); border-color: #ffd23f; }
+.session-profile-fields input { background: rgb(255 255 255 / 7%); color: #f1f1f0; border-color: rgb(255 255 255 / 18%); }
+.session-profile-avatar-option { background: rgb(255 255 255 / 6%); }
+.session-profile-body p, .session-profile-body small { color: #a9a9a6; }
+.session-profile-body button:not(.session-profile-choice):not(.session-profile-avatar-option):not(.primary) { color: #d9d9d6; }
