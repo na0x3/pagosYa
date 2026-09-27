@@ -19,3 +19,7 @@ test("the gradient moves slowly, and stands still for people who reduce motion",
   assert.ok(LOGIN_GRADIENT.speed > 0 && LOGIN_GRADIENT.speed < 1);
   assert.equal(loginShaderSpeed(true), 0);
 });
+
+test('the signed-in backdrop is a still frame: an animated shader under blurred glass panels makes scrolling stutter', () => {
+  assert.equal(loginShaderSpeed(false, { still: true }), 0);
+});

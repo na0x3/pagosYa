@@ -37,6 +37,9 @@ export function renderTemplateGallery(templates: TemplateSummary[], state: Galle
 }
 
 /** One template on the merchant's own store (spec 2026-09-26 §1.2); the frame is filled by `openTemplateGallery`. */
+/** The pagosYa star, bouncing while a preview is prepared (source-templates.css, .tpl-loader-star). */
+const LOADER_STAR = '<span class="tpl-loader-star" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M50 9 62 36 91 39 69 58 76 87 50 72 24 87 31 58 9 39 38 36Z" fill="#f8cf2a" stroke="#f8cf2a" stroke-width="14" stroke-linejoin="round"/><rect x="38.5" y="43" width="8" height="15" rx="4" fill="#1c1a17"/><rect x="53.5" y="43" width="8" height="15" rx="4" fill="#1c1a17"/></svg></span><span class="tpl-loader-shadow" aria-hidden="true"></span>';
+
 export function renderTemplatePreview(template: TemplateSummary, state: GalleryState): string {
   const off = state.busy ? 'disabled' : '';
   const width = state.width || 'desktop';
@@ -51,7 +54,7 @@ export function renderTemplatePreview(template: TemplateSummary, state: GalleryS
     </header>
     ${state.error ? `<p class="tpl-error" role="alert">${escape(state.error)}</p>` : ''}
     <p class="tpl-preview-note" data-template-confirm>Así se verá tu tienda con tus productos, precios y fotos.${state.hasSite ? ' Tu diseño actual queda guardado en el historial y puedes volver a él.' : ''}</p>
-    <div class="tpl-preview tpl-preview--${width}"><iframe class="tpl-preview__frame" title="Vista previa de ${escape(template.name)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><p class="tpl-preview__loading" data-template-loading>Preparando la vista previa con tus productos…</p></div>`;
+    <div class="tpl-preview tpl-preview--${width}"><iframe class="tpl-preview__frame" title="Vista previa de ${escape(template.name)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><p class="tpl-preview__loading" data-template-loading role="status">${LOADER_STAR}<span>Preparando la vista previa con tus productos…</span></p></div>`;
 }
 
 export type TemplateChoice = { id: string; name: string; reason: string };

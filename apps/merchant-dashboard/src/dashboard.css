@@ -2462,11 +2462,12 @@ body .store-templates-page .store-resource-frame { background: transparent; colo
 body.is-logged-in[data-dashboard-view="templates"] .workspace-yapi { display: none !important; }
 /* The bottom room kept for the YAPI dock is not needed here. */
 body.is-logged-in[data-dashboard-view="templates"] .dashboard-workspace { padding-bottom: 40px; }
-/* A previewed template gets the whole screen beside the sidebar and eases in. */
+/* A previewed template gets the whole screen beside the sidebar on an opaque navy (nothing behind shows through while
+   the preview eases in). */
 html:has(body.template-focus) { overflow: hidden; }
 /* The page's entrance animation leaves a transform on the section, which would trap the fixed frame inside it. */
 body.template-focus .store-templates-page { transform: none !important; animation: none !important; }
-body.template-focus .store-templates-page .store-resource-frame { position: fixed; inset: 0 auto 0 0; width: 100vw; height: 100dvh !important; z-index: 4010; background: hsl(222 70% 7% / .82); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); animation: template-focus-in .32s ease both; }
+body.template-focus .store-templates-page .store-resource-frame { position: fixed; inset: 0 auto 0 0; width: 100vw; height: 100dvh !important; z-index: 4010; background: radial-gradient(70% 60% at 92% 96%, hsl(198 85% 72% / .35), transparent 70%), hsl(222 70% 7%); animation: template-focus-in .2s ease both; }
 @media (min-width: 1000px) { body.template-focus .store-templates-page .store-resource-frame { left: var(--sidebar-w, 196px); width: calc(100vw - var(--sidebar-w, 196px)); } }
 @keyframes template-focus-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { body.template-focus .store-templates-page .store-resource-frame { animation: none; } }

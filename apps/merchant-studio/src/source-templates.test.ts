@@ -73,6 +73,15 @@ describe('template preview', () => {
     for (const selector of ['[data-template-prev]', '[data-template-next]', '[data-template-apply]', '[data-template-back]', '[data-template-width]', 'iframe.tpl-preview__frame']) expect(root.querySelector(selector)).toBeTruthy();
     expect(root.textContent).toContain('queda guardado en el historial');
   });
+  it('waits for the preview with the bouncing pagosYa star and a status line', () => {
+    const root = document.createElement('div');
+    root.innerHTML = renderTemplatePreview(templates[1], state(true, 'desktop'));
+    const loading = root.querySelector('[data-template-loading]')!;
+    expect(loading.getAttribute('role')).toBe('status');
+    expect(loading.querySelector('.tpl-loader-star svg')).toBeTruthy();
+    expect(loading.querySelector('.tpl-loader-star')!.getAttribute('aria-hidden')).toBe('true');
+    expect(loading.textContent).toContain('Preparando la vista previa con tus productos');
+  });
   it('drops the history note while the store is untouched', () => {
     const root = document.createElement('div');
     root.innerHTML = renderTemplatePreview(templates[1], state(false, 'phone'));

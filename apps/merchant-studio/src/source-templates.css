@@ -55,7 +55,13 @@
 .tpl-preview__frame{display:block;width:100%;height:min(72vh,820px);border:0;background:#fff}
 .tpl-preview--phone{width:min(390px,100%);margin-inline:auto;border:10px solid #1d1b18;border-radius:34px}
 .tpl-preview--phone .tpl-preview__frame{height:min(74vh,780px)}
-.tpl-preview__loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:24px;text-align:center;color:#6a645b;background:#fbfaf7}
+.tpl-preview__loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin:0;padding:24px;text-align:center;color:#6a645b;background:#fbfaf7;font-weight:600}
+.tpl-loader-star{display:block;width:68px;height:68px;transform-origin:50% 100%;animation:tpl-bounce .9s cubic-bezier(.33,.8,.4,1) infinite}
+.tpl-loader-star svg{display:block;width:100%;height:100%;overflow:visible}
+.tpl-loader-shadow{display:block;width:46px;height:9px;margin:-4px 0 6px;border-radius:50%;background:#1d1b1829;animation:tpl-bounce-shadow .9s cubic-bezier(.33,.8,.4,1) infinite}
+@keyframes tpl-bounce{0%,100%{transform:translateY(0) scale(1.1,.88)}14%{transform:translateY(0) scale(1)}50%{transform:translateY(-38px) scale(.96,1.05) rotate(-6deg)}86%{transform:translateY(0) scale(1)}}
+@keyframes tpl-bounce-shadow{0%,100%{transform:scale(1.08);opacity:1}50%{transform:scale(.55);opacity:.4}}
+@media (prefers-reduced-motion:reduce){.tpl-loader-star,.tpl-loader-shadow{animation:none}}
 .tpl-preview__loading[hidden]{display:none}
 @media (max-width:560px){.tpl-preview-title{flex-basis:100%;order:-1}.tpl-preview-bar .button--publish{flex:1}.tpl-width button{padding:0 10px}}
 /* The dashboard's Plantillas tab. The gallery sits straight on the dashboard's own background: the document is

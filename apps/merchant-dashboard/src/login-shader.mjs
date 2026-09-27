@@ -10,8 +10,10 @@ export const LOGIN_GRADIENT = {
   speed: 0.18,
 };
 
-/** @param {boolean} reducedMotion */
-export const loginShaderSpeed = (reducedMotion) => (reducedMotion ? 0 : LOGIN_GRADIENT.speed);
+/** A still frame for people who reduce motion, and behind the signed-in dashboard: there, glass panels blur whatever
+ * sits under them, so a moving shader would re-blur them every frame and make scrolling stutter.
+ * @param {boolean} reducedMotion @param {{ still?: boolean }} [options] */
+export const loginShaderSpeed = (reducedMotion, { still = false } = {}) => (reducedMotion || still ? 0 : LOGIN_GRADIENT.speed);
 
 /**
  * The same uniforms MeshGradient passes, for a pattern that fills its box (fit "none").
@@ -27,13 +29,13 @@ export function meshGradientUniforms(params, toColor) {
 }
 
 /** Mounts the gradient in `host`; returns a disposer. Without WebGL the CSS fallback gradient stays visible.
- * @param {HTMLElement} host */
-export async function mountLoginShader(host) {
+ * @param {HTMLElement} host @param {{ still?: boolean }} [options] */
+export async function mountLoginShader(host, options = {}) {
   try {
     const { ShaderMount, meshGradientFragmentShader, getShaderColorFromString } = await import("@paper-design/shaders");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const mount = new ShaderMount(host, meshGradientFragmentShader, meshGradientUniforms(LOGIN_GRADIENT, getShaderColorFromString), undefined, loginShaderSpeed(reduce.matches));
-    const onMotion = () => mount.setSpeed(loginShaderSpeed(reduce.matches));
+    const mount = new ShaderMount(host, meshGradientFragmentShader, meshGradientUniforms(LOGIN_GRADIENT, getShaderColorFromString), undefined, loginShaderSpeed(reduce.matches, options));
+    const onMotion = () => mount.setSpeed(loginShaderSpeed(reduce.matches, options));
     reduce.addEventListener("change", onMotion);
     host.classList.add("is-rendering");
     return () => { reduce.removeEventListener("change", onMotion); mount.dispose(); host.classList.remove("is-rendering"); };
