@@ -10,6 +10,8 @@ import { AppModule } from '../src/app.module';
 import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
 import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
 import { SourceRequestBudget } from '../src/storefront-source/source-request-budget';
+import { writeFileSync } from 'node:fs';
+import { captureAgentDraft } from '../src/storefront-source/agent/agent-capture';
 
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : undefined; };
 
@@ -35,6 +37,9 @@ async function main() {
     try {
       const result: any = await generation.generate(merchantId, storeId, { revision: current.revision, brief, instruction, maxCredits: credits } as any, new SourceRequestBudget(credits), [], undefined, { candidate: true, free: true, evaluate: true, snapshot });
       rows.push({ run, status: 'ok', seconds: Math.round((Date.now() - started) / 1000), credits: result.generation?.credits ?? 0, modelCalls: result.generation?.attempts?.length ?? 0 });
+      // --shot <file.jpg>: a desktop screenshot of the built candidate, to judge the design itself.
+      const shot = arg('shot');
+      if (shot && result.candidate) writeFileSync(shot.replace(/(\.jpe?g)?$/i, `-${run}.jpg`), Buffer.from((await captureAgentDraft(result.candidate, 1280)).image.split(',')[1], 'base64'));
       console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {
       rows.push({ run, status: 'failed', seconds: Math.round((Date.now() - started) / 1000), credits: 0, modelCalls: 0, error: (error as Error).message.slice(0, 160) });
