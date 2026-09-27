@@ -18,6 +18,8 @@ describe('openAiAgentModel', () => {
     const body = JSON.parse((fetchImpl.mock.calls[0] as any)[1].body);
     expect(body).toMatchObject({ model: 'gpt-5.6-terra', tool_choice: 'auto', parallel_tool_calls: false, store: false, instructions: 'protocolo' });
     expect(body.max_output_tokens).toBeGreaterThan(0);
+    // Unstored responses: reasoning items replayed on the next turn must carry their encrypted content.
+    expect(body.include).toEqual(['reasoning.encrypted_content']);
     expect(onTurn).toHaveBeenCalledWith(expect.objectContaining({ status: 'COMPLETED', body: expect.objectContaining({ usage: { input_tokens: 1200, output_tokens: 80 } }) }));
   });
   it('throws a merchant-safe error on a provider failure and reports the failed turn', async () => {
