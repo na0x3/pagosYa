@@ -140,8 +140,11 @@ body.is-logged-in #storeRows .store-create-tile:hover { background: var(--pg-sur
 .create-store-dialog { width: min(440px,calc(100% - 32px)); max-height: calc(100dvh - 40px); padding: 28px; border: var(--bento-line) solid var(--bento-keyline); border-radius: 10px; background: var(--pg-surface); color: var(--pg-text); box-shadow: var(--bento-shadow-sm); }
 .create-store-dialog::backdrop { background: #20211e70; }
 /* Traer mi tienda de Shopify (spec 2026-09-27) */
-.shopify-import-dialog { width: min(640px,calc(100% - 32px)); }
+.shopify-import-dialog { width: min(640px,calc(100% - 32px)); background: color-mix(in srgb, var(--pg-surface) 88%, transparent); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); }
+.shopify-import-dialog::backdrop { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 .shopify-import, .shopify-import section, .shopify-import form { display: grid; gap: 14px; }
+/* Panels and rows switch with [hidden]; the display rules above must not override it. */
+.shopify-import [hidden] { display: none !important; }
 .shopify-import footer { display: flex; justify-content: flex-end; gap: 10px; }
 .shopify-import details summary { cursor: pointer; font-size: 13px; color: var(--pg-text-muted); }
 .shopify-import [role="alert"] { color: var(--pg-danger, #b3261e); font-size: 13px; }

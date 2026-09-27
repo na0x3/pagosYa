@@ -502,7 +502,7 @@
               <footer><button class="ghost" type="button" data-close>Cancelar</button><button class="primary" type="button" id="shopifyImportConfirm">Importar</button></footer>
             </section>
             <section data-panel="importing" hidden><p id="shopifyImportProgress" role="status" aria-live="polite"></p><progress id="shopifyImportBar" max="1" value="0"></progress><p class="faint">Puedes cerrar esta ventana; la importación sigue.</p></section>
-            <section data-panel="failed" hidden><p id="shopifyImportError" role="alert"></p><footer><button class="ghost" type="button" data-close>Cerrar</button><button class="primary" type="button" id="shopifyImportRetry">Reintentar</button></footer></section>
+            <section data-panel="failed" hidden><p id="shopifyImportError" role="alert"></p><footer><button class="ghost" type="button" data-import-another>Importar otra tienda</button><button class="primary" type="button" id="shopifyImportRetry">Reintentar</button></footer></section>
             <section data-panel="design" hidden>
               <p>¿Cómo quieres que se vea tu tienda nueva?</p>
               <div class="shopify-import-choices">
@@ -511,6 +511,7 @@
                 <button type="button" data-design="template"><strong>Elegir plantilla</strong><span>Sin IA, al instante.</span></button>
               </div>
               <p id="shopifyImportDesignError" role="alert" hidden></p>
+              <footer><button class="ghost" type="button" data-import-another>Importar otra tienda</button></footer>
             </section>
             <section data-panel="building" hidden><p role="status" aria-live="polite">YAPI está diseñando tu tienda. Puedes cerrar esta ventana; verás el resultado al volver a abrirla.</p></section>
             <section data-panel="done" hidden>

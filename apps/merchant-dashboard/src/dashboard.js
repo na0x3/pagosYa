@@ -1565,6 +1565,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   let shopifyImport = null, shopifyImportTimer = null;
   const showShopifyImportMessage = (id, message) => { const box = document.getElementById(id); box.textContent = message || ""; box.hidden = !message; };
 
+  // Previews are limited to 5 per hour (spec 2026-09-27 §4); the throttler's own words are English and technical.
+  const shopifyImportError = err => err.status === 429 ? "Ya revisaste varias tiendas seguidas. Espera un rato (hasta una hora) y vuelve a intentarlo." : err.message;
+
   function showShopifyImportPanel(step) {
     shopifyImportDialog.querySelector(".shopify-import").dataset.step = step;
     shopifyImportDialog.querySelectorAll("[data-panel]").forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
@@ -1602,14 +1605,24 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }, 2000);
   }
 
+  function startShopifyImport() {
+    clearTimeout(shopifyImportTimer);
+    shopifyImport = null;
+    showShopifyImportPanel("start");
+    showShopifyImportMessage("shopifyImportUrlError", "");
+    document.getElementById("shopifyImportUrl").focus();
+  }
+
   function openShopifyImport() {
     if (!canLeaveMerchantStudio()) return;
     document.getElementById("createStoreDialog").close();
     shopifyImportDialog.showModal();
-    // Reopening shows where the last import is (importing, YAPI building, done); a finished one starts fresh.
-    if (shopifyImport && importStep(shopifyImport) !== "done") renderShopifyImport(shopifyImport);
-    else { shopifyImport = null; showShopifyImportPanel("start"); showShopifyImportMessage("shopifyImportUrlError", ""); document.getElementById("shopifyImportUrl").focus(); }
+    // Reopening shows an import already under way (importing, failed, the design choice, YAPI building); a review the
+    // merchant cancelled, or a finished import, starts fresh.
+    if (shopifyImport && !["review", "done"].includes(importStep(shopifyImport))) renderShopifyImport(shopifyImport);
+    else startShopifyImport();
   }
+  shopifyImportDialog.querySelectorAll("[data-import-another]").forEach(button => button.addEventListener("click", startShopifyImport));
   document.querySelector("[data-open-shopify-import]").addEventListener("click", openShopifyImport);
   shopifyImportDialog.addEventListener("close", () => clearTimeout(shopifyImportTimer));
   shopifyImportDialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => shopifyImportDialog.close()));
@@ -1622,7 +1635,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     try { renderShopifyImport(await api("/store-imports/shopify", { method: "POST", body: JSON.stringify({ url: document.getElementById("shopifyImportUrl").value }) })); }
     catch (err) {
       if (err.code === "protected") document.getElementById("shopifyImportCsv").open = true;
-      showShopifyImportMessage("shopifyImportUrlError", err.serverMessage || err.message);
+      showShopifyImportMessage("shopifyImportUrlError", shopifyImportError(err));
     } finally { setButtonBusy(submit, false, "Revisar"); }
   });
 
@@ -1633,7 +1646,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (!file) return;
     setButtonBusy(submit, true, "Leyendo el archivo…");
     try { renderShopifyImport(await api("/store-imports/shopify-csv", { method: "POST", body: JSON.stringify({ csv: await file.text(), name: document.getElementById("shopifyImportCsvName").value }) })); }
-    catch (err) { showShopifyImportMessage("shopifyImportUrlError", err.serverMessage || err.message); }
+    catch (err) { showShopifyImportMessage("shopifyImportUrlError", shopifyImportError(err)); }
     finally { setButtonBusy(submit, false, "Revisar archivo"); }
   });
 
