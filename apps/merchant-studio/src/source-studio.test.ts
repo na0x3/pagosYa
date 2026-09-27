@@ -129,6 +129,25 @@ it('keeps the canvas toolbar to preview, code, ZIP and browser — no Editar dis
   expect(app.querySelector('#source-open-browser')).toBeTruthy();
 });
 
+it('while YAPI builds, its stars hop in a strip in the chat and leave the page alone, and they leave when it ends', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'a1', role: 'ASSISTANT', content: 'Elige una dirección', createdAt: '2026-09-27', metadata: { directionChoices: [{ id: 'retro-americana', name: 'Retro americana', description: 'd', palette: { background: '#f6ecd6', surface: '#efd9a7', ink: '#2b1d14', accent: '#b5441b' }, fonts: { display: 'bebas-neue', text: 'rubik' } }] } },
+  ] } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceProgress').mockResolvedValue({ progress: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue({ at: null });
+  let finish: (value: any) => void = () => {};
+  vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
+  await mountSourceStudio(app);
+  expect(document.querySelector('.star-field:not(.star-field--work)')).toBeTruthy();
+  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
+  card.click();
+  await vi.waitFor(() => expect(app.querySelector('[data-build-stars] .star-field--work')).toBeTruthy());
+  expect(document.querySelector('.star-field:not(.star-field--work)')).toBeNull();
+  finish({ userMessage: { id: 'u', role: 'USER', content: 'Usar Retro americana' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } });
+  await vi.waitFor(() => expect(app.querySelector('.star-field--work')).toBeNull());
+});
+
 it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
