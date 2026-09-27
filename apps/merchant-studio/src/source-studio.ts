@@ -6,6 +6,7 @@ import { renderBuildProgress, type BuildProgress } from './source-build-progress
 import { merchantSafeText } from './source-merchant-copy';
 import { renderBuildStage, mountBuildStage, type BuildStageState } from './source-build-stage';
 import { mountFace, renderFaceMark } from './source-face';
+import { mountStarField } from './source-star-field';
 import './source-build-progress.css';
 import { renderStoreReadiness } from './store-readiness';
 import { openRetention } from './retention';
@@ -117,6 +118,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let pendingSubmission: { text: string; imageCount: number; hasVideo: boolean } | null = null;
   let buildStage: { update(state: BuildStageState): void; destroy(): void } | null = null;
   let idleFace: { destroy(): void } | null = null;
+  // YAPI's stars play over the whole Studio until a site exists (source-star-field.ts). The layer lives on <body>,
+  // outside what render() replaces, so the stars keep their flight across re-renders.
+  let starField: { destroy(): void } | null = null;
   let retrySubmission: RetrySubmission | null = null;
   let toastTimer: number | undefined;
   let mode = 'preview', mobile = false, page = 'index.html', filePath = 'index.html', draft: string | null = null;
@@ -501,6 +505,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     idleFace?.destroy();
     const idleStage = app.querySelector<HTMLElement>('.inspiration-stage [data-face]');
     idleFace = idleStage ? mountFace(idleStage) : null;
+    if (!version && !starField) starField = mountStarField(document.body);
+    if (version && starField) { starField.destroy(); starField = null; }
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {
       storeId, version, locked: busy || dirty() || historical(),

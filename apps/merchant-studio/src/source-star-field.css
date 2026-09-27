@@ -1,0 +1,3 @@
+/* The stars play over the whole Studio but never take a click or cover a dialog. */
+.star-field { position: fixed; inset: 0; z-index: 30; overflow: hidden; pointer-events: none; }
+.star-field__star { position: absolute; left: 0; top: 0; display: block; will-change: transform; line-height: 0; }

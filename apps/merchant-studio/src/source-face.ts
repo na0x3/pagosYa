@@ -21,7 +21,7 @@ import './source-face.css';
  */
 
 export type FaceMood = 'idle' | 'glance' | 'smirk' | 'breathe' | 'spin' | 'hop' | 'spark';
-export type FaceColor = 'amarillo' | 'verde' | 'azul';
+export type FaceColor = 'amarillo' | 'verde' | 'azul' | 'rosa' | 'morado' | 'naranja';
 
 /**
  * The loop, written as a rhythm rather than a list: quiet beats between the

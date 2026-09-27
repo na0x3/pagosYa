@@ -322,3 +322,42 @@
 @media (prefers-reduced-motion: reduce) {
   .yapi-mark__eye, .yapi-mark.is-thinking .yapi-mark__ball, .yapi-mark.is-thinking .yapi-mark__eye { animation: none; }
 }
+
+/* ---- La estrella. YAPI took the pagosYa star's shape: the same soft five points and two eyes as the logo, cut out of
+   the orb with a mask so the palette's light, grain, blink and every mood keep working. The halo moves from box-shadow
+   (which the mask would cut) to a drop-shadow on the float wrapper, and the mouth goes: the logo has none. ---- */
+.yapi-face__ball, .yapi-mark__ball {
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-mask: var(--star-mask) center / 100% 100% no-repeat;
+  mask: var(--star-mask) center / 100% 100% no-repeat;
+}
+.yapi-face, .yapi-mark {
+  --star-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 9 62 36 91 39 69 58 76 87 50 72 24 87 31 58 9 39 38 36Z' fill='%23000' stroke='%23000' stroke-width='14' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.yapi-face__orb { filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--glow) 70%, transparent)); }
+.yapi-mark { filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--glow) 60%, transparent)); }
+.yapi-face__mouth, .yapi-mark__mouth { display: none; }
+.yapi-face__eye { top: 42%; }
+.yapi-face__eye[data-eye=left] { left: 36%; }
+.yapi-face__eye[data-eye=right] { right: 36%; }
+.yapi-mark__eye { top: 42%; }
+.yapi-mark__eye:nth-child(1) { left: 36%; }
+.yapi-mark__eye:nth-child(2) { right: 36%; }
+
+/* More stars for the playground: every palette keeps the dark-core → light-rim ramp that reads as volume. */
+.yapi-face[data-color=rosa], .yapi-mark[data-color=rosa] {
+  --skin: radial-gradient(circle at 50% 45%, #c2336b 0%, #ef6f9f 40%, #ffa6c6 68%, #ffe3ee 100%);
+  --iris: linear-gradient(135deg, #4a1227 0%, #6e1d3b 100%);
+  --glow: #ff9cc0;
+}
+.yapi-face[data-color=morado], .yapi-mark[data-color=morado] {
+  --skin: radial-gradient(circle at 50% 45%, #5a2fb8 0%, #8b63f0 40%, #b9a0ff 68%, #ece4ff 100%);
+  --iris: linear-gradient(135deg, #ffffff 0%, #e6dcff 100%);
+  --glow: #b39bff;
+}
+.yapi-face[data-color=naranja], .yapi-mark[data-color=naranja] {
+  --skin: radial-gradient(circle at 50% 45%, #c9480f 0%, #f5793a 40%, #ffab76 68%, #ffe6d4 100%);
+  --iris: linear-gradient(135deg, #4d1a05 0%, #6d270b 100%);
+  --glow: #ffae80;
+}
