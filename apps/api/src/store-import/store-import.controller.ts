@@ -1,10 +1,13 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { IsIn } from 'class-validator';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { MerchantThrottlerGuard } from '../storefront-source/source-compile-budget';
 import { ConfirmImportDto, ShopifyCsvDto, ShopifyUrlDto } from './dto';
 import { StoreImportService } from './store-import.service';
+
+class DesignDto { @IsIn(['same', 'redesign']) option!: 'same' | 'redesign'; }
 
 @Controller('v1/store-imports') @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 export class StoreImportController {
@@ -16,4 +19,5 @@ export class StoreImportController {
   @Get(':id') get(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return this.imports.get(m.id, id); }
   @Post(':id/confirm') confirm(@CurrentMerchant() m: { id: string }, @Param('id') id: string, @Body() dto: ConfirmImportDto) { return this.imports.confirm(m.id, id, dto); }
   @Post(':id/retry') retry(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return this.imports.retry(m.id, id); }
+  @Post(':id/design') design(@CurrentMerchant() m: { id: string }, @Param('id') id: string, @Body() dto: DesignDto) { return this.imports.requestDesign(m.id, id, dto.option); }
 }

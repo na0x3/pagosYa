@@ -50,6 +50,13 @@ const TEMPLATE_ADAPTATION_MODEL = 'gpt-5.6-terra';
 export const TEMPLATE_REWORK_BRIEF = 'El comercio pidió que su tienda se vea más única y menos como la plantilla de la que partió. Conserva los productos, los textos, las fotos y el orden de las secciones. Cambia las tipografías (del catálogo de fuentes), la paleta, la forma de botones y tarjetas, los marcos de las fotos, la decoración y la composición de la portada, para que la tienda ya no se reconozca como esa plantilla. En una plantilla casi todo el aspecto vive en styles/globals.css: reemplaza ese archivo completo con el nuevo estilo y cambia los componentes con ediciones cortas (clases, textos, marcado puntual), así la respuesta cabe en el espacio disponible.';
 const TEMPLATE_CHOICES_REPLY = 'Elegí estas 3 plantillas para tu negocio. Toca la que más te guste o dime cuál prefieres, y la adapto a tu tienda con tus productos.';
 
+export const IMPORT_BUILD_MODEL = 'gpt-5.6-terra';
+export const IMPORT_BUILD_MAX_CREDITS = 150;
+const IMPORT_BUILD_REQUEST = {
+  same: 'Recrea esta tienda en pagosYa con el mismo estilo de su tienda Shopify actual: estructura, orden de secciones, colores, tipografías y textos de portada, usando sus fotos ya importadas. Las capturas adjuntas son su tienda actual.',
+  redesign: 'Diseña una tienda nueva y moderna para este negocio con su marca: logo, colores y fotos ya importadas. Las capturas adjuntas muestran su tienda anterior solo como contexto del negocio; no la copies.',
+} as const;
+
 /** The latest set of cards YAPI offered; a choice is only valid against these. Callers only accept choices on a store
  * with no design, so a set is never reused after a template was applied. */
 function offeredTemplates(messages: Array<{ role: string; metadata?: unknown }>): TemplateChoice[] {
@@ -108,6 +115,34 @@ export class SourceChatService {
     const draft: SourceSetupDraft = { ...newSourceSetup(), answers: { context: summary } };
     const result = await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, { id: manifest.id, name: manifest.name, reason: '' }, draft, [], revision);
     return { ...result.revision, adapted: result.revision.revision > revision + 1 };
+  }
+
+  /** Spec 2026-09-27 §3: the free first build after a Shopify import. Progress is saved on the user message under requestId = importId. */
+  async importBuild(merchantId: string, storeId: string, input: { importId: string; option: 'same' | 'redesign'; origin: string; productHandle?: string; summary: string }) {
+    const current = await this.projects.current(merchantId, storeId);
+    const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
+    const request = IMPORT_BUILD_REQUEST[input.option];
+    const metadata = { assetUrls: [], revision: current.revision, requestId: input.importId };
+    const userMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'USER', content: input.option === 'same' ? 'Recrear mi tienda de Shopify' : 'Rediseñar mi tienda con mi marca', metadata } });
+    const workflow = createSourceProgress(progress => this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: { metadata: { ...metadata, progress } } }));
+    await workflow.report('interpreting');
+    const urls = [input.origin, ...(input.productHandle ? [new URL(`/products/${input.productHandle}`, input.origin).href] : [])];
+    const references = await Promise.all(urls.map(url => inspectSourceWebsite(url)));
+    try {
+      const revision = await this.generation.generate(merchantId, storeId, {
+        revision: current.revision, model: IMPORT_BUILD_MODEL, maxCredits: IMPORT_BUILD_MAX_CREDITS,
+        brief: { sitePurpose: 'shop', businessInformation: input.summary, businessType: 'Tienda en línea', audience: 'Clientes de la tienda', primaryAction: 'Comprar', visualDirection: input.option === 'same' ? 'El estilo de su tienda Shopify actual' : 'Diseño nuevo con su marca' },
+        instruction: `${sourceRequestExecutionPrompt(request, current.revision > 0)}\n\nContexto del negocio:\n${input.summary}\n\nSu tienda Shopify actual (inspección pública):\n${JSON.stringify(sourceWebsiteReferenceContext(references))}\n\nPedido actual del comercio:\n${request}`,
+      }, new SourceRequestBudget(IMPORT_BUILD_MAX_CREDITS), [], workflow.report, { free: true, sponsor: 'shopify-import', referenceCaptures: sourceWebsiteReferenceCaptures(references), ...(input.option === 'redesign' && current.revision ? { redesign: true } : {}) });
+      await workflow.finish('completed');
+      await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT',
+        content: input.option === 'same' ? 'Recreé tu tienda de Shopify con tus productos y fotos. Revisa la vista previa y publícala cuando quieras.' : 'Diseñé una tienda nueva con tu marca, tus productos y tus fotos. Revisa la vista previa y publícala cuando quieras.',
+        metadata: { progress: workflow.value, sourceRevision: revision.revision, label: revision.label } } });
+      return { revision: revision.revision };
+    } catch (error) {
+      await workflow.finish('failed');
+      throw error;
+    }
   }
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */

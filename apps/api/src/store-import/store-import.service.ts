@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type StoreImport } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { SourceChatService } from '../storefront-source/source-chat.service';
 import { StoresService } from '../stores/stores.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { writeImport } from './import-writer';
@@ -17,7 +18,7 @@ export const MAX_FREE_BUILD_TRIES = 2;
 /** Shopify → pagosYa import (spec 2026-09-27): preview, confirm, retry; the worker calls claim() and run(). */
 @Injectable()
 export class StoreImportService {
-  constructor(private readonly prisma: PrismaService, private readonly stores: StoresService, private readonly uploads: UploadsService) {}
+  constructor(private readonly prisma: PrismaService, private readonly stores: StoresService, private readonly uploads: UploadsService, private readonly chat: SourceChatService) {}
 
   private async view(row: StoreImport) {
     const merchant = await this.prisma.merchant.findUnique({ where: { id: row.merchantId }, select: { importBuildUsedAt: true } });
@@ -118,6 +119,38 @@ export class StoreImportService {
     } catch (error) {
       const message = error instanceof BadRequestException || error instanceof ShopifyReadError ? (error as Error).message : 'No pudimos terminar la importación. Si reintentas, nada se duplicará.';
       await this.prisma.storeImport.updateMany({ where: { id: row.id, leaseToken: row.leaseToken }, data: { status: 'FAILED', error: message, leaseToken: null } });
+    }
+  }
+
+  /** Spec 2026-09-27 §3: one free build per merchant, one more try after a failure. */
+  async requestDesign(merchantId: string, id: string, option: 'same' | 'redesign') {
+    const row = await this.owned(merchantId, id);
+    if (row.status !== 'COMPLETED' || !row.storeId) throw new BadRequestException('Primero termina de importar tu tienda.');
+    const merchant = await this.prisma.merchant.findUnique({ where: { id: merchantId }, select: { importBuildUsedAt: true } });
+    if (merchant?.importBuildUsedAt || row.designTries >= MAX_FREE_BUILD_TRIES) throw new ConflictException('Ya usaste tu diseño gratis. Elige una plantilla o pídele cambios a YAPI con tus créditos.');
+    const changed = await this.prisma.storeImport.updateMany({ where: { id, merchantId, status: 'COMPLETED', OR: [{ designStatus: null }, { designStatus: 'FAILED' }] }, data: { designStatus: 'QUEUED', designOption: option, designError: null } });
+    if (!changed.count) throw new ConflictException('YAPI ya está diseñando esta tienda.');
+    return this.get(merchantId, id);
+  }
+
+  async claimDesign() {
+    const row = await this.prisma.storeImport.findFirst({ where: { designStatus: 'QUEUED' }, orderBy: { updatedAt: 'asc' } });
+    if (!row) return null;
+    const changed = await this.prisma.storeImport.updateMany({ where: { id: row.id, designStatus: 'QUEUED' }, data: { designStatus: 'RUNNING' } });
+    return changed.count ? this.prisma.storeImport.findUniqueOrThrow({ where: { id: row.id } }) : null;
+  }
+
+  async runDesign(row: StoreImport) {
+    const data = row.data as unknown as ShopifyStoreData;
+    const summary = [`Tienda: ${data.name}`, `Productos: ${data.products.slice(0, 30).map(product => product.title).join(', ')}`,
+      data.collections.length ? `Colecciones: ${data.collections.map(collection => collection.title).join(', ')}` : ''].filter(Boolean).join('\n');
+    try {
+      const result = await this.chat.importBuild(row.merchantId, row.storeId!, { importId: row.id, option: row.designOption as 'same' | 'redesign', origin: data.origin, productHandle: data.products[0]?.handle, summary });
+      await this.prisma.storeImport.updateMany({ where: { id: row.id }, data: { designStatus: 'COMPLETED', designRevision: result.revision } });
+      await this.prisma.merchant.update({ where: { id: row.merchantId }, data: { importBuildUsedAt: new Date() } });
+    } catch (error) {
+      const message = error instanceof HttpException && error.getStatus() < 500 ? (error as Error).message : 'YAPI no pudo terminar el diseño. Puedes intentarlo una vez más gratis o elegir una plantilla.';
+      await this.prisma.storeImport.updateMany({ where: { id: row.id }, data: { designStatus: 'FAILED', designTries: { increment: 1 }, designError: message } });
     }
   }
 }

@@ -11,7 +11,10 @@ export class StoreImportWorker {
   async tick() {
     if (this.busy) return;
     this.busy = true;
-    try { const row = await this.imports.claim(); if (row) await this.imports.run(row); }
+    try {
+      const row = await this.imports.claim(); if (row) await this.imports.run(row);
+      const design = await this.imports.claimDesign(); if (design) await this.imports.runDesign(design);
+    }
     catch { /* The next tick retries; failures inside run() are recorded on the row. */ }
     finally { this.busy = false; }
   }

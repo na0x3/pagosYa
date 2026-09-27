@@ -10,7 +10,7 @@ function setup(found: any = row()) {
     storeImport: { findFirst: jest.fn(async () => found), create: jest.fn(async ({ data }) => ({ ...row(), ...data })), updateMany: jest.fn(async () => ({ count: 1 })) },
     merchant: { findUnique: jest.fn(async () => ({ importBuildUsedAt: null })) },
   };
-  const service = new StoreImportService(prisma, { create: jest.fn() } as any, { saveBuffer: jest.fn() } as any);
+  const service = new StoreImportService(prisma, { create: jest.fn() } as any, { saveBuffer: jest.fn() } as any, {} as any);
   return { service, prisma };
 }
 
