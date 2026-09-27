@@ -70,3 +70,25 @@ describe('the star field', () => {
     field.destroy();
   });
 });
+
+describe('the stars while YAPI works', () => {
+  it('take turns in a wave: each star waits for its own slot in the cycle', async () => {
+    const { workWait } = await import('./source-star-field');
+    expect(workWait(0, 4, 0)).toBeCloseTo(0);
+    expect(workWait(1, 4, 0)).toBeCloseTo(0.35);
+    expect(workWait(0, 4, 350)).toBeCloseTo(1.05);
+    for (let i = 0; i < 4; i++) expect(workWait(i, 4, 987)).toBeGreaterThanOrEqual(0);
+  });
+  it('sit in a row in a small strip and one leaps high for each real step', async () => {
+    const { mountStarField } = await import('./source-star-field');
+    const host = document.createElement('div'); document.body.append(host);
+    const field = mountStarField(host, { count: 5, mode: 'work' });
+    const layer = host.querySelector('.star-field')!;
+    expect(layer.classList.contains('star-field--work')).toBe(true);
+    expect(layer.querySelectorAll('.star-field__star')).toHaveLength(5);
+    expect(typeof field.celebrate).toBe('function');
+    field.celebrate!();
+    field.destroy();
+    expect(host.querySelector('.star-field')).toBeNull();
+  });
+});

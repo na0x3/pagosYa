@@ -202,6 +202,15 @@ describe("store analytics daily cap", () => {
   });
 });
 
+describe("Anthropic", () => {
+  const saved = process.env.ANTHROPIC_API_KEY;
+  afterEach(() => { if (saved === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = saved; });
+  it("reads the Anthropic key for the Claude models", () => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    expect(configuration().app.anthropic.apiKey).toBe("sk-ant-test");
+  });
+});
+
 describe("YAPI engine", () => {
   const saved = { engine: process.env.YAPI_ENGINE, env: process.env.NODE_ENV };
   afterEach(() => { for (const [key, value] of [["YAPI_ENGINE", saved.engine], ["NODE_ENV", saved.env]] as const) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });

@@ -33,6 +33,17 @@ describe("AllExceptionsFilter", () => {
     errorSpy.mockRestore();
   });
 
+  it("never logs an MCP key, whether it is in the message or in a connector URL path", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const { host } = makeHost({ method: "POST", url: "/v1/mcp/k/mk_live_Secret123" });
+    filter.catch(new Error("failed for mk_live_Secret123"), host);
+    const logged = errorSpy.mock.calls.map(call => call.join(" ")).join(" ");
+    expect(logged).not.toContain("Secret123");
+    expect(logged).toContain("/v1/mcp/k/[REDACTED]");
+    errorSpy.mockRestore();
+  });
+
   it("logs and returns a generic 500 for an unexpected thrown Error", () => {
     const filter = new AllExceptionsFilter();
     const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);

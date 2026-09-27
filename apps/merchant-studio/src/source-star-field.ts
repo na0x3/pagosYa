@@ -72,10 +72,21 @@ export function stepStars(stars: FieldStar[], dt: number, box: { width: number; 
   }
 }
 
-export function mountStarField(host: HTMLElement = document.body, options: { count?: number } = {}): { destroy(): void } {
+/**
+ * While YAPI works the stars sit in a row and hop in turn, like typing dots: seconds until star `index` of `count` gets
+ * its slot in a `period`-second wave, at time `now` (ms).
+ */
+export function workWait(index: number, count: number, now: number, period = 1.4) {
+  const phase = (now / 1000) % period;
+  const slot = (index / count) * period;
+  return (slot - phase + period) % period;
+}
+
+export function mountStarField(host: HTMLElement = document.body, options: { count?: number; mode?: 'play' | 'work' } = {}): { destroy(): void; celebrate?: () => void } {
   const count = options.count ?? 7;
+  const work = options.mode === 'work';
   const layer = document.createElement('div');
-  layer.className = 'star-field';
+  layer.className = work ? 'star-field star-field--work' : 'star-field';
   layer.setAttribute('aria-hidden', 'true');
   const els = Array.from({ length: count }, (_, i) => {
     const el = document.createElement('span');
@@ -89,8 +100,16 @@ export function mountStarField(host: HTMLElement = document.body, options: { cou
   const start = box();
   const stars: FieldStar[] = els.map((_, i) => {
     const r = SIZES[i % SIZES.length] * 0.46;
+    // Working stars start sitting in a row, each waiting for its turn in the wave.
+    if (work) return { x: r + (i + 0.5) * Math.max(1, start.width - 2 * r) / count, y: start.height - r, vx: 0, vy: 0, r, angle: 0, squash: 0, resting: true, wait: workWait(i, count, performance.now()) };
     return { x: r + Math.random() * Math.max(1, start.width - 2 * r), y: r + Math.random() * start.height * 0.5, vx: (Math.random() * 2 - 1) * 200, vy: 0, r, angle: 0, squash: 0, resting: false, wait: 0 };
   });
+  // A real step (a file edited, a screenshot, a check): one star leaps to the ceiling.
+  const celebrate = () => {
+    const s = stars[Math.floor(Math.random() * stars.length)];
+    if (!s) return;
+    s.resting = false; s.vy = -Math.sqrt(2 * GRAVITY * box().height * 1.3); s.vx = (Math.random() * 2 - 1) * 260; s.squash = 0.6;
+  };
   const paint = () => stars.forEach((s, i) => {
     const sx = 1 + s.squash * 0.22, sy = 1 - s.squash * 0.26;
     els[i].style.transform = `translate3d(${s.x - s.r}px, ${s.y - s.r}px, 0) rotate(${s.angle}deg) scale(${sx}, ${sy})`;
@@ -100,13 +119,16 @@ export function mountStarField(host: HTMLElement = document.body, options: { cou
     // Resting in a row along the floor.
     stars.forEach((s, i) => { s.x = Math.min(start.width - s.r, s.r + i * (start.width / count)); s.y = start.height - s.r; });
     paint();
-    return { destroy: () => layer.remove() };
+    return { destroy: () => layer.remove(), celebrate: () => {} };
   }
   let frame = 0, last = 0;
   const tick = (now: number) => {
     const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60;
     last = now;
+    const wasResting = work ? stars.map(s => s.resting) : [];
     stepStars(stars, dt, box());
+    // A working star that just landed waits for its slot in the wave instead of a random pause.
+    if (work) stars.forEach((s, i) => { if (s.resting && !wasResting[i]) s.wait = workWait(i, count, now); });
     paint();
     frame = requestAnimationFrame(tick);
   };
@@ -119,6 +141,7 @@ export function mountStarField(host: HTMLElement = document.body, options: { cou
   paint();
   frame = requestAnimationFrame(tick);
   return {
+    celebrate,
     destroy() {
       cancelAnimationFrame(frame);
       document.removeEventListener('visibilitychange', onVisibility);

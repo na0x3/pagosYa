@@ -1,3 +1,5 @@
 /* The stars play over the whole Studio but never take a click or cover a dialog. */
 .star-field { position: fixed; inset: 0; z-index: 30; overflow: hidden; pointer-events: none; }
 .star-field__star { position: absolute; left: 0; top: 0; display: block; will-change: transform; line-height: 0; }
+/* While YAPI works: a small strip in the chat where the stars hop in turn and leap for each real step. */
+.star-field--work { position: relative; inset: auto; z-index: auto; height: 76px; margin: 4px 0 6px; border-radius: 14px; background: linear-gradient(180deg, transparent, rgb(255 210 63 / 7%)); }

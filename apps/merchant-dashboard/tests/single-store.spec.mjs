@@ -37,7 +37,8 @@ async function account(page, { occupied = false } = {}) {
 test('an existing profile creates another store and switches independently', async ({ page }) => {
   const requests = await account(page, { occupied: true });
   await page.getByRole('button', { name: 'Crear una tienda Empieza desde cero', exact: true }).click();
-  await page.getByLabel('Nombre de tu tienda').fill('Taller Norte');
+  // The Shopify import dialog has its own "Nombre de tu tienda" field; this is the create-store one.
+  await page.locator('#createStoreName').fill('Taller Norte');
   await page.getByRole('button', { name: 'Crear tienda', exact: true }).click();
   await expect(page.locator('#merchantStudioFrame')).toHaveAttribute('data-store-id', 'store-2');
   const editor = page.frameLocator('#merchantStudioFrame');

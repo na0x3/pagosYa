@@ -54,6 +54,7 @@ function setup() {
   prisma.sourceCheckResult = { findFirst: jest.fn().mockResolvedValue({ id: 'passing-check' }) };
   prisma.sourceRuntimeBundle = { upsert: jest.fn(async () => ({})) };
   prisma.storeRuntimePublication = { create: jest.fn(async () => ({})) };
+  prisma.storeExtension = { findMany: jest.fn(async () => []) };
   prisma.$transaction = jest.fn(async (work) => {
     if (Array.isArray(work)) return Promise.all(work);
     const before = structuredClone(row);

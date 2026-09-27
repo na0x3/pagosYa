@@ -92,9 +92,10 @@ export function backToStoreHtml(): string {
 
 const reportedPurchases = new Set<string>();
 /**
- * The sale, reported to whichever of the merchant's measurement tags is loaded. They are
- * loaded only when the shopper accepted statistics, so finding none here means "do not
- * track" and the sale is simply not reported — pagosYa's own order record is unaffected.
+ * The sale, reported through the storefront's PAGOSYA_TRACK when present (every installed
+ * extension listens there), else to whichever measurement tag is loaded. They are loaded
+ * only when the shopper accepted statistics, so finding none here means "do not track" and
+ * the sale is simply not reported — pagosYa's own order record is unaffected.
  * Guarded by order id because a re-render of the success screen is not a second sale.
  */
 function reportPurchase(order: OrderSummary) {
@@ -102,6 +103,9 @@ function reportPurchase(order: OrderSummary) {
   reportedPurchases.add(order.id);
   const runtime = window as unknown as { gtag?: (...args: unknown[]) => void; fbq?: (...args: unknown[]) => void; ttq?: { track?: (...args: unknown[]) => void } };
   const value = order.amount / 100, currency = String(order.currency || "").toUpperCase();
+  const track = (window as unknown as { PAGOSYA_TRACK?: (name: string, data: unknown) => void }).PAGOSYA_TRACK;
+  // Stores on the extensions framework expose one entry point; every installed pixel listens there.
+  if (typeof track === "function") { try { track("purchase", { orderId: order.id, value, currency }); } catch {} return; }
   try { runtime.gtag?.("event", "purchase", { transaction_id: order.id, value, currency }); } catch {}
   try { runtime.fbq?.("track", "Purchase", { value, currency }); } catch {}
   try { runtime.ttq?.track?.("CompletePayment", { value, currency }); } catch {}

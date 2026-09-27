@@ -39,6 +39,8 @@ import { ShippingModule } from "./shipping/shipping.module";
 import { PromoCodesModule } from "./promo-codes/promo-codes.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { CollectionsModule } from "./collections/collections.module";
+import { StoreImportModule } from "./store-import/store-import.module";
+import { ExtensionsModule } from "./extensions/extensions.module";
 import { FinancesModule } from "./finances/finances.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { DebtCollectionsModule } from "./debt-collections/debt-collections.module";
@@ -110,6 +112,8 @@ import { RewardsModule } from "./rewards/rewards.module";
     PaymentLinksModule,
     CategoriesModule,
     CollectionsModule,
+    StoreImportModule,
+    ExtensionsModule,
     FinancesModule,
     UploadsModule,
     DebtCollectionsModule,

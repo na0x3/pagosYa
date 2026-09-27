@@ -2,9 +2,16 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import type { ConfigService } from '@nestjs/config';
 
 export const isDeepSeek = (model: string) => model.startsWith('deepseek-');
+/** Claude models run only on YAPI's agent engine (Anthropic Messages API with tools). */
+export const isClaude = (model: string) => model.startsWith('claude-');
 
 /** Resolve credentials only on the server. A selected provider never falls back to another. */
 export function sourceProvider(config: ConfigService, model: string, hasImages = false) {
+  if (isClaude(model)) {
+    const apiKey = config.get<string>('app.anthropic.apiKey');
+    if (!apiKey) throw new ServiceUnavailableException('Los modelos Claude no están configurados. Configura ANTHROPIC_API_KEY en el servidor para usarlos. Tu sitio sigue guardado.');
+    return { name: 'Anthropic', apiKey, endpoint: 'https://api.anthropic.com/v1/messages' };
+  }
   const deepSeek = isDeepSeek(model);
   const name = deepSeek ? 'DeepSeek' : 'OpenAI';
   const namespace = deepSeek ? 'deepSeek' : 'openAi';

@@ -8,7 +8,7 @@ import { agentDraftPreviews } from './agent/agent-draft-previews';
 
 jest.setTimeout(180_000);
 
-const configValues = (engine: string) => ({ 'app.openAi.apiKey': 'test-server-key', 'app.openAi.enabled': true, 'app.checkoutOrigin': 'http://localhost:5174', 'app.environment': 'test', 'app.sourceFramework': 'next', 'app.yapiEngine': engine } as Record<string, unknown>);
+const configValues = (engine: string) => ({ 'app.openAi.apiKey': 'test-server-key', 'app.openAi.enabled': true, 'app.anthropic.apiKey': 'sk-ant-test', 'app.checkoutOrigin': 'http://localhost:5174', 'app.environment': 'test', 'app.sourceFramework': 'next', 'app.yapiEngine': engine } as Record<string, unknown>);
 async function setup(engine = 'agent') {
   const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
   const snapshot = sourceProjectSnapshot({ revision: 1, label: base.label, brief: base.brief, files: base.files } as any);
@@ -91,6 +91,21 @@ describe('generate() with the agent engine', () => {
     await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50))).rejects.toThrow('límite de créditos');
     expect(projects.save).not.toHaveBeenCalled();
   });
+  it('builds with Claude through the agent even where the single engine is the default', async () => {
+    const { service, projects, brief } = await setup('single');
+    const claudeTurn = (id: string, name: string, input: object) => new Response(JSON.stringify({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id, name, input }], usage: { input_tokens: 1000, output_tokens: 100 } }));
+    const fetchMock = jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(claudeTurn('t1', 'edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }))
+      .mockResolvedValueOnce(claudeTurn('t2', 'verify', {}))
+      .mockResolvedValueOnce(claudeTurn('t3', 'finish', { summary: 'Cambié el título con Claude.', sections: ['Portada'] }));
+    const result: any = await service.generate('m', 's', { ...input(brief), model: 'claude-sonnet-5' }, new SourceRequestBudget(50));
+    expect((fetchMock.mock.calls[0] as any)[0]).toBe('https://api.anthropic.com/v1/messages');
+    expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).model).toBe('claude-sonnet-5');
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'components/home.tsx').content).toContain('Tu calma');
+    expect(result.agent.summary).toBe('Cambié el título con Claude.');
+    expect(result.generation.attempts.every((a: any) => a.model === 'claude-sonnet-5')).toBe(true);
+  });
+
   it('keeps the single engine when the switch says single', async () => {
     const { service, projects, brief } = await setup('single');
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [] })));

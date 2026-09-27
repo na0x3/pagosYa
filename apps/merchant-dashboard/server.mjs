@@ -13,12 +13,9 @@ const variantEditorAssets = new Map([
   ["/variant-editor.js", "variant-editor.js"],
   ["/variant-editor.css", "variant-editor.css"],
 ]);
-// B1 blob characters: the browser loads Blobatar and @pagosya/blob-characters as native ES modules through the
-// import map in index.html. Only these named files are served from the two package folders.
+// Package ES modules the browser loads through the import map in index.html; only the listed files are served.
 const requireFromDashboard = createRequire(import.meta.url);
 const vendorModules = [
-  { prefix: "/vendor/blobatar/", dir: path.join(path.dirname(requireFromDashboard.resolve("blobatar/package.json")), "dist"), files: new Set(["internal.js", "expression.js", "motion.css"]) },
-  { prefix: "/vendor/blob-characters/", dir: path.dirname(requireFromDashboard.resolve("@pagosya/blob-characters/package.json")), files: new Set(["index.mjs", "render.mjs", "player.mjs", "blob-motion.css"]) },
   // The login's mesh gradient (src/login-shader.mjs): the package's own ES modules, listed once at startup.
   paperShadersVendor(),
 ];
@@ -151,7 +148,7 @@ const server = createServer(async (req, res) => {
       res.end(font);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/profile-blob.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css", "/src/settings-overlay.mjs", "/src/mcp-connect.mjs", "/src/login-shader.mjs"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/profile-initials.mjs", "/src/debt-csv.mjs", "/src/inventory-import.mjs", "/src/html.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css", "/src/settings-overlay.mjs", "/src/mcp-connect.mjs", "/src/login-shader.mjs", "/src/store-import.mjs"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
