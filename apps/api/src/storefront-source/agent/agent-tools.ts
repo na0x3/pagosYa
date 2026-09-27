@@ -7,7 +7,7 @@ import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from '
 
 export type AgentToolName = 'list_files' | 'read_file' | 'edit_file' | 'write_file' | 'screenshot' | 'verify' | 'finish';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
-export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; gate?: (files: SourceProjectFileDto[]) => Promise<string | null> };
+export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void };
 
 const object = (properties: Record<string, object>) => ({ type: 'object', additionalProperties: false, properties, required: Object.keys(properties) });
 const text = { type: 'string' };
@@ -56,7 +56,9 @@ export class AgentToolbox {
         const width: 1280 | 820 | 390 = [1280, 820, 390].includes(args.width) ? args.width : 1280;
         if (this.shots >= this.ctx.maxScreenshots) return { output: 'Ya no quedan capturas en este trabajo.' };
         try {
-          const shot = await captureAgentDraft(await agentPreviewSnapshot(this.ctx.base, ws.files().filter(f => nextSourceFile(f.path))), width, this.ctx.signal);
+          const snapshot = await agentPreviewSnapshot(this.ctx.base, ws.files().filter(f => nextSourceFile(f.path)));
+          const shot = await captureAgentDraft(snapshot, width, this.ctx.signal);
+          if (!shot.errors.length) this.ctx.onPreview?.(snapshot.files);
           this.shots++;
           step('screenshot', `Tomó una captura (${VIEW[width]})`, shot.thumbnail);
           return { output: shot.errors.length ? `captura adjunta. Errores de la página: ${shot.errors.join(' | ')}` : 'captura adjunta', image: shot.image };
@@ -69,6 +71,10 @@ export class AgentToolbox {
         this.repairs.push(...result.repairs);
         this.lastVerify = { version: ws.version, clean: result.findings.length === 0 };
         const count = result.findings.length;
+        // A clean draft is what the merchant sees appear in the preview while YAPI keeps working.
+        if (!count && this.ctx.onPreview) {
+          try { this.ctx.onPreview((await agentPreviewSnapshot(this.ctx.base, ws.files().filter(f => nextSourceFile(f.path)))).files); } catch { /* the preview is best-effort */ }
+        }
         step('verify', count ? `Verificó: ${count} ${count === 1 ? 'problema' : 'problemas'}` : 'Verificó: todo en orden');
         return { output: count ? result.findings.map((f, i) => `${i + 1}. [${f.source}] ${f.message}`).join('\n') : 'Todo en orden.' };
       }

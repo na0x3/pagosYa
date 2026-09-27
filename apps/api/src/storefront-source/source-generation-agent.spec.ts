@@ -4,6 +4,7 @@ import { sourceProjectSnapshot } from './source-project';
 import { SourceProjectsService } from './source-projects.service';
 import { templateDemoRevision } from './source-templates';
 import { SourceRequestBudget } from './source-request-budget';
+import { agentDraftPreviews } from './agent/agent-draft-previews';
 
 jest.setTimeout(180_000);
 
@@ -38,6 +39,20 @@ describe('generate() with the agent engine', () => {
     expect(saved.label).toBe('Cambié el título principal.');
     expect(result.agent).toEqual(expect.objectContaining({ summary: 'Cambié el título principal.', sections: ['Portada'] }));
     expect(result.generation.attempts.filter((a: any) => a.phase === 'agent')).toHaveLength(3);
+  });
+  it('publishes each clean draft for the live preview without resending saved photos, and clears it when the run ends', async () => {
+    const { service, brief } = await setup();
+    const published = jest.spyOn(agentDraftPreviews, 'set');
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Listo.', sections: ['Portada'] }]]));
+    await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
+    expect(published).toHaveBeenCalledWith('s', expect.any(Array));
+    const files = published.mock.calls[0][1];
+    expect(files.find(f => f.path === '_compiled/home.js')!.content).toContain('Tu calma');
+    expect(files.some(f => f.encoding === 'base64')).toBe(false);
+    expect(agentDraftPreviews.get('s')).toEqual({ at: null });
   });
   it('fails without saving when the agent stops at a limit with an unverified draft', async () => {
     const { service, projects, brief } = await setup();

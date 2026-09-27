@@ -169,3 +169,9 @@
 .source-canvas-tools .source-design-job > button[aria-expanded="true"] { background: var(--ink); color: var(--surface); }
 .source-canvas-tools .source-design-job { display: contents; }
 .source-canvas-tools .source-design-job section { position: static; flex: 1 0 100%; width: auto; max-height: 40dvh; overflow: auto; padding: 16px; }
+/* The store appearing while YAPI builds (sub-project 3). */
+.is-live-draft{position:relative}
+.live-draft-badge{position:absolute;top:12px;left:50%;z-index:2;transform:translateX(-50%);display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgb(17 17 17 / 82%);color:#fff;font-size:12px;font-weight:600;letter-spacing:.01em;pointer-events:none;backdrop-filter:blur(6px)}
+.live-draft-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffd23f;animation:live-draft-pulse 1.4s ease-in-out infinite}
+@keyframes live-draft-pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.live-draft-badge::before{animation:none}}

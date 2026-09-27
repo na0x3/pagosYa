@@ -49,6 +49,14 @@ describe('AgentToolbox', () => {
     expect((await box.run('screenshot', JSON.stringify({ width: 390 }))).output).toContain('No se pudo capturar');
     expect(box.draftIsClean()).toBe(false);
   });
+  it('hands the compiled draft to the live preview after a clean verify', async () => {
+    const previews: Array<Array<{ path: string; content: string }>> = [];
+    const box = new AgentToolbox({ workspace: new AgentWorkspace(authored, { redesign: false }), previous: authored, base, instruction: 'cambia el título', purpose: 'shop', maxScreenshots: 8, onPreview: files => { previews.push(files); } });
+    await box.run('edit_file', edit('Un respiro', 'Tu calma'));
+    await box.run('verify', '{}');
+    expect(previews).toHaveLength(1);
+    expect(previews[0].find(f => f.path === '_compiled/home.js')!.content).toContain('Tu calma');
+  });
   it('answers unknown tools, malformed arguments and read-only paths as tool errors', async () => {
     const box = toolbox();
     expect((await box.run('delete_everything', '{}')).output).toContain('inválid');

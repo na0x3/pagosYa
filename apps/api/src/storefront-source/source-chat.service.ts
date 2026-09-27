@@ -1,3 +1,4 @@
+import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { DESIGN_DIRECTIONS, directionBrief, rankDirections, type DesignDirection } from './source-directions';
 import { loadStoreKnowledge } from '../store-knowledge/store-knowledge';
 import { continuedCatalogRequest, pendingCatalogRequest } from './source-catalog-request';
@@ -158,6 +159,12 @@ export class SourceChatService {
     if (!draft) return newSourceSetup();
     // Keep old business details and uploads, but never resume a numbered questionnaire.
     return { ...draft, step: 'conversation', imageUses: draft.imageUses || [] };
+  }
+
+  /** The agent's latest compiled draft while it builds (sub-project 3); only files when newer than `since`. */
+  async draftPreview(merchantId: string, storeId: string, since?: number) {
+    await this.owner(merchantId, storeId);
+    return agentDraftPreviews.get(storeId, since);
   }
 
   async progress(merchantId: string, storeId: string, requestId: string) {

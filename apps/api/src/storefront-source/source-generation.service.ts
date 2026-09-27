@@ -73,6 +73,7 @@ import { AgentToolbox, type AgentStep } from './agent/agent-tools';
 import { runAgent, AGENT_LIMITS } from './agent/agent-loop';
 import { openAiAgentModel } from './agent/agent-model';
 import { agentInstructions, agentOpening } from './agent/agent-prompt';
+import { agentDraftPreviews } from './agent/agent-draft-previews';
 
 const outputSchema = {
   type: "object", additionalProperties: false, required: ["label", "files", "products", "productOperations"], properties: {
@@ -643,7 +644,9 @@ export class SourceGenerationService {
           try { await acceptCandidate(); return null; }
           catch (error) { autoRepairs.length = saved.repairs; motifFiles = saved.motifs; return repairDiagnostic(error); }
         };
-        const toolbox = new AgentToolbox({ workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, gate });
+        const toolbox = new AgentToolbox({ workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, gate,
+          // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
+          onPreview: files => agentDraftPreviews.set(storeId, files.filter(file => !(file.encoding === 'base64' && previousFiles.some(saved => saved.path === file.path)))) });
         const agentModel = openAiAgentModel({
           endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: plan.reasoningEffort, signal,
           // Every turn resends the growing transcript; a stable key lets the provider bill that prefix at the cached rate.
@@ -654,8 +657,12 @@ export class SourceGenerationService {
           },
         });
         execution?.onDispatch?.();
-        const outcome = await runAgent({ model: agentModel, toolbox, signal, instructions: agentInstructions(stablePrompt, sitePurpose, isNew), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
-        const accepted = outcome.status === 'finished' || outcome.status === 'limit' && toolbox.draftIsClean() && await gate(workspace.files()) === null;
+        let outcome: Awaited<ReturnType<typeof runAgent>>;
+        let accepted: boolean;
+        try {
+          outcome = await runAgent({ model: agentModel, toolbox, signal, instructions: agentInstructions(stablePrompt, sitePurpose, isNew), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
+          accepted = outcome.status === 'finished' || outcome.status === 'limit' && toolbox.draftIsClean() && await gate(workspace.files()) === null;
+        } finally { agentDraftPreviews.clear(storeId); }
         if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
         if (editExisting && !workspace.changedPaths().length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
         autoRepairs.push(...toolbox.repairs);

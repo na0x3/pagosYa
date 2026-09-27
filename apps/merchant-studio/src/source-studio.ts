@@ -117,6 +117,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let stores: MerchantStore[] = [], storeId = '', state: SourceState = { revision: 0, versions: [], nextBefore: null }, version: SourceVersion | null = null;
   let messages: AgentMessage[] = [], assets: Attachment[] = [];
   let busy = false, generating = false, loading = true, error = '', toast = '', instruction = '';
+  // The agent's latest clean draft while it builds (sub-project 3): the store appears in the preview as YAPI works.
+  let liveDraft: { at: number; snapshot: SourceVersion['snapshot'] } | null = null;
   let pendingSubmission: { text: string; imageCount: number; hasVideo: boolean } | null = null;
   let buildStage: { update(state: BuildStageState): void; destroy(): void } | null = null;
   let idleFace: { destroy(): void } | null = null;
@@ -174,6 +176,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     } catch { /* A saved preview remains usable offline; generation fetches the current catalog again. */ }
   }
   function previewSnapshot() {
+    if (generating && liveDraft) return liveDraft.snapshot;
     return { ...version!.snapshot, files: version!.snapshot.files.map(f => {
       if (f.path === filePath && draft !== null) return { ...f, content: draft };
       if (f.path !== 'config.js' || !liveCatalog || historical()) return f;
@@ -199,7 +202,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       error = e instanceof Error ? e.message : 'No pudimos completar la solicitud.';
       if (e instanceof ApiError && e.status === 401) { sessionStorage.removeItem(SESSION_STORAGE_KEY); api.setToken(''); clearAssets(); notifyParent({ type: 'pagosya:session-expired' }); }
     } finally {
-      busy = false; loading = false; generating = false; render();
+      busy = false; loading = false; generating = false; liveDraft = null; render();
       window.clearTimeout(toastTimer);
       if (toast) toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 4000);
     }
@@ -251,6 +254,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const result = await api.sourceProgress(selectedStore, requestId, controller.signal);
         if (controller.signal.aborted || storeId !== selectedStore) return;
         if (result.progress) { buildProgress = result.progress; updateBuildProgress(); }
+        const draft = await api.sourceDraftPreview(selectedStore, liveDraft?.at, controller.signal);
+        if (!controller.signal.aborted && storeId === selectedStore && generating && draft.at && draft.files) {
+          // Photos the saved revision already has are not resent; keep them from the current version.
+          const saved = version?.snapshot.files.filter(file => file.encoding === 'base64' && !draft.files!.some(next => next.path === file.path)) || [];
+          const hadDraft = Boolean(liveDraft);
+          liveDraft = { at: draft.at, snapshot: { ...(version?.snapshot ?? {}), files: [...draft.files, ...saved] } as SourceVersion['snapshot'] };
+          const frame = app.querySelector<HTMLIFrameElement>('.is-live-draft iframe');
+          if (hadDraft && frame) void renderPreview(frame); else render();
+        }
       } catch { /* Status availability must not interrupt the build request. */ }
       if (!controller.signal.aborted) timer = window.setTimeout(poll, 1500);
     };
@@ -289,7 +301,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         stopProgress = watchBuildProgress(storeId, requestId);
         const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId);
         stopProgress();
-        succeeded = true; pendingSubmission = null; generating = false;
+        succeeded = true; pendingSubmission = null; generating = false; liveDraft = null;
         productPhoto = false;
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
@@ -326,7 +338,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       } finally {
         stopProgress();
         if (assets !== submittedAssets) submittedAssets.forEach(asset => URL.revokeObjectURL(asset.src));
-        pendingSubmission = null; generating = false; scheduleEstimate();
+        pendingSubmission = null; generating = false; liveDraft = null; scheduleEstimate();
         if (usage !== null) await api.sourceUsage(storeId).then(result => { usage = result.runs; aiUsage = result.aiUsage || []; }).catch(() => { usage = null; });
       }
     });
@@ -498,7 +510,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
           <header class="canvas-toolbar">${storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-visual-edit" aria-pressed="${visualEditing}" ${disabled(locked || !version || historical())}>Editar diseño</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked, checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : generating ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : generating && liveDraft ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">Borrador en vivo · YAPI sigue trabajando</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : generating ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
@@ -535,7 +547,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const editor = app.querySelector<HTMLTextAreaElement>('#source-code');
     if (editor) editor.value = draft ?? version!.snapshot.files.find(f => f.path === filePath)?.content ?? '';
     const frame = app.querySelector<HTMLIFrameElement>('iframe');
-    if (frame && version) void renderPreview(frame);
+    if (frame && (version || (generating && liveDraft))) void renderPreview(frame);
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {

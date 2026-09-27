@@ -313,6 +313,11 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}) }) });
   }
 
+  /** The agent's latest clean draft while it builds; files only when newer than `since`. */
+  sourceDraftPreview(storeId: string, since?: number, signal?: AbortSignal): Promise<{ at: number | null; files?: Array<{ path: string; content: string; encoding?: string }> }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/draft-preview${since !== undefined ? `?since=${since}` : ''}`, { signal });
+  }
+
   sourceProgress(storeId: string, requestId: string, signal?: AbortSignal): Promise<{ progress: BuildProgress | null }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/progress?requestId=${encodeURIComponent(requestId)}`, { signal });
   }

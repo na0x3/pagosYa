@@ -1,4 +1,5 @@
 import { rankDirections } from './source-directions';
+import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { SourceConversationFailure } from './source-conversation-failure';
 import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
@@ -534,6 +535,15 @@ it('keeps the chosen direction when a failed build is retried, without asking ag
   expect(generation.generate).toHaveBeenCalledTimes(2);
   expect(generation.generate.mock.calls[1][2].instruction).toContain('«Nocturno neón»');
   expect(messages.filter((message: any) => message.metadata?.directionChoices)).toHaveLength(1);
+});
+
+it('serves the live draft preview only to the store owner and only when it is newer', async () => {
+  const { service } = firstShop();
+  agentDraftPreviews.set('s', [{ path: 'index.html', content: '<h1>Borrador</h1>' }]);
+  const first = await service.draftPreview('m', 's');
+  expect(first.files).toEqual([{ path: 'index.html', content: '<h1>Borrador</h1>' }]);
+  expect(await service.draftPreview('m', 's', first.at!)).toEqual({ at: first.at });
+  agentDraftPreviews.clear('s');
 });
 
 it('refuses a direction that was not offered', async () => {

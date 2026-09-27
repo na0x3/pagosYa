@@ -100,6 +100,26 @@ it('sends the tapped design direction as the choice', async () => {
   expect(sent.mock.calls[0].at(-1)).toBe('retro-americana');
 });
 
+it('shows the store appearing while YAPI builds, from its latest clean draft, and drops the draft when the build ends', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'a1', role: 'ASSISTANT', content: 'Elige una dirección', createdAt: '2026-09-27', metadata: { directionChoices: [{ id: 'retro-americana', name: 'Retro americana', description: 'd', palette: { background: '#f6ecd6', surface: '#efd9a7', ink: '#2b1d14', accent: '#b5441b' }, fonts: { display: 'bebas-neue', text: 'rubik' } }] } },
+  ] } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceProgress').mockResolvedValue({ progress: null });
+  const drafts = vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue({ at: 5, files: [{ path: 'index.html', content: '<!doctype html><h1>Borrador en vivo</h1>' }] });
+  let finish: (value: any) => void = () => {};
+  vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
+  await mountSourceStudio(app);
+  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
+  card.click();
+  const frame = await vi.waitFor(() => { const found = app.querySelector<HTMLIFrameElement>('.is-live-draft iframe'); expect(found?.srcdoc).toContain('Borrador en vivo'); return found!; }, { timeout: 4000 });
+  expect(frame).toBeTruthy();
+  expect(app.querySelector('[data-live-draft-badge]')?.textContent).toContain('en vivo');
+  expect(drafts.mock.calls.at(-1)?.[1]).toBeUndefined();
+  finish({ userMessage: { id: 'u', role: 'USER', content: 'Usar Retro americana' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } });
+  await vi.waitFor(() => expect(app.querySelector('.is-live-draft')).toBeNull());
+});
+
 it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
