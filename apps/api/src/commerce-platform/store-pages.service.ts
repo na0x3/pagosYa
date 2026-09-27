@@ -24,6 +24,15 @@ export class StorePagesService {
     });
   }
   async deleteRedirect(merchantId: string, storeId: string, id: string) { await this.owner(merchantId, storeId); if (!(await this.prisma.storeRedirect.deleteMany({ where: { id, storeId } })).count) throw new NotFoundException(); return { deleted: true }; }
+  /** Old Shopify links on a custom domain (spec 2026-09-27 §2): /products/<h>, /collections/<h>, /collections/<c>/products/<h>. */
+  async publicRedirect(slug: string, path: string) {
+    const match = /^\/(?:collections\/([a-z0-9-]{1,120})\/)?(products|collections)\/([a-z0-9-]{1,120})\/?$/.exec(path);
+    if (!match) throw new NotFoundException();
+    const store = await this.store(slug);
+    const redirect = await this.prisma.storeRedirect.findUnique({ where: { storeId_fromPath: { storeId: store.id, fromPath: `/${match[2]}/${match[3]}` } } });
+    if (!redirect || !/^\/(?:p|c)\/[\w-]+$/.test(redirect.toPath)) throw new NotFoundException();
+    return { location: redirect.toPath };
+  }
   async page(slug: string, path: string) {
     const store = await this.store(slug); const base = this.base(slug);
     if (!pathValid(path)) throw new NotFoundException();

@@ -238,3 +238,22 @@ test('keeps the merchant analytics tags on public pages and drops them on links 
   assert.doesNotMatch(privatePage, /data-pagosya-analytics/);
   assert.match(privatePage, /<h1>Café<\/h1>/);
 });
+test('old Shopify links on a custom domain 301 to the imported product and collection', async () => {
+  const backend = createServer((req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    if (req.url.startsWith('/stores/public/domain')) return res.end(JSON.stringify({ slug: 'cafe' }));
+    if (req.url === '/stores/public/cafe/redirect?path=%2Fproducts%2Fgrano') return res.end(JSON.stringify({ location: '/p/abc' }));
+    res.writeHead(404).end();
+  }); backend.listen(0, '127.0.0.1'); await once(backend, 'listening');
+  const middleware = createStorefrontSeo({ apiBase: `http://127.0.0.1:${backend.address().port}`, checkoutOrigin: 'https://shop.example', template: async () => '<head></head>' });
+  const frontend = createServer((req, res) => middleware(req, res, () => res.writeHead(404).end('next'))); frontend.listen(0, '127.0.0.1'); await once(frontend, 'listening');
+  try {
+    const port = frontend.address().port;
+    const head = path => new Promise((resolve, reject) => { const req = httpRequest({ host: '127.0.0.1', port, path, agent: false, headers: { Host: 'micafe.com' } }, res => { res.resume(); resolve({ status: res.statusCode, location: res.headers.location }); }); req.on('error', reject); req.end(); });
+    assert.deepEqual(await head('/products/grano'), { status: 301, location: '/p/abc' });
+    assert.deepEqual(await head('/collections/cafes/products/grano?ref=ig'), { status: 301, location: '/p/abc?ref=ig' });
+    assert.equal((await head('/products/otro')).status, 404);
+  } finally {
+    backend.closeAllConnections(); frontend.closeAllConnections(); backend.close(); frontend.close();
+  }
+});
