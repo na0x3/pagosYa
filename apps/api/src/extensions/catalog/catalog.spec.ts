@@ -17,6 +17,7 @@ describe('extension catalog', () => {
     if (item.logo) expect(existsSync(join(logos, `${item.logo}.svg`))).toBe(true);
     for (const field of item.settings) if (field.pattern && field.placeholder) expect(field.pattern.test(field.normalize ? field.normalize(field.placeholder) : field.placeholder)).toBe(true);
     expect([item.storefrontLoader, item.verificationMeta, item.productFeed].filter(Boolean)).toHaveLength(1);
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- parses the loader source the storefront embeds
     if (item.storefrontLoader) expect(() => new Function(`return (${item.storefrontLoader})`)()).not.toThrow();
     if (item.verificationMeta) expect(item.settings.some(field => field.key === item.verificationMeta!.settingKey && field.pattern)).toBe(true);
   });

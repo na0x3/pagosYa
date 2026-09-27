@@ -9,6 +9,7 @@ function run(head: string, consent: boolean) {
   const w: any = { PAGOSYA_PRIVACY: { analyticsAllowed: () => consent }, addEventListener: () => {} };
   const d: any = { createElement: () => ({}), head: { appendChild: (element: any) => scripts.push(element.src) }, documentElement: null };
   const body = head.replace(/^<script[^>]*>/, '').replace(/<\/script>$/, '');
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the test runs the exact script the storefront serves
   new Function('window', 'document', body)(w, d);
   return { w, scripts };
 }
