@@ -10,6 +10,12 @@ async function openNav(page, view) {
   return link;
 }
 
+// The Integraciones page lists extensions from GET /stores/:id/extensions (spec 2026-09-27).
+const extensionsFixture = {
+  extensions: [{ kind: 'extension', id: 'tiktok-pixel', name: 'TikTok Pixel', category: 'ads', categoryLabel: 'Publicidad', tier: 'free', logo: 'tiktok', summary: 'Mide tus anuncios de TikTok.', description: 'Registra visitas y compras para medir tus campañas en TikTok.', docsUrl: 'https://ads.tiktok.com/help/article/get-started-pixel', fields: [{ key: 'id', label: 'ID del pixel', type: 'text', help: null, where: 'Administrador de anuncios → Herramientas → Eventos.', placeholder: 'CJKLMNOP1234', required: true, pattern: null, options: [] }], secrets: [], installed: false, enabled: false, configured: false, settings: {}, lastError: null, lastErrorAt: null, capabilities: ['script'], feed: null }],
+  guides: [{ kind: 'guide', id: 'instagram-ads', name: 'Instagram Ads', category: 'ads', categoryLabel: 'Publicidad', logo: 'instagram', summary: 'Promociona tu tienda en Instagram.', url: 'https://adsmanager.facebook.com/', guide: 'https://www.facebook.com/business/ads/instagram-ad' }],
+};
+
 async function workspace(page, withSite = false) {
   let version = { revision: 1, label: 'Sitio guardado', snapshot: { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<h1>Mi café</h1><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js"></script><script src="commerce.js"></script>' },
@@ -66,6 +72,7 @@ async function workspace(page, withSite = false) {
     else if (path === '/merchants/finances') body = { totalRevenue: 0, paymentCount: 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: 'BOB' };
     else if (path === '/auth/google') body = { enabled: false };
     else if (path.endsWith('/domain-shop')) body = { available: false, sandbox: true, tlds: [], orders: [] };
+    else if (path.endsWith('/extensions')) body = extensionsFixture;
     else if (path.endsWith('/product-highlights/suggestions')) body = { highlights: [] };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -284,12 +291,13 @@ test('Comeback, campaigns and customers show distinct pages with the current fon
   await page.screenshot({ path: '/tmp/pagosya-comeback-mobile.png', fullPage: true });
 });
 
-test('integration logos load and provider details preserve the inventory draft', async ({ page }) => {
+test('integration logos load and extension details preserve the inventory draft', async ({ page }) => {
   await retentionFixture(page);
   await workspace(page, { withSite: true });
   await page.evaluate(() => window.setDashboardView('integrations'));
   const frame = page.frameLocator('#storeIntegrationsFrame');
-  await expect(frame.locator('.integration-card')).toHaveCount(20);
+  // One extension, the twelve pagosYa features and one guide.
+  await expect(frame.locator('.integration-card')).toHaveCount(14);
   const logos = frame.locator('.integration-logo img');
   for (const logo of await logos.all()) {
     await logo.scrollIntoViewIfNeeded();
@@ -297,15 +305,13 @@ test('integration logos load and provider details preserve the inventory draft',
     expect(await logo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
   }
   await frame.locator('[name=name]').fill('Mi inventario');
-  await frame.locator('[data-open-integration=tiktok-ads]').click();
-  // Providers now carry their own ID field instead of an apology; matches
-  // source-business-workspace.test.ts.
-  await expect(frame.locator('.integration-detail')).toContainText('pega su ID para activarlo aquí');
-  await expect(frame.locator('.integration-detail a').first()).toHaveAttribute('href', 'https://ads.tiktok.com/');
+  await frame.locator('[data-open-extension=tiktok-pixel]').click();
+  await expect(frame.locator('.integration-detail [name="setting:id"]')).toHaveAttribute('placeholder', 'CJKLMNOP1234');
+  await expect(frame.locator('.integration-detail a').first()).toHaveAttribute('href', 'https://ads.tiktok.com/help/article/get-started-pixel');
   await expect(frame.locator('[name=name]')).toHaveValue('Mi inventario');
   await frame.locator('[data-close-integration]').click();
   await expect(frame.locator('.integration-detail')).toHaveCount(0);
-  await expect(frame.locator('[data-open-integration=tiktok-ads]')).toBeFocused();
+  await expect(frame.locator('[data-open-extension=tiktok-pixel]')).toBeFocused();
   await page.screenshot({ path: '/tmp/pagosya-integrations.png', fullPage: true });
 });
 
