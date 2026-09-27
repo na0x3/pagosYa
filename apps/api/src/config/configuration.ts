@@ -116,6 +116,8 @@ export interface AppConfig {
     forcePathStyle: boolean;
   };
   deepSeek: { apiKey: string; enabled: boolean };
+  /** Claude models for YAPI's agent (they run only on the tool-using engine). */
+  anthropic: { apiKey: string };
   openAi: {
     apiKey: string;
     designModel: string;
@@ -349,6 +351,7 @@ export default (): { app: AppConfig } => {
     yapiEngine: process.env.YAPI_ENGINE === 'agent' || process.env.YAPI_ENGINE === 'single' ? process.env.YAPI_ENGINE : environment === 'development' ? 'agent' : 'single',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
+    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY ?? "" },
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",
       conversationModel: process.env.OPENAI_CONVERSATION_MODEL ?? "gpt-5.6-luna",

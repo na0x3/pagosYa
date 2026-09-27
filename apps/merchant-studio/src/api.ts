@@ -470,7 +470,7 @@ export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualPropos
   return url.toString();
 }
 
-export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt-5.6-sol' | 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'deepseek-v4-flash-vision-exp';
+export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt-5.6-sol' | 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'deepseek-v4-flash-vision-exp' | 'claude-haiku-4-5-20251001' | 'claude-sonnet-5' | 'claude-opus-5-5';
 export type SourceMotionMode = 'auto' | 'off' | 'subtle' | 'expressive';
 export type SourceScrollFeel = 'native' | 'soft' | 'cinematic';
 export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial' };

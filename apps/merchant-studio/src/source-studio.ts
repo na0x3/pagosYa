@@ -31,7 +31,7 @@ import './source-browser.css';
 import './source-workspace-design.css';
 import { bindSourcePaymentPreview } from './source-payment-preview';
 
-const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['deepseek-v4-flash', 'DeepSeek Flash · económico'], ['deepseek-v4-pro', 'DeepSeek Pro'], ['deepseek-v4-flash-vision-exp', 'DeepSeek Flash Vision · experimental']] as const;
+const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['deepseek-v4-flash', 'DeepSeek Flash · económico'], ['deepseek-v4-pro', 'DeepSeek Pro'], ['deepseek-v4-flash-vision-exp', 'DeepSeek Flash Vision · experimental'], ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 · económico'], ['claude-sonnet-5', 'Claude Sonnet 5 · equilibrado'], ['claude-opus-5-5', 'Claude Opus 5.5 · avanzado']] as const;
 const SOURCE_MODEL_STORAGE = "pagosya_source_model";
 /**
  * A premium pick used to persist forever, so one session's choice silently repriced
@@ -39,7 +39,7 @@ const SOURCE_MODEL_STORAGE = "pagosya_source_model";
  * Cheaper models still stick, because keeping those saves money; the expensive ones
  * are remembered only for the working session that chose them.
  */
-const PREMIUM_SOURCE_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'deepseek-v4-pro'];
+const PREMIUM_SOURCE_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'deepseek-v4-pro', 'claude-sonnet-5', 'claude-opus-5-5'];
 const PREMIUM_MODEL_TTL_MS = 2 * 60 * 60 * 1000;
 
 type Attachment = { file: File; src: string; url?: string };

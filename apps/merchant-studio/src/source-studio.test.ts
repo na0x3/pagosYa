@@ -148,6 +148,16 @@ it('while YAPI builds, its stars hop in a strip in the chat and leave the page a
   await vi.waitFor(() => expect(app.querySelector('.star-field--work')).toBeNull());
 });
 
+it('lets the merchant pick a Claude model like any other', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
+  await mountSourceStudio(app);
+  const select = await vi.waitFor(() => { const found = app.querySelector<HTMLSelectElement>('#source-model'); expect(found).toBeTruthy(); return found!; });
+  const options = [...select.options].map(option => option.value);
+  expect(options).toEqual(expect.arrayContaining(['claude-opus-5-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001']));
+  expect([...select.options].find(option => option.value === 'claude-sonnet-5')!.textContent).toContain('Claude Sonnet 5');
+});
+
 it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
