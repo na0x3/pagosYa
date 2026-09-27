@@ -277,6 +277,8 @@ body.is-logged-in {
   --pg-focus-ring: #f3f36b59; --pg-retro-grid: transparent; --pg-retro-glow: transparent; --pg-retro-shade: transparent;
 }
 body.is-logged-in :is(.panel,.card) { -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15); }
+/* A popover sits over live content, so it is solid: nothing behind it may read through its text. */
+body.is-logged-in .profile-menu { background: hsl(222 42% 9%); }
 body.is-logged-in :is(input,select,textarea) { background-color: #ffffff0d; color: var(--pg-text); border-color: var(--pg-border-strong); }
 body.is-logged-in :is(input,textarea)::placeholder { color: var(--pg-text-faint); }
 body.is-logged-in > .topbar, body.is-logged-in[data-dashboard-view="workspace"] > .topbar { border-bottom-color: #ffffff14; background: rgb(17 17 17 / .6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }

@@ -120,10 +120,9 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await page.locator("#fakeGoogleButton").click();
 
   await expect(page.locator("#sessionProfileDialog")).toBeVisible();
-  await page.locator("#sessionProfileName").fill("María");
-  const loginChoice = page.locator("#sessionProfileAvatars [data-login-avatar]").nth(2);
-  const loginVariation = Number(await loginChoice.getAttribute("data-login-avatar"));
-  await loginChoice.click();
+  // A profile is a name; its picture is the name's initials, with nothing to choose.
+  await expect(page.locator("#sessionProfileDialog [data-login-avatar]")).toHaveCount(0);
+  await page.locator("#sessionProfileName").fill("María José");
   await page.locator("#sessionProfileContinue").click();
   await expect(page.locator("#app")).toBeVisible();
   await expect(page.locator("#profileMenuTrigger")).toBeVisible();
@@ -132,16 +131,14 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await expect(page.locator("#profileMenu")).toBeVisible();
   await expect(page.locator("#loggedInAs")).toContainText("owner@gmail.com");
   await expect(page.locator("#profileSessionCount")).toHaveText("1 / 3");
-  await expect(page.locator("#profileDisplayName")).toHaveText("María");
-  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${loginVariation}"]`)).toHaveAttribute("aria-pressed", "true");
-  const menuChoice = page.locator("#profileAvatarOptions [data-profile-avatar]").nth(3);
-  const menuVariation = await menuChoice.getAttribute("data-profile-avatar");
-  await menuChoice.click();
-  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:owner@gmail.com"))).toBe(menuVariation);
+  await expect(page.locator("#profileDisplayName")).toHaveText("María José");
+  await expect(page.locator("#profileTriggerAvatar")).toHaveText("MJ");
+  await expect(page.locator("#profileMenuAvatar")).toHaveText("MJ");
+  await expect(page.locator("#profileMenu [data-profile-avatar], #profileMenu svg.blob, #profileMenu .profile-blob")).toHaveCount(0);
   await page.locator("#moneyVisibilityToggle").click();
   await expect(page.locator("#moneyVisibilityLabel")).toHaveText("Mostrar montos");
   expect(requests).toContainEqual({ path: "/dashboard/google", method: "POST", body: { credential: "google-id-token" } });
-  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_current", method: "PATCH", body: { profileName: "María", profileAvatarId: loginVariation } });
+  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_current", method: "PATCH", body: { profileName: "María José", profileAvatarId: 1 } });
   expect(await page.evaluate(() => sessionStorage.getItem("pagosya_merchant_session"))).toBe("dash_google");
 });
 
@@ -227,11 +224,11 @@ test("main session can rename another logged-in profile", async ({ page }) => {
   await page.locator("#profileMenuTrigger").click();
   await page.locator('[data-edit-session="session_other"]').click();
   await page.locator('[data-session-edit-form="session_other"] input[name="profileName"]').fill("Carlos");
-  const editChoice = page.locator('[data-session-edit-form="session_other"] [data-edit-avatar]').nth(3);
-  const editVariation = Number(await editChoice.getAttribute("data-edit-avatar"));
-  await editChoice.click();
+  await expect(page.locator('[data-session-edit-form="session_other"] [data-edit-avatar]')).toHaveCount(0);
   await page.locator('[data-session-edit-form="session_other"] button[type="submit"]').click();
 
   await expect(page.locator(".profile-session-row", { hasText: "Carlos" })).toBeVisible();
-  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_other", method: "PATCH", body: { profileName: "Carlos", profileAvatarId: editVariation } });
+  await expect(page.locator(".profile-session-row", { hasText: "Carlos" }).locator(".profile-session-avatar")).toHaveText("C");
+  // The API still stores an avatar number; renaming keeps the one the session had.
+  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_other", method: "PATCH", body: { profileName: "Carlos", profileAvatarId: 2 } });
 });
