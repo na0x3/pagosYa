@@ -236,6 +236,10 @@ export class SourceChatService {
       const sitePurpose = sourceSitePurpose({ sitePurpose: input.sitePurpose ?? (previous?.snapshot as unknown as SourceProjectSnapshot)?.brief?.sitePurpose ?? setupDraft.sitePurpose });
       setupDraft = { ...setupDraft, sitePurpose };
       const site = sourceSiteContext((previous?.snapshot as unknown as SourceProjectSnapshot)?.files || []);
+      // The dialogue can only tell a new style from the store's template if it knows the template and its look.
+      const originBrief = (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief;
+      const origin = originBrief?.templateId ? templateManifest(originBrief.templateId) : undefined;
+      const startedFromTemplate = origin ? { id: origin.id, name: origin.name, description: origin.description, untouched: templateUntouched(originBrief, current.revision) } : null;
       const catalogInstruction = continuedCatalogRequest(setupDraft.pendingCatalogRequest, input.instruction, !current.revision);
       const referenceUrls = sourceWebsiteReferenceUrls(input.instruction, setupDraft.prompt);
       const websiteReferences = referenceUrls.length ? await Promise.all(referenceUrls.map(async url => {
@@ -253,6 +257,7 @@ export class SourceChatService {
         revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [], knowledge: await loadStoreKnowledge(this.prisma, merchantId, storeId).catch(() => null),
         messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
         offeredTemplates: offeredTemplates(history.messages).map(({ id, name }) => ({ id, name })),
+        startedFromTemplate,
       })) };
       const correctedUses = honorImageContent(input.instruction, input.assetUrls?.length ? input.assetUrls : allAssets, decision.imageUses);
       if (JSON.stringify(correctedUses) !== JSON.stringify(decision.imageUses)) {

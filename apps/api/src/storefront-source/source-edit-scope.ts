@@ -103,7 +103,10 @@ export function validateSourceEditScope(previous: File[], next: File[], instruct
     const authored = (files: File[]) => files.filter(f => /\.(tsx|html|css|js)$/.test(f.path) && !f.path.startsWith('_compiled/')).map(f => f.content).join('\n');
     const refs = (text: string) => new Set(text.match(/(?:\/?assets\/|\/v1\/uploads\/)[\w/.-]+\.(?:png|jpe?g|webp|avif|gif|mp4)/gi) || []);
     const after = refs(authored(next));
-    for (const ref of refs(authored(previous))) if (!after.has(ref)) throw new SourceScopeConflict('Se retiró una foto o video existente sin que lo pidieras.');
+    // A Plantilla's demo photos (assets/template-<id>-<slot>) are placeholders the template ships to be replaced by the
+    // merchant's own photos; letting one go never removes the merchant's content.
+    const placeholder = (ref: string) => /(?:^|\/)assets\/template-[\w-]+\.\w+$/.test(ref);
+    for (const ref of refs(authored(previous))) if (!after.has(ref) && !placeholder(ref)) throw new SourceScopeConflict('Se retiró una foto o video existente sin que lo pidieras.');
   }
   if (!scope) return;
   const updated = sourceHomeRegions(next);

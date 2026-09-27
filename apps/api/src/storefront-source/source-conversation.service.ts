@@ -47,6 +47,8 @@ type ConversationInput = {
   model?: SourceModelChoice;
   budget?: SourceRequestBudget;
   site?: ReturnType<typeof sourceSiteContext>;
+  /** The Plantilla the store's design came from, its look, and whether the merchant has changed it since. */
+  startedFromTemplate?: { id: string; name: string; description: string; untouched: boolean } | null;
   instruction: string;
   buildNow: boolean;
   productPhoto?: boolean;
@@ -69,7 +71,7 @@ ${listTemplates().map(template => `- ${template.id}: ${template.name} (${templat
 startFrom: for a new shop, "template" when the merchant wants to start from a Plantilla or leaves the choice to you, "scratch" when they ask for a design from scratch ("desde cero", "algo propio"), otherwise "unknown".
 templates: when action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
 chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".
-rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template settles on a visual direction or style different from that template's (for example "moderna y clínica" on a warm, natural template); otherwise false.`;
+rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template (startedFromTemplate in the context, with that template's look) settles on a visual direction or style different from that look (for example "moderna y clínica" on Pausa, a warm natural pilates template); otherwise false.`;
 const decisionSchema = {
   type: 'object', additionalProperties: false,
   required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework'],
@@ -164,6 +166,7 @@ export class SourceConversationService {
       businessKnowledge: input.knowledge || null,
       websiteReferences: sourceWebsiteReferenceContext(input.draft.websiteReferences || []),
       existingSite: input.site || null,
+      startedFromTemplate: input.startedFromTemplate || null,
       browserReview: input.browserReview || [],
       offeredTemplates: input.offeredTemplates || [],
     };

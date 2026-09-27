@@ -588,6 +588,15 @@ it('reworks a template-based store when the merchant asks for a more unique look
   expect(execution?.redesign).toBe(true);
 });
 
+it('tells the dialogue which Plantilla the store started from and whether it is still untouched', async () => {
+  const { service, projects, dialogue } = setup();
+  projects.current.mockResolvedValue({ revision: 1, slug: 's' });
+  projects.version.mockResolvedValue({ snapshot: { brief: { businessType: 'Pilates', audience: 'V', primaryAction: 'Reservar', visualDirection: 'Plantilla', sitePurpose: 'shop', templateId: 'pausa', templateRevision: 1 }, files: [] } });
+  dialogue.decide.mockResolvedValue({ action: 'reply', reply: '¿Algo más?', summary: 'Pilates', generationInstruction: '', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: false });
+  await service.send('m', 's', { ...request, instruction: 'moderna y clínica' });
+  expect(dialogue.decide.mock.calls[0][1].startedFromTemplate).toMatchObject({ id: 'pausa', name: 'Pausa', untouched: true });
+});
+
 it('treats a rework request on a store without a template as an ordinary edit', async () => {
   const { service, dialogue, generation } = setup();
   dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Café', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });

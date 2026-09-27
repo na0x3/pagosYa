@@ -317,6 +317,16 @@ describe('Source conversation interpretation', () => {
     expect(result).toMatchObject({ startFrom: 'template', templates: [{ id: 'tostado', reason: 'Café de especialidad' }], chosenTemplateId: '', rework: false });
   });
 
+  it('knows which Plantilla the store started from and its look, so a new style can be recognised as a rework', async () => {
+    const { service } = setup();
+    respond({ ...reply(), startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: true });
+    const startedFrom = { id: 'pausa', name: 'Pausa', description: 'Estudio de pilates: tonos cálidos, arcos suaves', untouched: true };
+    await service.decide('merchant', { ...input(), startedFromTemplate: startedFrom });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(JSON.parse(body.input[0].content[2].text).startedFromTemplate).toEqual(startedFrom);
+    expect(body.instructions).toContain('startedFromTemplate');
+  });
+
   it('defaults the template fields when a provider omits or garbles them', async () => {
     const { service } = setup();
     respond({ ...reply(), startFrom: 'maybe', templates: 'tostado', rework: 'yes' });
