@@ -33,7 +33,9 @@ export interface MerchantStore {
 }
 
 /** Store columns holding a measurement ID the merchant pastes. */
-export type AnalyticsField = 'analyticsGa4Id' | 'analyticsGtmId' | 'analyticsMetaPixelId' | 'analyticsTiktokPixelId';
+export type ExtensionFieldView = { key: string; label: string; type: 'text' | 'select' | 'toggle'; help: string | null; where: string | null; placeholder: string | null; required: boolean; pattern: string | null; options: Array<{ value: string; label: string }> };
+export type ExtensionView = { kind: 'extension'; id: string; name: string; category: string; categoryLabel: string; tier: 'free' | 'pro'; logo: string | null; summary: string; description: string; docsUrl: string | null; fields: ExtensionFieldView[]; secrets: Array<{ key: string; label: string; help: string | null; configured: boolean }>; installed: boolean; enabled: boolean; configured: boolean; settings: Record<string, string | boolean>; lastError: string | null; lastErrorAt: string | null; capabilities: string[]; feed: { url: string; platform: 'google' | 'meta'; steps: string[]; skipped?: { noPhoto: number; noPrice: number } } | null };
+export type GuideView = { kind: 'guide'; id: string; name: string; category: string; categoryLabel: string; logo: string | null; summary: string; url: string; guide: string };
 
 /** SIN classification of a product, needed on electronic invoices. */
 export interface ProductFiscalMapping { codigoProducto?: string; actividadEconomica?: string; codigoProductoSin?: string; unidadMedida?: number }
@@ -181,6 +183,10 @@ export class MerchantStudioApi {
 
   businessWorkspace(storeId: string, path = '', method = 'GET', body?: unknown): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/email-workspace${path}`, {method,...(body === undefined ? {} : {body:JSON.stringify(body)})}); }
   integrationConnections(storeId: string): Promise<any[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations`); }
+  extensions(storeId: string): Promise<{ extensions: ExtensionView[]; guides: GuideView[] }> { return this.request(`/stores/${encodeURIComponent(storeId)}/extensions`); }
+  saveExtension(storeId: string, id: string, body: { settings: Record<string, string | boolean>; secrets: Record<string, string> }): Promise<ExtensionView> { return this.request(`/stores/${encodeURIComponent(storeId)}/extensions/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }); }
+  toggleExtension(storeId: string, id: string, enabled: boolean): Promise<ExtensionView> { return this.request(`/stores/${encodeURIComponent(storeId)}/extensions/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
+  removeExtension(storeId: string, id: string): Promise<{ removed: true }> { return this.request(`/stores/${encodeURIComponent(storeId)}/extensions/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
   integrationMappings(storeId: string, connectionId: string): Promise<{ products: Array<{ id: string; name: string; stock: number | null; variants: Array<{ id: string; name: string; stock: number | null }> }>; mappings: Array<{ id: string; paymentLinkId: string; variantId: string | null; externalSku: string }> }> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations/${encodeURIComponent(connectionId)}/mappings`); }
   saveIntegrationMapping(storeId: string, connectionId: string, input: { paymentLinkId: string; variantId?: string; externalSku: string }): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations/${encodeURIComponent(connectionId)}/mappings`, { method: 'POST', body: JSON.stringify(input) }); }
   deleteIntegrationMapping(storeId: string, connectionId: string, mappingId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations/${encodeURIComponent(connectionId)}/mappings/${encodeURIComponent(mappingId)}`, { method: 'DELETE' }); }
@@ -227,7 +233,6 @@ export class MerchantStudioApi {
   reorderCollections(storeId: string, ids: string[]): Promise<Collection[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/order`, { method: 'PUT', body: JSON.stringify({ collectionIds: ids }) }); }
   // Reuses the store-update endpoint other Studio settings already write through — no dedicated route for catalogLayout.
   /** An empty string clears the ID; the API rejects anything that is not that provider's shape. */
-  saveAnalyticsId(storeId: string, field: AnalyticsField, value: string): Promise<MerchantStore> { return this.request(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: JSON.stringify({ [field]: value }) }); }
   saveCatalogLayout(storeId: string, layout: CatalogLayout): Promise<MerchantStore> { return this.request(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: JSON.stringify({ catalogLayout: layout }) }); }
   brandProfile(storeId: string): Promise<BrandState> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/brand`);

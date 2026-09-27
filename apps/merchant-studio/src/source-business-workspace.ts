@@ -1,5 +1,5 @@
-import { MerchantStudioApi, SESSION_STORAGE_KEY, type SourceState, type SourceGenerationSettings, type AnalyticsField, type MerchantStore } from './api';
-import { externalIntegrations } from './integration-catalog';
+import { MerchantStudioApi, SESSION_STORAGE_KEY, type SourceState, type SourceGenerationSettings, type ExtensionView } from './api';
+import { extensionCard, extensionDetail, guideCard, readExtensionForm } from './extensions-panel';
 import { escapeHtml as esc } from './studio-ui';
 import { API_BASE_URL } from './api';
 import { openRetention } from './retention';
@@ -145,17 +145,11 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
             return;
         }
         if (kind === 'integrations') {
-            const [retention, source, domains, stores] = await Promise.all([api.retention(storeId), api.sourceState(storeId), api.domainShop(storeId).catch(() => null), api.listStores().catch(() => [] as MerchantStore[])]);
-            // Measurement IDs live on the store row, so a card can show what is already
-            // configured instead of sending the merchant to the provider to find out.
-            const storeRow = stores.find(item => item.id === storeId);
-            const analytics: Record<AnalyticsField, string> = {
-                analyticsGa4Id: storeRow?.analyticsGa4Id || '', analyticsGtmId: storeRow?.analyticsGtmId || '',
-                analyticsMetaPixelId: storeRow?.analyticsMetaPixelId || '', analyticsTiktokPixelId: storeRow?.analyticsTiktokPixelId || '',
-            };
+            const [retention, source, domains, loadedExtensions] = await Promise.all([api.retention(storeId), api.sourceState(storeId), api.domainShop(storeId).catch(() => null), api.extensions(storeId)]);
+            let extensionData = loadedExtensions;
             let connections = await api.integrationConnections(storeId), search = '', category = '', installed = false, issued: any = null, connectionDraft = { name: '', kind: 'CUSTOM_DATABASE' };
-            type Integration = { id: string; name: string; category: string; description: string; connected?: boolean; icon?: string; logo?: string; url?: string; guide?: string; setup?: string; view?: string; field?: AnalyticsField; placeholder?: string; where?: string; open?: () => unknown; action?: () => Promise<void> };
-            let selectedIntegration: Integration | undefined;
+            type Integration = { id: string; name: string; category: string; description: string; connected?: boolean; icon?: string; view?: string; open?: () => unknown; action?: () => Promise<void> };
+            let selectedExtension: string | undefined;
             // SKU linking for one connection: drafts survive redraws until saved.
             let linking: { connectionId: string; data: Awaited<ReturnType<MerchantStudioApi['integrationMappings']>>; drafts: Map<string, string>; search: string } | undefined;
             const kindLabels: Record<string, string> = { CUSTOM_DATABASE: 'Base de datos propia', SHOPIFY: 'Shopify', WOOCOMMERCE: 'WooCommerce', POS: 'Punto de venta', ACCOUNTING: 'Contabilidad', OTHER: 'Otro sistema' };
@@ -194,7 +188,6 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                 }).join('') || '<tr><td colspan="3">No hay productos para esta búsqueda.</td></tr>'}</tbody></table></div><div class="business-actions"><button class="business-primary" type="button" data-save-links>Guardar vínculos</button></div>${apiExample(connectionId)}</section>`;
             }
             const catalog: Integration[] = [
-                ...externalIntegrations.map(item => ({ ...item, connected: Boolean(item.field && analytics[item.field]) })),
                 { id: 'contact', name: 'Formulario de contacto', category: 'Atención al cliente', icon: 'mail', description: 'Recibe consultas desde tu tienda.', connected: Boolean(source.publication?.contactFormEnabled), action: async () => { await api.setSourceContactForm(storeId, source.revision, !source.publication?.contactFormEnabled); Object.assign(source, await api.sourceState(storeId)); } },
                 { id: 'comeback', name: 'Tarjeta Comeback', category: 'Marketing', icon: 'gift', description: 'Recompensa a los clientes que vuelven a comprar.', connected: retention.settings.comebackEnabled, view: 'marketing' },
                 { id: 'email', name: 'Correos y campañas', category: 'Marketing', icon: 'mail', description: 'Bienvenida, recuperación de carritos y campañas.', connected: retention.emailConfigured, view: 'marketing' },
@@ -209,30 +202,39 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                 { id: 'redirects', name: 'Redirecciones y artículos', category: 'Diseño', icon: 'link', description: 'Conserva las direcciones de tus artículos y su contenido.', open: () => openCommercePlatform(api, storeId, 'redirects') },
             ];
             function drawIntegrations() {
-                const filtered = catalog.filter(item => (!category || item.category === category) && (!installed || item.connected) && `${item.name} ${item.description}`.toLocaleLowerCase().includes(search));
-                app.innerHTML = `<header class="business-heading"><div><h2>Herramientas para hacer crecer tu tienda</h2><p>Publicidad, analítica y funciones de PagosYa en un solo lugar.</p></div></header>${selectedIntegration ? `<section class="business-edit integration-detail" aria-label="${esc(selectedIntegration.name)}"><header><span class="integration-logo"><img src="${import.meta.env.BASE_URL}integrations/${selectedIntegration.logo}.svg" alt="${esc(selectedIntegration.name)}" width="32" height="32"></span><div><h2>${esc(selectedIntegration.name)}</h2><p>${selectedIntegration.field ? analytics[selectedIntegration.field] ? 'Configurada en esta tienda' : 'Servicio externo · pega su ID para activarlo aquí' : 'Servicio externo · se administra en su propia plataforma'}</p></div><button type="button" data-close-integration aria-label="Cerrar detalles">Cerrar</button></header><p>${esc(selectedIntegration.setup || '')}</p>${selectedIntegration.field ? `<form class="integration-connect" data-analytics-form><label>ID de ${esc(selectedIntegration.name)}<input name="value" value="${esc(analytics[selectedIntegration.field] || '')}" placeholder="${esc(selectedIntegration.placeholder || '')}" spellcheck="false" autocomplete="off" maxlength="40"></label><p class="business-help">${esc(selectedIntegration.where || '')} Lo instalamos en todas las páginas de tu tienda publicada.</p><div class="business-actions"><button class="business-primary" type="submit">Guardar</button>${analytics[selectedIntegration.field] ? '<button type="button" data-analytics-clear>Quitar</button>' : ''}</div></form>` : '<p class="business-help">Este servicio se administra en su propia plataforma; no hay nada que configurar desde PagosYa.</p>'}<div class="business-actions"><a class="integration-link" href="${esc(selectedIntegration.url || '')}" target="_blank" rel="noopener noreferrer">Abrir ${esc(selectedIntegration.name)} ↗</a><a class="integration-link" href="${esc(selectedIntegration.guide || '')}" target="_blank" rel="noopener noreferrer">Ver guía oficial ↗</a></div></section>` : ''}<div class="integration-tools"><label>Buscar integraciones<input type="search" data-search-integration value="${esc(search)}" placeholder="Nombre o descripción"></label><label>Categoría<select data-integration-category><option value="">Todas</option>${[...new Set(catalog.map(item => item.category))].map(value => `<option ${category === value ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label class="business-switch"><input type="checkbox" data-only-connected ${installed ? 'checked' : ''}>Configuradas</label></div><p data-business-status role="status">${esc(message)}</p><div class="integrations-grid">${filtered.map(item => `<article class="integration-card"><header>${`<span class="integration-logo ${item.logo ? '' : 'is-pagosya'}"><img src="${import.meta.env.BASE_URL}${item.logo ? `integrations/${item.logo}.svg` : 'logo-mark.png'}" alt="${item.logo ? esc(item.name) : 'PagosYa'}" width="32" height="32" loading="lazy"></span>`}<span class="business-badge ${item.connected ? 'is-ready' : ''}">${item.connected ? 'Configurada' : item.url ? 'Externa' : 'Incluida'}</span></header><h2>${esc(item.name)}</h2><small>${esc(item.category)} · ${item.url ? 'Servicio externo' : 'Por PagosYa'}</small><p>${esc(item.description)}</p><button type="button" data-open-integration="${item.id}">${item.field ? item.connected ? 'Editar' : 'Configurar' : item.url ? 'Ver conexión' : item.id === 'contact' ? item.connected ? 'Desactivar' : 'Activar' : 'Configurar'} ↗</button></article>`).join('') || '<p class="business-empty">No hay integraciones para este filtro.</p>'}</div>${inventorySection()}`;
-                app.querySelector('[data-close-integration]')?.addEventListener('click', () => { const id = selectedIntegration?.id; selectedIntegration = undefined; drawIntegrations(); const trigger = app.querySelector<HTMLElement>(`[data-open-integration="${id}"]`); trigger?.scrollIntoView({ block: 'center' }); trigger?.focus({ preventScroll: true }); });
+                const base = import.meta.env.BASE_URL;
+                const matches = (name: string, text: string) => `${name} ${text}`.toLocaleLowerCase().includes(search);
+                const filtered = catalog.filter(item => (!category || item.category === category) && (!installed || item.connected) && matches(item.name, item.description));
+                const extensions = extensionData.extensions.filter(item => (!category || item.categoryLabel === category) && (!installed || (item.installed && item.configured)) && matches(item.name, item.summary));
+                const guides = installed ? [] : extensionData.guides.filter(item => (!category || item.categoryLabel === category) && matches(item.name, item.summary));
+                const current = extensionData.extensions.find(item => item.id === selectedExtension);
+                const categories = [...new Set([...extensionData.extensions.map(item => item.categoryLabel), ...extensionData.guides.map(item => item.categoryLabel), ...catalog.map(item => item.category)])];
+                const section = (title: string, cards: string[]) => cards.length ? `<h2 class="integration-section">${title}</h2><div class="integrations-grid">${cards.join('')}</div>` : '';
+                const ownCard = (item: Integration) => `<article class="integration-card"><header><span class="integration-logo is-pagosya"><img src="${base}logo-mark.png" alt="PagosYa" width="32" height="32" loading="lazy"></span><span class="business-badge ${item.connected ? 'is-ready' : ''}">${item.connected ? 'Configurada' : 'Incluida'}</span></header><h2>${esc(item.name)}</h2><small>${esc(item.category)} · Por PagosYa</small><p>${esc(item.description)}</p><button type="button" data-open-integration="${item.id}">${item.id === 'contact' ? item.connected ? 'Desactivar' : 'Activar' : 'Configurar'} ↗</button></article>`;
+                const sections = section('Extensiones', extensions.map(item => extensionCard(item, base))) + section('Funciones de pagosYa', filtered.map(ownCard)) + section('Guías', guides.map(item => guideCard(item, base)));
+                app.innerHTML = `<header class="business-heading"><div><h2>Herramientas para hacer crecer tu tienda</h2><p>Extensiones, funciones de pagosYa y guías para hacer crecer tu tienda.</p></div></header>${current ? extensionDetail(current, base) : ''}<div class="integration-tools"><label>Buscar integraciones<input type="search" data-search-integration value="${esc(search)}" placeholder="Nombre o descripción"></label><label>Categoría<select data-integration-category><option value="">Todas</option>${categories.map(value => `<option ${category === value ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label class="business-switch"><input type="checkbox" data-only-connected ${installed ? 'checked' : ''}>Configuradas</label></div><p data-business-status role="status">${esc(message)}</p>${sections || '<p class="business-empty">No hay integraciones para este filtro.</p>'}${inventorySection()}`;
+                app.querySelector('[data-close-integration]')?.addEventListener('click', () => { const id = selectedExtension; selectedExtension = undefined; drawIntegrations(); const trigger = app.querySelector<HTMLElement>(`[data-open-extension="${id}"]`); trigger?.scrollIntoView({ block: 'center' }); trigger?.focus({ preventScroll: true }); });
                 const searchEl = app.querySelector<HTMLInputElement>('[data-search-integration]')!;
                 searchEl.addEventListener('input', () => { const position = searchEl.selectionStart; search = searchEl.value.toLocaleLowerCase(); drawIntegrations(); const input = app.querySelector<HTMLInputElement>('[data-search-integration]')!; input.focus(); input.setSelectionRange(position, position); });
                 app.querySelector('[data-integration-category]')!.addEventListener('change', event => { category = (event.target as HTMLSelectElement).value; drawIntegrations(); });
                 app.querySelector('[data-only-connected]')!.addEventListener('change', event => { installed = (event.target as HTMLInputElement).checked; drawIntegrations(); });
-                app.querySelectorAll<HTMLButtonElement>('[data-open-integration]').forEach(button => button.onclick = () => { const item = catalog.find(item => item.id === button.dataset.openIntegration)!; if (item.url) { selectedIntegration = item; drawIntegrations(); app.querySelector('.integration-detail')?.scrollIntoView({ block: 'center' }); app.querySelector<HTMLElement>('[data-close-integration]')?.focus({ preventScroll: true }); } else if (item.view)
+                app.querySelectorAll<HTMLButtonElement>('[data-open-integration]').forEach(button => button.onclick = () => { const item = catalog.find(item => item.id === button.dataset.openIntegration)!; selectedExtension = undefined; if (item.view)
                     send({ type: 'pagosya:workspace', view: item.view, tab: item.id === 'comeback' ? 'program' : 'templates' });
                 else if (item.open)
                     void item.open();
                 else if (item.action)
                     void run(item.action, () => { item.connected = Boolean(source.publication?.contactFormEnabled); drawIntegrations(); }); });
-                // Saving a measurement ID: the API is the authority on what a valid ID looks
-                // like, so the field is refilled from what came back, not from what was typed.
-                const analyticsForm = app.querySelector<HTMLFormElement>('[data-analytics-form]');
-                const field = selectedIntegration?.field;
-                if (analyticsForm && field) {
-                    const save = (value: string) => void run(async () => {
-                        const saved = await api.saveAnalyticsId(storeId, field, value);
-                        analytics[field] = saved[field] || '';
-                    }, drawIntegrations);
-                    analyticsForm.addEventListener('submit', event => { event.preventDefault(); save(String(new FormData(analyticsForm).get('value') ?? '').trim()); });
-                    analyticsForm.querySelector('[data-analytics-clear]')?.addEventListener('click', () => save(''));
+                app.querySelectorAll<HTMLButtonElement>('[data-open-extension]').forEach(button => button.addEventListener('click', () => { selectedExtension = button.dataset.openExtension; drawIntegrations(); app.querySelector('.integration-detail')?.scrollIntoView({ block: 'center' }); app.querySelector<HTMLElement>('[data-close-integration]')?.focus({ preventScroll: true }); }));
+                // Extension settings: the API is the authority on what a valid value looks like, so
+                // the form is refilled from what came back, not from what was typed. run() reports
+                // "Cambios guardados." after the task, so a specific message is set in the redraw.
+                const extensionForm = app.querySelector<HTMLFormElement>('[data-extension-form]');
+                if (extensionForm && current) {
+                    const replace = (next: ExtensionView) => { extensionData = { ...extensionData, extensions: extensionData.extensions.map(item => item.id === next.id ? next : item) }; };
+                    extensionForm.addEventListener('submit', event => { event.preventDefault(); void run(async () => { replace(await api.saveExtension(storeId, current.id, readExtensionForm(extensionForm, current))); }, () => { message = 'Guardado. Se aplica en tu tienda publicada.'; drawIntegrations(); }); });
+                    app.querySelector('[data-toggle-extension]')?.addEventListener('click', () => void run(async () => { replace(await api.toggleExtension(storeId, current.id, !current.enabled)); }, drawIntegrations));
+                    app.querySelector('[data-remove-extension]')?.addEventListener('click', () => void run(async () => { await api.removeExtension(storeId, current.id); extensionData = await api.extensions(storeId); selectedExtension = undefined; }, () => { message = `Quitamos ${current.name}.`; drawIntegrations(); }));
+                    app.querySelector<HTMLButtonElement>('[data-copy-feed]')?.addEventListener('click', event => { void navigator.clipboard?.writeText((event.currentTarget as HTMLButtonElement).dataset.copyFeed || ''); message = 'Dirección copiada.'; drawIntegrations(); });
                 }
                 const form = app.querySelector<HTMLFormElement>('[data-connection-form]')!;
                 if (form.elements.namedItem('kind')) (form.elements.namedItem('kind') as HTMLSelectElement).value = connectionDraft.kind;
