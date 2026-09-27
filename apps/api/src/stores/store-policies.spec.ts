@@ -27,3 +27,11 @@ describe('owner-controlled public visibility', () => {
     expect(storeUpdateData(plainToInstance(UpdateStoreDto, { name: 'X' }))).not.toHaveProperty('publicVisibility');
   });
 });
+
+describe('measurement IDs moved to extensions', () => {
+  it('no longer writes the old Store columns: an old Studio saving them changes nothing', () => {
+    const { storeUpdateData } = jest.requireActual('./store-presentation');
+    const data = storeUpdateData(plainToInstance(UpdateStoreDto, { name: 'X', analyticsGa4Id: 'G-ABC1234567', analyticsGtmId: 'GTM-ABCD123', analyticsMetaPixelId: '123456789012345', analyticsTiktokPixelId: 'CJKLMNOP1234' }));
+    for (const column of ['analyticsGa4Id', 'analyticsGtmId', 'analyticsMetaPixelId', 'analyticsTiktokPixelId']) expect(data).not.toHaveProperty(column);
+  });
+});
