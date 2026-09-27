@@ -62,4 +62,13 @@ describe('ExtensionsService', () => {
     await expect(service.remove('m', 's', 'with-token')).resolves.toEqual({ removed: true });
     expect(prisma.storeExtension.deleteMany).toHaveBeenCalledWith({ where: { storeId: 's', extensionId: 'with-token' } });
   });
+
+  it('tells the card of an installed feed what the catalog leaves out', async () => {
+    const feed: ExtensionManifest = { id: 'feed', name: 'Feed', category: 'catalogs', tier: 'pro', logo: null, summary: 's', description: 'd', settings: [], productFeed: { platform: 'google', steps: ['Paso'] } };
+    const prisma: any = { store: { findFirst: jest.fn(async () => ({ id: 's', slug: 'cafe' })) }, storeExtension: { findMany: jest.fn(async () => [{ extensionId: 'feed', enabled: true, settings: {}, secrets: null }]) } };
+    const feeds: any = { summary: jest.fn(async () => ({ skipped: { noPhoto: 2, noPrice: 1 } })) };
+    const [view] = (await new ExtensionsService(prisma, {} as any, { get: () => undefined } as any, [feed], feeds).list('m', 's')).extensions;
+    expect(view.feed).toMatchObject({ url: expect.stringMatching(/\/stores\/public\/cafe\/feeds\/feed\.xml$/), skipped: { noPhoto: 2, noPrice: 1 } });
+    expect(feeds.summary).toHaveBeenCalledWith('cafe');
+  });
 });

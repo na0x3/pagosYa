@@ -4,6 +4,7 @@ import type { Prisma, StoreExtension } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GUIDES } from './catalog/guides';
 import { CATEGORY_LABELS, type ExtensionManifest } from './extension';
+import { StoreFeedsService } from './feeds/store-feeds.service';
 import { EXTENSION_REGISTRY, EXTENSIONS, type ExtensionRegistry } from './registry';
 import { SecretBox, SecretBoxError } from './secret-box';
 import { isConfigured, readSettings, validateInput } from './settings';
@@ -15,7 +16,7 @@ const UNREADABLE = 'Vuelve a pegar tu clave: no pudimos leer la que guardaste.';
 @Injectable()
 export class ExtensionsService {
   private readonly registry: ExtensionRegistry;
-  constructor(private readonly prisma: PrismaService, private readonly box: SecretBox, private readonly config: ConfigService, @Optional() @Inject(EXTENSION_REGISTRY) registry?: ExtensionRegistry) { this.registry = registry ?? EXTENSIONS; }
+  constructor(private readonly prisma: PrismaService, private readonly box: SecretBox, private readonly config: ConfigService, @Optional() @Inject(EXTENSION_REGISTRY) registry?: ExtensionRegistry, @Optional() private readonly feeds?: StoreFeedsService) { this.registry = registry ?? EXTENSIONS; }
 
   private async store(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, slug: true } });
@@ -56,8 +57,13 @@ export class ExtensionsService {
   async list(merchantId: string, storeId: string) {
     const store = await this.store(merchantId, storeId);
     const rows = await this.prisma.storeExtension.findMany({ where: { storeId } });
+    const hasFeed = this.registry.some(manifest => manifest.productFeed && rows.some(row => row.extensionId === manifest.id));
+    const summary = hasFeed && this.feeds ? await this.feeds.summary(store.slug) : null;
     return {
-      extensions: this.registry.map(manifest => this.view(manifest, rows.find(row => row.extensionId === manifest.id) ?? null, store.slug)),
+      extensions: this.registry.map(manifest => {
+        const view = this.view(manifest, rows.find(row => row.extensionId === manifest.id) ?? null, store.slug);
+        return view.feed && summary ? { ...view, feed: { ...view.feed, skipped: summary.skipped } } : view;
+      }),
       guides: GUIDES.map(guide => ({ kind: 'guide' as const, ...guide, categoryLabel: CATEGORY_LABELS[guide.category] })),
     };
   }
