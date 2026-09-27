@@ -16,6 +16,7 @@ export class StoreImportController {
   shopify(@CurrentMerchant() m: { id: string }, @Body() dto: ShopifyUrlDto) { return this.imports.previewUrl(m.id, dto.url); }
   @Post('shopify-csv') @Throttle({ default: { limit: 5, ttl: 3_600_000 } })
   csv(@CurrentMerchant() m: { id: string }, @Body() dto: ShopifyCsvDto) { return this.imports.previewCsv(m.id, dto.csv, dto.name, dto.host); }
+  @Get('latest') latest(@CurrentMerchant() m: { id: string }) { return this.imports.latest(m.id); }
   @Get(':id') get(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return this.imports.get(m.id, id); }
   @Post(':id/confirm') confirm(@CurrentMerchant() m: { id: string }, @Param('id') id: string, @Body() dto: ConfirmImportDto) { return this.imports.confirm(m.id, id, dto); }
   @Post(':id/retry') retry(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return this.imports.retry(m.id, id); }

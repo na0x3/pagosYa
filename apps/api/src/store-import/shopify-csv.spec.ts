@@ -33,4 +33,18 @@ describe('Shopify CSV', () => {
   it('rejects a file that is not a Shopify product export', () => {
     expect(() => readShopifyCsv('nombre,precio\nA,1', 'x', 'x.com')).toThrow('no es una exportación de productos de Shopify');
   });
+
+  // Final review, Important #10: untracked inventory and "continue selling" come out as qty 0 but are not sold out.
+  it('uses the quantity only when Shopify tracks it and stops selling at zero', () => {
+    const csv = [
+      'Handle,Title,Option1 Name,Option1 Value,Variant Inventory Tracker,Variant Inventory Policy,Variant Inventory Qty,Variant Price',
+      'a,A,Title,Default Title,,deny,0,10',
+      'b,B,Title,Default Title,shopify,continue,0,10',
+      'c,C,Title,Default Title,shopify,deny,0,10',
+    ].join('\n');
+    const [a, b, c] = readShopifyCsv(csv, 'x', 'x.com').products.map(product => product.variants[0]);
+    expect(a).toMatchObject({ available: true }); expect(a.inventoryQuantity).toBeUndefined();
+    expect(b).toMatchObject({ available: true }); expect(b.inventoryQuantity).toBeUndefined();
+    expect(c).toMatchObject({ available: false, inventoryQuantity: 0 });
+  });
 });

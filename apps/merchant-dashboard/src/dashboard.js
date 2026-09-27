@@ -3,7 +3,7 @@ import { ANIMATIONS, mountBlob } from "@pagosya/blob-characters";
 import { ADVENTURE_LEVELS, companionBlobHtml, companionBlobUri, companionSeed } from "/src/companions.mjs";
 import { normalizeVariation, profileBlobHtml, profileBlobUri, randomVariation, variationChoices } from "/src/profile-blob.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
-import { countsLine, importStep, parseExchangeRate, progressLabel } from "/src/store-import.mjs";
+import { countsLine, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
@@ -1591,6 +1591,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       document.getElementById("shopifyImportBar").value = view.progress?.total ? view.progress.done / view.progress.total : 0;
     }
     if (step === "failed") document.getElementById("shopifyImportError").textContent = view.error || "La importación falló.";
+    shopifyImportDialog.querySelectorAll("[data-import-summary]").forEach(list => { list.innerHTML = summaryLines(view.summary).map(line => `<li>${esc(line)}</li>`).join(""); });
     if (step === "design") {
       shopifyImportDialog.querySelectorAll("[data-free]").forEach(badge => { badge.hidden = !view.freeBuildAvailable; });
       // "Igual que mi Shopify" needs the live store to look at; a CSV alone has no address.
@@ -1613,10 +1614,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.getElementById("shopifyImportUrl").focus();
   }
 
-  function openShopifyImport() {
+  async function openShopifyImport() {
     if (!canLeaveMerchantStudio()) return;
     document.getElementById("createStoreDialog").close();
     shopifyImportDialog.showModal();
+    // After a reload or on another device, the server knows the last import (final review, Important #7).
+    if (!shopifyImport) shopifyImport = await api("/store-imports/latest").catch(() => null);
     // Reopening shows an import already under way (importing, failed, the design choice, YAPI building); a review the
     // merchant cancelled, or a finished import, starts fresh.
     if (shopifyImport && !["review", "done"].includes(importStep(shopifyImport))) renderShopifyImport(shopifyImport);

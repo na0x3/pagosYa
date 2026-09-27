@@ -33,3 +33,17 @@ export function parseExchangeRate(text) {
   const value = Number(String(text).trim().replace(",", "."));
   return Number.isFinite(value) && value > 0 ? Math.round(value * 1000) / 1000 : null;
 }
+
+/** What the import did, then every warning the worker recorded (photos not copied, products skipped, redirects over the cap). */
+export function summaryLines(summary) {
+  if (!summary) return [];
+  const { created = 0, updated = 0 } = summary.products || {};
+  const extras = [
+    summary.collections ? plural(summary.collections, "colección", "colecciones") : "",
+    summary.articles ? `${plural(summary.articles, "página", "páginas")} (sin publicar)` : "",
+  ].filter(Boolean);
+  const lines = [];
+  if (created) lines.push(`Importamos ${plural(created, "producto nuevo", "productos nuevos")}${extras.length ? `, ${extras.join(" y ")}` : ""}.`);
+  if (updated) lines.push(`Actualizamos precios y fotos de ${plural(updated, "producto", "productos")}.`);
+  return [...lines, ...(summary.warnings || [])];
+}

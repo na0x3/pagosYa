@@ -504,6 +504,7 @@
             <section data-panel="importing" hidden><p id="shopifyImportProgress" role="status" aria-live="polite"></p><progress id="shopifyImportBar" max="1" value="0"></progress><p class="faint">Puedes cerrar esta ventana; la importación sigue.</p></section>
             <section data-panel="failed" hidden><p id="shopifyImportError" role="alert"></p><footer><button class="ghost" type="button" data-import-another>Importar otra tienda</button><button class="primary" type="button" id="shopifyImportRetry">Reintentar</button></footer></section>
             <section data-panel="design" hidden>
+              <ul class="shopify-import-warnings" data-import-summary></ul>
               <p>¿Cómo quieres que se vea tu tienda nueva?</p>
               <div class="shopify-import-choices">
                 <button type="button" data-design="same"><strong>Igual que mi Shopify</strong><span>YAPI la recrea con tu estilo actual.</span><em data-free>Gratis la primera vez</em></button>
@@ -516,6 +517,7 @@
             <section data-panel="building" hidden><p role="status" aria-live="polite">YAPI está diseñando tu tienda. Puedes cerrar esta ventana; verás el resultado al volver a abrirla.</p></section>
             <section data-panel="done" hidden>
               <p><strong>Tu tienda está lista para revisar.</strong></p>
+              <ul class="shopify-import-warnings" data-import-summary></ul>
               <ol class="shopify-import-next"><li>Revisa el diseño y publícalo.</li><li>Conecta tu dominio (cambia los DNS que hoy apuntan a Shopify).</li><li>Revisa el stock y configura tus envíos.</li><li>No canceles Shopify hasta que tu dominio apunte aquí.</li></ol>
               <footer><button class="primary" type="button" id="shopifyImportOpen">Ver mi tienda</button></footer>
             </section>

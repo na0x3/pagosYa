@@ -6,9 +6,11 @@ const completed = (over: any = {}) => ({ id: 'imp', merchantId: 'm', storeId: 's
 
 function setup(row: any, usedAt: Date | null = null, chat: any = { importBuild: jest.fn(async () => ({ revision: 3 })) }) {
   const prisma: any = {
-    storeImport: { findFirst: jest.fn(async () => row), findUniqueOrThrow: jest.fn(async () => row), updateMany: jest.fn(async () => ({ count: 1 })) },
+    storeImport: { findFirst: jest.fn(async () => row), findMany: jest.fn(async () => [row]), findUniqueOrThrow: jest.fn(async () => row), updateMany: jest.fn(async () => ({ count: 1 })) },
     merchant: { findUnique: jest.fn(async () => ({ importBuildUsedAt: usedAt })), update: jest.fn() },
+    $queryRaw: jest.fn(async () => []),
   };
+  prisma.$transaction = jest.fn(async (fn: any) => fn(prisma));
   return { service: new StoreImportService(prisma, {} as any, {} as any, chat), prisma, chat };
 }
 

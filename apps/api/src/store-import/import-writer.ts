@@ -11,7 +11,7 @@ const REDIRECT_CAP = 500;
 const SHOPIFY_PATH = /^\/(?:products|collections)\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Writes one import inside the caller's transaction (spec 2026-09-27 §4). StoreImportLink makes a re-import update, never duplicate. */
-export async function writeImport(tx: Prisma.TransactionClient, input: { storeId: string; sourceHost: string; authorName: string; products: WritableProduct[]; collections: ImportCollection[]; articles: ImportArticle[] }): Promise<ImportSummary> {
+export async function writeImport(tx: Prisma.TransactionClient, input: { storeId: string; sourceHost: string; authorName: string; stockKnown: boolean; products: WritableProduct[]; collections: ImportCollection[]; articles: ImportArticle[] }): Promise<ImportSummary> {
   const { storeId, sourceHost } = input;
   // Same lock StorePagesService.saveRedirect takes, so the 500-redirect cap holds against a concurrent edit.
   await tx.$queryRaw`SELECT id FROM "Store" WHERE id = ${storeId} FOR UPDATE`;
@@ -36,20 +36,25 @@ export async function writeImport(tx: Prisma.TransactionClient, input: { storeId
     const existingId = linked('PRODUCT', product.externalId);
     const existing = existingId ? await tx.paymentLink.findFirst({ where: { id: existingId, storeId } }) : null;
     const previous = (existing?.variants as unknown as ProductVariant[] | undefined) ?? [];
-    // Variant ids are kept by name so carts opened before a re-import still point at the same option.
+    // Variant ids are kept by name so carts opened before a re-import still point at the same option. On a re-import the
+    // stock the merchant keeps in pagosYa wins unless the source actually knows quantities (the CSV).
     const variants = normalizeProductVariants(product.variants.map((variant, index) => {
       const kept = previous.find(item => item.name === variant.name);
-      return { ...(kept ? { id: kept.id } : {}), name: variant.name, amount: variant.amount, stock: variant.stock, options: variant.options, imageUrl: product.variantImageUrls[index] ?? null };
+      const stock = kept && !input.stockKnown ? kept.stock ?? null : variant.stock;
+      return { ...(kept ? { id: kept.id } : {}), name: variant.name, amount: variant.amount, stock, options: variant.options, imageUrl: product.variantImageUrls[index] ?? kept?.imageUrl ?? null };
     }) as unknown as ProductVariantDto[], existing ? previous : null);
-    const data = {
-      name: product.name, description: product.description || null, tags: product.tags, categoryId: await categoryId(product.categoryName),
-      imageUrls: product.imageUrls, imagePositions: product.imageUrls.map(() => '50% 50%'), shippingWeightGrams: product.shippingWeightGrams,
+    const prices = {
+      imageUrls: product.imageUrls, imagePositions: product.imageUrls.map(() => '50% 50%'),
       variants: variants as unknown as Prisma.InputJsonValue,
       amount: variants.length ? Math.min(...variants.map(variant => variant.amount)) : product.amount,
-      stock: variants.length ? totalVariantStock(variants) : product.stock,
-      discountPercent: product.discountPercent, discountStartsAt: null, discountEndsAt: null,
     };
-    const saved = existing ? await tx.paymentLink.update({ where: { id: existing.id }, data }) : await tx.paymentLink.create({ data: { storeId, currency: 'BOB', ...data } });
+    // A re-import is "actualizar precios y fotos" (spec §1): the merchant's name, texts, category and any discount they
+    // scheduled in pagosYa stay. Imported discounts never exist: pagosYa discounts need dates Shopify does not have.
+    const stock = variants.length ? totalVariantStock(variants) : input.stockKnown || !existing ? product.stock : existing.stock;
+    const saved = existing
+      ? await tx.paymentLink.update({ where: { id: existing.id }, data: { ...prices, stock } })
+      : await tx.paymentLink.create({ data: { storeId, currency: 'BOB', ...prices, stock,
+        name: product.name, description: product.description || null, tags: product.tags, categoryId: await categoryId(product.categoryName), shippingWeightGrams: product.shippingWeightGrams } });
     if (existing) summary.products.updated++; else summary.products.created++;
     productIds.set(product.externalId, saved.id);
     await link('PRODUCT', product.externalId, saved.id, product.skus);

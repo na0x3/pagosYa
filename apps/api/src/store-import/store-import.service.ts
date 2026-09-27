@@ -14,6 +14,7 @@ import type { ShopifyStoreData } from './shopify-types';
 
 const LEASE_MS = 5 * 60_000;
 export const MAX_FREE_BUILD_TRIES = 2;
+const DESIGN_STALE_MS = 15 * 60_000;
 
 /** Shopify → pagosYa import (spec 2026-09-27): preview, confirm, retry; the worker calls claim() and run(). */
 @Injectable()
@@ -22,8 +23,9 @@ export class StoreImportService {
 
   private async view(row: StoreImport) {
     const merchant = await this.prisma.merchant.findUnique({ where: { id: row.merchantId }, select: { importBuildUsedAt: true } });
+    const tries = (await this.prisma.storeImport.findMany({ where: { merchantId: row.merchantId }, select: { designTries: true } }).catch(() => [])).reduce((sum, item) => sum + (item.designTries ?? 0), 0);
     const { data: _data, photos: _photos, leaseToken: _lease, leaseUntil: _until, exchangeRateMilli: _rate, excluded: _excluded, ...rest } = row;
-    return { ...rest, freeBuildAvailable: !merchant?.importBuildUsedAt && row.designTries < MAX_FREE_BUILD_TRIES };
+    return { ...rest, freeBuildAvailable: !merchant?.importBuildUsedAt && tries < MAX_FREE_BUILD_TRIES };
   }
 
   private async owned(merchantId: string, id: string) {
@@ -34,33 +36,43 @@ export class StoreImportService {
 
   async get(merchantId: string, id: string) { return this.view(await this.owned(merchantId, id)); }
 
+  /** The dialog resumes from here after a reload or on another device (final review, Important #7). */
+  async latest(merchantId: string) {
+    const row = await this.prisma.storeImport.findFirst({ where: { merchantId, status: { not: 'REVIEW' } }, orderBy: { createdAt: 'desc' } });
+    return row ? this.view(row) : null;
+  }
+
   async previewUrl(merchantId: string, url: string) {
     let data: ShopifyStoreData;
     try { data = await readShopifyStore(url); }
     catch (error) { if (error instanceof ShopifyReadError) throw new BadRequestException({ message: error.message, code: error.code }); throw error; }
-    return this.create(merchantId, 'SHOPIFY_URL', data);
+    return this.create(merchantId, 'SHOPIFY_URL', data, true);
   }
 
   async previewCsv(merchantId: string, csv: string, name: string, host?: string) {
     let data: ShopifyStoreData;
     try { data = readShopifyCsv(csv, name.trim() || 'Mi tienda', (host || 'csv.shopify').toLowerCase()); }
     catch (error) { if (error instanceof ShopifyReadError) throw new BadRequestException({ message: error.message, code: error.code }); throw error; }
-    return this.create(merchantId, 'SHOPIFY_CSV', data);
+    return this.create(merchantId, 'SHOPIFY_CSV', data, Boolean(host));
   }
 
-  private async create(merchantId: string, source: string, data: ShopifyStoreData) {
-    // A re-import of a store this merchant already brought over goes back into the same pagosYa store.
-    const previous = await this.prisma.storeImport.findFirst({ where: { merchantId, sourceHost: data.host, storeId: { not: null } }, orderBy: { createdAt: 'desc' } });
-    const row = await this.prisma.storeImport.create({ data: { merchantId, source, sourceHost: data.host, storeId: previous?.storeId ?? null,
+  private async create(merchantId: string, source: string, data: ShopifyStoreData, reusable: boolean) {
+    // A re-import of a store this merchant already brought over goes back into the same pagosYa store. The key is the
+    // myshopify domain, so mitienda.com and www.mitienda.com are one store; a CSV without an address never matches
+    // anything, or two different stores' files would merge into one (final review, Critical #2 and Important #8).
+    const sourceHost = data.shopDomain || data.host;
+    const previous = reusable ? await this.prisma.storeImport.findFirst({ where: { merchantId, sourceHost, storeId: { not: null } }, orderBy: { createdAt: 'desc' } }) : null;
+    const row = await this.prisma.storeImport.create({ data: { merchantId, source, sourceHost, storeId: previous?.storeId ?? null,
       data: data as unknown as Prisma.InputJsonValue, preview: buildPreview(data) as unknown as Prisma.InputJsonValue } });
     return this.view(row);
   }
 
   async confirm(merchantId: string, id: string, input: { exchangeRate?: number; excluded?: string[] }) {
     const row = await this.owned(merchantId, id);
-    const preview = row.preview as { needsExchangeRate: boolean; products: Array<{ externalId: string }> };
+    const preview = row.preview as { needsExchangeRate: boolean; products: Array<{ externalId: string; problem?: string | null }> };
     if (preview.needsExchangeRate && !input.exchangeRate) throw new BadRequestException('Indica el tipo de cambio a bolivianos para convertir tus precios.');
     const known = new Set(preview.products.map(product => product.externalId));
+    if (!preview.products.some(product => !product.problem && !input.excluded?.includes(product.externalId))) throw new BadRequestException('No hay productos para importar. Revisa tu tienda o sube el CSV de Shopify.');
     const changed = await this.prisma.storeImport.updateMany({ where: { id, merchantId, status: 'REVIEW' },
       data: { status: 'QUEUED', exchangeRateMilli: input.exchangeRate ? Math.round(input.exchangeRate * 1000) : null, excluded: (input.excluded ?? []).filter(item => known.has(item)) } });
     if (!changed.count) throw new BadRequestException('Esta importación ya se confirmó.');
@@ -109,7 +121,7 @@ export class StoreImportService {
       await this.checkpoint(row, { photos: copied.urls, progress: { stage: 'catalog' } });
       if (copied.failed.length) warnings.push(`${copied.failed.length} ${copied.failed.length === 1 ? 'foto no se pudo copiar' : 'fotos no se pudieron copiar'}; los productos se crearon sin ellas.`);
       const summary = await this.prisma.$transaction(tx => writeImport(tx, {
-        storeId: storeId!, sourceHost: data.host, authorName: data.name,
+        storeId: storeId!, sourceHost: data.host, authorName: data.name, stockKnown: data.stockKnown,
         products: products.map(product => ({ ...product, imageUrls: product.imageSources.map(src => copied.urls[src]).filter(Boolean), variantImageUrls: product.variants.map(variant => variant.imageSource ? copied.urls[variant.imageSource] : undefined) })),
         collections: data.collections.map(collection => ({ externalId: collection.handle, title: collection.title, productExternalIds: collection.productHandles.filter(handle => !excluded.has(handle)) })),
         articles: data.articles.map(mapArticle),
@@ -122,18 +134,28 @@ export class StoreImportService {
     }
   }
 
-  /** Spec 2026-09-27 §3: one free build per merchant, one more try after a failure. */
+  /** Spec 2026-09-27 §3: one free build per merchant, one more try after a failure — counted across every import of the
+   * merchant and reserved under a lock on the merchant, so re-importing or two tabs cannot buy more (final review, Important #4). */
   async requestDesign(merchantId: string, id: string, option: 'same' | 'redesign') {
     const row = await this.owned(merchantId, id);
     if (row.status !== 'COMPLETED' || !row.storeId) throw new BadRequestException('Primero termina de importar tu tienda.');
-    const merchant = await this.prisma.merchant.findUnique({ where: { id: merchantId }, select: { importBuildUsedAt: true } });
-    if (merchant?.importBuildUsedAt || row.designTries >= MAX_FREE_BUILD_TRIES) throw new ConflictException('Ya usaste tu diseño gratis. Elige una plantilla o pídele cambios a YAPI con tus créditos.');
-    const changed = await this.prisma.storeImport.updateMany({ where: { id, merchantId, status: 'COMPLETED', OR: [{ designStatus: null }, { designStatus: 'FAILED' }] }, data: { designStatus: 'QUEUED', designOption: option, designError: null } });
-    if (!changed.count) throw new ConflictException('YAPI ya está diseñando esta tienda.');
+    if (option === 'same' && row.source === 'SHOPIFY_CSV') throw new BadRequestException('Para recrear tu tienda de Shopify necesitamos su dirección; elige el rediseño o una plantilla.');
+    await this.prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "Merchant" WHERE id = ${merchantId} FOR UPDATE`;
+      const merchant = await tx.merchant.findUnique({ where: { id: merchantId }, select: { importBuildUsedAt: true } });
+      const imports = await tx.storeImport.findMany({ where: { merchantId }, select: { designTries: true, designStatus: true } });
+      const tries = imports.reduce((sum, item) => sum + item.designTries, 0);
+      if (merchant?.importBuildUsedAt || tries >= MAX_FREE_BUILD_TRIES) throw new ConflictException('Ya usaste tu diseño gratis. Elige una plantilla o pídele cambios a YAPI con tus créditos.');
+      if (imports.some(item => item.designStatus === 'QUEUED' || item.designStatus === 'RUNNING')) throw new ConflictException('YAPI ya está diseñando una de tus tiendas.');
+      const changed = await tx.storeImport.updateMany({ where: { id, merchantId, status: 'COMPLETED', OR: [{ designStatus: null }, { designStatus: 'FAILED' }] }, data: { designStatus: 'QUEUED', designOption: option, designError: null } });
+      if (!changed.count) throw new ConflictException('YAPI ya está diseñando esta tienda.');
+    });
     return this.get(merchantId, id);
   }
 
   async claimDesign() {
+    // A build interrupted by a restart must not say "diseñando" forever; it did not finish, so it costs no try (Important #5).
+    await this.prisma.storeImport.updateMany({ where: { designStatus: 'RUNNING', updatedAt: { lt: new Date(Date.now() - DESIGN_STALE_MS) } }, data: { designStatus: 'FAILED', designError: 'El diseño se interrumpió. Puedes pedirlo de nuevo sin costo.' } });
     const row = await this.prisma.storeImport.findFirst({ where: { designStatus: 'QUEUED' }, orderBy: { updatedAt: 'asc' } });
     if (!row) return null;
     const changed = await this.prisma.storeImport.updateMany({ where: { id: row.id, designStatus: 'QUEUED' }, data: { designStatus: 'RUNNING' } });

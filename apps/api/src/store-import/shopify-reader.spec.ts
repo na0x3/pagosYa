@@ -60,4 +60,24 @@ describe('readShopifyStore', () => {
     expect(data.products.length).toBeGreaterThan(0);
     expect(data.warnings.join(' ')).toMatch(/colecciones/);
   });
+
+  // Final review, Important #3: a rate limit or a server error is not the end of the catalog, and a hidden catalog is protected.
+  it('says Shopify did not respond on a 429 or 5xx instead of reading an empty or shorter catalog', async () => {
+    const product = productsPage.products[0];
+    const full = { products: Array.from({ length: 250 }, (_, i) => ({ ...product, id: i, handle: `p-${i}` })) };
+    const throttled: JsonGet = async path => path === '/products.json?limit=250&page=2' ? { status: 429, finalPath: '/products.json', json: null } : routes({ '/products.json?limit=250&page=1': full })(path);
+    await expect(readShopifyStore('x.com', throttled)).rejects.toMatchObject({ code: 'unreachable' });
+    const metaDown: JsonGet = async path => path === '/meta.json' ? { status: 503, finalPath: '/meta.json', json: null } : routes()(path);
+    await expect(readShopifyStore('x.com', metaDown)).rejects.toMatchObject({ code: 'unreachable' });
+  });
+
+  it('says protected when the catalog itself is hidden', async () => {
+    const hidden: JsonGet = async path => path.startsWith('/products.json') ? { status: 404, finalPath: '/products.json', json: null } : routes()(path);
+    await expect(readShopifyStore('x.com', hidden)).rejects.toMatchObject({ code: 'protected' });
+  });
+
+  // Final review, Important #8: mitienda.com, www.mitienda.com and the .myshopify.com address are the same store.
+  it('identifies the store by its myshopify domain, whatever address was typed', async () => {
+    expect((await readShopifyStore('www.peak.example', routes())).shopDomain).toBe('peakclyro.myshopify.com');
+  });
 });

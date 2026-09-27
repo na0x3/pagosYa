@@ -3,11 +3,11 @@ import { StoreImportService } from './store-import.service';
 
 const row = (over: any = {}) => ({ id: 'imp', merchantId: 'm', storeId: null, source: 'SHOPIFY_URL', sourceHost: 'x.com', status: 'REVIEW', exchangeRateMilli: null, excluded: [], photos: {}, progress: {}, summary: null, error: null, attempts: 0, leaseToken: null, leaseUntil: null, designOption: null, designStatus: null, designTries: 0, designRevision: null, designError: null,
   data: { host: 'x.com', origin: 'https://x.com/', name: 'X', currency: 'USD', products: [], collections: [], articles: [], truncated: false, stockKnown: false, warnings: [] },
-  preview: { needsExchangeRate: true, products: [{ externalId: 'a' }] }, ...over });
+  preview: { needsExchangeRate: true, products: [{ externalId: 'a' }, { externalId: 'b' }] }, ...over });
 
 function setup(found: any = row()) {
   const prisma: any = {
-    storeImport: { findFirst: jest.fn(async () => found), create: jest.fn(async ({ data }) => ({ ...row(), ...data })), updateMany: jest.fn(async () => ({ count: 1 })) },
+    storeImport: { findFirst: jest.fn(async () => found), findMany: jest.fn(async () => []), create: jest.fn(async ({ data }) => ({ ...row(), ...data })), updateMany: jest.fn(async () => ({ count: 1 })) },
     merchant: { findUnique: jest.fn(async () => ({ importBuildUsedAt: null })) },
   };
   const service = new StoreImportService(prisma, { create: jest.fn() } as any, { saveBuffer: jest.fn() } as any, {} as any);

@@ -9,10 +9,10 @@ harness.describeDb('writeImport (real Postgres, real migrations)', () => {
     return;
   }
   let db: PrismaClient; let storeId: string;
-  const product = (externalId: string, amount: number) => ({ externalId, name: `Producto ${externalId}`, description: 'Texto', tags: ['a'], categoryName: 'Alimento', amount, discountPercent: null, stock: null,
+  const product = (externalId: string, amount: number) => ({ externalId, name: `Producto ${externalId}`, description: 'Texto', tags: ['a'], categoryName: 'Alimento', amount, onSale: false, descriptionTruncated: false, stock: null,
     shippingWeightGrams: 500, imageSources: ['https://cdn.shopify.com/a.jpg'], imageUrls: ['/v1/uploads/a.jpg'], skus: ['SKU'],
     variants: [{ name: 'S', amount, stock: null, options: [{ name: 'Talla', value: 'S' }] }, { name: 'M', amount: amount + 100, stock: null, options: [{ name: 'Talla', value: 'M' }] }], variantImageUrls: [undefined, undefined] });
-  const input = (amount: number) => ({ storeId, sourceHost: 'mitienda.com', authorName: 'Mi tienda', products: [product('croquetas', amount), product('collar', 3000)],
+  const input = (amount: number, stockKnown = false) => ({ storeId, sourceHost: 'mitienda.com', authorName: 'Mi tienda', stockKnown, products: [product('croquetas', amount), product('collar', 3000)],
     collections: [{ externalId: 'perros', title: 'Perros', productExternalIds: ['collar', 'croquetas'] }],
     articles: [{ externalId: 'policy:refund-policy', slug: 'politica-de-devoluciones', title: 'Política de devoluciones', excerpt: '30 días', body: '30 días' }] });
 
@@ -48,6 +48,23 @@ harness.describeDb('writeImport (real Postgres, real migrations)', () => {
     const after = await db.paymentLink.findUniqueOrThrow({ where: { id: before.id } });
     expect(after.amount).toBe(5500);
     expect((after.variants as any[]).map(v => v.id)).toEqual((before.variants as any[]).map(v => v.id));
+  });
+
+  // Final review, Important #1 and Critical #1: a re-import updates prices and photos only. Stock, the merchant's own
+  // name, and a discount they scheduled in pagosYa survive; stock changes only when the source knows it (the CSV).
+  it('re-import keeps the merchant edits, their scheduled discount and their stock unless the CSV says otherwise', async () => {
+    const product = await db.paymentLink.findFirstOrThrow({ where: { storeId, name: 'Producto croquetas' } });
+    const starts = new Date('2026-10-01T00:00:00Z'), ends = new Date('2026-10-31T00:00:00Z');
+    const edited = (product.variants as any[]).map(v => ({ ...v, stock: 7 }));
+    await db.paymentLink.update({ where: { id: product.id }, data: { name: 'Croquetas del comercio', description: 'Mi texto', discountPercent: 10, discountStartsAt: starts, discountEndsAt: ends, variants: edited, stock: 14 } });
+    await db.$transaction(tx => writeImport(tx, input(6000)));
+    const afterUrl = await db.paymentLink.findUniqueOrThrow({ where: { id: product.id } });
+    expect(afterUrl).toMatchObject({ name: 'Croquetas del comercio', description: 'Mi texto', amount: 6000, discountPercent: 10, discountStartsAt: starts, discountEndsAt: ends, stock: 14 });
+    expect((afterUrl.variants as any[]).map(v => v.stock)).toEqual([7, 7]);
+    await db.$transaction(tx => writeImport(tx, { ...input(6000, true), products: input(6000, true).products.map(p => ({ ...p, variants: p.variants.map(v => ({ ...v, stock: 3 })) })) }));
+    const afterCsv = await db.paymentLink.findUniqueOrThrow({ where: { id: product.id } });
+    expect((afterCsv.variants as any[]).map(v => v.stock)).toEqual([3, 3]);
+    expect(afterCsv.stock).toBe(6);
   });
 
   it('never goes past 500 redirects per store', async () => {

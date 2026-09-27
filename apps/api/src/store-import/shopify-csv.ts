@@ -40,8 +40,11 @@ export function readShopifyCsv(csv: string, name: string, host: string): Shopify
     if (image && !product.images.includes(image)) product.images.push(image);
     const price = get(row, 'Variant Price');
     if (price) {
+      // The quantity only means something when Shopify tracks it and stops selling at zero; untracked or "continue
+      // selling" variants export qty 0 without being sold out (final review, Important #10).
       const quantity = get(row, 'Variant Inventory Qty');
-      const inventoryQuantity = quantity === '' ? undefined : Math.max(0, Math.trunc(Number(quantity)) || 0);
+      const tracked = get(row, 'Variant Inventory Tracker').toLowerCase() === 'shopify' && get(row, 'Variant Inventory Policy').toLowerCase() !== 'continue';
+      const inventoryQuantity = quantity === '' || (col('Variant Inventory Tracker') >= 0 && !tracked) ? undefined : Math.max(0, Math.trunc(Number(quantity)) || 0);
       const variantImage = get(row, 'Variant Image');
       product.variants.push({ id: `${handle}#${product.variants.length + 1}`, options: [1, 2, 3].map(n => get(row, `Option${n} Value`)).filter(Boolean),
         sku: get(row, 'Variant SKU') || null, price, compareAtPrice: get(row, 'Variant Compare At Price') || null,

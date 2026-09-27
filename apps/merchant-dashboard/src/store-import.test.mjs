@@ -27,3 +27,14 @@ test('progress and exchange rate', () => {
   assert.equal(parseExchangeRate('0'), null);
   assert.equal(parseExchangeRate('abc'), null);
 });
+
+// Final review, Important #6: the merchant sees what happened, including what was left out.
+test('the import summary says what was created or updated and repeats every warning', async () => {
+  const { summaryLines } = await import('./store-import.mjs');
+  assert.deepEqual(summaryLines({ products: { created: 4, updated: 0 }, collections: 2, articles: 3, redirects: 6, warnings: ['2 fotos no se pudieron copiar; los productos se crearon sin ellas.'] }), [
+    'Importamos 4 productos nuevos, 2 colecciones y 3 páginas (sin publicar).',
+    '2 fotos no se pudieron copiar; los productos se crearon sin ellas.',
+  ]);
+  assert.deepEqual(summaryLines({ products: { created: 0, updated: 5 }, collections: 0, articles: 0, redirects: 0, warnings: [] }), ['Actualizamos precios y fotos de 5 productos.']);
+  assert.deepEqual(summaryLines(null), []);
+});

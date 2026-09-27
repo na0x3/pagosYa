@@ -6,6 +6,7 @@ const MAX_COLLECTIONS = 50;
 const POLICIES = ['refund-policy', 'shipping-policy', 'privacy-policy', 'terms-of-service'];
 // Shopify creates these itself; they are not the merchant's collections.
 const IGNORED_COLLECTIONS = new Set(['frontpage', 'all']);
+const UNREACHABLE = 'Shopify no respondió. Intenta de nuevo en unos minutos.';
 const PROTECTED = 'Tu tienda está protegida con contraseña. Exporta tus productos desde Shopify (Productos → Exportar) y sube el CSV aquí.';
 
 export class ShopifyReadError extends Error {
@@ -59,6 +60,7 @@ export async function readShopifyStore(raw: string, get?: JsonGet): Promise<Shop
   const warnings: string[] = [];
   const meta = await fetchJson('/meta.json');
   if (meta.finalPath === '/password') throw new ShopifyReadError('protected', PROTECTED);
+  if (meta.status === 429 || meta.status >= 500) throw new ShopifyReadError('unreachable', UNREACHABLE);
   if (meta.status !== 200 || !/\.myshopify\.com$/.test(text(meta.json?.myshopify_domain))) throw new ShopifyReadError('not_shopify', 'Esa dirección no es una tienda Shopify.');
 
   const products: ShopifyProduct[] = [];
@@ -66,6 +68,9 @@ export async function readShopifyStore(raw: string, get?: JsonGet): Promise<Shop
   for (let page = 1; ; page++) {
     const response = await fetchJson(`/products.json?limit=250&page=${page}`);
     if (response.finalPath === '/password') throw new ShopifyReadError('protected', PROTECTED);
+    // A rate limit or a server error is not the end of the catalog (final review, Important #3).
+    if (response.status === 429 || response.status >= 500) throw new ShopifyReadError('unreachable', UNREACHABLE);
+    if (page === 1 && [401, 403, 404].includes(response.status)) throw new ShopifyReadError('protected', PROTECTED);
     const items: any[] = Array.isArray(response.json?.products) ? response.json.products : [];
     if (!items.length) break;
     if (products.length >= MAX_PRODUCTS) { truncated = true; break; }
@@ -99,6 +104,6 @@ export async function readShopifyStore(raw: string, get?: JsonGet): Promise<Shop
     if (policy && text(policy.body).trim()) articles.push({ kind: 'policy', handle, title: text(policy.title).trim(), bodyHtml: text(policy.body) });
   }
 
-  return { host: origin.hostname, origin: origin.href, name: text(meta.json.name).trim() || origin.hostname, currency: text(meta.json.currency).toUpperCase() || 'BOB',
+  return { host: origin.hostname, shopDomain: text(meta.json.myshopify_domain).toLowerCase(), origin: origin.href, name: text(meta.json.name).trim() || origin.hostname, currency: text(meta.json.currency).toUpperCase() || 'BOB',
     products, collections, articles, truncated, stockKnown: false, warnings };
 }

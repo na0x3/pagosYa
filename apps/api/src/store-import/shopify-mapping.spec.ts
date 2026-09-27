@@ -18,7 +18,7 @@ describe('Shopify → pagosYa mapping', () => {
 
   it('maps a single-variant product with its discount, weight, stock and photos', () => {
     expect(mapProduct(base, null, false)).toEqual({ product: { externalId: 'croquetas', name: 'Croquetas', description: 'Hola & chau\n\nDos\nlíneas', tags: ['perros'], categoryName: 'Alimento',
-      amount: 5000, discountPercent: 20, stock: null, shippingWeightGrams: 1000, variants: [], imageSources: ['https://cdn.shopify.com/a.jpg'], skus: ['CR'] } });
+      amount: 5000, onSale: true, descriptionTruncated: false, stock: null, shippingWeightGrams: 1000, variants: [], imageSources: ['https://cdn.shopify.com/a.jpg'], skus: ['CR'] } });
   });
 
   it('maps option combinations into structured variants; sold out becomes zero stock', () => {
@@ -59,5 +59,29 @@ describe('Shopify → pagosYa mapping', () => {
     expect(preview.counts).toEqual({ products: 2, variants: 2, collections: 1, pages: 1, policies: 0, photos: 1 });
     expect(preview.products[1]).toMatchObject({ externalId: 'sin-precio', problem: 'Sin precio: no tiene precio.' });
     expect(preview.warnings).toEqual(expect.arrayContaining(['w', expect.stringMatching(/stock no es público/), expect.stringMatching(/primeros 1\.000/)]));
+  });
+
+  // Final review, Critical #1: pagosYa discounts are scheduled (start + end); an undated percent broke later edits.
+  it('imports the sale price without a pagosYa discount and flags the product as on sale', () => {
+    const mapped = mapProduct(base, null, false) as any;
+    expect(mapped.product).not.toHaveProperty('discountPercent');
+    expect(mapped.product).toMatchObject({ amount: 5000, onSale: true });
+    expect((mapProduct({ ...base, variants: [{ ...base.variants[0], compareAtPrice: null }] }, null, false) as any).product.onSale).toBe(false);
+  });
+
+  it('warns in the review about products that were on sale', () => {
+    const data: ShopifyStoreData = { host: 'x.com', origin: 'https://x.com/', name: 'X', currency: 'BOB', products: [base], collections: [], articles: [], truncated: false, stockKnown: true, warnings: [] };
+    expect(buildPreview(data).warnings.join(' ')).toMatch(/1 producto estaba en oferta/);
+  });
+
+  // Final review, Important #2: what the import writes must pass the product form's own limits, or the next edit fails.
+  it('keeps names, descriptions and tags within the product limits and drops unsafe characters', () => {
+    const long = { ...base, title: 'N'.repeat(150), bodyHtml: `<p>${'palabra '.repeat(100)}</p><p>&#8238;oculto</p>`, tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'x'.repeat(30)] };
+    const product = (mapProduct(long, null, false) as any).product;
+    expect(product.name).toHaveLength(120);
+    expect(product.description.length).toBeLessThanOrEqual(500);
+    expect(product.descriptionTruncated).toBe(true);
+    expect(product.tags).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(htmlToText('<p>a&#8238;b\u0007c</p>')).toBe('abc');
   });
 });
