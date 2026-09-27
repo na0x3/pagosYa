@@ -11,7 +11,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ar-hero">
+      <section id="inicio" className="ar-hero">
         <div className="ar-hero__photo"><Parallax strength={70} mobileStrength={30} className="ar-drift"><img src={photos.hero} alt={`Joyas de ${store.name}`} /></Parallax></div>
         <div className="ar-hero__copy">
           <p className="ar-kicker">Joyas finas</p>
@@ -21,7 +21,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="ar-cats" aria-label="Categorías">
+      <section id="categorias" className="ar-cats" aria-label="Categorías">
         <Reveal><a href="#joyas"><img src={photos.p1} alt="Aros" /><span>Aros</span></a></Reveal>
         <Reveal delay={80}><a href="#joyas"><img src={photos.p2} alt="Collares" /><span>Collares</span></a></Reveal>
         <Reveal delay={160}><a href="#joyas"><img src={photos.p3} alt="Anillos" /><span>Anillos</span></a></Reveal>
@@ -40,7 +40,7 @@ export default function Home() {
         <div className="ar-grid" data-pagosya-catalog />
       </section>
 
-      <section className="ar-stack" aria-label="Combínalas">
+      <section id="combinalas" className="ar-stack" aria-label="Combínalas">
         <Parallax strength={100} className="ar-drift ar-drift--deep"><img src={photos.mano} alt="" aria-hidden="true" /></Parallax>
         <Reveal className="ar-stack__card"><p className="ar-kicker">Combínalas</p><p className="ar-stack__line">Una sola joya dice algo. Tres cuentan tu historia.</p></Reveal>
       </section>

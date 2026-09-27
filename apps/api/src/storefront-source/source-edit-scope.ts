@@ -63,9 +63,11 @@ export function sourceSectionScope(files: File[], instruction: string): SectionS
   if (add) return { add, targets: [], original };
   const stop = new Set(['seccion','section','cambia','change','mejora','improve','solo','only','esta','este','para','with','that','this','quiero','puedes','hacer','texto','text','titulo','title']);
   const words = task.match(/[a-z0-9-]{4,}/g)?.filter(w => !stop.has(w)) || [];
-  const scores = original.map(region => {
+  const scores = original.map((region, index) => {
     const heading = region.text.match(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/)?.[1].replace(/<[^>]*>/g, ' ') || '';
-    const label = currentRequest(region.id.replace(/-/g, ' ') + ' ' + heading);
+    // The opening section answers to the names merchants use for it, whatever its heading says.
+    const opening = index === 0 ? ' principal portada hero banner primera' : '';
+    const label = currentRequest(region.id.replace(/-/g, ' ') + ' ' + heading + opening);
     return { id: region.id, score: words.filter(w => label.includes(w)).length };
   });
   const max = Math.max(...scores.map(s => s.score));

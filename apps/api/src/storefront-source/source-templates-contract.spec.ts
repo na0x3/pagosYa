@@ -4,6 +4,7 @@ import { SourceProjectsService } from './source-projects.service';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { captureSourceVisuals, probeSourceShopping } from './source-visual-capture';
 import { nextPageMarkup, validateNextSources } from './source-next';
+import { sourceHomeRegions, sourceSectionScope } from './source-edit-scope';
 
 jest.setTimeout(240_000);
 
@@ -20,6 +21,17 @@ describe.each(listTemplates().map(manifest => [manifest.id, manifest] as const))
     const authored = snapshot.files.filter(f => /^components\/.+\.tsx$/.test(f.path) || f.path === 'styles/globals.css');
     expect(() => validateNextSources(authored)).not.toThrow();
     expect(nextPageMarkup(authored, 'home').match(/<h1\b/g) || []).toHaveLength(1);
+  });
+
+  it('lets YAPI target every home section by name, the opening one as la sección principal', () => {
+    const authored = snapshot.files.filter(f => /^components\/.+\.tsx$/.test(f.path));
+    const home = authored.find(f => f.path === 'components/home.tsx')!.content;
+    const mainBody = home.slice(home.indexOf('<main'), home.lastIndexOf('</main>'));
+    const sections = (mainBody.match(/\n      <section\b[^>]*>/g) || []);
+    expect(sections.filter(tag => !/\bid="/.test(tag))).toEqual([]);
+    const opening = sourceHomeRegions(authored)[0]?.id;
+    expect(home.match(/<section\b[^>]*>/)![0]).toContain(`id="${opening}"`);
+    for (const request of ['Cambia la sección principal', 'Mejora la sección del hero', 'Cambia la sección de portada']) expect(sourceSectionScope(authored, request)?.targets).toEqual([opening]);
   });
 
   it('passes the commerce contract', () => {

@@ -11,7 +11,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="en-hero">
+      <section id="inicio" className="en-hero">
         <div className="en-hero__copy">
           <p className="en-kicker">Nueva colección</p>
           <h1 className="en-display">Romance<br /><em>de otra época</em></h1>
@@ -35,7 +35,7 @@ export default function Home() {
         <div className="en-grid" data-pagosya-catalog />
       </section>
 
-      <section className="en-lace" aria-label="Detalles">
+      <section id="detalles" className="en-lace" aria-label="Detalles">
         <Parallax strength={110} className="en-drift en-drift--deep"><img src={photos.detalle} alt="" aria-hidden="true" /></Parallax>
         <Reveal><p className="en-lace__line">Encajes, perlas<br /><em>y detalles hechos a mano.</em></p></Reveal>
       </section>

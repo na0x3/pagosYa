@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="se-hero">
+      <section id="inicio" className="se-hero">
         <div className="se-hero__copy">
           <p className="se-meta">Fotografía · Retrato · Eventos</p>
           <h1 className="se-display">Fotos que se <em>sienten.</em></h1>

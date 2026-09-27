@@ -12,7 +12,7 @@ export default function Home() {
   return <Shell>
     <main id="contenido">
       <div className="pa-mast" aria-hidden="true">{store.name}</div>
-      <section className="pa-hero">
+      <section id="inicio" className="pa-hero">
         <figure className="pa-hero__main"><Parallax strength={60} mobileStrength={14} className="pa-drift"><img src={photos.hero1} alt={`Colección de ${store.name}`} /></Parallax></figure>
         <div className="pa-hero__side">
           <div className="pa-hero__copy">
@@ -36,7 +36,7 @@ export default function Home() {
         <div className="pa-grid" data-pagosya-catalog />
       </section>
 
-      <blockquote className="pa-quote"><Reveal><p>“Vestirse bien es una forma de <em>cuidarse</em>.”</p></Reveal></blockquote>
+      <blockquote id="frase" className="pa-quote"><Reveal><p>“Vestirse bien es una forma de <em>cuidarse</em>.”</p></Reveal></blockquote>
 
       <section id="lookbook" className="pa-look" aria-labelledby="pa-look-title">
         <Reveal className="pa-look__head"><h2 id="pa-look-title" className="pa-title">Lookbook</h2></Reveal>

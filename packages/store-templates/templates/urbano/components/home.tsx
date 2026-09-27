@@ -13,7 +13,7 @@ export default function Home() {
   const row = [...ticker, ...ticker, ...ticker];
   return <Shell>
     <main id="contenido">
-      <section className="ur-hero">
+      <section id="inicio" className="ur-hero">
         <Parallax strength={150} mobileStrength={50} className="ur-hero__media"><img src={photos.hero} alt={`Colección de ${store.name}`} /></Parallax>
         <div className="ur-hero__copy">
           <p className="ur-mono">// Colección actual</p>
@@ -21,7 +21,7 @@ export default function Home() {
           <a className="ur-btn" href="#coleccion">Ver la colección →</a>
         </div>
       </section>
-      <div className="ur-ticker" aria-hidden="true"><div className="ur-ticker__track">{[...row, ...row].map((text, index) => <span key={index}>{text} ✕</span>)}</div></div>
+      <div id="cinta" className="ur-ticker" aria-hidden="true"><div className="ur-ticker__track">{[...row, ...row].map((text, index) => <span key={index}>{text} ✕</span>)}</div></div>
 
       <section id="coleccion" className="ur-shop" aria-labelledby="ur-shop-title">
         <Reveal className="ur-shop__head"><h2 id="ur-shop-title" className="ur-title">Colección</h2><p className="ur-mono">Todo lo disponible ahora</p></Reveal>

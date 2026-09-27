@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="pt-hero">
+      <section id="inicio" className="pt-hero">
         <div className="pt-hero__copy">
           <p className="pt-mono pt-kicker"><span className="pt-red" aria-hidden="true">●</span> Nuevo</p>
           <h1 className="pt-display">Tecnología,<br />sin ruido.</h1>
@@ -54,7 +54,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="pt-street" aria-label="En la calle">
+      <section id="calle" className="pt-street" aria-label="En la calle">
         <Parallax strength={140} className="pt-drift pt-drift--deep"><img src={photos.calle} alt="" aria-hidden="true" /></Parallax>
         <Reveal><p className="pt-street__line">Menos cosas.<br />Mejores cosas.</p></Reveal>
       </section>

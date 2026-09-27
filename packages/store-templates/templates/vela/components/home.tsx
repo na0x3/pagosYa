@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ve-hero">
+      <section id="inicio" className="ve-hero">
         <div className="ve-hero__copy">
           <p className="ve-kicker">Hecho a mano, en tandas pequeñas</p>
           <h1 className="ve-display">Enciende <em>algo bonito</em></h1>

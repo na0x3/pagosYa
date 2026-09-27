@@ -21,7 +21,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ch-hero">
+      <section id="inicio" className="ch-hero">
         <div className="ch-hero__panel">
           <h1 className="ch-display">Pequeñas cosas que te cambian el día.</h1>
           <p className="ch-lead">Colores que se notan, calidad que dura. Descubre lo que tenemos para ti.</p>
@@ -33,7 +33,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="ch-cats" aria-labelledby="ch-cats-title">
+      <section id="categorias" className="ch-cats" aria-labelledby="ch-cats-title">
         <Reveal><h2 id="ch-cats-title" className="ch-title ch-center">Explora</h2></Reveal>
         <Reveal delay={100}><ul className="ch-tiles">{tiles.map(tile => <li key={tile.label}><a href="#productos" className={`ch-tile ch-tile--${tile.tone}`}><img src={photos[tile.photo]} alt={tile.label} /><span>{tile.label}</span></a></li>)}</ul></Reveal>
       </section>
@@ -65,12 +65,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="ch-promise" aria-labelledby="ch-promise-title">
+      <section id="promesa" className="ch-promise" aria-labelledby="ch-promise-title">
         <h2 id="ch-promise-title" className="ch-eyebrow">Nuestra promesa</h2>
         <Reveal delay={100}><ul>{promises.map(item => <li key={item.title}><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul></Reveal>
       </section>
 
-      <section className="ch-wild" aria-labelledby="ch-wild-title">
+      <section id="dia-a-dia" className="ch-wild" aria-labelledby="ch-wild-title">
         <Reveal><h2 id="ch-wild-title" className="ch-title ch-center">En el día a día</h2></Reveal>
         <div className="ch-wild__strip">
           <Parallax strength={30}><img src={photos.vida1} alt="Nuestros productos en uso" /></Parallax>

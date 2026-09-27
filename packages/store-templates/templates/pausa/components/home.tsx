@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="pa2-hero">
+      <section id="inicio" className="pa2-hero">
         <div className="pa2-hero__copy">
           <p className="pa2-kicker">Pilates · Yoga · Bienestar</p>
           <h1 className="pa2-display">Un respiro<br /><em>para tu cuerpo.</em></h1>
@@ -54,7 +54,7 @@ export default function Home() {
         <Reveal><p className="pa2-quote">“Sal de la clase más liviana de lo que entraste.”</p></Reveal>
       </section>
 
-      <section className="pa2-team" aria-labelledby="pa2-team-title">
+      <section id="instructoras" className="pa2-team" aria-labelledby="pa2-team-title">
         <Reveal><img src={photos.instructora} alt="Una de nuestras instructoras" /></Reveal>
         <Reveal delay={120}>
           <p className="pa2-kicker">Quién te acompaña</p>

@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ri-hero">
+      <section id="inicio" className="ri-hero">
         <div className="ri-hero__copy">
           <h1 className="ri-display">Entrena<br /><span>más</span> fuerte</h1>
           <ul className="ri-perks">{perks.map(perk => <li key={perk}>{perk}</li>)}</ul>

@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="tv-hero">
+      <section id="inicio" className="tv-hero">
         <div className="tv-hero__copy">
           <p className="tv-kicker">Café de especialidad</p>
           <h1 className="tv-display">Café que vale la pena despertarse</h1>

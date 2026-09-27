@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="tz-hero">
+      <section id="inicio" className="tz-hero">
         <div className="tz-hero__frame"><Parallax strength={90} mobileStrength={30} className="tz-drift"><img src={photos.hero} alt={`Accesorios de ${store.name} en un escritorio`} /></Parallax></div>
         <Reveal className="tz-hero__card">
           <p className="tz-kicker">Accesorios para tu tecnología</p>
@@ -47,7 +47,7 @@ export default function Home() {
         <Reveal delay={100}><ul>{materials.map((item, index) => <li key={item.t}><span>{String(index + 1).padStart(2, '0')}</span><h3>{item.t}</h3><p>{item.b}</p></li>)}</ul></Reveal>
       </section>
 
-      <section className="tz-life" aria-labelledby="tz-life-title">
+      <section id="casa-y-viaje" className="tz-life" aria-labelledby="tz-life-title">
         <Reveal className="tz-life__copy">
           <p className="tz-kicker">En casa y de viaje</p>
           <h2 id="tz-life-title" className="tz-title">Todo cargado, donde estés.</h2>

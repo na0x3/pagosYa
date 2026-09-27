@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="hu-hero">
+      <section id="inicio" className="hu-hero">
         <div className="hu-hero__photo"><Parallax strength={80} mobileStrength={30} className="hu-drift"><img src={photos.hero} alt={`Productos frescos de ${store.name}`} /></Parallax></div>
         <div className="hu-hero__copy">
           <p className="hu-tag">De temporada</p>

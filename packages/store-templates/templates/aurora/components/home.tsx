@@ -16,7 +16,7 @@ const questions = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="au-hero">
+      <section id="inicio" className="au-hero">
         <div className="au-hero__media"><Parallax strength={60} mobileStrength={30} className="au-drift"><img src={photos.hero} alt={`Productos de ${store.name}`} /></Parallax></div>
         <div className="au-hero__copy">
           <p className="au-eyebrow">Nueva temporada</p>
@@ -54,7 +54,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="au-texture" aria-label="Textura">
+      <section id="textura" className="au-texture" aria-label="Textura">
         <Parallax strength={90} className="au-drift au-drift--deep"><img src={photos.texture} alt="" aria-hidden="true" /></Parallax>
         <Reveal><p className="au-statement">Texturas ligeras que se sienten bien desde la primera vez.</p></Reveal>
       </section>

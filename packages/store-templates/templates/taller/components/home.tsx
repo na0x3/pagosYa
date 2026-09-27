@@ -18,7 +18,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ta-hero">
+      <section id="inicio" className="ta-hero">
         <div className="ta-hero__copy">
           <p className="ta-kicker">Reparaciones y mantenimiento</p>
           <h1 className="ta-display">Lo arreglamos, <span>hoy.</span></h1>
@@ -54,7 +54,7 @@ export default function Home() {
         <Reveal delay={80}><ol>{steps.map((step, index) => <li key={step.t}><span>0{index + 1}</span><h3>{step.t}</h3><p>{step.b}</p></li>)}</ol></Reveal>
       </section>
 
-      <section className="ta-team" aria-labelledby="ta-team-title">
+      <section id="equipo" className="ta-team" aria-labelledby="ta-team-title">
         <Reveal><img src={photos.equipo} alt="Nuestro equipo listo para salir" /></Reveal>
         <Reveal delay={80}>
           <p className="ta-kicker">Dónde llegamos</p>

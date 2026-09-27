@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ju-hero">
+      <section id="inicio" className="ju-hero">
         <Parallax strength={-90} className="ju-blobs"><span className="ju-blob ju-blob--red" aria-hidden="true" /><span className="ju-blob ju-blob--blue" aria-hidden="true" /><span className="ju-blob ju-blob--green" aria-hidden="true" /></Parallax>
         <div className="ju-hero__copy">
           <h1 className="ju-display">Jugar es la mejor forma de aprender</h1>
@@ -45,7 +45,7 @@ export default function Home() {
         <div className="ju-grid" data-pagosya-catalog />
       </section>
 
-      <section className="ju-values" aria-labelledby="ju-values-title">
+      <section id="valores" className="ju-values" aria-labelledby="ju-values-title">
         <Reveal><img src={photos.juego} alt="Niños jugando" /></Reveal>
         <Reveal delay={120}>
           <h2 id="ju-values-title" className="ju-title ju-title--left">Lo que buscamos en cada juguete</h2>

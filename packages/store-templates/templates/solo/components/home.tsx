@@ -63,7 +63,7 @@ export default function Home() {
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
 
-      <section className="so-cta" aria-labelledby="so-cta-title">
+      <section id="cierre" className="so-cta" aria-labelledby="so-cta-title">
         <Reveal><h2 id="so-cta-title">¿Listo para probarlo?</h2></Reveal>
         <a className="so-btn" href="#comprar">Comprar ahora</a>
       </section>

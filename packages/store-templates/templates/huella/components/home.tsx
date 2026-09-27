@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="hl-hero">
+      <section id="inicio" className="hl-hero">
         <div className="hl-hero__copy">
           <h1 className="hl-display">Todo para que mueva la cola</h1>
           <p className="hl-lead">Comida, juguetes y accesorios elegidos por gente que también vive con mascotas.</p>

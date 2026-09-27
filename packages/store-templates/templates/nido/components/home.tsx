@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ni-hero">
+      <section id="inicio" className="ni-hero">
         <div className="ni-hero__copy">
           <h1 className="ni-display">Una casa que se siente <em>tuya</em></h1>
           <p className="ni-lead">Objetos simples, materiales nobles y piezas que acompañan tu día a día.</p>

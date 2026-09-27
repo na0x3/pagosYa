@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ps-hero">
+      <section id="inicio" className="ps-hero">
         <div className="ps-hero__stage"><Parallax strength={60} mobileStrength={20} className="ps-drift"><img src={photos.hero} alt={`Zapatillas de ${store.name}`} /></Parallax></div>
         <div className="ps-hero__copy">
           <h1 className="ps-display">Las zapatillas más cómodas que vas a usar.</h1>
@@ -47,7 +47,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="ps-walk" aria-label="Caminando">
+      <section id="caminar" className="ps-walk" aria-label="Caminando">
         <Parallax strength={80} className="ps-walk__photo"><img src={photos.caminar} alt="" aria-hidden="true" /></Parallax>
         <Reveal className="ps-walk__copy"><p className="ps-walk__line">Pensadas para caminar.<br />Y para no pensar en tus pies.</p><a className="ps-btn" href="#tienda">Elegir las mías</a></Reveal>
       </section>

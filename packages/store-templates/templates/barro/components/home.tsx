@@ -17,7 +17,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ba-hero">
+      <section id="inicio" className="ba-hero">
         <div className="ba-hero__copy">
           <p className="ba-kicker">Hecho a mano</p>
           <h1 className="ba-display">Piezas con <span className="ba-scribble">alma<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M2 14 C40 4 80 18 120 9 C150 3 175 12 198 6" /></svg></span>, hechas para usarse</h1>

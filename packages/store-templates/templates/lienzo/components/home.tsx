@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="li-hero">
+      <section id="inicio" className="li-hero">
         <div className="li-hero__copy">
           <p className="li-mono">Colección actual</p>
           <h1 className="li-display">Obras para vivir con ellas</h1>

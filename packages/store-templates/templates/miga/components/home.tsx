@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="mi-hero">
+      <section id="inicio" className="mi-hero">
         <Parallax strength={50} mobileStrength={20}><figure className="mi-polaroid mi-polaroid--left"><img src={photos.izq} alt={`Horneado de ${store.name}`} /><figcaption>Recién salido</figcaption></figure></Parallax>
         <div className="mi-hero__copy">
           <p className="mi-badge">Horneado hoy</p>

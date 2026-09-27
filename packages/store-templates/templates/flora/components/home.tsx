@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="fl-hero">
+      <section id="inicio" className="fl-hero">
         <div className="fl-hero__copy">
           <p className="fl-kicker">Plantas y flores</p>
           <h1 className="fl-display">Llena tu casa de vida</h1>

@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="ra-hero">
+      <section id="inicio" className="ra-hero">
         <div className="ra-hero__photo"><Parallax strength={120} mobileStrength={40} className="ra-drift ra-drift--deep"><img src={photos.hero} alt={`Piezas de ${store.name} sobre una mesa`} /></Parallax></div>
         <Reveal className="ra-hero__card">
           <p className="ra-kicker">Hecho a mano</p>
@@ -26,7 +26,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="ra-values" aria-label="Lo que nos importa">
+      <section id="valores" className="ra-values" aria-label="Lo que nos importa">
         {values.map((item, index) => <Reveal key={item.t} delay={index * 80}><article><p className="ra-values__n">{item.n}</p><h2>{item.t}</h2><p>{item.b}</p></article></Reveal>)}
       </section>
 
@@ -53,7 +53,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="ra-band" aria-label="El taller">
+      <section id="hecho-despacio" className="ra-band" aria-label="El taller">
         <Parallax strength={150} className="ra-drift ra-drift--deep"><img src={photos.taller} alt="" aria-hidden="true" /></Parallax>
         <Reveal><p className="ra-band__line">Hecho despacio.<br />Hecho para quedarse.</p></Reveal>
       </section>

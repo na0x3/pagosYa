@@ -11,7 +11,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="pg-hero">
+      <section id="inicio" className="pg-hero">
         <Parallax strength={120} mobileStrength={40} className="pg-drift pg-drift--deep"><img src={photos.hero} alt={`Interior de ${store.name}`} /></Parallax>
         <div className="pg-hero__card">
           <p className="pg-kicker">Librería</p>
@@ -34,7 +34,7 @@ export default function Home() {
         <div className="pg-grid" data-pagosya-catalog />
       </section>
 
-      <blockquote className="pg-quote"><Reveal><p>Hay libros que se leen de un tirón y otros que se quedan contigo para siempre.</p></Reveal></blockquote>
+      <blockquote id="frase" className="pg-quote"><Reveal><p>Hay libros que se leen de un tirón y otros que se quedan contigo para siempre.</p></Reveal></blockquote>
 
       <section id="en-casa" className="pg-home" aria-labelledby="pg-home-title">
         <Reveal><img src={photos.lectura} alt="Un libro y una taza en la cama" /></Reveal>

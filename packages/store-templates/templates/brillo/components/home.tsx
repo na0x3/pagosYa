@@ -16,7 +16,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="br-hero">
+      <section id="inicio" className="br-hero">
         <p className="br-kicker">Colección</p>
         <h1 className="br-display">Detalles que se quedan contigo</h1>
         <div className="br-rule" aria-hidden="true"><span>◆</span></div>

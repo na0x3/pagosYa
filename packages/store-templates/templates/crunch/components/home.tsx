@@ -20,7 +20,7 @@ export default function Home() {
   const ticker = [...band, ...band, ...band, ...band];
   return <Shell>
     <main id="contenido">
-      <section className="cr-hero">
+      <section id="inicio" className="cr-hero">
         <span className="cr-blob cr-blob--a" aria-hidden="true" /><span className="cr-blob cr-blob--b" aria-hidden="true" />
         <div className="cr-hero__copy">
           <h1 className="cr-display">El antojo que estabas buscando.</h1>
@@ -29,7 +29,7 @@ export default function Home() {
         </div>
         <Parallax strength={50} mobileStrength={20} className="cr-hero__float"><div className="cr-hero__card"><img src={photos.hero} alt={`Producto de ${store.name}`} /><span className="cr-sticker" aria-hidden="true">¡Nuevo!</span></div></Parallax>
       </section>
-      <div className="cr-band" aria-hidden="true"><div className="cr-band__track">{ticker.map((text, index) => <span key={index}>{text} •</span>)}</div></div>
+      <div id="cinta" className="cr-band" aria-hidden="true"><div className="cr-band__track">{ticker.map((text, index) => <span key={index}>{text} •</span>)}</div></div>
 
       <section id="productos" className="cr-shop" aria-labelledby="cr-shop-title">
         <Reveal><h2 id="cr-shop-title" className="cr-title">Elige tu sabor</h2></Reveal>
@@ -47,7 +47,7 @@ export default function Home() {
       </section>
 
       <Wave from="#fff" to="#6045d8" />
-      <section className="cr-feature" aria-labelledby="cr-feature-title">
+      <section id="compartir" className="cr-feature" aria-labelledby="cr-feature-title">
         <Reveal>
           <h2 id="cr-feature-title" className="cr-title cr-title--light">Hecho para compartir</h2>
           <p>Una bolsa, varias manos. Pide para la oficina, la casa o el camino.</p>
@@ -57,21 +57,21 @@ export default function Home() {
       </section>
       <Wave from="#6045d8" to="#ffb6d9" />
 
-      <section className="cr-statement" aria-label="Frase de la marca">
+      <section id="frase" className="cr-statement" aria-label="Frase de la marca">
         <p className="cr-statement__line">No dejes</p>
         <Parallax strength={-80} className="cr-statement__float"><img className="cr-statement__product" src={photos.statement} alt="" aria-hidden="true" /></Parallax>
         <p className="cr-statement__line cr-statement__line--outline">ni las</p>
         <p className="cr-statement__line">migas</p>
       </section>
 
-      <div className="cr-strip" aria-label="Nuestros clientes"><img src={photos.gente1} alt="Compartiendo nuestros productos" /><img src={photos.gente2} alt="Un plato con nuestros productos" /><img src={photos.gente3} alt="Un momento con nuestros productos" /></div>
+      <div id="clientes" className="cr-strip" aria-label="Nuestros clientes"><img src={photos.gente1} alt="Compartiendo nuestros productos" /><img src={photos.gente2} alt="Un plato con nuestros productos" /><img src={photos.gente3} alt="Un momento con nuestros productos" /></div>
 
       <section id="preguntas" className="cr-faq" aria-labelledby="cr-faq-title">
         <Reveal><h2 id="cr-faq-title" className="cr-title">Preguntas</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
 
-      <section className="cr-cta" aria-labelledby="cr-cta-title">
+      <section id="pedido" className="cr-cta" aria-labelledby="cr-cta-title">
         <Reveal><h2 id="cr-cta-title" className="cr-cta__title">¿Qué esperas?</h2></Reveal>
         <a className="cr-btn cr-btn--big" href="#productos">Pedir el mío</a>
       </section>

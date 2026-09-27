@@ -13,7 +13,7 @@ const faqs = [
 export default function Home() {
   return <Shell>
     <main id="contenido">
-      <section className="pi-hero">
+      <section id="inicio" className="pi-hero">
         <div className="pi-hero__photo"><Parallax strength={70} mobileStrength={14} className="pi-drift pi-drift--deep"><img src={photos.hero} alt={`Conjunto de ${store.name}`} /></Parallax></div>
         <div className="pi-hero__copy">
           <p className="pi-kicker">Nueva colección</p>
@@ -42,7 +42,7 @@ export default function Home() {
         <div className="pi-tonesband__photo"><Parallax strength={60} className="pi-drift pi-drift--deep"><img src={photos.tonos} alt="Prendas dobladas en todos los tonos" /></Parallax></div>
       </section>
 
-      <section className="pi-duo" aria-label="Juntas">
+      <section id="todos-los-cuerpos" className="pi-duo" aria-label="Juntas">
         <Parallax strength={70} className="pi-drift pi-drift--deep"><img src={photos.juntas} alt="" aria-hidden="true" /></Parallax>
         <Reveal><p className="pi-duo__line">Hecho para todos los cuerpos</p></Reveal>
       </section>
