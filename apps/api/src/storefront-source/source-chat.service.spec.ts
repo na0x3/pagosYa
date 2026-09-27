@@ -146,6 +146,13 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     expect(result.assistantMessage.content).toContain('Guardé los cambios de tu tienda');
     expect(result.assistantMessage.content).toContain('comprobará');
   });
+  it('opens the reply with the agent summary and the sections it built', async () => {
+    const { service, generation } = setup();
+    generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Portada nueva', agent: { summary: 'Construí tu portada nueva.', sections: ['Portada', 'Productos'], steps: [] } });
+    const result = await service.send('m', 's', request);
+    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nGuardé los cambios/);
+    expect(result.assistantMessage.metadata).toMatchObject({ agentSummary: 'Construí tu portada nueva.', agentSections: ['Portada', 'Productos'] });
+  });
   it('passes the selection to chat and generation and reinterprets after switching providers', async () => {
     const { service, dialogue, generation } = setup();
     generation.generate.mockRejectedValueOnce(new Error('source validation failed'));
