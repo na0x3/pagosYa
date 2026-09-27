@@ -82,4 +82,19 @@ describe('source preflight', () => {
       file('assets/bricolage.ttf', 'font-bytes'),
     ])).not.toThrow();
   });
+
+  // The Plantillas write url(assets/…) in styles/globals.css; the compiler serves that stylesheet from the site root
+  // (it rewrites the url to /assets/…), so the check must resolve it there too — or every edit of a template store fails.
+  it('resolves assets/ in the component stylesheet from the site root, as the compiler does', () => {
+    expect(() => validateSourcePreflight([
+      file('index.html', '<h1>Casa</h1>'),
+      file('styles/globals.css', "@font-face { font-family: Fraunces; src: url(assets/fraunces.ttf) format('truetype'); }\n.hero { background: url('./assets/hero.jpg'); }"),
+      file('assets/fraunces.ttf', 'font-bytes'),
+      file('assets/hero.jpg', 'jpg-bytes'),
+    ])).not.toThrow();
+    expect(diagnosticOf(() => validateSourcePreflight([
+      file('index.html', '<h1>Casa</h1>'),
+      file('styles/globals.css', "@font-face { font-family: Fraunces; src: url(assets/missing.ttf); }"),
+    ]))).toMatch(/missing local asset assets\/missing\.ttf/);
+  });
 });
