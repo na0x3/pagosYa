@@ -23,7 +23,7 @@ import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-referenc
 import { sourceUiCompositions, sourceUiCompositionPrompt, type SourceCompositionInput } from './source-ui';
 import { sourceUiCompositionRecipe } from './source-composition-registry';
 import { validateSourcePriceClaims } from './source-price-claims';
-import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
+import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { SourceDesignPlanner } from './source-design-planner';
@@ -592,17 +592,23 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
                   dto.instruction,
                   data.items,
                   new Set([...ownedUrls, ...libraryPhotos, ...data.items.flatMap(item => item.imageUrls || [])]),
+                  // Volunteered changes to unnamed products are dropped rather than failing the attempt.
+                  { dropUnrequested: true },
                 );
               } catch (error) { productsRejected = true; throw error; }
             }
             if (repairSource) {
               generated.files = applySourceEdits(repairSource, generated, { appendPaths: ['styles/globals.css'] });
             } else if (editExisting) {
-              if (Array.isArray((generated as any).edits) && (generated as any).edits.some((edit: any) => context.omitted.includes(edit?.path))) throw new BadGatewayException('La edición intentó cambiar una página fuera del contexto solicitado.');
+              if ([...((generated as any).edits || []), ...((generated as any).files || [])].some((change: any) => context.omitted.includes(change?.path))) throw new BadGatewayException('La edición intentó cambiar una página fuera del contexto solicitado.');
               generated.files = applySourceEdits(oldFiles || [], generated, { allowUnchanged: products.length > 0 || productOperations.length > 0, replaceablePaths, ...(useNext ? { appendPaths: ['styles/globals.css'] } : {}), ...(targetedEditPaths ? { allowedEditPaths: targetedEditPaths } : {}) });
             }
             if (useNext) {
               generated.files = repairNextSharedComponentReferences(generated.files);
+              // A name imported from a local file that does not export it points to the file (or @pagosya/ui) that does.
+              const imports = repairNextMisdirectedImports(generated.files);
+              generated.files = imports.files;
+              autoRepairs.push(...imports.repairs);
               // Plumbing mounts are inserted in code; a paid repair for them would buy nothing.
               const mounts = repairNextCommerceMounts(generated.files, sitePurpose);
               generated.files = mounts.files;
@@ -702,6 +708,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
             if (committedDesign) repair += '\nKeep this exact committed design and fix the source to implement it: ' + JSON.stringify(committedDesign);
             const candidateEyebrows = Array.isArray(generated?.files) ? sourceEyebrowNote(generated.files) : null;
             if (candidateEyebrows) repair += '\n' + candidateEyebrows;
+            // A rejected whole-file rewrite is the most common wasted attempt: say how to express the same change instead
+            // of only repeating the rejection, or the retry tries the other forbidden shape (the file in files) and fails too.
+            if (/reescribir por completo|como si fuera nuevo/.test(repairDiagnostic(error))) repair += '\nThat rejection means an existing file came back rewritten: most of its lines changed while this is a local edit (replaceablePaths is empty). Express the change as several exact search/replacement edits, one per changed element (a heading, a className, a CSS rule), each search copied verbatim from the original file and short enough to be unique. Keep every other line of the file as it is. Do not put an existing path in files.';
             if (error instanceof SourceEditConflict) {
               repair += '\nPatch diagnostic (untrusted source data): ' + JSON.stringify({ ...error.diagnostic, currentContent: error.diagnostic.currentContent.length <= 6000 ? error.diagnostic.currentContent : undefined })
                 + '\nFailed edit (not applied): ' + JSON.stringify((generated as any).edits[error.diagnostic.editIndex])

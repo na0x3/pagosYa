@@ -466,6 +466,76 @@ export function repairNextAuthoredMarkup(files: SourceProjectFileDto[]): { files
  * be omitted by a compact model response. Unknown missing components still go
  * through the normal AI repair path instead of being hidden.
  */
+/**
+ * A candidate that imports a name from a local component file which does not export it fails TypeScript, and used to
+ * buy a paid repair ("Module './store' has no exported member 'CartButton'"). The name is nearly always a @pagosya/ui
+ * component or a component another file exports; the import is pointed there in code. Unknown names stay for the
+ * validator to report.
+ */
+export function repairNextMisdirectedImports(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; repairs: string[] } {
+  const exportsOf = new Map<string, { defaultExport: boolean; named: Set<string> }>();
+  for (const file of files) if (file.path.endsWith('.tsx')) exportsOf.set(file.path, nextComponentExports(ts.createSourceFile(file.path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)));
+  const uiNamed = nextComponentExports(ts.createSourceFile(UI_LIBRARY_PATH, uiRuntime(), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)).named;
+  const repairs: string[] = [];
+  const out = files.map(file => {
+    if (!file.path.startsWith('components/') || !file.path.endsWith('.tsx')) return file;
+    const source = ts.createSourceFile(file.path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const edits: { start: number; end: number; text: string }[] = [];
+    const toUi: string[] = [];
+    const elsewhere = new Map<string, string[]>();
+    let uiImport: ts.ImportDeclaration | undefined;
+    for (const statement of source.statements) {
+      if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+      const spec = statement.moduleSpecifier.text;
+      if (spec === '@pagosya/ui') { uiImport ??= statement; continue; }
+      if (!spec.startsWith('.')) continue;
+      const base = posix.join(posix.dirname(file.path), spec);
+      const target = [base + '.tsx', base, base + '/index.tsx'].find(path => exportsOf.has(path));
+      const clause = statement.importClause;
+      if (!target || !clause?.namedBindings || !ts.isNamedImports(clause.namedBindings) || clause.isTypeOnly) continue;
+      const exported = exportsOf.get(target)!;
+      const keep: string[] = [];
+      let moved = false;
+      for (const element of clause.namedBindings.elements) {
+        const name = (element.propertyName ?? element.name).text;
+        const local = element.name.text;
+        if (exported.named.has(name) || element.isTypeOnly) { keep.push(element.getText(source)); continue; }
+        const others = [...exportsOf].filter(([path, info]) => path !== target && path !== file.path && info.named.has(name)).map(([path]) => path);
+        // A component this store wrote wins over a same-named kit one: that is the one the page means.
+        if (others.length === 1) {
+          const rel = posix.relative(posix.dirname(file.path), others[0].replace(/\.tsx$/, ''));
+          const specifier = rel.startsWith('.') ? rel : `./${rel}`;
+          elsewhere.set(specifier, [...(elsewhere.get(specifier) || []), name === local ? name : `${name} as ${local}`]);
+          moved = true;
+        } else if (uiNamed.has(name)) { toUi.push(name === local ? name : `${name} as ${local}`); moved = true; }
+        else keep.push(element.getText(source));
+      }
+      if (!moved) continue;
+      const defaultName = clause.name?.text;
+      const parts = [defaultName, keep.length ? `{ ${keep.join(', ')} }` : ''].filter(Boolean);
+      edits.push({ start: statement.getStart(source), end: statement.end, text: parts.length ? `import ${parts.join(', ')} from '${spec}';` : '' });
+    }
+    if (!edits.length) return file;
+    const added: string[] = [];
+    if (toUi.length) {
+      const bindings = uiImport?.importClause?.namedBindings;
+      if (uiImport && bindings && ts.isNamedImports(bindings)) {
+        const names = [...bindings.elements.map(element => element.getText(source)), ...toUi.filter(name => !bindings.elements.some(element => element.getText(source) === name))];
+        const defaultName = uiImport.importClause?.name?.text;
+        edits.push({ start: uiImport.getStart(source), end: uiImport.end, text: `import ${defaultName ? `${defaultName}, ` : ''}{ ${names.join(', ')} } from '@pagosya/ui';` });
+      } else added.push(`import { ${toUi.join(', ')} } from '@pagosya/ui';`);
+    }
+    for (const [specifier, names] of elsewhere) added.push(`import { ${names.join(', ')} } from '${specifier}';`);
+    let content = file.content;
+    for (const edit of edits.sort((a, b) => b.start - a.start)) content = content.slice(0, edit.start) + edit.text + content.slice(edit.end);
+    content = content.replace(/^\n+/, '');
+    if (added.length) content = `${added.join('\n')}\n${content}`;
+    repairs.push(`${file.path}: imports pointed to the files that export them`);
+    return { ...file, content };
+  });
+  return { files: out, repairs };
+}
+
 export function repairNextSharedComponentReferences(files: SourceProjectFileDto[]): SourceProjectFileDto[] {
   const candidates = new Map<string, SourceProjectFileDto[]>();
   for (const file of files) {

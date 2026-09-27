@@ -22,6 +22,34 @@ export class SourceEditConflict extends BadGatewayException {
   }
 }
 
+/** A whole file sent back for a local edit is accepted as that edit when it keeps at least this share of the file's lines. */
+export const LOCAL_REWRITE_KEPT_LINES = 0.5;
+
+/**
+ * Share of `before`'s non-blank lines that survive, in order, in `after` (a line-level longest common subsequence).
+ * Models often answer a local change to a short file (a template's Shell.tsx, checkout.tsx) by sending the whole file
+ * back; this tells that apart from a real rewrite without asking the model again.
+ */
+export function sourceLinesKept(before: string, after: string): number {
+  const a = before.split('\n').map(line => line.trim()).filter(Boolean), b = after.split('\n').map(line => line.trim()).filter(Boolean);
+  if (!a.length) return 1;
+  if (a.length * b.length > 4_000_000) {
+    // Too large to align line by line: count the untouched head and tail instead.
+    let head = 0, tail = 0;
+    while (head < a.length && head < b.length && a[head] === b[head]) head++;
+    while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail++;
+    return (head + tail) / a.length;
+  }
+  let row = new Array<number>(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    const next = new Array<number>(b.length + 1).fill(0);
+    for (let j = 1; j <= b.length; j++) next[j] = a[i - 1] === b[j - 1] ? row[j - 1] + 1 : Math.max(row[j], next[j - 1]);
+    row = next;
+  }
+  return row[b.length] / a.length;
+}
+const keepsMostOf = (before: string, after: string) => sourceLinesKept(before, after) >= LOCAL_REWRITE_KEPT_LINES;
+
 /** Atomic edits; existing-file replacement requires a server-authorized redesign scope. */
 export function applySourceEdits(previous: SourceProjectFileDto[], output: any, options: { allowUnchanged?: boolean; replaceablePaths?: string[]; appendPaths?: string[]; allowedEditPaths?: string[] } = {}): SourceProjectFileDto[] {
   function reject(reason: string): never { throw new BadGatewayException(`${reason} Tu revisión anterior sigue guardada.`); }
@@ -35,7 +63,8 @@ export function applySourceEdits(previous: SourceProjectFileDto[], output: any, 
     if (!file || file.encoding === 'base64') reject('La edición intentó cambiar un archivo fuera del proyecto.');
     const start = file.content.indexOf(edit.search);
     if (start < 0 || file.content.indexOf(edit.search, start + 1) !== -1) throw new SourceEditConflict({ path: edit.path, editIndex, reason: start < 0 ? 'missing' : 'ambiguous', search: edit.search, currentContent: file.content });
-    if (edit.search.trim() === file.content.trim()) reject(`La edición intentó reescribir por completo ${edit.path}.`);
+    // A search spanning the whole file is a rewrite unless it keeps most of the file: then it is the local edit it looks like.
+    if (edit.search.trim() === file.content.trim() && !keepsMostOf(file.content, edit.replacement)) reject(`La edición intentó reescribir por completo ${edit.path}.`);
     file.content = file.content.slice(0, start) + edit.replacement + file.content.slice(start + edit.search.length);
   }
   const written = new Set<string>();
@@ -44,7 +73,10 @@ export function applySourceEdits(previous: SourceProjectFileDto[], output: any, 
     written.add(file.path.toLowerCase());
     const existing = files.find(existing => existing.path.toLowerCase() === file.path.toLowerCase());
     if (existing) {
-      if (existing.path !== file.path || !options.replaceablePaths?.includes(file.path) || output.edits.some((edit: any) => edit.path === file.path)) reject('La edición intentó reemplazar un archivo existente como si fuera nuevo.');
+      // Outside a redesign, an existing file sent whole is accepted only as a local edit that keeps most of it.
+      if (options.allowedEditPaths && !options.allowedEditPaths.includes(file.path)) reject(`La edición intentó salir del alcance autorizado (${options.allowedEditPaths.join(', ')}).`);
+      const authorized = options.replaceablePaths?.includes(file.path) || keepsMostOf(existing.content, file.content);
+      if (existing.path !== file.path || !authorized || output.edits.some((edit: any) => edit.path === file.path)) reject('La edición intentó reemplazar un archivo existente como si fuera nuevo.');
       existing.content = file.content;
       continue;
     }
