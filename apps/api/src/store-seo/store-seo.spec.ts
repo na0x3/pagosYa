@@ -52,6 +52,7 @@ describe('StoreSeoService — the two new platform-owned catalog pages (Task 8/C
     const store = { id: 's1', slug: 'cafe', name: 'Café', tagline: 'Café de origen', bannerUrl: null, logoUrl: null, customDomains: [], publishedSourceRevision: 1, updatedAt: new Date('2026-01-01T00:00:00Z') };
     const prisma: any = {
       store: { findFirst: jest.fn().mockResolvedValue(store) },
+      storeExtension: { findMany: jest.fn(async () => []) },
       storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ snapshot: { files: opts.files || [] }, createdAt: new Date('2026-01-02T00:00:00Z') }) },
       paymentLink: { findMany: jest.fn().mockResolvedValue([]) },
       collection: { findMany: jest.fn().mockResolvedValue([{ slug: 'invierno', updatedAt: new Date('2026-09-01') }]) },
@@ -104,6 +105,7 @@ describe('StoreSeoService — React homepages, collections and locale (task 5.4)
     const store = { id: 's1', slug: 'cafe', name: 'Café', tagline: null, bannerUrl: null, logoUrl: null, customDomains: [], publishedSourceRevision: 1, updatedAt: new Date('2026-01-01T00:00:00Z') };
     const prisma: any = {
       store: { findFirst: jest.fn().mockResolvedValue(store) },
+      storeExtension: { findMany: jest.fn(async () => []) },
       storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ snapshot: { files }, createdAt: new Date('2026-01-02T00:00:00Z') }) },
       paymentLink: { findMany: jest.fn().mockResolvedValue([]) },
       collection: { findMany: jest.fn().mockResolvedValue([{ slug: 'invierno', updatedAt: new Date('2026-09-01T00:00:00Z') }]) },
