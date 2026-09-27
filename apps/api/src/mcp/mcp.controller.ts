@@ -30,7 +30,7 @@ const notAllowed = (res: Response) => res.status(405).json({ jsonrpc: '2.0', err
 export class McpController {
   constructor(private readonly tools: McpToolsService) {}
 
-  @Post()
+  @Post(['', 'k/:key'])
   @UseGuards(McpApiKeyGuard, MerchantThrottlerGuard)
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async handle(@Req() req: Request & { merchant: { id: string } }, @Res() res: Response) {
@@ -41,9 +41,9 @@ export class McpController {
     await transport.handleRequest(req, res, req.body);
   }
 
-  @Get()
+  @Get(['', 'k/:key'])
   get(@Res() res: Response) { notAllowed(res); }
 
-  @Delete()
+  @Delete(['', 'k/:key'])
   remove(@Res() res: Response) { notAllowed(res); }
 }

@@ -4102,8 +4102,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     openSettingsOverlay(currentStoreId, section);
   }
   document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
-  import("/src/mcp-connect.mjs").then(({ mountMcpConnect }) => {
+  import("/src/mcp-connect.mjs").then(({ mountMcpConnect, mountMcpConnectDialog }) => {
     mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
+    const connectDialog = mountMcpConnectDialog({ api, apiBase: () => apiBaseEl.value, onCreated: () => { void mcpConnect?.reload(); } });
+    document.querySelectorAll("[data-connect-ai-open]").forEach(button => button.addEventListener("click", () => connectDialog.open()));
     if (document.body.dataset.dashboardView === "connect-ai" && sessionToken) void mcpConnect.reload();
   });
   import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {

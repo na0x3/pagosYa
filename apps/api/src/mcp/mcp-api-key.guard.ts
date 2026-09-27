@@ -12,8 +12,11 @@ export class McpApiKeyGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const header = request.headers['authorization'];
     const value = Array.isArray(header) ? header[0] : header;
-    if (typeof value !== 'string' || !value.startsWith('Bearer ')) throw new UnauthorizedException('Falta la clave de pagosYa para tu IA.');
-    const apiKey = await this.apiKeys.verify(value.slice('Bearer '.length).trim(), ApiKeyType.MCP);
+    // Claude and ChatGPT connectors cannot send headers: their secret URL carries the key (/v1/mcp/k/<key>), revocable like any key.
+    const pathKey = typeof request.params?.key === 'string' ? request.params.key : '';
+    const key = typeof value === 'string' && value.startsWith('Bearer ') ? value.slice('Bearer '.length).trim() : pathKey;
+    if (!key) throw new UnauthorizedException('Falta la clave de pagosYa para tu IA.');
+    const apiKey = await this.apiKeys.verify(key, ApiKeyType.MCP);
     if (!apiKey) throw new UnauthorizedException('La clave no es válida o fue revocada.');
     request.merchant = apiKey.merchant;
     return true;

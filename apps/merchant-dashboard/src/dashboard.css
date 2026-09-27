@@ -2490,3 +2490,49 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
 .mcp-endpoint { font-size: .85rem; opacity: .8; }
 /* The YAPI dock is signed with the pagosYa star instead of a text badge. */
 .workspace-yapi-star { display: block; flex: none; width: 28px; height: 28px; object-fit: contain; }
+
+/* Conecta tu IA — dialog and sidebar card (dark, after the owner's reference). */
+.mcp-dialog { width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: 28px 32px 22px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 18px; background: #141517; color: #f1f1f0; box-shadow: 0 30px 80px rgb(0 0 0 / 55%); }
+.mcp-dialog::backdrop { background: rgb(6 8 14 / 62%); backdrop-filter: blur(3px); }
+.mcp-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mcp-dialog__head h2 { margin: 0; font-size: 1.35rem; font-weight: 650; letter-spacing: -.01em; }
+.mcp-dialog__close { width: 36px; height: 36px; border: 0; border-radius: 10px; background: none; color: #cfcfcd; font-size: 26px; line-height: 1; cursor: pointer; }
+.mcp-dialog__close:hover { background: rgb(255 255 255 / 7%); }
+.mcp-dialog__lead { margin: 10px 0 18px; color: #b9b9b6; line-height: 1.55; }
+.mcp-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.mcp-tab { min-height: 42px; padding: 0 16px; border: 1px solid rgb(255 255 255 / 12%); border-radius: 10px; background: rgb(255 255 255 / 3%); color: #eaeae8; font: inherit; font-weight: 550; cursor: pointer; }
+.mcp-tab[aria-selected="true"] { border-color: rgb(255 255 255 / 28%); background: rgb(255 255 255 / 10%); }
+.mcp-steps { list-style: none; counter-reset: mcp-step; margin: 0; padding: 0; display: grid; gap: 16px; }
+.mcp-steps > li { counter-increment: mcp-step; display: grid; grid-template-columns: 28px 1fr; gap: 14px; align-items: start; }
+.mcp-steps > li::before { content: counter(mcp-step); display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid rgb(255 255 255 / 14%); border-radius: 50%; color: #cfcfcd; font-size: .78rem; font-weight: 600; }
+.mcp-step-body { display: block; padding-top: 2px; color: #e6e6e3; line-height: 1.5; }
+.mcp-step-body > .mcp-copy-box { margin-top: 10px; }
+.mcp-step-body > .mcp-create-connection { display: block; margin-top: 10px; }
+.mcp-copy-box { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 10px 0 18px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 10px; background: #1e1f22; }
+.mcp-copy-box code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f1f1f0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9rem; }
+.mcp-copy-icon { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; color: #a9a9a6; cursor: pointer; }
+.mcp-copy-icon svg { width: 17px; height: 17px; }
+.mcp-copy-icon:hover, .mcp-copy-icon.is-copied { background: rgb(255 255 255 / 8%); color: #ffd23f; }
+.mcp-create-connection { justify-self: start; min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: #ffd23f; color: #1a1a1a; font: inherit; font-weight: 700; cursor: pointer; }
+.mcp-guide[aria-busy="true"] .mcp-create-connection { opacity: .6; cursor: progress; }
+.mcp-local-note { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; background: rgb(255 210 63 / 10%); color: #f3dc8a; font-size: .88rem; }
+.mcp-dialog__foot { margin: 22px 0 0; padding-top: 16px; border-top: 1px solid rgb(255 255 255 / 8%); color: #9d9d9a; font-size: .86rem; line-height: 1.5; }
+.mcp-dialog__foot a { color: #e6e6e3; }
+.connect-ai-card { display: grid; gap: 8px; margin: 12px 12px 8px; padding: 16px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 14px; background: rgb(255 255 255 / 4%); color: #f1f1f0; }
+.connect-ai-card strong { font-size: 1.02rem; }
+.connect-ai-card p { margin: 0; color: #a9a9a6; font-size: .86rem; line-height: 1.45; }
+.connect-ai-card__logos { display: flex; align-items: center; margin-bottom: 4px; }
+.connect-ai-logo { display: grid; place-items: center; width: 32px; height: 32px; margin-left: -6px; border: 2px solid #141517; border-radius: 50%; background: #2a2b2f; color: #fff; font-size: 15px; }
+.connect-ai-logo:first-child { margin-left: 0; }
+.connect-ai-logo--claude { background: #c96442; }
+.connect-ai-logo--chatgpt { background: #f1f1f0; color: #141517; }
+.connect-ai-logo--cursor { background: #0f0f10; }
+.connect-ai-logo--more { background: #3a3b40; color: #cfcfcd; }
+.connect-ai-card__link { flex: 1; height: 0; margin: 0 8px; border-top: 1px dashed rgb(255 255 255 / 25%); }
+.connect-ai-logo--pagosya { margin-left: 0; padding: 5px; background: #1e2a44; object-fit: contain; }
+.connect-ai-card__button { min-height: 42px; margin-top: 6px; border: 1px solid rgb(255 255 255 / 22%); border-radius: 10px; background: rgb(255 255 255 / 6%); color: #f1f1f0; font: inherit; font-weight: 650; cursor: pointer; }
+.connect-ai-card__button:hover { border-color: #ffd23f; }
+.connect-ai-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.connect-ai-hero h2 { margin: 0 0 4px; }
+.connect-ai-hero p { margin: 0; max-width: 60ch; }
+.connect-ai-hero .connect-ai-card__button { padding: 0 20px; background: #ffd23f; border-color: #ffd23f; color: #1a1a1a; }
