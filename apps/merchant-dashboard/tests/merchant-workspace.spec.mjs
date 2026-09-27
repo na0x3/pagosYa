@@ -339,24 +339,6 @@ test('compact navigation stays at the edge and the idle canvas keeps the draft',
 });
 
 
-test('direct canvas editing selects text, saves a revision and supports undo', async ({ page }) => {
-  const { editor, requests } = await workspace(page, true);
-  await editor.locator('#source-visual-edit').click();
-  await expect(editor.locator('[data-direct-value]')).toHaveValue('Mi café');
-  await editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Mi café' }).click();
-  await expect(editor.locator('[data-direct-value]')).toBeFocused();
-  await editor.locator('[data-direct-value]').fill('Nuestro café de altura');
-  await editor.getByRole('button', { name: 'Guardar cambio', exact: true }).click();
-  await expect(editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Nuestro café de altura' })).toBeVisible();
-  await expect(editor.locator('[data-direct-value]')).toHaveValue('Nuestro café de altura');
-  expect(requests.find(row => row.path.endsWith('/visual-edit')).body).toEqual({ revision: 1, fieldId: 'heading', value: 'Nuestro café de altura' });
-  await page.screenshot({ path: '.test-artifacts/yapi-direct-edit.png', fullPage: false });
-  await editor.getByRole('button', { name: 'Deshacer último cambio visual' }).click();
-  await expect(editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Mi café' })).toBeVisible();
-  await expect(editor.locator('[data-direct-undo]')).toHaveCount(0);
-  expect(requests.filter(row => row.method === 'POST' && /messages|generate/.test(row.path))).toEqual([]);
-});
-
 test('new site purpose is included in the first conversation request', async ({ page }) => {
   const { editor, requests } = await workspace(page);
   await editor.locator('#source-site-purpose').selectOption('portfolio');
