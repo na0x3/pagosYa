@@ -13,6 +13,7 @@ import { pricingForRail } from "../international/fx";
 import { openOpsCaseOnce } from "../ops/ops-escalation";
 import type { DlocalRefundNotification } from "../rails/adapters/dlocal/dlocal.types";
 import { ShipmentsService } from "../shipping/shipments.service";
+import { emitStoreEvent } from "../extensions/store-events";
 
 @Injectable()
 export class RefundsService {
@@ -291,5 +292,6 @@ export class RefundsService {
       paymentIntentId: intent.id,
       amount: refundTransaction.amount,
     });
+    if (order) await emitStoreEvent(tx, order.storeId, "refund.succeeded", { paymentIntentId: intent.id, orderId: order.id, amount: refundTransaction.amount });
   }
 }

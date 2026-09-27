@@ -25,6 +25,7 @@ import { LimitsService } from "../limits/limits.service";
 import { LimitsWarningService } from "../limits/limits-warning.service";
 import { InboxService } from "../inbox/inbox.service";
 import { markBusinessDocumentPaid } from "../business-documents/cobro-payment";
+import { emitStoreEvent, orderEventPayload } from "../extensions/store-events";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -195,6 +196,7 @@ export class PaymentIntentsService {
     await this.recordProductStats(tx, intent.merchantId, metadata);
     const updated = await tx.paymentIntent.update({ where: { id }, data: { status: 'SUCCEEDED', metadata } });
     await tx.storeOrder.update({ where: { id: order.id }, data: { status: 'PAID', statusEvents: { create: { status: 'PAID' } } } });
+    await emitStoreEvent(tx, order.storeId, 'order.paid', () => orderEventPayload(tx, order.id));
     await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING', nextAttemptAt: null }, data: { nextAttemptAt: new Date() } });
     await this.webhooks.enqueueEvent(tx, intent.merchantId, 'payment_intent.succeeded', { id, amount: 0, creditAmount: reservation.amount, orderTotal: order.amount, currency: intent.currency, status: 'SUCCEEDED' });
     await this.invoicing.enqueueInvoice(tx, intent.merchantId, { paymentIntentId: id, amount: order.amount, currency: intent.currency, customerName: null, customerDocument: null });
@@ -665,6 +667,7 @@ export class PaymentIntentsService {
               statusEvents: { create: { status: OrderFulfillmentStatus.PAID } },
             },
           });
+          await emitStoreEvent(tx, order.storeId, 'order.paid', () => orderEventPayload(tx, order.id));
           await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING', nextAttemptAt: null }, data: { nextAttemptAt: new Date() } });
         }
         const debtMetadata = (current.metadata as { debt?: { debtRecordId?: string; debtRecordIds?: string[] } } | null)?.debt;
