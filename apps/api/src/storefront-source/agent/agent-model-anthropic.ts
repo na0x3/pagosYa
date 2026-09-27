@@ -1,6 +1,7 @@
 import type { SourceRequestBudget } from '../source-request-budget';
 import { checkSourceProviderQuota } from '../source-provider-error';
 import type { AgentModel } from './agent-loop';
+import { agentProviderError, agentRejectedUsage } from './agent-model';
 
 type Block = Record<string, unknown>;
 type Message = { role: 'user' | 'assistant'; content: Block[] };
@@ -89,12 +90,12 @@ export function anthropicAgentModel(input: { endpoint: string; apiKey: string; m
         output_tokens: raw.output_tokens ?? 0,
         input_tokens_details: { cached_tokens: raw.cache_read_input_tokens ?? 0, cache_write_tokens: raw.cache_creation_input_tokens ?? 0 },
       } : undefined;
-      reserved.settle(usage);
+      reserved.settle(agentRejectedUsage(response, usage));
       const ok = Boolean(response?.ok && Array.isArray(body?.content));
       await input.onTurn?.({ body: body ? { ...body, usage } : body, durationMs: Date.now() - started, status: ok ? 'COMPLETED' : 'FAILED' });
     }
     checkSourceProviderQuota(response!.status, body, 'Anthropic');
-    if (!response!.ok || !Array.isArray(body?.content)) throw new Error(`El proveedor de IA respondió ${response!.status}.`);
+    if (!response!.ok || !Array.isArray(body?.content)) throw agentProviderError(response!.status, body);
     const content: any[] = body.content;
     const text = content.filter(block => block?.type === 'text' && block.text).map(block => block.text).join('\n') || undefined;
     const calls = content.filter(block => block?.type === 'tool_use').map(block => ({ name: String(block.name), arguments: JSON.stringify(block.input ?? {}), callId: String(block.id) }));

@@ -45,4 +45,10 @@ describe('Claude as the agent model', () => {
     const broke = anthropicAgentModel({ endpoint: 'e', apiKey: 'k', model: 'claude-opus-5-5', budget: new SourceRequestBudget(1), maxOutputTokens: 2000, fetchImpl: jest.fn() as any });
     await expect(broke({ instructions: 'x'.repeat(40_000), transcript: [], tools: [] as any })).rejects.toMatchObject({ agentLimit: true });
   });
+  it('releases the reservation of a request Claude rejected, and names the error type', async () => {
+    const fetchImpl = jest.fn(async () => new Response(JSON.stringify({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } }), { status: 529 }));
+    const model = anthropicAgentModel({ endpoint: 'e', apiKey: 'k', model: 'claude-sonnet-5', budget: new SourceRequestBudget(10), maxOutputTokens: 4000, fetchImpl: fetchImpl as any });
+    for (let index = 0; index < 3; index++) await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('respondió 529 (overloaded_error)');
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
 });

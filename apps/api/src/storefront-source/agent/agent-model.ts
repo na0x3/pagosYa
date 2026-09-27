@@ -10,6 +10,15 @@ function estimateInputTokens(value: unknown) {
   return Math.ceil(json.replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/g, '').length / 3.5) + images * IMAGE_TOKENS;
 }
 
+/** A request the provider refused with an error status is not billed. Only a lost response keeps its reservation. */
+export const agentRejectedUsage = (response: Response | undefined, usage: unknown) => usage ?? (response && !response.ok ? { input_tokens: 0, output_tokens: 0 } : undefined);
+
+/** The status and the provider's error code (rate_limit_exceeded, overloaded_error…), never its free-text message. */
+export function agentProviderError(status: number, body: any) {
+  const code = [body?.error?.code, body?.error?.type].find(value => typeof value === 'string' && /^[a-z_]{1,60}$/i.test(value));
+  return new Error(`El proveedor de IA respondió ${status}${code ? ` (${code})` : ''}.`);
+}
+
 /** One Responses API call per agent turn: one credit reservation, settled with the provider's usage. */
 export function openAiAgentModel(input: { endpoint: string; apiKey: string; model: string; providerName: string; budget: SourceRequestBudget; maxOutputTokens: number; reasoningEffort: string; promptCacheKey?: string; signal?: AbortSignal; onTurn?: (turn: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => void | Promise<void>; fetchImpl?: typeof fetch }): AgentModel {
   const fetchImpl = input.fetchImpl ?? fetch;
@@ -32,12 +41,12 @@ export function openAiAgentModel(input: { endpoint: string; apiKey: string; mode
       const cause = (error as { cause?: { code?: string; message?: string } })?.cause;
       throw new Error(`No se pudo contactar al proveedor de IA (${cause?.code || cause?.message || (error as Error).message}).`);
     } finally {
-      reserved.settle(body?.usage);
+      reserved.settle(agentRejectedUsage(response, body?.usage));
       const ok = Boolean(response?.ok && (body?.status === 'completed' || body?.status === 'incomplete'));
       await input.onTurn?.({ body, durationMs: Date.now() - started, status: ok ? 'COMPLETED' : 'FAILED' });
     }
     checkSourceProviderQuota(response!.status, body, input.providerName);
-    if (!response!.ok || (body?.status !== 'completed' && body?.status !== 'incomplete')) throw new Error(`El proveedor de IA respondió ${response!.status}.`);
+    if (!response!.ok || (body?.status !== 'completed' && body?.status !== 'incomplete')) throw agentProviderError(response!.status, body);
     const output: any[] = Array.isArray(body.output) ? body.output : [];
     return {
       output,

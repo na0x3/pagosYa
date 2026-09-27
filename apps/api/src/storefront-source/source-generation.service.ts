@@ -655,7 +655,9 @@ export class SourceGenerationService {
           // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
           onPreview: files => agentDraftPreviews.set(storeId, files.filter(file => !(file.encoding === 'base64' && previousFiles.some(saved => saved.path === file.path)))) });
         const onTurn = async ({ body, durationMs, status }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => {
-          attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}) });
+          attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}),
+            // The provider's own words, for us: the merchant sees only the status and code.
+            ...(body?.error ? { failureReason: [body.error.code || body.error.type, body.error.message].filter(part => typeof part === 'string' && part).join(': ').slice(0, 300) } : {}) });
           await this.metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
         };
         const agentModel = agentProvider
