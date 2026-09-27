@@ -26,6 +26,36 @@ it('shows the gallery on the page itself, not in a dialog, with no close button'
   expect(app.querySelector('[data-template-close]')).toBeNull();
 });
 
+it('lets the page scroll inside the dashboard frame over the dashboard background', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(version() as any);
+  await mountTemplatesPage(app);
+  // style.css pins html/body to the viewport with overflow hidden for the editor; the gallery page opts out.
+  expect(document.documentElement.classList.contains('tpl-page-doc')).toBe(true);
+});
+
+it('tells the dashboard its height so the frame grows with the gallery (one scroll, no gap)', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(version() as any);
+  let observed: () => void = () => {};
+  vi.stubGlobal('ResizeObserver', class { constructor(callback: () => void) { observed = callback; } observe() {} disconnect() {} });
+  await mountTemplatesPage(app);
+  Object.defineProperty(app, 'scrollHeight', { value: 5200, configurable: true });
+  observed();
+  expect(post).toHaveBeenCalledWith({ type: 'pagosya:resource-height', storeId: 's1', height: 5200 }, location.origin);
+  vi.unstubAllGlobals();
+});
+
+it('asks the dashboard for the whole screen while a template is open, and gives it back on Volver', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(version() as any);
+  await mountTemplatesPage(app);
+  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-template-pick="miga"]'); expect(found).toBeTruthy(); return found!; });
+  card.click();
+  expect(post).toHaveBeenCalledWith({ type: 'pagosya:template-focus', storeId: 's1', open: true }, location.origin);
+  expect(document.documentElement.classList.contains('tpl-focus')).toBe(true);
+  app.querySelector<HTMLButtonElement>('[data-template-back]')!.click();
+  expect(post).toHaveBeenLastCalledWith({ type: 'pagosya:template-focus', storeId: 's1', open: false }, location.origin);
+  expect(document.documentElement.classList.contains('tpl-focus')).toBe(false);
+});
+
 it('applies the chosen template at the current revision and tells the dashboard', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(version(3) as any);
   const apply = vi.spyOn(MerchantStudioApi.prototype, 'applyTemplate').mockResolvedValue({ revision: 4, label: 'Plantilla: Miga' } as any);

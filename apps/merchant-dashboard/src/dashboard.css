@@ -2456,6 +2456,20 @@
   }
   .topbar-xp-blob svg { filter: drop-shadow(1px 0 0 var(--bento-ink)) drop-shadow(-1px 0 0 var(--bento-ink)) drop-shadow(0 1px 0 var(--bento-ink)) drop-shadow(0 -1px 0 var(--bento-ink)); }
 .settings-overlay { position: fixed; inset: 0; z-index: 1000; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal; }
+/* Plantillas sits straight on the dashboard background: the frame is transparent (the gallery document is transparent
+   and dark too) and grows to the gallery's height, so the page has one scroll and no empty band. YAPI stays out of it. */
+body .store-templates-page .store-resource-frame { background: transparent; color-scheme: dark; min-height: 0; }
+body.is-logged-in[data-dashboard-view="templates"] .workspace-yapi { display: none !important; }
+/* The bottom room kept for the YAPI dock is not needed here. */
+body.is-logged-in[data-dashboard-view="templates"] .dashboard-workspace { padding-bottom: 40px; }
+/* A previewed template gets the whole screen beside the sidebar and eases in. */
+html:has(body.template-focus) { overflow: hidden; }
+/* The page's entrance animation leaves a transform on the section, which would trap the fixed frame inside it. */
+body.template-focus .store-templates-page { transform: none !important; animation: none !important; }
+body.template-focus .store-templates-page .store-resource-frame { position: fixed; inset: 0 auto 0 0; width: 100vw; height: 100dvh !important; z-index: 4010; background: hsl(222 70% 7% / .82); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); animation: template-focus-in .32s ease both; }
+@media (min-width: 1000px) { body.template-focus .store-templates-page .store-resource-frame { left: var(--sidebar-w, 196px); width: calc(100vw - var(--sidebar-w, 196px)); } }
+@keyframes template-focus-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { body.template-focus .store-templates-page .store-resource-frame { animation: none; } }
 .settings-more-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .settings-more-list li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--pg-border, #e2ded6); border-radius: 12px; background: var(--pg-surface, #fff); }
 .settings-more-list li div { display: grid; gap: 2px; min-width: 0; }

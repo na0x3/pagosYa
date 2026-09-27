@@ -66,7 +66,7 @@ export function renderTemplateChoices(choices: TemplateChoice[], previewBase: st
 
 /** Opens the gallery; `applied` receives the new revision once the template is saved. */
 /** Opens the gallery as a dialog, or renders it inside `host` as a page (the dashboard's Plantillas tab). */
-export async function openTemplateGallery(api: MerchantStudioApi, options: { storeId: string; revision: number; hasSite: boolean; applied: (revision: number) => Promise<void>; host?: HTMLElement }) {
+export async function openTemplateGallery(api: MerchantStudioApi, options: { storeId: string; revision: number; hasSite: boolean; applied: (revision: number) => Promise<void>; host?: HTMLElement; focus?: (open: boolean) => void }) {
   const pageMode = Boolean(options.host);
   const dialog: HTMLElement = document.createElement(pageMode ? 'div' : 'dialog'); dialog.className = pageMode ? 'tpl-dialog tpl-page' : 'tpl-dialog'; dialog.setAttribute('aria-label', 'Plantillas');
   let revision = options.revision;
@@ -75,6 +75,8 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
   const snapshots = new Map<string, Promise<SourceSnapshot>>();
   const loadImages = createPreviewImageLoader(API_BASE_URL);
   let templates: TemplateSummary[] = [];
+  // Page mode: the host gives a previewed template the whole screen and takes it back on Volver.
+  let focused = false;
   if (pageMode) options.host!.replaceChildren(dialog); else document.body.append(dialog);
   dialog.innerHTML = '<p role="status">Cargando plantillas…</p>';
   if (!pageMode) {
@@ -106,6 +108,7 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
   }
   function render() {
     dialog.innerHTML = renderTemplateGallery(templates, state);
+    if (focused !== Boolean(state.selected)) { focused = Boolean(state.selected); options.focus?.(focused); }
     // A page has nothing to close.
     if (pageMode) dialog.querySelectorAll('[data-template-close]').forEach(button => button.remove());
     dialog.querySelector('[data-template-close]')?.addEventListener('click', () => { if (!state.busy) close(); });

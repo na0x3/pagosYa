@@ -919,7 +919,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); return;
     }
     if (event.data.type === "pagosya:source-publication-changed") { void refresh(); return; }
-    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(4000, Math.max(340, event.data.height))}px`;
+    // A previewed template takes the whole screen beside the sidebar (dashboard.css, body.template-focus).
+    if (event.data.type === "pagosya:template-focus" && frame.id === "storeTemplatesFrame") { document.body.classList.toggle("template-focus", Boolean(event.data.open)); return; }
+    // The template gallery is one long page of cards; other resource pages stay capped.
+    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(frame.id === "storeTemplatesFrame" ? 30000 : 4000, Math.max(340, event.data.height))}px`;
     if (event.data.type === "pagosya:product-guide-ready") {
       frame.dataset.ready = "true";
       if (frame.dataset.pendingProduct) { frame.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId:currentStoreId, product:JSON.parse(frame.dataset.pendingProduct), ...(frame.dataset.pendingStep ? { step: frame.dataset.pendingStep } : {})}, location.origin); delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
@@ -932,6 +935,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
     // Plantillas reads the store's current revision, which the design editor may have changed: reload it on entry.
     if (view === "templates") { const templatesFrame = document.getElementById("storeTemplatesFrame"); templatesFrame.removeAttribute("src"); delete templatesFrame.dataset.storeId; }
+    document.body.classList.remove("template-focus");
     syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
     const views = ["workspace", "products", "charge-links", "payments", "compliance"];

@@ -58,5 +58,34 @@
 .tpl-preview__loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:24px;text-align:center;color:#6a645b;background:#fbfaf7}
 .tpl-preview__loading[hidden]{display:none}
 @media (max-width:560px){.tpl-preview-title{flex-basis:100%;order:-1}.tpl-preview-bar .button--publish{flex:1}.tpl-width button{padding:0 10px}}
-.tpl-page{width:auto;max-height:none;margin:0;border-radius:0;box-shadow:none;background:transparent}
-.tpl-page .tpl-head,.tpl-page .tpl-preview-bar{background:var(--pg-bg,#fbfaf7)}
+/* The dashboard's Plantillas tab. The gallery sits straight on the dashboard's own background: the document is
+   transparent (and dark, matching the embedder's color-scheme so Chrome keeps the frame see-through), the frame
+   grows to the gallery's height (one page scroll), and the gallery reads light on dark. A previewed template gets the
+   whole screen from the dashboard (.tpl-focus) and scrolls inside it. */
+html.tpl-page-doc{color-scheme:dark}
+html.tpl-page-doc,html.tpl-page-doc body{height:auto;min-height:0;overflow:visible;background:transparent}
+html.tpl-page-doc #app{height:auto}
+html.tpl-page-doc.tpl-focus,html.tpl-page-doc.tpl-focus body{height:100%;overflow:auto}
+.tpl-page{width:auto;max-height:none;margin:0;border-radius:0;box-shadow:none;background:transparent;color:#f4f6fb}
+.tpl-page .tpl-head{position:static;padding-top:6px;background:transparent;border-bottom:0}
+.tpl-page .tpl-preview-bar{background:#0b1730b8;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid #ffffff1f}
+.tpl-page .tpl-head p,.tpl-page .tpl-card__desc,.tpl-page .tpl-preview-note{color:#c3cde0}
+.tpl-page .tpl-chip{background:#ffffff12;border-color:#ffffff2b;color:#fff}
+.tpl-page .tpl-chip span{color:#a9b5cb}
+.tpl-page .tpl-chip[aria-pressed=true]{background:#fff;border-color:#fff;color:#0b1730}
+.tpl-page .tpl-chip[aria-pressed=true] span{color:#56627a}
+.tpl-page .tpl-card__meta small,.tpl-page .tpl-preview-title small{background:#ffffff1f;color:#e6ecf7}
+.tpl-page .tpl-card__frame{background:#ffffff14;box-shadow:0 1px 0 #ffffff14,0 14px 34px -16px #000a}
+.tpl-page .tpl-close:focus-visible,.tpl-page .tpl-chip:focus-visible,.tpl-page .tpl-card__pick:focus-visible{outline-color:#fff}
+.tpl-page .tpl-back:hover,.tpl-page .tpl-preview-nav button:hover:not(:disabled),.tpl-page .tpl-width button:hover:not([aria-pressed=true]):not(:disabled){background:#ffffff1a}
+.tpl-page .tpl-preview-nav,.tpl-page .tpl-width{background:#ffffff12;border-color:#ffffff2b}
+.tpl-page .tpl-width button[aria-pressed=true]{background:#fff;color:#0b1730}
+.tpl-page .tpl-confirm,.tpl-page .tpl-choice{color:#1d1b18}
+.tpl-page .tpl-preview{border-color:#ffffff1f}
+/* The previewed store fills the screen the dashboard hands over, and eases in. */
+.tpl-page .tpl-preview__frame{height:calc(100dvh - 150px);min-height:420px}
+.tpl-page .tpl-preview--phone .tpl-preview__frame{height:min(844px,calc(100dvh - 170px))}
+.tpl-page .tpl-preview-bar,.tpl-page .tpl-preview-note,.tpl-page .tpl-preview{animation:tpl-enter .42s cubic-bezier(.2,.7,.2,1) both}
+.tpl-page .tpl-preview-note{animation-delay:.04s}.tpl-page .tpl-preview{animation-delay:.08s}
+@keyframes tpl-enter{from{opacity:0;transform:translateY(14px)}}
+@media (prefers-reduced-motion:reduce){.tpl-page .tpl-preview-bar,.tpl-page .tpl-preview-note,.tpl-page .tpl-preview{animation:none}}
