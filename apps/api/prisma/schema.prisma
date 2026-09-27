@@ -273,6 +273,9 @@ model Merchant {
   kycDocuments                MerchantKycDocument[]
   rewardGrants                RewardGrant[]
   aiCreditRedemptions         AiCreditRedemption[]
+  // Set when the free YAPI build after a Shopify import is saved (spec 2026-09-27 §3): one per merchant.
+  importBuildUsedAt           DateTime?
+  storeImports                StoreImport[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -861,7 +864,7 @@ model Store {
   // Inventory quantities stay private unless the merchant explicitly opts in.
   // Sold-out state is still public so customers cannot add unavailable items.
   /// Merchant-authored shopper policies: { returns?, delivery?, privacy?, terms? } plain text.
-  policies Json @default("{}")
+  policies                     Json                             @default("{}")
   showLowStockToCustomers      Boolean                          @default(false)
   // Optional merchant-authored sales target shown and tracked by Yapi.
   salesGoalLabel               String?
@@ -892,7 +895,7 @@ model Store {
   analyticsMetaPixelId         String?
   analyticsTiktokPixelId       String?
   publishedRuntimeDigest       String?
-  publishedRuntime             SourceRuntimeBundle? @relation(fields: [publishedRuntimeDigest], references: [digest], onDelete: Restrict)
+  publishedRuntime             SourceRuntimeBundle?             @relation(fields: [publishedRuntimeDigest], references: [digest], onDelete: Restrict)
   runtimePublications          StoreRuntimePublication[]
   publishedSourceRevision      Int?
   sourcePublicationVersion     Int                              @default(0)
@@ -919,6 +922,8 @@ model Store {
   partners                     StorePartner[]
   rewardGrants                 RewardGrant[]
   boardState                   BoardState?
+  imports                      StoreImport[]
+  importLinks                  StoreImportLink[]
 
   @@index([merchantId, createdAt])
 }
@@ -1249,6 +1254,8 @@ model StoreSourceGeneration {
   status         String    @default("RUNNING")
   attempts       Json      @default("[]")
   durationMs     Int?
+  // Who paid for the run when the merchant did not, e.g. "shopify-import" (spec 2026-09-27 §3). Null = the merchant.
+  sponsor        String?
   createdAt      DateTime  @default(now())
   completedAt    DateTime?
 
@@ -1312,14 +1319,14 @@ model StoreSourceProject {
 }
 
 model StoreSourceVersion {
-  storeId      String
-  project      StoreSourceProject @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
-  revision     Int
-  label        String
-  digest       String
-  snapshot     Json
-  restoredFrom Int?
-  createdAt    DateTime           @default(now())
+  storeId           String
+  project           StoreSourceProject @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  revision          Int
+  label             String
+  digest            String
+  snapshot          Json
+  restoredFrom      Int?
+  createdAt         DateTime           @default(now())
   /// dnaFingerprint of the chosen design concept (sub-project 4 cross-store memory); null when the revision has no DNA.
   designFingerprint String?
 
@@ -1330,20 +1337,20 @@ model StoreSourceVersion {
 }
 
 model SourceRuntimeBundle {
-  digest       String @id
+  digest       String                    @id
   files        Json
-  createdAt    DateTime @default(now())
+  createdAt    DateTime                  @default(now())
   stores       Store[]
   publications StoreRuntimePublication[]
 }
 
 model StoreRuntimePublication {
-  id          String @id @default(cuid())
+  id          String              @id @default(cuid())
   storeId     String
-  store       Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   digest      String
   runtime     SourceRuntimeBundle @relation(fields: [digest], references: [digest], onDelete: Restrict)
-  publishedAt DateTime @default(now())
+  publishedAt DateTime            @default(now())
 
   @@index([storeId, digest, publishedAt])
 }
@@ -2477,34 +2484,34 @@ model StoreEmailCampaign {
 }
 
 model StoreEmailDelivery {
-  id         String              @id @default(cuid())
-  storeId    String
-  store      Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  campaignId String?
-  campaign StoreEmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  email String
-  kind String
-  sourceId String?
-  subject String
-  body String
+  id              String              @id @default(cuid())
+  storeId         String
+  store           Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaignId      String?
+  campaign        StoreEmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email           String
+  kind            String
+  sourceId        String?
+  subject         String
+  body            String
   // Who the recipient reaches by hitting Reply. A staff notification about an
   // order points at the buyer so the merchant can answer from their own inbox;
   // everything else falls back to the store's contact address.
-  replyTo String?
+  replyTo         String?
   // The RFC 5322 Message-ID value this delivery must be sent with, WITHOUT the
   // angle brackets (the sender adds them). Inbox replies set it so the
   // shopper's answer carries In-Reply-To/References pointing back at the
   // StoreInboxMessage row with the same id, which is the spec's primary thread
   // correlation. Null for every other kind, which needs no correlation.
   messageIdHeader String?
-  dedupeKey String @unique
-  status String @default("PENDING")
-  attempts Int @default(0)
-  dueAt DateTime @default(now())
-  lockedAt DateTime?
-  sentAt DateTime?
-  lastError String?
-  createdAt DateTime @default(now())
+  dedupeKey       String              @unique
+  status          String              @default("PENDING")
+  attempts        Int                 @default(0)
+  dueAt           DateTime            @default(now())
+  lockedAt        DateTime?
+  sentAt          DateTime?
+  lastError       String?
+  createdAt       DateTime            @default(now())
 
   @@index([status, dueAt])
   @@index([storeId, createdAt])
@@ -2532,35 +2539,37 @@ model StoreEmailDelivery {
 // delete those statements before applying it. The integration test
 // inbox-persistence.integration.spec.ts fails if they ever go missing.
 model StoreInboxThread {
-  id String @id @default(cuid())
-  storeId String
-  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  merchantId String
-  subject String
-  customerEmail String
-  customerName String?
-  leadId String?
-  orderId String?
-  status String @default("OPEN")
-  unreadForMerchant Boolean @default(true)
-  lastMessageAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  messages StoreInboxMessage[]
+  id                String              @id @default(cuid())
+  storeId           String
+  store             Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  merchantId        String
+  subject           String
+  customerEmail     String
+  customerName      String?
+  leadId            String?
+  orderId           String?
+  status            String              @default("OPEN")
+  unreadForMerchant Boolean             @default(true)
+  lastMessageAt     DateTime            @default(now())
+  createdAt         DateTime            @default(now())
+  messages          StoreInboxMessage[]
+
   @@index([storeId, status, lastMessageAt])
 }
 
 model StoreInboxMessage {
-  id String @id @default(cuid())
-  threadId String
-  thread StoreInboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  direction String
-  fromEmail String
-  toEmail String
-  body String
-  messageId String? @unique
-  inReplyTo String?
-  hadAttachments Boolean @default(false)
-  createdAt DateTime @default(now())
+  id             String           @id @default(cuid())
+  threadId       String
+  thread         StoreInboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  direction      String
+  fromEmail      String
+  toEmail        String
+  body           String
+  messageId      String?          @unique
+  inReplyTo      String?
+  hadAttachments Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+
   @@index([threadId, createdAt])
   @@index([inReplyTo])
 }
@@ -3049,4 +3058,53 @@ model StoreGrowthInsightState {
   updatedAt DateTime  @updatedAt
 
   @@unique([storeId, insightId])
+}
+
+// Shopify → pagosYa import (spec 2026-09-27). One row per preview; confirming queues it for the worker.
+model StoreImport {
+  id                String    @id @default(cuid())
+  merchantId        String
+  merchant          Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId           String?
+  store             Store?    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  source            String // SHOPIFY_URL | SHOPIFY_CSV
+  sourceHost        String
+  status            String    @default("REVIEW") // REVIEW | QUEUED | RUNNING | COMPLETED | FAILED
+  data              Json // ShopifyStoreData exactly as read at preview time
+  preview           Json // ImportPreview shown to the merchant
+  exchangeRateMilli Int? // Bs per 1 unit of the Shopify currency × 1000; required unless BOB
+  excluded          String[]  @default([])
+  photos            Json      @default("{}") // source URL → /v1/uploads/... (checkpoint for retries)
+  progress          Json      @default("{}")
+  summary           Json?
+  error             String?
+  attempts          Int       @default(0)
+  leaseToken        String?
+  leaseUntil        DateTime?
+  designOption      String? // same | redesign
+  designStatus      String? // QUEUED | RUNNING | COMPLETED | FAILED
+  designTries       Int       @default(0)
+  designRevision    Int?
+  designError       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  completedAt       DateTime?
+
+  @@index([merchantId, createdAt])
+  @@index([status, updatedAt])
+  @@index([designStatus, updatedAt])
+}
+
+// Which pagosYa row came from which Shopify item: makes re-import and retry idempotent.
+model StoreImportLink {
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sourceHost String
+  kind       String // PRODUCT | COLLECTION | ARTICLE
+  externalId String // Shopify handle (products, collections) or page:/policy:<handle>
+  localId    String
+  skus       String[] @default([])
+  updatedAt  DateTime @updatedAt
+
+  @@id([storeId, sourceHost, kind, externalId])
 }

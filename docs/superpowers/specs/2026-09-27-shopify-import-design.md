@@ -46,11 +46,12 @@ items are offered as "actualizar precios y fotos".
 
 ## 2. Data mapping
 
-Sources (all through the safe fetcher, §4): `/products.json?limit=250&page=N`, `/collections.json`,
-`/collections/<handle>/products.json`, the shop's public metadata for name and currency (falling back to the
-currency the storefront HTML declares), `sitemap.xml` (pages sitemap) plus each page's HTML for pages, and the
-public policy pages (`/policies/*`). The exact public endpoints and response shapes are verified against a live
-store during implementation and recorded as test fixtures.
+Sources (verified 2026-09-27 against peakclyro.myshopify.com and allbirds.com; all through the safe fetcher, §4):
+`/meta.json` (name, currency, `myshopify_domain` proves it is Shopify), `/products.json?limit=250&page=N`,
+`/collections.json?limit=250`, `/collections/<handle>/products.json?limit=250&page=N`, `/pages.json?limit=250`
+(title + `body_html`), `/policies/<refund-policy|shipping-policy|privacy-policy|terms-of-service>.json`
+(`{ policy: { title, body, handle } }`, empty body = not set). A password-protected store answers the products
+endpoint with a redirect to `/password`.
 
 | Shopify | pagosYa | Rule |
 |---|---|---|
@@ -60,10 +61,10 @@ store during implementation and recorded as test fixtures.
 | `price` / `compare_at_price` | `amount` / `discountPercent` | compare_at > price → discount percent (rounded, 1–99). Amounts in centavos. |
 | `available` | `stock` | Unavailable → 0; available → null (unlimited). CSV supplies exact quantities. |
 | `grams` | `shippingWeightGrams` | First variant's weight. |
-| Images | `imageUrls` (copied to our uploads) | Order kept. Never hotlinked: Shopify's CDN disappears when the account closes. Variant images are not mapped in v1. |
+| Images | `imageUrls` (copied to our uploads) | Order kept. Never hotlinked: Shopify's CDN disappears when the account closes. Variant images map to the variant's `imageUrl` (pagosYa variants carry one). |
 | Collection | `Collection` + `CollectionProduct` | `slug` = Shopify `handle` (deduplicated), products in Shopify order. |
 | Pages, policies | `StoreArticle` | **Unpublished drafts** (`publishedAt` null); policies are legal text the merchant must review. |
-| `/products/<h>`, `/collections/<h>`, `/pages/<h>`, `/policies/<h>` | `StoreRedirect` to the pagosYa equivalent | Created through the same validation `StorePagesService` applies (loop checks). Effective once the domain points to pagosYa. |
+| `/products/<h>`, `/collections/<h>`, `/collections/<c>/products/<h>` | `StoreRedirect` to `/p/<id>` and `/c/<slug>` | Today `StoreRedirect` only serves article paths; the storefront server gains a lookup for these Shopify paths on custom domains (plan Task 9). Written up to the existing 500-per-store cap, collections first; the rest is a warning. Pages/policies keep no redirect in v1 (they import unpublished). |
 | SKU | `StoreImportLink.sku` | Kept for future inventory sync; not written to `codigoProducto` (that is the SIN tax code). |
 
 New models:
@@ -77,12 +78,12 @@ New models:
   updatedAt }`, unique `(storeId, sourceHost, kind, externalId)`. This makes re-import and retry idempotent.
 
 v1 limits: 1,000 products and 3,000 photos per import, 10 MB per photo. Larger stores import the first 1,000
-products and say so. Redirects are unbounded in storage; the existing redirects list shows the first 500.
+products and say so. Redirects respect the existing 500-per-store cap.
 
 ## 3. YAPI and the free build
 
-Before YAPI: the brand profile (logo, colors, fonts, tone) is filled from the Shopify storefront with the existing
-`brand/` import, so every option starts from the merchant's real identity.
+Before YAPI: v1 gives YAPI the store name, the product and collection names and the captures of the Shopify store;
+it does not run the separate brand-profile analysis (another paid AI call) — out of scope for v1.
 
 - **Igual que mi Shopify** — `captureSourceReference` takes 2–4 captures (home desktop + mobile, one product page)
   and passes them as `referenceCaptures`; the instruction asks YAPI to recreate the structure, style and home copy
@@ -102,8 +103,8 @@ Free build rules:
 - The merchant spends nothing (`execution.free`, which already records 0 credits). The run is marked
   **sponsored by import** in its generation record so the owner can report acquisition cost per Shopify merchant.
 - Later YAPI requests use normal credits.
-- Progress shows the same YAPI steps as *Diseñar sitio*; the merchant may leave the page and is notified in the
-  dashboard when it finishes.
+- Progress shows the same YAPI steps as *Diseñar sitio*; the merchant may close the dialog and sees the result when
+  reopening it.
 
 ## 4. Architecture, errors, security, testing
 
@@ -150,5 +151,6 @@ Testing:
   database (it was wiped on 2026-09-25); schema changes go through a new migration only.
 - One live run against a public Shopify store before showing the owner.
 
-Out of scope for v1: continuous sync with Shopify, customers and orders via OAuth, variant images, the Shopify
+Out of scope for v1: continuous sync with Shopify, customers and orders via OAuth, automatic brand-profile analysis,
+a dashboard notification when the free build finishes (the import dialog shows it when reopened), the Shopify
 payments app (separate project once Shopify approves the payment method).
