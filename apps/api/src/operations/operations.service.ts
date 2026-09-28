@@ -130,7 +130,7 @@ export class OperationsService {
     for (const invoice of invoicesWithCheckout) invoicesBySubscription.set(invoice.subscriptionId, [...(invoicesBySubscription.get(invoice.subscriptionId) ?? []), invoice]);
     const subscriptionsWithHistory = subscriptions.map((subscription) => ({
       ...subscription,
-      plan: planById.get(subscription.planId) ?? null,
+      plan: planById.get(subscription.planId ?? "") ?? null,
       invoices: invoicesBySubscription.get(subscription.id) ?? [],
     }));
     const integrationsWithHealth = await Promise.all(integrations.map(async (connection) => {
@@ -209,7 +209,7 @@ export class OperationsService {
     const purchaseOrderIds = purchaseOrders.map((item) => item.id);
     const orderIds = [...new Set([...deliveries.map((item) => item.orderId), ...returns.map((item) => item.orderId)])];
     const subscriptionIds = [...new Set([...subscriptions.map((item) => item.id), ...invoices.map((item) => item.subscriptionId)])];
-    const planIds = [...new Set(subscriptions.map((item) => item.planId))];
+    const planIds = [...new Set(subscriptions.map((item) => item.planId).filter((id): id is string => id !== null))];
     const connectionIds = connections.map((item) => item.id);
     const [offerings, suppliers, purchaseItems, storeOrders, relatedSubscriptions, directPlans, failedSyncs] = await Promise.all([
       offeringIds.length ? this.prisma.appointmentServiceOffering.findMany({ where: { id: { in: offeringIds }, storeId }, select: { id: true, name: true } }) : [],
@@ -220,7 +220,7 @@ export class OperationsService {
       planIds.length ? this.prisma.subscriptionPlan.findMany({ where: { id: { in: planIds }, storeId }, select: { id: true, name: true } }) : [],
       connectionIds.length ? this.prisma.integrationSyncRun.findMany({ where: { connectionId: { in: connectionIds }, status: "FAILED", startedAt: inRange }, orderBy: { startedAt: "asc" } }) : [],
     ]);
-    const missingPlanIds = [...new Set(relatedSubscriptions.map((item) => item.planId).filter((id) => !directPlans.some((plan) => plan.id === id)))];
+    const missingPlanIds = [...new Set(relatedSubscriptions.map((item) => item.planId).filter((id): id is string => id !== null && !directPlans.some((plan) => plan.id === id)))];
     const extraPlans = missingPlanIds.length ? await this.prisma.subscriptionPlan.findMany({ where: { id: { in: missingPlanIds }, storeId }, select: { id: true, name: true } }) : [];
 
     const offeringById = new Map(offerings.map((item) => [item.id, item]));
@@ -309,7 +309,7 @@ export class OperationsService {
         id: `subscription:${subscription.id}`,
         type: "SUBSCRIPTION",
         title: `Próximo cobro · ${subscription.customerName}`,
-        detail: planById.get(subscription.planId)?.name ?? "Suscripción activa",
+        detail: planById.get(subscription.planId ?? "")?.name ?? "Suscripción activa",
         startsAt: subscription.nextBillingAt,
         status: subscription.status,
         urgency: urgencyFor(subscription.nextBillingAt),

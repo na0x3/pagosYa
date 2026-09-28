@@ -99,7 +99,7 @@ export class SubscriptionsService {
     const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: subscriptionId, merchantId, storeId } });
     if (!subscription) throw new NotFoundException("Subscription not found");
     if (subscription.status === "CANCELED" && dto.status !== "CANCELED") throw new BadRequestException("Una suscripción cancelada no puede reactivarse; crea una nueva");
-    const activeKey = dto.status === "CANCELED" ? null : subscriptionIdentityKey(storeId, subscription.planId, {
+    const activeKey = dto.status === "CANCELED" || !subscription.planId ? null : subscriptionIdentityKey(storeId, subscription.planId, {
       id: subscription.customerId,
       email: subscription.customerEmail,
       phone: subscription.customerPhone,
@@ -123,7 +123,7 @@ export class SubscriptionsService {
     tx: Prisma.TransactionClient,
     livemode: boolean,
     storeName: string,
-    subscription: { id: string; planId: string; customerName: string; customerEmail: string | null; customerPhone: string | null },
+    subscription: { id: string; customerName: string; customerEmail: string | null; customerPhone: string | null },
     plan: { id: string; name: string },
     invoice: { id: string; periodStart: Date; amount: number; currency: string },
     merchantId: string,
@@ -198,6 +198,7 @@ export class SubscriptionsService {
     let emailsSent = 0;
     const charges: Array<{ invoiceId: string; paymentIntentId: string; checkoutUrl: string; amount: number; currency: string }> = [];
     for (const subscription of candidates) {
+      if (!subscription.planId) continue;
       const plan = await this.prisma.subscriptionPlan.findFirst({ where: { id: subscription.planId, storeId } });
       if (!plan) continue;
       const generationAt = new Date(subscription.nextBillingAt.getTime() - plan.reminderHoursBefore * 3_600_000);
@@ -231,6 +232,7 @@ export class SubscriptionsService {
     for (const invoice of invoicesWithoutLinks) {
       const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
       if (!subscription) continue;
+      if (!subscription.planId) continue;
       const plan = await this.prisma.subscriptionPlan.findFirst({ where: { id: subscription.planId, storeId } });
       if (!plan) continue;
       const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, plan, invoice, merchantId, storeId));
@@ -265,7 +267,7 @@ export class SubscriptionsService {
     let skipped = 0;
     for (const invoice of invoices) {
       const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
-      if (!subscription || !subscription.customerEmail || !invoice.paymentIntentId) { skipped += 1; continue; }
+      if (!subscription || !subscription.planId || !subscription.customerEmail || !invoice.paymentIntentId) { skipped += 1; continue; }
       const [plan, intent] = await Promise.all([
         this.prisma.subscriptionPlan.findFirst({ where: { id: subscription.planId, storeId } }),
         this.prisma.paymentIntent.findUnique({ where: { id: invoice.paymentIntentId } }),
@@ -289,6 +291,7 @@ export class SubscriptionsService {
       this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId }, select: { status: true } }),
     ]);
     if (!subscription) throw new NotFoundException("Subscription not found");
+    if (!subscription.planId) throw new NotFoundException("Subscription plan not found");
     const plan = await this.prisma.subscriptionPlan.findFirst({ where: { id: subscription.planId, storeId } });
     if (!plan) throw new NotFoundException("Subscription plan not found");
     const livemode = merchant.status === MerchantStatus.ACTIVE && store.status === "ACTIVE";
