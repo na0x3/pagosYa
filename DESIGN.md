@@ -121,6 +121,22 @@ components:
 
 # Design System: pagosYa
 
+## Merchant Dashboard: Calm Workspace (2026-09-27)
+
+**This section overrides every other merchant-dashboard rule in this file** (bento
+tiles, 3px keylines, hard block shadows, mono-only type, uppercase poster headings,
+the navy glass backdrop). Those rules still describe Ops and are kept for history;
+the previous dashboard is archived in `docs/design-archive/bento-glass-2026-09-27/`
+and at git tag `design/bento-glass-2026-09-27`. Implementation: `apps/merchant-dashboard/src/calm.css`
+(loaded last) and `src/overview.mjs`.
+
+- **Ground:** light only. Page `#fafaf9`, sidebar `#f5f5f4`, cards `#fff`, 1px `#e7e5e4` borders, 12px card / 8px control radius, one soft shadow (`0 1px 2px rgb(24 24 27 / .04)`). No WebGL, gradient or glass behind signed-in pages.
+- **Type:** one system sans stack for all UI text and numbers, with tabular figures for money. Titles are sentence case, 650 weight; nothing is uppercase except native abbreviations.
+- **Actions:** primary buttons are graphite `#18181b` with white text; secondary buttons are white with a hairline border. Brand yellow `#f5d547` is reserved for YAPI (the dock button) and the logo.
+- **Colour is data:** cards are never tinted to decorate. Pastels and the bento palette appear only inside charts and as the payment-method series; status uses soft success/warning/error tints with a word, never colour alone.
+- **Resumen order:** greeting (Bolivian time) → one row of four key figures (ventas del mes, ventas totales, pagos exitosos, visitas) → *Primeros pasos* checklist (KYC, SIN, publicar, primer pago; disappears when complete) beside *Tu cuenta* (saldo por desembolsar, KYC, SIN) → international payments → finance detail. Every figure is bound to a real API response; none is invented.
+- **Personality is rationed:** the logo, the YAPI dock and the greeting carry the brand. Everything else stays quiet so the merchant's numbers lead.
+
 ## Overview
 
 **Creative North Star: "The Terminal Ledger"**

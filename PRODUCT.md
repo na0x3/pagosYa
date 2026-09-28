@@ -48,8 +48,8 @@ Local-first payment infrastructure for Bolivia. The mechanism a global processor
 
 - Name: **pagosYa**.
 - Logo: a colorful parrot mark in yellow, red, blue, black, and white — real assets at `assets/brand/logo.png` and `apps/checkout/public/logo-mark.png`.
-- Typeface: "0xProto Mono" (monospace) used consistently across all three surfaces — an established brand commitment, not a placeholder default.
-- Dark theme by default across all three surfaces (checkout supports a light variant for merchant-embedded contexts; the two admin tools are dark-only today).
+- Typeface: "0xProto Mono" (monospace) on checkout and Ops. The merchant dashboard moved to a calm system sans on 2026-09-27 (see DESIGN.md, "Merchant Dashboard: Calm Workspace").
+- Checkout is dark by default with a light variant for merchant-embedded contexts. The merchant dashboard is light-only since 2026-09-27; the previous glass design is archived at `docs/design-archive/bento-glass-2026-09-27/`.
 - Voice: Spanish-language product copy throughout (all three surfaces).
 
 ## Evidence on Hand
