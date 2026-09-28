@@ -136,6 +136,11 @@ and at git tag `design/bento-glass-2026-09-27`. Implementation: `apps/merchant-d
 - **Colour is data:** cards are never tinted to decorate. Pastels and the bento palette appear only inside charts and as the payment-method series; status uses soft success/warning/error tints with a word, never colour alone.
 - **Resumen order:** greeting (Bolivian time) → one row of four key figures (ventas del mes, ventas totales, pagos exitosos, visitas) → *Primeros pasos* checklist (KYC, SIN, publicar, primer pago; disappears when complete) beside *Tu cuenta* (saldo por desembolsar, KYC, SIN) → international payments → finance detail. Every figure is bound to a real API response; none is invented.
 - **Personality is rationed:** the logo, the YAPI dock and the greeting carry the brand. Everything else stays quiet so the merchant's numbers lead.
+- **Top bar:** the active store picker and *Ver mi tienda* on the left, the profile on the right.
+- **Status colour:** green = live/approved, amber = needs attention (pending, sin configurar, agotado), red = problem, grey = inactive/archived — always with the word.
+- **Tables (catalog first):** main identifier in 600 weight, money right-aligned with tabular figures, row actions as quiet text buttons with *Eliminar* in red; active and archived tables share column widths.
+- **Embedded Studio pages** (Productos assistant, Medios, Plantillas, Marketing, Integraciones, Pruebas A/B) use the same light palette via `apps/merchant-studio/src/source-library.css`; rebuild with `pnpm run build:studio` in the dashboard.
+- **Login** keeps its mesh gradient and yellow *Continuar* as the one expressive moment; the *¿Quién está ingresando?* dialog that follows it is a plain white dialog.
 
 ## Overview
 

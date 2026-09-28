@@ -231,3 +231,104 @@ body.is-logged-in :is(#quickPaymentAmount, .debt-collection-form textarea) { fon
 
 /* The narrow rail is icons only; its "Conecta tu IA" item already leads to the same place as the card. */
 @media (max-width: 999px) { body.is-logged-in .connect-ai-card { display: none; } }
+
+/* Studio resource pages (Productos, Medios, Plantillas…) render light inside their frame. */
+body.is-logged-in .store-resource-frame { background: transparent; color-scheme: light; }
+body.is-logged-in .product-yapi-guide > header { border-bottom-color: var(--pg-border); }
+
+/* Top bar: the active store on the left, the profile on the right. */
+.topbar-store { display: none; }
+body.is-logged-in > .topbar { justify-content: space-between; gap: 12px; }
+body.is-logged-in .topbar-store { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-store-picker { position: relative; display: flex; align-items: center; min-width: 0; }
+.topbar-store-picker svg { position: absolute; left: 10px; width: 16px; height: 16px; color: var(--pg-text-muted); pointer-events: none; }
+body.is-logged-in .topbar-store-picker select { width: auto; max-width: 260px; min-height: 36px; padding: 6px 30px 6px 34px; font-size: 14px; font-weight: 600; background-color: var(--pg-surface); border-color: var(--pg-border); box-shadow: var(--calm-shadow); cursor: pointer; }
+.topbar-store-link { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 10px; border-radius: var(--calm-radius-sm); color: var(--pg-text-muted); font-size: 13px; font-weight: 550; text-decoration: none; white-space: nowrap; }
+.topbar-store-link:hover { background: #efedeb; color: var(--pg-text); }
+.topbar-store-link:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+.topbar-store-link[hidden] { display: none; }
+.topbar-store-link svg { width: 14px; height: 14px; }
+@media (max-width: 560px) {
+  body.is-logged-in .topbar-store-picker select { max-width: 150px; }
+  .topbar-store-link { font-size: 0; gap: 0; padding: 0 8px; }
+  .topbar-store-link svg { width: 16px; height: 16px; }
+}
+
+/* Status tints carry meaning again: green is live, amber needs attention, red is a problem, grey is inactive. */
+body.is-logged-in .badge:is(.ACTIVE, .APPROVED, .EMITTED, .SUCCEEDED, .PAID, .CONFIGURED) { background: var(--pg-success-soft); color: var(--pg-success); }
+body.is-logged-in .badge:is(.PENDING, .PENDING_REVIEW, .VERIFIED, .NOT_SUBMITTED, .NOT_CONFIGURED, .REQUIRES_ACTION, .PROCESSING, .LEAD_RECEIVED, .SOLD_OUT) { background: var(--pg-warning-soft); color: var(--pg-warning); }
+body.is-logged-in .badge:is(.REJECTED, .FAILED, .SUSPENDED) { background: var(--pg-error-soft); color: var(--pg-error); }
+body.is-logged-in .badge.ARCHIVED { background: var(--pg-accent-soft); color: var(--pg-text-muted); }
+
+/* Catalog: one table language for active and archived products. */
+body.is-logged-in .payment-link-group { border: 1px solid var(--pg-border); border-radius: var(--calm-radius); box-shadow: none; }
+body.is-logged-in .payment-link-group .payment-link-group-head,
+body.is-logged-in .payment-link-group.is-active .payment-link-group-head,
+body.is-logged-in .payment-link-group.is-archived .payment-link-group-head { background: var(--pg-surface); color: var(--pg-text); border-bottom: 1px solid var(--pg-border); }
+body.is-logged-in .payment-link-group-head h3 { font-size: 14px; font-weight: 650; }
+body.is-logged-in .payment-link-group-count { color: var(--pg-text-muted); font: 500 13px/1.4 var(--pg-font-sans); font-variant-numeric: tabular-nums; }
+body.is-logged-in .payment-link-table { table-layout: fixed; }
+body.is-logged-in .payment-link-table :is(th, td):nth-child(1) { width: 33%; }
+body.is-logged-in .payment-link-table :is(th, td):nth-child(2) { width: 17%; text-align: right; padding-right: 24px; }
+body.is-logged-in .payment-link-table :is(th, td):nth-child(3) { width: 17%; }
+body.is-logged-in .payment-link-table :is(th, td):nth-child(4) { width: 33%; text-align: right; }
+body.is-logged-in .payment-link-table td { vertical-align: middle; padding-block: 12px; }
+body.is-logged-in .payment-link-table td:first-child { color: var(--pg-text); font-weight: 600; overflow-wrap: anywhere; }
+body.is-logged-in .payment-link-table td:first-child .faint { font-weight: 400; font-size: 12px; }
+body.is-logged-in .payment-link-table td:nth-child(2) { font-variant-numeric: tabular-nums; }
+body.is-logged-in .link-thumb { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--pg-border); }
+body.is-logged-in .tag-badge { background: var(--pg-accent-soft); color: var(--pg-text-muted); border: 0; border-radius: 6px; font-weight: 500; }
+body.is-logged-in .product-row-actions { gap: 2px; flex-wrap: nowrap; }
+body.is-logged-in .product-row-actions button { white-space: nowrap; }
+body.is-logged-in .product-row-actions button.ghost { min-height: 32px; padding: 4px 10px; border-color: transparent; background: transparent; box-shadow: none; color: var(--pg-text-muted); font-size: 13px; font-weight: 550; }
+body.is-logged-in .product-row-actions button.ghost:hover:not(:disabled) { background: var(--pg-accent-soft); border-color: transparent; color: var(--pg-text); }
+body.is-logged-in .product-row-actions button.delete-link { color: var(--pg-error); }
+body.is-logged-in .product-row-actions button.delete-link:hover:not(:disabled) { background: var(--pg-error-soft); color: var(--pg-error); }
+body.is-logged-in .payment-link-page-button { border: 1px solid var(--pg-border); border-radius: var(--calm-radius-sm); background: var(--pg-surface); box-shadow: none; font: 550 13px/1 var(--pg-font-sans); }
+body.is-logged-in .payment-link-page-button[aria-current="page"] { background: var(--pg-ink); border-color: var(--pg-ink); color: #fff; }
+body.is-logged-in .payment-link-page-summary { font-family: var(--pg-font-sans); }
+@media (max-width: 760px) {
+  body.is-logged-in .payment-link-table { table-layout: auto; }
+  body.is-logged-in .payment-link-table :is(th, td):nth-child(n) { width: auto; }
+  body.is-logged-in .product-row-actions { flex-wrap: wrap; }
+}
+
+/* On a phone the dock's button shortens to "Abrir ↗" so the question keeps one line. */
+@media (max-width: 999px) {
+  body.is-logged-in .workspace-yapi form button { max-width: none; white-space: nowrap; padding: 8px 14px; }
+}
+@media (max-width: 560px) {
+  .workspace-yapi-long { display: none; }
+  body.is-logged-in .workspace-yapi textarea { font-size: 14px; }
+  body.is-logged-in .workspace-yapi textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+  body.is-logged-in .workspace-yapi { padding-left: 12px; }
+  body.is-logged-in .workspace-yapi form { gap: 8px; }
+}
+/* The dock itself is the field: its textarea has no box of its own, and the dock shows focus. */
+body.is-logged-in .workspace-yapi textarea { border: 0; border-radius: 0; background: transparent; box-shadow: none; padding-inline: 0; }
+body.is-logged-in .workspace-yapi textarea:focus-visible { box-shadow: none; }
+body.is-logged-in .workspace-yapi:focus-within { border-color: var(--pg-border-strong); box-shadow: var(--calm-shadow-lg), 0 0 0 3px var(--pg-focus-ring); }
+
+/* "¿Quién está ingresando?" opens over the login (before body.is-logged-in), so its values are spelled out. */
+.session-profile-dialog { width: min(520px, calc(100% - 32px)); padding: 0; background: #fff; color: #18181b; border: 1px solid #e7e5e4; border-radius: 16px; box-shadow: 0 24px 64px -20px rgb(0 0 0 / .45); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
+.session-profile-dialog * { font-family: inherit; }
+.session-profile-dialog::backdrop { background: rgb(9 9 11 / .55); }
+.session-profile-head { padding: 28px 28px 4px; border: 0; background: #fff; color: #18181b; }
+.session-profile-head h2 { max-width: none; color: #18181b; font-size: 22px; font-weight: 650; line-height: 1.25; letter-spacing: -.02em; text-transform: none; }
+.session-profile-head p { margin-top: 6px; color: #57575e; font-size: 14px; font-weight: 400; line-height: 1.5; }
+.session-profile-body { gap: 18px; padding: 20px 28px; }
+.session-profile-body p, .session-profile-body small { color: #57575e; }
+.session-profile-existing > strong, .session-profile-fields label { color: #57575e; font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.session-profile-choice { min-height: 0; padding: 14px 8px; background: #fff; color: #18181b; border: 1px solid #e7e5e4; border-radius: 12px; box-shadow: 0 1px 2px rgb(24 24 27 / .04); cursor: pointer; }
+.session-profile-choice:hover { border-color: #d6d3d1; background: #fafaf9; }
+.session-profile-choice[aria-pressed="true"] { background: #fafaf9; border-color: #18181b; box-shadow: 0 0 0 1px #18181b; }
+.session-profile-choice-avatar { width: 44px; height: 44px; border: 0; background: #f4f4f5; }
+.session-profile-choice-avatar .profile-initials { font-size: 16px; }
+.session-profile-choice span:last-child { font-size: 13px; font-weight: 600; }
+.session-profile-fields input { margin-top: 6px; min-height: 44px; background: #fff; color: #18181b; border: 1px solid #d6d3d1; border-radius: 8px; }
+.session-profile-fields input:focus-visible { outline: none; border-color: #18181b; box-shadow: 0 0 0 3px rgb(24 24 27 / .14); }
+.session-profile-body button:not(.session-profile-choice):not(.session-profile-avatar-option):not(.primary) { color: #3f3f46; }
+.session-profile-actions { padding: 16px 28px 24px; border-top: 1px solid #e7e5e4; background: #fafaf9; }
+.session-profile-actions span { color: #7a7a82; font-size: 12px; }
+.session-profile-actions button { min-height: 42px; padding: 0 18px; background: #18181b; color: #fff; border: 1px solid #18181b; border-radius: 8px; box-shadow: none; font-weight: 600; text-transform: none; }
+.session-profile-actions button:hover:not(:disabled) { background: #2f2f35; transform: none; box-shadow: none; }

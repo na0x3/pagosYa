@@ -2012,6 +2012,9 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     const store = lastStores.find((s) => s.id === currentStoreId);
     document.getElementById("currentStoreLabel").textContent = store ? store.name : "esta tienda";
     document.getElementById("currentStoreLink").value = currentStoreUrl();
+    const storeLink = document.getElementById("topbarStoreLink");
+    storeLink.hidden = !store;
+    if (store) storeLink.href = currentStoreUrl();
   }
 
   function renderStoreRows(stores) {
