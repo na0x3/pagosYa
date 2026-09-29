@@ -1,0 +1,18 @@
+{
+  "id": "longevo",
+  "name": "Longevo",
+  "category": "belleza",
+  "description": "Suplementos y blog de salud: foto de estilo de vida desenfocada, navegación en píldoras y una tarjeta de artículo destacado.",
+  "tags": ["suplementos", "bienestar", "longevidad", "blog"],
+  "sitePurpose": "shop",
+  "order": -278,
+  "dna": { "display": "epilogue", "text": "manrope", "case": "none", "radius": "pill", "border": "hairline", "button": "pill", "hover": "fill", "press": "none", "motion": "cinematic", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "laboratorio", "role": "lifestyle", "demo": "laboratorio.jpg" },
+    { "slot": "articulo", "role": "lifestyle", "demo": "articulo.jpg" }
+  ]
+}
