@@ -3,6 +3,7 @@ import { IsInt, Min, Max, IsIn as IsModelIn } from 'class-validator';
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../source-generation-policy';
 import { Type } from "class-transformer";
 import { ArrayMaxSize, IsArray, IsDefined, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
+import { SourceSelectionDto } from "./source-selection.dto";
 import { SourceProjectBriefDto, SourceProjectRevisionDto } from "./save-source-project.dto";
 
 export class GenerateSourceProjectDto extends SourceProjectRevisionDto {
@@ -17,4 +18,5 @@ export class GenerateSourceProjectDto extends SourceProjectRevisionDto {
   @IsDefined() @ValidateNested() @Type(() => SourceProjectBriefDto) brief!: SourceProjectBriefDto;
   @IsString() @MaxLength(8000) instruction!: string;
   @IsOptional() @IsArray() @ArrayMaxSize(24) @IsString({ each: true }) @MaxLength(500, { each: true }) assetUrls?: string[];
+  @IsOptional() @ValidateNested() @Type(() => SourceSelectionDto) selection?: SourceSelectionDto;
 }

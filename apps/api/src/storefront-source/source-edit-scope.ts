@@ -53,14 +53,19 @@ export function sourceHomeRegions(files: File[]): Region[] {
   visit(source);
   return regions;
 }
-export type SectionScope = { add: boolean; targets: string[]; original: Region[] };
-export function sourceSectionScope(files: File[], instruction: string): SectionScope | undefined {
+export type SectionScope = { add: boolean; targets: string[]; original: Region[]; selected?: string };
+/** `selectedSectionId` is a section the merchant picked in the preview: it names the target, so the request needs no section words. */
+export function sourceSectionScope(files: File[], instruction: string, selectedSectionId?: string): SectionScope | undefined {
   const task = currentRequest(instruction);
-  if (sourceRedesignRequested(instruction) || !/\b(?:seccion|section)\b/.test(task) || !content(files, homePath)) return;
+  if (sourceRedesignRequested(instruction) || !(selectedSectionId || /\b(?:seccion|section)\b/.test(task)) || !content(files, homePath)) return;
   const original = sourceHomeRegions(files);
   if (!original.length) throw new SourceScopeConflict('No pude delimitar las secciones de esta página.');
   const add = /\b(?:agrega|anade|crea\w*|haz|incorpora|add|create|insert|build)\b.{0,50}\b(?:seccion|section)\b/.test(task);
   if (add) return { add, targets: [], original };
+  if (selectedSectionId) {
+    if (!original.some(region => region.id === selectedSectionId)) throw new SourceScopeConflict('La sección seleccionada ya no existe. Vuelve a seleccionarla.');
+    return { add: false, targets: [selectedSectionId], original, selected: selectedSectionId };
+  }
   const stop = new Set(['seccion','section','cambia','change','mejora','improve','solo','only','esta','este','para','with','that','this','quiero','puedes','hacer','texto','text','titulo','title']);
   const words = task.match(/[a-z0-9-]{4,}/g)?.filter(w => !stop.has(w)) || [];
   const scores = original.map((region, index) => {
@@ -77,6 +82,7 @@ export function sourceSectionScope(files: File[], instruction: string): SectionS
 }
 export function sourceSectionScopePrompt(scope?: SectionScope) {
   return scope ? 'ENFORCED SECTION SCOPE: ' + JSON.stringify({ add: scope.add, editableSectionIds: scope.targets, protectedSectionIds: scope.original.filter(r => !scope.targets.includes(r.id)).map(r => r.id) })
+    + (scope.selected ? '. The merchant explicitly selected section "' + scope.selected + '": the request refers to this section and to nothing else' : '')
     + '. Keep every byte outside these literal main sections unchanged, including imports, Header, Footer and existing links. For an addition insert one literal section with a unique id in components/home.tsx and scoped CSS. Existing shared selectors and global styles are protected. Use new section-specific class names; do not draw replacement artwork or alter existing images. Navigation additions can be requested separately.' : '';
 }
 const roots = (text: string) => new Set([

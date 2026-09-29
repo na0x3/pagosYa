@@ -354,7 +354,7 @@ export class SourceGenerationService {
     const editExisting = !!previous && !migrating;
     const oldFiles = previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path));
     const targetedEditPaths = requestProfile.targetedFeature === 'marquee' ? sourceMarqueeEditPaths(oldFiles) : undefined;
-    const sectionScope = execution?.candidate ? undefined : sourceSectionScope(oldFiles, dto.instruction);
+    const sectionScope = execution?.candidate ? undefined : sourceSectionScope(oldFiles, dto.instruction, dto.selection?.sectionId);
     const context = useNext ? { files: oldFiles, omitted: [] as string[] } : sourceTaskContext(oldFiles, dto.instruction.split('Pedido actual del comercio:').at(-1)!);
     const creative = !previous || redesign;
     const narrativePlanning = this.narrativePlanning();
