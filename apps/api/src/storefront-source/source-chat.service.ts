@@ -25,7 +25,7 @@ import { inspectSourceWebsite, sourceWebsiteReferenceUrls, sourceWebsiteReferenc
 import { honorImageContent } from './source-image-intent';
 import { requestsImageChange } from './source-edit-scope';
 import { createSourceProgress } from './source-progress';
-import { listTemplates, templateManifest } from '@pagosya/store-templates';
+import { galleryTemplates, templateManifest } from '@pagosya/store-templates';
 import { rankTemplates, type TemplateChoice } from './source-template-ranking';
 import { countTemplateVersions, FREE_TEMPLATE_ADAPTATIONS, templateUntouched } from './source-template-state';
 
@@ -345,7 +345,7 @@ export class SourceChatService {
         decision.generationInstruction = '';
       }
       if (!chosenDirection && newShop && decision.action === 'generate' && startFrom !== 'scratch') {
-        templateChoices = rankTemplates(decision.summary, listTemplates(), decision.templates);
+        templateChoices = rankTemplates(decision.summary, galleryTemplates(), decision.templates);
         decision.action = 'reply';
         decision.reply = TEMPLATE_CHOICES_REPLY;
         decision.generationInstruction = '';

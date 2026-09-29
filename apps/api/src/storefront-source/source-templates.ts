@@ -73,7 +73,7 @@ export function templateDna(manifest: Pick<TemplateManifest, 'id' | 'dna'>, stor
 const TEMPLATE_KIT_FILES = ['build.mjs', 'server.mjs', 'commerce.js', 'product.html', 'checkout.html', 'productos.html', 'coleccion.html', 'commerce-pages.css'];
 const CATEGORY_BUSINESS: Record<TemplateManifest['category'], string> = {
   comida: 'Comida y bebidas', moda: 'Moda', belleza: 'Belleza y cuidado personal', hogar: 'Hogar y decoración', arte: 'Arte y artesanía',
-  tecnologia: 'Tecnología', mascotas: 'Mascotas', ninos: 'Niños y juguetes', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros y papelería', 'producto-unico': 'Un producto estrella',
+  tecnologia: 'Tecnología', mascotas: 'Mascotas', ninos: 'Niños y juguetes', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros y papelería', 'producto-unico': 'Un producto estrella', motor: 'Autopartes y motor',
 };
 
 /**

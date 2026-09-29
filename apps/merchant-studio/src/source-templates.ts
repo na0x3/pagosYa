@@ -8,7 +8,7 @@ export type TemplateSummary = { id: string; name: string; category: string; desc
 
 const CATEGORY_LABELS: Record<string, string> = {
   comida: 'Comida y bebidas', moda: 'Moda', belleza: 'Belleza', hogar: 'Hogar', arte: 'Arte y artesanía', tecnologia: 'Tecnología',
-  mascotas: 'Mascotas', ninos: 'Niños', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros', 'producto-unico': 'Producto único',
+  mascotas: 'Mascotas', ninos: 'Niños', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros', 'producto-unico': 'Producto único', motor: 'Motor',
 };
 const label = (category: string) => CATEGORY_LABELS[category] ?? category;
 
