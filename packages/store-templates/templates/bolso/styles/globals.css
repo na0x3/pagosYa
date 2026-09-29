@@ -221,3 +221,6 @@ a{color:inherit}
 /* pagosya-kit:start */
 :root[data-dna-added=toast] .cart-added{inset:auto auto 24px 24px}
 /* pagosya-kit:end */
+
+/* one-product store: keep the lone card centred instead of stranded in a wide row */
+.bo-grid:has(> :only-child){grid-template-columns:minmax(0,min(100%,340px));justify-content:center}
