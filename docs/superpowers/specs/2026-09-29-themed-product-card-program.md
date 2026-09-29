@@ -1,6 +1,6 @@
 # Themed product card — program overview (2026-09-29)
 
-Status: direction agreed in brainstorming; no sub-project has a spec yet.
+Status: sub-projects 1 and 2 built (photo sets: `64508ec`, `6e1d6d4`, `a120d7a`, `0e3d27d`; content blocks: `1366faa`, `e11b17f`, `7adfeea`; photo-set integration fixes: `a85953c`). Content-block migration is written and awaits the owner. Sub-projects 3–6 remain planned.
 
 ## Why
 Every store's product page shares one skeleton, so a chair shop and a jewellery shop end up with cards that feel alike. Owners also need per-colour photo sets ("red chosen → red chair photos") and extra product media (e.g. how far a chair reclines) inside the product page, in the store's own theme.
@@ -16,8 +16,8 @@ Every store's product page shares one skeleton, so a chair shop and a jewellery 
 4. **Content is data, not CSS.** Merchants upload the real photos and diagrams; YAPI picks the block type and frames it. No generated illustrations for now (a wrong angle would be a false claim). Generated diagrams from merchant-entered numbers can come later.
 
 ## Sub-projects (each: spec → plan → build)
-1. **Per-colour photo sets.** A variant holds several photos; choosing a colour swaps the whole gallery. Data model + merchant upload UI. Standalone; fixes the red-chair case.
-2. **Typed content blocks.** Merchant-uploaded blocks (media, spec table, angle / before-after view) rendered by the runtime inside the product page; dashboard editor for them. Standalone.
+1. **Per-colour photo sets — built.** A variant holds up to eight photos; choosing a colour swaps the gallery. Studio checkbox picker reuses product uploads; legacy single photos keep their navigation behavior.
+2. **Typed content blocks — built.** Up to six media or before/after blocks rendered inside the runtime product page, with a Studio editor. Existing specifications supply spec tables. The owner applies the hand-written migration before database use.
 3. **Product-page parts and skins.** Expose named parts; build 6–8 curated skins (swatch shape, gallery treatment, spec-block frames, motion).
 4. **Guarded CSS.** Allowlist, sanitizer, real-browser visibility/contrast/overlap check, skin fallback, merchant preview and revert. Depends on 3 (built together).
 5. **YAPI integration.** YAPI picks a skin, writes guarded CSS, arranges blocks; prompt rules updated; eval that two different stores come out visibly different.
