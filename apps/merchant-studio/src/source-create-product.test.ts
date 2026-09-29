@@ -172,6 +172,40 @@ it('blocks saving when a photo used only by an untouched variant set was removed
   expect(api.updateProduct).not.toHaveBeenCalled();
 });
 
+describe('product content blocks in the guide', () => {
+  const a = '/v1/uploads/11111111-1111-1111-1111-111111111111.jpg', b = '/v1/uploads/22222222-2222-2222-2222-222222222222.jpg';
+  const blocks = [
+    { id: 'blk_aaaaaaaaaaaa', type: 'media' as const, imageUrl: b, alt: 'Respaldo', caption: '35°' },
+    { id: 'blk_bbbbbbbbbbbb', type: 'compare' as const, beforeUrl: a, afterUrl: b, title: 'Reclinación', beforeLabel: 'Recta', afterLabel: '35°', alt: 'Silla' },
+  ];
+  function edit() {
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p' }), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 's', saved, () => {}, { id: 'p', name: 'Silla', amount: 1000, imageUrls: [a, b], contentBlocks: blocks });
+    document.body.append(guide.element);
+    const save = () => { for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); };
+    return { api, guide, saved, save };
+  }
+  it('maps every block preview back to its uploaded URL and preserves stable ids', async () => {
+    const t = edit();
+    const select = t.guide.element.querySelector<HTMLSelectElement>('[data-block-field="imageUrl"]')!;
+    expect(select.value).toMatch(/^https?:/); expect(select.value).toContain(b);
+    t.save(); await vi.waitFor(() => expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.updateProduct.mock.calls[0][2].contentBlocks).toEqual(blocks);
+  });
+  it('blocks saving after a block photo was removed from the pool', () => {
+    const t = edit(); t.guide.element.querySelectorAll<HTMLButtonElement>('[data-remove-photo]')[1].click(); t.save();
+    expect(t.guide.element.querySelector('[data-product-error]')!.textContent).toContain('Una foto de un bloque fue retirada');
+    expect(t.api.updateProduct).not.toHaveBeenCalled();
+  });
+  it('sends an empty array when the last saved block is deleted', async () => {
+    const t = edit();
+    t.guide.element.querySelector<HTMLButtonElement>('[data-block-delete]')!.click();
+    t.guide.element.querySelector<HTMLButtonElement>('[data-block-delete]')!.click();
+    t.save(); await vi.waitFor(() => expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.updateProduct.mock.calls[0][2].contentBlocks).toEqual([]);
+  });
+});
+
 describe('boxes filled with catalog products', () => {
   const catalog = { items: [
     { id: 'matcha', name: 'Matcha', amount: 2200, imageUrls: ['/v1/uploads/matcha.jpg'], variants: [], extras: [] },

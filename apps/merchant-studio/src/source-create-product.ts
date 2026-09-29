@@ -7,10 +7,11 @@ import './source-library.css';
 import '@pagosya/variant-editor';
 import '@pagosya/variant-editor/style.css';
 import type { VariantInput, VariantDraft } from '@pagosya/variant-editor';
+import { mountContentBlocksEditor, type ContentBlockInput } from './product-content-blocks-editor';
 
 export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
 type BoxChoice = { id: string; name: string; imageUrls?: string[] };
-export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[] } & ProductFiscalMapping;
+export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[]; contentBlocks?: ContentBlockInput[] } & ProductFiscalMapping;
 export type ProductSpecification = { label: string; value: string };
 
 /** "Nombre: valor" lines to specification rows, or a message for the first invalid line. */
@@ -50,7 +51,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
       <section data-guide-step="3" hidden><label>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label></section>
       <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 4 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p></section>
-      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div></section>
+      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div></section>
       <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
       <section data-guide-step="7" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
       <section data-guide-step="8" hidden><div data-product-review class="product-review"></div>
@@ -188,10 +189,16 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   }
   let optionDrafts: VariantDraft[] = initial?.variants?.map(v => ({ ...v, amount: String(v.amount / 100), stock: v.stock == null ? '' : String(v.stock), imageUrl: v.imageUrl ? uploadedPreview(v.imageUrl) : undefined, imageUrls: (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).map(uploadedPreview) })) || [];
   const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: optionDrafts, onChange: rows => { optionDrafts = rows; }, basePrice: () => priceInput.value, photos: () => photos.map(p => p.preview) });
+  const blockEditor = mountContentBlocksEditor(dialog.querySelector<HTMLElement>('[data-product-content-blocks]')!, {
+    photos: () => photos,
+    initial: (initial?.contentBlocks || []).map(block => block.type === 'media'
+      ? { ...block, imageUrl: uploadedPreview(block.imageUrl) }
+      : { ...block, beforeUrl: uploadedPreview(block.beforeUrl), afterUrl: uploadedPreview(block.afterUrl) }),
+  });
   optionsToggle.addEventListener('change', () => { optionsHost.hidden = !optionsToggle.checked; stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked; dialog.querySelector<HTMLElement>('[data-variant-stock]')!.hidden = !optionsToggle.checked; });
   const showError = (message: string) => { error.textContent = message; error.hidden = !message; };
   const setBusy = (value: boolean) => { busy = value; fieldset.disabled = value; submit.disabled = value || (step === 1 && !nameInput.value.trim()); form.setAttribute('aria-busy', String(value)); };
-  const dispose = () => { photos.forEach(photo => URL.revokeObjectURL(photo.preview)); dialog.remove(); };
+  const dispose = () => { blockEditor.dispose(); photos.forEach(photo => URL.revokeObjectURL(photo.preview)); dialog.remove(); };
   const questions = ['¿Cómo se llama tu producto?', '¿Qué debería saber el cliente sobre este producto?', '¿Cuál es su precio de venta?', '¿Qué quieres destacar de este producto?', '¿Qué fotos quieres mostrar?', '¿El cliente puede elegir talla, color u otras opciones?', '¿Cuántas unidades tienes disponibles?', 'Todo listo. Revisa tus respuestas antes de guardar.'];
   function answers() {
     syncBoxSelection();
@@ -283,6 +290,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   nameInput.addEventListener('input', () => { submit.disabled = busy || !nameInput.value.trim(); });
   function drawPhotos() {
     optionEditor.refreshPhotos();
+    blockEditor.refreshPhotos();
     const host = dialog.querySelector<HTMLElement>('[data-product-photos]')!;
     host.innerHTML = photos.map((photo, index) => `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}${photo.scene ? ' · Escena YAPI' : ''}</figcaption>${index === 0 ? '' : `<button type="button" class="button" data-cover-photo="${index}" aria-label="Usar la foto ${index + 1} como portada">Usar como portada</button>`}${photo.scene ? '' : `<button type="button" class="button" data-scene-photo="${index}" aria-label="Crear escena con la foto ${index + 1}">Crear escena</button>`}<button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
     host.querySelectorAll<HTMLButtonElement>('[data-scene-photo]').forEach(button => button.addEventListener('click', () => { if (!busy) openScene(Number(button.dataset.scenePhoto)); }));
@@ -353,13 +361,15 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     const name = String(data.get('name') || '').trim();
     if (!name) { showError('Escribe el nombre del producto.'); (form.elements.namedItem('name') as HTMLInputElement).focus(); return; }
     let variants: VariantInput[] | undefined;
+    let contentBlocks: ContentBlockInput[];
     try {
+      contentBlocks = blockEditor.values();
       if (optionsToggle.checked) {
         variants = optionEditor.values();
         if (optionDrafts.some(v => (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).some(url => !photos.some(p => p.preview === url)))) throw Error('Una foto de combinación fue retirada. Elige otra foto para esa combinación.');
       }
     } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las combinaciones.'); return; }
-    const input = { name, description: String(data.get('description') || '').trim() || null, amount: variants ? Math.min(...variants.map(v => v.amount)) : Math.round(Number(data.get('price')) * 100), currency: initial?.currency || 'BOB', stock: variants ? initial && variants.some(v => v.stock === undefined) ? initial.stock ?? null : variants.some(v => v.stock == null) ? null : variants.reduce((n, v) => n + v.stock!, 0) : data.get('stock') === '' ? null : Number(data.get('stock')), imageUrls: [] as string[], ...(variants ? { variants } : {}) };
+    const input = { name, description: String(data.get('description') || '').trim() || null, amount: variants ? Math.min(...variants.map(v => v.amount)) : Math.round(Number(data.get('price')) * 100), currency: initial?.currency || 'BOB', stock: variants ? initial && variants.some(v => v.stock === undefined) ? initial.stock ?? null : variants.some(v => v.stock == null) ? null : variants.reduce((n, v) => n + v.stock!, 0) : data.get('stock') === '' ? null : Number(data.get('stock')), imageUrls: [] as string[], ...(variants ? { variants } : {}), ...(contentBlocks.length || initial?.contentBlocks?.length ? { contentBlocks } : {}) };
     const pickCount = Number(boxPickInput.value), groupName = boxGroupInput.value.trim();
     if (boxToggle.checked) Object.assign(input, { extras: [...selectedBox].map(productId => ({
       ...(savedBox.find(extra => extra.productId === productId)?.id ? { id: savedBox.find(extra => extra.productId === productId)!.id } : {}),
@@ -384,6 +394,8 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
         input.imageUrls.push(photo.url);
       }
       input.variants?.forEach(variant => { if (variant.imageUrl) variant.imageUrl = photos.find(photo => photo.preview === variant.imageUrl)!.url; if (variant.imageUrls) variant.imageUrls = variant.imageUrls.map(url => photos.find(photo => photo.preview === url)!.url!); });
+      const uploaded = (preview: string) => photos.find(photo => photo.preview === preview)!.url!;
+      if (input.contentBlocks) input.contentBlocks = input.contentBlocks.map(block => block.type === 'media' ? { ...block, imageUrl: uploaded(block.imageUrl) } : { ...block, beforeUrl: uploaded(block.beforeUrl), afterUrl: uploaded(block.afterUrl) });
       status.textContent = 'Guardando producto…';
       if (initial) {
         const update: Partial<typeof input> = {...input, variants: variants || []};
