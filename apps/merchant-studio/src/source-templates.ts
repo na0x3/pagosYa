@@ -2,6 +2,7 @@ import { API_BASE_URL, MerchantStudioApi } from './api';
 import { createPreviewImageLoader, sourcePreviewDocument, type SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml as escape } from './studio-ui';
 import './source-templates.css';
+import { LOADER_STAR } from './source-loader-star';
 
 /** Plantillas: complete designer-made stores the merchant picks; applying one saves it as the next revision. */
 export type TemplateSummary = { id: string; name: string; category: string; description: string; tags: string[]; order: number };
@@ -80,9 +81,6 @@ export function renderTemplateCards(templates: TemplateSummary[], state: Gallery
 }
 
 /** One template on the merchant's own store (spec 2026-09-26 §1.2); the frame is filled by `openTemplateGallery`. */
-/** The pagosYa star, bouncing while a preview is prepared (source-templates.css, .tpl-loader-star). */
-const LOADER_STAR = '<span class="tpl-loader-star" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M50 9 62 36 91 39 69 58 76 87 50 72 24 87 31 58 9 39 38 36Z" fill="#f8cf2a" stroke="#f8cf2a" stroke-width="14" stroke-linejoin="round"/><rect x="38.5" y="43" width="8" height="15" rx="4" fill="#1c1a17"/><rect x="53.5" y="43" width="8" height="15" rx="4" fill="#1c1a17"/></svg></span><span class="tpl-loader-shadow" aria-hidden="true"></span>';
-
 export function renderTemplatePreview(template: TemplateSummary, state: GalleryState): string {
   const off = state.busy ? 'disabled' : '';
   const width = state.width || 'desktop';
