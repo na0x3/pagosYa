@@ -2,6 +2,7 @@
  * Colours are deliberately absent: the store's --store-* / --brand-* tokens stay their single source.
  * Nothing here imports source-design.ts, which imports this module (no evaluation-time cycle). */
 import { SOURCE_FONT_IDS } from './source-font-catalog';
+import { sanitizeProductThemeCss } from './product-theme-css';
 export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
 export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
 /** The self-hosted fonts in the kit, from the one catalogue (source-font-catalog.ts). */
@@ -131,8 +132,12 @@ export function normalizeDna(raw: unknown, seed: string): { dna: SourceDesignDna
   }
   if (raw.productCss !== undefined) {
     if (typeof raw.productCss !== 'string') repairs.push('dna.productCss: not text, dropped');
-    else if (raw.productCss.length > PRODUCT_CSS_MAX) repairs.push(`dna.productCss: longer than ${PRODUCT_CSS_MAX} characters, dropped`);
-    else dna.productCss = raw.productCss;
+    else {
+      // The sanitizer is idempotent, so a stored design that already carries sanitized CSS comes back unchanged.
+      const themed = sanitizeProductThemeCss(raw.productCss);
+      dna.productCss = themed.css;
+      for (const item of themed.dropped) repairs.push(`dna.productCss: ${item.reason}${item.declaration ? ` (${item.declaration})` : item.rule ? ` (${item.rule})` : ''}`);
+    }
   }
   if (raw.motifs !== undefined && !Array.isArray(raw.motifs)) repairs.push('dna.motifs: not a list, dropped');
   const motifs = (Array.isArray(raw.motifs) ? raw.motifs : []).flatMap((motif: unknown, index: number) => {

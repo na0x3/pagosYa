@@ -10,6 +10,10 @@ export type ThemeCssReport = { css: string; dropped: Array<{ rule?: string; decl
 
 const MAX_CHARS = 3000, MAX_RULES = 40, MAX_DECLARATIONS = 200, MAX_COMPOUNDS = 3, MAX_KEYFRAME_STEPS = 10;
 const SCOPE = '[data-pagosya-product][data-style] ';
+/** Idempotence: stored designs are normalized again on every load, so the sanitizer accepts its own output
+ * (the scope prefix on selectors, the pt- prefix on keyframes) and returns it unchanged. */
+const withoutScope = (text: string) => text.split(SCOPE).join('');
+const keyframeName = (name: string) => name.startsWith('pt-') ? name : `pt-${name}`;
 /** Parts that are boxes the theme may size (width/height). Text parts keep the kit's sizing. */
 const SIZED_PARTS = new Set(['swatch', 'thumb', 'thumbs', 'frame', 'decor-a', 'decor-b', 'block', 'block-media', 'block-compare', 'blocks', 'gallery', 'stage']);
 
@@ -105,7 +109,7 @@ const FILL = new Set(['none', 'forwards', 'backwards', 'both']);
 const DIRECTION = new Set(['normal', 'reverse', 'alternate', 'alternate-reverse']);
 const animation: Validator = (value, ctx) => {
   const items = split(value, ',').map(item => split(item, ' ').map(token => {
-    if (ctx.keyframes.has(token)) return `pt-${token}`;
+    if (ctx.keyframes.has(token)) return keyframeName(token);
     if (okTime(token) || TIMING.test(token) || FILL.has(token.toLowerCase()) || DIRECTION.has(token.toLowerCase())) return token;
     const n = number(token);
     if (n !== null && n >= 0 && n <= 3) return token;
@@ -115,7 +119,7 @@ const animation: Validator = (value, ctx) => {
   if (!items.length || items.length > 3) fail('use up to 3 animations');
   return items.join(', ');
 };
-const animationName: Validator = (value, ctx) => split(value, ',').map(name => ctx.keyframes.has(name) ? `pt-${name}` : fail(`'${name}' is not a keyframes block of this CSS`)).join(', ');
+const animationName: Validator = (value, ctx) => split(value, ',').map(name => ctx.keyframes.has(name) ? keyframeName(name) : fail(`'${name}' is not a keyframes block of this CSS`)).join(', ');
 const filter: Validator = value => {
   if (value.trim().toLowerCase() === 'none') return 'none';
   return each(value, ' ', t => {
@@ -225,7 +229,7 @@ const COMPOUND = new RegExp(`^\\[data-part=(?:"|')?(${PART_ALTERNATION})(?:"|')?
 type ParsedSelector = { selector: string; last: string; pseudo: boolean };
 function parseSelector(raw: string): ParsedSelector | string {
   const refusal = `selector "${raw.trim()}" is not allowed (only [data-part=…] selectors on the cosmetic parts, with :hover, :focus-visible, :active, :first-child, :last-child, :nth-child() and one ::before/::after on the last part)`;
-  const tokens = raw.trim().replace(/\s*>\s*/g, ' > ').split(/\s+/).filter(Boolean);
+  const tokens = withoutScope(raw.trim() + ' ').replace(/\s*>\s*/g, ' > ').split(/\s+/).filter(Boolean);
   const out: string[] = [];
   let compounds = 0, last = '', pseudo = false, expectCompound = true;
   for (let i = 0; i < tokens.length; i++) {
@@ -250,7 +254,7 @@ export function sanitizeProductThemeCss(input: unknown): ThemeCssReport {
   const closed = (reason: string): ThemeCssReport => ({ css: '', dropped: [...dropped, { reason }] });
   if (typeof input !== 'string') return closed('CSS must be text');
   if (!input.trim()) return { css: '', dropped };
-  if (input.length > MAX_CHARS) return closed(`CSS is too long (limit ${MAX_CHARS} characters)`);
+  if (withoutScope(input).length > MAX_CHARS) return closed(`CSS is too long (limit ${MAX_CHARS} characters)`);
   let root: ReturnType<typeof postcss.parse>;
   try { root = postcss.parse(input); } catch { return closed('invalid CSS: it could not be parsed'); }
 
@@ -309,7 +313,7 @@ export function sanitizeProductThemeCss(input: unknown): ThemeCssReport {
     if (name === 'keyframes') {
       const id = node.params.trim();
       if (!keyframes.has(id)) { dropped.push({ rule: `@keyframes ${id}`, reason: 'invalid keyframes name' }); return; }
-      const frames = postcss.atRule({ name: 'keyframes', params: `pt-${id}` });
+      const frames = postcss.atRule({ name: 'keyframes', params: keyframeName(id) });
       const stepCtx: Ctx = { parts: [], pseudo: false, decor: false, motion: 'none', keyframes };
       let steps = 0;
       node.each(step => {

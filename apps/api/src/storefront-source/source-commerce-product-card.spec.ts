@@ -121,7 +121,7 @@ describe('product card DNA in the kit', () => {
     });
 
     it('injects nothing when the value is empty, not text, too long or the store has no DNA', async () => {
-      for (const productCss of ['', 42, { a: 1 }, 'a{color:red}'.padEnd(3001, ' ')]) expect(themeStyle((await open({ productCss })).w)).toBeNull();
+      for (const productCss of ['', 42, { a: 1 }, 'a{color:red}'.padEnd(8001, ' ')]) expect(themeStyle((await open({ productCss })).w)).toBeNull();
       expect(themeStyle((await open(undefined)).w)).toBeNull();
     });
   });

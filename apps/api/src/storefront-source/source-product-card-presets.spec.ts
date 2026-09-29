@@ -76,6 +76,33 @@ describe('product card DNA', () => {
     expect((normalizeDna(junk, 's') as any).dna.productCss).toBe('');
   });
 
+  it('sanitizes the model\'s productCss, keeps the safe part and reports what it dropped', () => {
+    const raw = validDna() as any;
+    raw.productCss = '[data-part="gallery"]{border:1px solid #111}[data-part="price"]{color:red}';
+    const { dna, repairs } = normalizeDna(raw, 'store-1') as any;
+    expect(dna.productCss.replace(/\s+/g, '')).toBe('[data-pagosya-product][data-style][data-part="gallery"]{border:1pxsolid#111}');
+    expect(repairs).toEqual([expect.stringMatching(/dna\.productCss.*price/)]);
+  });
+
+  it('refuses hostile productCss entirely and says why', () => {
+    const raw = validDna() as any;
+    raw.productCss = '[data-part="gallery"]{background:url(https://evil.test/x.png)}';
+    const { dna, repairs } = normalizeDna(raw, 'store-1') as any;
+    expect(dna.productCss).toBe('');
+    expect(repairs).toEqual([expect.stringMatching(/dna\.productCss.*url/i)]);
+  });
+
+  it('keeps an already sanitized productCss stable when a stored design is normalized again', () => {
+    const raw = validDna() as any;
+    raw.productCss = '@keyframes bob{from{transform:translateY(0)}to{transform:translateY(6px)}}@media (prefers-reduced-motion: no-preference){[data-part="gallery"]{animation:bob 1.2s ease infinite}}[data-part="title"]{letter-spacing:.05em}';
+    const first = normalizeDna(raw, 'store-1') as any;
+    expect(first.repairs).toEqual([]);
+    const second = normalizeDna(first.dna, 'store-1') as any;
+    expect(second.repairs).toEqual([]);
+    expect(second.dna.productCss).toBe(first.dna.productCss);
+    expect(first.dna.productCss).toContain('pt-bob');
+  });
+
   it('puts the five runtime names in config.dna and productCss only when present', () => {
     for (const name of ['swatch', 'gallery', 'blocks', 'divider', 'enter']) expect(SOURCE_DNA_RUNTIME_ENUMS[name]).toBeDefined();
     const plain = sourceRuntimeDna(validDna(), 's') as any;

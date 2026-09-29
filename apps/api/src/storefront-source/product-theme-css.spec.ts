@@ -162,6 +162,24 @@ describe('guarded product theme CSS', () => {
       expect(clean(css)).toBe(norm(`${PREFIX} [data-part="gallery"]{color:#111}`));
     });
 
+    it('is idempotent: sanitizing its own output changes nothing (stored designs are normalized again on every load)', () => {
+      const css = '@keyframes bob{from{transform:translateY(0)}to{transform:translateY(8px)}}@media (prefers-reduced-motion: no-preference){[data-part="gallery"]{animation:bob 1.2s ease-in-out infinite}}[data-part="thumb"]:hover{color:#111}[data-part="title"]::before{content:"";color:#111}[data-part="blocks"] > [data-part="block"]{border:1px solid #111}@media (max-width: 600px){[data-part="gallery"]{padding:8px}}';
+      const once = sanitizeProductThemeCss(css);
+      expect(once.dropped).toEqual([]);
+      expect(once.css.length).toBeGreaterThan(200);
+      const twice = sanitizeProductThemeCss(once.css);
+      expect(twice.dropped).toEqual([]);
+      expect(twice.css).toBe(once.css);
+    });
+
+    it('counts the input without its scope prefixes, so a full-size theme survives being sanitized twice', () => {
+      const rules = Array.from({ length: 30 }, (_, i) => `[data-part="gallery"]:nth-child(${i % 9 + 1}){border:1px solid #11${i % 10}}`).join('');
+      const once = sanitizeProductThemeCss(rules);
+      expect(rules.length).toBeLessThanOrEqual(3000);
+      expect(once.css.length).toBeGreaterThan(3000);
+      expect(sanitizeProductThemeCss(once.css).css).toBe(once.css);
+    });
+
     it('drops top-level declarations that have no rule', () => {
       refused('color:#111;');
     });
