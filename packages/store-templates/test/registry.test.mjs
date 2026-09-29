@@ -61,6 +61,13 @@ function writeTemplate(root, id, extra = {}) {
   writeFileSync(join(root, id, 'template.json'), JSON.stringify({ id, name: id, category: 'comida', description: 'x', tags: [], sitePurpose: 'shop', order: 1, photos: [], ...extra }));
 }
 
+test('construccion is a template category', () => {
+  assert.ok(templates.TEMPLATE_CATEGORIES.includes('construccion'));
+  const root = mkdtempSync(join(tmpdir(), 'tpl-'));
+  writeTemplate(root, 'obras', { category: 'construccion' });
+  assert.equal(templates.loadTemplates(root)[0].manifest.category, 'construccion');
+});
+
 test('motor is a template category', () => {
   assert.ok(templates.TEMPLATE_CATEGORIES.includes('motor'));
   const root = mkdtempSync(join(tmpdir(), 'tpl-'));

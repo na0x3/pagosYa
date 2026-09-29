@@ -8,32 +8,75 @@ export type TemplateSummary = { id: string; name: string; category: string; desc
 
 const CATEGORY_LABELS: Record<string, string> = {
   comida: 'Comida y bebidas', moda: 'Moda', belleza: 'Belleza', hogar: 'Hogar', arte: 'Arte y artesanía', tecnologia: 'Tecnología',
-  mascotas: 'Mascotas', ninos: 'Niños', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros', 'producto-unico': 'Producto único', motor: 'Motor',
+  mascotas: 'Mascotas', ninos: 'Niños', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros', 'producto-unico': 'Producto único', motor: 'Motor', construccion: 'Construcción',
 };
 const label = (category: string) => CATEGORY_LABELS[category] ?? category;
 
 export const templateCategories = (templates: TemplateSummary[]) => [...new Set(templates.map(template => template.category))];
 
-/** `hasSite` means "say the current design stays in the history": false while the store is untouched. */
-export type GalleryState = { category: string; selected: string; busy: boolean; error: string; hasSite: boolean; previewBase: string; width?: 'desktop' | 'phone'; adapting?: boolean };
+/** `hasSite` means "say the current design stays in the history": false while the store is untouched.
+ * `confirm` is the card asking before Editar replaces that design; `applying` is the card being applied. */
+export type GalleryState = { category: string; selected: string; busy: boolean; error: string; hasSite: boolean; previewBase: string; width?: 'desktop' | 'phone'; adapting?: boolean; query?: string; confirm?: string; applying?: string };
+
+const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/** The chosen category, then every word of the search in the name, category, description or tags (case and accents ignored). */
+export function filterTemplates(templates: TemplateSummary[], state: { category: string; query?: string }): TemplateSummary[] {
+  const words = fold(state.query || '').split(/\s+/).filter(Boolean);
+  return templates.filter(template => {
+    if (state.category && template.category !== state.category) return false;
+    const text = fold([template.name, label(template.category), template.description, ...template.tags].join(' '));
+    return words.every(word => text.includes(word));
+  });
+}
+
+/** Ver: the template on the merchant's catalog, full window in its own tab (source-browser.ts, template mode). */
+export function templateBrowserUrl(base: string, storeId: string, templateId: string, origin = location.origin): string {
+  const url = new URL(base, origin);
+  url.search = new URLSearchParams({ source: '1', browser: '1', store: storeId, template: templateId }).toString();
+  return url.href;
+}
 
 export function renderTemplateGallery(templates: TemplateSummary[], state: GalleryState): string {
   const off = state.busy ? 'disabled' : '';
-  const shown = templates.filter(template => !state.category || template.category === state.category);
   const chosen = templates.find(template => template.id === state.selected);
   const count = (category: string) => templates.filter(template => !category || template.category === category).length;
   const chip = (value: string, text: string) => `<button type="button" class="tpl-chip" data-template-category="${escape(value)}" aria-pressed="${state.category === value}" ${off}>${escape(text)} <span>${count(value)}</span></button>`;
   if (chosen) return renderTemplatePreview(chosen, state);
-  return `<header class="tpl-head"><div><h2>Elige una plantilla</h2><p>Tiendas completas con tus productos. Mira cómo queda la tuya antes de elegir.</p></div><button type="button" class="tpl-close" data-template-close aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+  return `<header class="tpl-head"><h2>Elige la plantilla que te encante</h2><p>Tiendas completas con tus productos. Mira cómo queda la tuya antes de elegir.</p>
+      <label class="tpl-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="search" data-template-search placeholder="Busca entre las plantillas…" aria-label="Buscar plantillas" autocomplete="off" value="${escape(state.query || '')}"></label>
+      <button type="button" class="tpl-close" data-template-close aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     ${state.error ? `<p class="tpl-error" role="alert">${escape(state.error)}</p>` : ''}
     <nav class="tpl-chips" aria-label="Categorías">${chip('', 'Todas')}${templateCategories(templates).map(category => chip(category, label(category))).join('')}</nav>
-    <ul class="tpl-grid">${shown.map(template => `<li class="tpl-card" data-template-card="${escape(template.id)}">
-      <button type="button" class="tpl-card__pick" data-template-pick="${escape(template.id)}" ${off} aria-label="Ver ${escape(template.name)}">
-        <span class="tpl-card__frame"><img class="tpl-card__desk" src="${escape(state.previewBase)}plantillas/${escape(template.id)}.webp" alt="" loading="lazy"><img class="tpl-card__phone" src="${escape(state.previewBase)}plantillas/${escape(template.id)}-mobile.webp" alt="" loading="lazy"></span>
-        <span class="tpl-card__meta"><strong>${escape(template.name)}</strong><small>${escape(label(template.category))}</small></span>
-        <span class="tpl-card__desc">${escape(template.description)}</span>
-      </button>
-    </li>`).join('')}</ul>`;
+    <div data-template-results>${renderTemplateCards(templates, state)}</div>`;
+}
+
+/** The count and the cards; the search re-renders only this part so the field keeps its focus. */
+export function renderTemplateCards(templates: TemplateSummary[], state: GalleryState): string {
+  const off = state.busy ? 'disabled' : '';
+  const shown = filterTemplates(templates, state);
+  const total = `<p class="tpl-count" data-template-count aria-live="polite">${shown.length} ${shown.length === 1 ? 'plantilla' : 'plantillas'}</p>`;
+  if (!shown.length) return `${total}<p class="tpl-empty">No encontramos plantillas para «${escape(state.query || '')}». Prueba con otra palabra o elige «Todas».</p>`;
+  return `${total}<ul class="tpl-grid">${shown.map(template => {
+    const id = escape(template.id);
+    const name = escape(template.name);
+    const confirm = state.confirm === template.id && !state.busy
+      ? `<div class="tpl-card__confirm" role="group" aria-label="Usar ${name}"><p>Tu diseño actual queda guardado en el historial y puedes volver a él.</p><div><button type="button" class="tpl-btn tpl-btn--dark" data-template-edit-confirm="${id}">Usar ${name}</button><button type="button" class="tpl-btn" data-template-edit-cancel>Cancelar</button></div></div>`
+      : '';
+    return `<li class="tpl-card${confirm ? ' tpl-card--confirm' : ''}" data-template-card="${id}">
+      <div class="tpl-card__frame">
+        <span class="tpl-card__chrome" aria-hidden="true"><i></i><i></i><i></i></span>
+        <img class="tpl-card__desk" src="${escape(state.previewBase)}plantillas/${id}.webp" alt="" loading="lazy">
+        <div class="tpl-card__actions">
+          <button type="button" class="tpl-btn tpl-btn--dark" data-template-edit="${id}" ${off}>${state.applying === template.id ? 'Aplicando…' : 'Editar'}</button>
+          <button type="button" class="tpl-btn" data-template-view="${id}" ${off}>Ver</button>
+          <button type="button" class="tpl-card__info" data-template-pick="${id}" aria-label="Info de ${name}" ${off}>Info</button>
+        </div>
+        ${confirm}
+      </div>
+      <div class="tpl-card__meta"><strong>${name}</strong><small>${escape(label(template.category))}</small></div>
+    </li>`;
+  }).join('')}</ul>`;
 }
 
 /** One template on the merchant's own store (spec 2026-09-26 §1.2); the frame is filled by `openTemplateGallery`. */
@@ -74,7 +117,7 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
   const dialog: HTMLElement = document.createElement(pageMode ? 'div' : 'dialog'); dialog.className = pageMode ? 'tpl-dialog tpl-page' : 'tpl-dialog'; dialog.setAttribute('aria-label', 'Plantillas');
   let revision = options.revision;
   const close = () => { if (!pageMode) (dialog as HTMLDialogElement).close(); };
-  const state: GalleryState = { category: '', selected: '', busy: false, error: '', hasSite: options.hasSite, previewBase: import.meta.env.BASE_URL, width: 'desktop' };
+  const state: GalleryState = { category: '', selected: '', busy: false, error: '', hasSite: options.hasSite, previewBase: import.meta.env.BASE_URL, width: 'desktop', query: '' };
   const snapshots = new Map<string, Promise<SourceSnapshot>>();
   const loadImages = createPreviewImageLoader(API_BASE_URL);
   let templates: TemplateSummary[] = [];
@@ -87,7 +130,7 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
     dialog.addEventListener('close', () => dialog.remove());
     dialog.addEventListener('cancel', event => { if (state.busy) event.preventDefault(); });
   }
-  const shown = () => templates.filter(template => !state.category || template.category === state.category);
+  const shown = () => filterTemplates(templates, state);
   function step(delta: number) {
     const list = shown(); const at = list.findIndex(template => template.id === state.selected);
     if (state.busy || at < 0 || list.length < 2) return;
@@ -115,8 +158,14 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
     // A page has nothing to close.
     if (pageMode) dialog.querySelectorAll('[data-template-close]').forEach(button => button.remove());
     dialog.querySelector('[data-template-close]')?.addEventListener('click', () => { if (!state.busy) close(); });
-    dialog.querySelectorAll<HTMLButtonElement>('[data-template-category]').forEach(button => button.addEventListener('click', () => { state.category = button.dataset.templateCategory || ''; render(); }));
-    dialog.querySelectorAll<HTMLButtonElement>('[data-template-pick]').forEach(button => button.addEventListener('click', () => { state.selected = button.dataset.templatePick || ''; state.error = ''; render(); dialog.querySelector<HTMLElement>('[data-template-apply]')?.focus(); }));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-template-category]').forEach(button => button.addEventListener('click', () => { state.category = button.dataset.templateCategory || ''; state.confirm = ''; render(); }));
+    // Typing re-renders only the results, so the field keeps its focus and caret.
+    dialog.querySelector<HTMLInputElement>('[data-template-search]')?.addEventListener('input', event => {
+      state.query = (event.target as HTMLInputElement).value; state.confirm = '';
+      const results = dialog.querySelector<HTMLElement>('[data-template-results]');
+      if (results) { results.innerHTML = renderTemplateCards(templates, state); bindCards(); }
+    });
+    bindCards();
     dialog.querySelector('[data-template-back]')?.addEventListener('click', () => { state.selected = ''; state.error = ''; render(); });
     dialog.querySelector('[data-template-prev]')?.addEventListener('click', () => step(-1));
     dialog.querySelector('[data-template-next]')?.addEventListener('click', () => step(1));
@@ -127,27 +176,45 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
       dialog.querySelector('.tpl-preview')?.classList.toggle('tpl-preview--desktop', state.width === 'desktop');
       dialog.querySelectorAll('[data-template-width]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
     }));
-    dialog.querySelector('[data-template-apply]')?.addEventListener('click', () => void apply());
+    dialog.querySelector('[data-template-apply]')?.addEventListener('click', () => void apply(state.selected));
     void fillPreview();
+  }
+  function bindCards() {
+    const each = (selector: string, run: (button: HTMLButtonElement) => void) => dialog.querySelectorAll<HTMLButtonElement>(selector).forEach(button => button.addEventListener('click', () => run(button)));
+    const focusOn = (attribute: string, id: string) => [...dialog.querySelectorAll<HTMLElement>(`[${attribute}]`)].find(button => button.getAttribute(attribute) === id)?.focus();
+    each('[data-template-pick]', button => { state.selected = button.dataset.templatePick || ''; state.confirm = ''; state.error = ''; render(); dialog.querySelector<HTMLElement>('[data-template-apply]')?.focus(); });
+    // Editar applies at once, unless it would replace the merchant's own design: then the card asks first.
+    each('[data-template-edit]', button => {
+      const id = button.dataset.templateEdit || '';
+      if (!state.hasSite) { void apply(id); return; }
+      state.confirm = id; state.error = ''; render();
+      focusOn('data-template-edit-confirm', id);
+    });
+    each('[data-template-edit-confirm]', button => void apply(button.dataset.templateEditConfirm || ''));
+    each('[data-template-edit-cancel]', () => { const id = state.confirm || ''; state.confirm = ''; render(); focusOn('data-template-edit', id); });
+    each('[data-template-view]', button => {
+      const tab = window.open(templateBrowserUrl(import.meta.env.BASE_URL, options.storeId, button.dataset.templateView || ''), '_blank');
+      if (tab) tab.opener = null;
+    });
   }
   dialog.addEventListener('keydown', event => {
     if (!state.selected || event.target instanceof HTMLInputElement) return;
     if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
     if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
   });
-  async function apply() {
-    if (state.busy || !state.selected) return;
-    state.busy = true; state.adapting = false; state.error = ''; render();
+  async function apply(id: string) {
+    if (state.busy || !id) return;
+    state.busy = true; state.adapting = false; state.error = ''; state.confirm = ''; state.applying = id; render();
     // A YAPI-flow store is adapted after the template is applied, which takes longer: say so.
     const slow = window.setTimeout(() => { if (state.busy) { state.adapting = true; const button = dialog.querySelector('[data-template-apply]'); if (button) button.textContent = 'Aplicando y adaptando…'; } }, 2000);
     try {
-      const saved = await api.applyTemplate(options.storeId, state.selected, revision);
+      const saved = await api.applyTemplate(options.storeId, id, revision);
       revision = saved.revision;
       close();
-      if (pageMode) { state.busy = false; state.adapting = false; state.selected = ''; state.hasSite = false; render(); }
+      if (pageMode) { state.busy = false; state.adapting = false; state.applying = ''; state.selected = ''; state.hasSite = false; render(); }
       await options.applied(saved.revision);
     } catch (error) {
-      state.busy = false; state.adapting = false; state.error = error instanceof Error ? error.message : 'No se pudo aplicar la plantilla.'; render();
+      state.busy = false; state.adapting = false; state.applying = ''; state.error = error instanceof Error ? error.message : 'No se pudo aplicar la plantilla.'; render();
     } finally { window.clearTimeout(slow); }
   }
   try { templates = await api.listTemplates(); render(); }
