@@ -298,7 +298,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
   }
 
-  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> } & ProductFiscalMapping): Promise<{ id: string; name: string }> {
+  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null; imageUrls?: string[] | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> } & ProductFiscalMapping): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 

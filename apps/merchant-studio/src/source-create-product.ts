@@ -6,7 +6,7 @@ import './source-create-product.css';
 import './source-library.css';
 import '@pagosya/variant-editor';
 import '@pagosya/variant-editor/style.css';
-import type { VariantInput } from '@pagosya/variant-editor';
+import type { VariantInput, VariantDraft } from '@pagosya/variant-editor';
 
 export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
 type BoxChoice = { id: string; name: string; imageUrls?: string[] };
@@ -183,10 +183,11 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     highlightsAsked = highlights.length > 0;
     stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked;
     dialog.querySelector<HTMLElement>('[data-variant-stock]')!.hidden = !optionsToggle.checked;
-    [...new Set([...(initial.imageUrls || []), ...(initial.variants || []).map(v => v.imageUrl).filter((url): url is string => Boolean(url))])].forEach(url => photos.push({preview: /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url, url}));
+    [...new Set([...(initial.imageUrls || []), ...(initial.variants || []).flatMap(v => v.imageUrls?.length ? v.imageUrls : [v.imageUrl]).filter((url): url is string => Boolean(url))])].forEach(url => photos.push({preview: /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url, url}));
     dialog.querySelector('#product-create-title')!.textContent = 'Editar producto';
   }
-  const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: initial?.variants?.map(v => ({...v, amount: String(v.amount / 100), stock: v.stock == null ? '' : String(v.stock), imageUrl: photos.find(photo => photo.url === v.imageUrl)?.preview || v.imageUrl || undefined})), basePrice: () => priceInput.value, photos: () => photos.map(p => p.preview) });
+  let optionDrafts: VariantDraft[] = initial?.variants?.map(v => ({ ...v, amount: String(v.amount / 100), stock: v.stock == null ? '' : String(v.stock), imageUrl: v.imageUrl ? uploadedPreview(v.imageUrl) : undefined, imageUrls: (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).map(uploadedPreview) })) || [];
+  const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: optionDrafts, onChange: rows => { optionDrafts = rows; }, basePrice: () => priceInput.value, photos: () => photos.map(p => p.preview) });
   optionsToggle.addEventListener('change', () => { optionsHost.hidden = !optionsToggle.checked; stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked; dialog.querySelector<HTMLElement>('[data-variant-stock]')!.hidden = !optionsToggle.checked; });
   const showError = (message: string) => { error.textContent = message; error.hidden = !message; };
   const setBusy = (value: boolean) => { busy = value; fieldset.disabled = value; submit.disabled = value || (step === 1 && !nameInput.value.trim()); form.setAttribute('aria-busy', String(value)); };
@@ -355,7 +356,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     try {
       if (optionsToggle.checked) {
         variants = optionEditor.values();
-        if (variants.some(v => v.imageUrl && !photos.some(p => p.preview === v.imageUrl))) throw Error('Una foto de combinación fue retirada. Elige otra foto para esa combinación.');
+        if (optionDrafts.some(v => (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).some(url => !photos.some(p => p.preview === url)))) throw Error('Una foto de combinación fue retirada. Elige otra foto para esa combinación.');
       }
     } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las combinaciones.'); return; }
     const input = { name, description: String(data.get('description') || '').trim() || null, amount: variants ? Math.min(...variants.map(v => v.amount)) : Math.round(Number(data.get('price')) * 100), currency: initial?.currency || 'BOB', stock: variants ? initial && variants.some(v => v.stock === undefined) ? initial.stock ?? null : variants.some(v => v.stock == null) ? null : variants.reduce((n, v) => n + v.stock!, 0) : data.get('stock') === '' ? null : Number(data.get('stock')), imageUrls: [] as string[], ...(variants ? { variants } : {}) };
@@ -382,7 +383,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
         if (!photo.url) photo.url = (await api.upload(photo.file!)).url;
         input.imageUrls.push(photo.url);
       }
-      input.variants?.forEach(variant => { if (variant.imageUrl) variant.imageUrl = photos.find(photo => photo.preview === variant.imageUrl)!.url; });
+      input.variants?.forEach(variant => { if (variant.imageUrl) variant.imageUrl = photos.find(photo => photo.preview === variant.imageUrl)!.url; if (variant.imageUrls) variant.imageUrls = variant.imageUrls.map(url => photos.find(photo => photo.preview === url)!.url!); });
       status.textContent = 'Guardando producto…';
       if (initial) {
         const update: Partial<typeof input> = {...input, variants: variants || []};

@@ -141,8 +141,35 @@ describe('choosing the cover photo', () => {
     await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
     const input = api.updateProduct.mock.calls[0][2];
     expect(input.imageUrls).toEqual(['https://example.test/white.webp', 'https://example.test/blue.webp']);
-    expect(input.variants[0].imageUrl).toBe('https://example.test/white.webp');
+    // Untouched photos are omitted so the API preserves their saved assignment.
+    expect(input.variants[0]).not.toHaveProperty('imageUrl');
+    expect(input.variants[0]).not.toHaveProperty('imageUrls');
   });
+});
+
+it('maps a changed variant photo set from preview URLs back to uploaded paths', async () => {
+  const a = '/v1/uploads/11111111-1111-1111-1111-111111111111.jpg';
+  const b = '/v1/uploads/22222222-2222-2222-2222-222222222222.jpg';
+  const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p' }), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+  const guide = createProductForm(api as unknown as MerchantStudioApi, 's', saved, () => {}, { id: 'p', name: 'Silla', amount: 1000, imageUrls: [a, b], variants: [{ id: 'red', name: 'Rojo', amount: 1000, imageUrl: a, options: [{ name: 'Color', value: 'Rojo' }] }] });
+  document.body.append(guide.element);
+  guide.element.querySelectorAll<HTMLInputElement>('[data-row="0"] input[type=checkbox]')[1].click();
+  for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(api.updateProduct.mock.calls[0][2].variants[0]).toMatchObject({ imageUrl: a, imageUrls: [a, b] });
+});
+
+it('blocks saving when a photo used only by an untouched variant set was removed', () => {
+  const api = { updateProduct: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) };
+  const guide = createProductForm(api as unknown as MerchantStudioApi, 's', () => {}, () => {}, {
+    id: 'p', name: 'Silla', amount: 1000, imageUrls: ['https://shop.test/a.jpg', 'https://shop.test/b.jpg'],
+    variants: [{ id: 'red', name: 'Rojo', amount: 1000, imageUrl: 'https://shop.test/a.jpg', imageUrls: ['https://shop.test/a.jpg', 'https://shop.test/b.jpg'], options: [{ name: 'Color', value: 'Rojo' }] }],
+  });
+  document.body.append(guide.element);
+  guide.element.querySelectorAll<HTMLButtonElement>('[data-remove-photo]')[1].click();
+  for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  expect(guide.element.querySelector('[data-product-error]')!.textContent).toContain('Una foto de combinación fue retirada');
+  expect(api.updateProduct).not.toHaveBeenCalled();
 });
 
 describe('boxes filled with catalog products', () => {

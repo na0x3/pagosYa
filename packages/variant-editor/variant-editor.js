@@ -42,7 +42,7 @@
       const stock = row.stock === '' || row.stock == null ? null : Number(row.stock);
       if (String(row.amount).trim() === '' || !Number.isFinite(amount) || amount < 0 || Math.round(amount * 100) > 2147483647) throw Error(`Revisa el precio de ${row.name}.`);
       if (stock !== null && (!Number.isInteger(stock) || stock < 0 || stock > 1000000)) throw Error(`Revisa el stock de ${row.name}.`);
-      return { ...(row.id ? { id: row.id } : {}), name: row.name, amount: Math.round(amount * 100), ...(row.id && !row.stockDirty || row.legacySharedStock && row.stock === '' ? {} : { stock }), ...(row.options?.length ? { options: row.options } : {}), ...(row.imageUrl ? { imageUrl: row.imageUrl } : row.imageDirty ? { imageUrl: null } : {}) };
+      return { ...(row.id ? { id: row.id } : {}), name: row.name, amount: Math.round(amount * 100), ...(row.id && !row.stockDirty || row.legacySharedStock && row.stock === '' ? {} : { stock }), ...(row.options?.length ? { options: row.options } : {}), ...(row.imageDirty ? { imageUrls: row.imageUrls?.length ? [...row.imageUrls] : null, imageUrl: row.imageUrls?.[0] || null } : !row.id && row.imageUrl ? { imageUrl: row.imageUrl } : {}) };
     });
   }
   const SUGGESTIONS = [['Talla', 'S, M, L'], ['Color', 'Negro, Blanco'], ['Tamaño', 'Pequeño, Grande'], ['Sabor', ''], ['Material', '']];
@@ -63,6 +63,7 @@
   /** @param {HTMLElement} host @param {import('./index').EditorConfig} config */
   function mount(host, config = {}) {
     let rows = structuredClone(config.variants || []), dirty = false, proposed = false, timer = 0;
+    rows.forEach(row => { row.imageUrls = row.imageUrls?.length ? [...row.imageUrls] : row.imageUrl ? [row.imageUrl] : []; });
     const first = rows[0]?.options;
     const groups = first?.length ? first.map((o, i) => ({ name: o.name, values: [...new Set(rows.map(v => v.options?.[i]?.value).filter(value => typeof value === 'string'))] }))
       : rows.length ? [{ name: 'Versión', values: rows.map(v => v.name) }] : [{ name: '', values: [] }];
@@ -95,7 +96,7 @@
       $('[data-matrix]').hidden = !rows.length;
       updateCount();
       $('[data-empty]').hidden = list.length > 0;
-      $('[data-rows]').innerHTML = list.map(({ row, index }) => `<div class="ve-row" data-row="${index}"><div class="ve-name"><strong>${esc(rowLabel(row))}</strong><span data-availability>${esc(availability(row))}</span></div><label><span class="ve-cell-label">Precio (Bs)</span><input data-field="amount" aria-label="Precio ${esc(row.name)}" type="number" min="0" max="21474836.47" step="0.01" value="${esc(row.amount)}"></label><label><span class="ve-cell-label">Unidades</span><input data-field="stock" aria-label="Stock ${esc(row.name)}" type="number" min="0" max="1000000" step="1" placeholder="Sin límite" value="${esc(row.stock)}"></label><label><span class="ve-cell-label">Foto</span><select data-field="imageUrl" aria-label="Foto ${esc(row.name)}"><option value="">Foto del producto</option>${[...new Set([...photos, ...(row.imageUrl ? [row.imageUrl] : [])])].map((url, n) => `<option value="${esc(url)}" ${url === row.imageUrl ? 'selected' : ''}>Foto ${n + 1}</option>`).join('')}</select></label></div>`).join('');
+      $('[data-rows]').innerHTML = list.map(({ row, index }) => `<div class="ve-row" data-row="${index}"><div class="ve-name"><strong>${esc(rowLabel(row))}</strong><span data-availability>${esc(availability(row))}</span></div><label><span class="ve-cell-label">Precio (Bs)</span><input data-field="amount" aria-label="Precio ${esc(row.name)}" type="number" min="0" max="21474836.47" step="0.01" value="${esc(row.amount)}"></label><label><span class="ve-cell-label">Unidades</span><input data-field="stock" aria-label="Stock ${esc(row.name)}" type="number" min="0" max="1000000" step="1" placeholder="Sin límite" value="${esc(row.stock)}"></label><details class="ve-photos"><summary>${row.imageUrls?.length ? `${row.imageUrls.length} ${row.imageUrls.length === 1 ? 'foto' : 'fotos'}` : 'Sin fotos'}</summary><div>${[...new Set([...photos, ...(row.imageUrls || [])])].map((url, n) => `<label><input type="checkbox" data-variant-photo value="${esc(url)}" ${row.imageUrls?.includes(url) ? 'checked' : ''} ${!row.imageUrls?.includes(url) && (row.imageUrls?.length || 0) >= 8 ? 'disabled' : ''}><img src="${esc(url)}" alt="" loading="lazy"><span>Foto ${n + 1}${photos.includes(url) ? '' : ' (retirada)'}</span></label>`).join('')}</div></details></div>`).join('');
     }
     /** Rebuild combinations from the options. Removing saved combinations always needs explicit confirmation. @param {boolean} confirmRemoval */
     function regenerate(confirmRemoval) {
@@ -139,9 +140,17 @@
     });
     host.addEventListener('change', event => {
       const input = event.target;
-      if (input instanceof HTMLSelectElement && input.matches('select[data-field]')) {
+      if (input instanceof HTMLInputElement && input.hasAttribute('data-variant-photo')) {
         const rowElement = /** @type {HTMLElement} */ (input.closest('[data-row]'));
-        const row = rows[Number(rowElement.dataset.row)]; row.imageUrl = input.value; row.imageDirty = true; notify();
+        const row = rows[Number(rowElement.dataset.row)];
+        const boxes = [...rowElement.querySelectorAll('input[data-variant-photo]')];
+        const selected = boxes.filter(box => /** @type {HTMLInputElement} */ (box).checked);
+        if (selected.length > 8) { input.checked = false; return; }
+        row.imageUrls = selected.map(box => /** @type {HTMLInputElement} */ (box).value);
+        row.imageUrl = row.imageUrls[0]; row.imageDirty = true;
+        boxes.forEach(box => { const field = /** @type {HTMLInputElement} */ (box); field.disabled = !field.checked && selected.length >= 8; });
+        rowElement.querySelector('summary').textContent = selected.length ? `${selected.length} ${selected.length === 1 ? 'foto' : 'fotos'}` : 'Sin fotos';
+        notify();
       }
     });
     host.addEventListener('click', event => {
