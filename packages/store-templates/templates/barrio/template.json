@@ -1,0 +1,18 @@
+{
+  "id": "barrio",
+  "name": "Barrio",
+  "category": "moda",
+  "description": "Ropa urbana por lanzamientos: nombre entre corchetes, texto en cajas apiladas y acentos rojos.",
+  "tags": ["streetwear", "urbano", "lanzamientos", "joven"],
+  "sitePurpose": "shop",
+  "order": -294,
+  "dna": { "display": "space-grotesk", "text": "space-mono", "case": "upper", "radius": "none", "border": "hairline", "button": "brutal", "hover": "invert", "press": "pop", "motion": "cinematic", "cart": "drawer", "added": "ribbon", "card": "zoom", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "calle", "role": "lifestyle", "demo": "calle.jpg" },
+    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+  ]
+}
