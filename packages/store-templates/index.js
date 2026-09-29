@@ -4,7 +4,7 @@
 const { readdirSync, readFileSync, statSync, existsSync } = require('node:fs');
 const { join, extname } = require('node:path');
 
-const TEMPLATE_CATEGORIES = Object.freeze(['comida', 'moda', 'belleza', 'hogar', 'arte', 'tecnologia', 'mascotas', 'ninos', 'deporte', 'servicios', 'libros', 'producto-unico']);
+const TEMPLATE_CATEGORIES = Object.freeze(['comida', 'moda', 'belleza', 'hogar', 'arte', 'tecnologia', 'mascotas', 'ninos', 'deporte', 'servicios', 'libros', 'producto-unico', 'motor']);
 const PHOTO_ROLES = Object.freeze(['hero', 'product', 'lifestyle', 'detail']);
 const DEMO_MAX_BYTES = 600 * 1024;
 const ID = /^[a-z0-9-]{2,40}$/;
@@ -23,6 +23,7 @@ function validate(dir, id) {
   if (!Array.isArray(manifest.tags) || manifest.tags.some(tag => typeof tag !== 'string')) fail(id, 'tags', 'must be a list of words');
   if (manifest.sitePurpose !== 'shop') fail(id, 'sitePurpose', 'must be shop');
   if (!Number.isInteger(manifest.order)) fail(id, 'order', 'must be an integer');
+  if (manifest.hidden !== undefined && typeof manifest.hidden !== 'boolean') fail(id, 'hidden', 'must be true or false');
   if (manifest.dna !== undefined && (!manifest.dna || typeof manifest.dna !== 'object' || Array.isArray(manifest.dna) || Object.entries(manifest.dna).some(([key, value]) => !/^[a-z]+$/.test(key) || typeof value !== 'string'))) fail(id, 'dna', 'must map kit surface names to values');
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
   const slots = new Set();
@@ -53,6 +54,10 @@ const registry = () => (cache ??= new Map(loadTemplates().map(entry => [entry.ma
 const listTemplates = () => [...registry().values()].map(entry => entry.manifest);
 const templateManifest = id => (typeof id === 'string' && ID.test(id) ? registry().get(id)?.manifest : undefined);
 
+/** What merchants may pick from: every template except the ones the owner hid. Hidden ones still resolve by id. */
+const gallerySelection = manifests => manifests.filter(manifest => manifest.hidden !== true);
+const galleryTemplates = () => gallerySelection(listTemplates());
+
 function walk(dir, prefix) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap(name => {
@@ -80,4 +85,4 @@ function templateDemoPhoto(id, slot) {
   return { ext: extname(photo.demo).slice(1), bytes: readFileSync(join(entry.dir, 'demo', photo.demo)) };
 }
 
-module.exports = { TEMPLATE_CATEGORIES, PHOTO_ROLES, DEMO_MAX_BYTES, templatesDir, loadTemplates, readTemplateSource, listTemplates, templateManifest, templateSourceFiles, templateDemoPhoto };
+module.exports = { TEMPLATE_CATEGORIES, PHOTO_ROLES, DEMO_MAX_BYTES, templatesDir, loadTemplates, readTemplateSource, listTemplates, templateManifest, gallerySelection, galleryTemplates, templateSourceFiles, templateDemoPhoto };

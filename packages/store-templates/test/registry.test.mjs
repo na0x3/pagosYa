@@ -55,3 +55,36 @@ test('demo photos are returned with their extension', () => {
   assert.ok(photo && photo.bytes.length > 0 && ['jpg', 'png', 'webp'].includes(photo.ext));
   assert.equal(templates.templateDemoPhoto('aurora', 'nope'), undefined);
 });
+
+function writeTemplate(root, id, extra = {}) {
+  mkdirSync(join(root, id, 'components'), { recursive: true });
+  writeFileSync(join(root, id, 'template.json'), JSON.stringify({ id, name: id, category: 'comida', description: 'x', tags: [], sitePurpose: 'shop', order: 1, photos: [], ...extra }));
+}
+
+test('motor is a template category', () => {
+  assert.ok(templates.TEMPLATE_CATEGORIES.includes('motor'));
+  const root = mkdtempSync(join(tmpdir(), 'tpl-'));
+  writeTemplate(root, 'autos', { category: 'motor' });
+  assert.equal(templates.loadTemplates(root)[0].manifest.category, 'motor');
+});
+
+test('hidden must be true or false when present', () => {
+  const root = mkdtempSync(join(tmpdir(), 'tpl-'));
+  writeTemplate(root, 'raro', { hidden: 'yes' });
+  assert.throws(() => templates.loadTemplates(root), /raro.*hidden/);
+});
+
+test('the gallery leaves hidden templates out, but a hidden template keeps its manifest', () => {
+  const root = mkdtempSync(join(tmpdir(), 'tpl-'));
+  writeTemplate(root, 'visible');
+  writeTemplate(root, 'oculta', { hidden: true });
+  const manifests = templates.loadTemplates(root).map(entry => entry.manifest);
+  assert.deepEqual(templates.gallerySelection(manifests).map(m => m.id), ['visible']);
+  assert.equal(manifests.find(m => m.id === 'oculta').hidden, true);
+});
+
+test('the real gallery is the full list minus hidden ones, and hidden ones still resolve by id', () => {
+  const all = templates.listTemplates();
+  assert.deepEqual(templates.galleryTemplates().map(t => t.id), all.filter(t => !t.hidden).map(t => t.id));
+  for (const t of all.filter(t => t.hidden)) assert.equal(templates.templateManifest(t.id).id, t.id);
+});

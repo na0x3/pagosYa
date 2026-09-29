@@ -1,4 +1,4 @@
-export type TemplateCategory = 'comida' | 'moda' | 'belleza' | 'hogar' | 'arte' | 'tecnologia' | 'mascotas' | 'ninos' | 'deporte' | 'servicios' | 'libros' | 'producto-unico';
+export type TemplateCategory = 'comida' | 'moda' | 'belleza' | 'hogar' | 'arte' | 'tecnologia' | 'mascotas' | 'ninos' | 'deporte' | 'servicios' | 'libros' | 'producto-unico' | 'motor';
 export type PhotoRole = 'hero' | 'product' | 'lifestyle' | 'detail';
 export interface TemplatePhotoSlot { readonly slot: string; readonly role: PhotoRole; readonly demo?: string }
 export interface TemplateManifest {
@@ -6,6 +6,8 @@ export interface TemplateManifest {
   readonly tags: readonly string[]; readonly sitePurpose: 'shop'; readonly order: number; readonly photos: readonly TemplatePhotoSlot[];
   /** Kit surfaces the design depends on, pinned over the store's seeded DNA (e.g. { button: 'block' }). */
   readonly dna?: Readonly<Record<string, string>>;
+  /** Left out of the gallery and YAPI picks; still resolvable by id. */
+  readonly hidden?: boolean;
 }
 export declare const TEMPLATE_CATEGORIES: readonly TemplateCategory[];
 export declare const PHOTO_ROLES: readonly PhotoRole[];
@@ -14,6 +16,8 @@ export declare const templatesDir: string;
 export declare function loadTemplates(root?: string): Array<{ dir: string; manifest: TemplateManifest }>;
 export declare function listTemplates(): TemplateManifest[];
 export declare function templateManifest(id: string): TemplateManifest | undefined;
+export declare function gallerySelection(manifests: readonly TemplateManifest[]): TemplateManifest[];
+export declare function galleryTemplates(): TemplateManifest[];
 export declare function templateSourceFiles(id: string): Array<{ path: string; content: string }>;
 export declare function templateDemoPhoto(id: string, slot: string): { ext: string; bytes: Buffer } | undefined;
 export declare function readTemplateSource(dir: string): Array<{ path: string; content: string }>;
