@@ -1,0 +1,18 @@
+{
+  "id": "trompo",
+  "name": "Trompo",
+  "category": "ninos",
+  "description": "Juguetes de madera por edad: nombre gigante en negro, tarjetas de colores por edad y un fondo crema.",
+  "tags": ["juguetes", "madera", "niños", "por edad"],
+  "sitePurpose": "shop",
+  "order": -296,
+  "dna": { "display": "unbounded", "text": "nunito", "case": "none", "radius": "round", "border": "bold", "button": "pill", "hover": "lift", "press": "squash", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "tilt", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" },
+    { "slot": "juego", "role": "lifestyle", "demo": "juego.jpg" }
+  ]
+}
