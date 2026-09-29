@@ -7,6 +7,7 @@ import { ConfigService } from "@nestjs/config";
 import { MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { findActiveStoreBySlug } from "./active-store";
+import { type Cadence, subscriptionConsentText, subscriptionPrices } from "../operations/subscription-pricing";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
@@ -77,6 +78,13 @@ export class StoreCheckoutService {
       throw new BadRequestException("Uno o más productos del carrito ya no están disponibles");
     }
 
+    const subscriptionItems = dto.items.filter(item => item.subscriptionCadence);
+    if (subscriptionItems.length && !store.subscriptionsEnabled) throw new BadRequestException("Esta tienda no ofrece suscripciones.");
+    if (subscriptionItems.length && !quoteOnly && dto.subscriptionConsent !== true) throw new BadRequestException("Acepta las condiciones de la suscripción para continuar.");
+    const offers = subscriptionItems.length
+      ? await this.prisma.productSubscriptionOption.findMany({ where: { paymentLinkId: { in: subscriptionItems.map(item => item.paymentLinkId) } } })
+      : [];
+
     const digitalOnly = links.every(link => link.fulfillmentType === 'DIGITAL');
     const digitalAssets = store.digitalGoodsEnabled ? await this.prisma.digitalAsset.findMany({ where: { storeId: store.id, productId: { in: links.map(link => link.id) }, active: true }, select: { id: true, productId: true } }) : [];
     for (const link of links) if (link.fulfillmentType === 'DIGITAL' && !digitalAssets.some(asset => asset.productId === link.id)) throw new BadRequestException(`El archivo de "${link.name}" no está disponible.`);
@@ -125,6 +133,7 @@ export class StoreCheckoutService {
         unitAmount: number;
         optionStock?: number | null;
         digitalAssetIds?: string[];
+        subscription?: { cadence: Cadence; discountPercent: number; lockedUnitAmount: number };
       }
     >();
     for (const item of dto.items) {
@@ -145,7 +154,19 @@ export class StoreCheckoutService {
       const exhaustedExtra = selectedExtras.find((extra) => extra.stock === 0);
       if (exhaustedExtra) throw new BadRequestException(`"${exhaustedExtra.name}" está agotado`);
 
-      const lineKey = `${link.id}:${variant?.id ?? "base"}:${selectedExtraIds.join("+")}`;
+      const cadence = item.subscriptionCadence;
+      let subscription: { cadence: Cadence; discountPercent: number; lockedUnitAmount: number } | undefined;
+      let unitAmount = discountedProductAmount(link, variant?.amount ?? link.amount) + selectedExtrasAmount(selectedExtras);
+      if (cadence) {
+        if (link.fulfillmentType === 'DIGITAL') throw new BadRequestException(`"${link.name}" no se puede comprar por suscripción.`);
+        const offer = offers.find(option => option.paymentLinkId === link.id && option.cadence === cadence);
+        if (!offer) throw new BadRequestException(`Esa frecuencia no está disponible para "${link.name}".`);
+        const baseAmount = variant?.amount ?? link.amount;
+        const prices = subscriptionPrices({ baseAmount, oneTimeAmount: discountedProductAmount(link, baseAmount), extrasAmount: selectedExtrasAmount(selectedExtras), discountPercent: offer.discountPercent });
+        unitAmount = prices.firstUnitAmount;
+        subscription = { cadence, discountPercent: offer.discountPercent, lockedUnitAmount: prices.lockedUnitAmount };
+      }
+      const lineKey = `${link.id}:${variant?.id ?? "base"}:${selectedExtraIds.join("+")}${cadence ? `:sub:${cadence}` : ""}`;
       const existing = selectedLines.get(lineKey);
       if (existing) existing.quantity += item.quantity;
       else {
@@ -155,9 +176,10 @@ export class StoreCheckoutService {
           ...(variant && { variantId: variant.id, variantName: variant.name }),
           ...(variant && variant.stock !== undefined && { optionStock: variant.stock }),
           ...(selectedExtraIds.length && { extraIds: selectedExtraIds, extras: selectedExtras }),
+          ...(subscription ? { subscription } : {}),
           name: link.name,
           quantity: item.quantity,
-          unitAmount: discountedProductAmount(link, variant?.amount ?? link.amount) + selectedExtrasAmount(selectedExtras),
+          unitAmount,
         });
       }
     }
@@ -191,7 +213,7 @@ export class StoreCheckoutService {
       ? this.promoCodes!.discountAmount(subtotal, promo.discountType, promo.discountValue)
       : 0;
     const bundles = store.bundlesEnabled ? await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true } }) : [];
-    const bundle = bestBundleDiscount(bundles as unknown as Bundle[], cartLines);
+    const bundle = bestBundleDiscount(bundles as unknown as Bundle[], cartLines.filter(line => !line.subscription));
     const discountAmount = Math.max(promoDiscountAmount, bundle.amount);
     let shipping: ShippingOption | null = null;
     let parcel: Parcel | null = null;
@@ -207,6 +229,7 @@ export class StoreCheckoutService {
       shippingOptions = quote.options;
       if (dto.fulfillmentMethod === 'delivery') {
         shipping = quote.selected;
+        if (!quoteOnly && shipping?.carrierId && subscriptionItems.length) throw new BadRequestException('Las suscripciones todavía no se envían por courier. Elige retiro o entrega local.');
         if (!quoteOnly && (!shipping || !dto.shippingAddress?.trim())) throw new BadRequestException('Elige una opción de envío y escribe la dirección.');
         if (!quoteOnly && shipping?.carrierId && !store.shippingCarriersEnabled) throw new BadRequestException('La opción de envío no está disponible para este pedido.');
         if (!quoteOnly && shipping?.carrierId && !dto.shippingDestination) throw new BadRequestException('Completa la dirección de entrega y marca tu ubicación en el mapa.');
@@ -239,6 +262,7 @@ export class StoreCheckoutService {
         metadata: {
           cart: cartLines,
           storeId: store.id,
+          ...(subscriptionItems.length ? { subscriptionConsent: { text: subscriptionConsentText(subscriptionItems[0].subscriptionCadence!), at: new Date().toISOString() } } : {}),
           ...(shipping ? { shipping: { ...shipping, address: dto.shippingAddress!.trim(), ...(dto.shippingCountry ? { country: dto.shippingCountry } : {}), ...(dto.shippingPostalCode ? { postalCode: dto.shippingPostalCode } : {}) }, subtotal } : {}),
           ...(fulfillmentLocation ? { fulfillment: { locationId: fulfillmentLocation.id, locationName: fulfillmentLocation.name, method: dto.fulfillmentMethod, ...(dto.fulfillmentMethod === 'delivery' && dto.shippingAddress?.trim() ? { address: dto.shippingAddress.trim() } : {}), ...(fulfillmentReadyAt ? { readyAt: fulfillmentReadyAt.toISOString() } : {}) } } : {}),
           ...(bundle.amount > promoDiscountAmount ? { bundle: { id: bundle.id, name: bundle.name, discountAmount: bundle.amount }, subtotal } : {}),

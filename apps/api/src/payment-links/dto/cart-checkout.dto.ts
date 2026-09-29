@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
 import { BOLIVIA_DEPARTMENTS, ShippingDestinationDto, type Department } from "../../shipping/bolivia-address";
 
 export class CartItemDto {
@@ -25,6 +25,11 @@ export class CartItemDto {
   @IsPositive()
   @Max(999)
   quantity!: number;
+
+  @ApiProperty({ required: false, enum: ["WEEKLY", "BIWEEKLY", "MONTHLY"], description: "Buy this line as a subscription with this frequency." })
+  @IsOptional()
+  @IsIn(["WEEKLY", "BIWEEKLY", "MONTHLY"])
+  subscriptionCadence?: "WEEKLY" | "BIWEEKLY" | "MONTHLY";
 }
 
 export class CartCheckoutDto {
@@ -51,6 +56,9 @@ export class CartCheckoutDto {
   @ValidateNested({ each: true })
   @Type(() => CartItemDto)
   items!: CartItemDto[];
+
+  @ApiProperty({ required: false, description: "The buyer ticked the subscription terms. Required when any line has subscriptionCadence." })
+  @IsOptional() @IsBoolean() subscriptionConsent?: boolean;
 
   @ApiProperty({ required: false, example: "VERANO20" })
   @IsOptional()

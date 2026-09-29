@@ -467,6 +467,14 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
       .toBeLessThan(test.domestic.authorize.mock.invocationCallOrder[0]);
   });
 
+  it("asks for an email before paying a cart with a subscription", async () => {
+    const test = setup({}, { metadata: { storeId: "store_1", cart: [{ paymentLinkId: "p1", quantity: 1, unitAmount: 7200, subscription: { cadence: "MONTHLY", discountPercent: 10, lockedUnitAmount: 7200 } }] } });
+    test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await expect(test.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any))
+      .rejects.toThrow("Ingresa tu correo para recibir los enlaces de tus próximas entregas.");
+    await expect(test.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" }, customerEmail: "ana@example.com" } as any)).resolves.toBeDefined();
+  });
+
   it("writes no acceptance when the checkout sent no terms version", async () => {
     const test = setup({});
     test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });

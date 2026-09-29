@@ -397,6 +397,10 @@ export class PaymentIntentsService {
       } | null)?.debt;
       const normalizedEmail = dto.customerEmail?.trim().toLowerCase();
       const effectiveEmail = debt?.customerEmail?.trim().toLowerCase() || normalizedEmail;
+      const confirmCart = (current.metadata as { cart?: unknown } | null)?.cart;
+      if (!effectiveEmail && Array.isArray(confirmCart) && confirmCart.some(line => !!line && typeof line === "object" && "subscription" in line)) {
+        throw new BadRequestException("Ingresa tu correo para recibir los enlaces de tus próximas entregas.");
+      }
       const matchedConsumer = effectiveEmail
         ? await tx.consumerUser.findFirst({ where: { email: effectiveEmail, emailVerifiedAt: { not: null } }, select: { id: true } })
         : null;
