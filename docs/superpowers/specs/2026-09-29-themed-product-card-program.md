@@ -23,4 +23,8 @@ Every store's product page shares one skeleton, so a chair shop and a jewellery 
 5. **YAPI integration.** YAPI picks a skin, writes guarded CSS, arranges blocks; prompt rules updated; eval that two different stores come out visibly different.
 6. **Visual selection editor (Wix-style).** Click an element in the sandboxed preview; hover highlight with a label; a chip ("Header ×") attached to the YAPI chat message so "make this bigger" targets it; section toolbar (reorder, duplicate, hide, ask YAPI). Builds on `source-direct-editor.ts`. Not in scope: free drag/resize (breaks responsive layouts) and editing runtime-owned parts (cart, checkout, product page). Direct edits for text/colour/image/order, YAPI for structural changes.
 
-Order: pending owner's choice (1 then 2 first, or theming 3–4 first).
+Build order (plans written 2026-09-29, all in docs/superpowers/plans/):
+1. `2026-09-29-photo-sets-and-content-blocks.md` (sub-projects 1 and 2)
+2. `2026-09-29-product-card-theme-and-guarded-css.md` (3 and 4; extends the existing Design DNA with a `productCard` group)
+3. `2026-09-29-yapi-product-card-theming.md` (5; needs 1 and 2 done)
+4. `2026-09-29-visual-selection-editor.md` (6; independent, can run any time)
