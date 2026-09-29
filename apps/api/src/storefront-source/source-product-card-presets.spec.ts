@@ -48,7 +48,8 @@ describe('product card DNA', () => {
     const props = (SOURCE_DNA_SCHEMA.properties as any).productCard.properties;
     expect(props.swatch.enum).toEqual([...SOURCE_DNA_ENUMS.productCard.swatch]);
     expect(props.gallery.enum).toEqual([...SOURCE_DNA_ENUMS.productCard.gallery]);
-    expect((SOURCE_DNA_SCHEMA.properties as any).productCss.maxLength).toBe(3000);
+    // Three concepts share the planner's output budget, so a concept's own CSS is capped lower than the 3000 the agent may write.
+    expect((SOURCE_DNA_SCHEMA.properties as any).productCss.maxLength).toBe(1200);
   });
 
   it('normalizes an older design without the new fields to the defaults and reports nothing', () => {

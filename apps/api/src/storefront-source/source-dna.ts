@@ -3,6 +3,7 @@
  * Nothing here imports source-design.ts, which imports this module (no evaluation-time cycle). */
 import { SOURCE_FONT_IDS } from './source-font-catalog';
 import { sanitizeProductThemeCss } from './product-theme-css';
+import { productCardDirection } from './source-product-card-presets';
 export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
 export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
 /** The self-hosted fonts in the kit, from the one catalogue (source-font-catalog.ts). */
@@ -28,6 +29,8 @@ export const SOURCE_DNA_ENUMS = {
   },
 } as const;
 export const PRODUCT_CSS_MAX = 3000;
+/** Inside a design concept the CSS is capped lower: three concepts share the planner's output budget. */
+export const PRODUCT_CSS_CONCEPT_MAX = 1200;
 export const SOURCE_DNA_MOTIF_ENUMS = {
   for: ['store', 'category', 'product'], behavior: ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'],
   trigger: ['appear', 'scroll', 'hover', 'add-to-cart', 'purchase'], placement: ['hero', 'card', 'product', 'cart', 'confirmation'],
@@ -85,11 +88,11 @@ export const SOURCE_DNA_SCHEMA = {
     } },
     signature: { type: 'string', maxLength: MAX_SIGNATURE },
     // Guarded CSS for the product page's cosmetic parts; sanitized in product-theme-css.ts. Empty when the concept has none.
-    productCss: { type: 'string', maxLength: PRODUCT_CSS_MAX },
+    productCss: { type: 'string', maxLength: PRODUCT_CSS_CONCEPT_MAX },
   },
 };
 
-export const SOURCE_DNA_DIRECTION = `For each concept also commit to dna, the store's design DNA: form, behaviour and placement, never colours (colours stay in the CSS tokens). Choose values that express this concept, not safe defaults. type.display and type.text name the self-hosted fonts; buttons.form, hover and press set how every button looks and reacts; surfaces choose the cart (drawer, sheet, page or overlay), the added-to-cart moment, the product page (it overrides layout.productPage, so keep both equal), the checkout review and how catalog cards respond. motifs: up to ${MAX_MOTIFS} small illustrated elements tied to the store, a category or a product (target names it), each with its meaning, behavior, trigger and placement; use none when nothing in the brief earns one. signature: the store's one memorable moment in at most ${MAX_SIGNATURE} characters. Make the three concepts differ in their DNA, above all in buttons.form, surfaces.cart, surfaces.added and the type pairing. The context's avoidRecent lists fingerprints other stores used recently, written buttons.form|surfaces.cart|surfaces.added|type.display+type.text: those combinations are taken, so no concept may repeat one.`;
+export const SOURCE_DNA_DIRECTION = `For each concept also commit to dna, the store's design DNA: form, behaviour and placement, never colours (colours stay in the CSS tokens). Choose values that express this concept, not safe defaults. type.display and type.text name the self-hosted fonts; buttons.form, hover and press set how every button looks and reacts; surfaces choose the cart (drawer, sheet, page or overlay), the added-to-cart moment, the product page (it overrides layout.productPage, so keep both equal), the checkout review and how catalog cards respond. motifs: up to ${MAX_MOTIFS} small illustrated elements tied to the store, a category or a product (target names it), each with its meaning, behavior, trigger and placement; use none when nothing in the brief earns one. signature: the store's one memorable moment in at most ${MAX_SIGNATURE} characters. Make the three concepts differ in their DNA, above all in buttons.form, surfaces.cart, surfaces.added and the type pairing. The context's avoidRecent lists fingerprints other stores used recently, written buttons.form|surfaces.cart|surfaces.added|type.display+type.text: those combinations are taken, so no concept may repeat one.\n${productCardDirection()}`;
 
 /** FNV-1a into mulberry32: tiny, deterministic, and good enough to spread stores across the enums. */
 function seededRandom(seed: string) {

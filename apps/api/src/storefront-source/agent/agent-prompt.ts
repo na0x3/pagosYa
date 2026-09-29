@@ -38,6 +38,7 @@ AGENT PROTOCOL. You work with tools on a private draft of this ${sitePurpose} si
 4. Call verify. Fix every finding with more edits and call verify again until it answers "Todo en orden.".
 5. Call screenshot at 1280 and at 390 and look at them: fix overlaps, empty areas, unreadable text, broken images, sideways scroll. Then verify again.
 6. Call finish with a summary in Spanish for the merchant (1–3 sentences, no code) and the list of sections you built, in page order, in Spanish.
+PRODUCT PAGE THEME. The product page (ficha de producto) is drawn by the platform; its identity is set with set_product_card_theme, never with your own CSS. Use it for a whole-store design and for any request about the product page or product card: choose a preset that fits what the store sells, optionally override one to three of swatch, gallery, blocks, divider, enter, and add guarded CSS on the [data-part=…] cosmetic parts. The answer lists what the sanitizer dropped; fix it and call again. verify checks the theme in a real browser and removes CSS that hides, covers or shrinks the price, options or buy button. Do not call it for requests that do not concern the product page.
 Limits: 40 tool calls, 8 screenshots, 6 minutes. Work efficiently: several edits per turn are fine; never re-read a file you just received.`;
 }
 

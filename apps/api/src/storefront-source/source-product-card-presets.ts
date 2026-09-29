@@ -1,4 +1,5 @@
 import type { SourceDesignDna } from './source-dna';
+import { COSMETIC_PARTS } from './product-theme-css';
 
 /** The named "skins" of the product page: DNA parameters plus an optional starter of guarded CSS
  * (filled in once the sanitizer exists; empty CSS is always valid). `plain` equals the pre-theme behaviour. */
@@ -17,6 +18,16 @@ export const PRODUCT_CARD_PRESETS: Record<PresetId, ProductCardPreset> = {
   craft: { label: 'Artesanal', when: 'food, ceramics, handmade goods', params: { swatch: 'photo', gallery: 'rail', blocks: 'tape', divider: 'dashed', enter: 'fade-up' }, css: '[data-part="stage"]{border:1px solid var(--pd-line);padding:8px;background-color:var(--pd-tint)}[data-part="title"]{font-style:italic}[data-part="block"]{border-radius:4px}' },
   plain: { label: 'Sencillo', when: 'everything else; identical to the default product page', params: { swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none' }, css: '' },
 };
+
+/** What the design model is told about the product page's identity, generated from the presets and the part list so it
+ * cannot drift from them (spec: docs/superpowers/plans/2026-09-29-yapi-product-card-theming.md, Design §3). */
+export function productCardDirection(): string {
+  const presets = PRESET_IDS.map(id => `${id} (${PRODUCT_CARD_PRESETS[id].when})`).join('; ');
+  return `PRODUCT CARD: each concept's dna also carries productCard (swatch, gallery, blocks, divider, enter: the identity of the product page) and productCss. Pick the preset that fits what this business sells, copy its values into productCard and change at most three of them: ${presets}. `
+    + `productCss is guarded CSS for the page's cosmetic parts only, at most 20 rules and 3000 characters (inside a concept keep it under 1200), written as [data-part="gallery"]{...}. Parts: ${COSMETIC_PARTS.join(', ')}; a block may be narrowed with [data-part-type="media"] or [data-part-type="compare"], and :hover, :focus-visible and ::before/::after are allowed. `
+    + `Use var(--pd-ink), var(--pd-line), var(--pd-tint) and var(--brand-…) so the theme follows the store's colours; no urls, calc(), !important or fixed positioning; opacity never below 0.6; never hide, shrink or cover anything. `
+    + `Price, stock, option state, quantity, the buy button and the pagosYa seal are protected: they cannot be selected and a real browser checks them, and a theme that breaks them loses its CSS. Content blocks (photo with text, before/after) are supplied by the merchant: frame them, never invent their content. Leave productCss empty when the preset is enough. Two different businesses must not end up with the same product page.`;
+}
 
 export function presetFor(id: PresetId): { params: ProductCardParams; css: string } {
   const preset = PRODUCT_CARD_PRESETS[id];
