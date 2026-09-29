@@ -1,9 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { compactPreviewImageData, createPreviewImageLoader } from './source-preview-media';
+import { compactPreviewImageData, createPreviewImageLoader, hostedCatalogImages } from './source-preview-media';
 import type { SourceSnapshot } from './source-preview';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('preview variant photography', () => {
+  it('hydrates every content block photo and uses absolute platform URLs in hosted mode', async () => {
+    vi.stubGlobal('location', { href: 'http://localhost:5175' });
+    vi.stubGlobal('FileReader', class {
+      result = ''; onload?: () => void;
+      readAsDataURL(blob: Blob) { void blob.text().then(value => { this.result = 'data:' + value; this.onload?.(); }); }
+    });
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(new Response(new Blob([url], { type: 'image/jpeg' }), { headers: { 'content-type': 'image/jpeg' } }))));
+    const a = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg', b = '/v1/uploads/bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+    const data = { items: [{ variants: [{ imageUrl: a, imageUrls: [a, b] }], contentBlocks: [{ type: 'media', imageUrl: a }, { type: 'compare', beforeUrl: a, afterUrl: b }] }] };
+    const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data })};` }] } as SourceSnapshot);
+    const item = JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, '')).data.items[0];
+    expect(item.contentBlocks[0].imageUrl).toBe('data:http://localhost:3001' + a);
+    expect(item.contentBlocks[1]).toMatchObject({ beforeUrl: 'data:http://localhost:3001' + a, afterUrl: 'data:http://localhost:3001' + b });
+    const hosted = hostedCatalogImages('https://api.test/v1').rewrite(data).items[0];
+    expect(hosted.variants[0].imageUrls).toEqual(['https://api.test' + a, 'https://api.test' + b]);
+    expect(hosted.contentBlocks[0].imageUrl).toBe('https://api.test' + a);
+    expect(hosted.contentBlocks[1]).toMatchObject({ beforeUrl: 'https://api.test' + a, afterUrl: 'https://api.test' + b });
+  });
   it('keeps a large variant grid compact without changing the runtime catalog', () => {
     const image = 'data:image/jpeg;base64,' + 'abcd'.repeat(10000);
     const config = { data:{items:[{name:'Suéter',imageUrls:[image],variants:Array.from({length:60},(_,i)=>({id:String(i),imageUrl:image}))}]} };

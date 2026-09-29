@@ -108,6 +108,42 @@ describe('Inline storefront product options', () => {
   }
   afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
+  it('renders content blocks in order, escapes text and keeps native compare keyboard controls', async () => {
+    const hostile = '<img src=x onerror=alert(1)>';
+    const { w, query, click } = await shop({ items: [{ ...product(), contentBlocks: [
+      { type: 'media', imageUrl: 'https://shop.test/angle.jpg', alt: hostile, caption: hostile + '35°' },
+      { type: 'compare', title: hostile, beforeUrl: 'https://shop.test/a.jpg', afterUrl: 'https://shop.test/b.jpg', beforeLabel: 'Recta', afterLabel: '35°', alt: 'Silla recta y reclinada' },
+    ] }] });
+    click('.menu-add');
+    expect([...w.document.querySelectorAll('[data-part="block"]')].map((b: any) => b.dataset.partType)).toEqual(['media', 'compare']);
+    expect(query('[data-part="block-media"]').getAttribute('alt')).toBe(hostile);
+    expect(query('figcaption').textContent).toBe(hostile + '35°');
+    expect(query('figcaption img')).toBeNull(); expect(query('[data-part-compare] h3 img')).toBeNull();
+    expect(query('.product-detail__layout').nextElementSibling).toBe(query('[data-part="blocks"]'));
+    const range = query('.pd-compare__range');
+    expect(range.type).toBe('range'); expect(range.getAttribute('aria-label')).toBe('Comparar: Recta y 35°');
+    range.value = '30'; range.dispatchEvent(new w.Event('input', { bubbles: true }));
+    expect(query('.product-detail__compare').style.getPropertyValue('--pd-compare')).toBe('30%');
+    const key = new w.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    range.dispatchEvent(key); expect(key.defaultPrevented).toBe(false);
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+  });
+
+  it('drops unsafe content blocks and renders no empty wrapper', async () => {
+    const { query, click } = await shop({ items: [{ ...product(), contentBlocks: [
+      { type: 'media', imageUrl: 'javascript:alert(1)', alt: 'x' },
+      { type: 'compare', beforeUrl: 'https://shop.test/a.jpg', afterUrl: 'javascript:alert(1)', alt: 'x' },
+      { type: 'unknown', imageUrl: 'https://shop.test/a.jpg', alt: 'x' },
+    ] }] });
+    click('.menu-add'); expect(query('[data-part="blocks"]')).toBeNull();
+  });
+
+  it('caps content rendering at six blocks and retains the runtime marker', async () => {
+    const { w, click } = await shop({ items: [{ ...product(), contentBlocks: Array.from({ length: 9 }, (_, i) => ({ type: 'media', imageUrl: `https://shop.test/${i}.jpg`, alt: `f${i}` })) }] });
+    click('.menu-add'); expect(w.document.querySelectorAll('[data-part="block"]')).toHaveLength(6);
+    expect(commerce).toContain('pagosya-product-content:v1');
+  });
+
   it('shows a colour photo set, navigates within it and preserves its position on a size choice', async () => {
     const red = ['https://shop.test/r1.jpg', 'https://shop.test/r2.jpg', 'https://shop.test/r3.jpg'];
     const blue = ['https://shop.test/b1.jpg', 'https://shop.test/b2.jpg'];

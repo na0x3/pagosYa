@@ -69,6 +69,10 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
         if (variant && Array.isArray(variant.imageUrls)) variant.imageUrls.forEach((value: unknown, index: number) => tasks.push(async () => { variant.imageUrls[index] = await image(value); }));
       }
       // Box choices show the photo of the product they stand for.
+      if (Array.isArray(item.contentBlocks)) for (const block of item.contentBlocks) {
+        if (!block || typeof block !== 'object') continue;
+        for (const key of ['imageUrl', 'beforeUrl', 'afterUrl']) if (typeof block[key] === 'string') tasks.push(async () => { block[key] = await image(block[key]); });
+      }
       if (Array.isArray(item.extras)) for (const extra of item.extras) {
         if (extra && typeof extra.imageUrl === 'string') tasks.push(async () => { extra.imageUrl = await image(extra.imageUrl); });
       }
@@ -99,7 +103,13 @@ export function hostedCatalogImages(apiBaseUrl: string) {
     for (const item of Array.isArray(copy?.items) ? copy.items : []) {
       if (!item || typeof item !== 'object') continue;
       if (Array.isArray(item.imageUrls)) item.imageUrls = item.imageUrls.map(image);
-      for (const variant of Array.isArray(item.variants) ? item.variants : []) if (variant && typeof variant.imageUrl === 'string') variant.imageUrl = image(variant.imageUrl);
+      for (const variant of Array.isArray(item.variants) ? item.variants : []) if (variant) {
+        if (typeof variant.imageUrl === 'string') variant.imageUrl = image(variant.imageUrl);
+        if (Array.isArray(variant.imageUrls)) variant.imageUrls = variant.imageUrls.map(image);
+      }
+      for (const block of Array.isArray(item.contentBlocks) ? item.contentBlocks : []) if (block && typeof block === 'object') {
+        for (const key of ['imageUrl', 'beforeUrl', 'afterUrl']) if (typeof block[key] === 'string') block[key] = image(block[key]);
+      }
       for (const extra of Array.isArray(item.extras) ? item.extras : []) if (extra && typeof extra.imageUrl === 'string') extra.imageUrl = image(extra.imageUrl);
     }
     return copy;
