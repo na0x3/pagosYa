@@ -8,7 +8,8 @@ const fields: Record<string, string> = { positioning: 'Qué hace única a tu mar
 export type BrandFact = { field: string; value: string; evidence: string; source: string };
 export type BrandState = { revision: number; data: { confirmed: BrandFact[]; suggested: BrandFact[] }; cacheHit?: boolean };
 
-export async function openBrandProfile(api: MerchantStudioApi, storeId: string): Promise<void> {
+/** `host`: draw the panel inside the settings window instead of opening a modal of its own. */
+export async function openBrandProfile(api: MerchantStudioApi, storeId: string, host?: HTMLElement): Promise<void> {
   const dialog = document.createElement('dialog'); dialog.className = 'brand-dialog';
   dialog.setAttribute('aria-labelledby', 'brand-title');
   let state: BrandState; let busy = false; let message = ''; let importText = ''; let websiteUrl = ''; let selectedFiles: File[] = [];
@@ -17,8 +18,8 @@ export async function openBrandProfile(api: MerchantStudioApi, storeId: string):
   const close = () => { if (!busy) dialog.close(); };
   dialog.addEventListener('close', () => dialog.remove());
   dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
-  document.body.append(dialog);
-  dialog.innerHTML = '<p role="status">Cargando tu marca…</p>'; dialog.showModal();
+  (host ?? document.body).append(dialog);
+  dialog.innerHTML = '<p role="status">Cargando tu marca…</p>'; if (host) dialog.setAttribute('open', ''); else dialog.showModal();
   try { state = await api.brandProfile(storeId); render(); } catch (e) { dialog.innerHTML = `<p role="alert">${escape(e instanceof Error ? e.message : 'No se pudo cargar la marca.')}</p><button type="button">Cerrar</button>`; dialog.querySelector('button')!.onclick = close; }
   function collect() {
     const previous = new Map(state.data.confirmed.map(f => [f.field, f]));
