@@ -1,0 +1,18 @@
+{
+  "id": "sendero",
+  "name": "Sendero",
+  "category": "deporte",
+  "description": "Mochilas y equipo de montaña: foto de bosque con niebla, panel lateral con el producto y precio, y una cinta oscura arriba.",
+  "tags": ["mochilas", "montaña", "trekking", "resistente"],
+  "sitePurpose": "shop",
+  "order": -297,
+  "dna": { "display": "bricolage", "text": "chivo", "case": "none", "radius": "none", "border": "hairline", "button": "block", "hover": "fill", "press": "sink", "motion": "snappy", "cart": "sheet", "added": "ribbon", "card": "zoom", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "ruta", "role": "lifestyle", "demo": "ruta.jpg" },
+    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+  ]
+}
