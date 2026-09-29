@@ -1,0 +1,18 @@
+{
+  "id": "infusion",
+  "name": "Infusión",
+  "category": "comida",
+  "description": "Té en hojas: fondo azul marino, titular serif enorme y una foto de manos sirviendo el té.",
+  "tags": ["té", "hierbas", "infusiones", "ceremonia"],
+  "sitePurpose": "shop",
+  "order": -281,
+  "dna": { "display": "fraunces", "text": "figtree", "case": "none", "radius": "soft", "border": "hairline", "button": "block", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "ceremonia", "role": "lifestyle", "demo": "ceremonia.jpg" },
+    { "slot": "hojas", "role": "lifestyle", "demo": "hojas.jpg" }
+  ]
+}
