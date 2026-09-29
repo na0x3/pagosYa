@@ -108,6 +108,67 @@ describe('Inline storefront product options', () => {
   }
   afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
+  it('shows a colour photo set, navigates within it and preserves its position on a size choice', async () => {
+    const red = ['https://shop.test/r1.jpg', 'https://shop.test/r2.jpg', 'https://shop.test/r3.jpg'];
+    const blue = ['https://shop.test/b1.jpg', 'https://shop.test/b2.jpg'];
+    const { w, query, click, choose } = await shop({ items: [{ ...product(), variants: [
+      { ...variant('rs', 'Rojo', 'S'), imageUrls: red },
+      { ...variant('rm', 'Rojo', 'M'), imageUrls: red },
+      { ...variant('bm', 'Azul', 'M'), imageUrls: blue },
+    ] }] });
+    click('.menu-add');
+    const thumbs = () => [...w.document.querySelectorAll('[data-product-image] img')].map((i: any) => i.getAttribute('src'));
+    expect(thumbs()).toHaveLength(6);
+    choose(0, 'Rojo'); expect(thumbs()).toEqual(red);
+    expect(query('[data-product-count]').textContent).toBe('1 / 3');
+    click('[data-product-next]'); expect(query('.product-detail__photo').src).toBe(red[1]);
+    const photo = query('.product-detail__photo');
+    choose(1, 'M'); expect(query('.product-detail__photo')).toBe(photo);
+    expect(query('[data-product-count]').textContent).toBe('2 / 3');
+    click('[data-product-image="2"]'); expect(query('.product-detail__photo').src).toBe(red[2]);
+    click('[data-product-next]'); expect(query('.product-detail__photo').src).toBe(red[0]);
+    choose(0, 'Azul'); expect(thumbs()).toEqual(blue);
+    expect(query('[data-product-count]').textContent).toBe('1 / 2');
+    click('[data-product-close]'); click('.menu-add'); expect(thumbs()).toHaveLength(6);
+  });
+
+  it('restores the full gallery from a photo set when the chosen colour has no photos', async () => {
+    const { w, query, click, choose } = await shop({ items: [{ ...product(), variants: [
+      { ...variant('rs', 'Rojo', 'S'), imageUrls: ['https://shop.test/r1.jpg', 'https://shop.test/r2.jpg'] },
+      variant('bs', 'Azul', 'S'),
+    ] }] });
+    click('.menu-add'); choose(0, 'Rojo');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(2);
+    choose(0, 'Azul');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(3);
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+  });
+
+  it('uses the chosen size photo set and drops unsafe photos', async () => {
+    const { w, query, click, choose } = await shop({ items: [{ ...product(), variants: [
+      { ...variant('rs', 'Rojo', 'S'), imageUrls: ['https://shop.test/s1.jpg', 'https://shop.test/s2.jpg', 'javascript:alert(1)'] },
+      { ...variant('rm', 'Rojo', 'M'), imageUrls: ['https://shop.test/m1.jpg', 'https://shop.test/m2.jpg'] },
+    ] }] });
+    click('.menu-add'); choose(1, 'S');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(2);
+    choose(1, 'M'); expect(query('.product-detail__photo').src).toBe('https://shop.test/m1.jpg');
+    expect(query('img[src^="javascript:"]')).toBeNull();
+  });
+
+  it('keeps a legacy single-photo colour on the full gallery and jumps to its photo', async () => {
+    const { w, query, click, choose } = await shop(); click('.menu-add');
+    const before = w.document.querySelectorAll('[data-product-image]').length;
+    choose(0, 'Azul');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(before);
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
+  });
+
+  it('keeps products without photo sets free of empty content wrappers', async () => {
+    const { query, click } = await shop(); click('.menu-add');
+    expect(query('.product-detail__thumbnails')).not.toBeNull();
+    expect(query('[data-part="blocks"]')).toBeNull();
+  });
+
   it.each(['', ' style="display:none!important;margin-top:7px"'])('reveals a generated CSS-hidden cart mount only while the platform drawer is open (%s)', async inline => {
     // Reduced reproduction of beauty-auto-1's literal RuntimeSlots component and stylesheet.
     const { w, query, click } = await shop({
