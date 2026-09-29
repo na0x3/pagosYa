@@ -318,3 +318,6 @@
 :root[data-dna-cart=overlay] .cart-drawer::backdrop{background:#0f0f0f8c}
 :root[data-dna-added=toast] .cart-added{border:0;border-radius:24px;background:#fff;color:#0f0f0f;box-shadow:0 22px 50px -20px #0f0f0f80}
 /* pagosya-kit:end */
+
+/* one-product store: keep the lone card centred instead of stranded in a wide row */
+.ec-rail:has(> :only-child){grid-auto-columns:min(100%,320px);justify-content:center}
