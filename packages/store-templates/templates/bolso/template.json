@@ -1,0 +1,61 @@
+{
+  "id": "bolso",
+  "name": "Bolso",
+  "category": "moda",
+  "description": "Bolsos y totes estampados: fondo blanco, producto como protagonista, colores vivos y un nombre con carácter.",
+  "tags": [
+    "bolsos",
+    "estampados",
+    "accesorios",
+    "colorido"
+  ],
+  "sitePurpose": "shop",
+  "order": -240,
+  "dna": {
+    "display": "young-serif",
+    "text": "figtree",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "block",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "inset"
+  },
+  "photos": [
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "taller",
+      "role": "lifestyle",
+      "demo": "taller.jpg"
+    },
+    {
+      "slot": "calle",
+      "role": "lifestyle",
+      "demo": "calle.jpg"
+    }
+  ]
+}
