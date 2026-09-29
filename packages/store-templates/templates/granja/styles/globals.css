@@ -247,3 +247,6 @@
   .gr-review__col--summary{order:2}
 }
 @media (prefers-reduced-motion:reduce){.gr *:not(.gr-header),.gr-cartpanel *,.gr-added *{transition:none!important;animation:none!important}}
+
+/* one-product store: keep the lone card centred instead of stranded in a wide row */
+.gr-grid:has(> :only-child){grid-template-columns:minmax(0,min(100%,340px));justify-content:center}
