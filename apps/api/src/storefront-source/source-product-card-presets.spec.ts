@@ -1,6 +1,7 @@
 import { PRESET_IDS, PRODUCT_CARD_PRESETS, presetFor } from './source-product-card-presets';
 import { defaultDna, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
 import { validDna } from './fixtures/dna';
+import { sanitizeProductThemeCss } from './product-theme-css';
 
 const DEFAULTS = { swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none' };
 
@@ -15,6 +16,16 @@ describe('product card presets', () => {
       for (const [key, value] of Object.entries(params)) expect((SOURCE_DNA_ENUMS.productCard as Record<string, readonly string[]>)[key]).toContain(value);
       expect(Object.keys(params).sort()).toEqual(Object.keys(DEFAULTS).sort());
       expect(PRODUCT_CARD_PRESETS[id].when.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('every preset\'s starter CSS passes the guarded sanitizer untouched (plain has none)', () => {
+    for (const id of PRESET_IDS) {
+      const { css } = presetFor(id);
+      const result = sanitizeProductThemeCss(css);
+      expect(result.dropped).toEqual([]);
+      if (id === 'plain') expect(css).toBe('');
+      else { expect(css.length).toBeGreaterThan(60); expect(result.css.length).toBeGreaterThan(60); }
     }
   });
 
