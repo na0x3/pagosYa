@@ -1,0 +1,71 @@
+{
+  "id": "granja",
+  "name": "Granja",
+  "category": "comida",
+  "description": "Granja y productos del campo: fotos a todo lo ancho, nombre gigante y reparto por días de la semana.",
+  "tags": [
+    "granja",
+    "huevos",
+    "orgánico",
+    "campo"
+  ],
+  "sitePurpose": "shop",
+  "order": -220,
+  "dna": {
+    "display": "syne",
+    "text": "bitter",
+    "case": "upper",
+    "radius": "soft",
+    "border": "none",
+    "button": "block",
+    "hover": "lift",
+    "press": "sink",
+    "motion": "cinematic",
+    "cart": "sheet",
+    "added": "ribbon",
+    "card": "zoom",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "gallinas",
+      "role": "lifestyle",
+      "demo": "gallinas.jpg"
+    },
+    {
+      "slot": "pasto",
+      "role": "lifestyle",
+      "demo": "pasto.jpg"
+    },
+    {
+      "slot": "recoleccion",
+      "role": "lifestyle",
+      "demo": "recoleccion.jpg"
+    },
+    {
+      "slot": "granjero",
+      "role": "lifestyle",
+      "demo": "granjero.jpg"
+    }
+  ]
+}
