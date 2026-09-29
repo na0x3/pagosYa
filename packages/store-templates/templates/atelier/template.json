@@ -1,0 +1,18 @@
+{
+  "id": "atelier",
+  "name": "Atelier",
+  "category": "moda",
+  "description": "Marroquinería fina: foto oscura de tablero de inspiración, texto serif encima y una cinta color vino.",
+  "tags": ["cuero", "accesorios", "elegante", "hecho a mano"],
+  "sitePurpose": "shop",
+  "order": -289,
+  "dna": { "display": "bodoni-moda", "text": "instrument", "case": "none", "radius": "none", "border": "hairline", "button": "outline", "hover": "invert", "press": "none", "motion": "cinematic", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" },
+    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+  ]
+}
