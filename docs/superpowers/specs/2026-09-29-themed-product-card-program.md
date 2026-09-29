@@ -1,6 +1,6 @@
 # Themed product card — program overview (2026-09-29)
 
-Status: sub-projects 1 and 2 built (photo sets: `64508ec`, `6e1d6d4`, `a120d7a`, `0e3d27d`; content blocks: `1366faa`, `e11b17f`, `7adfeea`; photo-set integration fixes: `a85953c`). Content-block migration is written and awaits the owner. Sub-projects 3–6 remain planned.
+Status: all six sub-projects built (see the dated status below). Sub-projects 1 and 2 built (photo sets: `64508ec`, `6e1d6d4`, `a120d7a`, `0e3d27d`; content blocks: `1366faa`, `e11b17f`, `7adfeea`; photo-set integration fixes: `a85953c`). Content-block migration is written and awaits the owner.
 
 ## Why
 Every store's product page shares one skeleton, so a chair shop and a jewellery shop end up with cards that feel alike. Owners also need per-colour photo sets ("red chosen → red chair photos") and extra product media (e.g. how far a chair reclines) inside the product page, in the store's own theme.
