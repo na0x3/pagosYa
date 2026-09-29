@@ -3,7 +3,7 @@ import { compileNextPreview, nextSourceFile, repairNextAuthoredMarkup, repairNex
 import { validateSourceArtwork, validateSourceEditScope } from '../source-edit-scope';
 import type { SourceSitePurpose } from '../source-site-purpose';
 
-export type AgentFinding = { source: 'typescript' | 'contract' | 'scope' | 'artwork' | 'runtime'; message: string };
+export type AgentFinding = { source: 'typescript' | 'contract' | 'scope' | 'artwork' | 'runtime' | 'theme'; message: string };
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 /**

@@ -2,15 +2,21 @@ import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import type { SourceSitePurpose } from '../source-site-purpose';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
-import { verifyAgentDraft } from './agent-verify';
+import { verifyAgentDraft, type AgentFinding } from './agent-verify';
+import { checkProductThemeOnSnapshot, type ThemeCheckFailure } from '../product-theme-check';
 import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from './agent-capture';
 import { SOURCE_DNA_ENUMS } from '../source-dna';
 import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
-import { resolveProductTheme, type ProductThemeInput } from '../product-theme';
+import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput } from '../product-theme';
 
 export type AgentToolName = 'list_files' | 'read_file' | 'edit_file' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
-export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void };
+export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void;
+  /** False when the merchant's request does not concern the product page (a local edit elsewhere); the theme tool then refuses. */
+  themeAllowed?: boolean;
+  /** Opens a themed draft in a browser and reports what the theme broke; defaults to the real Playwright check. */
+  checkTheme?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<ThemeCheckFailure[]>;
+};
 
 const object = (properties: Record<string, object>) => ({ type: 'object', additionalProperties: false, properties, required: Object.keys(properties) });
 const text = { type: 'string' };
@@ -43,6 +49,20 @@ export class AgentToolbox {
   constructor(private readonly ctx: AgentToolboxContext) {}
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
+
+  /** Opens the draft's product page with the pending theme applied. Any failure, or no way to check, removes the CSS. */
+  private async checkPendingTheme(): Promise<AgentFinding[]> {
+    const theme = this.pendingTheme!;
+    const drop = (messages: string[]): AgentFinding[] => {
+      this.pendingTheme = { productCard: theme.productCard, productCss: '' };
+      return [...messages.map(message => ({ source: 'theme' as const, message })), { source: 'theme' as const, message: 'Se quitó el CSS de la ficha de producto; los ajustes del preset se conservan. Llama de nuevo a set_product_card_theme con otro CSS si lo quieres.' }];
+    };
+    try {
+      const snapshot = snapshotWithProductTheme(await agentPreviewSnapshot(this.ctx.base, this.workspace.files().filter(f => nextSourceFile(f.path))), theme);
+      const failures = await (this.ctx.checkTheme ?? (snap => checkProductThemeOnSnapshot(snap as never, { signal: this.ctx.signal })))(snapshot);
+      return failures.length ? drop(failures.map(f => `${f.control} (${f.viewport}): ${f.reason}`)) : [];
+    } catch (error) { return drop([`No se pudo comprobar la ficha de producto: ${(error as Error).message.slice(0, 300)}`]); }
+  }
 
   async run(name: string, rawArgs: string): Promise<{ output: string; image?: string }> {
     let args: any;
@@ -79,16 +99,21 @@ export class AgentToolbox {
         // Code-only repairs are applied to the draft before the verdict is recorded, so finish sees the same version.
         for (const file of result.files) if (ws.list().includes(file.path) && ws.read(file.path) !== file.content) ws.write(file.path, file.content);
         this.repairs.push(...result.repairs);
-        this.lastVerify = { version: ws.version, clean: result.findings.length === 0 };
-        const count = result.findings.length;
+        const findings = [...result.findings];
+        // The theme is checked in a real browser only on a draft that builds; a theme that hides, covers or shrinks a
+        // protected control loses its CSS (the params stay), and the draft is not clean until verified again.
+        if (!findings.length && this.pendingTheme?.productCss) findings.push(...await this.checkPendingTheme());
+        this.lastVerify = { version: ws.version, clean: findings.length === 0 };
+        const count = findings.length;
         // A clean draft is what the merchant sees appear in the preview while YAPI keeps working.
         if (!count && this.ctx.onPreview) {
           try { this.ctx.onPreview((await agentPreviewSnapshot(this.ctx.base, ws.files().filter(f => nextSourceFile(f.path)))).files); } catch { /* the preview is best-effort */ }
         }
         step('verify', count ? `Verificó: ${count} ${count === 1 ? 'problema' : 'problemas'}` : 'Verificó: todo en orden');
-        return { output: count ? result.findings.map((f, i) => `${i + 1}. [${f.source}] ${f.message}`).join('\n') : 'Todo en orden.' };
+        return { output: count ? findings.map((f, i) => `${i + 1}. [${f.source}] ${f.message}`).join('\n') : 'Todo en orden.' };
       }
       case 'set_product_card_theme': {
+        if (this.ctx.themeAllowed === false) return { output: 'Este pedido no cambia la ficha de producto.' };
         const chosen: ProductThemeInput = {};
         if (typeof args.preset === 'string') chosen.preset = args.preset as ProductThemeInput['preset'];
         const params = Object.fromEntries(Object.keys(SOURCE_DNA_ENUMS.productCard).filter(key => typeof args[key] === 'string').map(key => [key, args[key]]));
