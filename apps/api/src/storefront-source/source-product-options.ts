@@ -16,6 +16,7 @@ const properties = {
   stock: nullable({ type: 'integer', minimum: 0, maximum: 1000000 }),
   stockText: nullable({ type: 'string', description: 'Exact current stock quote, such as 5 de cada una, sold out, or sin límite. Required for new combinations. Null preserves existing stock; stock:null with an explicit unlimited quote disables tracking.' }),
   imageUrl: nullable({ type: 'string', description: 'Original uploaded product-photo URL; null preserves an existing assignment.' }),
+  imageUrls: nullable({ type: 'array', maxItems: 8, items: { type: 'string' }, description: 'Original uploaded product-photo URLs for this option; null preserves.' }),
 };
 export const sourceVariantsSchema = { type: 'array', maxItems: 256, items: { type: 'object', additionalProperties: false, required: Object.keys(properties), properties } };
 export const sourceVariantOperationsSchema = { type: 'array', maxItems: 256, items: { type: 'object', additionalProperties: false,
@@ -159,6 +160,10 @@ function changes(raw: any, instruction: string, baseAmount: number, currency: st
   if (raw.imageUrl != null) {
     if (typeof raw.imageUrl !== 'string' || !images.has(raw.imageUrl)) throw new BadRequestException('Usa una foto que pertenezca a este producto o a los archivos adjuntos.');
     result.imageUrl = raw.imageUrl;
+  }
+  if (raw.imageUrls != null) {
+    if (!Array.isArray(raw.imageUrls) || raw.imageUrls.some((url: unknown) => typeof url !== 'string' || !images.has(url))) throw new BadRequestException('Usa fotos que pertenezcan a este producto o a los archivos adjuntos.');
+    result.imageUrls = raw.imageUrls;
   }
   if (creating && !result.name) throw new BadRequestException('Indica las opciones de la nueva combinación.');
   if (validateSync(plainToInstance(ProductVariantDto, { name:'Opción', amount:baseAmount, ...result }), {whitelist:true,forbidNonWhitelisted:true}).length) throw new BadRequestException('Revisa los nombres, valores, precio y foto de la combinación.');

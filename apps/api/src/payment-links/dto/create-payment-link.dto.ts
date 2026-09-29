@@ -59,6 +59,10 @@ export class ProductVariantDto {
 
   @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
   imageUrl?: string | null;
+
+  @IsOptional() @IsArray() @ArrayMaxSize(8) @Matches(UPLOADED_FILE_URL_PATTERN, { each: true }) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH, { each: true })
+  imageUrls?: string[] | null;
+
   @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
   @IsOptional()
   @IsString()
