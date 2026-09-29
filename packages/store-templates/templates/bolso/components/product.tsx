@@ -12,9 +12,9 @@ export default function Product() {
             <KitSlot kind="product" name="title" className="bo-pdp__title" />
             <KitSlot kind="product" name="rating" className="bo-pdp__rating" />
             <KitSlot kind="product" name="pricing" className="bo-pdp__price" />
+            <KitSlot kind="product" name="buy" className="bo-pdp__buy" />
             <KitSlot kind="product" name="description" className="bo-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="bo-pdp__highlights" />
-            <KitSlot kind="product" name="buy" className="bo-pdp__buy" />
             <KitSlot kind="product" name="info" className="bo-pdp__more" />
             <KitSlot kind="product" name="delivery" className="bo-pdp__delivery" />
           </div>

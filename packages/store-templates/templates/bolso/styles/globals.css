@@ -213,7 +213,6 @@ a{color:inherit}
   .bo-footer__top{grid-template-columns:2fr 1fr 1fr}
   .bo-footer__about{grid-column:auto}
   .bo-pdp__grid{grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:clamp(32px,4.5vw,72px);align-items:start}
-  .bo-pdp__info{position:sticky;top:112px}
   .bo-review{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:56px;align-items:start}
   .bo-review__col--summary{order:2}
 }
