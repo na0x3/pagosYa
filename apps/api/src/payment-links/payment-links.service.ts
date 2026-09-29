@@ -548,7 +548,7 @@ export class PaymentLinksService {
   /** Same active-store/publication checks as StoresService.findActiveBySlugPublic. */
   async listPublicSubscriptions(slug: string, id: string) {
     const product = await this.prisma.paymentLink.findFirst({
-      where: { id, status: PaymentLinkStatus.ACTIVE, store: { slug, status: "ACTIVE", sourcePublicationPaused: false } },
+      where: { id, status: PaymentLinkStatus.ACTIVE, fulfillmentType: { not: "DIGITAL" }, store: { slug, status: "ACTIVE", sourcePublicationPaused: false, subscriptionsEnabled: true } },
       select: { subscriptionOptions: { orderBy: { cadence: "asc" }, select: {
         id: true, paymentLinkId: true, cadence: true, discountPercent: true,
       } } },

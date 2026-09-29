@@ -627,15 +627,20 @@ export function mountCobrosPanel(deps) {
     else input.removeAttribute("aria-activedescendant");
   }
 
+  // Only the newest request may answer, and a late answer keeps the option the merchant already moved to.
+  let suggestionRequest = 0;
+  const sameCustomer = (a, b) => a.name === b.name && (a.phone || "") === (b.phone || "") && (a.email || "") === (b.email || "");
   async function fetchSuggestions(query) {
+    const request = ++suggestionRequest;
     try {
       const rows = await deps.api(`${storePath("/document-customers")}${query ? `?q=${encodeURIComponent(query)}` : ""}`);
-      if (!draft) return;
+      if (!draft || request !== suggestionRequest) return;
+      const active = suggestions[activeSuggestion];
       suggestions = Array.isArray(rows) ? rows : [];
-      activeSuggestion = -1;
+      activeSuggestion = active ? suggestions.findIndex((row) => sameCustomer(row, active)) : -1;
       renderSuggestions(document.activeElement === panel.querySelector("#cobroCustomerName"));
     } catch {
-      suggestions = [];
+      if (request === suggestionRequest) suggestions = [];
     }
   }
 

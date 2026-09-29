@@ -7,7 +7,7 @@
 <title>pagosYa - Panel de comercio</title>
 <meta name="description" content="Administra tu tienda, catálogo, cobros, desembolsos y facturación local desde pagosYa.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#eee7dc">
+<meta name="theme-color" content="#fafaf9">
 <script type="importmap">{"imports":{"@paper-design/shaders":"/vendor/paper-shaders/index.js"}}</script>
 <link rel="stylesheet" href="/src/dashboard.css">
 <link rel="stylesheet" href="/src/workspace-design.css">
@@ -15,14 +15,19 @@
 <link rel="stylesheet" href="/src/growth.css">
 <link rel="stylesheet" href="/src/proposals.css">
 <link rel="stylesheet" href="/src/contracts.css">
+<link rel="stylesheet" href="/src/calm.css">
 </head>
 <body>
-<div class="dashboard-backdrop" data-dashboard-shader aria-hidden="true"></div>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
   <div class="topbar">
     <!-- The bird now sits at the top of the sidebar; the topbar carries no
          second brand lockup. Kept as the page's only h1 for the outline. -->
     <h1 class="sr-only">pagosYa · Panel de Comercio</h1>
+    <!-- Which store every page is about, and a way to see it as a customer does. -->
+    <div class="topbar-store">
+      <label class="topbar-store-picker" for="sidebarStorePicker"><span class="sr-only">Tienda activa</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/></svg><select id="sidebarStorePicker" aria-label="Tienda activa"><option value="">Selecciona una tienda</option></select></label>
+      <a class="topbar-store-link" id="topbarStoreLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Ver mi tienda<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+    </div>
     <div class="topbar-actions">
       <div id="loggedInBar">
         <button class="profile-trigger" id="profileMenuTrigger" type="button" popovertarget="profileMenu" aria-expanded="false" aria-label="Abrir perfil" title="Perfil y sesión">
@@ -155,7 +160,6 @@
             </button>
           </div>
         </div>
-        <label class="sidebar-store-picker" for="sidebarStorePicker">Tienda activa<select id="sidebarStorePicker" aria-label="Tienda activa"><option value="">Selecciona una tienda</option></select></label>
         <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
           <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
           <a class="dashboard-nav-button" href="#dashboard-growth" data-dashboard-view="growth"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/><path d="M3 21h18"/></svg></span>Crecimiento</a>
@@ -239,26 +243,21 @@
           <iframe id="merchantStudioFrame" title="YAPI · Editor de tu tienda" hidden></iframe>
           <p class="merchant-workspace-note">El diseño se guarda como borrador. Tu catálogo y checkout siguen conectados a pagosYa.</p>
         </section>
-    <div class="cards" data-dashboard-page="overview">
-      <div id="balanceCards" style="display:contents"></div>
-      <div class="card">
-        <div class="card-head">
-          <span class="muted">Estado de verificación (KYC)</span>
-          <span class="card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
-          </span>
-        </div>
-        <div class="value"><span class="badge" id="kycBadge">—</span></div>
-      </div>
-      <div class="card">
-        <div class="card-head">
-          <span class="muted">Facturación (SIN)</span>
-          <span class="card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 16h6"/></svg>
-          </span>
-        </div>
-        <div class="value"><span class="badge" id="invoicingBadge">—</span></div>
-      </div>
+    <section class="overview-top" data-dashboard-page="overview" aria-labelledby="overviewGreeting">
+      <p class="overview-greeting" id="overviewGreeting">Hola</p>
+      <dl class="overview-kpis" id="overviewKpis" aria-label="Cifras clave de la tienda"></dl>
+    </section>
+    <div class="overview-grid" data-dashboard-page="overview">
+      <section class="panel overview-setup" id="overviewSetup" aria-labelledby="overviewSetupTitle" hidden></section>
+      <section class="panel overview-account" aria-labelledby="overviewAccountTitle">
+        <h2 id="overviewAccountTitle">Tu cuenta</h2>
+        <dl class="overview-account-list">
+          <div id="balanceCards" style="display:contents"></div>
+          <div><dt>Verificación (KYC)</dt><dd><span class="badge" id="kycBadge">—</span></dd></div>
+          <div><dt>Facturación (SIN)</dt><dd><span class="badge" id="invoicingBadge">—</span></dd></div>
+        </dl>
+        <a class="overview-account-link" href="#dashboard-payouts" data-dashboard-view="payouts">Ver desembolsos</a>
+      </section>
     </div>
     <div id="internationalPaymentsCard" data-dashboard-page="overview"></div>
 
@@ -983,7 +982,7 @@
 
 <aside class="workspace-yapi" aria-label="YAPI, asistente de tu tienda">
   <div class="workspace-yapi-heading"><img class="workspace-yapi-star" src="/assets/pagosya-star-yellow.png" alt="YAPI" width="28" height="28"><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
-  <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar hoy?" required></textarea><button class="primary" type="submit">Abrir con YAPI ↗</button></form>
+  <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?" required></textarea><button class="primary" type="submit" aria-label="Abrir con YAPI">Abrir<span class="workspace-yapi-long"> con YAPI</span> ↗</button></form>
   <p class="workspace-yapi-status" id="workspaceYapiStatus" role="status"></p>
 </aside>
 <link rel="stylesheet" href="/variant-editor.css">

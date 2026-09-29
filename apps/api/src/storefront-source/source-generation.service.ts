@@ -212,7 +212,7 @@ export class SourceGenerationService {
     if (!owner) throw new NotFoundException("Store not found");
     const data = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
     const retention = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } });
-    return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
+    return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, subscriptionsEnabled: data.subscriptionsEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,

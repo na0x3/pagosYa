@@ -1,4 +1,4 @@
-body.store-resource-body { display:block; margin:0; padding:4px; min-height:0; height:auto; background:var(--resource-paper,#f8f8f2); color:var(--resource-ink,#20211e); font:14px/1.6 Arial,sans-serif; overflow:auto; }
+body.store-resource-body { display:block; margin:0; padding:4px; min-height:0; height:auto; background:var(--resource-paper,#f8f8f2); color:var(--resource-ink,#20211e); font:14px/1.6 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; overflow:auto; }
 .store-resource-body #app { height:auto; min-height:0; }
 .store-resource-body * { box-sizing:border-box; }
 .store-resource-body button,.store-resource-body input,.store-resource-body select { font:inherit; color:inherit; border:1px solid var(--resource-line,#d8d9ce); border-radius:6px; padding:10px 12px; background:var(--resource-surface,white); min-height:44px; }
@@ -40,12 +40,21 @@ body.store-resource-body { display:block; margin:0; padding:4px; min-height:0; h
 .product-create-panel .product-next {color:#20211e}
 .store-resource-body .product-create-panel :is(input,textarea) {background:var(--resource-surface,white);color:var(--resource-ink,#20211e);border-color:var(--resource-line,#d8d9ce)}
 html:has(body.store-resource-body), .store-resource-body, .store-resource-body #app { min-width:0; }
-/* Resource pages live inside the dark dashboard (Correos y marketing, Integraciones, Pruebas A/B, Productos…):
-   no white paper or cards — transparent over the dashboard's gradient, glass surfaces, light ink. */
-html:has(body.store-resource-body){background:transparent;color-scheme:dark}
-body.store-resource-body{--resource-paper:transparent;--resource-surface:rgb(255 255 255 / 5%);--resource-field:rgb(255 255 255 / 7%);--resource-soft:rgb(255 255 255 / 9%);--resource-line:rgb(255 255 255 / 14%);--resource-ink:#f1f1f0;--resource-muted:#a9a9a6;background:transparent;color:#f1f1f0}
-body.store-resource-body :is(input,select,textarea){background:rgb(255 255 255 / 7%);color:#f1f1f0}
-body.store-resource-body :is(input,textarea)::placeholder{color:#8d8d8a}
-body.store-resource-body .experiment-designs>article{border-color:rgb(255 255 255 / 16%);box-shadow:none}
-body.store-resource-body .business-note{background:rgb(133 113 151 / 18%);border-color:rgb(203 188 224 / 35%);color:#e7def3}
-body.store-resource-body .email-preview{background:rgb(255 255 255 / 4%)}
+/* Resource pages sit inside the dashboard's calm workspace (Productos, Medios, Plantillas, Marketing,
+   Integraciones, Pruebas A/B): the page shows through, cards are white with hairline borders, and the
+   primary action is graphite like the dashboard's. */
+html:has(body.store-resource-body){background:transparent;color-scheme:light}
+body.store-resource-body{--resource-paper:transparent;--resource-surface:#fff;--resource-field:#fff;--resource-soft:#f5f5f4;--resource-line:#e7e5e4;--resource-ink:#18181b;--resource-muted:#57575e;background:transparent;color:#18181b;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body.store-resource-body :is(input,select,textarea){background:#fff;color:#18181b;border-color:#d6d3d1;border-radius:8px}
+body.store-resource-body :is(input,textarea)::placeholder{color:#7a7a82}
+body.store-resource-body :is(input,select,textarea):focus-visible{outline:none;border-color:#18181b;box-shadow:0 0 0 3px rgb(24 24 27 / .14)}
+body.store-resource-body .experiment-designs>article{border-color:#e7e5e4;box-shadow:0 1px 2px rgb(24 24 27 / .04)}
+body.store-resource-body .business-note{background:#f5f5f4;border-color:#e7e5e4;color:#3f3f46}
+body.store-resource-body .email-preview{background:#fafaf9}
+body.store-resource-body :is(.resource-card,.content-page,.product-review){border-radius:12px;box-shadow:0 1px 2px rgb(24 24 27 / .04)}
+body.store-resource-body .resource-copy a{color:#18181b;text-underline-offset:3px}
+body.store-resource-body .product-create-panel{font-family:inherit}
+body.store-resource-body .product-yapi-badge{background:#f5d547;color:#1c1a05}
+body.store-resource-body .product-create-panel .product-step-track .is-current{background:#18181b}
+body.store-resource-body .product-create-panel .product-next{background:#18181b;color:#fff;border-color:#18181b;border-radius:8px;box-shadow:none}
+body.store-resource-body .product-create-panel .product-next:disabled{background:#e7e5e4;border-color:#e7e5e4;color:#7a7a82}
