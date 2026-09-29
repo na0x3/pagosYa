@@ -211,7 +211,12 @@ export function applyVariantOperations(existing: ProductVariant[], operations: S
       const index = next.findIndex(variant=>variant.id===operation.variantId);
       if (index < 0) throw new BadRequestException('La combinación cambió o ya no existe. Actualiza antes de editar.');
       if (operation.action === 'delete') next.splice(index,1);
-      else next[index] = {...next[index],...operation.changes};
+      else {
+        next[index] = {...next[index],...operation.changes};
+        // A legacy single-photo patch must reach the normalizer as a patch,
+        // not as an explicit request to retain the old multi-photo set.
+        if (operation.changes?.imageUrl !== undefined && operation.changes.imageUrls === undefined) delete next[index].imageUrls;
+      }
     }
   }
   if (!next.length) throw new BadRequestException('Conserva una combinación o marca el producto como agotado.');
