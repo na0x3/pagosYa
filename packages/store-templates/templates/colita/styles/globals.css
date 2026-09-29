@@ -294,3 +294,6 @@
 :root[data-dna-cart=sheet] .cart-drawer{border:2.5px solid var(--co-plum);border-bottom:0;border-radius:30px 30px 0 0;background:var(--co-cream);overflow:hidden auto}
 :root[data-dna-added=bubble] .cart-added{border-color:var(--co-plum);background:var(--co-plum);color:var(--co-cream)}
 /* pagosya-kit:end */
+
+/* one-product store: keep the lone card centred instead of stranded in a wide row */
+.co-grid:has(> :only-child){grid-template-columns:minmax(0,min(100%,340px));justify-content:center}
