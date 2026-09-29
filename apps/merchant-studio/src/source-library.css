@@ -40,3 +40,12 @@ body.store-resource-body { display:block; margin:0; padding:4px; min-height:0; h
 .product-create-panel .product-next {color:#20211e}
 .store-resource-body .product-create-panel :is(input,textarea) {background:var(--resource-surface,white);color:var(--resource-ink,#20211e);border-color:var(--resource-line,#d8d9ce)}
 html:has(body.store-resource-body), .store-resource-body, .store-resource-body #app { min-width:0; }
+/* Resource pages live inside the dark dashboard (Correos y marketing, Integraciones, Pruebas A/B, Productos…):
+   no white paper or cards — transparent over the dashboard's gradient, glass surfaces, light ink. */
+html:has(body.store-resource-body){background:transparent;color-scheme:dark}
+body.store-resource-body{--resource-paper:transparent;--resource-surface:rgb(255 255 255 / 5%);--resource-field:rgb(255 255 255 / 7%);--resource-soft:rgb(255 255 255 / 9%);--resource-line:rgb(255 255 255 / 14%);--resource-ink:#f1f1f0;--resource-muted:#a9a9a6;background:transparent;color:#f1f1f0}
+body.store-resource-body :is(input,select,textarea){background:rgb(255 255 255 / 7%);color:#f1f1f0}
+body.store-resource-body :is(input,textarea)::placeholder{color:#8d8d8a}
+body.store-resource-body .experiment-designs>article{border-color:rgb(255 255 255 / 16%);box-shadow:none}
+body.store-resource-body .business-note{background:rgb(133 113 151 / 18%);border-color:rgb(203 188 224 / 35%);color:#e7def3}
+body.store-resource-body .email-preview{background:rgb(255 255 255 / 4%)}

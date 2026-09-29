@@ -15,6 +15,8 @@ export class StoreRedirectsController {
 @Controller('v1/stores/public/:slug')
 export class StorePagesController {
   constructor(private readonly pages: StorePagesService) {}
+  @Get('redirect') @Header('Cache-Control', 'no-cache')
+  redirect(@Param('slug') s: string, @Query('path') path?: string) { return this.pages.publicRedirect(s, String(path ?? '')); }
   @Get('pages') @Header('Content-Type', 'text/html; charset=utf-8') @Header('Cache-Control', 'no-cache')
   archive(@Param('slug') s: string, @Query('page') page?: string) { return this.pages.archive(s, page === undefined ? 1 : Number(page)); }
   @Get('pages/*path')

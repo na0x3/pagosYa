@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // Every view must open without a script error; removals in dashboard.js
 // surface here first, because one stale element lookup stops the whole script.
-const VIEWS = ["overview", "progress", "stores", "store-settings", "connect-ai", "products", "media", "marketing", "experiments", "integrations", "charge-links", "cobros", "proposals", "contracts", "inbox", "payments", "payouts", "account", "compliance", "workspace"];
+const VIEWS = ["overview", "stores", "store-settings", "connect-ai", "products", "media", "marketing", "experiments", "integrations", "charge-links", "cobros", "proposals", "contracts", "inbox", "payments", "payouts", "account", "compliance", "workspace"];
 
 test("every dashboard view opens without script errors", async ({ page }) => {
   const errors = [];
@@ -27,6 +27,9 @@ test("every dashboard view opens without script errors", async ({ page }) => {
   });
   await page.goto("/#dashboard-overview");
   await expect(page.locator("body")).toHaveClass(/is-logged-in/);
+  // The dashboard is a work tool: no levels, XP, companions or rewards anywhere.
+  await expect(page.locator('[data-dashboard-view="progress"], #gamificationSummary, #gamificationToast, #rewardsPanel, .gamification-blob')).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText(/\bXP\b|Progreso|compañeros/);
   for (const view of VIEWS) {
     await page.evaluate((target) => window.setDashboardView(target), view);
     await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", view);

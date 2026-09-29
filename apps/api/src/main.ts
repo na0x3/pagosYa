@@ -76,6 +76,8 @@ async function bootstrap() {
   // Slightly above Express's 100kb default for general headroom. Product photos and
   // merchant logos go through multipart uploads (see UploadsModule), not JSON bodies,
   // so this limit no longer needs to accommodate base64 image payloads.
+  // Shopify's product export CSV travels as JSON text (spec 2026-09-27); only this route gets the room for it.
+  app.use("/v1/store-imports/shopify-csv", json({ limit: "6mb", strict: true, reviver: safeJsonReviver }));
   app.use(json({
     limit: "1mb",
     strict: true,

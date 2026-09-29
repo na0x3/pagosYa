@@ -4,7 +4,8 @@ import { IllegalStateTransitionError } from "../../payment-intents/payment-inten
 
 function redactSecrets(value: string): string {
   return value
-    .replace(/\b(?:sk|pk)_(?:test|live)_[0-9A-Za-z_]+\b/g, "[REDACTED_API_KEY]")
+    .replace(/(\/mcp\/k\/)[^/?#\s]+/g, "$1[REDACTED]")
+    .replace(/\b(?:sk|pk|mk)_(?:test|live)_[0-9A-Za-z_]+\b/g, "[REDACTED_API_KEY]")
     .replace(/\b(?:dash|consumer|ops|whsec)_[0-9A-Za-z_-]+\b/g, "[REDACTED_TOKEN]")
     .replace(/\bpi_[0-9a-z]+_secret_[0-9A-Za-z]+\b/g, "[REDACTED_CLIENT_SECRET]")
     .replace(/([?&](?:client_secret|publishable_key|token)=)[^&#\s]*/gi, "$1[REDACTED]")
@@ -55,7 +56,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if ((!isHttpException && !isStateConflict) || status >= 500) {
       const message = redactSecrets(exception instanceof Error ? exception.message : String(exception));
       const stack = exception instanceof Error && exception.stack ? redactSecrets(exception.stack) : undefined;
-      this.logger.error(`[${requestId}] ${request.method} ${requestPath(request)} -> ${status}: ${message}`, stack);
+      this.logger.error(`[${requestId}] ${request.method} ${redactSecrets(requestPath(request))} -> ${status}: ${message}`, stack);
     }
 
     // A streaming/download response may already have committed its headers.

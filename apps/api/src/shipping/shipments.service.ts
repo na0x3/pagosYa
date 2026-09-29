@@ -9,6 +9,7 @@ import { CarrierRegistry } from './carriers/carrier-registry';
 import type { BookInput, ShipmentParty } from './carriers/carrier';
 import type { Parcel } from './parcel';
 import { renderWaybillPdf } from './waybill-pdf';
+import { emitStoreEvent } from '../extensions/store-events';
 
 // Ruling R1: DEVELOPMENT_ORDER_TRACKING_SECRET is not exported from
 // ../consumer/order-tracking-token (it's a local const in payment-intents.service.ts:27).
@@ -81,6 +82,10 @@ export class ShipmentsService {
     const changed = await tx.storeOrder.updateMany({ where: { id: order.id, status: { in: from } }, data: { status: to } });
     if (!changed.count) return;
     const event = await tx.storeOrderStatusEvent.create({ data: { orderId: order.id, status: to } });
+    await emitStoreEvent(tx, order.storeId, 'order.status_changed', async () => {
+      const shipment = await tx.shipment.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' }, select: { trackingNumber: true } });
+      return { orderId: order.id, from: from.length === 1 ? from[0] : null, to, trackingNumber: shipment?.trackingNumber ?? null };
+    });
     if (to !== 'SHIPPED' && to !== 'DELIVERED') return;
     const payment = await tx.paymentIntent.findUnique({ where: { id: order.paymentIntentId } });
     if (payment?.livemode) await queueStoreEmail(tx, order.storeId, to, event.id, payment.customerEmail, { store: order.storeName, order: order.id, customer: payment.customerName || 'cliente', amount: `${(order.amount / 100).toFixed(2)} ${order.currency}`, ...(details ? { details } : {}) });

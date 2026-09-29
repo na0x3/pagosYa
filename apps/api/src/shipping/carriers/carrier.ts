@@ -7,6 +7,8 @@ export type BookInput = { shipmentId: string; orderReference: string; origin: Sh
 export type BookResult = { trackingNumber: string | null; carrierRef: string | null; labelPdf: Buffer | null; cost: number | null; needsWaybill: boolean };
 export type CarrierRef = { carrierRef: string | null; trackingNumber: string | null };
 export type TrackingUpdate = { status: ShipmentStatus; occurredAt: Date; description?: string; location?: string; carrierEventId?: string };
+export type QuoteInput = { origin: ShipmentParty; destination: ShipmentParty; weightGrams: number | null; parcel: Parcel | null; declaredAmount: number; currency: string };
+export type CarrierQuote = { service: string; label: string; amount: number; currency: string; days?: { min: number; max: number } };
 
 export interface CarrierAdapter {
   readonly code: string;
@@ -15,6 +17,8 @@ export interface CarrierAdapter {
   book(input: BookInput, creds: CarrierCredentials | null): Promise<BookResult>;
   cancel(ref: CarrierRef, creds: CarrierCredentials | null): Promise<{ fee: number }>;
   track(ref: CarrierRef, creds: CarrierCredentials | null): Promise<TrackingUpdate[]>;
+  /** Prices before booking, shown at checkout (FedEx and later carriers). Manual shipping has none. */
+  quote?(input: QuoteInput, creds: CarrierCredentials | null): Promise<CarrierQuote[]>;
   verifyWebhook?(req: { headers: Record<string, string | undefined>; body: Buffer }): TrackingUpdate[] | null;
   testConnection?(creds: CarrierCredentials): Promise<void>;
 }

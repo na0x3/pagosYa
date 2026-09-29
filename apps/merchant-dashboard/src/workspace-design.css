@@ -139,6 +139,41 @@ body.is-logged-in #storeRows .store-create-tile:hover { background: var(--pg-sur
 .store-library-empty { font-size: 14px; color: var(--pg-text-muted); padding: 20px; }
 .create-store-dialog { width: min(440px,calc(100% - 32px)); max-height: calc(100dvh - 40px); padding: 28px; border: var(--bento-line) solid var(--bento-keyline); border-radius: 10px; background: var(--pg-surface); color: var(--pg-text); box-shadow: var(--bento-shadow-sm); }
 .create-store-dialog::backdrop { background: #20211e70; }
+/* Traer mi tienda de Shopify (spec 2026-09-27) */
+.shopify-import-dialog { width: min(640px,calc(100% - 32px)); background: color-mix(in srgb, var(--pg-surface) 88%, transparent); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); }
+.shopify-import-dialog::backdrop { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.shopify-import, .shopify-import section, .shopify-import form { display: grid; gap: 14px; }
+/* Panels and rows switch with [hidden]; the display rules above must not override it. */
+.shopify-import [hidden] { display: none !important; }
+.shopify-import footer { display: flex; justify-content: flex-end; gap: 10px; }
+.shopify-import details summary { cursor: pointer; font-size: 13px; color: var(--pg-text-muted); }
+.shopify-import [role="alert"] { color: var(--pg-danger, #b3261e); font-size: 13px; }
+.shopify-import-counts { font-weight: 700; color: var(--pg-text) !important; }
+.shopify-import-warnings { margin: 0; padding-left: 18px; font-size: 13px; color: var(--pg-text-muted); }
+.shopify-import-rate { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.shopify-import-rate input { width: 90px; }
+.shopify-import-products { max-height: 300px; overflow: auto; list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.shopify-import-products label { display: grid; grid-template-columns: auto 40px 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.shopify-import-products img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
+.shopify-import-products em { grid-column: 3 / -1; color: var(--pg-danger, #b3261e); font-style: normal; font-size: 12px; }
+.shopify-import-choices { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); }
+.shopify-import-choices button { display: grid; gap: 4px; text-align: left; padding: 14px; border: 1px solid var(--pg-border); border-radius: 10px; background: transparent; color: var(--pg-text); text-transform: none; }
+.shopify-import-choices button:hover:not(:disabled) { border-color: var(--pg-border-strong); background: var(--pg-surface-2, transparent); }
+.shopify-import-choices button span { font-size: 12px; color: var(--pg-text-muted); }
+.shopify-import-choices button em { font-style: normal; font-size: 11px; font-weight: 700; }
+.shopify-import-choices button:disabled { opacity: .5; cursor: not-allowed; }
+.shopify-import progress { width: 100%; }
+.shopify-import-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 13px; }
+.shopify-import-steps li { display: grid; grid-template-columns: 16px 1fr; column-gap: 8px; color: var(--pg-text-muted); }
+.shopify-import-steps li::before { content: "○"; text-align: center; }
+.shopify-import-steps li[data-state="completed"]::before { content: "✓"; color: var(--pg-success); }
+.shopify-import-steps li[data-state="failed"]::before { content: "↻"; }
+.shopify-import-steps li[data-state="running"] { color: var(--pg-text); font-weight: 600; }
+.shopify-import-steps li[data-state="running"]::before { content: "●"; color: var(--pg-accent); animation: shopify-import-step 1.2s ease-in-out infinite alternate; }
+.shopify-import-steps small { grid-column: 2; font-size: 12px; font-weight: 400; color: var(--pg-text-muted); overflow-wrap: anywhere; }
+@keyframes shopify-import-step { from { opacity: 1; } to { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .shopify-import-steps li[data-state="running"]::before { animation: none; } }
+.shopify-import-next { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; }
 .create-store-dialog #createStoreForm { display: grid; gap: 20px; margin: 0; }
 .create-store-dialog h2 { margin: 0 0 8px; font: 800 24px/1.2 Arial,sans-serif; letter-spacing: -.6px; }
 .create-store-dialog p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--pg-text-muted); }
@@ -242,6 +277,8 @@ body.is-logged-in {
   --pg-focus-ring: #f3f36b59; --pg-retro-grid: transparent; --pg-retro-glow: transparent; --pg-retro-shade: transparent;
 }
 body.is-logged-in :is(.panel,.card) { -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15); }
+/* A popover sits over live content, so it is solid: nothing behind it may read through its text. */
+body.is-logged-in .profile-menu { background: hsl(222 42% 9%); }
 body.is-logged-in :is(input,select,textarea) { background-color: #ffffff0d; color: var(--pg-text); border-color: var(--pg-border-strong); }
 body.is-logged-in :is(input,textarea)::placeholder { color: var(--pg-text-faint); }
 body.is-logged-in > .topbar, body.is-logged-in[data-dashboard-view="workspace"] > .topbar { border-bottom-color: #ffffff14; background: rgb(17 17 17 / .6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }

@@ -12,6 +12,11 @@ export const SOURCE_MODELS = {
   'deepseek-v4-flash': { label: 'DeepSeek Flash', input: 0.44, cached: 0.014, output: 1.32 },
   'deepseek-v4-pro': { label: 'DeepSeek Pro', input: 1.32, cached: 0.044, output: 3.96 },
   'deepseek-v4-flash-vision-exp': { label: 'DeepSeek Flash Vision (experimental)', input: 0.44, cached: 0.014, output: 1.32 },
+  // Claude (Anthropic) per-million-token list prices — VERIFY against anthropic.com/pricing before production.
+  // Cache reads bill at 0.1× input; cache writes at 1.25× (sourceUsage adds the .25).
+  'claude-opus-5-5': { label: 'Claude Opus 5.5', input: 5, cached: 0.5, output: 25 },
+  'claude-sonnet-5': { label: 'Claude Sonnet 5', input: 3, cached: 0.3, output: 15 },
+  'claude-haiku-4-5-20251001': { label: 'Claude Haiku 4.5', input: 1, cached: 0.1, output: 5 },
 } as const;
 export type SourceModel = keyof typeof SOURCE_MODELS;
 export type SourceModelChoice = 'auto' | SourceModel;
@@ -40,7 +45,7 @@ export function sourceUsage(model: SourceModel, raw: any) {
   const cachedInputTokens = Math.min(inputTokens, integer(raw.input_tokens_details?.cached_tokens) ? raw.input_tokens_details.cached_tokens : 0);
   const cacheWriteTokens = isDeepSeek(model) ? 0 : Math.min(inputTokens - cachedInputTokens, integer(raw.input_tokens_details?.cache_write_tokens) ? raw.input_tokens_details.cache_write_tokens : 0);
   const rates = SOURCE_MODELS[model];
-  const long = !isDeepSeek(model) && inputTokens > 272000;
+  const long = !isDeepSeek(model) && !model.startsWith('claude-') && inputTokens > 272000;
   const providerMicroUsd = Math.ceil(((inputTokens - cachedInputTokens + cacheWriteTokens * .25) * rates.input + cachedInputTokens * rates.cached) * (long ? 2 : 1) + outputTokens * rates.output * (long ? 1.5 : 1));
   return { inputTokens, cachedInputTokens, outputTokens, providerMicroUsd, ...(cacheWriteTokens ? { cacheWriteTokens } : {}) };
 }
@@ -104,6 +109,10 @@ const CONVERSATION_MODEL_CAP: Record<SourceModel, SourceModel> = {
   'deepseek-v4-pro': 'deepseek-v4-flash',
   'deepseek-v4-flash': 'deepseek-v4-flash',
   'deepseek-v4-flash-vision-exp': 'deepseek-v4-flash-vision-exp',
+  // The chat's conversation step is built for OpenAI's format; Claude choices keep it on the economical OpenAI model.
+  'claude-opus-5-5': 'gpt-5.6-luna',
+  'claude-sonnet-5': 'gpt-5.6-luna',
+  'claude-haiku-4-5-20251001': 'gpt-5.6-luna',
 };
 export function sourceConversationModel(choice: SourceModelChoice | undefined, configured: string | undefined) {
   const requested = choice && choice !== 'auto' ? choice : configured;

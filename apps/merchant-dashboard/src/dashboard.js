@@ -1,9 +1,9 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
-import { ANIMATIONS, mountBlob } from "@pagosya/blob-characters";
-import { ADVENTURE_LEVELS, companionBlobHtml, companionBlobUri, companionSeed } from "/src/companions.mjs";
-import { normalizeVariation, profileBlobHtml, profileBlobUri, randomVariation, variationChoices } from "/src/profile-blob.mjs";
+import { profileInitials } from "/src/profile-initials.mjs";
+import { debtAmountInCents, parseDebtCollectionRows, parseDebtCsv } from "/src/debt-csv.mjs";
+import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
-import { mountRewardsPanel } from "/src/rewards-panel.mjs";
+import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
@@ -13,8 +13,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
   try { localStorage.removeItem("pagosya_dashboard_theme"); } catch { /* storage unavailable */ }
 
-  // Keep XP current while the merchant leaves the dashboard open. A newly
-  // completed sale can therefore unlock and announce its companion in-session.
+  // Keep the finance summary current while the merchant leaves the dashboard open.
   window.setInterval(() => {
     if (sessionToken && currentStoreId && !document.hidden) refreshFinancesInBackground();
   }, 60_000);
@@ -40,9 +39,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   const profileMenuTriggerEl = document.getElementById("profileMenuTrigger");
   const profileTriggerAvatarEl = document.getElementById("profileTriggerAvatar");
   const profileMenuAvatarEl = document.getElementById("profileMenuAvatar");
-  const profileAvatarOptionsEl = document.getElementById("profileAvatarOptions");
   const accountAvatarEl = document.getElementById("accountAvatar");
-  const sessionProfileAvatarsEl = document.getElementById("sessionProfileAvatars");
   const profileDisplayNameEl = document.getElementById("profileDisplayName");
   const profileSessionsEl = document.getElementById("profileSessions");
   const profileSessionCountEl = document.getElementById("profileSessionCount");
@@ -59,53 +56,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   if (savedApiBase === "http://localhost:3000/v1") sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
   emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
-  const PROFILE_AVATAR_STORAGE_PREFIX = "pagosya_merchant_avatar:";
-  // B1: the API's one-way blob seed, cached per email so the picture paints at once on the next load.
-  const PROFILE_BLOB_SEED_STORAGE_PREFIX = "pagosya_merchant_blob_seed:";
-  let currentBlobSeed = "";
-  let profileVariationChoices = [];
-  let loginVariationChoices = [];
-  let editingVariationChoices = [];
-  let selectedProfileAvatar = 1;
   let currentProfileName = "";
-  let selectedLoginAvatar = 1;
   let lastProfileSessionsPayload = null;
   let editingProfileSessionId = null;
   let pendingLoginSessionId = null;
+  let pendingLoginAvatarId = 1;
   let resolveProfileSelection = null;
-
-
-  function profileAvatarStorageKey() {
-    return PROFILE_AVATAR_STORAGE_PREFIX + String(emailEl.value || "default").trim().toLocaleLowerCase("es");
-  }
-
-  function readProfileAvatar() {
-    try {
-      return normalizeVariation(localStorage.getItem(profileAvatarStorageKey()));
-    } catch {
-      return 1;
-    }
-  }
-
-  function blobSeedStorageKey() {
-    return PROFILE_BLOB_SEED_STORAGE_PREFIX + String(emailEl.value || "default").trim().toLocaleLowerCase("es");
-  }
-
-  function readBlobSeed() {
-    try { return localStorage.getItem(blobSeedStorageKey()) || ""; } catch { return ""; }
-  }
-
-  /** Takes the blob seed from a /dashboard/sessions answer; an answer without one changes nothing. */
-  function rememberBlobSeed(seed) {
-    if (typeof seed !== "string" || !seed || seed === currentBlobSeed) return;
-    currentBlobSeed = seed;
-    try { localStorage.setItem(blobSeedStorageKey(), seed); } catch {}
-    renderProfileAvatar();
-    setLoginAvatar(selectedLoginAvatar);
-    // Only the runner token's image, never the whole board: renderBoard() can briefly show "No pudimos
-    // cargar el tablero." when sessions arrive before rewards has loaded, and this fires before that.
-    rewards.refreshRunner();
-  }
 
   function profileNameFromEmail(email) {
     const localPart = String(email || "").split("@")[0].replace(/[._-]+/g, " ").trim();
@@ -113,51 +69,23 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     return localPart.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("es"));
   }
 
-  /**
-   * Renders a row of variation-option buttons by updating existing <button> elements in place rather
-   * than rebuilding them with `innerHTML`, so a re-render while one of them holds keyboard focus (a
-   * save in flight, a menu refresh under a focused user) never drops focus to <body>.
-   */
-  function renderVariationOptionButtons(container, className, dataAttr, variations, selected) {
-    const buttons = Array.from(container.children);
-    while (buttons.length < variations.length) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = className;
-      container.appendChild(button);
-      buttons.push(button);
-    }
-    while (buttons.length > variations.length) buttons.pop().remove();
-    variations.forEach((variation, index) => {
-      const button = buttons[index];
-      button.dataset[dataAttr] = String(variation);
-      button.setAttribute("aria-label", `Variación ${variation}`);
-      button.setAttribute("aria-pressed", String(variation === selected));
-      button.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true });
-    });
+  /** A profile's picture is its initials. Where a heading or label already names the person it is decorative. */
+  function initialsHtml(name, decorative = true) {
+    return `<span class="profile-initials"${decorative ? ' aria-hidden="true"' : ` role="img" aria-label="${esc(name)}"`}>${esc(profileInitials(name))}</span>`;
   }
+
+  // The API still stores an avatar number per session; the dashboard no longer shows it and saves back what it read.
+  const storedAvatarId = (session) => Number(session?.profileAvatarId) || 1;
 
   function renderProfileAvatar() {
     const name = currentProfileName || profileNameFromEmail(emailEl.value);
-    // The trigger button carries its own label, so its blob is decorative; the menu head is the named picture.
-    profileTriggerAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
-    profileMenuAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, name });
-    if (!profileVariationChoices.includes(selectedProfileAvatar)) profileVariationChoices = variationChoices(selectedProfileAvatar);
-    renderVariationOptionButtons(profileAvatarOptionsEl, "profile-avatar-option", "profileAvatar", profileVariationChoices, selectedProfileAvatar);
-    // The account page has its own heading naming the person, so its picture stays decorative here too.
-    if (accountAvatarEl) accountAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
-  }
-
-  function setLoginAvatar(avatarId) {
-    selectedLoginAvatar = normalizeVariation(avatarId);
-    if (!loginVariationChoices.includes(selectedLoginAvatar)) loginVariationChoices = variationChoices(selectedLoginAvatar);
-    renderVariationOptionButtons(sessionProfileAvatarsEl, "session-profile-avatar-option", "loginAvatar", loginVariationChoices, selectedLoginAvatar);
+    profileTriggerAvatarEl.innerHTML = initialsHtml(name);
+    profileMenuAvatarEl.innerHTML = initialsHtml(name, false);
+    if (accountAvatarEl) accountAvatarEl.innerHTML = initialsHtml(name);
   }
 
   function applyProfileIdentity() {
     const email = emailEl.value || "tu cuenta del panel";
-    selectedProfileAvatar = readProfileAvatar();
-    currentBlobSeed = readBlobSeed();
     profileDisplayNameEl.textContent = currentProfileName || profileNameFromEmail(email);
     loggedInAsEl.textContent = email;
     profileMenuTriggerEl.setAttribute("aria-label", `Abrir perfil de ${email}`);
@@ -166,80 +94,11 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   function applyCurrentSessionIdentity(session) {
     if (!session) return;
-    selectedProfileAvatar = normalizeVariation(session.profileAvatarId);
     currentProfileName = session.profileName || profileNameFromEmail(emailEl.value);
     profileDisplayNameEl.textContent = currentProfileName;
-    try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
     renderProfileAvatar();
   }
-
-  // Guards selectProfileVariation against overlapping requests: while a save is in flight, the
-  // option buttons and the shuffle button are marked aria-disabled (the click handlers below re-check
-  // this flag, which is what actually blocks a second call — native `disabled` would do that too, but
-  // it also blurs a focused element to <body> immediately, so aria-disabled is used instead).
-  let profileVariationSaveInFlight = false;
-
-  function setProfileAvatarControlsBusy(busy) {
-    profileAvatarOptionsEl.querySelectorAll("[data-profile-avatar]").forEach((button) => button.setAttribute("aria-disabled", String(busy)));
-    const shuffleButton = document.getElementById("profileAvatarShuffle");
-    if (shuffleButton) shuffleButton.setAttribute("aria-disabled", String(busy));
-  }
-
-  async function selectProfileVariation(variation) {
-    if (profileVariationSaveInFlight) return;
-    const previousAvatar = selectedProfileAvatar;
-    selectedProfileAvatar = normalizeVariation(variation);
-    try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
-    renderProfileAvatar();
-    rewards.refreshRunner();
-    const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
-    if (!currentSession) return;
-    profileVariationSaveInFlight = true;
-    setProfileAvatarControlsBusy(true);
-    try {
-      await updateProfileSession(currentSession.id, currentSession.profileName, selectedProfileAvatar);
-    } catch (error) {
-      selectedProfileAvatar = previousAvatar;
-      try { localStorage.setItem(profileAvatarStorageKey(), String(previousAvatar)); } catch {}
-      renderProfileAvatar();
-      rewards.refreshRunner();
-      profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
-      profileVariationSaveInFlight = false;
-      setProfileAvatarControlsBusy(false);
-      return;
-    }
-    // The save already succeeded; a refresh that fails afterwards keeps the new variation and shows no error
-    // (calling loadProfileSessions here would overwrite the menu with its own "couldn't load" message).
-    try {
-      const payload = await api("/dashboard/sessions");
-      renderProfileSessions(payload);
-    } catch { /* save succeeded; nothing to roll back */ }
-    profileVariationSaveInFlight = false;
-    setProfileAvatarControlsBusy(false);
-  }
-  profileAvatarOptionsEl.addEventListener("click", (event) => {
-    if (profileVariationSaveInFlight) return;
-    const button = event.target.closest("[data-profile-avatar]");
-    if (button) void selectProfileVariation(Number(button.dataset.profileAvatar));
-  });
-  // "Otra variación": a fresh blob, saved at once, with three new alternatives beside it.
-  document.getElementById("profileAvatarShuffle").addEventListener("click", () => {
-    if (profileVariationSaveInFlight) return;
-    const next = randomVariation(profileVariationChoices);
-    profileVariationChoices = variationChoices(next);
-    void selectProfileVariation(next);
-  });
-  sessionProfileAvatarsEl.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-login-avatar]");
-    if (button) setLoginAvatar(Number(button.dataset.loginAvatar));
-  });
-  document.getElementById("sessionProfileAvatarShuffle").addEventListener("click", () => {
-    const next = randomVariation(loginVariationChoices);
-    loginVariationChoices = variationChoices(next);
-    setLoginAvatar(next);
-  });
   renderProfileAvatar();
-  setLoginAvatar(1);
 
   function positionProfileMenu() {
     if (!profileMenuEl.matches(":popover-open")) return;
@@ -262,7 +121,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const limit = Number(payload?.limit) || 3;
     const active = Number.isFinite(Number(payload?.active)) ? Number(payload.active) : sessions.length;
     lastProfileSessionsPayload = { ...payload, limit, active, sessions };
-    rememberBlobSeed(payload?.blobSeed);
     profileSessionCountEl.textContent = `${active} / ${limit}`;
     if (!sessions.length) {
       profileSessionsEl.innerHTML = '<p class="profile-session-state">No se encontraron sesiones activas.</p>';
@@ -272,17 +130,16 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     applyCurrentSessionIdentity(sessions.find((session) => session.current));
     profileSessionsEl.innerHTML = sessions.map((session) => `<div class="profile-session-row">
       <div class="profile-session-person">
-        <span class="profile-session-avatar" aria-hidden="true">${profileBlobHtml({ blobSeed: currentBlobSeed, variation: session.profileAvatarId, decorative: true })}</span>
+        <span class="profile-session-avatar">${initialsHtml(session.profileName || "Sin nombre")}</span>
         <div class="profile-session-copy"><strong>${esc(session.profileName || "Sin nombre")}</strong><small>Inicio: ${esc(formatSessionDate(session.createdAt))}${session.isPrimary ? " · Principal" : ""}</small></div>
       </div>
       <div class="profile-session-actions">
         ${session.current ? '<span class="profile-session-current">Esta sesión</span>' : ""}
-        ${(session.current || payload.canManageSessions) ? `<button class="profile-session-action" type="button" data-edit-session="${esc(session.id)}" aria-label="Cambiar nombre de ${esc(session.profileName || "esta sesión")}" title="Cambiar nombre y avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button>` : ""}
+        ${(session.current || payload.canManageSessions) ? `<button class="profile-session-action" type="button" data-edit-session="${esc(session.id)}" aria-label="Cambiar nombre de ${esc(session.profileName || "esta sesión")}" title="Cambiar nombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button>` : ""}
         ${!session.current && payload.canManageSessions ? `<button class="profile-session-action" type="button" data-revoke-session="${esc(session.id)}" aria-label="Cerrar la sesión de ${esc(session.profileName || "este perfil")}" title="Cerrar esta sesión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>` : ""}
       </div>
-      ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${normalizeVariation(session.profileAvatarId)}">
+      ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${storedAvatarId(session)}">
         <label>Nombre del perfil<input name="profileName" value="${esc(session.profileName || "")}" maxlength="32" autocomplete="off" required></label>
-        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${editingVariationChoices.map((variation) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === normalizeVariation(session.profileAvatarId)}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("")}</div>
         <div class="profile-session-edit-actions"><button class="ghost" type="button" data-cancel-session-edit>Cancelar</button><button class="primary" type="submit">Guardar</button></div>
       </form>` : ""}
     </div>`).join("");
@@ -313,24 +170,23 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   }
 
   function renderSessionProfileChoices(payload, currentSession) {
-    rememberBlobSeed(payload?.blobSeed);
     const seen = new Set();
     const choices = (payload?.profiles?.length ? payload.profiles : payload?.sessions || []).filter((session) => {
       const name = String(session.profileName || "").trim();
       if (!name || name === "Seleccionar perfil") return false;
-      const key = `${name.toLocaleLowerCase("es")}:${session.profileAvatarId}`;
+      const key = name.toLocaleLowerCase("es");
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
     sessionProfileExistingEl.hidden = choices.length === 0;
-    sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${normalizeVariation(session.profileAvatarId)}" aria-pressed="false">
-      <span class="session-profile-choice-avatar" aria-hidden="true">${profileBlobHtml({ blobSeed: currentBlobSeed, variation: session.profileAvatarId, decorative: true })}</span><span>${esc(session.profileName)}</span>
+    sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" aria-pressed="false">
+      <span class="session-profile-choice-avatar">${initialsHtml(session.profileName)}</span><span>${esc(session.profileName)}</span>
     </button>`).join("");
 
     const isUnassigned = !currentSession?.profileName || currentSession.profileName === "Seleccionar perfil";
     sessionProfileNameEl.value = isUnassigned ? "" : currentSession.isPrimary ? profileNameFromEmail(emailEl.value) : currentSession.profileName;
-    setLoginAvatar(currentSession?.profileAvatarId);
+    pendingLoginAvatarId = storedAvatarId(currentSession);
   }
 
   async function chooseProfileForNewLogin(loginResult) {
@@ -356,7 +212,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (!choice) return;
     sessionProfileChoicesEl.querySelectorAll("[data-profile-choice-name]").forEach((button) => button.setAttribute("aria-pressed", String(button === choice)));
     sessionProfileNameEl.value = choice.dataset.profileChoiceName;
-    setLoginAvatar(Number(choice.dataset.profileChoiceAvatar));
   });
   sessionProfileNameEl.addEventListener("input", () => {
     sessionProfileChoicesEl.querySelectorAll("[data-profile-choice-name]").forEach((button) => button.setAttribute("aria-pressed", "false"));
@@ -374,9 +229,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     setButtonBusy(sessionProfileContinueEl, true, "Guardando perfil…");
     sessionProfileErrorEl.hidden = true;
     try {
-      await updateProfileSession(pendingLoginSessionId, profileName, selectedLoginAvatar);
-      selectedProfileAvatar = selectedLoginAvatar;
-      try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
+      await updateProfileSession(pendingLoginSessionId, profileName, pendingLoginAvatarId);
       currentProfileName = profileName;
       profileDisplayNameEl.textContent = currentProfileName;
       renderProfileAvatar();
@@ -410,8 +263,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const editButton = event.target.closest("[data-edit-session]");
     if (editButton) {
       editingProfileSessionId = editButton.dataset.editSession;
-      const editing = lastProfileSessionsPayload?.sessions?.find((session) => session.id === editingProfileSessionId);
-      editingVariationChoices = variationChoices(editing?.profileAvatarId);
       renderProfileSessions(lastProfileSessionsPayload);
       profileSessionsEl.querySelector(`[data-session-edit-form="${CSS.escape(editingProfileSessionId)}"] input`)?.focus();
       return;
@@ -419,13 +270,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (event.target.closest("[data-cancel-session-edit]")) {
       editingProfileSessionId = null;
       renderProfileSessions(lastProfileSessionsPayload);
-      return;
-    }
-    const avatarButton = event.target.closest("[data-edit-avatar]");
-    if (avatarButton) {
-      const form = avatarButton.closest("[data-session-edit-form]");
-      form.dataset.avatarId = avatarButton.dataset.editAvatar;
-      form.querySelectorAll("[data-edit-avatar]").forEach((button) => button.setAttribute("aria-pressed", String(button === avatarButton)));
       return;
     }
     const button = event.target.closest("[data-revoke-session]");
@@ -500,21 +344,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
-  const rewards = mountRewardsPanel({
-    api,
-    storeId: () => currentStoreId,
-    signedIn: () => !!sessionToken,
-    currentXp: () => (lastFinances ? gamificationState(lastFinances).xp : 0),
-    // The dice-board runner is the merchant's own blob; the level's companion stands in until the API sends the seed.
-    runnerImage: () => (currentBlobSeed
-      ? profileBlobUri(currentBlobSeed, selectedProfileAvatar)
-      : companionBlobUri(ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)])),
-    celebrateCompanion: () => { if (heroBlob) void heroBlob.play(ANIMATIONS.cheer); },
-    rerender: (announce) => { if (lastFinances) renderGamification(lastFinances, { announce }); },
-    burstConfetti,
-    playTouchSound: playAdventureTouchSound,
-    audioContext: adventureAudio,
-  });
   // Documentos → Cobros (D1); the module owns its view, this is only the glue.
   const cobros = mountCobrosPanel({
     api,
@@ -579,66 +408,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       return true;
     },
   });
-  let luckWheelModalShownThisLoad = false;
   let lastTotalFinances = null;
   let lastBalances = null;
-  const GAMIFICATION_XP_PER_SALE = 50;
-  const GAMIFICATION_XP_PER_VISIT = 2;
-
-  window.ADVENTURE_LEVELS = ADVENTURE_LEVELS;
-  // World rewards use only signals the application already owns. Benefits that
-  // require billing or promotion infrastructure are deliberately not implied.
-  const ADVENTURE_REWARDS = [
-    { id: "first-view", title: "Primera mirada", icon: "✦", requirement: { kind: "visits", threshold: 1 }, requirementCopy: "Recibe 1 visita", description: "Tu escaparate empezó a viajar: ganaste la insignia Mirada." },
-    { id: "first-sale", title: "Primera venta", icon: "◆", requirement: { kind: "sales", threshold: 1 }, requirementCopy: "Completa 1 venta", description: "La primera compra exitosa enciende una celebración especial." },
-    { id: "two-days", title: "2 días con estrella", icon: "2", requirement: { kind: "dailyLoginStars", threshold: 2 }, requirementCopy: "Vuelve 2 días", description: "Dos visitas diarias a tu panel desbloquean la insignia Ritmo." },
-    { id: "discovered", title: "Tienda descubierta", icon: "◎", requirement: { kind: "visits", threshold: 100 }, requirementCopy: "Alcanza 100 visitas", description: "Tu tienda ya encontró una audiencia real." },
-    { id: "seven-days", title: "Semana constante", icon: "7", requirement: { kind: "dailyLoginStars", threshold: 7 }, requirementCopy: "Suma 7 estrellas diarias", description: "Una semana de constancia deja una huella brillante en la ruta." },
-    { id: "ten-sales", title: "Diez celebraciones", icon: "10", requirement: { kind: "sales", threshold: 10 }, requirementCopy: "Completa 10 ventas", description: "Diez pagos exitosos desbloquean el cofre de celebración." },
-    { id: "unstoppable", title: "Tesoro imparable", icon: "★", requirement: { kind: "combined", sales: 25, visits: 500 }, requirementCopy: "25 ventas + 500 visitas", description: "La combinación final de ventas y audiencia revela el gran tesoro." },
-  ];
-  const ADVENTURE_WORLD_STAGES = [
-    { type: "start", id: "start", title: "Tu tienda despega" },
-    { type: "character", id: "character-1", levelIndex: 0 },
-    { type: "reward", rewardIndex: 0 },
-    { type: "character", id: "character-2", levelIndex: 1 },
-    { type: "reward", rewardIndex: 1 },
-    { type: "character", id: "character-3", levelIndex: 2 },
-    { type: "reward", rewardIndex: 2 },
-    { type: "character", id: "character-4", levelIndex: 3 },
-    { type: "reward", rewardIndex: 3 },
-    { type: "character", id: "character-5", levelIndex: 4 },
-    { type: "reward", rewardIndex: 4 },
-    { type: "character", id: "character-6", levelIndex: 5 },
-    { type: "reward", rewardIndex: 5 },
-    { type: "character", id: "character-7", levelIndex: 6 },
-    { type: "reward", rewardIndex: 6 },
-    { type: "character", id: "character-8", levelIndex: 7, special: true },
-  ];
-
-  const GAMIFICATION_STARS = [
-    { id: "first-view", title: "Primera mirada", description: "El enlace de tu tienda recibió su primera visita.", earned: ({ visits }) => visits >= 1, progress: ({ visits }) => `${Math.min(visits, 1)}/1 visita` },
-    { id: "first-sale", title: "Primera venta", description: "Completaste tu primer pago exitoso.", earned: ({ sales }) => sales >= 1, progress: ({ sales }) => `${Math.min(sales, 1)}/1 venta` },
-    { id: "hundred-views", title: "Tienda descubierta", description: "Alcanzaste 100 visitas a la tienda.", earned: ({ visits }) => visits >= 100, progress: ({ visits }) => `${Math.min(visits, 100)}/100 visitas` },
-    { id: "ten-sales", title: "Diez celebraciones", description: "Acumulaste 10 pagos exitosos.", earned: ({ sales }) => sales >= 10, progress: ({ sales }) => `${Math.min(sales, 10)}/10 ventas` },
-    { id: "unstoppable", title: "Negocio imparable", description: "Llegaste a 25 ventas y 500 visitas.", earned: ({ sales, visits }) => sales >= 25 && visits >= 500, progress: ({ sales, visits }) => `${Math.min(sales, 25)}/25 ventas · ${Math.min(visits, 500)}/500 visitas` },
-  ];
-  let gamificationToastTimer = null;
-  const gamificationAnnouncementQueue = [];
-  let activeGamificationAnnouncement = null;
-  const progressCelebrationFetches = new Set();
-  const queuedProgressLevels = new Set();
-  let progressAcknowledgementChain = Promise.resolve();
-  let birdUnlockQueue = [];
-  let adventureRenderedXp = null;
-  let adventureRenderedScope = null;
-  let adventureMarkerAnimation = null;
-  let adventureLevelUpTimer = null;
-  let adventureXpToastTimer = null;
-  let lastAdventureState = null;
-  let lastAdventureCommerceState = null;
-  let adventureInitialScrollScope = null;
-  let dailyLoginReward = { awarded: false, totalStars: 0 };
   const MONEY_VISIBILITY_KEY = "pagosya_dashboard_hide_money";
   let monetaryValuesHidden = false;
   try {
@@ -835,7 +606,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   const DASHBOARD_VIEW_COPY = {
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
     growth: ["Crecimiento", "Qué pasa en tu tienda y qué hacer ahora para vender más."],
-    progress: ["Progreso", "Convierte la actividad real de tu tienda en niveles, estrellas y nuevos compañeros."],
     stores: ["Mi tienda", "Tus tiendas, sus diseños y sus catálogos. Todo desde un mismo perfil."],
     discounts: ["Correos y marketing", "Cuida a tus clientes y haz que vuelvan."],
     marketing: ["Correos y marketing", "Mensajes, Comeback y promociones para la tienda seleccionada."],
@@ -850,7 +620,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
-    "connect-ai": ["Conecta tu IA", "Usa Claude, Codex o Cursor con tu tienda. Tu IA diseña y carga productos; publicar y cobrar siguen siendo tuyos."],
+    "connect-ai": ["Conecta tu IA", "Usa Claude, ChatGPT, Claude Code, Cursor o Codex con tu tienda. Tu IA diseña y carga productos; publicar y cobrar siguen siendo tuyos."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
@@ -990,9 +760,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (view === "discounts") { view = "marketing"; document.getElementById("marketingTabs").dataset.tab = "promotions"; document.getElementById("marketingPromotions").hidden = false; document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed",String(tab.dataset.marketingTab === "promotions"))); }
     const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
     const viewChanged = document.body.dataset.dashboardView !== nextView;
-    if (nextView !== "progress" && document.getElementById("adventureGuide")?.getAttribute("aria-expanded") === "true") {
-      setAdventureGuideOpen(false);
-    }
     if (viewChanged) {
       document.body.dataset.dashboardView = nextView;
       document.querySelectorAll("[data-dashboard-page]").forEach((element) => {
@@ -1019,10 +786,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (nextView === "contracts") contracts.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
-      try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
-    }
-    if (nextView === "progress" && lastAdventureState) {
-      requestAnimationFrame(() => renderAnimalAdventure(lastAdventureState.currentXP, { animate: false, commerce: lastAdventureCommerceState }));
+      try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
     }
   }
 
@@ -1052,58 +816,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   try { initialDashboardView = viewFromHash || localStorage.getItem(DASHBOARD_VIEW_KEY) || "overview"; } catch { initialDashboardView = viewFromHash || "overview"; }
   setDashboardView(initialDashboardView, { remember: false });
   window.addEventListener("popstate", () => setDashboardView(location.hash.slice(11), { remember: false }));
-  document.getElementById("gamificationCompanions")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-companion-select]");
-    if (!button || button.disabled || !lastFinances) return;
-    try { localStorage.setItem(gamificationCompanionKey(), button.dataset.companionSelect); } catch {}
-    renderGamification(lastFinances, { announce: false });
-  });
-  document.getElementById("adventureLevelNodes")?.addEventListener("click", (event) => {
-    const node = event.target.closest("[data-adventure-level-index]");
-    if (!node || node.disabled) return;
-    renderAdventureLevelDetail(ADVENTURE_LEVELS[Number(node.dataset.adventureLevelIndex)]);
-  });
-  document.getElementById("adventureGuide")?.addEventListener("click", () => {
-    playAdventureTouchSound("open");
-    setAdventureGuideOpen(true);
-  });
-  document.getElementById("adventureGuideClose")?.addEventListener("click", () => {
-    playAdventureTouchSound("close");
-    setAdventureGuideOpen(false, { restoreFocus: true });
-  });
-  document.getElementById("animalAdventure")?.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    if (document.getElementById("adventureGuideBubble").hidden) return;
-    playAdventureTouchSound("close");
-    setAdventureGuideOpen(false, { restoreFocus: true });
-  });
-  document.getElementById("adventureDebugControls")?.addEventListener("click", (event) => {
-    if (!lastFinances) return;
-    const addButton = event.target.closest("[data-adventure-xp]");
-    const resetButton = event.target.closest("[data-adventure-reset]");
-    if (!addButton && !resetButton) return;
-    const actualXP = gamificationState(lastFinances).xp;
-    if (resetButton) {
-      try { localStorage.removeItem(adventureDebugXpKey()); } catch {}
-      renderAnimalAdventure(actualXP, { animate: true });
-      return;
-    }
-    const previousXP = resolvedAdventureXp(actualXP);
-    const gainedXP = Math.max(0, Number(addButton.dataset.adventureXp) || 0);
-    const nextXP = previousXP + gainedXP;
-    try { localStorage.setItem(adventureDebugXpKey(), String(nextXP)); } catch {}
-    renderAnimalAdventure(nextXP, { animate: true, delta: gainedXP });
-  });
-  let adventureResizeTimer = null;
-  window.addEventListener("resize", () => {
-    window.cancelAnimationFrame(adventureResizeTimer);
-    adventureResizeTimer = window.requestAnimationFrame(() => {
-      if (lastAdventureState && document.getElementById("animalAdventure")?.offsetParent) {
-        renderAnimalAdventure(lastAdventureState.currentXP, { animate: false, commerce: lastAdventureCommerceState });
-      }
-    });
-  });
-  document.getElementById("gamificationToastClose")?.addEventListener("click", () => hideGamificationToast());
   // Below the desktop breakpoint the sidebar is off-canvas: the menu handle
   // pins it open, hovering peeks, and the backdrop or Escape closes it.
   function initSidebarMenuHandle() {
@@ -1162,8 +874,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (lastStores) renderStoreRows(lastStores);
   });
 
-  const MAX_IMAGE_BYTES = 8_000_000;
-  const MAX_GALLERY_IMAGES = 10;
   const inventoryCsvInputEl = document.getElementById("inventoryCsvInput");
   const inventoryImagesInputEl = document.getElementById("inventoryImagesInput");
   const inventoryDropzoneEl = document.getElementById("inventoryDropzone");
@@ -1558,6 +1268,138 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.getElementById("createStoreName").focus();
   }
   document.getElementById("cancelCreateStore").addEventListener("click", () => document.getElementById("createStoreDialog").close());
+
+  // Traer mi tienda de Shopify (spec 2026-09-27): paste the address or the CSV, review, import, then pick the look.
+  const shopifyImportDialog = document.getElementById("shopifyImportDialog");
+  let shopifyImport = null, shopifyImportTimer = null;
+  const showShopifyImportMessage = (id, message) => { const box = document.getElementById(id); box.textContent = message || ""; box.hidden = !message; };
+
+  // Previews are limited to 5 per hour (spec 2026-09-27 §4); the throttler's own words are English and technical.
+  const shopifyImportError = err => err.status === 429 ? "Ya revisaste varias tiendas seguidas. Espera un rato (hasta una hora) y vuelve a intentarlo." : err.message;
+
+  function showShopifyImportPanel(step) {
+    shopifyImportDialog.querySelector(".shopify-import").dataset.step = step;
+    shopifyImportDialog.querySelectorAll("[data-panel]").forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
+  }
+
+  function renderShopifyImport(view) {
+    shopifyImport = view;
+    const step = importStep(view);
+    showShopifyImportPanel(step);
+    if (step === "review") {
+      const preview = view.preview;
+      document.getElementById("shopifyImportCounts").textContent = countsLine(preview.counts);
+      document.getElementById("shopifyImportWarnings").innerHTML = preview.warnings.map(warning => `<li>${esc(warning)}</li>`).join("");
+      document.getElementById("shopifyImportRateRow").hidden = !preview.needsExchangeRate;
+      document.getElementById("shopifyImportCurrency").textContent = preview.currency;
+      document.getElementById("shopifyImportProducts").innerHTML = preview.products.map(product => `<li><label><input type="checkbox" value="${esc(product.externalId)}" ${product.problem ? "disabled" : "checked"}>${product.image ? `<img src="${esc(product.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : "<span></span>"}<span>${esc(product.name)}</span><span class="faint">${esc(product.price)} ${esc(preview.currency)}</span>${product.problem ? `<em>${esc(product.problem)}</em>` : ""}</label></li>`).join("");
+      showShopifyImportMessage("shopifyImportConfirmError", "");
+    }
+    if (step === "importing") {
+      document.getElementById("shopifyImportProgress").textContent = progressLabel(view.progress);
+      document.getElementById("shopifyImportBar").value = view.progress?.total ? view.progress.done / view.progress.total : 0;
+    }
+    if (step === "failed") document.getElementById("shopifyImportError").textContent = view.error || "La importación falló.";
+    if (step === "building") document.getElementById("shopifyImportDesignSteps").innerHTML = designStepItems(view.designSteps)
+      .map(item => `<li data-state="${esc(item.state)}"><span>${esc(item.label)}</span>${item.detail ? `<small>${esc(item.detail)}</small>` : ""}</li>`).join("");
+    shopifyImportDialog.querySelectorAll("[data-import-summary]").forEach(list => { list.innerHTML = summaryLines(view.summary).map(line => `<li>${esc(line)}</li>`).join(""); });
+    if (step === "design") {
+      shopifyImportDialog.querySelectorAll("[data-free]").forEach(badge => { badge.hidden = !view.freeBuildAvailable; });
+      // "Igual que mi Shopify" needs the live store to look at; a CSV alone has no address.
+      shopifyImportDialog.querySelectorAll('[data-design="same"], [data-design="redesign"]').forEach(button => {
+        button.disabled = !view.freeBuildAvailable || (button.dataset.design === "same" && view.source === "SHOPIFY_CSV");
+      });
+      showShopifyImportMessage("shopifyImportDesignError", view.designError);
+    }
+    clearTimeout(shopifyImportTimer);
+    if ((step === "importing" || step === "building") && shopifyImportDialog.open) shopifyImportTimer = setTimeout(async () => {
+      try { renderShopifyImport(await api(`/store-imports/${view.id}`)); } catch { renderShopifyImport(view); }
+    }, 2000);
+  }
+
+  function startShopifyImport() {
+    clearTimeout(shopifyImportTimer);
+    shopifyImport = null;
+    showShopifyImportPanel("start");
+    showShopifyImportMessage("shopifyImportUrlError", "");
+    document.getElementById("shopifyImportUrl").focus();
+  }
+
+  async function openShopifyImport() {
+    if (!canLeaveMerchantStudio()) return;
+    document.getElementById("createStoreDialog").close();
+    shopifyImportDialog.showModal();
+    // After a reload or on another device, the server knows the last import (final review, Important #7).
+    if (!shopifyImport) shopifyImport = await api("/store-imports/latest").catch(() => null);
+    // Reopening shows an import already under way (importing, failed, the design choice, YAPI building); a review the
+    // merchant cancelled, or a finished import, starts fresh.
+    if (shopifyImport && !["review", "done"].includes(importStep(shopifyImport))) renderShopifyImport(shopifyImport);
+    else startShopifyImport();
+  }
+  shopifyImportDialog.querySelectorAll("[data-import-another]").forEach(button => button.addEventListener("click", startShopifyImport));
+  document.querySelector("[data-open-shopify-import]").addEventListener("click", openShopifyImport);
+  shopifyImportDialog.addEventListener("close", () => clearTimeout(shopifyImportTimer));
+  shopifyImportDialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => shopifyImportDialog.close()));
+
+  document.getElementById("shopifyImportUrlForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    showShopifyImportMessage("shopifyImportUrlError", "");
+    setButtonBusy(submit, true, "Leyendo tu tienda…");
+    try { renderShopifyImport(await api("/store-imports/shopify", { method: "POST", body: JSON.stringify({ url: document.getElementById("shopifyImportUrl").value }) })); }
+    catch (err) {
+      if (err.code === "protected") document.getElementById("shopifyImportCsv").open = true;
+      showShopifyImportMessage("shopifyImportUrlError", shopifyImportError(err));
+    } finally { setButtonBusy(submit, false, "Revisar"); }
+  });
+
+  document.getElementById("shopifyImportCsvForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    const file = document.getElementById("shopifyImportCsvFile").files[0];
+    if (!file) return;
+    setButtonBusy(submit, true, "Leyendo el archivo…");
+    try { renderShopifyImport(await api("/store-imports/shopify-csv", { method: "POST", body: JSON.stringify({ csv: await file.text(), name: document.getElementById("shopifyImportCsvName").value }) })); }
+    catch (err) { showShopifyImportMessage("shopifyImportUrlError", shopifyImportError(err)); }
+    finally { setButtonBusy(submit, false, "Revisar archivo"); }
+  });
+
+  document.getElementById("shopifyImportConfirm").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    const excluded = [...document.querySelectorAll("#shopifyImportProducts input:not(:checked):not(:disabled)")].map(input => input.value);
+    const rate = shopifyImport.preview.needsExchangeRate ? parseExchangeRate(document.getElementById("shopifyImportRate").value) : null;
+    if (shopifyImport.preview.needsExchangeRate && !rate) {
+      showShopifyImportMessage("shopifyImportConfirmError", `Escribe cuántos bolivianos vale 1 ${shopifyImport.preview.currency}.`);
+      document.getElementById("shopifyImportRate").focus();
+      return;
+    }
+    setButtonBusy(button, true, "Importando…");
+    try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/confirm`, { method: "POST", body: JSON.stringify({ excluded, ...(rate ? { exchangeRate: rate } : {}) }) })); }
+    catch (err) { showShopifyImportMessage("shopifyImportConfirmError", err.message); }
+    finally { setButtonBusy(button, false, "Importar"); }
+  });
+
+  document.getElementById("shopifyImportRetry").addEventListener("click", async () => {
+    try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/retry`, { method: "POST" })); }
+    catch (err) { document.getElementById("shopifyImportError").textContent = err.message; }
+  });
+
+  async function openImportedStore(view = "workspace") {
+    shopifyImportDialog.close();
+    selectStore(shopifyImport.storeId);
+    await refresh();
+    history.pushState(null, "", "#dashboard-workspace");
+    setDashboardView(view);
+  }
+
+  shopifyImportDialog.querySelectorAll("[data-design]").forEach(button => button.addEventListener("click", async () => {
+    if (button.dataset.design === "template") return openImportedStore("templates");
+    showShopifyImportMessage("shopifyImportDesignError", "");
+    try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/design`, { method: "POST", body: JSON.stringify({ option: button.dataset.design }) })); }
+    catch (err) { showShopifyImportMessage("shopifyImportDesignError", err.message); }
+  }));
+
+  document.getElementById("shopifyImportOpen").addEventListener("click", () => openImportedStore());
   document.getElementById("storeLibrarySearch").addEventListener("input", () => renderStoreRows(lastStores));
   document.getElementById("storeLibraryStatus").addEventListener("change", () => renderStoreRows(lastStores));
   document.getElementById("sidebarStorePicker").addEventListener("change", async event => {
@@ -1789,11 +1631,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (storeId) sessionStorage.setItem("pagosya_current_store_id", storeId);
     else sessionStorage.removeItem("pagosya_current_store_id");
     if (storeChanged) {
-      birdUnlockQueue = birdUnlockQueue.filter((item) => {
-        if (item.storeId === storeId) return true;
-        queuedProgressLevels.delete(`${item.storeId}:${item.levelIndex}`);
-        return false;
-      });
       stopQuickPaymentPolling();
       resetPaymentLinkBrowseState();
       resetDebtCollectionEntry();
@@ -1802,12 +1639,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       lastDebtCollectionLinks = [];
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
-      rewards.reset();
       cobros.reset();
       growth.reset();
       proposals.reset();
       contracts.reset();
-      rewards.load().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
   }
 
@@ -2126,115 +1961,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }));
   }
 
-  function debtAmountInCents(value, lineNumber) {
-    let normalized = String(value || "").trim().replace(/\s|Bs\.?/gi, "");
-    if (normalized.includes(",") && normalized.includes(".")) normalized = normalized.replace(/\./g, "").replace(",", ".");
-    else normalized = normalized.replace(",", ".");
-    const amount = Number(normalized);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error(lineNumber ? `Monto inválido en la línea ${lineNumber}.` : "Escribe un monto válido mayor a cero.");
-    }
-    return Math.round(amount * 100);
-  }
-
-  function parseDebtCollectionRows(text) {
-    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    if (!lines.length) throw new Error("Agrega al menos una deuda.");
-    if (lines.length > 1000) throw new Error("Puedes cargar hasta 1.000 deudas por link.");
-    return lines.map((line, index) => {
-      const [rawDocument = "", customerName = "", rawAmount = "", description = "", reference = "", customerEmail = "", customerPhone = ""] = line.split(";").map((cell) => cell.trim());
-      const customerDocument = debtDocumentDigits(rawDocument);
-      if (!customerDocument || !customerName || !rawAmount) throw new Error(`Completa carnet, nombre y monto en la línea ${index + 1}.`);
-      return {
-        customerDocument,
-        customerName,
-        amount: debtAmountInCents(rawAmount, index + 1),
-        ...(description && { description }),
-        ...(reference && { reference }),
-        ...(customerEmail && { customerEmail }),
-        ...(customerPhone && { customerPhone }),
-      };
-    });
-  }
-
-  function parseDebtCsv(text) {
-    const source = String(text || "").replace(/^\uFEFF/, "").trim();
-    if (!source) throw new Error("El CSV está vacío.");
-    const delimiter = csvDelimiter(source);
-    const table = parseCsvTable(source, delimiter).filter((row) => row.some((cell) => cell.trim()));
-    if (!table.length) throw new Error("El CSV está vacío.");
-    const aliases = {
-      customerDocument: ["nit", "nro_nit", "numeronit", "carnet", "ci", "cedula", "documento", "nrodocumento", "identificacion", "customerdocument", "customer_document"],
-      customerName: ["nombre", "cliente", "alumno", "estudiante", "socio", "nombrecliente", "customername", "customer_name"],
-      amount: ["monto", "montobs", "importe", "deuda", "saldo", "saldobs", "cuota", "precio", "total", "amount"],
-      customerEmail: ["gmail", "correo", "correoelectronico", "email", "customeremail", "customer_email"],
-      customerPhone: ["telefono", "telefonocelular", "celular", "movil", "whatsapp", "phone", "customerphone", "customer_phone"],
-    };
-    const normalizedHeader = table[0].map(normalizeDebtCsvHeader);
-    const positions = Object.fromEntries(Object.entries(aliases).map(([key, names]) => [key, normalizedHeader.findIndex((value) => names.includes(value))]));
-    const hasHeader = positions.customerDocument >= 0 && positions.customerName >= 0 && positions.amount >= 0;
-    const rows = hasHeader ? table.slice(1) : table;
-    if (!rows.length) throw new Error("El CSV no contiene deudas debajo de los encabezados.");
-    const parsed = rows.flatMap((row, index) => {
-      const line = index + (hasHeader ? 2 : 1);
-      const cell = (key, fallback) => String(row[hasHeader ? positions[key] : fallback] || "").trim();
-      const customerDocument = debtDocumentDigits(cell("customerDocument", 0));
-      const customerName = cell("customerName", 1);
-      const rawAmount = cell("amount", 2);
-      const customerEmail = cell("customerEmail", 3);
-      const customerPhone = cell("customerPhone", 4);
-      if (!customerDocument || !customerName || !rawAmount) return [];
-      let amount;
-      try { amount = debtAmountInCents(rawAmount, line); }
-      catch { return []; }
-      return [{
-        customerDocument,
-        customerName,
-        amount,
-        ...(customerEmail && { customerEmail }),
-        ...(customerPhone && { customerPhone }),
-      }];
-    });
-    if (!parsed.length) throw new Error("El CSV no contiene filas con NIT/CI, nombre y monto válidos.");
-    return parsed.slice(0, 1000);
-  }
-
-  function debtDocumentDigits(value) {
-    return String(value || "").normalize("NFKC").replace(/[^0-9]/g, "");
-  }
-
-  function normalizeDebtCsvHeader(value) {
-    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_]/g, "");
-  }
-
-  function csvDelimiter(text) {
-    const firstLine = text.split(/\r?\n/, 1)[0] || "";
-    return (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length ? ";" : ",";
-  }
-
-  function parseCsvTable(text, delimiter) {
-    const rows = [];
-    let row = [];
-    let cell = "";
-    let quoted = false;
-    for (let index = 0; index < text.length; index += 1) {
-      const char = text[index];
-      if (char === '"') {
-        if (quoted && text[index + 1] === '"') { cell += '"'; index += 1; }
-        else quoted = !quoted;
-      } else if (char === delimiter && !quoted) {
-        row.push(cell); cell = "";
-      } else if ((char === "\n" || char === "\r") && !quoted) {
-        if (char === "\r" && text[index + 1] === "\n") index += 1;
-        row.push(cell); rows.push(row); row = []; cell = "";
-      } else cell += char;
-    }
-    row.push(cell);
-    if (row.some((value) => value.length)) rows.push(row);
-    if (quoted) throw new Error("El CSV tiene una comilla sin cerrar.");
-    return rows;
-  }
-
   function stopQuickPaymentPolling() {
     quickPaymentPollGeneration += 1;
     if (quickPaymentPollTimer) window.clearTimeout(quickPaymentPollTimer);
@@ -2304,7 +2030,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const statusFor = store => store.status === "ARCHIVED" ? "archived" : (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
     const visible = stores.filter(store => (!search || store.name.toLocaleLowerCase().includes(search)) && (!filter || statusFor(store) === filter));
     document.getElementById("storeLibraryCount").textContent = `${visible.length} de ${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}`;
-    document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button>` + visible.map(store => {
+    document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button><button class="store-create-tile" id="openShopifyImport" type="button"><span aria-hidden="true">↧</span><strong>Traer mi tienda de Shopify</strong><small>Productos, fotos y páginas</small></button>` + visible.map(store => {
       const revision = store.sourceProject?.revision || store.publishedSourceRevision;
       const cover = store.bannerUrl || store.heroSlides?.[0]?.imageUrl || store.publicityImageUrl;
       const preview = revision ? `<iframe src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
@@ -2316,6 +2042,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       </article>`;
     }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
     document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
+    document.getElementById("openShopifyImport").addEventListener("click", openShopifyImport);
     document.querySelectorAll(".store-card-menu").forEach(menu => menu.addEventListener("click", event => event.stopPropagation()));
 
     document.querySelectorAll(".store-row").forEach((row) => {
@@ -2591,709 +2318,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     bars.setAttribute("aria-label", description);
   }
 
-  const GAMIFICATION_STAR_SVG = `<svg class="gamification-star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="#050505" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="m12 2.7 2.86 5.8 6.4.93-4.63 4.51 1.1 6.38L12 17.3l-5.73 3.02 1.1-6.38-4.63-4.51 6.4-.93z"/></svg>`;
-
-  function gamificationIdentityHash() {
-    const identity = (emailEl.value || sessionStorage.getItem("pagosya_merchant_email") || "merchant").trim().toLocaleLowerCase("es");
-    let hash = 2166136261;
-    for (let index = 0; index < identity.length; index++) hash = Math.imul(hash ^ identity.charCodeAt(index), 16777619);
-    return (hash >>> 0).toString(36);
-  }
-
-  function gamificationStorageScope() {
-    return `${gamificationIdentityHash()}_${currentStoreId || "all-stores"}`;
-  }
-
-  function gamificationCompanionKey() {
-    return `pagosya_gamification_companion_${gamificationStorageScope()}`;
-  }
-
-  function gamificationSnapshotKey() {
-    return `pagosya_gamification_snapshot_${gamificationStorageScope()}`;
-  }
-
-  function adventureDebugXpKey() {
-    return `pagosya_adventure_debug_xp_${gamificationStorageScope()}`;
-  }
-
-  function gamificationSeenAchievementsKey(scope = gamificationStorageScope()) {
-    return `pagosya_gamification_seen_achievements_${scope}`;
-  }
-
-  function gamificationPendingAchievementsKey(scope = gamificationStorageScope()) {
-    return `pagosya_gamification_pending_achievements_${scope}`;
-  }
-
-  function selectedGamificationCompanion(levelIndex) {
-    try {
-      const saved = localStorage.getItem(gamificationCompanionKey());
-      if (saved === null) return levelIndex;
-      const stored = Number(saved);
-      if (Number.isInteger(stored) && stored >= 0 && stored <= levelIndex && stored < ADVENTURE_LEVELS.length) return stored;
-    } catch {}
-    return levelIndex;
-  }
-
-  function storedStringList(key) {
-    try {
-      const value = JSON.parse(localStorage.getItem(key) || "[]");
-      return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function pendingAchievementIds(state) {
-    const scope = gamificationStorageScope();
-    const seen = new Set(storedStringList(gamificationSeenAchievementsKey(scope)));
-    const pending = storedStringList(gamificationPendingAchievementsKey(scope)).filter((id) => !seen.has(id));
-    const pendingSet = new Set(pending);
-    state.stars.filter((star) => star.isEarned).forEach((star) => {
-      if (!seen.has(star.id) && !pendingSet.has(star.id)) {
-        pending.push(star.id);
-        pendingSet.add(star.id);
-      }
-    });
-    try { localStorage.setItem(gamificationPendingAchievementsKey(scope), JSON.stringify(pending)); } catch {}
-    return pending;
-  }
-
-  function markAchievementSeen(achievementId, scope = gamificationStorageScope()) {
-    if (!achievementId) return;
-    const seenKey = gamificationSeenAchievementsKey(scope);
-    const pendingKey = gamificationPendingAchievementsKey(scope);
-    const seen = new Set(storedStringList(seenKey));
-    seen.add(achievementId);
-    const pending = storedStringList(pendingKey).filter((id) => id !== achievementId);
-    try {
-      localStorage.setItem(seenKey, JSON.stringify([...seen]));
-      localStorage.setItem(pendingKey, JSON.stringify(pending));
-    } catch {}
-  }
-
-  function gamificationState(finances) {
-    const sales = Math.max(0, Number(finances?.paymentCount) || 0);
-    const visits = Math.max(0, Number(finances?.totalStoreViews) || 0);
-    const salesXp = sales * GAMIFICATION_XP_PER_SALE;
-    const visitsXp = visits * GAMIFICATION_XP_PER_VISIT;
-    const gameXp = Math.max(0, Number(rewards.state()?.bonusXp) || 0);
-    const xp = salesXp + visitsXp + gameXp;
-    let levelIndex = 0;
-    ADVENTURE_LEVELS.forEach((entry, index) => { if (xp >= entry.xpRequired) levelIndex = index; });
-    const level = ADVENTURE_LEVELS[levelIndex];
-    const nextLevel = ADVENTURE_LEVELS[levelIndex + 1] || null;
-    const span = nextLevel ? nextLevel.xpRequired - level.xpRequired : 1;
-    const progress = nextLevel ? Math.max(0, Math.min(100, Math.round(((xp - level.xpRequired) / span) * 100))) : 100;
-    const stars = GAMIFICATION_STARS.map((star) => ({ ...star, isEarned: star.earned({ sales, visits }) }));
-    return { sales, visits, salesXp, visitsXp, gameXp, xp, levelIndex, level, nextLevel, progress, stars, earnedStars: stars.filter((star) => star.isEarned).length, dailyLoginStars: Math.max(0, Number(dailyLoginReward.totalStars) || 0) };
-  }
-
-  function getProgressState(currentXP, levels = ADVENTURE_LEVELS) {
-    const safeLevels = Array.isArray(levels) && levels.length ? levels : ADVENTURE_LEVELS;
-    const rawXP = Math.max(0, Number(currentXP) || 0);
-    const maxXP = Math.max(0, Number(safeLevels[safeLevels.length - 1].xpRequired) || 0);
-    const clampedXP = Math.min(rawXP, maxXP);
-    let currentLevelIndex = 0;
-    safeLevels.forEach((level, index) => {
-      if (clampedXP >= Number(level.xpRequired)) currentLevelIndex = index;
-    });
-    const currentLevel = safeLevels[currentLevelIndex];
-    const nextLevel = safeLevels[currentLevelIndex + 1] || null;
-    const currentFloor = Number(currentLevel.xpRequired) || 0;
-    const currentCeiling = nextLevel ? Number(nextLevel.xpRequired) : maxXP;
-    const currentSpan = Math.max(1, currentCeiling - currentFloor);
-    const currentLevelPercentage = nextLevel ? ((clampedXP - currentFloor) / currentSpan) * 100 : 100;
-    return {
-      currentXP: rawXP,
-      clampedXP,
-      maxXP,
-      currentLevelIndex,
-      currentLevel,
-      nextLevel,
-      completedLevels: safeLevels.filter((_, index) => index < currentLevelIndex || (!nextLevel && index === currentLevelIndex)),
-      lockedLevels: safeLevels.filter((_, index) => index > currentLevelIndex),
-      xpUntilNext: nextLevel ? Math.max(0, Number(nextLevel.xpRequired) - rawXP) : 0,
-      overallPercentage: maxXP ? (clampedXP / maxXP) * 100 : 100,
-      currentLevelPercentage: Math.max(0, Math.min(100, currentLevelPercentage)),
-      isAdventureComplete: !nextLevel,
-    };
-  }
-  window.getProgressState = getProgressState;
-
-  function storedAdventureDebugXp() {
-    try {
-      const stored = localStorage.getItem(adventureDebugXpKey());
-      if (stored === null) return null;
-      const xp = Number(stored);
-      return Number.isFinite(xp) && xp >= 0 ? xp : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function resolvedAdventureXp(actualXP) {
-    const debugXP = storedAdventureDebugXp();
-    return debugXP === null ? Math.max(0, Number(actualXP) || 0) : debugXP;
-  }
-
-  function adventureNodeStatus(index, state) {
-    if (index < state.currentLevelIndex || (state.isAdventureComplete && index === state.currentLevelIndex)) return "completed";
-    if (index === state.currentLevelIndex) return "current";
-    return "locked";
-  }
-
-  function renderAdventureLevelDetail(level, state = lastAdventureState) {
-    if (!level || !state) return;
-    const statusIndex = ADVENTURE_LEVELS.findIndex((entry) => entry.id === level.id);
-    const status = adventureNodeStatus(statusIndex, state);
-    const statusCopy = status === "completed" ? "Completado" : status === "current" ? "Etapa actual" : `Se abre con ${level.xpRequired.toLocaleString("es-BO")} XP`;
-    document.getElementById("adventureLevelDetail").innerHTML = `<strong>Nivel ${level.id} · ${esc(level.name)} <small>(${esc(level.englishName)})</small></strong>${esc(level.description)} · ${esc(statusCopy)}`;
-  }
-
-  function showAdventureXpToast(delta) {
-    if (!(delta > 0)) return;
-    const toast = document.getElementById("adventureXpToast");
-    window.clearTimeout(adventureXpToastTimer);
-    toast.textContent = `+${delta.toLocaleString("es-BO")} XP`;
-    toast.hidden = true;
-    void toast.offsetWidth;
-    toast.hidden = false;
-    adventureXpToastTimer = window.setTimeout(() => { toast.hidden = true; }, 820);
-  }
-
-  function showAdventureLevelUp(level) {
-    const overlay = document.getElementById("adventureLevelUp");
-    window.clearTimeout(adventureLevelUpTimer);
-    document.getElementById("adventureLevelUpTitle").textContent = `Nivel ${level.id} — ${level.name}`;
-    overlay.hidden = true;
-    void overlay.offsetWidth;
-    overlay.hidden = false;
-    adventureLevelUpTimer = window.setTimeout(() => { overlay.hidden = true; }, 1120);
-  }
-
-  let adventureAudioContext = null;
-  // One AudioContext for every dashboard sound; null where the browser has none.
-  function adventureAudio() {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return null;
-    adventureAudioContext ||= new AudioContext();
-    return adventureAudioContext;
-  }
-  function playAdventureTouchSound(kind = "open") {
-    try {
-      const context = adventureAudio();
-      if (!context) return;
-      if (context.state === "suspended") context.resume();
-      const now = context.currentTime;
-      const notes = kind === "close" ? [620, 430] : [480, 720];
-      notes.forEach((frequency, index) => {
-        const start = now + (index * .075);
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-        oscillator.type = index ? "sine" : "triangle";
-        oscillator.frequency.setValueAtTime(frequency, start);
-        oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.08, start + .09);
-        gain.gain.setValueAtTime(.0001, start);
-        gain.gain.exponentialRampToValueAtTime(.045, start + .018);
-        gain.gain.exponentialRampToValueAtTime(.0001, start + .13);
-        oscillator.connect(gain).connect(context.destination);
-        oscillator.start(start);
-        oscillator.stop(start + .14);
-      });
-    } catch {
-      // Sound is optional; blocked audio must never affect the guide interaction.
-    }
-  }
-
-  function setAdventureGuideOpen(open, { restoreFocus = false } = {}) {
-    const guide = document.getElementById("adventureGuide");
-    const bubble = document.getElementById("adventureGuideBubble");
-    guide.setAttribute("aria-expanded", String(open));
-    bubble.hidden = !open;
-    document.body.classList.toggle("adventure-guide-open", open);
-    document.querySelectorAll("#adventureMapStage > :not(#adventureGuideBubble)").forEach((element) => { element.inert = open; });
-    if (open) requestAnimationFrame(() => document.getElementById("adventureGuideClose").focus());
-    else if (restoreFocus) guide.focus();
-  }
-
-  const JOURNEY_NODE_Y = [350, 235, 365, 205, 325, 245, 380, 220, 345, 235, 375, 210, 330, 250, 370, 205];
-  let journeySoundTimer = null;
-  let journeySoundEnabled = false;
-  const journeyStagePositions = () => ADVENTURE_WORLD_STAGES.map((_, index) => ({ x: 130 + (index * 235), y: JOURNEY_NODE_Y[index] }));
-  function journeyPathData(positions) {
-    return positions.slice(1).reduce((path, point, index) => {
-      const previous = positions[index];
-      const midpoint = (previous.x + point.x) / 2;
-      return `${path} C ${midpoint} ${previous.y}, ${midpoint} ${point.y}, ${point.x} ${point.y}`;
-    }, `M ${positions[0].x} ${positions[0].y}`);
-  }
-  function journeyRewardUnlocked(reward, commerce) {
-    const requirement = reward.requirement;
-    if (requirement.kind === "combined") return commerce.sales >= requirement.sales && commerce.visits >= requirement.visits;
-    return Math.max(0, Number(commerce[requirement.kind]) || 0) >= requirement.threshold;
-  }
-  function journeyStageStatus(stage, state, commerce) {
-    if (stage.type === "start") return "completed";
-    if (stage.type === "reward") return journeyRewardUnlocked(ADVENTURE_REWARDS[stage.rewardIndex], commerce) ? "earned" : "locked";
-    if (stage.levelIndex < state.currentLevelIndex || (state.isAdventureComplete && stage.levelIndex === state.currentLevelIndex)) return "completed";
-    if (stage.levelIndex === state.currentLevelIndex) return "current";
-    return "locked";
-  }
-  function journeyPathProgress(state) {
-    const characterStops = ADVENTURE_WORLD_STAGES.map((stage, index) => stage.type === "character" ? index : -1).filter((index) => index >= 0);
-    const from = characterStops[state.currentLevelIndex] || 0;
-    const to = characterStops[state.currentLevelIndex + 1] ?? from;
-    return (state.nextLevel ? from + ((to - from) * state.currentLevelPercentage / 100) : from) / (ADVENTURE_WORLD_STAGES.length - 1);
-  }
-  function scheduleJourneySoundtrack() {
-    if (!journeySoundEnabled) return;
-    try {
-      const context = adventureAudio();
-      if (!context) return;
-      if (context.state === "suspended") context.resume();
-      [261.63,329.63,392,329.63,293.66,349.23,440,349.23].forEach((frequency, index) => {
-        const oscillator = context.createOscillator(); const gain = context.createGain(); const start = context.currentTime + .04 + (index * .34);
-        oscillator.type = index % 2 ? "sine" : "triangle"; oscillator.frequency.setValueAtTime(frequency, start);
-        gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(.018, start + .035); gain.gain.exponentialRampToValueAtTime(.0001, start + .28);
-        oscillator.connect(gain).connect(context.destination); oscillator.start(start); oscillator.stop(start + .3);
-      });
-    } catch {}
-  }
-  function setJourneySound(enabled) {
-    journeySoundEnabled = enabled; window.clearInterval(journeySoundTimer); journeySoundTimer = null;
-    try { localStorage.setItem("pagosya_journey_sound", enabled ? "on" : "off"); } catch {}
-    const button = document.getElementById("journeySoundToggle");
-    button?.setAttribute("aria-pressed", String(enabled)); button?.setAttribute("aria-label", enabled ? "Silenciar música de la ruta" : "Reproducir música de la ruta");
-    if (enabled) { scheduleJourneySoundtrack(); journeySoundTimer = window.setInterval(scheduleJourneySoundtrack, 3200); }
-  }
-  function renderJourneyDetail(stageIndex, state, commerce) {
-    const stage = ADVENTURE_WORLD_STAGES[stageIndex]; if (!stage) return;
-    if (stage.type === "start") { document.getElementById("adventureLevelDetail").innerHTML = `<strong>Inicio · Tu tienda despega</strong>Cada venta suma ${GAMIFICATION_XP_PER_SALE} XP y cada visita suma ${GAMIFICATION_XP_PER_VISIT} XP.`; return; }
-    if (stage.type === "reward") {
-      const reward = ADVENTURE_REWARDS[stage.rewardIndex]; const unlocked = journeyRewardUnlocked(reward, commerce);
-      document.getElementById("adventureLevelDetail").innerHTML = `<strong>${unlocked ? "Recompensa ganada" : "Recompensa misteriosa"} · ${esc(reward.title)}</strong>${esc(unlocked ? reward.description : reward.requirementCopy)}.`; return;
-    }
-    const level = ADVENTURE_LEVELS[stage.levelIndex]; const unlocked = stage.levelIndex <= state.currentLevelIndex;
-    document.getElementById("adventureLevelDetail").innerHTML = `<strong>${unlocked ? `${esc(level.character)} · ${esc(level.rarity)}` : "Personaje bloqueado"}</strong>${esc(unlocked ? level.description : `Consigue ${level.xpRequired.toLocaleString("es-BO")} XP para descubrirlo`)}.`;
-  }
-  function renderJourneyNodes(state, commerce) {
-    const selected = selectedGamificationCompanion(state.currentLevelIndex); const positions = journeyStagePositions();
-    document.getElementById("adventureLevelNodes").innerHTML = ADVENTURE_WORLD_STAGES.map((stage, index) => {
-      const position = positions[index]; const status = journeyStageStatus(stage, state, commerce);
-      if (stage.type === "start") return `<button class="journey-node is-start is-completed" type="button" data-world-stage-index="${index}" style="left:${position.x}px;top:${position.y}px"><span class="journey-node-platform"><span class="journey-start-flag"></span></span><span class="journey-node-copy"><strong>Comienza aquí</strong><small>Comparte tu tienda</small></span><span class="journey-node-badge">✓</span></button>`;
-      if (stage.type === "reward") { const reward = ADVENTURE_REWARDS[stage.rewardIndex]; return `<button class="journey-node is-reward is-${status}" type="button" data-world-stage-index="${index}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(reward.title)}, ${status === "earned" ? "ganada" : "bloqueada"}"><span class="journey-node-platform"><span class="journey-reward-gem" aria-hidden="true">${esc(reward.icon)}</span></span><span class="journey-node-copy"><strong>${status === "earned" ? esc(reward.title) : "Recompensa misteriosa"}</strong><small>${status === "earned" ? "Ganada" : esc(reward.requirementCopy)}</small></span><span class="journey-node-badge">${status === "earned" ? "✓" : "🔒"}</span></button>`; }
-      const level = ADVENTURE_LEVELS[stage.levelIndex]; const isSelected = selected === stage.levelIndex;
-      return `<button class="journey-node is-${status}${isSelected ? " is-selected" : ""}" type="button" data-world-stage-index="${index}" data-journey-companion="${stage.levelIndex}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(level.character)}, ${status === "locked" ? `bloqueado hasta ${level.xpRequired} XP` : `${level.rarity}, desbloqueado`}" aria-disabled="${status === "locked"}"><span class="journey-node-platform"><span class="journey-node-art">${companionBlobHtml(level)}</span></span><span class="journey-node-copy"><strong>${status === "locked" ? "???" : esc(level.character)}</strong><small>${status === "locked" ? `${level.xpRequired.toLocaleString("es-BO")} XP` : esc(level.rarity)}</small></span><span class="journey-node-badge">${status === "completed" ? "✓" : status === "current" ? "AHORA" : "🔒"}</span></button>`;
-    }).join("");
-    const route = journeyPathData(positions); ["journeyRouteShadow","journeyRouteBase","journeyRouteProgressShadow","journeyRouteProgress"].forEach((id) => document.getElementById(id).setAttribute("d", route)); return positions;
-  }
-  function renderJourneyCompanions(state) {
-    const selected = selectedGamificationCompanion(state.currentLevelIndex);
-    document.getElementById("gamificationRunnerPicker").innerHTML = ADVENTURE_LEVELS.slice(0, state.currentLevelIndex + 1).map((level, index) => `<button class="journey-companion-option" type="button" data-journey-companion="${index}" aria-pressed="${index === selected}" aria-label="Elegir a ${esc(level.character)}" title="${esc(level.character)} · ${esc(level.rarity)}">${companionBlobHtml(level)}</button>`).join("");
-  }
-  function ensureJourneyMarkup() {
-    const root = document.getElementById("animalAdventure"); if (!root || root.querySelector(".journey-shell")) return;
-    root.className = "animal-adventure journey-experience";
-    root.innerHTML = `<div class="journey-shell">
-      <header class="journey-topbar"><div class="journey-title"><small>Ruta de crecimiento</small><h2 id="adventureMapTitle">Horizonte pagosYa</h2></div><div class="journey-progress-card" aria-live="polite"><div class="journey-progress-heading"><span id="adventureCurrentLevel">Nivel 1 · Pipa</span><strong id="adventureXpValue">0 / 100 XP</strong></div><div class="journey-xp-track" id="adventureXpTrack" role="progressbar" aria-label="Progreso de la etapa actual" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="adventureXpFill"></span></div><div class="journey-progress-meta"><span id="adventureXpRemaining">100 XP para Capi</span><span id="adventureOverallProgress">0% de la ruta</span></div></div><div class="journey-actions"><button class="journey-icon-button" id="journeySoundToggle" type="button" aria-pressed="false" aria-label="Reproducir música de la ruta" title="Música de la ruta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></button><button class="journey-icon-button" type="button" data-journey-scroll="-1" aria-label="Explorar hacia atrás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><button class="journey-icon-button" type="button" data-journey-scroll="1" aria-label="Explorar hacia adelante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></header>
-      <div class="journey-viewport" id="journeyViewport" tabindex="0" aria-label="Mundo de progreso. Desliza horizontalmente para explorar."><div class="journey-world" id="journeyWorld"><span class="journey-sun" aria-hidden="true"></span><span class="journey-cloud cloud-a" aria-hidden="true"></span><span class="journey-cloud cloud-b" aria-hidden="true"></span><span class="journey-cloud cloud-c" aria-hidden="true"></span><span class="journey-biome-label biome-a">Valle inicial</span><span class="journey-biome-label biome-b">Bosque de impulso</span><span class="journey-biome-label biome-c">Cumbre brillante</span><svg class="journey-route" viewBox="0 0 3860 500" preserveAspectRatio="none" aria-hidden="true"><path class="journey-route-shadow" id="journeyRouteShadow"/><path class="journey-route-base" id="journeyRouteBase" pathLength="100"/><path class="journey-route-progress-shadow" id="journeyRouteProgressShadow" pathLength="100"/><path class="journey-route-progress" id="journeyRouteProgress" pathLength="100"/></svg><div class="journey-nodes" id="adventureLevelNodes"></div><div class="journey-player" id="adventurePlayer"><span class="journey-player-face" id="adventurePlayerFace"></span><span class="journey-player-flag">Tú</span></div></div></div>
-      <footer class="journey-footer"><div class="journey-stage-detail" id="adventureLevelDetail" aria-live="polite"></div><div class="journey-companion-control"><span>Tu compañero</span><div class="journey-companion-picker" id="gamificationRunnerPicker" role="group" aria-label="Personajes desbloqueados"></div></div><div class="journey-help">Desliza para explorar. En escritorio también puedes arrastrar o usar las flechas.</div><div id="adventureDebugControls" hidden></div></footer><div class="journey-xp-toast" id="adventureXpToast" hidden aria-live="polite"></div><div class="journey-level-up" id="adventureLevelUp" hidden aria-live="assertive"><span>Nueva etapa</span><strong id="adventureLevelUpTitle"></strong></div></div>`;
-    const viewport = document.getElementById("journeyViewport");
-    root.addEventListener("click", (event) => {
-      const scrollButton = event.target.closest("[data-journey-scroll]"); if (scrollButton) viewport.scrollBy({ left: Number(scrollButton.dataset.journeyScroll) * viewport.clientWidth * .72, behavior: "smooth" });
-      if (event.target.closest("#journeySoundToggle")) setJourneySound(!journeySoundEnabled);
-      const companionButton = event.target.closest("[data-journey-companion]");
-      if (companionButton && lastAdventureState && Number(companionButton.dataset.journeyCompanion) <= lastAdventureState.currentLevelIndex) {
-        try { localStorage.setItem(gamificationCompanionKey(), companionButton.dataset.journeyCompanion); } catch {}
-        playAdventureTouchSound("open"); renderAnimalAdventure(lastAdventureState.currentXP, { animate: false, commerce: lastAdventureCommerceState });
-      }
-      const node = event.target.closest("[data-world-stage-index]"); if (node && lastAdventureState) renderJourneyDetail(Number(node.dataset.worldStageIndex), lastAdventureState, lastAdventureCommerceState);
-    });
-    let dragStartX = 0; let dragStartScroll = 0;
-    viewport.addEventListener("pointerdown", (event) => { if (event.pointerType !== "mouse" || event.target.closest("button")) return; dragStartX = event.clientX; dragStartScroll = viewport.scrollLeft; viewport.classList.add("is-dragging"); viewport.setPointerCapture(event.pointerId); });
-    viewport.addEventListener("pointermove", (event) => { if (viewport.classList.contains("is-dragging")) viewport.scrollLeft = dragStartScroll - (event.clientX - dragStartX); });
-    const endDrag = () => viewport.classList.remove("is-dragging"); viewport.addEventListener("pointerup", endDrag); viewport.addEventListener("pointercancel", endDrag);
-    viewport.addEventListener("wheel", (event) => { if (!event.shiftKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return; event.preventDefault(); viewport.scrollLeft += event.deltaY; }, { passive: false });
-    journeySoundEnabled = false;
-    document.getElementById("journeySoundToggle").setAttribute("aria-pressed", "false");
-  }
-
-  function renderAnimalAdventure(currentXP, { animate = true, delta = null, commerce = null } = {}) {
-    const scope = gamificationStorageScope();
-    const state = getProgressState(currentXP);
-    const previousState = adventureRenderedXp === null || adventureRenderedScope !== scope ? null : getProgressState(adventureRenderedXp);
-    const commerceState = commerce || lastAdventureCommerceState || { sales: 0, visits: 0, dailyLoginStars: 0 };
-    lastAdventureState = state; lastAdventureCommerceState = commerceState;
-    // The Horizonte map was removed from the dashboard; keep the progress state for the rest of gamification.
-    if (!document.getElementById("animalAdventure")) return;
-    ensureJourneyMarkup();
-    const positions = renderJourneyNodes(state, commerceState);
-    renderJourneyCompanions(state);
-    const selected = ADVENTURE_LEVELS[selectedGamificationCompanion(state.currentLevelIndex)];
-    document.getElementById("adventurePlayerFace").innerHTML = companionBlobHtml(selected);
-    const path = document.getElementById("journeyRouteBase");
-    const progress = journeyPathProgress(state);
-    const totalLength = path.getTotalLength();
-    const point = path.getPointAtLength(totalLength * progress);
-    const player = document.getElementById("adventurePlayer");
-    const finalTransform = `translate3d(${point.x - 32}px,${point.y - 32}px,0)`;
-    const shouldAnimate = animate && previousState && previousState.currentXP !== state.currentXP;
-    if (shouldAnimate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const previousPoint = path.getPointAtLength(totalLength * journeyPathProgress(previousState));
-      adventureMarkerAnimation?.cancel();
-      adventureMarkerAnimation = player.animate([{ transform: `translate3d(${previousPoint.x - 32}px,${previousPoint.y - 32}px,0)` }, { transform: finalTransform }], { duration: 500, easing: "cubic-bezier(.23,1,.32,1)", fill: "forwards" });
-      adventureMarkerAnimation.addEventListener("finish", () => { player.style.transform = finalTransform; adventureMarkerAnimation?.cancel(); adventureMarkerAnimation = null; }, { once: true });
-    } else player.style.transform = finalTransform;
-    const routePercent = progress * 100;
-    document.getElementById("journeyRouteProgress").style.strokeDasharray = `${routePercent} ${100 - routePercent}`;
-    document.getElementById("journeyRouteProgressShadow").style.strokeDasharray = `${routePercent} ${100 - routePercent}`;
-    document.getElementById("adventureCurrentLevel").textContent = `Nivel ${state.currentLevel.id} · ${state.currentLevel.character}`;
-    document.getElementById("adventureXpValue").textContent = state.nextLevel ? `${state.currentXP.toLocaleString("es-BO")} / ${state.nextLevel.xpRequired.toLocaleString("es-BO")} XP` : `${state.currentXP.toLocaleString("es-BO")} XP · Ruta completa`;
-    document.getElementById("adventureXpRemaining").textContent = state.nextLevel ? `${state.xpUntilNext.toLocaleString("es-BO")} XP para ${state.nextLevel.character}` : "Todos los personajes desbloqueados";
-    document.getElementById("adventureOverallProgress").textContent = `${Math.round(state.overallPercentage)}% de la ruta`;
-    const xpTrack = document.getElementById("adventureXpTrack"); xpTrack.setAttribute("aria-valuenow", String(Math.round(state.currentLevelPercentage))); xpTrack.setAttribute("aria-valuetext", `${Math.round(state.currentLevelPercentage)}% de la etapa actual`);
-    document.getElementById("adventureXpFill").style.transform = `scaleX(${state.currentLevelPercentage / 100})`;
-    const currentStageIndex = ADVENTURE_WORLD_STAGES.findIndex((stage) => stage.type === "character" && stage.levelIndex === state.currentLevelIndex);
-    renderJourneyDetail(currentStageIndex, state, commerceState);
-    const viewport = document.getElementById("journeyViewport");
-    if (adventureInitialScrollScope !== scope && viewport.clientWidth > 0) { viewport.scrollLeft = Math.max(0, positions[currentStageIndex].x - (viewport.clientWidth * .38)); adventureInitialScrollScope = scope; }
-    const inferredDelta = delta === null && previousState ? state.currentXP - previousState.currentXP : delta;
-    if (shouldAnimate && inferredDelta > 0) showAdventureXpToast(inferredDelta);
-    if (shouldAnimate && state.currentLevelIndex > previousState.currentLevelIndex) { showAdventureLevelUp(state.currentLevel); playAdventureTouchSound("open"); }
-    adventureRenderedXp = state.currentXP; adventureRenderedScope = scope;
-    return state;
-  }
-  window.renderAnimalAdventure = renderAnimalAdventure;
-
-  function defaultGamificationSpeech(state, storeName) {
-    const subject = storeName || "tu negocio";
-    if (state.sales === 0 && state.visits === 0) {
-      return `¡${subject} está listo para comenzar! Comparte el enlace de tu tienda: la primera visita ya suma experiencia.`;
-    }
-    if (!state.nextLevel) {
-      return `¡Qué recorrido! ${subject} llegó a la guía final con ${state.sales.toLocaleString("es-BO")} ventas y ${state.visits.toLocaleString("es-BO")} visitas. Sigue creciendo a tu ritmo.`;
-    }
-    if (state.sales > 0) {
-      return `¡Buen trabajo! ${subject} ya convirtió ${state.sales.toLocaleString("es-BO")} ${state.sales === 1 ? "venta" : "ventas"} y ${state.visits.toLocaleString("es-BO")} ${state.visits === 1 ? "visita" : "visitas"} en progreso real.`;
-    }
-    return `¡Ya te están descubriendo! ${subject} sumó ${state.visits.toLocaleString("es-BO")} ${state.visits === 1 ? "visita" : "visitas"}. La primera venta desbloqueará 50 XP de una vez.`;
-  }
-
-  function setGamificationProgress(element, progress) {
-    element.style.setProperty("--xp-progress-scale", String(progress / 100));
-    element.setAttribute("aria-valuenow", String(progress));
-    element.setAttribute("aria-valuetext", `${progress}% del nivel completado`);
-  }
-
-  function hideGamificationToast() {
-    window.clearTimeout(gamificationToastTimer);
-    gamificationToastTimer = null;
-    const toast = document.getElementById("gamificationToast");
-    toast.hidden = true;
-    if (activeGamificationAnnouncement?.achievementId) {
-      markAchievementSeen(activeGamificationAnnouncement.achievementId, activeGamificationAnnouncement.achievementScope);
-      document.querySelector(`[data-achievement-id="${activeGamificationAnnouncement.achievementId}"]`)?.classList.remove("is-unlocking");
-    }
-    activeGamificationAnnouncement = null;
-    window.setTimeout(showNextGamificationAnnouncement, 220);
-  }
-
-  function showNextGamificationAnnouncement() {
-    if (activeGamificationAnnouncement || !gamificationAnnouncementQueue.length) return;
-    activeGamificationAnnouncement = gamificationAnnouncementQueue.shift();
-    const { companion, title, message, achievementId } = activeGamificationAnnouncement;
-    const toast = document.getElementById("gamificationToast");
-    paintBlob(document.getElementById("gamificationToastBlob"), `${companion.id}:happy`, companionBlobHtml(companion, { expression: "happy" }));
-    document.getElementById("gamificationToastTitle").textContent = title;
-    document.getElementById("gamificationToastMessage").textContent = message;
-    toast.dataset.kind = achievementId ? "achievement" : "progress";
-    if (achievementId) {
-      const card = document.querySelector(`[data-achievement-id="${achievementId}"]`);
-      card?.classList.remove("is-unlocking");
-      requestAnimationFrame(() => card?.classList.add("is-unlocking"));
-    }
-    window.clearTimeout(gamificationToastTimer);
-    toast.hidden = false;
-    requestAnimationFrame(() => burstConfetti(toast, { count: achievementId ? 56 : 28 }));
-    gamificationToastTimer = window.setTimeout(hideGamificationToast, 8500);
-  }
-
-  function showGamificationToast(companion, title, message, achievementId = null, achievementScope = null) {
-    const duplicate = achievementId && (
-      (activeGamificationAnnouncement?.achievementId === achievementId && activeGamificationAnnouncement?.achievementScope === achievementScope)
-      || gamificationAnnouncementQueue.some((item) => item.achievementId === achievementId && item.achievementScope === achievementScope)
-    );
-    if (duplicate) return;
-    gamificationAnnouncementQueue.push({ companion, title, message, achievementId, achievementScope });
-    showNextGamificationAnnouncement();
-  }
-
-  let unlockBlob = null;
-  function showNextBirdUnlock() {
-    const dialog = document.getElementById("birdUnlockDialog");
-    const blockingDialog = document.querySelector("dialog[open]:not(#birdUnlockDialog)");
-    if (dialog.open || blockingDialog || !birdUnlockQueue.length) return;
-    const pending = birdUnlockQueue[0];
-    if (pending.storeId !== currentStoreId) {
-      birdUnlockQueue.shift();
-      queuedProgressLevels.delete(`${pending.storeId}:${pending.levelIndex}`);
-      window.setTimeout(showNextBirdUnlock, 0);
-      return;
-    }
-    const { level, storeName, storeId, levelIndex } = pending;
-    unlockBlob?.destroy();
-    unlockBlob = mountBlob(document.getElementById("birdUnlockBlob"), { seed: companionSeed(level), look: level.look, expression: level.expression });
-    document.getElementById("birdUnlockTitle").textContent = `¡${level.character} llegó!`;
-    document.getElementById("birdUnlockLevel").textContent = `Nivel ${level.id} · ${level.name}`;
-    document.getElementById("birdUnlockSpeech").textContent = `¡Felicidades! Has llegado al nivel ${level.id}. ${storeName} va muy bien; cada venta y cada visita cuentan. Desde ahora ${level.character} te acompaña. ¡Sigue así!`;
-    try {
-      dialog.showModal();
-      birdUnlockQueue.shift();
-      document.getElementById("birdUnlockContinue").focus();
-      void unlockBlob.play(ANIMATIONS.unlock);
-      progressAcknowledgementChain = progressAcknowledgementChain.then(() => acknowledgeBirdUnlock(storeId, levelIndex));
-    } catch {
-      // Keep the unlock pending locally and on the server so a later render can retry it.
-    }
-  }
-
-  function queueBirdUnlock(levelIndex, storeName, storeId) {
-    const level = ADVENTURE_LEVELS[levelIndex];
-    const queueKey = `${storeId}:${levelIndex}`;
-    if (!level || queuedProgressLevels.has(queueKey)) return;
-    queuedProgressLevels.add(queueKey);
-    birdUnlockQueue.push({ level, levelIndex, storeName, storeId });
-    showNextBirdUnlock();
-  }
-
-  async function acknowledgeBirdUnlock(storeId, levelIndex) {
-    try {
-      await api("/dashboard/progress-celebrations/acknowledge", {
-        method: "POST",
-        body: JSON.stringify({ storeId, level: levelIndex }),
-      });
-    } catch {
-      // The server remains authoritative and will offer the unlock again next login.
-    }
-  }
-
-  async function claimProgressCelebrations() {
-    if (!sessionToken || !currentStoreId) return;
-    const storeId = currentStoreId;
-    if (progressCelebrationFetches.has(storeId)) return;
-    progressCelebrationFetches.add(storeId);
-    try {
-      const result = await api("/dashboard/progress-celebrations", {
-        method: "POST",
-        body: JSON.stringify({ storeId }),
-      });
-      if (storeId !== currentStoreId) return;
-      const storeName = lastStores.find((store) => store.id === storeId)?.name || "Tu tienda";
-      (result.newlyUnlockedLevels || []).forEach((levelIndex) => queueBirdUnlock(levelIndex, storeName, storeId));
-    } catch {
-      // Progress celebration must never block the operational dashboard.
-    } finally {
-      progressCelebrationFetches.delete(storeId);
-    }
-  }
-
-  document.getElementById("birdUnlockContinue").addEventListener("click", () => document.getElementById("birdUnlockDialog").close());
-  document.getElementById("birdUnlockDialog").addEventListener("cancel", (event) => {
-    event.preventDefault();
-    event.currentTarget.close();
-  });
-  document.getElementById("birdUnlockDialog").addEventListener("close", () => window.setTimeout(showNextBirdUnlock, 120));
-  document.addEventListener("close", (event) => {
-    if (event.target?.id !== "birdUnlockDialog") window.setTimeout(showNextBirdUnlock, 120);
-  }, true);
-
-  async function claimDailyLoginReward() {
-    try {
-      const reward = await api("/dashboard/daily-login-reward", { method: "POST" });
-      dailyLoginReward = {
-        awarded: reward?.awarded === true,
-        totalStars: Math.max(0, Number(reward?.totalStars) || 0),
-        wheelAvailable: reward?.wheelAvailable === true,
-      };
-      await rewards.load();
-      if (lastFinances) renderGamification(lastFinances, { announce: false });
-      if (dailyLoginReward.wheelAvailable && rewards.state()?.wheel.available && !luckWheelModalShownThisLoad) { luckWheelModalShownThisLoad = true; rewards.openWheelModal(); }
-      if (!dailyLoginReward.awarded) return;
-
-      const state = gamificationState(lastFinances);
-      const companion = ADVENTURE_LEVELS[selectedGamificationCompanion(state.levelIndex)];
-      const totalLabel = state.dailyLoginStars === 1 ? "tu primera estrella de constancia" : `${state.dailyLoginStars.toLocaleString("es-BO")} estrellas de constancia`;
-      showGamificationToast(companion, "¡Ganaste 1 estrella!", `${companion.character} celebra que volviste hoy. Ya tienes ${totalLabel}.`);
-    } catch {
-      // A gamification reward must never block access to the operational dashboard.
-    }
-  }
-
-  function gamificationCelebration(state, companion) {
-    let previous = null;
-    try { previous = JSON.parse(localStorage.getItem(gamificationSnapshotKey()) || "null"); } catch {}
-    const snapshot = { xp: state.xp, levelIndex: state.levelIndex };
-    try { localStorage.setItem(gamificationSnapshotKey(), JSON.stringify(snapshot)); } catch {}
-    if (!previous || state.xp <= (Number(previous.xp) || 0)) return null;
-
-    const gained = state.xp - (Number(previous.xp) || 0);
-    if (state.levelIndex > (Number(previous.levelIndex) || 0)) {
-      // The durable server claim owns level-up celebrations so they work on
-      // another device and after an offline acquisition without duplicating.
-      return null;
-    }
-    return { title: `¡+${gained.toLocaleString("es-BO")} XP!`, message: `${companion.character} te felicita: nuevas ventas o visitas acercaron tu tienda al siguiente nivel.` };
-  }
-
-  function renderGamificationMap(state) {
-    renderAnimalAdventure(resolvedAdventureXp(state.xp), { commerce: state });
-  }
-
-  let topbarRenderedXp = null;
-  let topbarRenderedScope = null;
-  let topbarXpGainTimer = null;
-  function renderTopbarXp(state, companion) {
-    const bar = document.getElementById("topbarXp");
-    const scope = gamificationStorageScope();
-    const nextCopy = state.nextLevel ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para nivel ${state.levelIndex + 2}` : "Nivel máximo";
-    paintBlob(document.getElementById("topbarXpBlob"), String(companion.id), companionBlobHtml(companion));
-    document.getElementById("topbarXpLevel").textContent = `Nivel ${state.levelIndex + 1} · ${state.level.name}`;
-    document.getElementById("topbarXpNext").textContent = nextCopy;
-    const track = document.getElementById("topbarXpTrack");
-    track.setAttribute("aria-valuenow", String(state.progress));
-    track.setAttribute("aria-valuetext", `${state.progress}% del nivel ${state.levelIndex + 1}. ${nextCopy}`);
-    document.getElementById("topbarXpFill").style.transform = `scaleX(${state.progress / 100})`;
-    bar.setAttribute("aria-label", `Nivel ${state.levelIndex + 1}, ${state.xp.toLocaleString("es-BO")} XP. ${nextCopy}. Ver tu progreso`);
-    bar.hidden = false;
-    const gained = topbarRenderedScope === scope && topbarRenderedXp !== null ? state.xp - topbarRenderedXp : 0;
-    topbarRenderedXp = state.xp; topbarRenderedScope = scope;
-    if (gained <= 0) return;
-    const chip = document.getElementById("topbarXpGain");
-    window.clearTimeout(topbarXpGainTimer);
-    chip.textContent = `+${gained.toLocaleString("es-BO")} XP`;
-    chip.hidden = true; bar.classList.remove("is-gaining");
-    void bar.offsetWidth;
-    chip.hidden = false; bar.classList.add("is-gaining");
-    topbarXpGainTimer = window.setTimeout(() => { chip.hidden = true; bar.classList.remove("is-gaining"); }, 1600);
-  }
-
-  const CONFETTI_COLORS = ["#ffc956", "#f27a62", "#7fd3c3", "#818cf8", "#fff5bd", "#15352f"];
-  function burstConfetti(origin, { count = 36, spread = 1 } = {}) {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const rect = origin?.getBoundingClientRect?.();
-    const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-    const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
-    const layer = document.createElement("div");
-    layer.className = "confetti-layer";
-    layer.setAttribute("aria-hidden", "true");
-    document.body.append(layer);
-    let remaining = count;
-    for (let index = 0; index < count; index++) {
-      const piece = document.createElement("span");
-      piece.style.left = `${x}px`; piece.style.top = `${y}px`;
-      piece.style.background = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
-      if (index % 3 === 0) piece.style.borderRadius = "50%";
-      layer.append(piece);
-      const angle = Math.random() * Math.PI * 2;
-      const distance = (90 + Math.random() * 190) * spread;
-      const dx = Math.cos(angle) * distance;
-      const dy = Math.sin(angle) * distance - 80 * spread;
-      piece.animate([
-        { transform: "translate(-50%,-50%) rotate(0deg)", opacity: 1 },
-        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${Math.random() * 540 - 270}deg)`, opacity: 1, offset: .55 },
-        { transform: `translate(calc(-50% + ${dx * 1.1}px), calc(-50% + ${dy + 160}px)) rotate(${Math.random() * 720 - 360}deg) scale(.6)`, opacity: 0 },
-      ], { duration: 1100 + Math.random() * 600, easing: "cubic-bezier(.2,.7,.3,1)", fill: "forwards" }).finished.catch(() => {}).then(() => { if (--remaining === 0) layer.remove(); });
-    }
-  }
-
-  // B1: repaint a static blob only when what it shows changed, so the 60-second refresh does not churn the DOM.
-  function paintBlob(element, key, markup) {
-    if (!element || element.dataset.blobKey === key) return;
-    element.dataset.blobKey = key;
-    element.innerHTML = markup;
-  }
-
-  // The Progreso hero is the one animated companion on the page (idle on hover, "cheer" on a Fiesta tip).
-  let heroBlob = null;
-  let heroBlobLevel = null;
-  function mountHeroBlob(companion) {
-    const host = document.getElementById("gamificationHeroBlob");
-    if (!host || (heroBlob && heroBlobLevel === companion.id)) return;
-    heroBlob?.destroy();
-    heroBlob = mountBlob(host, { seed: companionSeed(companion), look: companion.look, expression: companion.expression, animate: "hover" });
-    heroBlobLevel = companion.id;
-  }
-
-  function renderGamification(finances, { announce = true } = {}) {
-    const state = gamificationState(finances);
-    const selectedStore = lastStores.find((store) => store.id === currentStoreId);
-    const storeName = finances?.scope?.storeName || selectedStore?.name || "tu negocio";
-    const companionIndex = selectedGamificationCompanion(state.levelIndex);
-    const companion = ADVENTURE_LEVELS[companionIndex];
-    const achievementIds = announce ? pendingAchievementIds(state) : [];
-    const celebration = announce ? gamificationCelebration(state, companion) : null;
-    const speech = celebration?.message || defaultGamificationSpeech(state, storeName);
-    const nextCopy = state.nextLevel
-      ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para ${state.nextLevel.name}`
-      : "Nivel máximo alcanzado";
-
-    paintBlob(document.getElementById("gamificationSummaryBlob"), `${companion.id}:hover`, companionBlobHtml(companion, { animate: "hover" }));
-    mountHeroBlob(companion);
-
-    document.getElementById("gamificationSummaryXp").textContent = `${state.xp.toLocaleString("es-BO")} XP`;
-    document.getElementById("gamificationSummarySpeech").textContent = speech;
-    document.getElementById("gamificationSummaryLevel").textContent = `Nivel ${state.levelIndex + 1} · ${state.level.name}`;
-    document.getElementById("gamificationSummaryNext").textContent = nextCopy;
-    setGamificationProgress(document.getElementById("gamificationSummaryTrack"), state.progress);
-
-    document.getElementById("gamificationLevelTitle").textContent = state.level.name;
-    document.getElementById("gamificationLevelNumber").textContent = `Nivel ${state.levelIndex + 1} de ${ADVENTURE_LEVELS.length}`;
-    document.getElementById("gamificationSpeech").textContent = speech;
-    document.getElementById("gamificationXpTotal").textContent = `${state.xp.toLocaleString("es-BO")} XP`;
-    document.getElementById("gamificationXpNext").textContent = state.nextLevel ? `Te faltan ${nextCopy}` : nextCopy;
-    document.getElementById("gamificationLevelFloor").textContent = `${state.level.xpRequired.toLocaleString("es-BO")} XP`;
-    document.getElementById("gamificationLevelCeiling").textContent = state.nextLevel ? `${state.nextLevel.xpRequired.toLocaleString("es-BO")} XP` : "Nivel máximo";
-    setGamificationProgress(document.getElementById("gamificationLevelTrack"), state.progress);
-    document.getElementById("gamificationSalesXp").textContent = `${state.salesXp.toLocaleString("es-BO")} XP`;
-    document.getElementById("gamificationSalesSource").textContent = `${state.sales.toLocaleString("es-BO")} ${state.sales === 1 ? "venta" : "ventas"} × ${GAMIFICATION_XP_PER_SALE} XP`;
-    document.getElementById("gamificationVisitsXp").textContent = `${state.visitsXp.toLocaleString("es-BO")} XP`;
-    document.getElementById("gamificationVisitsSource").textContent = `${state.visits.toLocaleString("es-BO")} ${state.visits === 1 ? "visita" : "visitas"} × ${GAMIFICATION_XP_PER_VISIT} XP`;
-    document.getElementById("gamificationDailyStars").textContent = `${state.dailyLoginStars.toLocaleString("es-BO")} ${state.dailyLoginStars === 1 ? "estrella" : "estrellas"}`;
-    document.getElementById("gamificationDailySource").textContent = dailyLoginReward.awarded ? "Ganaste 1 hoy · vuelve mañana" : "+1 por tu primer ingreso de cada día";
-
-    document.getElementById("gamificationStarsSummary").textContent = `${state.earnedStars} de ${state.stars.length} estrellas ganadas con la actividad real de ${storeName}.`;
-    document.getElementById("gamificationStars").innerHTML = state.stars.map((star) => `<article class="gamification-star${star.isEarned ? " is-earned" : ""}" data-achievement-id="${star.id}">
-      ${GAMIFICATION_STAR_SVG}
-      <strong>${esc(star.title)}</strong>
-      <p>${esc(star.description)}</p>
-      <span class="gamification-star-status">${star.isEarned ? "Ganada" : esc(star.progress(state))}</span>
-    </article>`).join("");
-
-    document.getElementById("gamificationCompanions").innerHTML = ADVENTURE_LEVELS.map((entry, index) => {
-      const isLocked = index > state.levelIndex;
-      const isSelected = index === companionIndex;
-      const buttonLabel = isLocked ? `Se abre en nivel ${index + 1}` : isSelected ? "Acompañándote" : `Elegir a ${entry.character}`;
-      return `<article class="gamification-companion${isLocked ? " is-locked" : ""}${isSelected ? " is-selected" : ""}">
-        ${isLocked ? `<span class="gamification-companion-lock">Nivel ${index + 1}</span>` : ""}
-        <div class="gamification-companion-art">${companionBlobHtml(entry, { expression: isLocked ? "sleepy" : entry.expression })}</div>
-        <div class="gamification-companion-copy"><strong>${esc(entry.character)} · ${esc(entry.name)}</strong><span>${esc(entry.description)}</span><button type="button" data-companion-select="${index}" aria-pressed="${isSelected}"${isLocked ? " disabled" : ""}>${esc(buttonLabel)}</button></div>
-      </article>`;
-    }).join("");
-
-    renderGamificationMap(state);
-    renderTopbarXp(state, companion);
-    rewards.renderWheel();
-    if (activeGamificationAnnouncement?.achievementId) {
-      document.querySelector(`[data-achievement-id="${activeGamificationAnnouncement.achievementId}"]`)?.classList.add("is-unlocking");
-    }
-    achievementIds.forEach((achievementId) => {
-      const achievement = state.stars.find((star) => star.id === achievementId);
-      if (!achievement) return;
-      showGamificationToast(companion, "¡Logro desbloqueado!", `${companion.character} encontró “${achievement.title}”. ${achievement.description}`, achievement.id, gamificationStorageScope());
-    });
-    if (celebration) showGamificationToast(companion, celebration.title, celebration.message);
-  }
-
   function renderFinances(finances) {
     lastFinances = finances;
     const selectedStore = lastStores.find((store) => store.id === currentStoreId);
@@ -3310,8 +2334,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.getElementById("financeRevenueValue").textContent = money(finances.totalRevenue);
     document.getElementById("financeInventoryValue").textContent = money(finances.inventoryValue);
     document.getElementById("financeViewsValue").textContent = String(finances.totalStoreViews);
-    renderGamification(finances);
-    void claimProgressCelebrations();
     document.getElementById("downloadFinancePdf").disabled = !(finances.paymentCount > 0);
     renderFinanceDonut(finances.revenueByPaymentMethod || []);
     renderFinanceForecast(finances);
@@ -3354,8 +2376,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       if (storeId !== currentStoreId) return;
       renderTotalFinances(totalFinances);
       renderFinances(scopedFinances);
-      // New sales may have earned a board roll; loading rewards pops the board when they did.
-      void rewards.load();
     }).catch(() => {
       // The product mutation already succeeded. Keep the last summary instead
       // of turning a non-critical refresh into a blocking error.
@@ -4066,6 +3086,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
         ? "El servidor no pudo completar esta operación. Tus cambios siguen aquí; vuelve a intentarlo en unos segundos."
         : responseMessage || res.statusText || "No pudimos completar la solicitud.");
       error.status = res.status;
+      // A machine-readable reason some routes add (e.g. the Shopify import's "protected").
+      if (typeof body?.code === "string") error.code = body.code;
       error.retryable = res.status === 408 || res.status === 425 || res.status === 429 || res.status >= 500;
       throw error;
     }
@@ -4102,8 +3124,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     openSettingsOverlay(currentStoreId, section);
   }
   document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
-  import("/src/mcp-connect.mjs").then(({ mountMcpConnect }) => {
+  import("/src/mcp-connect.mjs").then(({ mountMcpConnect, mountMcpConnectDialog }) => {
     mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
+    const connectDialog = mountMcpConnectDialog({ api, apiBase: () => apiBaseEl.value, onCreated: () => { void mcpConnect?.reload(); } });
+    document.querySelectorAll("[data-connect-ai-open]").forEach(button => button.addEventListener("click", () => connectDialog.open()));
     if (document.body.dataset.dashboardView === "connect-ai" && sessionToken) void mcpConnect.reload();
   });
   import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {
@@ -4134,124 +3158,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       throw new Error("El servidor no devolvió una ruta válida para la foto.");
     }
     return url;
-  }
-
-  function inventoryFilenameKey(value) {
-    let filename = String(value || "").trim();
-    try { filename = decodeURIComponent(filename); } catch {}
-    filename = filename.split(/[?#]/, 1)[0].replace(/\\/g, "/").split("/").pop() || filename;
-    return filename.normalize("NFC").toLocaleLowerCase("es");
-  }
-
-  function inventoryStemKey(value) {
-    return inventoryFilenameKey(value)
-      .replace(/\.[^.]+$/, "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-  }
-
-  function inventoryAutomaticImageMatches(name, codigoProducto, imageFiles, matchedImageFiles) {
-    const nameKey = inventoryStemKey(name);
-    const skuKey = inventoryStemKey(codigoProducto);
-    const nameTokens = nameKey.split(" ").filter((token) => token.length >= 3);
-    const candidates = imageFiles
-      .filter((file) => !matchedImageFiles.has(file))
-      .map((file) => {
-        const stem = inventoryStemKey(file.name);
-        let score = 0;
-        if (skuKey && stem === skuKey) score = 100;
-        else if (nameKey && stem === nameKey) score = 100;
-        else if (skuKey && (stem.startsWith(`${skuKey} `) || stem.endsWith(` ${skuKey}`))) score = 92;
-        else if (nameKey && (stem.startsWith(`${nameKey} `) || stem.endsWith(` ${nameKey}`))) score = 88;
-        else if (nameTokens.length && nameTokens.every((token) => stem.includes(token))) score = 72;
-        return { file, score };
-      })
-      .filter((candidate) => candidate.score > 0)
-      .sort((left, right) => right.score - left.score || left.file.name.localeCompare(right.file.name, "es"));
-    const strongMatches = candidates.filter((candidate) => candidate.score >= 88).slice(0, MAX_GALLERY_IMAGES);
-    if (strongMatches.length) return strongMatches.map((candidate) => candidate.file);
-    return candidates.length === 1 ? [candidates[0].file] : [];
-  }
-
-  function markDuplicateInventorySkus(rows) {
-    const firstRowBySku = new Map();
-    rows.forEach((row) => {
-      const sku = row.product.codigoProducto;
-      if (!sku) return;
-      if (firstRowBySku.has(sku)) {
-        row.errors.push(`El SKU ${sku} ya aparece en la fila ${firstRowBySku.get(sku)}`);
-      } else {
-        firstRowBySku.set(sku, row.rowNumber);
-      }
-    });
-  }
-
-  function prepareAiInventoryRows(products, imageFiles) {
-    if (!Array.isArray(products) || products.length === 0) throw new Error("La IA no encontró productos en el archivo.");
-    if (products.length > 100) throw new Error("La IA encontró más de 100 productos. Divide el archivo e intenta nuevamente.");
-    const imagesByName = new Map();
-    const imagesByStem = new Map();
-    const matchedImageFiles = new Set();
-    imageFiles.forEach((file) => {
-      imagesByName.set(inventoryFilenameKey(file.name), file);
-      const stem = inventoryStemKey(file.name);
-      imagesByStem.set(stem, [...(imagesByStem.get(stem) || []), file]);
-    });
-
-    const rows = products.map((source, index) => {
-      const errors = Array.isArray(source.errors) ? source.errors.map((value) => String(value)).filter(Boolean) : [];
-      const name = String(source.name || "").trim();
-      const codigoProducto = String(source.codigoProducto || "").trim();
-      if (codigoProducto.length > 64) errors.push("El SKU supera 64 caracteres");
-      if (codigoProducto && !/^[A-Za-z0-9._-]+$/.test(codigoProducto)) errors.push("El SKU solo admite letras, números, punto, guion y guion bajo");
-      const requestedImages = Array.isArray(source.imageNames) ? source.imageNames.map((value) => String(value).trim()).filter(Boolean) : [];
-      const matchedImages = requestedImages.map((filename) => {
-        const exact = imagesByName.get(inventoryFilenameKey(filename));
-        const stemMatches = imagesByStem.get(inventoryStemKey(filename)) || [];
-        const file = exact || (stemMatches.length === 1 ? stemMatches[0] : undefined);
-        if (!file) errors.push(`No se seleccionó la foto "${filename}"`);
-        else matchedImageFiles.add(file);
-        return file;
-      }).filter(Boolean);
-      if (requestedImages.length === 0 && name) {
-        const automaticMatches = inventoryAutomaticImageMatches(name, codigoProducto, imageFiles, matchedImageFiles);
-        automaticMatches.forEach((file) => matchedImageFiles.add(file));
-        matchedImages.push(...automaticMatches);
-      }
-      matchedImages.forEach((file) => {
-        if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) errors.push(`Formato no admitido para "${file.name}"`);
-        else if (file.size > MAX_IMAGE_BYTES) errors.push(`"${file.name}" supera 8 MB`);
-      });
-      const variants = Array.isArray(source.variants) ? source.variants : [];
-      if (variants.length === 1) errors.push("Un producto con tamaños necesita por lo menos 2 opciones");
-      return {
-        rowNumber: Number.isInteger(source.sourceRow) ? source.sourceRow : index + 2,
-        errors,
-        imageFiles: matchedImages,
-        product: {
-          name,
-          codigoProducto: codigoProducto || null,
-          description: source.description || null,
-          tags: Array.isArray(source.tags) ? source.tags : [],
-          stock: variants.length ? null : source.stock ?? null,
-          variants,
-          categoryName: source.categoryName || undefined,
-          color: source.color || null,
-          amount: source.amount,
-          currency: "BOB",
-        },
-      };
-    });
-    const unmatchedImageCount = imageFiles.filter((file) => !matchedImageFiles.has(file)).length;
-    markDuplicateInventorySkus(rows);
-    return {
-      rows,
-      warnings: unmatchedImageCount
-        ? [`${unmatchedImageCount} ${unmatchedImageCount === 1 ? "foto no pudo relacionarse" : "fotos no pudieron relacionarse"} con un producto. Puedes renombrarlas con el nombre o SKU del producto y volver a adaptar el archivo.`]
-        : [],
-    };
   }
 
   function renderInventoryAiWarnings(warnings = []) {
@@ -4615,7 +3521,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.body.classList.remove("is-logged-in");
     document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
     currentProfileName = "";
-    currentBlobSeed = "";
     if (profileMenuEl.matches(":popover-open")) profileMenuEl.hidePopover();
     loginFormEl.style.display = "grid";
     loggedInBarEl.style.display = "none";
@@ -4632,7 +3537,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     startDashboardShader();
     loggedInBarEl.style.display = "flex";
     applyProfileIdentity();
-    // The blob seed and the saved variation come from the sessions list; fetch it now, not only when the menu opens.
+    // The profile name comes from the sessions list; fetch it now, not only when the menu opens.
     loadProfileSessions(false).catch(() => undefined);
     if (document.body.dataset.dashboardView === "connect-ai") void mcpConnect?.reload();
   }
@@ -4668,7 +3573,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     appEl.style.display = "block";
     infoEl.textContent = "Sesión iniciada. Cargando tu panel…";
     await refresh();
-    if (sessionToken) await claimDailyLoginReward();
     if (sessionToken) infoEl.textContent = "";
   }
 
@@ -5087,7 +3991,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     showLoggedIn();
     appEl.style.display = "block";
     infoEl.textContent = "Actualizando tu panel…";
-    refresh().then(() => sessionToken ? claimDailyLoginReward() : undefined).finally(() => {
+    refresh().finally(() => {
       if (sessionToken) infoEl.textContent = "";
     });
   } else {

@@ -10,6 +10,7 @@ import { EmailProvider } from "../dashboard/interfaces/email-provider.interface"
 import { normalizeCustomerDocument, DebtCollectionsService } from "../debt-collections/debt-collections.service";
 import { readOrderTrackingToken } from "./order-tracking-token";
 import { ShipmentsService } from "../shipping/shipments.service";
+import { emitStoreEvent } from "../extensions/store-events";
 
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 32);
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -330,6 +331,7 @@ export class ConsumerService {
       const changed = await tx.storeOrder.updateMany({ where: { id: order.id, status: order.status }, data: { status } });
       if (changed.count !== 1) throw new BadRequestException("El pedido cambió mientras lo actualizabas; vuelve a cargarlo");
       const statusEvent = await tx.storeOrderStatusEvent.create({ data: { orderId: order.id, status } });
+      await emitStoreEvent(tx, order.storeId, 'order.status_changed', { orderId: order.id, from: order.status, to: status, trackingNumber: null });
       if (status === OrderFulfillmentStatus.CANCELED || status === OrderFulfillmentStatus.REFUNDED) await this.shipments.cancelForOrder(tx, order.id);
       if (['SHIPPED','DELIVERED','CANCELED'].includes(status) && tx.paymentIntent?.findUnique) {
         const payment = await tx.paymentIntent.findUnique({where:{id:order.paymentIntentId}});

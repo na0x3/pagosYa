@@ -39,6 +39,16 @@ describe('pagosYa MCP over HTTP', () => {
     expect(secret.status).toBe(401);
   });
 
+  it('serves Claude and ChatGPT connectors from a secret URL with no header, and refuses a wrong one', async () => {
+    const client = new Client({ name: 'connector', version: '1.0.0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL('/v1/mcp/k/mk_live_ok', url)));
+    expect((await client.listTools()).tools.length).toBe(10);
+    await client.close();
+    const wrong = await fetch(new URL('/v1/mcp/k/mk_live_nope', url), { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) });
+    expect(wrong.status).toBe(401);
+    expect((await fetch(new URL('/v1/mcp/k/mk_live_ok', url))).status).toBe(405);
+  });
+
   it('answers 405 to GET, since the server keeps no sessions', async () => {
     expect((await fetch(url, { headers: { authorization: 'Bearer mk_live_ok' } })).status).toBe(405);
   });

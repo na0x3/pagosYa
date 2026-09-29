@@ -72,7 +72,8 @@ export class SourceVisualReviewService {
     if (!snapshot.files.some(f => f.path === input.page && f.path.endsWith('.html'))) throw new BadRequestException('Selecciona una página de esta revisión.');
     try { sourceVisualState(snapshot, input.page, input.productId); }
     catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Selecciona un producto del catálogo.'); }
-    const model = !input.model || input.model === 'auto' ? 'gpt-5.6-terra' : input.model;
+    // The visual review is built for OpenAI's format; a Claude choice reviews with the equivalent OpenAI model.
+    const model = !input.model || input.model === 'auto' || input.model.startsWith('claude-') ? 'gpt-5.6-terra' : input.model;
     const provider = sourceProvider(this.config, model, true);
     const budget = new SourceRequestBudget(input.maxCredits ?? 10);
     if (this.running) throw new ServiceUnavailableException('Hay otra revisión visual en curso. Intenta de nuevo en un momento.');

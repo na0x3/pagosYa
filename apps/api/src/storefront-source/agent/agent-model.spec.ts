@@ -37,6 +37,13 @@ describe('openAiAgentModel', () => {
     await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('respondió 500');
     expect(onTurn).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAILED' }));
   });
+  it('releases the reservation of a request the provider rejected, and names the provider error', async () => {
+    // A rejected request is not billed; keeping its reservation turned two provider errors into a false credit limit.
+    const fetchImpl = jest.fn(async () => new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded', message: 'Rate limit reached' } }), { status: 429 }));
+    const model = openAiAgentModel({ endpoint: 'e', apiKey: 'k', model: 'gpt-5.6-terra', providerName: 'OpenAI', budget: new SourceRequestBudget(10), maxOutputTokens: 4000, reasoningEffort: 'low', fetchImpl: fetchImpl as any });
+    for (let index = 0; index < 3; index++) await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('respondió 429 (rate_limit_exceeded)');
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
   it('explains a network failure in Spanish with its cause, never the bare runtime message', async () => {
     const { model } = make(async () => { throw Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }) }); });
     await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('No se pudo contactar al proveedor de IA (ECONNRESET)');

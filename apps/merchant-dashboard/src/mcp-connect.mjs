@@ -18,6 +18,61 @@ export function mcpClientSnippets(endpoint, key) {
 
 const CLIENTS = [["claude", "Claude Code"], ["codex", "Codex"], ["cursor", "Cursor (.cursor/mcp.json)"]];
 
+/** Claude (web) and ChatGPT connectors cannot send headers, so their URL carries the key; it is revocable like any key. */
+export function mcpConnectorUrl(endpoint, key) {
+  return `${String(endpoint).replace(/\/+$/, "")}/k/${key}`;
+}
+
+export const MCP_GUIDE_TABS = [["claude", "Claude"], ["chatgpt", "ChatGPT"], ["claude-code", "Claude Code"], ["cursor", "Cursor"], ["codex", "Codex"]];
+const FIRST_PROMPT = "Muéstrame mis tiendas y una vista previa de mi portada.";
+const copyBox = (value, label) => `<div class="mcp-copy-box"><code>${esc(value)}</code><button type="button" class="mcp-copy-icon" data-mcp-copy="${esc(value)}" aria-label="Copiar ${esc(label)}" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>`;
+const step = (body) => `<li><span class="mcp-step-body">${body}</span></li>`;
+
+/**
+ * One tab of the Conecta tu IA dialog: numbered steps, the secret URL or command in a copy box, and a first prompt.
+ * Without a fresh key (keys are shown once) it offers to create the connection instead of showing any secret.
+ * @param {string} client @param {{ endpoint: string, key: string | null }} options
+ */
+export function renderMcpGuide(client, { endpoint, key }) {
+  const local = /^http:\/\/(localhost|127\.0\.0\.1)/.test(endpoint);
+  const web = client === "claude" || client === "chatgpt";
+  const create = `<button type="button" class="mcp-create-connection" data-mcp-create-connection="${esc(client)}">Crear mi conexión</button>`;
+  const secret = (value, label) => key ? copyBox(value, label) : create;
+  const snippets = key ? mcpClientSnippets(endpoint, key) : null;
+  const url = key ? mcpConnectorUrl(endpoint, key) : "";
+  const steps = {
+    claude: [
+      "En <strong>claude.ai</strong>, abre Configuración y luego Conectores.",
+      `Elige <strong>Agregar conector personalizado</strong>, llámalo pagosYa y pega esta URL:${secret(url, "la URL")}`,
+      "Guárdalo y actívalo en tu chat. Eso es todo.",
+      `Empieza con esto y mira cómo responde tu tienda:${copyBox(FIRST_PROMPT, "el mensaje")}`,
+    ],
+    chatgpt: [
+      "En <strong>ChatGPT</strong>, abre Configuración → Aplicaciones y conectores → Avanzado y activa el modo desarrollador.",
+      `Crea un conector llamado pagosYa, sin autenticación, con esta URL:${secret(url, "la URL")}`,
+      "En un chat nuevo, elige pagosYa en las herramientas.",
+      `Empieza con esto y mira cómo responde tu tienda:${copyBox(FIRST_PROMPT, "el mensaje")}`,
+    ],
+    "claude-code": [
+      "Abre la terminal en tu computadora.",
+      `Pega este comando:${secret(snippets?.claude || "", "el comando")}`,
+      "Abre <strong>claude</strong> y escribe /mcp para ver pagosYa conectado.",
+      `Empieza con esto:${copyBox(FIRST_PROMPT, "el mensaje")}`,
+    ],
+    cursor: [
+      "En <strong>Cursor</strong>, abre Settings → MCP → Add new MCP server.",
+      `Pega esto en .cursor/mcp.json:${secret(snippets?.cursor || "", "la configuración")}`,
+      `Empieza con esto en el chat de Cursor:${copyBox(FIRST_PROMPT, "el mensaje")}`,
+    ],
+    codex: [
+      "Abre ~/.codex/config.toml en tu computadora.",
+      `Agrega esto al final:${secret(snippets?.codex || "", "la configuración")}`,
+      `Abre Codex y empieza con esto:${copyBox(FIRST_PROMPT, "el mensaje")}`,
+    ],
+  }[client] || [];
+  return `${web && local ? '<p class="mcp-local-note">Claude y ChatGPT necesitan una dirección pública (https). En tu computadora de desarrollo usa Claude Code, Cursor o Codex; en producción esta URL funciona tal cual.</p>' : ""}<ol class="mcp-steps">${steps.map(step).join("")}</ol>`;
+}
+
 /**
  * @param {HTMLElement} root
  * @param {{ api: (path: string, options?: RequestInit) => Promise<any>, apiBase: () => string }} deps
@@ -63,3 +118,42 @@ export function mountMcpConnect(root, deps) {
   // Loaded when the Conecta tu IA page opens, after sign-in.
   return { reload: load };
 }
+
+/**
+ * The Conecta tu IA dialog (opened from the sidebar card or the page): a tab per AI, the guide for it, and the
+ * connection created on demand. A new key lives only in this page's memory, since the server never shows it again.
+ * @param {{ api: (path: string, options?: RequestInit) => Promise<any>, apiBase: () => string, onCreated?: () => void }} deps
+ */
+export function mountMcpConnectDialog(deps) {
+  const dialog = document.createElement("dialog");
+  dialog.className = "mcp-dialog";
+  dialog.setAttribute("aria-labelledby", "mcpDialogTitle");
+  document.body.append(dialog);
+  let client = "claude"; let key = null; let busy = false; let error = "";
+  function render() {
+    const endpoint = mcpEndpoint(deps.apiBase());
+    dialog.innerHTML = `<div class="mcp-dialog__head"><h2 id="mcpDialogTitle">Conecta tu IA</h2><button type="button" class="mcp-dialog__close" data-mcp-close aria-label="Cerrar">×</button></div>
+      <p class="mcp-dialog__lead">Configúralo una vez y edita tu tienda desde el chat que ya usas. Funciona con la suscripción de tu IA: cero créditos de pagosYa.</p>
+      <div class="mcp-tabs" role="tablist">${MCP_GUIDE_TABS.map(([id, name]) => `<button type="button" role="tab" class="mcp-tab" data-mcp-tab="${id}" aria-selected="${id === client}">${esc(name)}</button>`).join("")}</div>
+      ${error ? `<p class="mcp-message" role="alert">${esc(error)}</p>` : ""}
+      <div class="mcp-guide" role="tabpanel" ${busy ? 'aria-busy="true"' : ""}>${renderMcpGuide(client, { endpoint, key })}</div>
+      <p class="mcp-dialog__foot">Tu conexión es una clave personal: quien tenga esa URL o comando puede editar tu tienda. Revócala cuando quieras en <a href="#dashboard-connect-ai" data-mcp-close>Conecta tu IA</a>.</p>`;
+    dialog.querySelectorAll("[data-mcp-close]").forEach((el) => el.addEventListener("click", () => dialog.close()));
+    dialog.querySelectorAll("[data-mcp-tab]").forEach((tab) => tab.addEventListener("click", () => { client = tab.getAttribute("data-mcp-tab") || "claude"; render(); }));
+    dialog.querySelectorAll("[data-mcp-copy]").forEach((button) => button.addEventListener("click", () => { void navigator.clipboard?.writeText(button.getAttribute("data-mcp-copy") || ""); button.classList.add("is-copied"); }));
+    dialog.querySelector("[data-mcp-create-connection]")?.addEventListener("click", () => void create());
+  }
+  async function create() {
+    if (busy) return;
+    busy = true; error = ""; render();
+    try {
+      const label = MCP_GUIDE_TABS.find(([id]) => id === client)?.[1] || "Mi IA";
+      key = (await deps.api("/mcp/keys", { method: "POST", body: JSON.stringify({ label }) })).fullKey;
+      deps.onCreated?.();
+    } catch (e) { error = e instanceof Error ? e.message : "No se pudo crear la conexión."; }
+    busy = false; render();
+  }
+  dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+  return { open(next = "claude") { client = next; render(); dialog.showModal(); } };
+}
+

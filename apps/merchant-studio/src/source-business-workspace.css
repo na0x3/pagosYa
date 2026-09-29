@@ -22,3 +22,4 @@
 .integration-connect input { min-height:44px; padding:10px 12px; border:1px solid var(--resource-line,#d8d9ce); border-radius:6px; background:var(--resource-field,#fff); color:inherit; font:inherit; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
 .integration-connect input:focus-visible { outline:3px solid #857197; outline-offset:2px; }
 .integration-connect .business-help { margin:0; }
+.integration-section{margin:28px 0 12px;font-size:13px;letter-spacing:.02em;text-transform:uppercase;color:var(--resource-muted,#61625b)}.integration-badges{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}.business-badge.is-pro{background:#ede4f7;color:#5b3a86}.business-badge.is-error{background:#f7dede;color:#a13333}.integration-feed{display:grid;gap:8px}.integration-feed-url{display:flex;gap:8px}.integration-feed-url input{flex:1;min-width:0;font-family:inherit}
