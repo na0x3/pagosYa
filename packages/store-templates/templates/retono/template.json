@@ -1,0 +1,18 @@
+{
+  "id": "retono",
+  "name": "Retoño",
+  "category": "ninos",
+  "description": "Ropa infantil: tira de tres fotos, tarjeta blanca flotante y nombre en letra cursiva.",
+  "tags": ["ropa infantil", "algodón", "colorido", "juego"],
+  "sitePurpose": "shop",
+  "order": -279,
+  "dna": { "display": "bricolage", "text": "nunito", "case": "none", "radius": "round", "border": "none", "button": "pill", "hover": "lift", "press": "squash", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "tilt", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "lifestyle", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "lifestyle", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "tela", "role": "product", "demo": "tela.jpg" },
+    { "slot": "parque", "role": "lifestyle", "demo": "parque.jpg" }
+  ]
+}
