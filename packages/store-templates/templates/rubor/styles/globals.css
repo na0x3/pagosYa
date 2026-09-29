@@ -291,3 +291,6 @@
 /* pagosya-kit:start */
 :root[data-dna-added=toast] .cart-added{border:0;border-radius:28px;background:var(--ru-wine);color:var(--ru-cream)}
 /* pagosya-kit:end */
+
+/* one-product store: keep the lone card centred instead of stranded in a wide row */
+.ru-grid:has(> :only-child){grid-template-columns:minmax(0,min(100%,340px));justify-content:center}
