@@ -37,6 +37,23 @@ describe('preview variant photography', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(snapshot.files[0].content).not.toContain('data:image');
   });
+  it('hydrates every photo in a variant photo set', async () => {
+    vi.stubGlobal('location', { href: 'http://localhost:5175' });
+    vi.stubGlobal('FileReader', class {
+      result = 'data:image/jpeg;base64,cGhvdG8=';
+      onload?: () => void;
+      readAsDataURL() { queueMicrotask(() => this.onload?.()); }
+    });
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response(new Blob(['photo'], { type: 'image/jpeg' }), { headers: { 'content-type': 'image/jpeg' } }))));
+    const a = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+    const b = '/v1/uploads/bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+    const snapshot = { files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data: { items: [{ variants: [{ imageUrl: a, imageUrls: [a, b] }] }] } })};` }] } as SourceSnapshot;
+    const result = await createPreviewImageLoader('http://localhost:3001/v1')(snapshot);
+    const config = JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, ''));
+    const variant = config.data.items[0].variants[0];
+    expect(variant.imageUrls).toEqual(['data:image/jpeg;base64,cGhvdG8=', 'data:image/jpeg;base64,cGhvdG8=']);
+    expect(variant.imageUrls[0]).toBe(variant.imageUrl);
+  });
   it('does not fetch arbitrary external variant image URLs', async () => {
     vi.stubGlobal('location', { href:'http://localhost:5175' });
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);

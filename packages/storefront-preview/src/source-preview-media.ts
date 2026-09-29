@@ -66,6 +66,7 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
       // color selection dependent on network access inside the sandboxed frame.
       if (Array.isArray(item.variants)) for (const variant of item.variants) {
         if (variant && typeof variant.imageUrl === 'string') tasks.push(async () => { variant.imageUrl = await image(variant.imageUrl); });
+        if (variant && Array.isArray(variant.imageUrls)) variant.imageUrls.forEach((value: unknown, index: number) => tasks.push(async () => { variant.imageUrls[index] = await image(value); }));
       }
       // Box choices show the photo of the product they stand for.
       if (Array.isArray(item.extras)) for (const extra of item.extras) {
