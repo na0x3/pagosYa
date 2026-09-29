@@ -308,6 +308,8 @@ export default (): { app: AppConfig } => {
       token: process.env.NAMECOM_API_TOKEN ?? '',
       platformMerchantId: process.env.DOMAIN_PLATFORM_MERCHANT_ID ?? '',
       bobPerUsd: Number(process.env.DOMAIN_BOB_PER_USD ?? 0),
+      // The official rate is followed automatically (Banco Central de Bolivia); DOMAIN_BOB_PER_USD is then only the fallback.
+      fxSource: process.env.DOMAIN_FX_SOURCE === 'env' ? 'env' : 'bcb',
       markupPercent: Number(process.env.DOMAIN_MARKUP_PERCENT ?? 0),
       cloudflareToken: process.env.DOMAIN_CLOUDFLARE_API_TOKEN ?? '',
       cloudflareZoneId: process.env.DOMAIN_CLOUDFLARE_ZONE_ID ?? '',

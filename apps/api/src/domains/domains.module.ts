@@ -8,12 +8,13 @@ import { DomainCommerceController } from "./domain-commerce.controller";
 import { DomainCommerceService } from "./domain-commerce.service";
 import { NamecomProvider } from "./namecom.provider";
 import { CloudflareHostingProvider } from "./cloudflare-hosting.provider";
+import { DomainFxRefresher } from "./domain-fx-rate";
 
 /** Custom domains: connecting a domain the merchant owns, and buying one through us. */
 @Module({
   imports: [DashboardModule, AuthModule, PaymentIntentsModule],
   controllers: [DomainCommerceController, CustomDomainsController],
-  providers: [CustomDomainsService, DomainCommerceService, NamecomProvider, CloudflareHostingProvider],
+  providers: [CustomDomainsService, DomainCommerceService, NamecomProvider, CloudflareHostingProvider, DomainFxRefresher],
   exports: [CustomDomainsService],
 })
 export class DomainsModule {}

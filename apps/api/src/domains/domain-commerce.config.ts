@@ -1,14 +1,21 @@
 import { ConfigService } from '@nestjs/config';
 import { ServiceUnavailableException } from '@nestjs/common';
+import { effectiveBobPerUsd } from './domain-fx-rate';
 
 export interface DomainCommerceConfig {
   enabled: boolean; sandbox: boolean; username: string; token: string;
   platformMerchantId: string; bobPerUsd: number; markupPercent: number;
   cloudflareToken: string; cloudflareZoneId: string; target: string;
+  /** 'bcb' (default): follow the official rate published daily by the Banco Central; 'env': use only bobPerUsd. */
+  fxSource?: 'bcb' | 'env';
 }
 
+/** The store's domain commerce settings with the boliviano rate resolved: the live official rate (BCB) while it is fresh,
+ * otherwise DOMAIN_BOB_PER_USD; DOMAIN_FX_SOURCE=env forces the configured number only. */
 export function domainCommerceConfig(config: ConfigService): DomainCommerceConfig {
-  return config.get<DomainCommerceConfig>('app.domainCommerce')!;
+  const c = config.get<DomainCommerceConfig>('app.domainCommerce')!;
+  if (!c || c.fxSource === 'env') return c;
+  return { ...c, bobPerUsd: effectiveBobPerUsd(Number(c.bobPerUsd) || 0) };
 }
 
 export function assertDomainCommerceReady(config: ConfigService): DomainCommerceConfig {
