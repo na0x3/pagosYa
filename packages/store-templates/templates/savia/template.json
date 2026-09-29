@@ -1,0 +1,18 @@
+{
+  "id": "savia",
+  "name": "Savia",
+  "category": "belleza",
+  "description": "Jabones y velas naturales: foto cálida de piedra, titular serif y el nombre en una caja.",
+  "tags": ["jabones", "natural", "velas", "artesanal"],
+  "sitePurpose": "shop",
+  "order": -291,
+  "dna": { "display": "lora", "text": "figtree", "case": "none", "radius": "soft", "border": "hairline", "button": "pill", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "ritual", "role": "lifestyle", "demo": "ritual.jpg" },
+    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" }
+  ]
+}
