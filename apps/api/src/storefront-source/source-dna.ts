@@ -20,7 +20,13 @@ export const SOURCE_DNA_ENUMS = {
     cart: ['drawer', 'sheet', 'page', 'overlay'], added: ['toast', 'ribbon', 'bubble', 'inline', 'stamp'], product: SOURCE_PRODUCT_PAGE_STYLES,
     review: ['split', 'stacked', 'ticket', 'notebook'], card: ['still', 'second-photo', 'swatch-swap', 'zoom', 'quick-look', 'tilt'],
   },
+  // The product page's own identity. The first value of each list is today's behaviour (FIXED_DEFAULTS below).
+  productCard: {
+    swatch: ['pill', 'circle', 'square', 'label', 'photo'], gallery: ['rail', 'strip', 'stack', 'mosaic'],
+    blocks: ['plain', 'card', 'outline', 'tape', 'ticket'], divider: ['none', 'hairline', 'dashed', 'bold'], enter: ['none', 'fade-up', 'slide', 'pop'],
+  },
 } as const;
+export const PRODUCT_CSS_MAX = 3000;
 export const SOURCE_DNA_MOTIF_ENUMS = {
   for: ['store', 'category', 'product'], behavior: ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'],
   trigger: ['appear', 'scroll', 'hover', 'add-to-cart', 'purchase'], placement: ['hero', 'card', 'product', 'cart', 'confirmation'],
@@ -34,16 +40,21 @@ type Enums = typeof SOURCE_DNA_ENUMS;
 type MotifEnums = typeof SOURCE_DNA_MOTIF_ENUMS;
 export type SourceDnaMotif = { -readonly [K in keyof MotifEnums]: MotifEnums[K][number] } & { target: string; meaning: string };
 export type SourceDesignDna = { version: 1 } & { -readonly [G in keyof Enums]: { -readonly [K in keyof Enums[G]]: Enums[G][K] extends readonly string[] ? Enums[G][K][number] : never } }
-  & { motifs: SourceDnaMotif[]; signature: string };
+  & { motifs: SourceDnaMotif[]; signature: string; productCss: string };
 
 // Runtime names are what commerce.js writes as data-dna-<name>; two read better renamed.
 const RUNTIME_NAMES: Record<string, string> = { 'buttons.form': 'button', 'motion.personality': 'motion' };
 /** Identity libraries (T2b) appended these values. The seeded default never picks them: withSeededDna seeds every stored
  * store without a DNA on each public view, so a new value in the draw would silently restyle stores published long ago. */
 const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'], 'shape.frame': ['blob', 'stamp', 'tape'] };
-const FIELDS = Object.entries(SOURCE_DNA_ENUMS).flatMap(([group, keys]) => Object.entries(keys).map(([key, values]) => (
-  { group, key, name: RUNTIME_NAMES[`${group}.${key}`] ?? key, values: values as readonly string[],
-    seeded: (values as readonly string[]).filter(value => !(NOT_SEEDED[`${group}.${key}`] ?? []).includes(value)) })));
+/** Fields whose seeded default is one fixed value (today's look) for every store, so no store is ever restyled by a
+ * seed. The planner may still choose any value of the field (PLANNER_BY_FIELD). */
+const FIXED_DEFAULTS: Record<string, string> = Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS.productCard).map(([key, values]) => [`productCard.${key}`, values[0]]));
+const FIELDS = Object.entries(SOURCE_DNA_ENUMS).flatMap(([group, keys]) => Object.entries(keys).map(([key, values]) => {
+  const all = values as readonly string[], id = `${group}.${key}`;
+  const seeded = FIXED_DEFAULTS[id] ? [FIXED_DEFAULTS[id]] : all.filter(value => !(NOT_SEEDED[id] ?? []).includes(value));
+  return { group, key, name: RUNTIME_NAMES[id] ?? key, values: all, seeded, planner: FIXED_DEFAULTS[id] ? all : seeded };
+}));
 export const SOURCE_DNA_RUNTIME_ENUMS: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [field.name, field.values]));
 export type SourceRuntimeDna = { version: 1 } & Record<string, string | 1>;
 /** The seeded (T4-gated) values per field, keyed "group.key": what defaultDna draws from, what the planner's schema
@@ -51,17 +62,18 @@ export type SourceRuntimeDna = { version: 1 } & Record<string, string | 1>;
  * existing store) still validates and renders — normalizeDna and the runtime check against the full SOURCE_DNA_ENUMS
  * below, never this map. */
 const SEEDED_BY_FIELD: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [`${field.group}.${field.key}`, field.seeded]));
+const PLANNER_BY_FIELD: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [`${field.group}.${field.key}`, field.planner]));
 
 const enumSchema = (values: readonly string[]) => ({ type: 'string', enum: [...values] });
 /** Strict structured-output fragment: every property required, no extra keys. Spec §2.6 ("Nothing is chosen in T2
  * itself"): the new button forms and frames (NOT_SEEDED above) stay out of what the planner can choose until T4. */
 export const SOURCE_DNA_SCHEMA = {
-  type: 'object', additionalProperties: false, required: ['version', ...Object.keys(SOURCE_DNA_ENUMS), 'motifs', 'signature'],
+  type: 'object', additionalProperties: false, required: ['version', ...Object.keys(SOURCE_DNA_ENUMS), 'motifs', 'signature', 'productCss'],
   properties: {
     version: { type: 'integer', enum: [1] },
     ...Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS).map(([group, keys]) => [group, {
       type: 'object', additionalProperties: false, required: Object.keys(keys),
-      properties: Object.fromEntries(Object.entries(keys).map(([key, values]) => [key, enumSchema(SEEDED_BY_FIELD[`${group}.${key}`] ?? values)])),
+      properties: Object.fromEntries(Object.entries(keys).map(([key, values]) => [key, enumSchema(PLANNER_BY_FIELD[`${group}.${key}`] ?? values)])),
     }])) as { [G in keyof Enums]: { type: 'object'; additionalProperties: false; required: string[]; properties: { [K in keyof Enums[G]]: { type: 'string'; enum: string[] } } } },
     motifs: { type: 'array', maxItems: MAX_MOTIFS, items: {
       type: 'object', additionalProperties: false, required: ['for', 'target', 'meaning', 'behavior', 'trigger', 'placement'],
@@ -71,6 +83,8 @@ export const SOURCE_DNA_SCHEMA = {
       },
     } },
     signature: { type: 'string', maxLength: MAX_SIGNATURE },
+    // Guarded CSS for the product page's cosmetic parts; sanitized in product-theme-css.ts. Empty when the concept has none.
+    productCss: { type: 'string', maxLength: PRODUCT_CSS_MAX },
   },
 };
 
@@ -95,7 +109,7 @@ export function defaultDna(seed: string): SourceDesignDna {
   const random = seededRandom(seed);
   const dna: any = { version: 1 };
   for (const { group, key, seeded } of FIELDS) (dna[group] ??= {})[key] = seeded[Math.floor(random() * seeded.length)];
-  return { ...dna, motifs: [], signature: '' };
+  return { ...dna, motifs: [], signature: '', productCss: '' };
 }
 
 const isObject = (value: unknown): value is Record<string, any> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -109,9 +123,16 @@ export function normalizeDna(raw: unknown, seed: string): { dna: SourceDesignDna
   const repairs: string[] = [];
   if (raw.version !== 1) repairs.push(`dna.version: invalid ${shown(raw.version)}, used 1`);
   for (const { group, key, values } of FIELDS) {
+    // A design saved before the product card existed has no such group: it renders as it always did, silently.
+    if (group === 'productCard' && raw.productCard === undefined) continue;
     const value = raw[group]?.[key];
     if (values.includes(value)) dna[group][key] = value;
     else repairs.push(`dna.${group}.${key}: invalid ${shown(value)}, used the default`);
+  }
+  if (raw.productCss !== undefined) {
+    if (typeof raw.productCss !== 'string') repairs.push('dna.productCss: not text, dropped');
+    else if (raw.productCss.length > PRODUCT_CSS_MAX) repairs.push(`dna.productCss: longer than ${PRODUCT_CSS_MAX} characters, dropped`);
+    else dna.productCss = raw.productCss;
   }
   if (raw.motifs !== undefined && !Array.isArray(raw.motifs)) repairs.push('dna.motifs: not a list, dropped');
   const motifs = (Array.isArray(raw.motifs) ? raw.motifs : []).flatMap((motif: unknown, index: number) => {
@@ -175,7 +196,7 @@ export function avoidTakenFingerprint(dna: SourceDesignDna, taken: readonly stri
 
 /** The config.js form: enums only, flat, no motifs or signature prose. */
 export function dnaRuntimeConfig(dna: SourceDesignDna): SourceRuntimeDna {
-  return { version: 1, ...Object.fromEntries(FIELDS.map(({ group, key, name }) => [name, (dna as any)[group][key]])) };
+  return { version: 1, ...Object.fromEntries(FIELDS.map(({ group, key, name }) => [name, (dna as any)[group][key]])), ...(dna.productCss ? { productCss: dna.productCss } : {}) };
 }
 
 /** The store's runtime DNA, seeded when the design has none; product always equals the productPageStyle the kit reads. */
