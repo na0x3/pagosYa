@@ -17,7 +17,7 @@ const finish = JSON.stringify({ summary: 'Cambié el título', sections: ['Porta
 
 describe('AgentToolbox', () => {
   it('declares every tool with a strict JSON schema', () => {
-    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['list_files', 'read_file', 'edit_file', 'write_file', 'screenshot', 'verify', 'finish']);
+    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['list_files', 'read_file', 'edit_file', 'write_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
     for (const tool of AGENT_TOOLS) expect(tool.strict).toBe(true);
   });
   it('reads and edits, recording merchant-facing steps without source code', async () => {
