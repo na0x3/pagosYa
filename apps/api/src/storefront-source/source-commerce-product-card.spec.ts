@@ -98,6 +98,34 @@ describe('product card DNA in the kit', () => {
     expect(detail().querySelectorAll('.product-detail__stack img').length).toBe(6);
   });
 
+  describe('guarded product theme CSS', () => {
+    const SAFE = '[data-pagosya-product][data-style] [data-part="gallery"]{border:2px solid #111}';
+    const themeStyle = (w: any) => w.document.querySelector('style[data-pagosya-kit="product-theme"]');
+
+    it('injects the sanitized CSS after the kit\'s own DNA styles', async () => {
+      const { w } = await open({ productCss: SAFE });
+      const style = themeStyle(w);
+      expect(style.textContent).toBe(SAFE);
+      const styles = [...w.document.head.querySelectorAll('style')];
+      expect(styles.indexOf(style)).toBeGreaterThan(styles.indexOf(w.document.querySelector('style[data-pagosya-kit="dna"]')));
+    });
+
+    it.each([
+      ['an import', '@import url(x.css);'], ['a url', '[data-pagosya-product] a{background:url(x)}'], ['an uppercase URL with a space', 'A{BACKGROUND:URL (x)}'],
+      ['an expression', 'a{width:expression(1)}'], ['a style breakout', '</style><script>1</script>'], ['an angle bracket', 'a<b{color:red}'],
+      ['a backslash escape', 'a{content:"\\41"}'], ['fixed positioning', 'a{position:fixed}'], ['fixed positioning with spaces', 'a{position : fixed}'],
+      ['pointer-events', 'a{pointer-events:none}'], ['important', 'a{color:red !important}'], ['important with a space', 'a{color:red ! important}'],
+    ])('injects nothing when the CSS contains %s', async (_name, css) => {
+      const { w } = await open({ productCss: css });
+      expect(themeStyle(w)).toBeNull();
+    });
+
+    it('injects nothing when the value is empty, not text, too long or the store has no DNA', async () => {
+      for (const productCss of ['', 42, { a: 1 }, 'a{color:red}'.padEnd(3001, ' ')]) expect(themeStyle((await open({ productCss })).w)).toBeNull();
+      expect(themeStyle((await open(undefined)).w)).toBeNull();
+    });
+  });
+
   it('carries a rule for every non-default value, and the entrance only under no-preference motion', async () => {
     const { w } = await open({ swatch: 'circle', gallery: 'strip', blocks: 'tape', divider: 'hairline', enter: 'slide' });
     const css = [...w.document.querySelectorAll('style')].map((s: any) => s.textContent).join('\n');

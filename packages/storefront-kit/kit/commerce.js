@@ -3005,6 +3005,16 @@
     // Every variant sits in the pagosya-dna layer: above the kit defaults, below the store's own (unlayered) CSS.
     dnaStyle.textContent = `@layer pagosya-dna {\n${[...DNA_CSS, DNA_REDUCED_MOTION].join('\n')}\n}\n${DNA_PAGE_CSS.join('\n')}`;
     document.head.append(dnaStyle);
+    /* Product theme: guarded CSS the API sanitized (product-theme-css.ts) before it reached config.dna.productCss. This check is
+     * defence in depth only, a coarse refusal of what the sanitizer never emits; it does not re-implement the sanitizer.
+     * It goes after the kit's own styles so an equally specific theme rule wins. */
+    const themeCss = config.dna.productCss;
+    if (typeof themeCss === 'string' && themeCss && themeCss.length <= 3000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|pointer-events|!\s*important/i.test(themeCss)) {
+      const themeStyle = document.createElement('style');
+      themeStyle.dataset.pagosyaKit = 'product-theme';
+      themeStyle.textContent = themeCss;
+      document.head.append(themeStyle);
+    }
   }
   /* Card preview listeners (DNA stores only). The second photo follows the photo's box; a long press previews
    * it on touch (and swallows the click that follows); keyboard focus previews it too (CSS :focus-within). */
