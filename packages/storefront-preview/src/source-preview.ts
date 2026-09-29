@@ -5,6 +5,7 @@ import privacyRuntime from '@pagosya/storefront-kit/kit/privacy.js?raw';
 import commerceRuntime from '@pagosya/storefront-kit/kit/commerce.js?raw';
 import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
+import editModeRuntime from './source-preview-edit-mode.js?raw';
 
 export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" | "url" }
 export interface SourceSnapshot { schemaVersion: number; brief: { sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial'; businessType: string; audience: string; primaryAction: string; visualDirection: string; templateId?: string; templateRevision?: number }; files: SourceFile[] }
@@ -20,6 +21,18 @@ export function receivePreviewNavigation(event: MessageEvent, frame: HTMLIFrameE
   return { page: data.page, theme: data.theme === 'light' || data.theme === 'dark' ? data.theme : undefined, newTab: data.newTab === true, query: typeof data.query === 'string' && data.query.startsWith('?') ? data.query.slice(0, 2000) : '', fragment: typeof data.fragment === 'string' && data.fragment.startsWith('#') ? data.fragment.slice(0, 1000) : '',
     cart: Array.isArray(data.cart) ? data.cart.slice(0, 100).filter((item: any) => typeof item?.id === 'string' && item.id.length <= 200 && Number.isInteger(item.quantity) && item.quantity > 0 && item.quantity <= 99) : [] };
 }
+/** What the merchant clicked in the preview while editing: a section of the page, or a part the platform owns.
+ * An empty section id with kind 'section' means "clear the selection". */
+export interface PreviewSelection { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }
+export function receivePreviewSelection(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewSelection | null {
+  const data = event.data;
+  if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-select') return null;
+  if ((data.kind !== 'section' && data.kind !== 'platform') || typeof data.sectionId !== 'string' || typeof data.label !== 'string' || data.label.length > 60) return null;
+  if (data.kind === 'platform' ? data.sectionId !== '' : data.sectionId !== '' && !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId)) return null;
+  const text = typeof data.text === 'string' ? data.text.slice(0, 200) : '';
+  return { kind: data.kind, sectionId: data.sectionId, label: data.label, ...(text ? { text } : {}) };
+}
+
 /** Only the platform's own upload directory may be allowed as an image source, and only over HTTPS
  * (or a local development origin). Any request the design makes there reaches pagosYa, never a third party. */
 export function uploadImageSource(value: string): string | null {
@@ -172,6 +185,8 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       if (fragment) { try { document.getElementById(decodeURIComponent(fragment.slice(1)))?.scrollIntoView(); } catch {} }
     });`;
   flag.textContent += '\n' + videoLoopRuntime;
+  // Edit mode (visual selection) belongs to the Studio preview only: a published, hosted page never carries it.
+  if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime;
   policy.after(flag);
   return "<!doctype html>" + doc.documentElement.outerHTML;
 }
