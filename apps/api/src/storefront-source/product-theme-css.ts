@@ -152,13 +152,13 @@ const offset: Validator = (value, ctx) => {
   if (!(ctx.pseudo || ctx.decor)) fail('offsets are only allowed where position:absolute is');
   return each(value, ' ', t => inPx(t, -100, 100) || pct(t, -100, 100), 'offset: px or % between -100 and 100', 4);
 };
-/** Sizes keep a floor (16px, 10% / 5vw / 5vh) so a theme cannot hide a control by shrinking it; only the decor slots may be 0. */
+/** Sizes keep a floor (24px, the WCAG 2.2 minimum target; 10% / 5vw / 5vh) so a theme cannot hide a control by shrinking it; only the decor slots may be 0. */
 const size: Validator = (value, ctx) => {
   if (!ctx.parts.every(part => SIZED_PARTS.has(part))) fail('this part keeps the kit\'s sizing');
   const v = value.trim().toLowerCase();
   if (v === 'auto') return v;
   const l = parseLength(v);
-  const floor = ctx.decor ? 0 : 16;
+  const floor = ctx.decor ? 0 : 24;
   const ok = l && (((l.unit === 'px' || (l.unit === '' && l.n === 0)) && l.n >= floor && l.n <= 1200) || (l.unit === '%' && l.n >= (ctx.decor ? 0 : 10) && l.n <= 100) || ((l.unit === 'vw' || l.unit === 'vh') && l.n >= (ctx.decor ? 0 : 5) && l.n <= 100));
   return ok ? v : fail(`size must be ${floor}-1200px or ${ctx.decor ? 0 : 10}-100% / vw / vh (a theme may not shrink a control away)`);
 };

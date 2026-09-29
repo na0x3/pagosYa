@@ -245,7 +245,7 @@ export function staticMotionTokens(files: SourceProjectSnapshot['files']): numbe
     .reduce((sum, f) => sum + (f.content.match(/var\(\s*--motion-/g)?.length ?? 0), 0);
 }
 
-function parseConfig(snapshot: SourceProjectSnapshot) {
+export function parseConfig(snapshot: SourceProjectSnapshot) {
   const content = snapshot.files.find(f => f.path === 'config.js')?.content ?? '';
   try { return JSON.parse(content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] || '{}'); } catch { return {}; }
 }

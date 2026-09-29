@@ -79,7 +79,7 @@ describe('guarded product theme CSS', () => {
     });
 
     it('allows content:"" and absolute positioning on a pseudo-element or a decor slot only', () => {
-      expect(clean(rule('content:"";position:absolute;top:0;left:0;width:20px;height:20px', '[data-part="gallery"]::before'))).toContain('position:absolute');
+      expect(clean(rule('content:"";position:absolute;top:0;left:0;width:24px;height:24px', '[data-part="gallery"]::before'))).toContain('position:absolute');
       expect(clean(rule('position:absolute;top:10px;left:10px', '[data-part="decor-a"]'))).toContain('position:absolute');
       refused(rule('position:absolute', '[data-part="title"]'));
       refused(rule('content:"x"', '[data-part="title"]::before'));
@@ -95,8 +95,9 @@ describe('guarded product theme CSS', () => {
     it('protects interactive parts from being hidden, shrunk, clipped or stripped of focus', () => {
       refused(rule('width:0', '[data-part="swatch"]'));
       refused(rule('width:8px;height:8px', '[data-part="swatch"]'));
+      refused(rule('width:20px;height:20px', '[data-part="swatch"]'));
       refused(rule('max-width:0', '[data-part="swatch"]'));
-      expect(clean(rule('width:16px;height:16px', '[data-part="swatch"]'))).toContain('width:16px');
+      expect(clean(rule('width:24px;height:24px', '[data-part="swatch"]'))).toContain('width:24px');
       expect(clean(rule('width:0;height:0', '[data-part="decor-a"]'))).toContain('width:0');
       refused(rule('clip-path:inset(100%)', '[data-part="swatch"]'));
       refused(rule('clip-path:polygon(0 0,0 0,0 0)', '[data-part="thumb"]'));
