@@ -1,0 +1,66 @@
+{
+  "id": "rubor",
+  "name": "Rubor",
+  "category": "belleza",
+  "description": "Skincare con actitud: rosa intenso, retrato a pantalla completa y un nombre enorme en minúsculas.",
+  "tags": [
+    "skincare",
+    "piel",
+    "rutina",
+    "rosa"
+  ],
+  "sitePurpose": "shop",
+  "order": -210,
+  "dna": {
+    "display": "bricolage",
+    "text": "figtree",
+    "case": "none",
+    "radius": "pill",
+    "border": "none",
+    "button": "pill",
+    "hover": "fill",
+    "press": "pop",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "bleed"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "textura",
+      "role": "detail",
+      "demo": "textura.jpg"
+    },
+    {
+      "slot": "antes",
+      "role": "detail",
+      "demo": "antes.jpg"
+    },
+    {
+      "slot": "despues",
+      "role": "detail",
+      "demo": "despues.jpg"
+    }
+  ]
+}
