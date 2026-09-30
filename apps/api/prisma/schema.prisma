@@ -694,6 +694,7 @@ model Store {
   articles                     StoreArticle[]
   bundles                      StoreBundle[]
   bundlesEnabled               Boolean                          @default(false)
+  subscriptionsEnabled         Boolean                          @default(false)
   shippingEnabled              Boolean                          @default(false)
   shippingPickupEnabled        Boolean                          @default(true)
   shippingCarriersEnabled      Boolean                          @default(false)
@@ -2194,26 +2195,49 @@ model SubscriptionPlan {
 }
 
 model CustomerSubscription {
-  id                 String    @id @default(cuid())
+  id                 String                      @id @default(cuid())
   merchantId         String
   storeId            String
-  planId             String
+  // Exactly one of planId (plan subscription) or paymentLinkId (product subscription).
+  planId             String?
   customerId         String?
   customerName       String
   customerEmail      String?
   customerPhone      String?
   amountOverride     Int?
   nextAmountOverride Int?
-  activeKey          String?   @unique
-  status             String    @default("ACTIVE")
-  startedAt          DateTime  @default(now())
+  activeKey          String?                     @unique
+  status             String                      @default("ACTIVE")
+  startedAt          DateTime                    @default(now())
   nextBillingAt      DateTime
   canceledAt         DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  paymentLinkId      String?
+  variantId          String?
+  extraIds           String[]                    @default([])
+  itemName           String?
+  quantity           Int?
+  cadence            ProductSubscriptionCadence?
+  discountPercent    Int?
+  // Locked unit price including extras, in minor units.
+  unitAmount         Int?
+  currency           String?
+  pendingUnitAmount  Int?
+  pendingFrom        DateTime?
+  // { method, locationId, locationName, zoneId, zoneName, fee, address }
+  fulfillment        Json?
+  sourceOrderId      String?
+  consumerUserId     String?
+  consentText        String?
+  consentAt          DateTime?
+  missedCount        Int                         @default(0)
+  pausedAt           DateTime?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
 
   @@index([storeId, status, nextBillingAt])
   @@index([planId, status])
+  @@index([paymentLinkId, status])
+  @@index([sourceOrderId])
 }
 
 model SubscriptionInvoice {
@@ -2226,6 +2250,8 @@ model SubscriptionInvoice {
   currency        String    @default("BOB")
   status          String    @default("DUE")
   paymentIntentId String?
+  // Renewal StoreOrder for product subscriptions. status also takes "MISSED" and "SKIPPED".
+  orderId         String?   @unique
   dueAt           DateTime
   paidAt          DateTime?
   initialNoticeAt DateTime?

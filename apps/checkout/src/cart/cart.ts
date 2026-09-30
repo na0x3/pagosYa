@@ -4,6 +4,7 @@ import { StoreItem, Store } from "../api";
 import { state } from "../state";
 import { addedProducts, productQuantities } from "../store-analytics";
 import { formatAmount } from "../ui/html";
+import { subscriptionUnitAmount } from "./subscription-choice";
 
 
 // Product/option key -> quantity, persisted to localStorage (see loadCart/saveCart)
@@ -181,12 +182,12 @@ export function saveCart(store: Store): void {
 export function cartTotal(items: StoreItem[]): number {
   let total = 0;
   for (const [key, quantity] of cart) {
-    const { paymentLinkId, variantId, extraIds } = parseCartItemKey(key);
+    const { paymentLinkId, variantId, extraIds, cadence } = parseCartItemKey(key);
     const item = items.find((candidate) => candidate.id === paymentLinkId);
     if (!item) continue;
     const variant = itemVariants(item).find((candidate) => candidate.id === variantId);
     const extras = pickedExtras(itemExtras(item), extraIds);
-    total += selectedUnitAmount(item, variant, extras) * quantity;
+    total += (cadence ? subscriptionUnitAmount(item, variant, extras, cadence) : selectedUnitAmount(item, variant, extras)) * quantity;
   }
   return total;
 }

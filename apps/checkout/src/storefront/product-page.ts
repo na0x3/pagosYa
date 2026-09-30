@@ -1,6 +1,6 @@
 /** A product's own page: gallery, options and extras, stock, and adding to the cart. */
 import { productOptionGroups, productOptionKind, optionValueAvailable, productOptionColor, matchingOptionVariant } from "../product-options";
-import { cartItemKey, pickedExtrasLabel, pickGroups } from "../cart-state";
+import { cartItemKey, pickedExtrasLabel, pickGroups, type CartCadence } from "../cart-state";
 import { Store, assetUrl, StoreItem } from "../api";
 import { postToParent } from "../postmessage";
 import { state } from "../state";
@@ -17,6 +17,10 @@ import { previewBlueprintButton, bindPreviewBlueprints } from "../preview-editor
 import { bindInternalStoreLinks, bindTimedDiscountSchedule } from "./navigation";
 import { updateCartBar } from "../cart/cart-bar";
 import { bindCartCheckout } from "../cart/cart-review-dialog";
+import { subscriptionChoiceHtml, cartCadenceConflict, subscriptionsAvailable } from "../cart/subscription-choice";
+
+/** The frequency each product page has picked; absent means Compra única. Survives the page re-rendering itself. */
+const selectedCadenceByItem = new Map<string, CartCadence>();
 
 
 export function renderProductPage(slug: string, store: Store, productId: string): void {
@@ -69,7 +73,10 @@ export function renderProductPage(slug: string, store: Store, productId: string)
   const selectedVariant = selectedVariantFor(item);
   const selectedExtras = selectedExtrasFor(item);
   const selectedStock = optionStock(item, selectedVariant);
-  const key = cartItemKey(item.id, selectedVariant?.id, selectedExtras.map((extra) => extra.id));
+  const offeredCadence = subscriptionsAvailable(store) ? selectedCadenceByItem.get(item.id) : undefined;
+  const selectedCadence = offeredCadence && item.subscriptionOptions?.some((option) => option.cadence === offeredCadence) ? offeredCadence : null;
+  const cadenceConflict = cartCadenceConflict(cart.keys(), selectedCadence);
+  const key = cartItemKey(item.id, selectedVariant?.id, selectedExtras.map((extra) => extra.id), selectedCadence ?? undefined);
   const qty = cart.get(key) ?? 0;
   const unavailableRequiredExtra = itemExtras(item).find((extra) => extra.required && !extra.available);
   const productLimit = productStockLimit(item);
@@ -224,6 +231,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
         ${optionGroups.length && Object.keys(optionSelection).length ? '<button type="button" class="product-options-clear">Limpiar selección</button>' : ''}
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
+        ${subscriptionsAvailable(store) && item.subscriptionOptions?.length ? `<div data-subscription-slot>${subscriptionChoiceHtml(item, selectedCadence, selectedVariant, selectedExtras, cadenceConflict)}</div>` : ""}
         <div class="product-detail-purchase">
           <div>
             <span class="product-detail-selection-title">${selectionLabels.length ? 'Tu selección' : 'Tu producto'}</span>
@@ -234,7 +242,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
             soldOut || (qty === 0 && (atProductLimit || atOptionLimit))
               ? `<button type="button" class="primary product-add" disabled>Stock agotado</button>`
               : qty === 0
-                ? `<button type="button" class="primary product-add" ${configurationComplete ? "" : "disabled"}>${configurationComplete ? "Agregar al carrito" : "Completa las opciones"}</button>`
+                ? `<button type="button" class="primary product-add"  ${configurationComplete && !cadenceConflict ? "" : "disabled"}>${configurationComplete ? "Agregar al carrito" : "Completa las opciones"}</button>`
                 : `<div class="qty-stepper product-detail-stepper" aria-label="Cantidad de ${escapeHtml(item.name)}">
                     <button type="button" class="qty-minus" aria-label="Quitar una unidad de ${escapeHtml(item.name)}">−</button>
                     <span class="qty-value" aria-live="polite">${qty}</span>
@@ -341,12 +349,25 @@ export function renderProductPage(slug: string, store: Store, productId: string)
     });
   });
 
+  app.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-subscription-slot] [name="purchaseMode"], [data-subscription-slot] [name="subscriptionCadence"]').forEach((control) => {
+    control.addEventListener("change", () => {
+      const slot = app.querySelector<HTMLElement>("[data-subscription-slot]");
+      const mode = slot?.querySelector<HTMLInputElement>('[name="purchaseMode"]:checked')?.value;
+      const cadence = slot?.querySelector<HTMLSelectElement | HTMLInputElement>('[name="subscriptionCadence"]')?.value as CartCadence | undefined;
+      if (mode === "subscribe" && cadence) selectedCadenceByItem.set(item.id, cadence);
+      else selectedCadenceByItem.delete(item.id);
+      renderProductPage(slug, store, item.id);
+      app.querySelector<HTMLElement>(`[data-subscription-slot] [name="${control.getAttribute("name")}"]:not(:disabled)`)?.focus();
+    });
+  });
+
   const addOne = () => {
     if (!productConfigurationComplete(item)) return;
+    if (cadenceConflict) return;
     const variant = selectedVariantFor(item);
     if (remainingStock(item, variant) === 0) return;
     const extras = selectedExtrasFor(item);
-    const cartKey = cartItemKey(item.id, variant?.id, extras.map((extra) => extra.id));
+    const cartKey = cartItemKey(item.id, variant?.id, extras.map((extra) => extra.id), selectedCadence ?? undefined);
     const available = optionStock(item, variant);
     if (available !== null && optionCartQuantity(item.id, variant?.id) >= available) return;
     cart.set(cartKey, (cart.get(cartKey) ?? 0) + 1);
@@ -357,7 +378,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
   app.querySelector<HTMLButtonElement>(".product-add")?.addEventListener("click", addOne);
   app.querySelector<HTMLButtonElement>(".qty-plus")?.addEventListener("click", addOne);
   app.querySelector<HTMLButtonElement>(".qty-minus")?.addEventListener("click", () => {
-    const cartKey = cartItemKey(item.id, selectedVariantFor(item)?.id, selectedExtrasFor(item).map((extra) => extra.id));
+    const cartKey = cartItemKey(item.id, selectedVariantFor(item)?.id, selectedExtrasFor(item).map((extra) => extra.id), selectedCadence ?? undefined);
     const next = (cart.get(cartKey) ?? 0) - 1;
     if (next <= 0) cart.delete(cartKey);
     else cart.set(cartKey, next);

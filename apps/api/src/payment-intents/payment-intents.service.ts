@@ -26,6 +26,7 @@ import { LimitsWarningService } from "../limits/limits-warning.service";
 import { InboxService } from "../inbox/inbox.service";
 import { markBusinessDocumentPaid } from "../business-documents/cobro-payment";
 import { emitStoreEvent, orderEventPayload } from "../extensions/store-events";
+import { applyRenewalPaid, createSubscriptionsFromOrder } from "../operations/subscription-enrollment";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -397,6 +398,10 @@ export class PaymentIntentsService {
       } | null)?.debt;
       const normalizedEmail = dto.customerEmail?.trim().toLowerCase();
       const effectiveEmail = debt?.customerEmail?.trim().toLowerCase() || normalizedEmail;
+      const confirmCart = (current.metadata as { cart?: unknown } | null)?.cart;
+      if (!effectiveEmail && Array.isArray(confirmCart) && confirmCart.some(line => !!line && typeof line === "object" && "subscription" in line)) {
+        throw new BadRequestException("Ingresa tu correo para recibir los enlaces de tus próximas entregas.");
+      }
       const matchedConsumer = effectiveEmail
         ? await tx.consumerUser.findFirst({ where: { email: effectiveEmail, emailVerifiedAt: { not: null } }, select: { id: true } })
         : null;
@@ -520,6 +525,33 @@ export class PaymentIntentsService {
   }
 
   /** Invoked by authenticated rail callbacks to resolve a `requires_action` intent. */
+  /**
+   * Asks the bank about a Baneco QR before an old REQUIRES_ACTION intent is cancelled (Baneco's date-only dueDate
+   * keeps a QR payable for up to ~48 h). "paid": the bank has the money and the success was applied here (never cancel).
+   * "unpaid": the bank says not paid; the QR was withdrawn there (best effort). "unknown": the answer or the apply failed; leave it for the next run.
+   * Mock rails and test-mode intents never reach the bank.
+   */
+  async resolveStaleBanecoQr(intent: { id: string; railId?: string | null; livemode?: boolean }): Promise<"paid" | "unpaid" | "unknown"> {
+    if (intent.railId !== "baneco_qr" || intent.livemode === false) return "unpaid";
+    try {
+      const attempt = await this.prisma.transaction.findFirst({ where: { paymentIntentId: intent.id, type: TransactionType.AUTHORIZATION }, orderBy: { createdAt: "desc" }, select: { railReference: true } });
+      const qrId = attempt?.railReference;
+      if (!qrId || qrId.startsWith("order:")) return "unknown";
+      const rail = this.railRegistry.get("baneco_qr");
+      const status = await rail.getStatus(qrId);
+      if (status.status === "succeeded") {
+        await this.applyCallbackResult(intent.id, status, { railId: "baneco_qr" });
+        return "paid";
+      }
+      try { await (rail as { cancelQr?: (id: string) => Promise<void> }).cancelQr?.(qrId); }
+      catch (error) { this.logger.warn(`Could not cancel Baneco QR ${qrId} for ${intent.id}: ${(error as Error).message}`); }
+      return "unpaid";
+    } catch (error) {
+      this.logger.warn(`Baneco status check failed for ${intent.id}; leaving it for the next run: ${(error as Error).message}`);
+      return "unknown";
+    }
+  }
+
   async applyCallbackResult(
     paymentIntentId: string,
     result: RailResult,
@@ -617,6 +649,7 @@ export class PaymentIntentsService {
       if (nextStatus === PaymentIntentStatus.FAILED) await this.limits.release(tx, paymentIntentId);
 
       let receiptQueued = false;
+      let subscriptionBlock = "";
       // Collected here, acted on after the transaction commits — see the call
       // site below for why it must not happen inside this callback.
       let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receiptSourceId: string } | null = null;
@@ -646,14 +679,20 @@ export class PaymentIntentsService {
         await this.decrementStockForCart(tx, current.metadata);
         await this.recordCartSales(tx, merchantId, updated.id, current.metadata);
         await this.recordProductStats(tx, merchantId, current.metadata);
-        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true } });
+        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true, merchantId: true, fulfillmentMethod: true, fulfillmentLocationId: true, fulfillmentLocationName: true } });
+        const enrollment = order && typeof tx.productSubscriptionOption?.findMany === "function" ? await createSubscriptionsFromOrder(tx, {
+          intent: { id: updated.id, livemode: updated.livemode, currency: updated.currency, customerName: updated.customerName, customerEmail: updated.customerEmail, customerPhone: updated.customerPhone, consumerUserId: updated.consumerUserId, metadata: updated.metadata },
+          order: { id: order.id, storeId: order.storeId, merchantId: order.merchantId, fulfillmentMethod: order.fulfillmentMethod, fulfillmentLocationId: order.fulfillmentLocationId, fulfillmentLocationName: order.fulfillmentLocationName },
+          manage: { checkoutOrigin: this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174', secret: this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET },
+        }) : null;
+        subscriptionBlock = enrollment?.emailBlock ?? "";
         if (order?.storeId && updated.livemode) {
           const cart = (updated.metadata as {cart?:CartInventoryLine[]} | null)?.cart;
           const lineCurrency = lineCurrencyFor({ currency: updated.currency, metadata: updated.metadata });
           const originalTotal = invoiceAmount.currency !== updated.currency ? ` (${formatAmount(invoiceAmount.amount, invoiceAmount.currency)})` : '';
           const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
           const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
-          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`},{email:updated.customerEmail,name:updated.customerName});
+          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}${enrollment?.emailBlock ? `\n\n${enrollment.emailBlock}` : ''}`},{email:updated.customerEmail,name:updated.customerName});
           // receiptSourceId is the sourceId queueStoreEmail was just called with,
           // which is what lets the thread find that receipt row again once this
           // transaction has committed and file it into the conversation.
@@ -686,6 +725,7 @@ export class PaymentIntentsService {
           where: { paymentIntentId, status: "DUE" },
           data: { status: "PAID", paidAt: new Date() },
         });
+        if (typeof tx.subscriptionInvoice?.findFirst === "function" && typeof tx.customerSubscription?.updateMany === "function") await applyRenewalPaid(tx, paymentIntentId);
         // A cobro (business document) paid through its public link; never throws (see the helper).
         await markBusinessDocumentPaid(tx, updated);
         await tx.appointment.updateMany({
@@ -707,14 +747,14 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder, subscriptionBlock };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
     // webhook/invoice enqueues above, which just write an outbox row), so it
     // must never hold a DB row lock open while it runs.
     if (outcome.railResult.status === "succeeded") {
-      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
+      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName, outcome.subscriptionBlock);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
 
@@ -762,6 +802,7 @@ export class PaymentIntentsService {
       metadata: Prisma.JsonValue;
     },
     merchantName: string,
+    subscriptionBlock = "",
   ): Promise<void> {
     if (!intent.customerEmail) return;
     try {
@@ -787,7 +828,7 @@ export class PaymentIntentsService {
       await this.email.send({
         to: intent.customerEmail,
         subject: appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`,
-        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}\nGracias por tu compra.`,
+        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`,
       });
     } catch (err) {
       this.logger.warn(`Failed to send receipt email for ${intent.id}: ${(err as Error).message}`);

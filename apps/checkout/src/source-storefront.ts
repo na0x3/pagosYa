@@ -11,12 +11,14 @@ import { API_BASE_URL, type Store } from './api';
 import { sourceVisitorId, rememberSourceVisit } from './source-attribution';
 import { storePartnerCode } from './partner-referral';
 
-type StoredCartItem = { id: string; variantId?: string; quantity: number; extras?: string[] };
+type Cadence = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+const CADENCES: readonly string[] = ['WEEKLY', 'BIWEEKLY', 'MONTHLY'];
+type StoredCartItem = { id: string; variantId?: string; quantity: number; extras?: string[]; subscriptionCadence?: Cadence };
 const CART_TTL = 30 * 24 * 60 * 60 * 1000;
 const cartId = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 64;
 
 // Copy only selections across the untrusted frame/storage boundary, never prices.
-function validatedCart(value: unknown, extrasKey: 'extras' | 'extraIds' = 'extras'): StoredCartItem[] | null {
+export function validatedCart(value: unknown, extrasKey: 'extras' | 'extraIds' = 'extras'): StoredCartItem[] | null {
   if (!Array.isArray(value) || value.length > 100) return null;
   const items: StoredCartItem[] = [];
   for (const item of value) {
@@ -24,7 +26,8 @@ function validatedCart(value: unknown, extrasKey: 'extras' | 'extraIds' = 'extra
     if (item.variantId !== undefined && !cartId(item.variantId)) return null;
     const extras = item[extrasKey];
     if (extras !== undefined && (!Array.isArray(extras) || extras.length > 100 || ![...extras].every(cartId))) return null;
-    items.push({ id: item.id, quantity: item.quantity, ...(item.variantId !== undefined ? { variantId: item.variantId } : {}), ...(extras !== undefined ? { extras: [...extras] } : {}) });
+    if (item.subscriptionCadence !== undefined && !CADENCES.includes(item.subscriptionCadence)) return null;
+    items.push({ id: item.id, quantity: item.quantity, ...(item.variantId !== undefined ? { variantId: item.variantId } : {}), ...(extras !== undefined ? { extras: [...extras] } : {}), ...(item.subscriptionCadence !== undefined ? { subscriptionCadence: item.subscriptionCadence } : {}) });
   }
   return items;
 }
@@ -229,7 +232,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       }
       const checkout = data.action === 'checkout';
       const shipping = data.action === 'shipping', content = data.action === 'content', review = data.action === 'review';
-      const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, shippingDepartment: body.shippingDepartment, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
+      const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, subscriptionConsent: checkout && body.subscriptionConsent === true ? true : undefined, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, shippingDepartment: body.shippingDepartment, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
         : review ? { trackingToken: body.trackingToken, productId: body.productId, displayName: body.displayName, rating: body.rating, body: body.body }
         : { items: [], name: body.name, email: body.email, phone: body.phone, message: body.message };
       const endpoint = checkout ? 'cart-checkout' : shipping ? 'shipping/quote' : review ? 'content/reviews' : content ? `content?locale=${encodeURIComponent(typeof body.locale === 'string' ? body.locale.slice(0, 8) : 'es')}` : 'leads';

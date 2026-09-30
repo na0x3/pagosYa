@@ -1,6 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { PaymentIntentStatus, PaymentLinkStatus } from "@prisma/client";
 import { PaymentIntentsService } from "./payment-intents.service";
+import { productSubscriptionKey } from "../operations/subscription-pricing";
 
 function noopConfig() {
   return { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) } as any;
@@ -467,6 +468,14 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
       .toBeLessThan(test.domestic.authorize.mock.invocationCallOrder[0]);
   });
 
+  it("asks for an email before paying a cart with a subscription", async () => {
+    const test = setup({}, { metadata: { storeId: "store_1", cart: [{ paymentLinkId: "p1", quantity: 1, unitAmount: 7200, subscription: { cadence: "MONTHLY", discountPercent: 10, lockedUnitAmount: 7200 } }] } });
+    test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await expect(test.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any))
+      .rejects.toThrow("Ingresa tu correo para recibir los enlaces de tus próximas entregas.");
+    await expect(test.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" }, customerEmail: "ana@example.com" } as any)).resolves.toBeDefined();
+  });
+
   it("writes no acceptance when the checkout sent no terms version", async () => {
     const test = setup({});
     test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
@@ -621,6 +630,23 @@ describe("PaymentIntentsService receipts", () => {
   });
 });
 
+describe("PaymentIntentsService receipt subscription block", () => {
+  it("appends the subscription block to the fallback receipt", async () => {
+    const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
+    const email = { send: jest.fn() };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    await (service as any).sendReceiptEmail(
+      { id: "pi_3", amount: 5000, currency: "BOB", customerEmail: "ana@example.com", customerName: "Ana", metadata: { cart: [] } },
+      "Tienda Ejemplo",
+      "Suscripción: Café · cada mes\nPróxima entrega: 2026-11-01\nAdministra tu suscripción: https://pagar.test/suscripcion/x",
+    );
+    const body = email.send.mock.calls[0][0].body as string;
+    expect(body).toContain("cada mes");
+    expect(body).toContain("2026-11-01");
+    expect(body).toContain("https://pagar.test/suscripcion/x");
+  });
+});
+
 describe("PaymentIntentsService carrier shipments", () => {
   it("arms a pending carrier shipment when store credit pays the whole order", async () => {
     const tx: any = {
@@ -657,5 +683,117 @@ describe("PaymentIntentsService carrier shipments", () => {
 
     expect(tx.storeOrder.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "order_1" } }));
     expect(tx.shipment.updateMany).toHaveBeenCalledWith({ where: { orderId: "order_1", status: "BOOKING" }, data: { status: "CANCELED", nextAttemptAt: null } });
+  });
+});
+
+describe("PaymentIntentsService subscription enrollment", () => {
+  function harness(settings: unknown, livemode = true) {
+    const activeKey = productSubscriptionKey("store_1", { paymentLinkId: "p1", variantId: null, extraIds: [] }, "ana@mail.com");
+    const metadata = {
+      storeId: "store_1",
+      cart: [{ paymentLinkId: "p1", name: "Café 500 g", quantity: 2, unitAmount: 7200, subscription: { cadence: "MONTHLY", discountPercent: 10, lockedUnitAmount: 7200 } }],
+      subscriptionConsent: { text: "Acepto…", at: "2026-10-01T15:00:00.000Z" },
+    };
+    const intentRow = { id: "pi_1", livemode, amount: 14400, currency: "BOB", status: "SUCCEEDED", customerEmail: "ana@mail.com", customerName: "Ana", customerPhone: null, consumerUserId: null, metadata };
+    const tx: any = {
+      $queryRaw: jest.fn().mockResolvedValue([{ status: "PROCESSING", amount: 14400, customerName: "Ana", customerDocument: null, metadata }]),
+      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m1", name: "Tienda", settlementMode: "T0" }) },
+      transaction: { create: jest.fn().mockResolvedValue({ id: "tx_1" }) },
+      paymentIntent: { update: jest.fn().mockResolvedValue(intentRow) },
+      storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", storeId: "store_1", status: "AWAITING_PAYMENT", merchantId: "m1", fulfillmentMethod: "pickup", fulfillmentLocationId: "loc_1", fulfillmentLocationName: "Centro" }), update: jest.fn() },
+      shipment: { updateMany: jest.fn() },
+      debtRecord: { updateMany: jest.fn() },
+      subscriptionInvoice: { updateMany: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
+      appointment: { updateMany: jest.fn() },
+      storeRetention: { findUnique: jest.fn().mockResolvedValue({ settings }) },
+      storeEmailDelivery: { upsert: jest.fn() },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([{ id: "p1", fulfillmentType: "PHYSICAL", variants: [], name: "Café 500 g" }]) },
+      productSubscriptionOption: { findMany: jest.fn().mockResolvedValue([{ paymentLinkId: "p1", cadence: "MONTHLY", discountPercent: 10 }]) },
+      customerSubscription: {
+        findMany: jest.fn().mockResolvedValueOnce([]).mockResolvedValue([{ id: "cm1sub0000000000000000001", activeKey }]),
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn(),
+      },
+    };
+    const config = { get: jest.fn((key: string) => key === "app.checkoutOrigin" ? "https://pagar.test" : key === "app.orderTrackingSecret" ? "secret" : { bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
+    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any,
+      { buildCaptureJournal: jest.fn().mockReturnValue([]), postJournalEntry: jest.fn(), generateGroupId: jest.fn() } as any,
+      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any);
+    for (const method of ["decrementStockForCart", "recordCartSales", "recordProductStats", "sendReceiptEmail", "sendDebtPaymentNotification"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
+    return { tx, service, activeKey, pay: () => (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION") };
+  }
+  const enabledTemplate = { emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: "Pedido {{order}}", body: "Hola {{customer}}" } } } };
+
+  it("starts the buyer's subscription when the first order is paid and puts the manage link in the receipt", async () => {
+    const { tx, pay, activeKey } = harness(enabledTemplate);
+    await pay();
+
+    expect(tx.customerSubscription.createMany).toHaveBeenCalledWith(expect.objectContaining({ skipDuplicates: true }));
+    expect(tx.customerSubscription.createMany.mock.calls[0][0].data[0]).toEqual(expect.objectContaining({ sourceOrderId: "order_1", merchantId: "m1", activeKey }));
+    expect(tx.storeEmailDelivery.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ body: expect.stringContaining("Administra tu suscripción: https://pagar.test/suscripcion/") }) }));
+  });
+
+  it("hands the subscription block to the fallback receipt when the merchant has no confirmation template", async () => {
+    const { service, pay } = harness({});
+    await pay();
+    expect((service as any).sendReceiptEmail).toHaveBeenCalledWith(expect.anything(), "Tienda", expect.stringContaining("Administra tu suscripción: https://pagar.test/suscripcion/"));
+    const block = (service as any).sendReceiptEmail.mock.calls[0][2] as string;
+    expect(block).toContain("cada mes");
+    expect(block).toContain("Próxima entrega:");
+  });
+
+  it("hands the block to the receipt in test mode too", async () => {
+    const { service, pay } = harness({}, false);
+    await pay();
+    expect((service as any).sendReceiptEmail).toHaveBeenCalledWith(expect.anything(), "Tienda", expect.stringContaining("Administra tu suscripción"));
+  });
+});
+
+describe("PaymentIntentsService.resolveStaleBanecoQr (N1)", () => {
+  function setup(status: string | Error, railReference: string | null = "qr_1", cancel?: jest.Mock) {
+    const rail: any = { getStatus: status instanceof Error ? jest.fn().mockRejectedValue(status) : jest.fn().mockResolvedValue({ status, railReference: "qr_1", raw: {} }), cancelQr: cancel ?? jest.fn().mockResolvedValue(undefined) };
+    const prisma: any = { transaction: { findFirst: jest.fn().mockResolvedValue(railReference ? { railReference } : null) } };
+    const service = new PaymentIntentsService(prisma, { get: jest.fn().mockReturnValue(rail) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const apply = jest.spyOn(service, "applyCallbackResult").mockResolvedValue({} as any);
+    return { service, rail, apply };
+  }
+  const intent = { id: "pi_1", railId: "baneco_qr", livemode: true };
+
+  it("applies the success through the callback path when the bank says paid", async () => {
+    const { service, apply, rail } = setup("succeeded");
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("paid");
+    expect(apply).toHaveBeenCalledWith("pi_1", expect.objectContaining({ status: "succeeded" }), { railId: "baneco_qr" });
+    expect(rail.cancelQr).not.toHaveBeenCalled();
+  });
+  it("reports unknown when the status call fails, and never cancels", async () => {
+    const { service, rail, apply } = setup(new Error("timeout"));
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unknown");
+    expect(rail.cancelQr).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+  });
+  it("reports unknown when the paid result cannot be applied", async () => {
+    const { service, apply } = setup("succeeded");
+    apply.mockRejectedValue(new Error("db"));
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unknown");
+  });
+  it("cancels the QR at the bank and reports unpaid when it is still pending", async () => {
+    const { service, rail } = setup("requires_action");
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unpaid");
+    expect(rail.cancelQr).toHaveBeenCalledWith("qr_1");
+  });
+  it("still reports unpaid when only the bank cancel fails", async () => {
+    const { service } = setup("failed", "qr_1", jest.fn().mockRejectedValue(new Error("nope")));
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unpaid");
+  });
+  it("reports unknown when there is no QR reference to ask about", async () => {
+    const { service, rail } = setup("succeeded", null);
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unknown");
+    expect(rail.getStatus).not.toHaveBeenCalled();
+  });
+  it("skips the bank for mock rails and test mode", async () => {
+    const { service, rail } = setup("succeeded");
+    expect(await service.resolveStaleBanecoQr({ id: "pi_1", railId: "mock_qr", livemode: true })).toBe("unpaid");
+    expect(await service.resolveStaleBanecoQr({ id: "pi_1", railId: "baneco_qr", livemode: false })).toBe("unpaid");
+    expect(rail.getStatus).not.toHaveBeenCalled();
   });
 });

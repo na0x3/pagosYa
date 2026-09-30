@@ -104,3 +104,13 @@ footer { display: flex; justify-content: space-between; gap: 20px; max-width: 14
   html { scroll-behavior: auto; }
   .store-card, .store-card-media img { transition: none; }
 }
+
+/* Subscribe & Save: the product-page choice, its inline conflict message and the cart consent. */
+.subscription-choice { border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 12px; padding: 12px 14px; margin: 14px 0; display: grid; gap: 8px; }
+.subscription-choice label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.subscription-choice label strong { margin-left: auto; }
+.subscription-choice select { width: 100%; min-height: 40px; }
+.subscription-choice__note, .field-hint { margin: 0; font-size: 0.85em; opacity: 0.75; }
+.subscription-choice__conflict { margin: 0; font-size: 0.9em; color: #b3261e; }
+.subscription-consent { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9em; margin-bottom: 10px; }
+.cart-line-subscription { display: block; opacity: 0.75; }

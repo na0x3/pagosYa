@@ -1,0 +1,56 @@
+/* Suscripciones: calm light workspace. Uses the palette tokens from calm.css / workspace-design.css. */
+#subscriptionsRoot { display: grid; gap: 16px; }
+.subs-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.subs-head p { margin: 0; color: var(--pg-text-muted); font-size: 14px; }
+.subs-tabs { display: inline-flex; gap: 4px; padding: 3px; background: var(--pg-accent-soft); border-radius: var(--calm-radius-sm, 8px); }
+.subs-tabs button { min-height: 34px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--pg-text-muted); font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
+.subs-tabs button[aria-selected="true"] { background: var(--pg-surface, #fff); color: var(--pg-text); box-shadow: var(--calm-shadow); }
+.subs-card { padding: 20px; background: var(--pg-surface, #fff); border: 1px solid var(--pg-border); border-radius: var(--calm-radius, 12px); box-shadow: var(--calm-shadow); }
+.subs-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 650; }
+.subs-card p { margin: 0; color: var(--pg-text-muted); font-size: 14px; line-height: 1.5; }
+.subs-empty { display: grid; justify-items: start; gap: 10px; }
+.subs-empty .primary { min-height: 40px; padding: 0 16px; }
+.subs-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; background: var(--pg-surface, #fff); border: 1px solid var(--pg-border); border-radius: var(--calm-radius, 12px); box-shadow: var(--calm-shadow); }
+.subs-figures div { padding: 16px 18px; min-width: 0; }
+.subs-figures div + div { border-left: 1px solid var(--pg-border); }
+.subs-figures dt { color: var(--pg-text-muted); font-size: 12px; font-weight: 550; }
+.subs-figures dd { margin: 6px 0 0; font-size: 22px; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.subs-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.subs-filters select, .subs-filters input { min-height: 38px; width: auto; }
+.subs-filters input[type="search"] { flex: 1 1 200px; min-width: 0; }
+.subs-table-wrap { overflow-x: auto; background: var(--pg-surface, #fff); border: 1px solid var(--pg-border); border-radius: var(--calm-radius, 12px); box-shadow: var(--calm-shadow); }
+.subs-card .subs-table-wrap { border: 0; box-shadow: none; border-radius: 0; margin-top: 8px; }
+.subs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.subs-table th { padding: 10px 14px; text-align: left; color: var(--pg-text-muted); font-size: 12px; font-weight: 550; white-space: nowrap; border-bottom: 1px solid var(--pg-border); }
+.subs-table td { padding: 12px 14px; vertical-align: top; border-bottom: 1px solid var(--pg-border); }
+.subs-table tbody tr:last-child td { border-bottom: 0; }
+.subs-table td small { display: block; margin-top: 2px; color: var(--pg-text-faint); font-size: 12px; }
+.subs-table .is-disabled { color: var(--pg-text-faint); }
+.subs-actions { display: flex; flex-wrap: wrap; gap: 4px; min-width: 200px; }
+.subs-quiet { min-height: 32px; padding: 0 10px; border: 1px solid var(--pg-border); border-radius: var(--calm-radius-sm, 8px); background: var(--pg-surface, #fff); color: var(--pg-text); font: inherit; font-size: 13px; font-weight: 550; cursor: pointer; }
+.subs-quiet:hover:not(:disabled) { border-color: var(--pg-border-strong); background: var(--pg-bg); }
+.subs-quiet.is-danger { color: var(--pg-error); }
+.subs-more { justify-self: center; }
+.pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill--ok { background: var(--pg-success-soft); color: var(--pg-success); }
+.pill--warn { background: var(--pg-warning-soft); color: var(--pg-warning); }
+.pill--muted { background: var(--pg-accent-soft); color: var(--pg-text-muted); }
+.subs-confirm { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--pg-warning-soft); border-radius: var(--calm-radius-sm, 8px); }
+.subs-confirm p { margin: 0; color: var(--pg-text); font-size: 14px; }
+.subs-confirm div { display: flex; gap: 6px; }
+.subs-confirm .primary { min-height: 32px; padding: 0 12px; font-size: 13px; }
+.subs-confirm-row td { padding: 0 14px 12px; }
+.subs-switch label { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.subs-switch label input { width: 18px; height: 18px; accent-color: var(--pg-ink); }
+.subs-switch .subs-confirm { margin-top: 12px; }
+.subs-chip { display: inline-block; margin: 0 4px 4px 0; padding: 2px 9px; border-radius: 999px; background: var(--pg-accent-soft); font-size: 12px; font-weight: 600; }
+.subs-offer-form { display: grid; gap: 8px; padding: 4px 0; }
+.subs-offer-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); align-items: center; gap: 12px; }
+.subs-offer-row label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.subs-offer-row input[type="number"] { width: 72px; min-height: 34px; }
+.subs-offer-actions { display: flex; gap: 8px; }
+.subs-offer-actions .primary { min-height: 34px; padding: 0 14px; }
+.subs-status { margin: 0; color: var(--pg-text-muted); font-size: 14px; }
+.subs-status[hidden] { display: none; }
+@media (max-width: 900px) { .subs-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } .subs-figures div:nth-child(3) { border-left: 0; } .subs-figures div:nth-child(n+3) { border-top: 1px solid var(--pg-border); } }
+@media (max-width: 640px) { .subs-filters > * { flex: 1 1 100%; } .subs-filters select { width: 100%; } .subs-offer-row { grid-template-columns: 1fr; gap: 4px; } }

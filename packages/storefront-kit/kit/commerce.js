@@ -263,7 +263,32 @@
     return groups;
   }
   const variantValues = v => v.options?.length ? v.options.map(o => o.value) : [v.name];
-  const lineKey = (id, variantId) => variantId ? JSON.stringify([id, variantId]) : id;
+  const lineKey = (id, variantId, cadence) => cadence ? JSON.stringify([id, variantId || '', null, cadence]) : variantId ? JSON.stringify([id, variantId]) : id;
+  /* Subscriptions are offered only where checkout can record consent and create them: online payment. */
+  const subscriptionsAvailable = () => store?.subscriptionsEnabled === true && store?.checkoutMode === 'payment';
+  const CADENCE_TEXT = { WEEKLY: 'cada semana', BIWEEKLY: 'cada dos semanas', MONTHLY: 'cada mes' };
+  const CADENCE_CONFLICT = 'Por ahora solo puedes suscribirte a una frecuencia por pedido. Separa las frecuencias en pedidos distintos.';
+  const offerFor = (p, cadence) => subscriptionsAvailable() && p?.fulfillmentType !== 'DIGITAL' ? (p?.subscriptionOptions || []).find(o => o.cadence === cadence) : undefined;
+  /* Same rule as the API: min(one-time price, base - discount). */
+  const subscriptionPrice = (p, variant, cadence) => {
+    const offer = offerFor(p, cadence), base = variant ? variant.amount : p.amount, oneTime = price(variant ? { ...p, amount: variant.amount } : p);
+    return offer ? Math.min(oneTime, Math.round(base * (100 - offer.discountPercent) / 100)) : oneTime;
+  };
+  /* What the subscriber keeps paying: the discounted base, ignoring any scheduled one-time sale. */
+  const subscriptionRecurringPrice = (p, variant, cadence) => {
+    const offer = offerFor(p, cadence), base = variant ? variant.amount : p.amount;
+    return offer ? Math.round(base * (100 - offer.discountPercent) / 100) : subscriptionPrice(p, variant, cadence);
+  };
+  /* "Bs 30 hoy, luego Bs 45 / cada mes" when a sale makes the first order cheaper than the locked price; else "Bs 45 cada mes". */
+  const subscriptionPriceNote = (p, variant, cadence) => {
+    const today = subscriptionPrice(p, variant, cadence), later = subscriptionRecurringPrice(p, variant, cadence);
+    return today === later ? `${money(today, p.currency)} ${CADENCE_TEXT[cadence]}` : `${money(today, p.currency)} hoy, luego ${money(later, p.currency)} / ${CADENCE_TEXT[cadence]}`;
+  };
+  const keyCadence = key => { try { const parsed = JSON.parse(key); return Array.isArray(parsed) ? parsed[3] : undefined; } catch { return undefined; } };
+  /* The API takes one frequency per order: the message to show when `cadence` differs from one already in the cart. */
+  const cadenceConflict = cadence => cadence && [...cart.keys()].some(key => { const existing = keyCadence(key); return existing && existing !== cadence; }) ? CADENCE_CONFLICT : '';
+  const consentText = cadence => `Acepto que este pedido se repita ${CADENCE_TEXT[cadence]}. Antes de cada entrega recibiré un enlace para pagar; no se cobra nada automáticamente. Puedo saltar, pausar o cancelar cuando quiera.`;
+  const subscriptionLineInCart = () => [...cart.keys()].map(cartLine).find(line => line?.cadence);
   /* A box: one "choose N" group the shopper fills, repeats allowed (6 cookies, 2 of them Matcha).
    * Any other kind of extra still needs the hosted configuration page. */
   function boxGroup(p) {
@@ -282,7 +307,16 @@
   function cartLine(key) {
     let p = products().find(p => p.id === key), variant, picks;
     if (!p) {
-      try { const [id, variantId, keyPicks] = JSON.parse(key); p = products().find(p => p.id === id); if (Array.isArray(keyPicks)) picks = keyPicks; else variant = p?.variants?.find(v => v.id === variantId); } catch {}
+      try {
+        const [id, variantId, keyPicks, cadence] = JSON.parse(key);
+        p = products().find(p => p.id === id);
+        if (cadence) {
+          variant = variantId ? p?.variants?.find(v => v.id === variantId) : undefined;
+          if (!p || !offerFor(p, cadence) || p.extras?.length || (variantId && !variant) || (p.variants?.length && (!variant || !optionGroups(p)))) return null;
+          return { p, variant, cadence, name: `${variant ? `${p.name} · ${variant.name}` : p.name} · ${CADENCE_TEXT[cadence]}`, amount: subscriptionPrice(p, variant, cadence) };
+        }
+        if (Array.isArray(keyPicks)) picks = keyPicks; else variant = p?.variants?.find(v => v.id === variantId);
+      } catch {}
       if (!variant && !picks) return null;
     }
     if (picks) {
@@ -306,7 +340,8 @@
     return units;
   }
   function remaining(p, variant, picks) {
-    let left = Math.max(0, Math.min(limit(p) - usedUnits(p.id), variant ? limit(variant) - (cart.get(lineKey(p.id, variant.id)) || 0) : 99));
+    const variantUnits = variant ? [...cart].reduce((sum, [key, count]) => { const line = cartLine(key); return line?.variant?.id === variant.id && line.p.id === p.id ? sum + count : sum; }, 0) : 0;
+    let left = Math.max(0, Math.min(limit(p) - usedUnits(p.id), variant ? limit(variant) - variantUnits : 99));
     const group = picks && boxGroup(p);
     for (const e of group ? group.extras : []) {
       const per = picks.filter(id => id === e.id).length, linked = e.productId && products().find(item => item.id === e.productId);
@@ -318,7 +353,7 @@
   function cartCurrency() { for (const [key] of cart) { const line = cartLine(key); if (line?.p?.currency) return line.p.currency; } return selectedProduct?.currency || 'BOB'; }
   const cartItems = () => [...cart].flatMap(([key, quantity]) => {
     const line = cartLine(key);
-    return line ? [{ id: line.p.id, ...(line.variant ? { variantId: line.variant.id } : {}), ...(line.picks ? { extraIds: line.picks } : {}), quantity }] : [];
+    return line ? [{ id: line.p.id, ...(line.variant ? { variantId: line.variant.id } : {}), ...(line.picks ? { extraIds: line.picks } : {}), ...(line.cadence ? { subscriptionCadence: line.cadence } : {}), quantity }] : [];
   });
   const checkoutItems = () => cartItems().map(({ id, ...item }) => ({ paymentLinkId: id, ...item }));
   function message(text) {
@@ -337,8 +372,9 @@
     cart.clear();
     for (const item of items.slice(0, 100)) {
       const p = products().find(p => p.id === item?.id);
-      const key = Array.isArray(item?.extraIds) ? boxKey(item.id, item.extraIds) : lineKey(item?.id, item?.variantId), line = cartLine(key);
-      if (p && line && !cart.has(key) && Number.isInteger(item.quantity) && item.quantity > 0) {
+      const key = item?.subscriptionCadence ? Array.isArray(item.extraIds) ? '' : lineKey(item.id, item.variantId, item.subscriptionCadence) : Array.isArray(item?.extraIds) ? boxKey(item.id, item.extraIds) : lineKey(item?.id, item?.variantId), line = cartLine(key);
+      // Lines with a cadence need subscriptions to still be on and a single frequency in the cart.
+      if (p && line && !cart.has(key) && !cadenceConflict(line.cadence) && Number.isInteger(item.quantity) && item.quantity > 0) {
         const quantity = Math.min(item.quantity, remaining(p, line.variant, line.picks));
         if (quantity > 0) cart.set(key, quantity);
       }
@@ -782,6 +818,45 @@
     const amount = price(base), sale = amount < base.amount;
     return `<strong class="product-detail__price">${from ? 'Desde ' : ''}${money(amount, p.currency)}</strong>${sale ? `<del class="product-detail__original" aria-label="Precio anterior">${money(base.amount, p.currency)}</del><span class="product-detail__saving">${escape(p.discountPercent)}% de descuento</span>` : ''}`;
   }
+  /* Compra única vs. Suscríbete y ahorra: offered only for plain products of a store that can take the consent at payment. */
+  function subscriptionChoice(p) {
+    const offers = subscriptionsAvailable() && p.fulfillmentType !== 'DIGITAL' && !p.extras?.length ? (p.subscriptionOptions || []) : [];
+    if (!offers.length) return '';
+    const best = Math.max(...offers.map(o => o.discountPercent));
+    return `<fieldset class="product-detail__subscription" data-subscription-choice><legend>Cómo lo quieres</legend>`
+      + `<label><input type="radio" name="purchaseMode" value="once" checked> Compra única</label>`
+      + `<label><input type="radio" name="purchaseMode" value="subscribe"> ${best ? `Suscríbete y ahorra hasta ${best}%` : 'Suscríbete'}</label>`
+      + (offers.length > 1
+        ? `<select name="subscriptionCadence" aria-label="Frecuencia" disabled>${offers.map(o => `<option value="${escape(o.cadence)}">${escape(CADENCE_TEXT[o.cadence])}${o.discountPercent ? ` · −${o.discountPercent}%` : ''}</option>`).join('')}</select>`
+        : `<input type="hidden" name="subscriptionCadence" value="${escape(offers[0].cadence)}">`)
+      + `<p class="product-detail__subscription-price" data-subscription-price hidden></p>`
+      + `<p class="product-detail__subscription-conflict" data-subscription-conflict role="alert" hidden></p>`
+      + `<p>Te enviamos un enlace para pagar antes de cada entrega. No se cobra automáticamente.</p></fieldset>`;
+  }
+  function selectedCadence() {
+    const choice = detail.querySelector('[data-subscription-choice]');
+    if (!choice || !selectedProduct || !subscriptionsAvailable() || choice.querySelector('[name=purchaseMode]:checked')?.value !== 'subscribe') return undefined;
+    const cadence = choice.querySelector('[name=subscriptionCadence]')?.value;
+    return offerFor(selectedProduct, cadence) ? cadence : undefined;
+  }
+  function showCadenceConflict(cadence) {
+    const note = detail.querySelector('[data-subscription-conflict]');
+    const text = cadenceConflict(cadence);
+    if (note) { note.textContent = text; note.hidden = !text; }
+    return text;
+  }
+  function updateSubscriptionChoice() {
+    const choice = detail.querySelector('[data-subscription-choice]');
+    if (!choice || !selectedProduct) return;
+    const cadence = selectedCadence(), note = choice.querySelector('[data-subscription-price]'), select = choice.querySelector('select[name=subscriptionCadence]');
+    if (select) select.disabled = choice.querySelector('[name=purchaseMode]:checked')?.value !== 'subscribe';
+    const groups = optionGroups(selectedProduct), variant = groups ? selectedVariant() : undefined;
+    if (note) {
+      note.hidden = !cadence || (groups && !variant);
+      if (!note.hidden) note.textContent = subscriptionPriceNote(selectedProduct, variant || undefined, cadence);
+    }
+    showCadenceConflict(cadence);
+  }
   function quantityMarkup(action = '') {
     return '<div class="product-detail__purchase"><div class="product-detail__quantity" role="group" aria-label="Cantidad"><button type="button" data-product-quantity="-1" aria-label="Reducir cantidad" disabled>−</button><output data-product-quantity-value aria-live="polite" aria-label="Cantidad de unidades">1</output><button type="button" data-product-quantity="1" aria-label="Aumentar cantidad">+</button></div><span class="product-detail__subtotal" data-product-subtotal></span>' + action + '</div>';
   }
@@ -820,11 +895,13 @@
     const groups = optionGroups(selectedProduct), variant = selectedVariant();
     const available = groups && !variant || box && !boxLine ? 0 : remaining(selectedProduct, variant, boxLine?.picks);
     selectedQuantity = Math.max(1, Math.min(selectedQuantity, available));
+    updateSubscriptionChoice();
     detail.querySelector('[data-product-quantity-value]').textContent = selectedQuantity;
     detail.querySelectorAll('[data-product-quantity]').forEach(button => {
       button.disabled = !ready || checkingOut || (Number(button.dataset.productQuantity) < 0 ? selectedQuantity <= 1 : selectedQuantity >= available);
     });
-    const amount = boxLine ? boxLine.amount : price(variant ? { ...selectedProduct, amount: variant.amount } : selectedProduct);
+    const cadence = selectedCadence();
+    const amount = boxLine ? boxLine.amount : cadence && !(groups && !variant) ? subscriptionPrice(selectedProduct, variant || undefined, cadence) : price(variant ? { ...selectedProduct, amount: variant.amount } : selectedProduct);
     const pending = groups && !variant || box && !boxLine;
     const startingAt = pending && !box ? selectedProduct.variants.filter(v => remaining(selectedProduct, v) > 0 && variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value)).map(v => price({ ...selectedProduct, amount: v.amount })) : [];
     const total = pending ? startingAt.length ? `desde ${money(Math.min(...startingAt), selectedProduct.currency)}` : '' : available ? money(amount * selectedQuantity, selectedProduct.currency) : '';
@@ -1040,7 +1117,7 @@
     const variant = selectedVariant(), buy = detail.querySelector('[data-variant-add]');
     const available = variant && remaining(p, variant) > 0;
     buy.disabled = !ready || checkingOut || !available;
-    if (variant) buy.dataset.add = lineKey(p.id, variant.id); else delete buy.dataset.add;
+    if (variant) buy.dataset.add = lineKey(p.id, variant.id, selectedCadence()); else delete buy.dataset.add;
     const compatible = p.variants.filter(v => remaining(p, v) > 0 && variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value));
     const lowest = (compatible.length ? compatible : p.variants).reduce((a, b) => a.amount <= b.amount ? a : b);
     detail.querySelector('[data-product-pricing]').innerHTML = priceMarkup(p, variant || lowest, !variant);
@@ -1080,7 +1157,7 @@
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
-    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy">${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy">${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
@@ -1198,6 +1275,13 @@
     });
   }
   detail.addEventListener("close", () => { document.documentElement.style.overflow = oldOverflow; detailTrigger?.focus(); selectedProduct = null; });
+  detail.addEventListener('change', event => {
+    if (!selectedProduct || !event.target.matches('[name=purchaseMode],[name=subscriptionCadence]')) return;
+    const buy = detail.querySelector('.product-detail__buy[data-add], .product-detail__buy[data-variant-add]'), variant = optionGroups(selectedProduct) ? selectedVariant() : undefined;
+    if (buy && (variant || !selectedProduct.variants?.length)) buy.dataset.add = lineKey(selectedProduct.id, variant?.id, selectedCadence());
+    updateQuantity();
+    renderCart();
+  });
   detail.addEventListener("click", event => {
     if (fullProductPage || event.target !== detail) return;
     const rect = detail.getBoundingClientRect();
@@ -2561,15 +2645,17 @@
       total += amount * quantity; count += quantity;
       // Each line shows its photo, chosen option, unit price and any active discount.
       const image = safeUrl(variant?.imageUrl) || galleryImages(p)[0];
-      const option = variant ? variant.name : line.extras ? pickLabel(line.extras) : '';
+      const option = [variant ? variant.name : line.extras ? pickLabel(line.extras) : '', line.cadence ? `Suscripción · ${CADENCE_TEXT[line.cadence]}` : ''].filter(Boolean).join(' · ');
       const listUnit = (variant ? variant.amount : p.amount) + (line.extras || []).reduce((sum, e) => sum + e.amount, 0);
       const saved = listUnit > amount ? (listUnit - amount) * quantity : 0;
       savings += saved;
-      const unitCopy = quantity > 1 || saved ? `<p class="order-item__unit">${money(amount, p.currency)} c/u${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
+      const laterUnit = line.cadence ? subscriptionRecurringPrice(p, variant, line.cadence) : amount;
+      const later = laterUnit !== amount ? `hoy, luego ${money(laterUnit, p.currency)} / ${CADENCE_TEXT[line.cadence]}` : '';
+      const unitCopy = quantity > 1 || saved || later ? `<p class="order-item__unit">${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
       const few = Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? `<p class="order-item__stock">${p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`}</p>` : '';
       rows.push(`<li class="order-item"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
       lineViews.push({ id, p, name, amount, quantity, image, option,
-        unit: quantity > 1 || saved ? `${money(amount, p.currency)} c/u${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
+        unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
     document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
@@ -2578,12 +2664,13 @@
       const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : focused?.hasAttribute('data-remove-line') ? 'data-remove-line' : null;
       const focusedId = focusedAction ? focused.getAttribute(focusedAction) : null;
       const remembered = el.hasAttribute("data-checkout-review") ? [...checkoutAnswers] : [];
-      const answers = [...remembered, ...[...el.querySelectorAll('input,textarea')].map(field => [field.name, field.value])];
+      const answers = [...remembered, ...[...el.querySelectorAll('input:not([type=checkbox]),textarea')].map(field => [field.name, field.value])];
       const previousLocation = el.querySelector("[name=location]")?.value || checkoutAnswers.get("location");
       const previousMethod = el.querySelector("[name=method]")?.value || checkoutAnswers.get("method");
       delete el.dataset.discountedSubtotal;
       const previousCredit = el.querySelector('[name=creditCode]')?.value || '';
       const previousAddress = el.querySelector('[name=shippingAddress]')?.value || '';
+      const consentChecked = el.querySelector('[name=subscriptionConsent]')?.checked === true;
       const review = el.hasAttribute("data-checkout-review");
       // Studio's separate payment-preview calculator currently accepts only
       // simple lines. Keep options and order review interactive without sending
@@ -2593,7 +2680,7 @@
       const payment = el.dataset.checkoutReview === "payment";
       const action = review ? payment ? "data-finish-demo" : "data-pay" : "data-checkout";
       const actionLabel = review ? payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
-      el.innerHTML = `<ul class="order-items">${rows.join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`;
+      el.innerHTML = `<ul class="order-items">${rows.join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`;
       const lineTemplate = cartLineTemplate();
       if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
       const panelTemplate = review ? null : cartTemplate();
@@ -3204,6 +3291,10 @@
     analytics('pay_click');
     const panel = button.closest("[data-pagosya-cart]");
     if (!validateDelivery(panel)) return;
+    const subscriptionLine = subscriptionLineInCart();
+    // Consent is only needed when actually paying: WhatsApp/external flows never carry subscription lines.
+    const paying = !preview && !config.demo && store.checkoutMode !== 'whatsapp' && store.checkoutMode !== 'external';
+    if (subscriptionLine && paying && !panel.querySelector('[name=subscriptionConsent]')?.checked) { message('Acepta las condiciones de la suscripción para continuar.'); return; }
     const locationId = panel.querySelector("[name=location]")?.value;
     const fulfillmentMethod = panel.querySelector("[name=method]")?.value;
     if (fulfillmentMethod) { track('delivery_selected', fulfillmentMethod); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); }
@@ -3230,7 +3321,7 @@
     checkingOut = true; button.disabled = true; button.setAttribute("aria-busy", "true"); message("Preparando tu pedido…");
     flushAnalytics();
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/cart-checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", body: JSON.stringify({ partnerCode: window.PAGOSYA_PRIVACY?.analyticsAllowed(config.slug) ? partnerCode : undefined, creditCode, recoveryToken: window.PAGOSYA_RETENTION_STATE?.token || undefined, ...(fulfillmentMethod === 'delivery' ? { shippingAddress, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) } : {}), ...(store.shippingEnabled ? { fulfillmentMethod, shippingZoneId, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined } : {}), items: checkoutItems(), ...(locationId ? { locationId, fulfillmentMethod } : {}) }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/cart-checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", body: JSON.stringify({ partnerCode: window.PAGOSYA_PRIVACY?.analyticsAllowed(config.slug) ? partnerCode : undefined, creditCode, recoveryToken: window.PAGOSYA_RETENTION_STATE?.token || undefined, ...(fulfillmentMethod === 'delivery' ? { shippingAddress, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) } : {}), ...(store.shippingEnabled ? { fulfillmentMethod, shippingZoneId, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined } : {}), items: checkoutItems(), ...(subscriptionLine ? { subscriptionConsent: true } : {}), ...(locationId ? { locationId, fulfillmentMethod } : {}) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join(" ") : result.message || "No pudimos preparar el pedido.");
       if (hosted) return;
@@ -3314,8 +3405,17 @@
       return;
     }
     if (button.hasAttribute("data-add") && ready) {
-      const key = button.dataset.add, line = cartLine(key);
+      // The product page's buy button follows the shopper's current choice, not a stale key.
+      const choosing = button.classList.contains('product-detail__buy') && selectedProduct && detail.querySelector('[data-subscription-choice]');
+      const chosenVariant = choosing && optionGroups(selectedProduct) ? selectedVariant() : undefined;
+      const key = choosing && !(optionGroups(selectedProduct) && !chosenVariant) ? lineKey(selectedProduct.id, chosenVariant?.id, selectedCadence()) : button.dataset.add, line = cartLine(key);
       if (!line) return;
+      const conflict = cadenceConflict(line.cadence);
+      if (conflict) {
+        showCadenceConflict(line.cadence); message(conflict);
+        if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = conflict;
+        return;
+      }
       const { p, variant, name } = line;
       const quantity = cart.get(key) || 0;
       if (remaining(p, variant, line.picks) <= 0) { message("Ya añadiste la cantidad disponible."); return; }

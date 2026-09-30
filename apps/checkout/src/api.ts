@@ -70,6 +70,8 @@ export async function fetchSession(clientSecret: string, publishableKey?: string
  * customer buying several things adds them to one Cart and pays once.
  */
 export interface StoreItem {
+  /** Frequencies this product can be subscribed to, with the discount for each. */
+  subscriptionOptions?: Array<{ cadence: "WEEKLY" | "BIWEEKLY" | "MONTHLY"; discountPercent: number }>;
   fulfillmentType?: 'PHYSICAL' | 'DIGITAL';
   id: string;
   categoryId: string | null;
@@ -213,6 +215,7 @@ export interface StoreLocation {
 }
 
 export interface Store {
+  subscriptionsEnabled?: boolean;
   publishedSourceRevision?: number | null;
   /** The store's runtime Design DNA (enums only); the order confirmation reads button and radius. */
   dna?: Record<string, string | number> | null;
@@ -455,7 +458,7 @@ export async function quotePromoCode(slug: string, code: string): Promise<PromoC
  * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
 export type CartFulfillment = { shippingCountry?: string; shippingPostalCode?: string; creditCode?: string; locationId?: string; fulfillmentMethod?: "pickup" | "delivery"; shippingZoneId?: string; shippingAddress?: string; shippingDestination?: { department: string; city: string; street: string; references?: string; lat: number; lng: number; recipientName: string; recipientPhone: string } };
 export type CartQuote = { creditAmount?: number; orderTotal?: number; subtotal: number; discountAmount: number; shippingAmount: number; amount: number; currency: string; shippingOptions: Array<{ id: string; name: string; amount: number; currency: string; carrierId?: string | null }> };
-export async function quoteCart(slug: string, items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[], promoCode?: string, fulfillment?: CartFulfillment): Promise<CartQuote> {
+export async function quoteCart(slug: string, items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number; subscriptionCadence?: "WEEKLY" | "BIWEEKLY" | "MONTHLY" }[], promoCode?: string, fulfillment?: CartFulfillment): Promise<CartQuote> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/shipping/quote`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ items, ...(promoCode ? { promoCode } : {}), ...fulfillment }),
@@ -464,15 +467,16 @@ export async function quoteCart(slug: string, items: { paymentLinkId: string; va
 }
 export async function checkoutCart(
   slug: string,
-  items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[],
+  items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number; subscriptionCadence?: "WEEKLY" | "BIWEEKLY" | "MONTHLY" }[],
   promoCode?: string,
   fulfillment?: CartFulfillment,
   funnelToken?: string,
+  subscriptionConsent?: boolean,
 ): Promise<CartCheckoutResult> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/cart-checkout`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ items, funnelToken, recoveryToken: (window as any).PAGOSYA_RETENTION_STATE?.slug === slug ? (window as any).PAGOSYA_RETENTION_STATE.token || undefined : undefined, sourceVisitToken: sourceVisitToken(slug), partnerCode: storePartnerCode(slug), ...(promoCode ? { promoCode } : {}), ...fulfillment }),
+    body: JSON.stringify({ items, funnelToken, recoveryToken: (window as any).PAGOSYA_RETENTION_STATE?.slug === slug ? (window as any).PAGOSYA_RETENTION_STATE.token || undefined : undefined, sourceVisitToken: sourceVisitToken(slug), partnerCode: storePartnerCode(slug), ...(promoCode ? { promoCode } : {}), ...(subscriptionConsent ? { subscriptionConsent: true } : {}), ...fulfillment }),
   });
   return parseOrThrow<CartCheckoutResult>(response);
 }
@@ -649,4 +653,25 @@ export async function simulateRailCallback(
     body: JSON.stringify({ paymentIntentId, status, railReference: `dev_sim_${Date.now()}` }),
   });
   if (!response.ok) throw new Error(`Rail callback failed (${response.status})`);
+}
+
+export interface SubscriptionManageView {
+  storeName: string; itemName: string; cadence: string; cadenceLabel: string; amount: number; currency: string;
+  nextBillingAt: string; status: "ACTIVE" | "PAUSED" | "CANCELED";
+  openPayment: { checkoutUrl: string; amount: number; dueAt: string } | null;
+  history: Array<{ periodStart: string; status: string; amount: number }>;
+  cadenceOptions: Array<{ cadence: string; label: string; discountPercent: number; amount?: number | null }>;
+}
+
+export async function fetchSubscription(token: string): Promise<SubscriptionManageView> {
+  const response = await fetch(`${API_BASE_URL}/subscriptions/public/${encodeURIComponent(token)}`, { credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer" });
+  if (!response.ok) throw new Error(response.status === 404 ? "Este enlace no es válido o la suscripción ya no existe." : "No pudimos cargar tu suscripción.");
+  return response.json();
+}
+
+export async function actOnSubscription(token: string, body: { action: string; cadence?: string }): Promise<SubscriptionManageView> {
+  const response = await fetch(`${API_BASE_URL}/subscriptions/public/${encodeURIComponent(token)}/actions`, { method: "POST", credentials: "omit", referrerPolicy: "no-referrer", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof data.message === "string" ? data.message : "No pudimos guardar el cambio.");
+  return data;
 }

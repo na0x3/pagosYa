@@ -121,7 +121,7 @@ export function templateDemoPublicStore(): SourcePublicStore {
   const product = (id: string, name: string, amount: number, description: string) => ({ id, name, amount, currency: 'BOB', stock: 12, description, imageUrls: [], variants: [], extras: [], highlights: [] });
   return ({
     storeName: 'Tu marca', tagline: 'Hecho con cuidado en Bolivia', checkoutMode: 'payment', creditsEnabled: false, digitalGoodsEnabled: false,
-    shippingEnabled: false, shippingPickupEnabled: false, shippingCarriersEnabled: false, bundlesEnabled: false, logoUrl: null, contactPhone: null,
+    shippingEnabled: false, shippingPickupEnabled: false, shippingCarriersEnabled: false, bundlesEnabled: false, subscriptionsEnabled: false, logoUrl: null, contactPhone: null,
     leadCaptureUrl: null, contactFormEnabled: false, contactTitle: null, contactSubtitle: null, categories: [],
     locations: [],
     cartRecommendationsEnabled: false, cartRecommendationProductIds: [], bundles: [],

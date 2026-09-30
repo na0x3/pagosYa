@@ -90,6 +90,11 @@ export class BanecoQrAdapter implements PaymentRailAdapter {
     };
   }
 
+  /** Best-effort withdrawal of an unpaid QR at the bank so it can no longer be scanned. */
+  async cancelQr(railReference: string): Promise<void> {
+    await this.client.cancelQr(railReference);
+  }
+
   async getStatus(railReference: string): Promise<RailResult> {
     const result = await this.client.statusQr(railReference);
     const status = result.statusQRCode === 1 ? "succeeded" : result.statusQRCode === 9 ? "failed" : "requires_action";

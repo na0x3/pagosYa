@@ -22,11 +22,16 @@ export class OperationsWorker {
           this.operations.runAutomations(store.merchantId, store.id),
           this.subscriptions.generateSubscriptionInvoices(store.merchantId, store.id),
         ]);
-        if (generation[1].status === "fulfilled") {
-          await this.subscriptions.sendDueSubscriptionReminders(store.merchantId, store.id).catch((error: Error) => {
-            this.logger.warn(`Subscription reminders failed for ${store.id}: ${error.message}`);
-          });
+        for (const [label, outcome] of [["automations", generation[0]], ["subscription invoice generation", generation[1]]] as const) {
+          if (outcome.status === "rejected") this.logger.warn(`${label} failed for ${store.id}: ${(outcome.reason as Error)?.message ?? outcome.reason}`);
         }
+        // Independent of generation: a failure there must not leave reminders and missed renewals stuck.
+        await this.subscriptions.sendDueSubscriptionReminders(store.merchantId, store.id).catch((error: Error) => {
+          this.logger.warn(`Subscription reminders failed for ${store.id}: ${error.message}`);
+        });
+        await this.subscriptions.expireMissedRenewals(store.merchantId, store.id).catch((error: Error) => {
+          this.logger.warn(`Missed renewals failed for ${store.id}: ${error.message}`);
+        });
       }
       await this.appointments.releaseExpiredAppointmentHolds();
     } catch (error) {

@@ -790,6 +790,108 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
   });
 });
 
+describe("StoresService.createCartCheckout — subscription lines", () => {
+  const baseProduct = { id: "p1", name: "Café 500 g", amount: 8000, currency: "BOB", status: "ACTIVE", fulfillmentType: "PHYSICAL", variants: [], extras: [], stock: null, locationStocks: {}, discountPercent: null, discountStartsAt: null, discountEndsAt: null };
+  const monthlyOffer = { paymentLinkId: "p1", cadence: "MONTHLY", discountPercent: 10 };
+
+  function setup(storeOverrides: Record<string, unknown> = {}, productOverrides: Record<string, unknown> = {}) {
+    const prisma: any = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, subscriptionsEnabled: true, bundlesEnabled: false, ...storeOverrides });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{ ...baseProduct, ...productOverrides }]);
+    prisma.productSubscriptionOption = { findMany: jest.fn().mockResolvedValue([monthlyOffer]) };
+    prisma.storeBundle = { findMany: jest.fn().mockResolvedValue([]) };
+    prisma.deliveryZone = { findMany: jest.fn().mockResolvedValue([]) };
+    const paymentIntents = makeFakePaymentIntents();
+    const service = makeStoreServices(prisma, paymentIntents as any, makeFakeUploads() as any);
+    return { prisma, paymentIntents, service };
+  }
+  const sub = (extra: Record<string, unknown> = {}) => ({ paymentLinkId: "p1", quantity: 1, subscriptionCadence: "MONTHLY", ...extra });
+
+  it("prices a mixed cart: one line once, one line on subscription", async () => {
+    const { service } = setup();
+    const quote: any = await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "p1", quantity: 1 }, sub()], subscriptionConsent: true } as never, true);
+    expect(quote.subtotal).toBe(8000 + 7200);
+  });
+
+  it("stores the locked price and the consent on the intent", async () => {
+    const { service, paymentIntents } = setup();
+    await service.createCartCheckout("abc123", { items: [sub({ quantity: 2 })], subscriptionConsent: true } as never);
+    const metadata = paymentIntents.create.mock.calls[0][2].metadata;
+    expect(metadata.cart[0]).toMatchObject({ unitAmount: 7200, quantity: 2, subscription: { cadence: "MONTHLY", discountPercent: 10, lockedUnitAmount: 7200 } });
+    expect(metadata.subscriptionConsent.text).toContain("cada mes");
+    expect(typeof metadata.subscriptionConsent.at).toBe("string");
+  });
+
+  it("rejects subscriptions while the store switch is off", async () => {
+    const { service } = setup({ subscriptionsEnabled: false });
+    await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true } as never)).rejects.toThrow("Esta tienda no ofrece suscripciones.");
+  });
+
+  it("rejects a cadence the product does not offer", async () => {
+    const { service } = setup();
+    await expect(service.createCartCheckout("abc123", { items: [sub({ subscriptionCadence: "WEEKLY" })], subscriptionConsent: true } as never))
+      .rejects.toThrow('Esa frecuencia no está disponible para "Café 500 g".');
+  });
+
+  it("rejects a cart that mixes subscription cadences", async () => {
+    const { service, prisma } = setup();
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([monthlyOffer, { ...monthlyOffer, cadence: "WEEKLY" }]);
+    await expect(service.createCartCheckout("abc123", { items: [sub(), sub({ subscriptionCadence: "WEEKLY" })], subscriptionConsent: true } as never))
+      .rejects.toThrow("Por ahora solo puedes suscribirte a una frecuencia por pedido. Separa las frecuencias en pedidos distintos.");
+  });
+
+  it("accepts two subscription lines of the same cadence", async () => {
+    const { service } = setup();
+    await expect(service.createCartCheckout("abc123", { items: [sub(), sub({ quantity: 2 })], subscriptionConsent: true } as never, true))
+      .resolves.toMatchObject({ subtotal: 7200 * 3 });
+  });
+
+  it("rejects a digital product on subscription", async () => {
+    const { service, prisma } = setup({ digitalGoodsEnabled: true }, { fulfillmentType: "DIGITAL" });
+    prisma.digitalAsset = { findMany: jest.fn().mockResolvedValue([{ id: "asset_1", productId: "p1" }]) };
+    await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true } as never))
+      .rejects.toThrow('"Café 500 g" no se puede comprar por suscripción.');
+  });
+
+  it("requires consent to create the payment but not to quote", async () => {
+    const { service } = setup();
+    await expect(service.createCartCheckout("abc123", { items: [sub()] } as never)).rejects.toThrow("Acepta las condiciones de la suscripción para continuar.");
+    await expect(service.createCartCheckout("abc123", { items: [sub()] } as never, true)).resolves.toMatchObject({ subtotal: 7200 });
+  });
+
+  it("keeps subscription lines out of bundle matching", async () => {
+    const { service, prisma } = setup({ bundlesEnabled: true });
+    prisma.storeBundle.findMany.mockResolvedValue([{ id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "p1", quantity: 2 }], minimumQuantity: null, discountPercent: 20 }]);
+    const quote: any = await service.createCartCheckout("abc123", { items: [sub({ quantity: 2 })], subscriptionConsent: true } as never, true);
+    expect(quote.discountAmount).toBe(0);
+  });
+
+  it("rejects a subscription cart that store credit would pay in full, but allows partial credit", async () => {
+    const { service, prisma } = setup({ creditsEnabled: true });
+    prisma.storeCredit = { findFirst: jest.fn().mockResolvedValue({ id: "cr_1", currency: "BOB", balance: 100000, active: true, expiresAt: null }) };
+    await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true, creditCode: "SALDO" } as never))
+      .rejects.toThrow("Para suscribirte necesitamos un pago con enlace de renovación");
+    prisma.storeCredit.findFirst.mockResolvedValue({ id: "cr_1", currency: "BOB", balance: 1000, active: true, expiresAt: null });
+    await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true, creditCode: "SALDO" } as never, true)).resolves.toMatchObject({ creditAmount: 1000 });
+  });
+
+  it("does not blame store credit for a zero-total subscription cart when no credit is used", async () => {
+    const { service } = setup({}, { amount: 0 });
+    let message = "";
+    try { await service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true } as never); } catch (error) { message = (error as Error).message; }
+    expect(message).not.toContain("saldo completo");
+  });
+
+  it("rejects carrier shipping for a subscription", async () => {
+    const { service, prisma } = setup({ shippingEnabled: true, shippingCarriersEnabled: true });
+    prisma.deliveryZone.findMany.mockResolvedValue([{ id: "zone_1", name: "Courier", fee: 1500, currency: "BOB", carrierId: "car_servientrega", isActive: true, minimumOrder: 0, maximumOrder: null, freeAbove: null, minimumWeightGrams: null, maximumWeightGrams: null, countryCodes: [], postalPrefixes: [], departments: [], sizeClasses: [] }]);
+    await expect(service.createCartCheckout("abc123", {
+      items: [sub()], subscriptionConsent: true, fulfillmentMethod: "delivery", shippingZoneId: "zone_1", shippingAddress: "Av. Arce 123",
+    } as never)).rejects.toThrow("Las suscripciones todavía no se envían por courier. Elige retiro o entrega local.");
+  });
+});
+
 describe("StoresService.getStorePublic — sold counts", () => {
 
   it("shows box choices with their product's live name and photo, and drops unavailable ones", async () => {

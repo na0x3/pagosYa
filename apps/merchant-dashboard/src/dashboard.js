@@ -5,9 +5,11 @@ import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
+import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
+import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -90,6 +92,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     loggedInAsEl.textContent = email;
     profileMenuTriggerEl.setAttribute("aria-label", `Abrir perfil de ${email}`);
     renderProfileAvatar();
+    document.getElementById("overviewGreeting").textContent = greetingFor(new Date(), currentProfileName);
   }
 
   function applyCurrentSessionIdentity(session) {
@@ -352,6 +355,13 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     signedIn: () => !!sessionToken,
     invoicingReady: () => Boolean(lastInvoicingProfile?.cuis),
     apiBase: () => apiBaseEl.value,
+  });
+  // Suscripciones: subscribers and per-product frequencies; the module owns its view.
+  const subscriptionsPanel = mountSubscriptionsPanel({
+    api,
+    storeId: () => currentStoreId,
+    signedIn: () => !!sessionToken,
+    products: () => lastPaymentLinks,
   });
   // Documentos → Propuestas (D2); an accepted proposal hands its new cobro to the Cobros view.
   const proposals = mountProposalsPanel({
@@ -617,6 +627,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
+    subscriptions: ["Suscripciones", "Clientes que compran tus productos de forma recurrente."],
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
@@ -781,6 +792,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     syncMerchantStoreWorkspace(nextView);
     if (nextView === "cobros") cobros.show();
+    if (nextView === "subscriptions") subscriptionsPanel.show();
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
@@ -1640,6 +1652,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
       cobros.reset();
+      subscriptionsPanel.reset();
       growth.reset();
       proposals.reset();
       contracts.reset();
@@ -2010,6 +2023,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const store = lastStores.find((s) => s.id === currentStoreId);
     document.getElementById("currentStoreLabel").textContent = store ? store.name : "esta tienda";
     document.getElementById("currentStoreLink").value = currentStoreUrl();
+    const storeLink = document.getElementById("topbarStoreLink");
+    storeLink.hidden = !store;
+    if (store) storeLink.href = currentStoreUrl();
   }
 
   function renderStoreRows(stores) {
@@ -2027,7 +2043,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     picker.value = currentStoreId || "";
     const search = document.getElementById("storeLibrarySearch").value.trim().toLocaleLowerCase();
     const filter = document.getElementById("storeLibraryStatus").value;
-    const statusFor = store => store.status === "ARCHIVED" ? "archived" : (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
+    const statusFor = storePublicationState;
     const visible = stores.filter(store => (!search || store.name.toLocaleLowerCase().includes(search)) && (!filter || statusFor(store) === filter));
     document.getElementById("storeLibraryCount").textContent = `${visible.length} de ${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}`;
     document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button><button class="store-create-tile" id="openShopifyImport" type="button"><span aria-hidden="true">↧</span><strong>Traer mi tienda de Shopify</strong><small>Productos, fotos y páginas</small></button>` + visible.map(store => {
@@ -2136,21 +2152,39 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     return monetaryValuesHidden ? "••••••" : (cents / 100).toFixed(2);
   }
 
-  const BALANCE_CARD_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
-
+  // One row per currency in the "Tu cuenta" list on Resumen.
   function renderBalanceCards(balances) {
     document.getElementById("balanceCards").innerHTML = balances
       .map(
-        (entry) => `<div class="card">
-          <div class="card-head">
-            <span class="muted">Saldo por desembolsar (${esc(entry.currency)})</span>
-            <span class="card-icon">${BALANCE_CARD_ICON}</span>
-          </div>
-          <div class="value">${money(entry.payableBalance, esc(entry.currency))}</div>
-          <p class="faint" style="margin:4px 0 0">Se transfiere a tu cuenta bancaria en el próximo desembolso</p>
+        (entry) => `<div class="overview-balance">
+          <dt>Saldo por desembolsar (${esc(entry.currency)})</dt>
+          <dd>${money(entry.payableBalance, esc(entry.currency))}</dd>
+          <p>Se transfiere a tu cuenta bancaria en el próximo desembolso.</p>
         </div>`,
       )
       .join("");
+  }
+
+  function storePublicationState(store) {
+    if (store.status === "ARCHIVED") return "archived";
+    return (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
+  }
+
+  // Greeting, key figures and the setup checklist; re-run whenever the finances or the money visibility change.
+  function renderOverview() {
+    if (!lastFinances) return;
+    document.getElementById("overviewGreeting").textContent = greetingFor(new Date(), currentProfileName);
+    document.getElementById("overviewKpis").innerHTML = renderOverviewKpis(overviewKpis({ finances: lastFinances, money }));
+    const store = lastStores.find((entry) => entry.id === currentStoreId);
+    const setup = document.getElementById("overviewSetup");
+    setup.innerHTML = renderSetupSteps(setupSteps({
+      kycStatus: lastKyc?.status,
+      invoicingConfigured: Boolean(lastInvoicingProfile?.cuis),
+      storePublished: store ? storePublicationState(store) === "published" : false,
+      paymentCount: lastTotalFinances?.paymentCount ?? lastFinances.paymentCount,
+      paymentStore: (store?.checkoutMode || "payment") === "payment",
+    }));
+    setup.hidden = !setup.innerHTML;
   }
 
   function renderInternationalCard(intl) {
@@ -2320,6 +2354,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   function renderFinances(finances) {
     lastFinances = finances;
+    renderOverview();
     const selectedStore = lastStores.find((store) => store.id === currentStoreId);
     const storeName = finances.scope?.storeName || selectedStore?.name;
     const isStoreScope = finances.scope?.type === "STORE" && !!storeName;
@@ -3499,19 +3534,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     });
   }
   function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
-  // Signed in, the same gradient sits behind every page; only one of the two runs at a time.
-  let disposeDashboardShader = null;
-  function startDashboardShader() {
-    if (disposeDashboardShader) return;
-    disposeDashboardShader = () => {};
-    const host = document.querySelector("[data-dashboard-shader]");
-    if (!host) return;
-    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
-      const dispose = await mountLoginShader(host, { still: true });
-      if (document.body.classList.contains("is-logged-in")) disposeDashboardShader = dispose; else dispose();
-    });
-  }
-  function stopDashboardShader() { disposeDashboardShader?.(); disposeDashboardShader = null; }
 
   function showLoggedOut() {
     const studioFrame = document.getElementById("merchantStudioFrame");
@@ -3525,7 +3547,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     loginFormEl.style.display = "grid";
     loggedInBarEl.style.display = "none";
     appEl.style.display = "none";
-    stopDashboardShader();
     startLoginShader();
   }
 
@@ -3534,7 +3555,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.body.classList.add("is-logged-in");
     loginFormEl.style.display = "none";
     stopLoginShader();
-    startDashboardShader();
     loggedInBarEl.style.display = "flex";
     applyProfileIdentity();
     // The profile name comes from the sessions list; fetch it now, not only when the menu opens.
@@ -3663,8 +3683,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       const paymentStore = (selectedStore?.checkoutMode || "payment") === "payment";
 
       const kycBadge = document.getElementById("kycBadge");
-      const dashboardStatusLabels = { NOT_SUBMITTED: "Pendiente de envío", NOT_CONFIGURED: "Sin configurar" };
-      kycBadge.textContent = paymentStore ? dashboardStatusLabels[kyc.status] || kyc.status : "No requerido para esta tienda";
+      kycBadge.textContent = paymentStore ? kycStatusLabel(kyc.status) : "No requerido para esta tienda";
       kycBadge.className = "badge " + (paymentStore ? kyc.status : "");
       // The level card (usage, 80%/100% banners, upgrade actions) must stay
       // visible whenever we have limits data, even once KYC is APPROVED — an
@@ -3680,7 +3699,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
       const invBadge = document.getElementById("invoicingBadge");
       const invStatus = invoicing.status || (invoicing.cuis ? "CONFIGURED" : "NOT_CONFIGURED");
-      invBadge.textContent = paymentStore ? dashboardStatusLabels[invStatus] || invStatus : "No requerido para esta tienda";
+      invBadge.textContent = paymentStore ? kycStatusLabel(invStatus) : "No requerido para esta tienda";
       invBadge.className = "badge " + (paymentStore ? invoicing.cuis ? "APPROVED" : "NOT_CONFIGURED" : "");
       document.getElementById("invoicingSection").style.display = !paymentStore || !invoicing.cuis ? "block" : "none";
       document.getElementById("invoicingModeNotice").hidden = paymentStore;

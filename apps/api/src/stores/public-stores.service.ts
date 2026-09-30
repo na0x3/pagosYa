@@ -16,6 +16,7 @@ export class PublicStoresService implements OnModuleDestroy {
   private readonly pendingStoreViews = new Map<string, number>();
   private storeViewFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private storeViewFlushPromise: Promise<void> | null = null;
+  private destroyed = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -23,7 +24,7 @@ export class PublicStoresService implements OnModuleDestroy {
 
   private queueStoreView(storeId: string): void {
     this.pendingStoreViews.set(storeId, (this.pendingStoreViews.get(storeId) ?? 0) + 1);
-    if (this.storeViewFlushTimer || this.storeViewFlushPromise) return;
+    if (this.destroyed || this.storeViewFlushTimer || this.storeViewFlushPromise) return;
     this.storeViewFlushTimer = setTimeout(() => {
       this.storeViewFlushTimer = null;
       void this.flushPendingStoreViews();
@@ -40,7 +41,8 @@ export class PublicStoresService implements OnModuleDestroy {
     if (!batch.length) return;
     this.pendingStoreViews.clear();
     this.storeViewFlushPromise = (async () => {
-      const results = await Promise.allSettled(batch.map(([storeId, count]) => this.prisma.store.update({
+      // An async callback turns a synchronous throw (e.g. a client without store.update) into a rejection allSettled can report.
+      const results = await Promise.allSettled(batch.map(async ([storeId, count]) => this.prisma.store.update({
         where: { id: storeId },
         data: { viewCount: { increment: count } },
       })));
@@ -53,9 +55,12 @@ export class PublicStoresService implements OnModuleDestroy {
     })();
     try {
       await this.storeViewFlushPromise;
+    } catch (error) {
+      // Runs from a timer: nothing may escape into the process.
+      this.logger.warn(`Storefront view flush failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this.storeViewFlushPromise = null;
-      if (this.pendingStoreViews.size && !this.storeViewFlushTimer) {
+      if (!this.destroyed && this.pendingStoreViews.size && !this.storeViewFlushTimer) {
         this.storeViewFlushTimer = setTimeout(() => {
           this.storeViewFlushTimer = null;
           void this.flushPendingStoreViews();
@@ -65,6 +70,11 @@ export class PublicStoresService implements OnModuleDestroy {
     }
   }
   async onModuleDestroy(): Promise<void> {
+    this.destroyed = true;
+    if (this.storeViewFlushTimer) {
+      clearTimeout(this.storeViewFlushTimer);
+      this.storeViewFlushTimer = null;
+    }
     await this.flushPendingStoreViews();
   }
   /**
@@ -176,6 +186,7 @@ export class PublicStoresService implements OnModuleDestroy {
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
+        include: { subscriptionOptions: { orderBy: { cadence: "asc" }, select: { cadence: true, discountPercent: true } } },
       }),
       this.prisma.category.findMany({ where: { storeId: store.id }, orderBy: { sortOrder: "asc" } }),
       this.prisma.storeLink.findMany({ where: { storeId: store.id }, orderBy: { sortOrder: "asc" } }),
@@ -231,7 +242,7 @@ export class PublicStoresService implements OnModuleDestroy {
       dna: look?.dna ?? null,
       confirmationMotif: look?.confirmationMotif ?? null,
       storeName: store.name,
-      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled,
+      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled, subscriptionsEnabled: store.subscriptionsEnabled,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
       bannerUrl: store.bannerUrl,
@@ -366,6 +377,7 @@ export class PublicStoresService implements OnModuleDestroy {
         discountStartsAt: item.discountStartsAt?.toISOString() ?? null,
         discountEndsAt: item.discountEndsAt?.toISOString() ?? null,
         soldCount: soldByProduct.get(item.id) ?? 0,
+        subscriptionOptions: store.subscriptionsEnabled && item.fulfillmentType !== "DIGITAL" ? item.subscriptionOptions : [],
       })),
     };
   }

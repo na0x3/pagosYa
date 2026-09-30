@@ -112,6 +112,7 @@ function reportPurchase(order: OrderSummary) {
 }
 
 export function renderSuccess(order: OrderSummary, preview = false) {
+  try { sessionStorage.removeItem("pagosya_subscription_checkout"); } catch { /* nothing to clear */ }
   document.body.classList.add("payment-page", "payment-success-page");
   const cart = Array.isArray(order.metadata?.cart) ? order.metadata.cart as CartLine[] : null;
   const storeCheckout = Boolean(cart);
