@@ -164,7 +164,8 @@ export class DomainCommerceService {
     return hosted;
   }
   private async advance(order: DomainOrder) {
-    const c = assertDomainCommerceReady(this.config, this.fx.current());
+    // The price is already persisted on the order: fulfilment must not depend on the FX rate.
+    const c = assertDomainCommerceReady(this.config, undefined, { skipRate: true });
     if (order.sandbox !== c.sandbox) return; // An environment switch must never promote a sandbox purchase.
     const payment = order.paymentIntentId ? await this.prisma.paymentIntent.findUnique({ where: { id: order.paymentIntentId }, include: { transactions: { where: { type: 'REFUND', status: 'SUCCEEDED' } } } }) : null;
     if (!payment) return;
