@@ -111,6 +111,43 @@ describe("SubscribersService", () => {
     expect(email.send).toHaveBeenCalledTimes(1);
   });
 
+  it("repeat apply is a no-op: keeps the pending date and sends no email", async () => {
+    const { prisma, email, service } = setup();
+    prisma.paymentLink.findFirst.mockResolvedValue({ id: "p1", amount: 9000, variants: [], extras: [], status: "ACTIVE" });
+    prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, pendingUnitAmount: 8100, pendingFrom: new Date(Date.now() + 3 * 86_400_000) }]);
+    const result = await service.reprice("merchant_1", "store_1", "p1");
+    expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
+    expect(email.send).not.toHaveBeenCalled();
+    expect(result.affected).toBe(0);
+  });
+
+  it("reverting the price clears a stale pending price without emailing", async () => {
+    const { prisma, email, service } = setup();
+    prisma.paymentLink.findFirst.mockResolvedValue({ id: "p1", amount: 8000, variants: [], extras: [], status: "ACTIVE" });
+    prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, pendingUnitAmount: 8100, pendingFrom: new Date(Date.now() + 3 * 86_400_000) }]);
+    await service.reprice("merchant_1", "store_1", "p1");
+    expect(prisma.customerSubscription.update).toHaveBeenCalledWith({ where: { id: productSubscription.id }, data: { pendingUnitAmount: null, pendingFrom: null } });
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("skips a subscriber whose variant no longer exists when repricing", async () => {
+    const { prisma, email, service } = setup();
+    prisma.paymentLink.findFirst.mockResolvedValue({ id: "p1", amount: 9000, variants: [], extras: [], status: "ACTIVE" });
+    prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, variantId: "gone" }]);
+    const result = await service.reprice("merchant_1", "store_1", "p1");
+    expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
+    expect(email.send).not.toHaveBeenCalled();
+    expect(result.affected).toBe(0);
+  });
+
+  it("answers 400 to a cadence change when the subscribed variant no longer exists", async () => {
+    const { prisma, service } = setup();
+    prisma.customerSubscription.findUnique.mockResolvedValue({ ...productSubscription, variantId: "gone" });
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "WEEKLY", discountPercent: 5 }]);
+    await expect(service.publicAct(token, { action: "change_cadence", cadence: "WEEKLY" })).rejects.toThrow("La presentación que elegiste ya no está disponible.");
+    expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
+  });
+
   it("summarises live subscriptions normalised to 30 days", async () => {
     const { prisma, service } = setup();
     prisma.customerSubscription.findMany.mockResolvedValue([

@@ -97,7 +97,14 @@ export class SubscribersService {
     let affected = 0;
     for (const subscription of subscribers) {
       const unit = this.lockedUnit(product, subscription, subscription.discountPercent ?? 0);
-      if (unit === subscription.unitAmount) continue;
+      if (unit === null) continue;
+      if (unit === subscription.unitAmount) {
+        if (subscription.pendingUnitAmount !== null || subscription.pendingFrom) {
+          await this.prisma.customerSubscription.update({ where: { id: subscription.id }, data: { pendingUnitAmount: null, pendingFrom: null } });
+        }
+        continue;
+      }
+      if (subscription.pendingUnitAmount === unit && subscription.pendingFrom) continue;
       await this.prisma.customerSubscription.update({ where: { id: subscription.id }, data: { pendingUnitAmount: unit, pendingFrom: effectiveFrom } });
       affected += 1;
       const money = `${((unit * (subscription.quantity ?? 1)) / 100).toFixed(2)} ${subscription.currency ?? "BOB"}`;
@@ -107,8 +114,9 @@ export class SubscribersService {
     return { affected, effectiveFrom: effectiveFrom.toISOString() };
   }
 
-  private lockedUnit(product: { amount: number; variants: Prisma.JsonValue; extras: Prisma.JsonValue }, subscription: CustomerSubscription, discountPercent: number) {
-    const variant = readProductVariants(product.variants).find(entry => entry.id === subscription.variantId);
+  private lockedUnit(product: { amount: number; variants: Prisma.JsonValue; extras: Prisma.JsonValue }, subscription: CustomerSubscription, discountPercent: number): number | null {
+    const variant = subscription.variantId ? readProductVariants(product.variants).find(entry => entry.id === subscription.variantId) : undefined;
+    if (subscription.variantId && !variant) return null;
     const extras = readProductExtras(product.extras);
     const picked = subscription.extraIds.flatMap(id => extras.filter(extra => extra.id === id));
     const base = variant?.amount ?? product.amount;
@@ -128,8 +136,10 @@ export class SubscribersService {
     if (!dto.cadence || !offer) throw new BadRequestException("Esa frecuencia ya no está disponible.");
     const product = await this.prisma.paymentLink.findFirst({ where: { id: subscription.paymentLinkId!, status: "ACTIVE" } });
     if (!product) throw new BadRequestException("Este producto ya no está disponible.");
+    const unitAmount = this.lockedUnit(product, subscription, offer.discountPercent);
+    if (unitAmount === null) throw new BadRequestException("La presentación que elegiste ya no está disponible.");
     const updated = await this.prisma.customerSubscription.update({ where: { id: subscription.id }, data: {
-      cadence: dto.cadence, discountPercent: offer.discountPercent, unitAmount: this.lockedUnit(product, subscription, offer.discountPercent), pendingUnitAmount: null, pendingFrom: null,
+      cadence: dto.cadence, discountPercent: offer.discountPercent, unitAmount, pendingUnitAmount: null, pendingFrom: null,
     } });
     return this.view(updated);
   }
