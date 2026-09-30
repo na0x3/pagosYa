@@ -1,6 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { PaymentIntentStatus, PaymentLinkStatus } from "@prisma/client";
 import { PaymentIntentsService } from "./payment-intents.service";
+import { productSubscriptionKey } from "../operations/subscription-pricing";
 
 function noopConfig() {
   return { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) } as any;
@@ -665,5 +666,48 @@ describe("PaymentIntentsService carrier shipments", () => {
 
     expect(tx.storeOrder.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "order_1" } }));
     expect(tx.shipment.updateMany).toHaveBeenCalledWith({ where: { orderId: "order_1", status: "BOOKING" }, data: { status: "CANCELED", nextAttemptAt: null } });
+  });
+});
+
+describe("PaymentIntentsService subscription enrollment", () => {
+  it("starts the buyer's subscription when the first order is paid and puts the manage link in the receipt", async () => {
+    const activeKey = productSubscriptionKey("store_1", { paymentLinkId: "p1", variantId: null, extraIds: [] }, "ana@mail.com");
+    const metadata = {
+      storeId: "store_1",
+      cart: [{ paymentLinkId: "p1", name: "Café 500 g", quantity: 2, unitAmount: 7200, subscription: { cadence: "MONTHLY", discountPercent: 10, lockedUnitAmount: 7200 } }],
+      subscriptionConsent: { text: "Acepto…", at: "2026-10-01T15:00:00.000Z" },
+    };
+    const intentRow = { id: "pi_1", livemode: true, amount: 14400, currency: "BOB", status: "SUCCEEDED", customerEmail: "ana@mail.com", customerName: "Ana", customerPhone: null, consumerUserId: null, metadata };
+    const tx: any = {
+      $queryRaw: jest.fn().mockResolvedValue([{ status: "PROCESSING", amount: 14400, customerName: "Ana", customerDocument: null, metadata }]),
+      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m1", name: "Tienda", settlementMode: "T0" }) },
+      transaction: { create: jest.fn().mockResolvedValue({ id: "tx_1" }) },
+      paymentIntent: { update: jest.fn().mockResolvedValue(intentRow) },
+      storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", storeId: "store_1", status: "AWAITING_PAYMENT", merchantId: "m1", fulfillmentMethod: "pickup", fulfillmentLocationId: "loc_1", fulfillmentLocationName: "Centro" }), update: jest.fn() },
+      shipment: { updateMany: jest.fn() },
+      debtRecord: { updateMany: jest.fn() },
+      subscriptionInvoice: { updateMany: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
+      appointment: { updateMany: jest.fn() },
+      storeRetention: { findUnique: jest.fn().mockResolvedValue({ settings: { emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: "Pedido {{order}}", body: "Hola {{customer}}" } } } } }) },
+      storeEmailDelivery: { upsert: jest.fn() },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([{ id: "p1", fulfillmentType: "PHYSICAL", variants: [], name: "Café 500 g" }]) },
+      productSubscriptionOption: { findMany: jest.fn().mockResolvedValue([{ paymentLinkId: "p1", cadence: "MONTHLY", discountPercent: 10 }]) },
+      customerSubscription: {
+        findMany: jest.fn().mockResolvedValueOnce([]).mockResolvedValue([{ id: "cm1sub0000000000000000001", activeKey }]),
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn(),
+      },
+    };
+    const config = { get: jest.fn((key: string) => key === "app.checkoutOrigin" ? "https://pagar.test" : key === "app.orderTrackingSecret" ? "secret" : { bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
+    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any,
+      { buildCaptureJournal: jest.fn().mockReturnValue([]), postJournalEntry: jest.fn(), generateGroupId: jest.fn() } as any,
+      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any);
+    for (const method of ["decrementStockForCart", "recordCartSales", "recordProductStats", "sendReceiptEmail", "sendDebtPaymentNotification"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
+
+    await (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION");
+
+    expect(tx.customerSubscription.createMany).toHaveBeenCalledWith(expect.objectContaining({ skipDuplicates: true }));
+    expect(tx.customerSubscription.createMany.mock.calls[0][0].data[0]).toEqual(expect.objectContaining({ sourceOrderId: "order_1", merchantId: "m1", activeKey }));
+    expect(tx.storeEmailDelivery.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ body: expect.stringContaining("Administra tu suscripción: https://pagar.test/suscripcion/") }) }));
   });
 });

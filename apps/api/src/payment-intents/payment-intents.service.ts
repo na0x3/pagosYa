@@ -26,6 +26,7 @@ import { LimitsWarningService } from "../limits/limits-warning.service";
 import { InboxService } from "../inbox/inbox.service";
 import { markBusinessDocumentPaid } from "../business-documents/cobro-payment";
 import { emitStoreEvent, orderEventPayload } from "../extensions/store-events";
+import { applyRenewalPaid, createSubscriptionsFromOrder } from "../operations/subscription-enrollment";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -650,14 +651,19 @@ export class PaymentIntentsService {
         await this.decrementStockForCart(tx, current.metadata);
         await this.recordCartSales(tx, merchantId, updated.id, current.metadata);
         await this.recordProductStats(tx, merchantId, current.metadata);
-        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true } });
+        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true, merchantId: true, fulfillmentMethod: true, fulfillmentLocationId: true, fulfillmentLocationName: true } });
+        const enrollment = order && typeof tx.productSubscriptionOption?.findMany === "function" ? await createSubscriptionsFromOrder(tx, {
+          intent: { id: updated.id, livemode: updated.livemode, currency: updated.currency, customerName: updated.customerName, customerEmail: updated.customerEmail, customerPhone: updated.customerPhone, consumerUserId: updated.consumerUserId, metadata: updated.metadata },
+          order: { id: order.id, storeId: order.storeId, merchantId: order.merchantId, fulfillmentMethod: order.fulfillmentMethod, fulfillmentLocationId: order.fulfillmentLocationId, fulfillmentLocationName: order.fulfillmentLocationName },
+          manage: { checkoutOrigin: this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174', secret: this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET },
+        }) : null;
         if (order?.storeId && updated.livemode) {
           const cart = (updated.metadata as {cart?:CartInventoryLine[]} | null)?.cart;
           const lineCurrency = lineCurrencyFor({ currency: updated.currency, metadata: updated.metadata });
           const originalTotal = invoiceAmount.currency !== updated.currency ? ` (${formatAmount(invoiceAmount.amount, invoiceAmount.currency)})` : '';
           const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
           const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
-          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`},{email:updated.customerEmail,name:updated.customerName});
+          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}${enrollment?.emailBlock ? `\n\n${enrollment.emailBlock}` : ''}`},{email:updated.customerEmail,name:updated.customerName});
           // receiptSourceId is the sourceId queueStoreEmail was just called with,
           // which is what lets the thread find that receipt row again once this
           // transaction has committed and file it into the conversation.
@@ -690,6 +696,7 @@ export class PaymentIntentsService {
           where: { paymentIntentId, status: "DUE" },
           data: { status: "PAID", paidAt: new Date() },
         });
+        if (typeof tx.subscriptionInvoice?.findFirst === "function" && typeof tx.customerSubscription?.updateMany === "function") await applyRenewalPaid(tx, paymentIntentId);
         // A cobro (business document) paid through its public link; never throws (see the helper).
         await markBusinessDocumentPaid(tx, updated);
         await tx.appointment.updateMany({
