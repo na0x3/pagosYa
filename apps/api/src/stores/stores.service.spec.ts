@@ -834,6 +834,19 @@ describe("StoresService.createCartCheckout — subscription lines", () => {
       .rejects.toThrow('Esa frecuencia no está disponible para "Café 500 g".');
   });
 
+  it("rejects a cart that mixes subscription cadences", async () => {
+    const { service, prisma } = setup();
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([monthlyOffer, { ...monthlyOffer, cadence: "WEEKLY" }]);
+    await expect(service.createCartCheckout("abc123", { items: [sub(), sub({ subscriptionCadence: "WEEKLY" })], subscriptionConsent: true } as never))
+      .rejects.toThrow("Por ahora solo puedes suscribirte a una frecuencia por pedido. Separa las frecuencias en pedidos distintos.");
+  });
+
+  it("accepts two subscription lines of the same cadence", async () => {
+    const { service } = setup();
+    await expect(service.createCartCheckout("abc123", { items: [sub(), sub({ quantity: 2 })], subscriptionConsent: true } as never, true))
+      .resolves.toMatchObject({ subtotal: 7200 * 3 });
+  });
+
   it("rejects a digital product on subscription", async () => {
     const { service, prisma } = setup({ digitalGoodsEnabled: true }, { fulfillmentType: "DIGITAL" });
     prisma.digitalAsset = { findMany: jest.fn().mockResolvedValue([{ id: "asset_1", productId: "p1" }]) };

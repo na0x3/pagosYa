@@ -80,6 +80,7 @@ export class StoreCheckoutService {
 
     const subscriptionItems = dto.items.filter(item => item.subscriptionCadence);
     if (subscriptionItems.length && !store.subscriptionsEnabled) throw new BadRequestException("Esta tienda no ofrece suscripciones.");
+    if (new Set(subscriptionItems.map(item => item.subscriptionCadence)).size > 1) throw new BadRequestException("Por ahora solo puedes suscribirte a una frecuencia por pedido. Separa las frecuencias en pedidos distintos.");
     if (subscriptionItems.length && !quoteOnly && dto.subscriptionConsent !== true) throw new BadRequestException("Acepta las condiciones de la suscripción para continuar.");
     const offers = subscriptionItems.length
       ? await this.prisma.productSubscriptionOption.findMany({ where: { paymentLinkId: { in: subscriptionItems.map(item => item.paymentLinkId) } } })
