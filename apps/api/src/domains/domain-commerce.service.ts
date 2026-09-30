@@ -33,8 +33,9 @@ export function purchasableHostname(input: string): string {
   }
   return hostname;
 }
-function supported(row: DomainAvailability | undefined): row is DomainAvailability {
-  return Boolean(row?.purchasable === true && row.premium === false && row.purchaseType === 'registration' &&
+// Name.com omits `premium` for ordinary names, so only an explicit true excludes a domain.
+export function supported(row: DomainAvailability | undefined): row is DomainAvailability {
+  return Boolean(row?.purchasable === true && row.premium !== true && row.purchaseType === 'registration' &&
     Number.isFinite(row.purchasePrice) && row.purchasePrice > 0 && Number.isFinite(row.renewalPrice) && row.renewalPrice > 0);
 }
 export function paidDomainOrder(order: DomainOrder, payment: { status: string; amount: number; currency: string; merchantId: string; livemode: boolean; railId: string | null }, platformId: string) {
