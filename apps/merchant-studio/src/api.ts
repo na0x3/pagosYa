@@ -360,6 +360,10 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project${before ? `?before=${before}` : ""}`);
   }
 
+  addStandardPages(storeId: string, revision: number): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/standard-pages`, { method: 'POST', body: JSON.stringify({ revision }) });
+  }
+
   setSourceMotion(storeId: string, revision: number, motion: SourceMotionMode, scrollFeel?: SourceScrollFeel): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/motion`, { method: 'PATCH', body: JSON.stringify({ revision, motion, scrollFeel }) });
   }
