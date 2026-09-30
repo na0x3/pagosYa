@@ -867,6 +867,15 @@ describe("StoresService.createCartCheckout — subscription lines", () => {
     expect(quote.discountAmount).toBe(0);
   });
 
+  it("rejects a subscription cart that store credit would pay in full, but allows partial credit", async () => {
+    const { service, prisma } = setup({ creditsEnabled: true });
+    prisma.storeCredit = { findFirst: jest.fn().mockResolvedValue({ id: "cr_1", currency: "BOB", balance: 100000, active: true, expiresAt: null }) };
+    await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true, creditCode: "SALDO" } as never))
+      .rejects.toThrow("Para suscribirte necesitamos un pago con enlace de renovación");
+    prisma.storeCredit.findFirst.mockResolvedValue({ id: "cr_1", currency: "BOB", balance: 1000, active: true, expiresAt: null });
+    await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true, creditCode: "SALDO" } as never, true)).resolves.toMatchObject({ creditAmount: 1000 });
+  });
+
   it("rejects carrier shipping for a subscription", async () => {
     const { service, prisma } = setup({ shippingEnabled: true, shippingCarriersEnabled: true });
     prisma.deliveryZone.findMany.mockResolvedValue([{ id: "zone_1", name: "Courier", fee: 1500, currency: "BOB", carrierId: "car_servientrega", isActive: true, minimumOrder: 0, maximumOrder: null, freeAbove: null, minimumWeightGrams: null, maximumWeightGrams: null, countryCodes: [], postalPrefixes: [], departments: [], sizeClasses: [] }]);
