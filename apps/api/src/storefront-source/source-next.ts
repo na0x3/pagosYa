@@ -20,11 +20,41 @@ export const nextSourceFile = (path: string) => /^components\/(?:[a-zA-Z0-9_-]+\
 export const isNextSource = (files: SourceProjectFileDto[] = []) => files.some(f => f.path === NEXT_SOURCE_MARKER);
 export const nextPages = [{ name: 'home', path: 'index.html' }, { name: 'product', path: 'product.html' }, { name: 'checkout', path: 'checkout.html' }] as const;
 
-/** Explicit page-* convention avoids treating shared components as routes. */
+/** Folders under components/ whose files are standard store pages (spec 2026-09-30-store-page-architecture). The value
+ * is the prefix of the URL for a file the table below does not know. */
+const STANDARD_PAGE_GROUPS: Record<string, string> = { pages: '', catalog: '', auth: 'acceso-', account: 'cuenta-' };
+/** Spanish URL slug of each known page, keyed by `group/file`. */
+const STANDARD_PAGE_SLUGS: Record<string, string> = {
+  'pages/faq': 'faq', 'pages/shipping': 'envios', 'pages/refund-policy': 'reembolsos', 'pages/privacy': 'privacidad', 'pages/terms': 'terminos',
+  'pages/cookies': 'cookies', 'pages/contact': 'contacto', 'pages/about': 'nosotros', 'pages/not-found': '404',
+  'catalog/collections': 'colecciones', 'catalog/search': 'buscar',
+  'auth/login': 'acceso-ingresar', 'auth/register': 'acceso-registro', 'auth/forgot-password': 'acceso-olvide-mi-contrasena', 'auth/reset-password': 'acceso-restablecer-contrasena',
+  'account/orders': 'cuenta-pedidos', 'account/addresses': 'cuenta-direcciones', 'account/profile': 'cuenta-perfil', 'account/downloads': 'cuenta-descargas',
+  'account/payment-methods': 'cuenta-metodos-de-pago', 'account/subscriptions': 'cuenta-suscripciones',
+};
+const STANDARD_PAGE_FILE = /^components\/(pages|catalog|auth|account)\/([a-z][a-z0-9-]{0,47})\.tsx$/;
+
+/** The route of a file in one of the standard page folders, or null for any other file (shared components never route). */
+export function standardPageRoute(path: string): { name: string; path: string } | null {
+  const match = STANDARD_PAGE_FILE.exec(path);
+  if (!match) return null;
+  const name = `${match[1]}/${match[2]}`;
+  return { name, path: `${STANDARD_PAGE_SLUGS[name] ?? `${STANDARD_PAGE_GROUPS[match[1]]}${match[2]}`}.html` };
+}
+
+/** Explicit page-* convention avoids treating shared components as routes; the standard page folders are explicit too. */
 export function nextContentPages(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop'): Array<{ name: string; path: string }> {
-  return [...nextPages.filter(page => purpose === 'shop' || page.name === 'home' || files.some(file => file.path === `components/${page.name}.tsx`)),
+  const pages = [...nextPages.filter(page => purpose === 'shop' || page.name === 'home' || files.some(file => file.path === `components/${page.name}.tsx`)),
     ...files.filter(file => /^components\/page-(?!index\.|product\.|checkout\.)[a-z][a-z0-9-]{0,47}\.tsx$/.test(file.path))
-      .map(file => ({ name: file.path.slice(11, -4), path: file.path.slice(16, -4) + '.html' }))];
+      .map(file => ({ name: file.path.slice(11, -4), path: file.path.slice(16, -4) + '.html' })),
+    ...files.flatMap(file => standardPageRoute(file.path) ?? [])];
+  const owners = new Map<string, string>();
+  for (const page of pages) {
+    const owner = `components/${page.name}.tsx`, other = owners.get(page.path);
+    if (other) throw new BadGatewayException(`${other} y ${owner} producen la misma página ${page.path}. Cambia el nombre de uno.`);
+    owners.set(page.path, owner);
+  }
+  return pages;
 }
 
 export const SOURCE_NEXT_INSTRUCTIONS = `Generate a real Next.js storefront using React, TypeScript and Tailwind CSS 3. The platform supplies the trusted Next.js Pages Router scaffold, package.json, configuration, runtime and build tooling. Return ONLY components/**/*.tsx and styles/globals.css. Required default-export React components: components/home.tsx, components/product.tsx, components/checkout.tsx. Extract a shared Header, Footer and other reusable pieces into components/. Each page must reuse the same actual shared navigation, typography and brand. Use className with complete literal Tailwind utility names, responsive prefixes, arbitrary values and normal React event handlers/useState/useEffect for interaction. Use styles/globals.css for shared tokens, @font-face, runtime commerce selectors (kit surfaces in its pagosya-kit block) and custom animation. The platform adds @tailwind directives. ${SOURCE_CREATIVE_TOOLS}\n${SOURCE_UI_TOOLS}\nReact and relative component imports are available; do not import remote resources, server modules, Next APIs or CSS from components. Do not output framework configuration, HTML files, site.js, styles.css or compiled bundles. Do not use dangerouslySetInnerHTML, eval, new Function, dynamic imports, script tags or authored fetch calls. Use ordinary anchors with index.html, product.html and checkout.html hrefs, because the same components run in isolated preview and Next.js static exports. The framework supplies document/head/scripts and SEO; components return page content, never html/head/body tags.
