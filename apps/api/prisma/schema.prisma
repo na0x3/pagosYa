@@ -691,6 +691,7 @@ model Store {
   digitalAssets                DigitalAsset[]
   redirects                    StoreRedirect[]
   reviews                      StoreReview[]
+  customers                    StoreCustomer[]
   articles                     StoreArticle[]
   bundles                      StoreBundle[]
   bundlesEnabled               Boolean                          @default(false)
@@ -3183,4 +3184,52 @@ model ExtensionDelivery {
 
   @@unique([eventId, extensionId])
   @@index([status, nextAttemptAt])
+}
+
+// A shopper's account in ONE store (spec 2026-09-30-store-customer-accounts-design): separate from the pagosYa-wide
+// ConsumerUser, never shared between stores.
+model StoreCustomer {
+  id              String                 @id @default(cuid())
+  storeId         String
+  store           Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email           String
+  name            String
+  phone           String?
+  hashedPassword  String
+  emailVerifiedAt DateTime?
+  deletedAt       DateTime?
+  /// At most 10 entries: { id, label, recipient, phone, department, city, street, references }.
+  addresses       Json                   @default("[]")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  sessions        StoreCustomerSession[]
+  tokens          StoreCustomerToken[]
+
+  @@unique([storeId, email])
+}
+
+model StoreCustomerSession {
+  id          String        @id @default(cuid())
+  customerId  String
+  customer    StoreCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  hashedToken String        @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([customerId, expiresAt])
+}
+
+/// Single-use email tokens: VERIFY_EMAIL (24 h) and RESET_PASSWORD (1 h). Only the SHA-256 digest is stored.
+model StoreCustomerToken {
+  id          String        @id @default(cuid())
+  customerId  String
+  customer    StoreCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  purpose     String
+  hashedToken String        @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([customerId, purpose])
 }
