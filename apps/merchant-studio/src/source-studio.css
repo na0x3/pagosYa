@@ -172,9 +172,7 @@
 /* The store appearing while YAPI builds (sub-project 3). */
 .is-live-draft{position:relative}
 .live-draft-badge{position:absolute;top:12px;left:50%;z-index:2;transform:translateX(-50%);display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgb(17 17 17 / 82%);color:#fff;font-size:12px;font-weight:600;letter-spacing:.01em;pointer-events:none;backdrop-filter:blur(6px)}
-.live-draft-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffd23f;animation:live-draft-pulse 1.4s ease-in-out infinite}
-@keyframes live-draft-pulse{50%{opacity:.35}}
-@media (prefers-reduced-motion:reduce){.live-draft-badge::before{animation:none}}
+.live-draft-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffd23f}
 
 .selection-panel { display: grid; gap: 6px; margin: 0 0 8px; }
 .selection-chip { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; padding: 3px 4px 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; overflow-wrap: anywhere; }

@@ -129,7 +129,7 @@ it('keeps the canvas toolbar to preview, code, ZIP and browser — no Editar dis
   expect(app.querySelector('#source-open-browser')).toBeTruthy();
 });
 
-it('while YAPI builds, its stars hop in a strip in the chat and leave the page alone, and they leave when it ends', async () => {
+it('while YAPI builds nothing animates: no thinking face, stars or code ticker in the chat or the preview', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
     { id: 'a1', role: 'ASSISTANT', content: 'Elige una dirección', createdAt: '2026-09-27', metadata: { directionChoices: [{ id: 'retro-americana', name: 'Retro americana', description: 'd', palette: { background: '#f6ecd6', surface: '#efd9a7', ink: '#2b1d14', accent: '#b5441b' }, fonts: { display: 'bebas-neue', text: 'rubik' } }] } },
@@ -139,13 +139,15 @@ it('while YAPI builds, its stars hop in a strip in the chat and leave the page a
   let finish: (value: any) => void = () => {};
   vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
   await mountSourceStudio(app);
-  expect(document.querySelector('.star-field:not(.star-field--work)')).toBeTruthy();
+  expect(document.querySelector('.star-field')).toBeTruthy();
   const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
   card.click();
-  await vi.waitFor(() => expect(app.querySelector('[data-build-stars] .star-field--work')).toBeTruthy());
-  expect(document.querySelector('.star-field:not(.star-field--work)')).toBeNull();
+  const working = await vi.waitFor(() => { const note = app.querySelector('[data-build-progress]')?.closest('.agent-note'); expect(note).toBeTruthy(); return note!; });
+  expect(working.querySelector('.yapi-mark, .is-thinking')).toBeNull();
+  expect(app.querySelector('.is-thinking, [data-face]')).toBeNull();
+  expect(app.querySelector('[data-build-stars], [data-build-code]')).toBeNull();
+  expect(document.querySelector('.star-field, .code-ticker')).toBeNull();
   finish({ userMessage: { id: 'u', role: 'USER', content: 'Usar Retro americana' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } });
-  await vi.waitFor(() => expect(app.querySelector('.star-field--work')).toBeNull());
 });
 
 it('lets the merchant pick a Claude model like any other', async () => {
@@ -164,22 +166,6 @@ it('offers 200 credits per request by default, enough for YAPI to build and chec
   await mountSourceStudio(app);
   const limit = await vi.waitFor(() => { const found = app.querySelector<HTMLInputElement>('#source-credit-limit'); expect(found).toBeTruthy(); return found!; });
   expect(limit.value).toBe('200');
-});
-
-it('types the store’s code in the chat while YAPI builds, and removes it when the build ends', async () => {
-  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
-  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
-    { id: 'a1', role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', createdAt: '2026-09-26', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'Café' }, { id: 'miga', name: 'Miga', reason: 'Pan' }, { id: 'huerta', name: 'Huerta', reason: 'Verde' }] } },
-  ] } as any);
-  let finish: (value: any) => void = () => {};
-  vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
-  await mountSourceStudio(app);
-  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-template-choice="miga"]'); expect(found).toBeTruthy(); return found!; });
-  card.click();
-  const ticker = await vi.waitFor(() => { const found = app.querySelector('[data-build-code] .code-ticker'); expect(found).toBeTruthy(); return found!; });
-  expect(ticker.getAttribute('aria-hidden')).toBe('true');
-  finish({ userMessage: { id: 'u', role: 'USER', content: 'Usar Miga' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } });
-  await vi.waitFor(() => expect(app.querySelector('.code-ticker')).toBeNull());
 });
 
 it('keeps only the latest set of Plantilla cards tappable', async () => {

@@ -9,7 +9,6 @@ import { merchantSafeText } from './source-merchant-copy';
 import { renderBuildStage, mountBuildStage, type BuildStageState } from './source-build-stage';
 import { mountFace, renderFaceMark } from './source-face';
 import { mountStarField } from './source-star-field';
-import { codeTickerLines, mountCodeTicker } from './source-code-ticker';
 import './source-build-progress.css';
 import { renderStoreReadiness } from './store-readiness';
 import { openRetention } from './retention';
@@ -163,12 +162,6 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   // YAPI's stars play over the whole Studio until a site exists (source-star-field.ts). The layer lives on <body>,
   // outside what render() replaces, so the stars keep their flight across re-renders.
   let starField: { destroy(): void } | null = null;
-  // The code YAPI "types" while it builds (source-code-ticker.ts): created once per build and moved into each
-  // re-rendered chat, so the typing never restarts mid-build.
-  let codeTicker: { element: HTMLElement; destroy(): void } | null = null;
-  // YAPI's stars hop in a strip in the chat while it builds; one leaps for each real step it reports.
-  let workStars: { element: HTMLElement; field: { destroy(): void; celebrate?: () => void } } | null = null;
-  let celebratedSteps = 0;
   let retrySubmission: RetrySubmission | null = null;
   let toastTimer: number | undefined;
   let mode = 'preview', mobile = false, page = 'index.html', filePath = 'index.html', draft: string | null = null;
@@ -296,8 +289,6 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const atBottom = stream && stream.scrollHeight - stream.scrollTop - stream.clientHeight < 80;
     const expanded = host.querySelector('details')?.open;
     host.innerHTML = buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`;
-    const steps = buildProgress?.steps.reduce((sum, step) => sum + ((step as { details?: unknown[] }).details?.length ?? 0), 0) ?? 0;
-    for (; celebratedSteps < steps; celebratedSteps++) workStars?.field.celebrate?.();
     const details = host.querySelector('details');
     if (details && expanded !== undefined) details.open = expanded;
     if (stream && atBottom) stream.scrollTop = stream.scrollHeight;
@@ -549,7 +540,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || generating || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
           <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div>
             ${messages.length ? messages.map(chatMessage).join('') : `<section class="conversation-welcome">${renderFaceMark({ size: 30 })}<strong>Tu sitio empieza con una conversación.</strong><p data-setup-prompt>${escape(setup?.prompt || `Antes de crear el sitio de ${store?.name || 'tu negocio'}, aclaremos tu negocio y el estilo que buscas. ¿Qué vendes y a quién quieres llegar?`)}</p></section>`}
-            ${generating ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request><p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta">${renderFaceMark({ thinking: true })}<strong>YAPI</strong></div><div data-build-stars></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div><div data-build-code></div></article>` : ''}
+            ${generating ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request><p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta"><strong>YAPI</strong></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div></article>` : ''}
             ${dirty() ? '<p class="source-chat-hint">Guarda o descarta la edición de código antes de pedir otro cambio.</p>' : ''}
             ${error ? `<p class="auth-error" role="alert">${escape(merchantSafeText(error))}</p>${retrySubmission ? `<button type="button" class="button button--secondary" id="source-retry-message" ${disabled(locked || historical() || Boolean(instruction.trim()) || assets.length > 0)}>Reintentar mensaje</button>` : ''}` : ''}
             ${!storeId ? '<section class="remote-empty-state"><strong>No hay una tienda todavía.</strong><p>Crea una tienda en el dashboard para comenzar.</p></section>' : ''}
@@ -583,20 +574,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     idleFace?.destroy();
     const idleStage = app.querySelector<HTMLElement>('.inspiration-stage [data-face]');
     idleFace = idleStage ? mountFace(idleStage) : null;
-    // The playground fills the page while there is no site; while YAPI builds, the stars move into the chat instead.
+    // The playground fills the page while there is no site; while YAPI builds nothing animates, so the stars leave.
     if (!version && !generating && !starField) starField = mountStarField(document.body);
     if ((version || generating) && starField) { starField.destroy(); starField = null; }
-    const starsHost = app.querySelector<HTMLElement>('[data-build-stars]');
-    if (starsHost && workStars) starsHost.append(workStars.element);
-    else if (starsHost) {
-      const field = mountStarField(starsHost, { count: 5, mode: 'work' });
-      workStars = { element: starsHost.querySelector<HTMLElement>('.star-field')!, field };
-      celebratedSteps = 0;
-    } else if (workStars) { workStars.field.destroy(); workStars = null; }
-    const codeHost = app.querySelector<HTMLElement>('[data-build-code]');
-    if (codeHost && codeTicker) codeHost.append(codeTicker.element);
-    else if (codeHost) codeTicker = mountCodeTicker(codeHost, codeTickerLines({ files: version?.snapshot.files, storeName: stores.find(s => s.id === storeId)?.name, items: Array.isArray(liveCatalog?.items) ? liveCatalog!.items as any[] : [] }));
-    else if (codeTicker) { codeTicker.destroy(); codeTicker = null; }
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {
       storeId, version, locked: busy || dirty() || historical(),

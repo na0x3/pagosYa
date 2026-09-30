@@ -5,6 +5,8 @@ export type AgentModelTurn = { calls: AgentModelCall[]; text?: string; output?: 
 export type AgentModel = (input: { instructions: string; transcript: unknown[]; tools: typeof AGENT_TOOLS }) => Promise<AgentModelTurn>;
 export type AgentRunResult = { status: 'finished' | 'limit' | 'failed'; reason?: string };
 export const AGENT_LIMITS = { toolCalls: 40, wallMs: 360_000, screenshots: 8 };
+/** A run on the merchant's own ChatGPT plan is free but slower than a paid API (calls of 20-90 s), so it gets twice the time. */
+export const agentLimits = (chatgptPlan: boolean) => chatgptPlan ? { ...AGENT_LIMITS, wallMs: AGENT_LIMITS.wallMs * 2 } : AGENT_LIMITS;
 
 /** Model ↔ tools until a gated finish, a limit, a second failed model call or cancellation. Never saves anything itself. */
 export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox; instructions: string; opening: unknown[]; limits?: Partial<typeof AGENT_LIMITS>; signal?: AbortSignal; onStep?: (step: AgentStep) => void | Promise<void>; now?: () => number; sleep?: (ms: number) => Promise<void> }): Promise<AgentRunResult> {

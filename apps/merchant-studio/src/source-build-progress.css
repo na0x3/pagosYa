@@ -14,11 +14,9 @@
 .source-build-progress li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0 9px 4px; color: #333; }
 .source-build-progress small { display: block; font-size: 11px; color: #777; }
 .build-state { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #bbb; border-radius: 5px; color: #555; }
-.build-state.is-running { border-radius: 50%; border-color: #dedede; border-top-color: #333; animation: source-build-spin 1s linear infinite; }
+.build-state.is-running { border-radius: 50%; border-color: #dedede; border-top-color: #333; }
 .build-duration { color: #888; font-size: 12px; }
 .build-waiting { color: #737373; font: 13px/1.6 Arial, Helvetica, sans-serif; }
-@keyframes source-build-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .build-state.is-running { animation: none; } }
 
 /* ---- Waiting room: the four openings YAPI chooses between, then the facts ---- */
 .yapi-stage { margin: 14px 0 6px; font: 13px/1.55 Arial, Helvetica, sans-serif; color: #444; }
@@ -26,7 +24,7 @@
 
 .yapi-stage__status { margin: 12px 0 7px; color: #2b2b2b; font-size: 13.5px; }
 .yapi-stage__meter { height: 4px; border-radius: 3px; background: #e8e4dc; overflow: hidden; }
-.yapi-stage__meter > span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6f8f74, #2f6f4e); transition: width .8s cubic-bezier(.3,.8,.3,1); }
+.yapi-stage__meter > span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6f8f74, #2f6f4e); }
 .yapi-stage__meta { display: flex; align-items: center; gap: 12px; margin: 7px 0 0; color: #7a7a7a; font-size: 12px; font-variant-numeric: tabular-nums; }
 .yapi-stage__link { background: none; border: 0; padding: 0; color: #5a6b5c; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .yapi-stage__link:hover { color: #2f6f4e; }
@@ -36,9 +34,6 @@
 .yapi-stage__steps .source-build-progress > summary { display: none; }
 .yapi-stage__steps .source-build-progress ol { padding-top: 0; }
 
-@media (prefers-reduced-motion: reduce) {
-  .yapi-stage__meter > span { transition: none; }
-}
 
 /* The stage also fills the main canvas while a store is being created, where it
    has far more room than the chat column it was first sized for. */

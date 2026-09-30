@@ -5,7 +5,9 @@ import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceUsage, type
 /** One estimated provider-cost allowance shared by conversation and all generation attempts. */
 export class SourceRequestBudget {
   private spent = 0;
-  constructor(readonly maxCredits = DEFAULT_MAX_CREDITS) {
+  /** `unmetered`: the run costs nothing (the merchant's own ChatGPT plan), so the allowance never stops it. Usage is still
+   * priced and the model must still be known, so what the provider would have billed stays measurable. */
+  constructor(readonly maxCredits = DEFAULT_MAX_CREDITS, private readonly unmetered = false) {
     if (!Number.isInteger(maxCredits) || maxCredits < 1 || maxCredits > 500) throw new BadRequestException('El límite debe ser de 1 a 500 créditos.');
   }
   reserve(model: string, inputTokens: number, requestedOutput: number, minimumOutput = 512) {
@@ -14,7 +16,7 @@ export class SourceRequestBudget {
     const input = Math.ceil(inputTokens);
     const cost = (output: number) => sourceUsage(pricedModel, { input_tokens: input, input_tokens_details: { cache_write_tokens: input }, output_tokens: output })!.providerMicroUsd;
     const outputRate = SOURCE_MODELS[pricedModel].output * (!isDeepSeek(model) && input > 272000 ? 1.5 : 1);
-    const available = this.maxCredits * CREDIT_MICRO_USD - this.spent;
+    const available = this.unmetered ? Infinity : this.maxCredits * CREDIT_MICRO_USD - this.spent;
     const outputTokens = Math.min(requestedOutput, Math.floor((available - cost(0)) / outputRate));
     if (outputTokens < minimumOutput) throw new BadRequestException('El límite restante no alcanza para continuar. Tu sitio sigue guardado. Puedes reducir el alcance del cambio o aumentar el límite; los intentos anteriores pueden tener costo API.');
     const reserved = cost(outputTokens);
