@@ -120,3 +120,13 @@ describe('information pages in the storefront runtime', () => {
     w.close();
   });
 });
+
+describe('information page styling', () => {
+  it('inherits the template colours and lays the nav out in a row', () => {
+    const at = commerce.indexOf('.pagosya-info-nav');
+    expect(at).toBeGreaterThan(-1);
+    const css = commerce.slice(at, at + 600);
+    expect(css).toMatch(/display:flex/);
+    expect(css).toMatch(/color:inherit/);
+  });
+});
