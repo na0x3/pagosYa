@@ -1,4 +1,4 @@
-import { nextContentPages, standardPageRoute } from './source-next';
+import { nextContentPages, standardPageRoute, validateNextSources } from './source-next';
 import { nextStoreFiles } from './fixtures/next-store';
 
 const file = (path: string) => ({ path, content: 'export default function P() { return null; }' });
@@ -43,5 +43,18 @@ describe('standard page routes', () => {
     const homeOnly = base().filter(f => !/components\/(product|checkout)\.tsx$/.test(f.path));
     expect(nextContentPages(homeOnly, 'portfolio').map(p => p.path)).toEqual(['index.html']);
     expect(nextContentPages(base(), 'portfolio').map(p => p.path)).toEqual(commerce);
+  });
+});
+
+describe('validating standard pages', () => {
+  const faq = { path: 'components/pages/faq.tsx', content: "import Header from '../Header';\nexport default function Faq() { return <><Header /><main id=\"contenido\"><h1>Preguntas frecuentes</h1></main></>; }" };
+
+  it('does not ask a content page for the checkout mount', () => {
+    expect(() => validateNextSources([...nextStoreFiles(), faq], 'shop')).not.toThrow();
+  });
+
+  it('still asks a hand-written page-SLUG page for the hooks it always needed', () => {
+    const old = { ...faq, path: 'components/page-faq.tsx' };
+    expect(() => validateNextSources([...nextStoreFiles(), old], 'shop')).toThrow(/page-faq necesita data-pagosya-checkout-page/);
   });
 });

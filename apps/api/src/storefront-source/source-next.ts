@@ -128,7 +128,7 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
   const missing: string[] = [];
   for (const page of nextContentPages(files, purpose)) {
     const markup = nextPageMarkup(files, page.name);
-    const hooks = purpose !== 'shop' ? (page.name === 'home' ? ['data-pagosya-status', 'data-pagosya-contact'] : ['data-pagosya-status']) : page.name === 'home' ? ['data-pagosya-catalog', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : page.name === 'product' ? ['data-pagosya-product-page', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : ['data-pagosya-checkout-page', 'data-pagosya-status'];
+    const hooks = purpose !== 'shop' ? (page.name === 'home' ? ['data-pagosya-status', 'data-pagosya-contact'] : ['data-pagosya-status']) : page.name === 'home' ? ['data-pagosya-catalog', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : page.name === 'product' ? ['data-pagosya-product-page', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : standardPageRoute(`components/${page.name}.tsx`) ? [] : ['data-pagosya-checkout-page', 'data-pagosya-status'];
     for (const hook of hooks) if (!new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup)) missing.push(`${page.name} necesita ${hook} en JSX visible.`);
   }
   const repairable = [
