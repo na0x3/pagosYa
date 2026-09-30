@@ -20,7 +20,7 @@ marked where they no longer describe current code.
 | Hop | State | Evidence |
 | --- | --- | --- |
 | Search a name | Real | `apps/api/src/stores/domains/domain-commerce.controller.ts:14` → `domain-commerce.service.ts:62-73` → `namecom.provider.ts:33-37`. Live `POST https://api.name.com/core/v1/domains:checkAvailability`, sandbox host swapped at `namecom.provider.ts:24`. |
-| See a price | Real, operator-defined | `domain-commerce.config.ts:26-32`. `usd × DOMAIN_BOB_PER_USD × (1 + DOMAIN_MARKUP_PERCENT/100)`, rounded up to centavos. There is no exchange-rate feed and no registrar-fee/tax line; both are absorbed by the operator's markup. |
+| See a price | Real, operator-defined | `domain-commerce.config.ts:26-32`. `usd × DOMAIN_BOB_PER_USD × (1 + DOMAIN_MARKUP_PERCENT/100)`, rounded up to centavos. The BOB/USD rate is now live from DolarApi (`domain-fx-rate.ts`, refreshed every 6h, `DOMAIN_FX_SOURCE` = `oficial`|`binance`), with `DOMAIN_BOB_PER_USD` as fallback. There is no registrar-fee/tax line; both are absorbed by the operator's markup. |
 | Hold a quote | Real | `domain-commerce.service.ts:74-82`. Persists a `DomainOrder` in `QUOTED` with a 15-minute `quoteExpiresAt`. |
 | Supply registrant contact | Real | Validated at `domain-commerce.dto.ts:10-20`; collected by `apps/merchant-dashboard/src/domain-shop.mjs:4-9` and rendered at `domain-shop.mjs:33`. Frozen onto the order at `domain-commerce.service.ts:104`. |
 | Pay | Real, indirect | `domain-commerce.service.ts:83-111`. Reserves both hostnames and creates a `PaymentIntent` on the platform merchant (`:99`). The merchant pays in the checkout app through the `client_secret` link built at `:47-53`. QR-only is enforced at `apps/api/src/payment-intents/payment-intents.service.ts:302-304`, the rail is pinned at `:313-317`, and the checkout UI forces QR at `apps/checkout/src/main.ts:9328-9329` and `:9416`. |
@@ -92,7 +92,7 @@ match the documentation.
 | `NAMECOM_USERNAME` | `configuration.ts:215` | Blocks activation at `domain-commerce.config.ts:16`; the provider also refuses at `namecom.provider.ts:23`. |
 | `NAMECOM_API_TOKEN` | `configuration.ts:216` | Same as above. |
 | `DOMAIN_PLATFORM_MERCHANT_ID` | `configuration.ts:217` | Blocks activation. Even when set, checkout requires a matching `ACTIVE` `Merchant` row that is not the buyer (`domain-commerce.service.ts:86-87`), and payment matching requires it (`:28`). |
-| `DOMAIN_BOB_PER_USD` | `configuration.ts:218` | `Number(undefined ?? 0)` → 0 → blocked by the `> 0` check at `domain-commerce.config.ts:17`. |
+| `DOMAIN_BOB_PER_USD` | `configuration.ts:218` | `Number(undefined ?? 0)` → 0 → blocked by the `> 0` check at `domain-commerce.config.ts:17`. Now only the fallback: the live DolarApi rate takes precedence; blocked only when neither exists. |
 | `DOMAIN_MARKUP_PERCENT` | `configuration.ts:219` | Defaults to 0, which passes the `>= 0` check. **The platform sells at cost, silently.** Absence is not an error. |
 | `DOMAIN_CLOUDFLARE_API_TOKEN` | `configuration.ts:220` | Required only in live mode (`domain-commerce.config.ts:20`). Absent in live mode → 503 on every call. |
 | `DOMAIN_CLOUDFLARE_ZONE_ID` | `configuration.ts:221` | Same as above; also interpolated into every Cloudflare URL (`cloudflare-hosting.provider.ts:16`). |

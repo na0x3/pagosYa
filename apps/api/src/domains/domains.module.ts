@@ -6,6 +6,7 @@ import { CustomDomainsController } from "./custom-domains.controller";
 import { CustomDomainsService } from "./custom-domains.service";
 import { DomainCommerceController } from "./domain-commerce.controller";
 import { DomainCommerceService } from "./domain-commerce.service";
+import { DomainFxRate } from "./domain-fx-rate";
 import { NamecomProvider } from "./namecom.provider";
 import { CloudflareHostingProvider } from "./cloudflare-hosting.provider";
 
@@ -13,7 +14,7 @@ import { CloudflareHostingProvider } from "./cloudflare-hosting.provider";
 @Module({
   imports: [DashboardModule, AuthModule, PaymentIntentsModule],
   controllers: [DomainCommerceController, CustomDomainsController],
-  providers: [CustomDomainsService, DomainCommerceService, NamecomProvider, CloudflareHostingProvider],
+  providers: [CustomDomainsService, DomainCommerceService, DomainFxRate, NamecomProvider, CloudflareHostingProvider],
   exports: [CustomDomainsService],
 })
 export class DomainsModule {}
