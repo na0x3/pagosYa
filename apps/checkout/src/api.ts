@@ -654,3 +654,24 @@ export async function simulateRailCallback(
   });
   if (!response.ok) throw new Error(`Rail callback failed (${response.status})`);
 }
+
+export interface SubscriptionManageView {
+  storeName: string; itemName: string; cadence: string; cadenceLabel: string; amount: number; currency: string;
+  nextBillingAt: string; status: "ACTIVE" | "PAUSED" | "CANCELED";
+  openPayment: { checkoutUrl: string; amount: number; dueAt: string } | null;
+  history: Array<{ periodStart: string; status: string; amount: number }>;
+  cadenceOptions: Array<{ cadence: string; label: string; discountPercent: number }>;
+}
+
+export async function fetchSubscription(token: string): Promise<SubscriptionManageView> {
+  const response = await fetch(`${API_BASE_URL}/subscriptions/public/${encodeURIComponent(token)}`, { credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer" });
+  if (!response.ok) throw new Error(response.status === 404 ? "Este enlace no es válido o la suscripción ya no existe." : "No pudimos cargar tu suscripción.");
+  return response.json();
+}
+
+export async function actOnSubscription(token: string, body: { action: string; cadence?: string }): Promise<SubscriptionManageView> {
+  const response = await fetch(`${API_BASE_URL}/subscriptions/public/${encodeURIComponent(token)}/actions`, { method: "POST", credentials: "omit", referrerPolicy: "no-referrer", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof data.message === "string" ? data.message : "No pudimos guardar el cambio.");
+  return data;
+}

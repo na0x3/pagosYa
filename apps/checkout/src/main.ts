@@ -21,6 +21,7 @@ import { sourcePaymentPreview, renderForm, enterPaymentFlow } from "./checkout/p
 import { escapeHtml } from "./ui/html";
 import { storefrontRouteFromLocation, productIdFromLocation } from "./storefront/routes";
 import { renderOrderTracking } from "./orders/order-tracking";
+import { renderSubscriptionManage } from "./subscriptions/manage-page";
 import { renderCobroPage } from "./documents/cobro-page";
 import { renderDebtCollection } from "./checkout/debt-collection";
 import { suppressStoreViewForMerchant } from "./storefront/merchant-views";
@@ -91,6 +92,9 @@ async function main() {
   } catch {
     trackingToken = null;
   }
+  const subscriptionMatch = window.location.pathname.match(/^\/suscripcion\/([^/]+)\/?$/);
+  let subscriptionToken: string | null = null;
+  try { subscriptionToken = subscriptionMatch?.[1] ? decodeURIComponent(subscriptionMatch[1]) : null; } catch { subscriptionToken = null; }
   const clientSecret = fragmentParams.get("client_secret") ?? params.get("client_secret") ?? retainedCheckout?.clientSecret ?? null;
   state.checkoutPublishableKey =
     fragmentParams.get("publishable_key") ?? params.get("publishable_key") ?? retainedCheckout?.publishableKey ?? null;
@@ -118,6 +122,7 @@ async function main() {
     );
   }
 
+  if (subscriptionToken) { await renderSubscriptionManage(subscriptionToken); observeResize(app); return; }
   if (trackingToken) {
     await renderOrderTracking(trackingToken);
     observeResize(app);
