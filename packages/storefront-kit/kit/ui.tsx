@@ -473,10 +473,11 @@ export function StandardPagePlaceholder({ title }: { title: string }) {
     <Container><Display>{title}</Display><Lead>Esta página se completa pronto.</Lead></Container>
   </main>;
 }
-export type InfoPageKind = 'about' | 'contact' | 'shipping' | 'faq' | 'refund' | 'privacy' | 'terms' | 'cookies' | 'notfound';
+export type InfoPageKind = 'about' | 'contact' | 'shipping' | 'faq' | 'refund' | 'privacy' | 'terms' | 'cookies' | 'notfound' | 'collections' | 'search';
 const INFO_PAGE_TITLES: Record<InfoPageKind, string> = {
   about: 'Nosotros', contact: 'Contacto', shipping: 'Envíos y entregas', faq: 'Preguntas frecuentes', refund: 'Cambios y devoluciones',
   privacy: 'Privacidad', terms: 'Términos y condiciones', cookies: 'Cookies y almacenamiento', notfound: 'Página no encontrada',
+  collections: 'Colecciones', search: 'Buscar',
 };
 /** A store information page: a title and the runtime's empty mount, which fills it from the live store (commerce.js,
  * `renderInfoPages`). Never put children in the mount: the runtime owns it. */

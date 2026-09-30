@@ -149,3 +149,21 @@ it('keeps the not-found page out of the sitemap and llms.txt and never asks to i
   expect(files.find(f => f.path === '404.html')!.content).toContain('noindex');
   expect(files.find(f => f.path === 'nosotros.html')!.content).not.toContain('noindex');
 });
+
+it('keeps the search page out of the sitemap and llms.txt and never asks to index it, while collections stay indexable', () => {
+  const snapshot: any = {
+    schemaVersion: 1, brief: { audience: 'private' },
+    files: [
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'cafe', checkoutOrigin: 'https://shops.example', data: { storeName: 'Café', items: [] } }) + ';' },
+      { path: 'index.html', content: '<html><head><title>Café</title></head><body><h1>Café</h1></body></html>' },
+      { path: 'colecciones.html', content: '<html><head><title>Colecciones</title></head><body><h1>Colecciones</h1></body></html>' },
+      { path: 'buscar.html', content: '<html><head><title>Buscar</title></head><body><h1>Buscar</h1></body></html>' },
+    ],
+  };
+  const files = withSourceSeo(snapshot).files;
+  expect(files.find(f => f.path === 'sitemap.xml')!.content).toContain('colecciones.html');
+  expect(files.find(f => f.path === 'sitemap.xml')!.content).not.toContain('buscar');
+  expect(files.find(f => f.path === 'llms.txt')!.content).not.toContain('buscar');
+  expect(files.find(f => f.path === 'buscar.html')!.content).toContain('noindex');
+  expect(files.find(f => f.path === 'colecciones.html')!.content).not.toContain('noindex');
+});

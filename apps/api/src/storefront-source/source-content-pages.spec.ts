@@ -18,11 +18,14 @@ const apply = (source: Array<{ path: string; content: string }>, id = 'acuarela'
 });
 
 describe('content page files', () => {
-  it('are nine thin files, each marked as a page and routed to its Spanish URL', () => {
-    expect(CONTENT_PAGE_FILES.map(file => file.path).sort()).toEqual(['about', 'contact', 'cookies', 'faq', 'not-found', 'privacy', 'refund-policy', 'shipping', 'terms'].map(name => `components/pages/${name}.tsx`).sort());
+  it('are eleven thin files, each marked as a page and routed to its Spanish URL', () => {
+    expect(CONTENT_PAGE_FILES.map(file => file.path).sort()).toEqual([
+      ...['about', 'contact', 'cookies', 'faq', 'not-found', 'privacy', 'refund-policy', 'shipping', 'terms'].map(name => `components/pages/${name}.tsx`),
+      ...['collections', 'search'].map(name => `components/catalog/${name}.tsx`),
+    ].sort());
     for (const file of CONTENT_PAGE_FILES) { expect(file.content.startsWith('// @pagosya-page\n')).toBe(true); expect(file.content).toContain('<InfoPage kind='); }
     expect(nextContentPages([...templateSourceFiles('acuarela'), ...CONTENT_PAGE_FILES]).map(p => p.path).sort()).toEqual([
-      '404.html', 'checkout.html', 'contacto.html', 'cookies.html', 'envios.html', 'faq.html', 'index.html', 'nosotros.html', 'privacidad.html', 'product.html', 'reembolsos.html', 'terminos.html',
+      '404.html', 'buscar.html', 'checkout.html', 'colecciones.html', 'contacto.html', 'cookies.html', 'envios.html', 'faq.html', 'index.html', 'nosotros.html', 'privacidad.html', 'product.html', 'reembolsos.html', 'terminos.html',
     ].sort());
   });
 
@@ -30,7 +33,7 @@ describe('content page files', () => {
     const revision = await apply(templateSourceFiles('acuarela'));
     const paths = revision.files.map(f => f.path);
     for (const file of CONTENT_PAGE_FILES) expect(paths).toContain(file.path);
-    for (const html of ['nosotros.html', 'faq.html', '404.html', 'cookies.html', 'contacto.html']) expect(paths).toContain(html);
+    for (const html of ['nosotros.html', 'faq.html', '404.html', 'cookies.html', 'contacto.html', 'colecciones.html', 'buscar.html']) expect(paths).toContain(html);
   });
 
   it('are not added to a source that has no Shell to host them', async () => {

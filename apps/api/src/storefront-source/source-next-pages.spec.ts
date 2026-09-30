@@ -116,9 +116,10 @@ describe('InfoPage', () => {
     return module.exports.default(kind) as string;
   };
 
-  it.each(['about', 'contact', 'shipping', 'faq', 'refund', 'privacy', 'terms', 'cookies', 'notfound'])('%s renders a title and exactly one empty runtime mount', async kind => {
+  const titles: Record<string, string> = { about: 'Nosotros', contact: 'Contacto', shipping: 'Envíos y entregas', faq: 'Preguntas frecuentes', refund: 'Cambios y devoluciones', privacy: 'Privacidad', terms: 'Términos y condiciones', cookies: 'Cookies y almacenamiento', notfound: 'Página no encontrada', collections: 'Colecciones', search: 'Buscar' };
+  it.each(Object.keys(titles))('%s renders its title and exactly one empty runtime mount', async kind => {
     const html = await render(kind);
-    expect(html).toMatch(/<h1\b/);
+    expect(html).toMatch(new RegExp(`<h1[^>]*>${titles[kind]}</h1>`));
     expect(html).toContain(`data-info-page="${kind}"`);
     expect(html.match(new RegExp(`data-pagosya-page="${kind}"`, 'g'))).toHaveLength(1);
     expect(html).toContain(`<div data-pagosya-page="${kind}"></div>`);
