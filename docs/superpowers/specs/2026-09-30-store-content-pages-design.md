@@ -44,11 +44,13 @@ cookies, not found), in the template's own design, showing the merchant's real d
 ### Mechanism: live, filled by the runtime
 
 Each page file is the thin file of sub-project 1 (first line `// @pagosya-page`), rendering inside the template's
-`Shell`. Its body comes from a new kit component per page (`AboutPage`, `ContactPage`, `ShippingPage`,
-`PolicyPage kind="refund|privacy|terms"`, `FaqPage`, `CookiesPage`, `NotFoundPage`) that draws a title and one
-empty runtime mount, `data-pagosya-page="<kind>"`. `commerce.js` fills the mount from `store` with escaped text
-(the same discipline as the policy dialog: text nodes and paragraph splitting, never markup). Editing a policy in
-Ajustes changes the page without republishing. `StandardPagePlaceholder` from sub-project 1 stays exported and is not used by any of these pages.
+`Shell`. Its body is one kit component, `InfoPage kind="about|contact|shipping|faq|refund|privacy|terms|cookies|notfound"`,
+that draws a title and one empty runtime mount, `data-pagosya-page="<kind>"`. `commerce.js` fills the mount from
+`store` with escaped text (the same discipline as the policy dialog: text nodes and paragraph splitting, never
+markup). Editing a policy in Ajustes changes the page without republishing. `StandardPagePlaceholder` from
+sub-project 1 stays exported and is not used by any of these pages.
+
+The contact page shows phone, email and places with hours; it does not embed the contact form.
 
 ### Pages with no data
 
@@ -86,8 +88,14 @@ working; they simply have no links.
 
 ### When files are created
 
-When a template is applied and when a new store is generated (all nine files). Published stores are untouched; the
-explicit "add standard pages" action is sub-project 6.
+When a template is applied (`assembleTemplateRevision`), and only if the template has a `components/Shell.tsx`
+to host them and does not ship a page at the same path itself (all nine files). YAPI from-scratch stores are not
+given these files: they have no guaranteed `Shell`. Published stores are untouched; the explicit "add standard
+pages" action, and pages for from-scratch stores, are sub-project 6.
+
+A found gap, fixed here: the save validator only gave flat compiled scripts (`_compiled/home.js`) the compiled-script
+size budget, so the compiled script of a page in a folder (`_compiled/pages/faq.js`) was rejected. It now accepts
+one level under `pages`, `catalog`, `auth` or `account`.
 
 ### Errors and safety
 
