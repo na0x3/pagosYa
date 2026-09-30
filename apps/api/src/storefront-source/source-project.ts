@@ -32,7 +32,7 @@ function text(value: unknown, name: string, max: number): string {
 
 /** A source artifact is data here. No imports, build scripts, or HTML are run. */
 export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjectSnapshot {
-  if (!input.brief || !Array.isArray(input.files) || !input.files.length || input.files.length > 100) reject("A brief and 1–100 source files are required");
+  if (!input.brief || !Array.isArray(input.files) || !input.files.length || input.files.length > 250) reject("A brief and 1–250 source files are required");
   if (input.brief.sitePurpose !== undefined && !SOURCE_SITE_PURPOSES.includes(input.brief.sitePurpose)) reject('Invalid site purpose');
   const brief = {
     ...(input.brief.sitePurpose ? { sitePurpose: sourceSitePurpose(input.brief) } : {}),

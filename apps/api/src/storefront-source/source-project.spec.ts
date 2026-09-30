@@ -22,6 +22,11 @@ export function sourceFixture(): SaveSourceProjectDto {
 }
 
 describe("Independent source artifacts", () => {
+  it('holds the files of a template store with its standard pages: up to 250 files, not one more', () => {
+    const many = (count: number) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...Array.from({ length: count - sourceFixture().files.length }, (_, i) => ({ path: `components/pages/p${i}.tsx`, content: 'x' }))] });
+    expect(() => many(250)).not.toThrow();
+    expect(() => many(251)).toThrow('1–250 source files');
+  });
   it('gives the compiled script of a standard page folder the compiled-script budget, and no other folder', () => {
     const compiled = (path: string) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path, content: 'x'.repeat(500_000) }] });
     for (const folder of ['pages', 'catalog', 'auth', 'account']) expect(() => compiled(`_compiled/${folder}/faq.js`)).not.toThrow();
