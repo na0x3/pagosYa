@@ -58,6 +58,10 @@ Extend the route rule so a route is either:
   `GROUP-SLUG.html` for `auth/` and `account/` (for example `account/orders.tsx` → `cuenta-pedidos.html`,
   `auth/login.tsx` → `acceso-ingresar.html`; exact Spanish slugs are fixed in the plan).
 
+A file in those folders is a page only when its first line is the marker `// @pagosya-page`. Generated stores
+already keep shared components in subfolders of `components/`; without the marker an existing store would gain
+pages on its next save. Page files written by the platform always carry it.
+
 Files elsewhere in `components/` (like `Shell.tsx`) never become routes. Slugs must be unique across both forms;
 a collision fails the build with a clear message.
 

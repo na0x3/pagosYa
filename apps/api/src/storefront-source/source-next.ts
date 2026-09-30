@@ -34,6 +34,9 @@ const STANDARD_PAGE_SLUGS: Record<string, string> = {
   'account/payment-methods': 'cuenta-metodos-de-pago', 'account/subscriptions': 'cuenta-suscripciones',
 };
 const STANDARD_PAGE_FILE = /^components\/(pages|catalog|auth|account)\/([a-z][a-z0-9-]{0,47})\.tsx$/;
+/** A file in those folders is a page only when it says so on its first line. Generated stores already keep shared
+ * components in subfolders of components/; without this marker they would start producing pages on the next save. */
+const STANDARD_PAGE_MARK = /^\s*\/\/\s*@pagosya-page\b/;
 
 /** The route of a file in one of the standard page folders, or null for any other file (shared components never route). */
 export function standardPageRoute(path: string): { name: string; path: string } | null {
@@ -48,7 +51,7 @@ export function nextContentPages(files: SourceProjectFileDto[], purpose: SourceS
   const pages = [...nextPages.filter(page => purpose === 'shop' || page.name === 'home' || files.some(file => file.path === `components/${page.name}.tsx`)),
     ...files.filter(file => /^components\/page-(?!index\.|product\.|checkout\.)[a-z][a-z0-9-]{0,47}\.tsx$/.test(file.path))
       .map(file => ({ name: file.path.slice(11, -4), path: file.path.slice(16, -4) + '.html' })),
-    ...files.flatMap(file => standardPageRoute(file.path) ?? [])];
+    ...files.flatMap(file => (STANDARD_PAGE_MARK.test(file.content) ? standardPageRoute(file.path) : null) ?? [])];
   const owners = new Map<string, string>();
   for (const page of pages) {
     const owner = `components/${page.name}.tsx`, other = owners.get(page.path);

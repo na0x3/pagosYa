@@ -7,7 +7,8 @@ import { nextStoreFiles } from './fixtures/next-store';
 // Compiles real Next.js projects and renders 61 templates.
 jest.setTimeout(60_000);
 
-const file = (path: string) => ({ path, content: 'export default function P() { return null; }' });
+const PAGE_MARK = '// @pagosya-page\n';
+const file = (path: string, content = `${PAGE_MARK}export default function P() { return null; }`) => ({ path, content });
 const base = () => nextStoreFiles();
 const commerce = ['index.html', 'product.html', 'checkout.html'];
 
@@ -40,6 +41,12 @@ describe('standard page routes', () => {
     expect(nextContentPages([...base(), file(path)]).map(p => p.path)).toEqual(commerce);
   });
 
+  it('leaves a shared component that merely lives in a group folder alone, so an existing store does not gain pages', () => {
+    const shared = [file('components/account/OrderRow.tsx', 'export default function OrderRow() { return null; }'), file('components/pages/hero.tsx', '// not a page marker\nexport default function Hero() { return null; }')];
+    expect(nextContentPages([...base(), ...shared]).map(p => p.path)).toEqual(commerce);
+    expect(nextContentPages([...base(), file('components/pages/hero.tsx')]).map(p => p.path)).toEqual([...commerce, 'hero.html']);
+  });
+
   it('fails with a Spanish message for the merchant and a diagnostic naming both files for the repair', () => {
     const collide = (files: Array<{ path: string; content: string }>) => { try { nextContentPages(files); } catch (error) { return error as SourceValidationError; } throw new Error('expected a collision'); };
     const faq = collide([...base(), file('components/page-faq.tsx'), file('components/pages/faq.tsx')]);
@@ -58,7 +65,7 @@ describe('standard page routes', () => {
 });
 
 describe('validating standard pages', () => {
-  const faq = { path: 'components/pages/faq.tsx', content: "import Header from '../Header';\nexport default function Faq() { return <><Header /><main id=\"contenido\"><h1>Preguntas frecuentes</h1></main></>; }" };
+  const faq = { path: 'components/pages/faq.tsx', content: "// @pagosya-page\nimport Header from '../Header';\nexport default function Faq() { return <><Header /><main id=\"contenido\"><h1>Preguntas frecuentes</h1></main></>; }" };
 
   it('does not ask a content page for the checkout mount', () => {
     expect(() => validateNextSources([...nextStoreFiles(), faq], 'shop')).not.toThrow();
@@ -70,7 +77,7 @@ describe('validating standard pages', () => {
   });
 });
 
-const thinPage = (path: string, title: string) => ({ path, content: `import Shell from '../Shell';\nimport { StandardPagePlaceholder } from '@pagosya/ui';\nexport default function Page() { return <Shell><StandardPagePlaceholder title="${title}" /></Shell>; }\n` });
+const thinPage = (path: string, title: string) => ({ path, content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { StandardPagePlaceholder } from '@pagosya/ui';\nexport default function Page() { return <Shell><StandardPagePlaceholder title="${title}" /></Shell>; }\n` });
 
 describe('standard pages end to end', () => {
   it.each(listTemplates().map(t => t.id))('%s renders a standard page inside its own Shell', id => {
@@ -81,7 +88,7 @@ describe('standard pages end to end', () => {
   });
 
   it('compiles a grouped page to its own html and script, and the scaffold routes it', async () => {
-    const files = [...nextStoreFiles(), { path: 'components/pages/faq.tsx', content: "import Header from '../Header';\nimport { StandardPagePlaceholder } from '@pagosya/ui';\nexport default function Faq() { return <><Header /><StandardPagePlaceholder title=\"Preguntas\" /></>; }" }];
+    const files = [...nextStoreFiles(), { path: 'components/pages/faq.tsx', content: "// @pagosya-page\nimport Header from '../Header';\nimport { StandardPagePlaceholder } from '@pagosya/ui';\nexport default function Faq() { return <><Header /><StandardPagePlaceholder title=\"Preguntas\" /></>; }" }];
     const out = await compileNextPreview(files, 'shop');
     expect(out.some(f => f.path === 'faq.html')).toBe(true);
     expect(out.some(f => f.path === '_compiled/pages/faq.js')).toBe(true);
@@ -90,7 +97,7 @@ describe('standard pages end to end', () => {
   });
 
   it("writes the not-found page as Next's own 404", () => {
-    const scaffold = nextProjectScaffold('tienda', nextContentPages([...nextStoreFiles(), { path: 'components/pages/not-found.tsx', content: 'export default function NotFound() { return null; }' }]));
+    const scaffold = nextProjectScaffold('tienda', nextContentPages([...nextStoreFiles(), { path: 'components/pages/not-found.tsx', content: '// @pagosya-page\nexport default function NotFound() { return null; }' }]));
     expect(scaffold.some(f => f.path === 'pages/404.tsx')).toBe(true);
   });
 });
