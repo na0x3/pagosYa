@@ -156,6 +156,16 @@ describe("SubscribersService", () => {
     ]);
   });
 
+  it("shows the subscription's actual current amount for its own cadence, even when today's offer would price it differently", async () => {
+    const { prisma, service } = setup();
+    prisma.customerSubscription.findUnique.mockResolvedValue({ ...productSubscription, quantity: 2, fulfillment: { fee: 1500 }, cadence: "MONTHLY", discountPercent: 10, unitAmount: 6500 });
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "WEEKLY", discountPercent: 5 }, { cadence: "MONTHLY", discountPercent: 10 }]);
+    const view: any = await service.publicView(token);
+    expect(view.amount).toBe(6500 * 2 + 1500);
+    expect(view.cadenceOptions.find((o: any) => o.cadence === "MONTHLY").amount).toBe(view.amount);
+    expect(view.cadenceOptions.find((o: any) => o.cadence === "WEEKLY").amount).toBe(7600 * 2 + 1500);
+  });
+
   it("returns 404 for a bad token", async () => {
     const { service } = setup();
     await expect(service.publicView("nope")).rejects.toThrow("Suscripción no encontrada");

@@ -292,7 +292,7 @@ export class SubscriptionsService {
     const now = new Date();
     const generationHorizon = new Date(now.getTime() + 720 * 3_600_000);
     const candidates = await this.prisma.customerSubscription.findMany({ where: { merchantId, storeId, status: "ACTIVE", nextBillingAt: { lte: generationHorizon } } });
-    const origins = await originLivemodes(this.prisma, candidates);
+    const origins = await originLivemodes(this.prisma, candidates, this.logger);
     let created = 0;
     let paymentLinksCreated = 0;
     let emailsSent = 0;
@@ -355,7 +355,7 @@ export class SubscriptionsService {
         if (!subscription || subscription.status !== "ACTIVE") continue;
         const terms = await this.termsFor(subscription, storeId, now);
         if (!terms) continue;
-        const invoiceOrigins = await originLivemodes(this.prisma, [subscription]);
+        const invoiceOrigins = await originLivemodes(this.prisma, [subscription], this.logger);
         if (!originMatchesStore(subscription, invoiceOrigins, livemode)) { this.logOriginSkip(subscription.id, livemode); continue; }
         const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId));
         if (!ensured.created) continue;
@@ -397,7 +397,7 @@ export class SubscriptionsService {
       const [terms, intent, origins] = await Promise.all([
         this.termsFor(subscription, storeId, now),
         this.prisma.paymentIntent.findUnique({ where: { id: invoice.paymentIntentId } }),
-        originLivemodes(this.prisma, [subscription]),
+        originLivemodes(this.prisma, [subscription], this.logger),
       ]);
       if (!terms || !intent || intent.status === PaymentIntentStatus.SUCCEEDED || intent.status === PaymentIntentStatus.CANCELED) { skipped += 1; continue; }
       if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); skipped += 1; continue; }
@@ -426,7 +426,7 @@ export class SubscriptionsService {
     const terms = await this.termsFor(subscription, storeId);
     if (!terms) throw new NotFoundException("Subscription plan not found");
     const livemode = await this.storeLivemode(merchantId, store);
-    if (!originMatchesStore(subscription, await originLivemodes(this.prisma, [subscription]), livemode)) throw new BadRequestException("Esta suscripción se creó en otro modo (prueba o producción) y no se puede cobrar desde el modo actual de la tienda");
+    if (!originMatchesStore(subscription, await originLivemodes(this.prisma, [subscription], this.logger), livemode)) throw new BadRequestException("Esta suscripción se creó en otro modo (prueba o producción) y no se puede cobrar desde el modo actual de la tienda");
     const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId, regenerate));
     const checkoutUrl = paymentCheckoutUrl(this.config, ensured.intent.clientSecret);
     const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, checkoutUrl, "reminder");
@@ -468,9 +468,15 @@ export class SubscriptionsService {
     const store = await ownedStore(this.prisma, merchantId, storeId);
     const cutoff = new Date(Date.now() - MISSED_AFTER_DAYS * DAY_MS);
     const invoices = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", orderId: { not: null }, dueAt: { lte: cutoff } }, orderBy: { dueAt: "asc" }, take: 200 });
+    const owners = invoices.length ? await this.prisma.customerSubscription.findMany({ where: { id: { in: [...new Set(invoices.map(invoice => invoice.subscriptionId))] } } }) : [];
+    const ownerById = new Map(owners.map(owner => [owner.id, owner]));
+    const origins = await originLivemodes(this.prisma, owners, this.logger);
+    const livemode = await this.storeLivemode(merchantId, store);
     let missed = 0;
     let paused = 0;
     for (const invoice of invoices) {
+      const owner = ownerById.get(invoice.subscriptionId);
+      if (owner && !originMatchesStore(owner, origins, livemode)) { this.logOriginSkip(owner.id, livemode); continue; }
       const result = await this.prisma.$transaction(async (tx) => {
         if (invoice.paymentIntentId && !(await this.cancelUnpaidIntent(tx, invoice.paymentIntentId))) return null;
         const marked = await tx.subscriptionInvoice.updateMany({ where: { id: invoice.id, status: "DUE" }, data: { status: "MISSED" } });

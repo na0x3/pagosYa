@@ -298,6 +298,23 @@ describe("product subscription renewals", () => {
       await service.generateSubscriptionInvoices("merchant_1", "store_1");
       expect(paymentIntents.createInTransaction).toHaveBeenCalledWith(expect.anything(), "merchant_1", false, expect.anything());
     });
+    it("expireMissedRenewals leaves a cross-mode subscription's invoice alone", async () => {
+      prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([{ id: "inv_1", subscriptionId: productSubscription.id, orderId: "order_r1", paymentIntentId: "pi_r1", status: "DUE", dueAt: new Date(Date.now() - 8 * 86_400_000) }]);
+      prisma.customerSubscription.findMany.mockResolvedValue([productSubscription]);
+      prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+      expect(await service.expireMissedRenewals("merchant_1", "store_1")).toEqual({ missed: 0, paused: 0 });
+      expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
+      expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
+    });
+    it("warns once per call when a product subscription's source order is missing", async () => {
+      prisma.storeOrder.findMany.mockResolvedValue([]);
+      const warn = jest.spyOn((service as any).logger, "warn").mockImplementation(() => undefined);
+      prisma.customerSubscription.findMany.mockResolvedValue([productSubscription, { ...productSubscription, id: "cm1sub0000000000000000002" }]);
+      await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain("order_1");
+    });
     it("refuses a manual reminder across modes", async () => {
       prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
       prisma.subscriptionInvoice.findFirst.mockResolvedValue({ id: "inv_1", subscriptionId: productSubscription.id, status: "DUE" });
@@ -316,7 +333,7 @@ describe("product subscription renewals", () => {
   });
 
   describe("a long-overdue subscription (N2)", () => {
-    it("rolls a 5-week-overdue monthly-free weekly subscription forward without a burst of invoices", async () => {
+    it("rolls a 5-week-overdue weekly subscription forward without a burst of invoices", async () => {
       const overdue = new Date(Date.now() - 35 * 86_400_000);
       prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, cadence: "WEEKLY", nextBillingAt: overdue }]);
       const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");

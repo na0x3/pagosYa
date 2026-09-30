@@ -182,7 +182,7 @@ export class SubscribersService {
       openPayment: open && intent?.status === PaymentIntentStatus.REQUIRES_PAYMENT_METHOD
         ? { checkoutUrl: paymentCheckoutUrl(this.config, intent.clientSecret), amount: open.amount, dueAt: open.dueAt.toISOString() } : null,
       history: history.map(entry => ({ periodStart: entry.periodStart.toISOString(), status: entry.status, amount: entry.amount })),
-      cadenceOptions: offers.filter(offer => isCadence(offer.cadence)).map(offer => ({ cadence: offer.cadence, label: cadenceLabel(offer.cadence as never), discountPercent: offer.discountPercent, amount: optionAmount(offer.discountPercent) })),
+      cadenceOptions: offers.filter(offer => isCadence(offer.cadence)).map(offer => ({ cadence: offer.cadence, label: cadenceLabel(offer.cadence as never), discountPercent: offer.discountPercent, amount: offer.cadence === subscription.cadence ? (terms?.amount ?? optionAmount(offer.discountPercent)) : optionAmount(offer.discountPercent) })),
     };
   }
 

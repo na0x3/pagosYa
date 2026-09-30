@@ -240,7 +240,7 @@ export class StoreCheckoutService {
     const amount = subtotal - discountAmount + shippingAmount;
     if (dto.creditCode && !store.creditsEnabled) throw new BadRequestException('Esta tienda no acepta códigos de saldo.');
     const creditAmount = dto.creditCode ? (await creditQuote(this.prisma, store.id, dto.creditCode, currency, amount)).amount : 0;
-    if (!quoteOnly && subscriptionItems.length && creditAmount >= amount) throw new BadRequestException('Para suscribirte necesitamos un pago con enlace de renovación; usa un método de pago en vez del saldo completo.');
+    if (!quoteOnly && subscriptionItems.length && creditAmount > 0 && creditAmount >= amount) throw new BadRequestException('Para suscribirte necesitamos un pago con enlace de renovación; usa un método de pago en vez del saldo completo.');
     if (quoteOnly) return { orderTotal: amount, creditAmount, subtotal, discountAmount, shippingAmount, amount: amount - creditAmount, currency, shippingOptions, sizeClass: parcel?.sizeClass ?? null, shippingEnabled: store.shippingEnabled && !digitalOnly, pickupEnabled: store.shippingPickupEnabled };
 
 

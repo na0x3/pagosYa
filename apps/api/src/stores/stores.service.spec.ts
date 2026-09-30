@@ -876,6 +876,13 @@ describe("StoresService.createCartCheckout — subscription lines", () => {
     await expect(service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true, creditCode: "SALDO" } as never, true)).resolves.toMatchObject({ creditAmount: 1000 });
   });
 
+  it("does not blame store credit for a zero-total subscription cart when no credit is used", async () => {
+    const { service } = setup({}, { amount: 0 });
+    let message = "";
+    try { await service.createCartCheckout("abc123", { items: [sub()], subscriptionConsent: true } as never); } catch (error) { message = (error as Error).message; }
+    expect(message).not.toContain("saldo completo");
+  });
+
   it("rejects carrier shipping for a subscription", async () => {
     const { service, prisma } = setup({ shippingEnabled: true, shippingCarriersEnabled: true });
     prisma.deliveryZone.findMany.mockResolvedValue([{ id: "zone_1", name: "Courier", fee: 1500, currency: "BOB", carrierId: "car_servientrega", isActive: true, minimumOrder: 0, maximumOrder: null, freeAbove: null, minimumWeightGrams: null, maximumWeightGrams: null, countryCodes: [], postalPrefixes: [], departments: [], sizeClasses: [] }]);
