@@ -105,7 +105,8 @@ describe('Next.js storefront compilation', () => {
     const compiled = await compileNextPreview(source);
     expect((globalThis as any).__nextAuthoredExecution).toBeUndefined();
     expect(compiled.find(f => f.path === 'styles.css')!.content).toContain('.text-3xl');
-    expect(compiled.filter(f => f.path.startsWith('_compiled/'))).toHaveLength(3);
+    // One script per page, plus the vendor script they share.
+    expect(compiled.filter(f => f.path.startsWith('_compiled/')).map(f => f.path).sort()).toEqual(['_compiled/checkout.js', '_compiled/home.js', '_compiled/product.js', '_compiled/vendor.js']);
     const snapshot = sourceProjectSnapshot({ revision: 0, label: 'Next', brief: nextBrief, files: [...source, ...compiled, ...nextProjectScaffold('test'), { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` }, { path: 'commerce.js', content: '/* runtime */' }, nextStoreImage] });
     expect(() => assertSourceCommerceContract(snapshot)).not.toThrow();
     const exported = nextProjectExport(snapshot.files, 'test');

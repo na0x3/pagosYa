@@ -19,6 +19,9 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 export const NEXT_SOURCE_MARKER = 'storefront-framework.json';
 export const nextSourceFile = (path: string) => /^components\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.tsx$/.test(path) || path === 'styles/globals.css';
 export const isNextSource = (files: SourceProjectFileDto[] = []) => files.some(f => f.path === NEXT_SOURCE_MARKER);
+export const NEXT_VENDOR_PATH = '_compiled/vendor.js';
+const VENDOR_ENTRY = `import * as react from 'react'; import * as jsx from 'react/jsx-runtime'; import * as dom from 'react-dom'; import * as client from 'react-dom/client'; import * as motion from 'motion/react';
+(window as any).__pagosyaVendor = { 'react': react, 'react/jsx-runtime': jsx, 'react-dom': dom, 'react-dom/client': client, 'motion/react': motion };`;
 export const nextPages = [{ name: 'home', path: 'index.html' }, { name: 'product', path: 'product.html' }, { name: 'checkout', path: 'checkout.html' }] as const;
 
 /** Folders under components/ whose files are standard store pages (spec 2026-09-30-store-page-architecture). The value
@@ -670,6 +673,18 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
   // Tailwind utilities are authored CSS too (`[&_.menu-add]:opacity-0`): the compiled sheet meets the protected-element rules.
   const compiled: SourceProjectFileDto[] = [{ path: 'styles.css', content: validateAuthoredCss(css.css, 'styles.css').css }, { path: 'site.js', content: '/* React components own authored interactions. */' }];
   if (storeKit) compiled.push({ path: SOURCE_KIT_CSS_PATH, content: storeKit });
+  // React, ReactDOM and motion are compiled once into a shared script every page loads first. Each page used to embed its own
+  // ~400 KB copy, which pushed a store with the nine information pages over the 8 MiB source limit.
+  try {
+    const vendor = await build({
+      stdin: { contents: VENDOR_ENTRY, sourcefile: 'vendor-entry.ts', resolveDir: process.cwd(), loader: 'ts' }, bundle: true, write: false,
+      platform: 'browser', charset: 'utf8', format: 'iife', target: 'es2022', minify: true, define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent',
+      plugins: [{ name: 'vendor-resolve', setup(builder) { builder.onResolve({ filter: /^(?:react|react\/jsx-runtime|react-dom|react-dom\/client|motion\/react)$/ }, args => ({ path: require.resolve(args.path) })); } }],
+    });
+    compiled.push({ path: NEXT_VENDOR_PATH, content: vendor.outputFiles[0].text });
+  } catch (error: any) {
+    throw new SourceValidationError(`The shared vendor script failed to compile: ${String(error.errors?.[0]?.text || error.message).slice(0, 450)}`);
+  }
   for (const page of pages) {
     const entry = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {flushSync} from 'react-dom'; import {CreativeProvider} from '@pagosya/creative'; import Page from './components/${page.name}'; flushSync(()=>createRoot(document.getElementById('pagosya-react-root')).render(React.createElement(CreativeProvider, null, React.createElement(Page))));`;
     try {
@@ -683,8 +698,8 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
             if (args.path === '@pagosya/ui') return { path: 'lib/ui.tsx', namespace: 'merchant' };
             if (args.namespace === 'merchant' && args.importer === 'lib/creative.tsx' && args.path === 'lottie-web/build/player/lottie_light') return { path: require.resolve(args.path) };
             if (args.namespace === 'merchant' && args.importer === 'lib/ui.tsx' && args.path === 'lenis') return { path: require.resolve(args.path) };
-            if (['react', 'react/jsx-runtime', 'motion/react', 'motion'].includes(args.path)) return { path: require.resolve(args.path) };
-            if (entryImport && ['react-dom', 'react-dom/client'].includes(args.path)) return { path: require.resolve(args.path) };
+            if (['react', 'react/jsx-runtime', 'motion/react'].includes(args.path) || entryImport && ['react-dom', 'react-dom/client'].includes(args.path)) return { path: args.path, namespace: 'vendor' };
+            if (args.path === 'motion') return { path: require.resolve(args.path) };
             if (!args.path.startsWith('.')) return { errors: [{ text: `Import no permitido: ${args.path}` }] };
             const base = args.namespace === 'merchant' ? posix.dirname(args.importer) : '.';
             const path = posix.normalize(posix.join(base, args.path));
@@ -692,13 +707,15 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
             return resolved ? { path: resolved, namespace: 'merchant' } : { errors: [{ text: `No existe el componente ${path}` }] };
           });
           builder.onLoad({ filter: /.*/, namespace: 'merchant' }, args => ({ contents: source.get(args.path), loader: 'tsx' }));
+          // Served by the vendor script, which runs first and leaves these modules on window.__pagosyaVendor.
+          builder.onLoad({ filter: /.*/, namespace: 'vendor' }, args => ({ contents: `module.exports = window.__pagosyaVendor[${JSON.stringify(args.path)}];`, loader: 'js' }));
         } }],
       });
       compiled.push({ path: `_compiled/${page.name}.js`, content: result.outputFiles[0].text });
     } catch (error: any) {
       throw new BadGatewayException(`No se pudo compilar ${page.name}: ${String(error.errors?.[0]?.text || error.message).slice(0, 450)}`);
     }
-    compiled.push({ path: page.path, content: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">${storeKit ? storeKitLink() : ''}<link rel="stylesheet" href="brand.css"></head><body><div id="pagosya-react-root"></div><script src="config.js" defer></script><script src="_compiled/${page.name}.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>` });
+    compiled.push({ path: page.path, content: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">${storeKit ? storeKitLink() : ''}<link rel="stylesheet" href="brand.css"></head><body><div id="pagosya-react-root"></div><script src="config.js" defer></script><script src="${NEXT_VENDOR_PATH}" defer></script><script src="_compiled/${page.name}.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>` });
   }
   compiled.push({ path: 'source-next-layout.json', content: JSON.stringify(Object.fromEntries(pages.map(page => [page.path, nextPageMarkup(authored, page.name)]))) });
   return compiled;
