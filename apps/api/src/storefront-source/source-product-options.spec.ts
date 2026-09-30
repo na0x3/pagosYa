@@ -2,7 +2,7 @@ import { requestedSourceVariants, requestedVariantOperations, applyVariantOperat
 import { normalizeProductVariants } from '../payment-links/product-variants';
 // Exercise the same structured-output parsers and transaction path used by chat.
 import { ProductSubscriptionCadence } from '@prisma/client';
-import { SOURCE_PRODUCT_OPTIONS, requestedSourceSubscriptions, requestedSubscriptionOperations, sourceSubscriptionsSchema, sourceSubscriptionOperationsSchema } from './source-product-options';
+import { SOURCE_PRODUCT_OPTIONS, SOURCE_PRODUCT_SUBSCRIPTIONS, requestedSourceSubscriptions, requestedSubscriptionOperations, sourceSubscriptionsSchema, sourceSubscriptionOperationsSchema } from './source-product-options';
 import { requestedSourceProducts, requestedSourceProductOperations, sourceProductsSchema, sourceProductOperationsSchema } from './source-products';
 import { SourceProjectsService } from './source-projects.service';
 
@@ -139,7 +139,7 @@ describe('confirmed recurring-purchase options in chat', () => {
     }], subscriptionRequest, [{ id: 'p1' }], new Set())).toThrow();
     expect(SOURCE_PRODUCT_OPTIONS).toContain('subscriptionOptions');
     expect(SOURCE_PRODUCT_OPTIONS).toContain('A suggestion is not authorization');
-    expect(SOURCE_PRODUCT_OPTIONS).toContain('automatic charging are not implemented');
+    expect(SOURCE_PRODUCT_OPTIONS).toContain('renewals are pay links');
   });
 
   it('persists chat creation and cadence edits in the source revision transaction', async () => {
@@ -179,4 +179,10 @@ describe('confirmed recurring-purchase options in chat', () => {
     await expect(service.save('m1', 's1', input, { id: 'g2', data: {}, productOperations })).rejects.toThrow('cadence write failed');
     expect(prisma.storeSourceVersion.create).toHaveBeenCalledTimes(1);
   });
+});
+
+it("describes subscriptions as pay-link renewals, never automatic charges", () => {
+  expect(SOURCE_PRODUCT_SUBSCRIPTIONS).toContain("renewals are pay links");
+  expect(SOURCE_PRODUCT_SUBSCRIPTIONS).toContain("Never claim or imply automatic charging");
+  expect(SOURCE_PRODUCT_SUBSCRIPTIONS).not.toContain("customer enrollment, recurring orders and automatic charging are not implemented");
 });
