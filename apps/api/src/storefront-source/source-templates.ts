@@ -6,6 +6,7 @@ import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templat
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
 import { compileNextPreview, nextContentPages, nextProjectScaffold } from './source-next';
+import { contentPagesFor } from './source-content-pages';
 import { sourceCommerceRoutes } from './source-commerce-pages';
 import { SOURCE_DNA_RUNTIME_ENUMS, sourceRuntimeDna } from './source-dna';
 import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
@@ -90,7 +91,7 @@ export async function assembleTemplateRevision(input: {
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
   const { photos, demoSlots } = fillTemplatePhotos(manifest, data.items);
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '' }, photos);
-  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH), storeData];
+  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH), ...contentPagesFor(input.source), storeData];
   const compiled = await compileNextPreview(authored, 'shop');
   const scaffold = [...compiled, ...nextProjectScaffold(input.slug, nextContentPages(authored, 'shop'))];
   const kitFiles = await Promise.all(TEMPLATE_KIT_FILES.filter(path => !scaffold.some(file => file.path === path))
