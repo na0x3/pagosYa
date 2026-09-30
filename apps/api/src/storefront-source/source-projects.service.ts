@@ -6,6 +6,7 @@ import { normalizeProductVariants, totalVariantStock, type ProductVariant } from
 import { applyVariantOperations } from './source-product-options';
 import { applyProductSubscriptionOperations, validateProductSubscriptions } from '../payment-links/product-subscriptions';
 import { readFile } from 'node:fs/promises';
+import { withStandardPages } from './source-content-pages';
 import { currentSourceRuntime } from './source-runtime';
 import { publicationState } from './source-publishing.service';
 import { withSourceMotionSettings, type SourceMotionMode, type SourceScrollFeel } from './source-motion';
@@ -170,6 +171,21 @@ export class SourceProjectsService {
 
   async editFile(merchantId: string, storeId: string, input: EditSourceFileDto) {
     return this.editFiles(merchantId, storeId, { revision: input.revision, files: [{ path: input.path, content: input.content }] });
+  }
+
+  /** Adds the standard information pages (and the footer link to them) to a store built before they existed. The new revision
+   * is not published: the merchant reviews it like any other change. */
+  async addStandardPages(merchantId: string, storeId: string, revision: number) {
+    await this.ownedStore(merchantId, storeId);
+    if (!revision) throw new BadRequestException('Crea el sitio antes de agregar páginas.');
+    const previous = await this.version(merchantId, storeId, revision);
+    // The stored snapshot as it is, like editFiles: the platform swaps in the current runtime whenever a page renders, and
+    // the refreshed (composed) commerce.js is over the size a saved file may have.
+    const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
+    if (!isNextSource(snapshot.files)) throw new BadRequestException('Las páginas estándar solo se agregan a sitios React.');
+    const result = withStandardPages(snapshot.files);
+    if (!result.added.length && !result.slotAdded) throw new ConflictException('Este sitio ya tiene las páginas estándar, o su diseño no permite agregarlas.');
+    return this.save(merchantId, storeId, { revision, label: 'Páginas estándar agregadas', brief: snapshot.brief, files: result.files });
   }
 
   /** Several text files as one revision (the code editor sends one; the MCP server sends a batch). */

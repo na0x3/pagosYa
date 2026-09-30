@@ -1,6 +1,6 @@
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { CONTENT_PAGE_FILES } from './source-content-pages';
+import { CONTENT_PAGE_FILES, withStandardPages } from './source-content-pages';
 import { nextContentPages } from './source-next';
 import { assembleTemplateRevision } from './source-templates';
 
@@ -47,5 +47,51 @@ describe('content page files', () => {
     const revision = await apply([...templateSourceFiles('acuarela'), own]);
     expect(revision.files.filter(f => f.path === 'components/pages/faq.tsx')).toHaveLength(1);
     expect(revision.files.find(f => f.path === 'components/pages/faq.tsx')!.content).toContain('Mi FAQ');
+  });
+});
+
+describe('withStandardPages: adding the pages to a store that already exists', () => {
+  const shell = (footer = '<footer className="x"><p>Pie</p></footer>') => ({ path: 'components/Shell.tsx', content: `import type { ReactNode } from 'react';\nexport function Footer() {\n  return ${footer};\n}\nexport default function Shell({ children }: { children: ReactNode }) { return <div>{children}<Footer /></div>; }\n` });
+  const home = { path: 'components/home.tsx', content: 'export default function Home() { return null; }' };
+
+  it('adds the eleven pages and the footer nav slot', () => {
+    const result = withStandardPages([home, shell()]);
+    expect(result.added.sort()).toEqual(CONTENT_PAGE_FILES.map(file => file.path).sort());
+    expect(result.slotAdded).toBe(true);
+    const footer = result.files.find(file => file.path === 'components/Shell.tsx')!.content;
+    expect(footer.match(/data-pagosya-pages/g)).toHaveLength(1);
+    expect(footer.indexOf('data-pagosya-pages')).toBeLessThan(footer.indexOf('</footer>'));
+    expect(result.files.find(file => file.path === 'components/home.tsx')).toEqual(home);
+  });
+
+  it('changes nothing when the pages and the slot are already there', () => {
+    const once = withStandardPages([home, shell()]);
+    const twice = withStandardPages(once.files);
+    expect(twice.added).toEqual([]);
+    expect(twice.slotAdded).toBe(false);
+    expect(twice.files).toEqual(once.files);
+  });
+
+  it('adds nothing to a store with no Shell to host the pages', () => {
+    const result = withStandardPages([home]);
+    expect(result).toEqual({ files: [home], added: [], slotAdded: false });
+  });
+
+  it('keeps a page the store already has, and adds the rest', () => {
+    const own = { path: 'components/pages/faq.tsx', content: '// @pagosya-page\nexport default function Faq() { return null; }' };
+    const result = withStandardPages([home, shell(), own]);
+    expect(result.added).not.toContain('components/pages/faq.tsx');
+    expect(result.files.find(file => file.path === 'components/pages/faq.tsx')).toEqual(own);
+    expect(result.added).toHaveLength(CONTENT_PAGE_FILES.length - 1);
+  });
+
+  it('still adds the pages, without touching the Shell, when its footer cannot be found safely', () => {
+    const odd = { path: 'components/Shell.tsx', content: 'export default function Shell({ children }: { children: unknown }) { return <div>{children}</div>; }\n' };
+    const result = withStandardPages([home, odd]);
+    expect(result.slotAdded).toBe(false);
+    expect(result.files.find(file => file.path === 'components/Shell.tsx')).toEqual(odd);
+    expect(result.added).toHaveLength(CONTENT_PAGE_FILES.length);
+    const two = { path: 'components/Shell.tsx', content: 'export function Footer() { return <footer>a</footer>; }\nexport function Other() { return <footer>b</footer>; }\n' };
+    expect(withStandardPages([home, two]).slotAdded).toBe(false);
   });
 });

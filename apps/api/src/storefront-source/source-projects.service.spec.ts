@@ -3,8 +3,9 @@ jest.setTimeout(60_000);
 
 import { nextStoreFiles, nextBrief, nextStoreConfig } from './fixtures/next-store';
 import { nextProjectScaffold } from './source-next';
-import { ConflictException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { SourceProjectsService } from "./source-projects.service";
+import { SourceProjectsController } from "./source-projects.controller";
 import { sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
 import { validateLegacySources } from "./source-legacy";
 import { dnaFingerprint } from "./source-dna";
@@ -261,5 +262,42 @@ describe('design fingerprint memory', () => {
       where: { storeId: { not: 's1' }, designFingerprint: { not: null }, createdAt: { gte: new Date('2026-07-26T12:00:00Z') } },
       orderBy: { createdAt: 'desc' }, take: 40, select: { designFingerprint: true },
     });
+  });
+});
+
+describe('adding the standard pages to a store that already exists', () => {
+  const shell = { path: 'components/Shell.tsx', content: "import type { ReactNode } from 'react';\nexport function Footer() {\n  return <footer className=\"x\"><p>Pie</p></footer>;\n}\nexport default function Shell({ children }: { children: ReactNode }) { return <div>{children}<Footer /></div>; }\n" };
+  const project = (extra: Array<{ path: string; content: string }> = []) => ({ revision: 0, label: 'Next', brief: nextBrief, files: [...nextStoreFiles(), ...extra, ...nextProjectScaffold('cafe'), { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` }, { path: 'commerce.js', content: '/* runtime */' }] });
+
+  it('saves a new revision with the pages, the footer slot and the pages compiled, and leaves the old revision alone', async () => {
+    const { service } = setup();
+    await service.save('m1', 's1', project([shell]));
+    const saved: any = await service.addStandardPages('m1', 's1', 1);
+    expect(saved.revision).toBe(2);
+    const version: any = await service.version('m1', 's1', 2);
+    const paths = version.snapshot.files.map((f: any) => f.path);
+    for (const page of ['components/pages/faq.tsx', 'components/catalog/search.tsx']) expect(paths).toContain(page);
+    for (const html of ['faq.html', 'buscar.html', '404.html']) expect(paths).toContain(html);
+    expect(version.snapshot.files.find((f: any) => f.path === 'components/Shell.tsx').content).toContain('data-pagosya-pages');
+    const old: any = await service.version('m1', 's1', 1);
+    expect(old.snapshot.files.map((f: any) => f.path)).not.toContain('components/pages/faq.tsx');
+  });
+
+  it('refuses when there is nothing to add, when there is no Shell, for a missing site and for a store it does not own', async () => {
+    const { service } = setup();
+    await service.save('m1', 's1', project([shell]));
+    await service.addStandardPages('m1', 's1', 1);
+    await expect(service.addStandardPages('m1', 's1', 2)).rejects.toBeInstanceOf(ConflictException);
+    const bare = setup();
+    await bare.service.save('m1', 's1', project());
+    await expect(bare.service.addStandardPages('m1', 's1', 1)).rejects.toBeInstanceOf(ConflictException);
+    await expect(bare.service.addStandardPages('m1', 's1', 0)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(bare.service.addStandardPages('other', 's1', 1)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('is a compile-heavy merchant route with its own throttle', () => {
+    const handler = (SourceProjectsController.prototype as any).addStandardPages;
+    expect(Reflect.getMetadata('THROTTLER:LIMITdefault', handler)).toBeGreaterThan(0);
+    expect(Reflect.getMetadata('path', handler)).toBe('standard-pages');
   });
 });

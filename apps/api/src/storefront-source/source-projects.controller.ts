@@ -27,6 +27,14 @@ class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: b
 export class SourceProjectsController {
   constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService) {}
 
+  // Recompiles the whole project with eleven new pages, so it has a tight limit like the other compile-heavy routes.
+  @Post('standard-pages')
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @CompileBudget()
+  addStandardPages(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SourceProjectRevisionDto) {
+    return this.projects.addStandardPages(merchant.id, storeId, input.revision);
+  }
+
   @Patch('contact-form')
   contactForm(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: ContactFormDto) {
     return this.projects.setContactForm(merchant.id, storeId, input.revision, input.enabled);
