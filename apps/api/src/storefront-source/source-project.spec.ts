@@ -22,6 +22,13 @@ export function sourceFixture(): SaveSourceProjectDto {
 }
 
 describe("Independent source artifacts", () => {
+  it('gives the compiled script of a standard page folder the compiled-script budget, and no other folder', () => {
+    const compiled = (path: string) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path, content: 'x'.repeat(500_000) }] });
+    for (const folder of ['pages', 'catalog', 'auth', 'account']) expect(() => compiled(`_compiled/${folder}/faq.js`)).not.toThrow();
+    expect(() => compiled('_compiled/home.js')).not.toThrow();
+    expect(() => compiled('_compiled/other/faq.js')).toThrow('Invalid source file content');
+    expect(() => compiled('_compiled/pages/deep/faq.js')).toThrow('Invalid source file content');
+  });
   it('gives the platform commerce runtime its own budget while authored files keep theirs', () => {
     const runtime = { path: 'commerce.js', content: '/* runtime */'.padEnd(200_000, ' ') };
     expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);

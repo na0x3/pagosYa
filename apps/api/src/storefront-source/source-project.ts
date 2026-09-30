@@ -54,7 +54,7 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     if (key === RESERVED_PATH || paths.has(key)) reject("Duplicate or reserved source file path");
     paths.add(key);
     const encoding = file.encoding ?? "utf8";
-    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
+    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(?:(?:pages|catalog|auth|account)\/)?[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
     if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image, MP4 and font assets are supported");
     if (encoding === "utf8" && (file.content.includes("\0") || SECRET.test(file.content))) reject("Source files cannot contain NUL characters or recognized private credentials");
     if (sourceVideo(file.path)) {
