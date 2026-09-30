@@ -65,3 +65,13 @@ describe('AgentToolbox', () => {
     expect(box.steps).toEqual([]);
   });
 });
+
+describe('AgentToolbox screenshots', () => {
+  it('tells the model what to do when the screenshots are used up, instead of leaving it to ask again', async () => {
+    const box = new AgentToolbox({ workspace: new AgentWorkspace(authored, { redesign: false }), previous: authored, base, instruction: 'x', purpose: 'shop', maxScreenshots: 0 });
+    const result = await box.run('screenshot', JSON.stringify({ width: 1280 }));
+    expect(result.output).toContain('Ya no quedan capturas');
+    expect(result.output).toContain('finish');
+    expect(result.image).toBeUndefined();
+  });
+});

@@ -488,7 +488,7 @@ export class SourceGenerationService {
     const started = Date.now();
     const runTimeout = agentEngine ? agentLimits(chatgptPlan).wallMs + 30_000 : 240_000;
     const signal = execution?.signal ? AbortSignal.any([execution.signal, AbortSignal.timeout(runTimeout)]) : AbortSignal.timeout(runTimeout);
-    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string }> = [];
+    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[] }> = [];
     let generated!: { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
     let agentOutcome: { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>> } | undefined;
     /** The product page theme the agent chose (already sanitized and browser-checked); merged into the accepted design below. */
@@ -665,7 +665,9 @@ export class SourceGenerationService {
           // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
           onPreview: files => agentDraftPreviews.set(storeId, files.filter(file => !(file.encoding === 'base64' && previousFiles.some(saved => saved.path === file.path)))) });
         const onTurn = async ({ body, durationMs, status }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => {
-          attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}),
+          // The tools this turn asked for, so a slow or failed run can be explained afterwards (OpenAI `output`, Anthropic `content`).
+          const tools = [...(Array.isArray(body?.output) ? body.output : []), ...(Array.isArray(body?.content) ? body.content : [])].filter((item: any) => item?.type === 'function_call' || item?.type === 'tool_use').map((item: any) => String(item.name));
+          attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, tools, ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}),
             // The provider's own words, for us: the merchant sees only the status and code.
             ...(body?.error ? { failureReason: [body.error.code || body.error.type, body.error.message].filter(part => typeof part === 'string' && part).join(': ').slice(0, 300) } : {}) });
           await this.metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
@@ -682,10 +684,10 @@ export class SourceGenerationService {
         let outcome: Awaited<ReturnType<typeof runAgent>>;
         let accepted: boolean;
         try {
-          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: agentLimits(chatgptPlan), instructions: agentInstructions(stablePrompt, sitePurpose, isNew, isNew || redesign), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
+          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: agentLimits(chatgptPlan), instructions: agentInstructions(stablePrompt, sitePurpose, isNew, isNew || redesign, agentLimits(chatgptPlan).wallMs / 60_000), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), oldFiles, images), onStep: step => progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }) });
           accepted = outcome.status === 'finished' || outcome.status === 'limit' && toolbox.draftIsClean() && await gate(workspace.files()) === null;
         } finally { agentDraftPreviews.clear(storeId); }
-        if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
+        if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : outcome.reason === 'loop' ? ' porque se quedó repitiendo la misma acción' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
         if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
         autoRepairs.push(...toolbox.repairs);
         agentTheme = toolbox.pendingTheme;

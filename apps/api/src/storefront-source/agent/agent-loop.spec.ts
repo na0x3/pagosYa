@@ -76,3 +76,23 @@ describe('agent limits', () => {
     expect(agentLimits(true)).toEqual({ ...AGENT_LIMITS, wallMs: 720_000 });
   });
 });
+
+describe('runAgent repetition guard', () => {
+  it('warns the model on the second identical result and stops on the third, long before the tool-call limit', async () => {
+    const seen: string[] = [];
+    const model: AgentModel = async ({ transcript }) => { seen.push(JSON.stringify(transcript)); return { calls: [call('list_files', {})] }; };
+    const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], model });
+    expect(result).toEqual({ status: 'limit', reason: 'loop' });
+    expect(seen).toHaveLength(3);
+    expect(seen[1]).not.toContain('repitiendo');
+    expect(seen[2]).toContain('repitiendo');
+  });
+
+  it('does not call a run a loop while its calls differ or only alternate', async () => {
+    const paths = ['components/home.tsx', 'components/Shell.tsx'];
+    let i = 0;
+    const model: AgentModel = async () => ({ calls: [call('read_file', { path: paths[i++ % paths.length] })] });
+    const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], limits: { toolCalls: 8 }, model });
+    expect(result).toEqual({ status: 'limit' });
+  });
+});

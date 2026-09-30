@@ -28,7 +28,7 @@ ${shop ? 'The Catalog with every product stays on the page (after Producto estre
 }
 
 /** The existing contracts stay first (a cached prefix, as today); the protocol tells the model how to use its tools. */
-export function agentInstructions(stablePrompt: string, sitePurpose: SourceSitePurpose, isNew: boolean, creative = isNew) {
+export function agentInstructions(stablePrompt: string, sitePurpose: SourceSitePurpose, isNew: boolean, creative = isNew, minutes = 6) {
   return `${stablePrompt}
 ${creative ? boldRecipes(sitePurpose) : ''}
 AGENT PROTOCOL. You work with tools on a private draft of this ${sitePurpose} site; nothing is saved until finish succeeds.
@@ -39,7 +39,7 @@ AGENT PROTOCOL. You work with tools on a private draft of this ${sitePurpose} si
 5. Call screenshot at 1280 and at 390 and look at them: fix overlaps, empty areas, unreadable text, broken images, sideways scroll. Then verify again.
 6. Call finish with a summary in Spanish for the merchant (1–3 sentences, no code) and the list of sections you built, in page order, in Spanish.
 PRODUCT PAGE THEME. The product page (ficha de producto) is drawn by the platform; its identity is set with set_product_card_theme, never with your own CSS. Use it for a whole-store design and for any request about the product page or product card: choose a preset that fits what the store sells, optionally override one to three of swatch, gallery, blocks, divider, enter, and add guarded CSS on the [data-part=…] cosmetic parts. The answer lists what the sanitizer dropped; fix it and call again. verify checks the theme in a real browser and removes CSS that hides, covers or shrinks the price, options or buy button. Do not call it for requests that do not concern the product page.
-Limits: 40 tool calls, 8 screenshots, 6 minutes. Work efficiently: several edits per turn are fine; never re-read a file you just received.`;
+Limits: 40 tool calls, 8 screenshots, ${minutes} minutes. Work efficiently: several edits per turn are fine; never re-read a file you just received.`;
 }
 
 export function agentOpening(task: string, files: SourceProjectFileDto[], images: unknown[]) {

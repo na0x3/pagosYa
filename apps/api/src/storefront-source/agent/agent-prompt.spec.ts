@@ -18,3 +18,10 @@ describe('agent instructions', () => {
     expect(service).toContain('Preguntas');
   });
 });
+
+describe('agent limits in the instructions', () => {
+  it('tells the model the minutes it really has', () => {
+    expect(agentInstructions('CONTRATOS', 'shop', false, false)).toContain('6 minutes');
+    expect(agentInstructions('CONTRATOS', 'shop', false, false, 12)).toContain('12 minutes');
+  });
+});

@@ -19,6 +19,9 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
   const sleep = input.sleep ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
   let toolCalls = 0;
   let idle = 0;
+  // A model that keeps asking for the same thing and getting the same answer (for example a screenshot after the last one)
+  // burns the whole clock. Told once on the second repeat, stopped on the third, so a clean draft is still saved.
+  let repeats = 0, lastSignature = '', warn = false;
   while (true) {
     if (input.signal?.aborted) return { status: 'failed', reason: 'cancelled' };
     if (toolCalls >= limits.toolCalls || now() - started >= limits.wallMs) return { status: 'limit' };
@@ -57,8 +60,14 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
       for (const step of toolbox.steps.slice(before)) await input.onStep?.(step);
       if (toolbox.finished) return { status: 'finished' };
       if (toolCalls >= limits.toolCalls) break;
+      const signature = `${call.name}|${call.arguments}|${result.output}`;
+      repeats = signature === lastSignature ? repeats + 1 : 1;
+      lastSignature = signature;
+      if (repeats >= 3) return { status: 'limit', reason: 'loop' };
+      if (repeats === 2) warn = true;
     }
     // Screenshots reach the model as images after the tool outputs, since function outputs carry text only.
     if (images.length) transcript.push({ role: 'user', content: images.map(image_url => ({ type: 'input_image', image_url, detail: 'auto' })) });
+    if (warn) { warn = false; transcript.push({ role: 'user', content: [{ type: 'input_text', text: 'Estás repitiendo la misma acción y obtienes el mismo resultado. Cambia de estrategia: si verify ya está limpio y no quedan capturas, llama finish ahora.' }] }); }
   }
 }

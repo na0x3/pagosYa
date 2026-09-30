@@ -84,7 +84,7 @@ export class AgentToolbox {
       }
       case 'screenshot': {
         const width: 1280 | 820 | 390 = [1280, 820, 390].includes(args.width) ? args.width : 1280;
-        if (this.shots >= this.ctx.maxScreenshots) return { output: 'Ya no quedan capturas en este trabajo.' };
+        if (this.shots >= this.ctx.maxScreenshots) return { output: 'Ya no quedan capturas en este trabajo. No pidas más: si verify está limpio, llama finish.' };
         try {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, ws.files().filter(f => nextSourceFile(f.path)));
           const shot = await captureAgentDraft(snapshot, width, this.ctx.signal);

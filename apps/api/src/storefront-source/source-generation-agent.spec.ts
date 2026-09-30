@@ -179,6 +179,21 @@ describe('generate() with the agent engine', () => {
     const capped = api.service.newBudget(1);
     expect(() => capped.reserve('gpt-5.6-sol', 240_000, 20_000, 1024)).toThrow('límite restante');
   });
+  it('records which tools each turn called, so a slow or failed run can be explained', async () => {
+    const { service, brief } = await setup();
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título principal.', sections: ['Portada'] }]]));
+    const result: any = await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
+    expect(result.generation.attempts.filter((a: any) => a.phase === 'agent').map((a: any) => a.tools)).toEqual([['edit_file'], ['verify'], ['finish']]);
+  });
+  it('says the agent kept repeating itself when a loop ends a run whose draft is not clean', async () => {
+    const { service, projects, brief } = await setup();
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => turn([['list_files', {}]]));
+    await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50))).rejects.toThrow('repitiendo');
+    expect(projects.save).not.toHaveBeenCalled();
+  });
   it('keeps the reason a run failed in its receipt, so a FAILED row explains itself', async () => {
     const { service, prisma, brief } = await setup();
     jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ error: {} }), { status: 500 }));
