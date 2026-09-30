@@ -60,37 +60,43 @@ whole by their owner.
 - Orders are shown only for a **verified** email, so registering someone else's address never exposes their orders.
 - Rate limits: login 10/min, register 5/hour, forgot-password 5/hour, reset/verify 10/hour, per IP.
 - Scope: every query includes the `storeId` resolved from the slug; a token from one store never works in another.
-- The runtime escapes everything it draws; the bearer token lives in `localStorage` under `pagosya:customer:<slug>`
-  (an XSS on a store would expose it, the same exposure the cart already has; it is never sent outside the API origin).
+- The account pages escape everything they draw. The bearer token lives in the checkout origin's `localStorage`, so an
+  XSS inside a store (the sandbox) cannot reach it; it is only ever sent to the API.
 - Deliberately not built: social login, two-factor, magic links, saved cards.
 
-## Storefront pages
+## Where the account pages live (changed while building, for security)
 
-Eight more `InfoPage` kinds and files, filled by the runtime (`commerce.js`) like the other information pages:
-`login`, `register`, `forgot`, `reset` (under `components/auth/`) and `orders`, `addresses`, `profile`, `subscriptions`
-(under `components/account/`), at the URLs fixed in sub-project 1 (`acceso-ingresar.html`, `acceso-registro.html`,
-`acceso-olvide-mi-contrasena.html`, `acceso-restablecer-contrasena.html`, `cuenta-pedidos.html`, `cuenta-direcciones.html`,
-`cuenta-perfil.html`, `cuenta-suscripciones.html`).
+The first design drew the account forms inside the store, like the information pages. That was dropped: a published store
+runs in a sandboxed iframe inside the checkout app, and the platform already keeps every personal-data form out of it (the
+"trusted form" for leads and newsletter sign-ups) because authored code, from a template or written by YAPI, runs in the
+same frame and could read what the shopper types. A password form there would hand passwords to that code.
 
-- The verification link lands on `acceso-ingresar.html?verify=<token>`; the reset link on
-  `acceso-restablecer-contrasena.html?token=<token>`. Both send the token in a POST body, never in a header or another URL.
-- An account page without a session sends the shopper to the login page; with a session it loads its data.
-- The footer nav shows "Ingresar" (with "Crear cuenta") when signed out and "Mi cuenta", "Mis pedidos" and "Salir"
-  when signed in.
-- Every `auth` and `account` page is baked `noindex` and left out of the sitemap and `llms.txt`.
-- The cookies page gains one line for the session token, and its pin test gains the `customer` prefix.
-- The page files are written on template apply like the others (19 pages, 57 files; the source limit was raised to
-  250 files in sub-project 3 for this).
+So the account pages are served by the checkout app, on its own origin, at `/cuenta/<slug>[/<view>]`, with the store's name:
 
-Decision: `downloads` and `payment-methods` are not built. There is no saved card anywhere, and downloads are delivered
-through order tracking links that have no list to show. Their URLs stay reserved in the slug table.
+| View | URL | What it does |
+|---|---|---|
+| `ingresar` | `/cuenta/<slug>` | sign in (signed-in shoppers go to their orders) |
+| `registro`, `recuperar` | `/cuenta/<slug>/registro`, `/recuperar` | create an account, ask for a reset link |
+| `verificar`, `restablecer` | `/cuenta/<slug>/verificar?token=`, `/restablecer?token=` | the links in the emails; the token is taken out of the address bar at once |
+| `pedidos`, `suscripciones`, `direcciones`, `perfil` | `/cuenta/<slug>/…` | the account itself, plus data export and account deletion in `perfil` |
+
+- The session token is kept in the checkout origin's `localStorage` under `pagosya:customer:<slug>`; the store never sees it.
+- The emails link to these pages (`checkoutOrigin/cuenta/<slug>/verificar|restablecer?token=`).
+- Every account page is `noindex` (`markPrivateStorePage`) and the server marks `/cuenta/` with `X-Robots-Tag: noindex, nofollow`.
+- The store's footer nav (`data-pagosya-pages`) gets one link, "Mi cuenta", to `/cuenta/<slug>`. In the sandboxed host it
+  opens through the existing `pagosya:source-external` bridge, which now allows exactly that destination.
+- **No `auth/` or `account/` page files are written into the store's source**; the URLs reserved in sub-project 1 stay unused.
+  The store's design reaches these pages through the store name only: applying the full store branding to them is a later
+  improvement, not part of this sub-project.
+- `downloads` and `payment-methods` are not built (see above).
 
 ## Testing
 
 API: unit tests with a mocked Prisma like `consumer.service.spec.ts` (register, verify, login incl. timing path and
 unverified, logout, forgot/reset incl. single use and session revocation, scope by store, orders only for verified email,
-export, delete), plus a controller test that the throttles are declared. Runtime: JSDOM tests with a fake `fetch` (forms
-post the right body, errors show, redirect without session, escaping, nav states). Seeded migration applied to the dev
+export, delete), plus a controller test that the throttles are declared. Checkout pages: Vitest with a fake `fetch` (forms
+post the right body, errors show, sign-in prompt without a session, expired or rejected sessions, escaping, token removal
+from the URL). Store runtime: the footer link, and its bridge message in the sandboxed host. Seeded migration applied to the dev
 database only with `migrate deploy`.
 
 ## Out of scope

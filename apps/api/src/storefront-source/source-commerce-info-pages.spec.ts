@@ -7,7 +7,7 @@ const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checko
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 
 const base = { storeName: 'Marca', items: [{ id: 'p1', name: 'Café', amount: 2000, currency: 'BOB', stock: null, imageUrls: [] }] };
-async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Record<string, unknown>, fetchImpl?: () => Promise<unknown>, query = '') {
+async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Record<string, unknown>, fetchImpl?: () => Promise<unknown>, query = '', hosted = false) {
   const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido</button><section data-pagosya-catalog></section><section data-pagosya-cart></section><main><div data-pagosya-page="${kind}"></div></main><footer><nav data-pagosya-pages></nav></footer><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
   const w = dom.window;
   w.HTMLElement.prototype.scrollIntoView = () => {};
@@ -17,6 +17,7 @@ async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Re
   const data = { ...base, ...extra };
   w.PAGOSYA_PREVIEW = !live;
   if (query) w.PAGOSYA_PREVIEW_QUERY = query;
+  if (hosted) { w.PAGOSYA_HOSTED = true; w.PAGOSYA_HOSTED_REQUEST = jest.fn(async () => ({ ok: true, body: {} })); w.__messages = []; w.addEventListener('message', (event: any) => w.__messages.push(event.data)); }
   w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data };
   w.fetch = jest.fn(fetchImpl ?? (async () => ({ ok: true, json: async () => ({ ...data, ...live }) })));
   w.eval(commerce);
@@ -241,5 +242,43 @@ describe('catalog pages in the storefront runtime', () => {
     expect(emptyLabels).not.toContain('Colecciones');
     expect(emptyLabels).not.toContain('Buscar');
     full.close(); empty.close();
+  });
+});
+
+describe('the account link in the footer nav', () => {
+  const items = [{ id: 'p1', name: 'Café', description: '', amount: 100, currency: 'BOB', stock: 1, imageUrls: [], tags: [] }];
+
+  it('links the shopper to the account pages on the trusted checkout origin', async () => {
+    const w = await shop('about', { tagline: 'x', items });
+    const link = w.document.querySelector('[data-pagosya-pages] a[data-pagosya-account]');
+    expect(link.textContent).toBe('Mi cuenta');
+    expect(link.getAttribute('href')).toBe('https://pay.test/cuenta/marca');
+    w.close();
+  });
+
+  it('opens it through the bridge when the store runs in the sandboxed host, so the store never handles the account itself', async () => {
+    const w = await shop('about', { tagline: 'x', items }, undefined, undefined, '', true);
+    const link = w.document.querySelector('[data-pagosya-pages] a[data-pagosya-account]');
+    const click = new w.MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    expect(click.defaultPrevented).toBe(true);
+    expect(w.__messages).toContainEqual({ type: 'pagosya:source-external', url: 'https://pay.test/cuenta/marca' });
+    w.close();
+  });
+
+  it('is not shown when the store has no slug or no checkout origin to send the shopper to', async () => {
+    const w = await shop('about', { tagline: 'x', items });
+    w.close();
+    const dom = new (createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom').JSDOM)('<html><head></head><body><main><div data-pagosya-page="about"></div></main><nav data-pagosya-pages></nav><p data-pagosya-status></p></body></html>', { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
+    const win = dom.window as any;
+    win.HTMLElement.prototype.scrollIntoView = () => {}; win.matchMedia = () => ({ matches: true });
+    win.PAGOSYA_PREVIEW = true;
+    win.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', data: { ...base, tagline: 'x', items } };
+    win.fetch = jest.fn();
+    win.eval(commerce);
+    await new Promise(resolve => setTimeout(resolve, 60));
+    expect(win.document.querySelector('[data-pagosya-pages] a[data-pagosya-account]')).toBeNull();
+    win.close();
   });
 });

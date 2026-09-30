@@ -1056,6 +1056,12 @@
     ['faq', 'faq.html', 'Preguntas frecuentes'], ['refund', 'reembolsos.html', 'Cambios y devoluciones'], ['privacy', 'privacidad.html', 'Privacidad'],
     ['terms', 'terminos.html', 'Términos y condiciones'], ['cookies', 'cookies.html', 'Cookies y almacenamiento'],
   ];
+  // The shopper's account is served by the checkout app on its own origin, never inside the store, where authored code runs.
+  const accountUrl = () => { try { return config.slug && config.checkoutOrigin ? new URL(`/cuenta/${encodeURIComponent(config.slug)}`, config.checkoutOrigin).href : ''; } catch { return ''; } };
+  document.addEventListener('click', event => {
+    const link = event.target.closest && event.target.closest('[data-pagosya-account]');
+    if (link && hosted) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
+  });
   const infoText = value => (typeof value === 'string' ? value.trim() : '');
   const infoParagraphs = text => text.split(/\n{2,}/).map(paragraph => `<p>${escape(paragraph).replace(/\n/g, '<br>')}</p>`).join('');
   const policyText = key => infoText(storePolicies()[key]);
@@ -1133,7 +1139,8 @@
   function renderInfoPages(force = false) {
     const live = force || ready;
     if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
-      slot.innerHTML = INFO_LINKS.filter(([kind]) => infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('');
+      const account = accountUrl();
+      slot.innerHTML = INFO_LINKS.filter(([kind]) => infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '');
       slot.hidden = !slot.innerHTML;
     });
     let unavailable = false;
