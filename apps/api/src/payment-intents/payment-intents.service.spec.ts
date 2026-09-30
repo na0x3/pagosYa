@@ -748,3 +748,52 @@ describe("PaymentIntentsService subscription enrollment", () => {
     expect((service as any).sendReceiptEmail).toHaveBeenCalledWith(expect.anything(), "Tienda", expect.stringContaining("Administra tu suscripción"));
   });
 });
+
+describe("PaymentIntentsService.resolveStaleBanecoQr (N1)", () => {
+  function setup(status: string | Error, railReference: string | null = "qr_1", cancel?: jest.Mock) {
+    const rail: any = { getStatus: status instanceof Error ? jest.fn().mockRejectedValue(status) : jest.fn().mockResolvedValue({ status, railReference: "qr_1", raw: {} }), cancelQr: cancel ?? jest.fn().mockResolvedValue(undefined) };
+    const prisma: any = { transaction: { findFirst: jest.fn().mockResolvedValue(railReference ? { railReference } : null) } };
+    const service = new PaymentIntentsService(prisma, { get: jest.fn().mockReturnValue(rail) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const apply = jest.spyOn(service, "applyCallbackResult").mockResolvedValue({} as any);
+    return { service, rail, apply };
+  }
+  const intent = { id: "pi_1", railId: "baneco_qr", livemode: true };
+
+  it("applies the success through the callback path when the bank says paid", async () => {
+    const { service, apply, rail } = setup("succeeded");
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("paid");
+    expect(apply).toHaveBeenCalledWith("pi_1", expect.objectContaining({ status: "succeeded" }), { railId: "baneco_qr" });
+    expect(rail.cancelQr).not.toHaveBeenCalled();
+  });
+  it("reports unknown when the status call fails, and never cancels", async () => {
+    const { service, rail, apply } = setup(new Error("timeout"));
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unknown");
+    expect(rail.cancelQr).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+  });
+  it("reports unknown when the paid result cannot be applied", async () => {
+    const { service, apply } = setup("succeeded");
+    apply.mockRejectedValue(new Error("db"));
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unknown");
+  });
+  it("cancels the QR at the bank and reports unpaid when it is still pending", async () => {
+    const { service, rail } = setup("requires_action");
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unpaid");
+    expect(rail.cancelQr).toHaveBeenCalledWith("qr_1");
+  });
+  it("still reports unpaid when only the bank cancel fails", async () => {
+    const { service } = setup("failed", "qr_1", jest.fn().mockRejectedValue(new Error("nope")));
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unpaid");
+  });
+  it("reports unknown when there is no QR reference to ask about", async () => {
+    const { service, rail } = setup("succeeded", null);
+    expect(await service.resolveStaleBanecoQr(intent)).toBe("unknown");
+    expect(rail.getStatus).not.toHaveBeenCalled();
+  });
+  it("skips the bank for mock rails and test mode", async () => {
+    const { service, rail } = setup("succeeded");
+    expect(await service.resolveStaleBanecoQr({ id: "pi_1", railId: "mock_qr", livemode: true })).toBe("unpaid");
+    expect(await service.resolveStaleBanecoQr({ id: "pi_1", railId: "baneco_qr", livemode: false })).toBe("unpaid");
+    expect(rail.getStatus).not.toHaveBeenCalled();
+  });
+});

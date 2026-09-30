@@ -525,6 +525,33 @@ export class PaymentIntentsService {
   }
 
   /** Invoked by authenticated rail callbacks to resolve a `requires_action` intent. */
+  /**
+   * Asks the bank about a Baneco QR before an old REQUIRES_ACTION intent is cancelled (Baneco's date-only dueDate
+   * keeps a QR payable for up to ~48 h). "paid": the bank has the money and the success was applied here (never cancel).
+   * "unpaid": the bank says not paid; the QR was withdrawn there (best effort). "unknown": the answer or the apply failed; leave it for the next run.
+   * Mock rails and test-mode intents never reach the bank.
+   */
+  async resolveStaleBanecoQr(intent: { id: string; railId?: string | null; livemode?: boolean }): Promise<"paid" | "unpaid" | "unknown"> {
+    if (intent.railId !== "baneco_qr" || intent.livemode === false) return "unpaid";
+    try {
+      const attempt = await this.prisma.transaction.findFirst({ where: { paymentIntentId: intent.id, type: TransactionType.AUTHORIZATION }, orderBy: { createdAt: "desc" }, select: { railReference: true } });
+      const qrId = attempt?.railReference;
+      if (!qrId || qrId.startsWith("order:")) return "unknown";
+      const rail = this.railRegistry.get("baneco_qr");
+      const status = await rail.getStatus(qrId);
+      if (status.status === "succeeded") {
+        await this.applyCallbackResult(intent.id, status, { railId: "baneco_qr" });
+        return "paid";
+      }
+      try { await (rail as { cancelQr?: (id: string) => Promise<void> }).cancelQr?.(qrId); }
+      catch (error) { this.logger.warn(`Could not cancel Baneco QR ${qrId} for ${intent.id}: ${(error as Error).message}`); }
+      return "unpaid";
+    } catch (error) {
+      this.logger.warn(`Baneco status check failed for ${intent.id}; leaving it for the next run: ${(error as Error).message}`);
+      return "unknown";
+    }
+  }
+
   async applyCallbackResult(
     paymentIntentId: string,
     result: RailResult,

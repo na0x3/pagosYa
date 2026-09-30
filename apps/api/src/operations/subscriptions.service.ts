@@ -23,9 +23,11 @@ import { advanceBillingDate, LAST_REMINDER_AFTER_DAYS, MISSED_AFTER_DAYS, subscr
 import { subscriptionManageUrl } from "./subscription-manage-token";
 import { originLivemodes, originMatchesStore } from "./subscription-origin";
 
-/** A Baneco QR lives about 24 h; past this an untouched REQUIRES_ACTION intent is dead and may be replaced. */
+/** A QR lives about 24 h; past this an untouched REQUIRES_ACTION intent is dead and may be replaced. */
 export const STALE_QR_HOURS = 25;
-const staleQrCutoff = (now = Date.now()) => new Date(now - STALE_QR_HOURS * 3_600_000);
+/** Baneco sends a date-only dueDate, so its QR can stay payable for up to ~48 h. */
+export const STALE_BANECO_QR_HOURS = 49;
+const staleQrCutoff = (railId?: string | null, now = Date.now()) => new Date(now - (railId === "baneco_qr" ? STALE_BANECO_QR_HOURS : STALE_QR_HOURS) * 3_600_000);
 
 export const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
 
@@ -146,11 +148,20 @@ export class SubscriptionsService {
   private async cancelUnpaidIntent(tx: Prisma.TransactionClient, paymentIntentId: string): Promise<boolean> {
     const canceled = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: { in: [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED] } }, data: { status: PaymentIntentStatus.CANCELED } });
     if (canceled?.count) return true;
-    // An abandoned bank QR never expires on our side: after ~25 h it is dead and the renewal must not stay stuck on it.
-    const stale = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: PaymentIntentStatus.REQUIRES_ACTION, updatedAt: { lt: staleQrCutoff() } }, data: { status: PaymentIntentStatus.CANCELED } });
-    if (stale?.count) return true;
-    const current = await tx.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { status: true } });
-    return current?.status === PaymentIntentStatus.CANCELED;
+    const current = await tx.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { status: true, railId: true, livemode: true, updatedAt: true } });
+    if (current?.status !== PaymentIntentStatus.REQUIRES_ACTION) return current?.status === PaymentIntentStatus.CANCELED;
+    // An abandoned QR never expires on our side: once it is dead (25 h, 49 h for Baneco) the renewal must not stay stuck on it.
+    const cutoff = staleQrCutoff(current.railId);
+    if (!current.updatedAt || current.updatedAt >= cutoff) return false;
+    if (!(await this.bankAllowsCancel(paymentIntentId, current))) return false;
+    const stale = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: PaymentIntentStatus.REQUIRES_ACTION, updatedAt: { lt: cutoff } }, data: { status: PaymentIntentStatus.CANCELED } });
+    return !!stale?.count;
+  }
+
+  /** A Baneco QR is cancelled only when the bank confirms it is unpaid; a payment or an unanswered status call blocks the cancel. */
+  private async bankAllowsCancel(paymentIntentId: string, intent: { railId?: string | null; livemode?: boolean }): Promise<boolean> {
+    if (intent.railId !== "baneco_qr" || intent.livemode === false) return true;
+    return (await this.paymentIntents.resolveStaleBanecoQr({ id: paymentIntentId, railId: intent.railId, livemode: intent.livemode })) === "unpaid";
   }
 
   /** Cancels the open (unpaid) renewal of a subscription; paid orders are never touched. */
@@ -182,7 +193,8 @@ export class SubscriptionsService {
     const existingIntentId = rows[0]?.paymentIntentId;
     if (existingIntentId) {
       const existingIntent = await tx.paymentIntent.findUnique({ where: { id: existingIntentId } });
-      const staleQr = existingIntent?.status === PaymentIntentStatus.REQUIRES_ACTION && existingIntent.updatedAt < staleQrCutoff();
+      const staleQr = existingIntent?.status === PaymentIntentStatus.REQUIRES_ACTION && existingIntent.updatedAt < staleQrCutoff(existingIntent.railId);
+      if (staleQr && !(await this.bankAllowsCancel(existingIntent!.id, existingIntent!))) return { intent: existingIntent!, created: false }; // paid at the bank or bank unreachable: keep it
       if (existingIntent && !staleQr && (!forceNew || (existingIntent.status !== PaymentIntentStatus.FAILED && existingIntent.status !== PaymentIntentStatus.CANCELED))) return { intent: existingIntent, created: false };
       if (existingIntent?.status === PaymentIntentStatus.FAILED) {
         await tx.paymentIntent.update({ where: { id: existingIntent.id }, data: { status: PaymentIntentStatus.CANCELED } });
