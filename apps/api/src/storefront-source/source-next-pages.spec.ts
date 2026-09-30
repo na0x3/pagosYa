@@ -1,5 +1,10 @@
-import { nextContentPages, standardPageRoute, validateNextSources } from './source-next';
+import { compileNextPreview, nextContentPages, nextPageMarkup, nextProjectScaffold, standardPageRoute, validateNextSources } from './source-next';
+import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { templateStoreDataFile } from './source-templates';
 import { nextStoreFiles } from './fixtures/next-store';
+
+// Compiles real Next.js projects and renders 61 templates.
+jest.setTimeout(60_000);
 
 const file = (path: string) => ({ path, content: 'export default function P() { return null; }' });
 const base = () => nextStoreFiles();
@@ -56,5 +61,30 @@ describe('validating standard pages', () => {
   it('still asks a hand-written page-SLUG page for the hooks it always needed', () => {
     const old = { ...faq, path: 'components/page-faq.tsx' };
     expect(() => validateNextSources([...nextStoreFiles(), old], 'shop')).toThrow(/page-faq necesita data-pagosya-checkout-page/);
+  });
+});
+
+const thinPage = (path: string, title: string) => ({ path, content: `import Shell from '../Shell';\nimport { StandardPagePlaceholder } from '@pagosya/ui';\nexport default function Page() { return <Shell><StandardPagePlaceholder title="${title}" /></Shell>; }\n` });
+
+describe('standard pages end to end', () => {
+  it.each(listTemplates().map(t => t.id))('%s renders a standard page inside its own Shell', id => {
+    const files = [...templateSourceFiles(id), templateStoreDataFile({ name: 'Tienda' }, {}), thinPage('components/pages/faq.tsx', 'Preguntas frecuentes')];
+    const markup = nextPageMarkup(files, 'pages/faq');
+    expect(markup).toMatch(/<h1\b/);
+    expect(markup).toContain('data-standard-page');
+  });
+
+  it('compiles a grouped page to its own html and script, and the scaffold routes it', async () => {
+    const files = [...nextStoreFiles(), { path: 'components/pages/faq.tsx', content: "import Header from '../Header';\nimport { StandardPagePlaceholder } from '@pagosya/ui';\nexport default function Faq() { return <><Header /><StandardPagePlaceholder title=\"Preguntas\" /></>; }" }];
+    const out = await compileNextPreview(files, 'shop');
+    expect(out.some(f => f.path === 'faq.html')).toBe(true);
+    expect(out.some(f => f.path === '_compiled/pages/faq.js')).toBe(true);
+    const scaffold = nextProjectScaffold('tienda', nextContentPages(files));
+    expect(scaffold.find(f => f.path === 'pages/faq.tsx')!.content).toContain('../components/pages/faq');
+  });
+
+  it("writes the not-found page as Next's own 404", () => {
+    const scaffold = nextProjectScaffold('tienda', nextContentPages([...nextStoreFiles(), { path: 'components/pages/not-found.tsx', content: 'export default function NotFound() { return null; }' }]));
+    expect(scaffold.some(f => f.path === 'pages/404.tsx')).toBe(true);
   });
 });

@@ -466,6 +466,13 @@ export function Lead({ children }: { children: ReactNode }) { return <p classNam
 export function Text({ children, muted = false }: { children: ReactNode; muted?: boolean }) { return <p className={muted ? 'ui-text ui-muted' : 'ui-text'}>{children}</p>; }
 export function Hairline() { return <hr className="ui-hairline" />; }
 export function Badge({ children }: { children: ReactNode }) { return <span className="ui-badge">{children}</span>; }
+/** The body of a standard store page that has no content yet. Only tests use it: a customer must never see it, so no
+ * store gets a page file until the sub-project that owns that page replaces this with real content. */
+export function StandardPagePlaceholder({ title }: { title: string }) {
+  return <main id="contenido" className="ui-standard-page" data-standard-page>
+    <Container><Display>{title}</Display><Lead>Esta página se completa pronto.</Lead></Container>
+  </main>;
+}
 export function Button({ href, children, variant = 'solid', size = 'md', onClick, type = 'button' }: {
   href?: string; children: ReactNode; variant?: 'solid' | 'outline' | 'ghost' | 'link'; size?: 'sm' | 'md' | 'lg'; onClick?: () => void; type?: 'button' | 'submit';
 }) {
