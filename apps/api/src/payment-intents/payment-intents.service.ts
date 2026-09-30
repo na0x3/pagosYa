@@ -622,6 +622,7 @@ export class PaymentIntentsService {
       if (nextStatus === PaymentIntentStatus.FAILED) await this.limits.release(tx, paymentIntentId);
 
       let receiptQueued = false;
+      let subscriptionBlock = "";
       // Collected here, acted on after the transaction commits — see the call
       // site below for why it must not happen inside this callback.
       let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receiptSourceId: string } | null = null;
@@ -657,6 +658,7 @@ export class PaymentIntentsService {
           order: { id: order.id, storeId: order.storeId, merchantId: order.merchantId, fulfillmentMethod: order.fulfillmentMethod, fulfillmentLocationId: order.fulfillmentLocationId, fulfillmentLocationName: order.fulfillmentLocationName },
           manage: { checkoutOrigin: this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174', secret: this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET },
         }) : null;
+        subscriptionBlock = enrollment?.emailBlock ?? "";
         if (order?.storeId && updated.livemode) {
           const cart = (updated.metadata as {cart?:CartInventoryLine[]} | null)?.cart;
           const lineCurrency = lineCurrencyFor({ currency: updated.currency, metadata: updated.metadata });
@@ -718,14 +720,14 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder, subscriptionBlock };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
     // webhook/invoice enqueues above, which just write an outbox row), so it
     // must never hold a DB row lock open while it runs.
     if (outcome.railResult.status === "succeeded") {
-      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
+      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName, outcome.subscriptionBlock);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
 
@@ -773,6 +775,7 @@ export class PaymentIntentsService {
       metadata: Prisma.JsonValue;
     },
     merchantName: string,
+    subscriptionBlock = "",
   ): Promise<void> {
     if (!intent.customerEmail) return;
     try {
@@ -798,7 +801,7 @@ export class PaymentIntentsService {
       await this.email.send({
         to: intent.customerEmail,
         subject: appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`,
-        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}\nGracias por tu compra.`,
+        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`,
       });
     } catch (err) {
       this.logger.warn(`Failed to send receipt email for ${intent.id}: ${(err as Error).message}`);
