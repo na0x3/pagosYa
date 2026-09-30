@@ -22,7 +22,7 @@ import { ownedStore, clean, paymentCheckoutUrl, subscriptionIdentityKey, readSto
 import { advanceBillingDate, LAST_REMINDER_AFTER_DAYS, MISSED_AFTER_DAYS, subscriptionTerms, type SubscriptionTerms } from "./subscription-pricing";
 import { subscriptionManageUrl } from "./subscription-manage-token";
 
-const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
+export const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
 
 type RenewalFulfillment = { method?: string; locationId?: string; locationName?: string; zoneId?: string; zoneName?: string; fee?: number; address?: string };
 const renewalFulfillment = (subscription: { fulfillment: Prisma.JsonValue }) => (subscription.fulfillment ?? {}) as RenewalFulfillment;

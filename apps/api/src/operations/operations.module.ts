@@ -14,11 +14,14 @@ import { IntegrationsService } from "./integrations.service";
 import { AppointmentsService } from "./appointments.service";
 import { OperationsWorker } from "./operations.worker";
 import { PublicAppointmentsController } from "./public-appointments.controller";
+import { SubscribersController } from "./subscribers.controller";
+import { SubscribersService } from "./subscribers.service";
+import { SubscriptionManageController } from "./subscription-manage.controller";
 
 @Module({
   imports: [AuthModule, DashboardModule, ConsumerModule, PaymentIntentsModule],
-  controllers: [OperationsController, IntegrationsInboundController, CalendarOauthController, ConsumerOperationsController, PublicAppointmentsController],
-  providers: [OperationsService, SubscriptionsService, IntegrationsService, AppointmentsService, GoogleCalendarService, OperationsWorker],
+  controllers: [OperationsController, IntegrationsInboundController, CalendarOauthController, ConsumerOperationsController, PublicAppointmentsController, SubscribersController, SubscriptionManageController],
+  providers: [OperationsService, SubscriptionsService, SubscribersService, IntegrationsService, AppointmentsService, GoogleCalendarService, OperationsWorker],
   exports: [OperationsService],
 })
 export class OperationsModule {}
