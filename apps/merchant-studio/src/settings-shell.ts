@@ -10,7 +10,7 @@ export const SETTINGS_GROUPS = [
   { label: 'Tienda', items: [
     { id: 'brand', label: 'Marca', title: 'Marca', description: 'La identidad que se usa en toda tu tienda.' },
     { id: 'shipping', label: 'Envíos y retiro', title: 'Envíos y retiro', description: 'Tarifas y puntos de retiro que se suman al pago.' },
-    { id: 'domain', label: 'Dominio', title: 'Dominios', description: 'Compra un dominio o conecta uno que ya tengas.' },
+    { id: 'domain', label: 'Dominio', title: 'Dominios', description: 'Compra un nombre para tu tienda; lo conectamos por ti, con HTTPS.' },
   ] as const },
 ] as const;
 const ITEMS = SETTINGS_GROUPS.flatMap(group => group.items);

@@ -47,7 +47,7 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
   const dialog = document.createElement('dialog'); dialog.className = 'brand-dialog';
   dialog.setAttribute('aria-label', 'Tu propio dominio');
   let state: DomainShopState | undefined, results: DomainSearchResult[] = [], quote: DomainOrderView | null = null;
-  let busy = false, message = '', query = '', connected = false, timer: ReturnType<typeof setInterval> | undefined;
+  let busy = false, message = '', query = '', contact: Record<string, string> = {}, connected = false, timer: ReturnType<typeof setInterval> | undefined;
   (host ?? document.body).append(dialog); dialog.innerHTML = '<p role="status">Cargando dominios…</p>'; if (host) dialog.setAttribute('open', ''); else dialog.showModal();
   dialog.addEventListener('close', () => { clearInterval(timer); dialog.remove(); });
   dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
@@ -64,7 +64,14 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
   timer = setInterval(() => { if (!document.hidden && !busy && dialog.open) void refresh(); }, 15_000);
 
   async function refresh() {
-    try { state = await api.domainShop(storeId); notifyIfConnected(); render(); }
+    try {
+      const next = await api.domainShop(storeId);
+      if (busy) return;
+      const changed = JSON.stringify(next) !== JSON.stringify(state);
+      state = next; notifyIfConnected();
+      // An identical answer must not redraw: a redraw would wipe the holder form the merchant is filling in.
+      if (changed) { const restore = preserveDialogForms(dialog); render(); restore(); }
+    }
     catch { /* A transient failure keeps the panel on screen; the next tick retries. */ }
   }
   function notifyIfConnected() {
@@ -83,12 +90,12 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
 
   function searchSection() {
     if (!state!.available) {
-      return `<section class="settings-card"><h3>Comprar un dominio</h3><p>La compra de dominios estará disponible pronto. Mientras tanto puedes conectar un dominio que ya tengas desde el panel, en <strong>Apariencia → Publica con tu propio dominio</strong>.</p></section>`;
+      return `<section class="settings-card"><h3>Comprar un dominio</h3><p>La compra de dominios estará disponible pronto. Mientras tanto puedes conectar un dominio que ya tengas desde <strong>Ajustes de la tienda</strong> en el panel.</p></section>`;
     }
     return `<section class="settings-card"><h3>Comprar un dominio</h3>
       <form id="domain-search" class="settings-inline"><input name="query" value="${escape(query)}" placeholder="Busca un dominio, p. ej. tu-marca" aria-label="Nombre de tu dominio" maxlength="100" required autocomplete="off"><button type="submit">Buscar</button></form>
       <p>Busca entre ${escape(state!.tlds.map(tld => '.' + tld).join(', '))}. Los precios son por el primer año y la renovación no es automática. Compramos el nombre y lo conectamos a esta tienda, con y sin www.</p></section>
-      ${results.length ? `<section class="settings-card"><h3>Resultados</h3>${results.map(row => `<article><strong>${escape(row.hostname)}</strong><p>${row.available ? `${escape(money(row.amount, row.currency))} el primer año · renovación estimada ${escape(money(row.renewalAmount, row.currency))}/año` : 'No disponible para comprar'}</p><button class="button${row.available ? ' button--publish' : ''}" type="button" data-choose="${escape(row.hostname)}" ${row.available ? '' : 'disabled'}>${row.available ? 'Elegir' : 'No disponible'}</button></article>`).join('')}</section>` : ''}`;
+      ${results.length ? `<section class="settings-card"><h3>Resultados</h3>${results.map(row => `<article class="settings-row${row.available ? '' : ' is-muted'}"><div><strong>${escape(row.hostname)}</strong><p>${row.available ? `<b>${escape(money(row.amount, row.currency))}</b> el primer año · renovación ~${escape(money(row.renewalAmount, row.currency))}/año` : 'No disponible para comprar'}</p></div><button class="button${row.available ? ' button--publish' : ''}" type="button" data-choose="${escape(row.hostname)}" ${row.available ? '' : 'disabled'}>${row.available ? 'Elegir' : 'No disponible'}</button></article>`).join('')}</section>` : ''}`;
   }
 
   function reviewSection() {
@@ -96,11 +103,11 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
     return `<form id="domain-checkout" class="settings-card"><h3>${escape(quote.hostname)}</h3>
       <p><strong>${escape(money(quote.amount, quote.currency))} por el primer año</strong> · Renovación estimada ${escape(money(quote.renewalAmount, quote.currency))}/año.</p>
       <p>El dominio se registra a nombre del titular indicado abajo, que podría recibir un correo para confirmar su dirección.</p>
-      <div class="brand-fields">${REGISTRANT_FIELDS.map(([name, label, autocomplete, type]) => `<label>${escape(label)}<input name="${escape(name)}" type="${escape(type || 'text')}" autocomplete="${escape(autocomplete)}" required maxlength="${name === 'country' ? 2 : name === 'zip' ? 20 : 160}" ${name === 'country' ? 'value="BO" pattern="[A-Z]{2}"' : ''}${name === 'phone' ? ' placeholder="+59170000000" pattern="\\+[1-9][0-9]{6,14}"' : ''}></label>`).join('')}</div>
+      <div class="brand-fields">${REGISTRANT_FIELDS.map(([name, label, autocomplete, type]) => `<label>${escape(label)}<input name="${escape(name)}" type="${escape(type || 'text')}" autocomplete="${escape(autocomplete)}" required maxlength="${name === 'country' ? 2 : name === 'zip' ? 20 : 160}" value="${escape(contact[name] ?? (name === 'country' ? 'BO' : ''))}"${name === 'country' ? ' pattern="[A-Z]{2}"' : ''}${name === 'phone' ? ' placeholder="+59170000000" pattern="\\+[1-9][0-9]{6,14}"' : ''}></label>`).join('')}</div>
       <p>Incluye la conexión automática y el HTTPS. <strong>La renovación automática está desactivada</strong>: pide la renovación a soporte antes del vencimiento, y su precio puede cambiar.</p>
-      <label><span><input type="checkbox" name="accepted" required style="width:auto"> Confirmo los datos del titular y la compra por un año por ${escape(money(quote.amount, quote.currency))}. Autorizo el registro y la configuración del dominio para esta tienda.</span></label>
-      <button class="button button--publish" type="submit">Continuar al pago · ${escape(money(quote.amount, quote.currency))}</button>
-      <button class="button" type="button" id="domain-back">Volver a buscar</button>
+      <label class="settings-consent"><span><input type="checkbox" name="accepted" required> Confirmo los datos del titular y la compra por un año por ${escape(money(quote.amount, quote.currency))}. Autorizo el registro y la configuración del dominio para esta tienda.</span></label>
+      <div class="settings-actions"><button class="button button--publish" type="submit">Continuar al pago · ${escape(money(quote.amount, quote.currency))}</button>
+      <button class="button" type="button" id="domain-back">Volver a buscar</button></div>
       <p>Si el nombre deja de estar disponible después del pago, soporte revisa la compra y el reembolso. No tendrás que pagar otra vez.</p></form>`;
   }
 
@@ -109,21 +116,25 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
     if (!orders.length) {
       return `<section class="settings-card"><h3>Tus dominios</h3><div class="settings-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><strong>Aún no tienes dominios</strong><p>${state!.available ? 'Busca arriba para comprar tu primer dominio.' : 'Cuando conectes un dominio aparecerá aquí.'}</p></div></section>`;
     }
-    return `<section class="settings-card"><h3>Tus dominios</h3>${orders.map(order => `<article><strong>${escape(order.hostname)}</strong>
-      <p>${escape(STATUS_LABELS[order.status] || order.status)}${order.message ? ` · ${escape(order.message)}` : ''}</p>
+    return `<section class="settings-card"><h3>Tus dominios</h3>${orders.map(order => `<article class="settings-row settings-row--order"><div><strong>${escape(order.hostname)}</strong><span class="settings-pill settings-pill--${order.status === 'ACTIVE' || order.status === 'TEST_COMPLETE' ? 'ok' : order.status === 'REVIEW_REQUIRED' || order.status === 'CANCELED' ? 'warn' : 'wait'}">${escape(STATUS_LABELS[order.status] || order.status)}</span></div>
+      ${order.message ? `<p>${escape(order.message)}</p>` : ''}
       ${order.expiresAt ? `<p>${escape(expiryNotice(order.expiresAt))}</p>` : ''}
       ${order.expiresAt && !order.sandbox && !order.contactVerified ? '<p>Revisa el correo del titular y completa la verificación para mantener el dominio activo.</p>' : ''}
-      ${order.checkoutUrl ? `<a class="button button--publish" href="${escape(order.checkoutUrl)}" target="_blank" rel="noopener noreferrer">Pagar ${escape(money(order.amount, order.currency))}</a><button class="button" type="button" data-cancel="${escape(order.id)}">Cancelar compra pendiente</button>` : ''}
-      ${order.url ? `<a class="button" href="${escape(order.url)}" target="_blank" rel="noopener noreferrer">Abrir tienda ↗</a>` : ''}</article>`).join('')}</section>`;
+      <div class="settings-actions">${order.checkoutUrl ? `<a class="button button--publish" href="${escape(order.checkoutUrl)}" target="_blank" rel="noopener noreferrer">Pagar ${escape(money(order.amount, order.currency))}</a><button class="button" type="button" data-cancel="${escape(order.id)}">Cancelar compra pendiente</button>` : ''}
+      ${order.url ? `<a class="button" href="${escape(order.url)}" target="_blank" rel="noopener noreferrer">Abrir tienda ↗</a>` : ''}</div></article>`).join('')}</section>`;
   }
 
   function render() {
     dialog.innerHTML = `<header><h2>Tu propio dominio</h2><button class="button" id="domain-close">Cerrar</button></header>
       ${state!.sandbox && state!.available ? '<p class="settings-note"><strong>Modo de prueba.</strong> No se compra ni se publica un dominio real.</p>' : ''}
-      ${searchSection()}${reviewSection()}${ordersSection()}<p role="status">${escape(message)}</p>`;
+      ${searchSection()}${reviewSection()}${ordersSection()}<p role="status" class="settings-status">${escape(message)}</p>`;
 
     dialog.querySelector('#domain-close')!.addEventListener('click', () => dialog.close());
     dialog.querySelector('#domain-back')?.addEventListener('click', () => { quote = null; render(); });
+    dialog.querySelector('#domain-checkout')?.addEventListener('input', event => {
+      const field = event.target as HTMLInputElement;
+      if (field.name && field.type !== 'checkbox') contact[field.name] = field.value;
+    });
 
     dialog.querySelector('#domain-search')?.addEventListener('submit', event => {
       event.preventDefault();
@@ -152,7 +163,7 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
       const quoteId = quote!.id;
       void run(async () => {
         await api.checkoutDomain(storeId, { quoteId, registrant, accepted: form.has('accepted') });
-        quote = null; results = [];
+        quote = null; results = []; contact = {};
         state = await api.domainShop(storeId);
         message = 'Tu pago está listo. Abre el enlace de pago para continuar; la conexión sigue aunque cierres esta ventana.';
       });

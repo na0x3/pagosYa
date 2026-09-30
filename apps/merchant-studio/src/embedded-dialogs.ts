@@ -52,7 +52,8 @@ export function fitEmbeddedDialogs() {
   const releases = new Map<HTMLDialogElement, () => void>();
   const sync = (dialog: HTMLDialogElement) => {
     // Embedded pages that render the dialog shell inline are not modals.
-    if (!dialog.matches('.brand-dialog') || dialog.matches('.retention-embedded')) return;
+    // Panels drawn inside the settings window (brand, shipping, domain) sit in its page flow; pinning would pull them out of it.
+    if (!dialog.matches('.brand-dialog') || dialog.matches('.retention-embedded') || dialog.closest('.settings-shell__host')) return;
     if (dialog.open && !releases.has(dialog)) releases.set(dialog, pin(dialog));
     else if (!dialog.open && releases.has(dialog)) { releases.get(dialog)!(); releases.delete(dialog); }
   };
