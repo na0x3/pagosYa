@@ -1,4 +1,5 @@
 import { createSubscriptionManageToken } from "./subscription-manage-token";
+import { BadRequestException } from "@nestjs/common";
 import { SubscribersService } from "./subscribers.service";
 
 const productSubscription = {
@@ -78,9 +79,35 @@ describe("SubscribersService", () => {
     const { prisma, service } = setup();
     prisma.customerSubscription.findFirst.mockResolvedValue({ ...productSubscription, status: "PAUSED", missedCount: 2, nextBillingAt: new Date("2026-01-01T00:00:00Z") });
     await service.act("merchant_1", "store_1", productSubscription.id, "resume");
-    const data = prisma.customerSubscription.update.mock.calls[0][0].data;
+    const call = prisma.customerSubscription.updateMany.mock.calls[0][0];
+    expect(call.where).toEqual({ id: productSubscription.id, status: "PAUSED" });
+    const data = call.data;
     expect(data).toMatchObject({ status: "ACTIVE", missedCount: 0, pausedAt: null });
     expect(data.nextBillingAt.getTime()).toBeGreaterThan(Date.now() + 72 * 3_600_000);
+  });
+
+  it("pause is status-guarded and answers 409 when the state already changed", async () => {
+    const { prisma, service } = setup();
+    await service.act("merchant_1", "store_1", productSubscription.id, "pause");
+    expect(prisma.customerSubscription.updateMany).toHaveBeenCalledWith({ where: { id: productSubscription.id, status: "ACTIVE" }, data: { status: "PAUSED", pausedAt: expect.any(Date) } });
+    prisma.customerSubscription.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.act("merchant_1", "store_1", productSubscription.id, "pause")).rejects.toThrow(/cambió/);
+  });
+
+  it("resume answers 409 when the subscription is no longer paused", async () => {
+    const { prisma, service } = setup();
+    prisma.customerSubscription.findFirst.mockResolvedValue({ ...productSubscription, status: "PAUSED" });
+    prisma.customerSubscription.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.act("merchant_1", "store_1", productSubscription.id, "resume")).rejects.toThrow(/cambió/);
+  });
+
+  it("resend refuses a canceled or paused subscription", async () => {
+    for (const status of ["CANCELED", "PAUSED"]) {
+      const { prisma, subscriptions, service } = setup();
+      prisma.customerSubscription.findFirst.mockResolvedValue({ ...productSubscription, status });
+      await expect(service.resend("merchant_1", "store_1", productSubscription.id)).rejects.toThrow(BadRequestException);
+      expect(subscriptions.remindSubscriptionInvoice).not.toHaveBeenCalled();
+    }
   });
 
   it("rejects a removed cadence", async () => {
@@ -93,6 +120,40 @@ describe("SubscribersService", () => {
     prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "WEEKLY", discountPercent: 5 }, { cadence: "MONTHLY", discountPercent: 10 }]);
     await service.publicAct(token, { action: "change_cadence", cadence: "WEEKLY" });
     expect(prisma.customerSubscription.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ cadence: "WEEKLY", discountPercent: 5, unitAmount: 7600 }) }));
+  });
+
+  it("rejects a change to the cadence the subscription already has, without re-pricing", async () => {
+    const { prisma, service } = setup();
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "MONTHLY", discountPercent: 20 }]);
+    await expect(service.publicAct(token, { action: "change_cadence", cadence: "MONTHLY" })).rejects.toThrow("Ya tienes esa frecuencia.");
+    expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
+  });
+
+  it("rewrites the consent text and date for the new cadence", async () => {
+    const { prisma, service } = setup();
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "WEEKLY", discountPercent: 5 }]);
+    await service.publicAct(token, { action: "change_cadence", cadence: "WEEKLY" });
+    const data = prisma.customerSubscription.update.mock.calls[0][0].data;
+    expect(data.consentText).toBe("Acepto que este pedido se repita cada semana. Antes de cada entrega recibiré un enlace para pagar; no se cobra nada automáticamente. Puedo saltar, pausar o cancelar cuando quiera.");
+    expect(data.consentAt).toBeInstanceOf(Date);
+  });
+
+  it("applies a higher price immediately when the buyer changes cadence", async () => {
+    const { prisma, service } = setup();
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "WEEKLY", discountPercent: 0 }, { cadence: "MONTHLY", discountPercent: 10 }]);
+    await service.publicAct(token, { action: "change_cadence", cadence: "WEEKLY" });
+    expect(prisma.customerSubscription.update.mock.calls[0][0].data).toMatchObject({ cadence: "WEEKLY", unitAmount: 8000 });
+  });
+
+  it("shows the per-delivery amount of each cadence option, delivery fee included", async () => {
+    const { prisma, service } = setup();
+    prisma.customerSubscription.findUnique.mockResolvedValue({ ...productSubscription, quantity: 2, fulfillment: { fee: 1500 } });
+    prisma.productSubscriptionOption.findMany.mockResolvedValue([{ cadence: "WEEKLY", discountPercent: 5 }, { cadence: "MONTHLY", discountPercent: 10 }]);
+    const view: any = await service.publicView(token);
+    expect(view.cadenceOptions).toEqual([
+      expect.objectContaining({ cadence: "WEEKLY", amount: 7600 * 2 + 1500 }),
+      expect.objectContaining({ cadence: "MONTHLY", amount: 7200 * 2 + 1500 }),
+    ]);
   });
 
   it("returns 404 for a bad token", async () => {

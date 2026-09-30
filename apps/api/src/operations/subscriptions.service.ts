@@ -21,6 +21,11 @@ import {
 import { ownedStore, clean, paymentCheckoutUrl, subscriptionIdentityKey, readStockVariants, DAY_MS } from "./operations-helpers";
 import { advanceBillingDate, LAST_REMINDER_AFTER_DAYS, MISSED_AFTER_DAYS, subscriptionTerms, type SubscriptionTerms } from "./subscription-pricing";
 import { subscriptionManageUrl } from "./subscription-manage-token";
+import { originLivemodes, originMatchesStore } from "./subscription-origin";
+
+/** A Baneco QR lives about 24 h; past this an untouched REQUIRES_ACTION intent is dead and may be replaced. */
+export const STALE_QR_HOURS = 25;
+const staleQrCutoff = (now = Date.now()) => new Date(now - STALE_QR_HOURS * 3_600_000);
 
 export const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
 
@@ -37,6 +42,7 @@ function renewalFulfillmentMetadata(f: RenewalFulfillment) {
 @Injectable()
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
+  private readonly loggedOriginSkips = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -111,6 +117,7 @@ export class SubscriptionsService {
     await ownedStore(this.prisma, merchantId, storeId);
     const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: subscriptionId, merchantId, storeId } });
     if (!subscription) throw new NotFoundException("Subscription not found");
+    if (subscription.paymentLinkId) throw new BadRequestException("Gestiona esta suscripción desde Suscripciones");
     if (subscription.status === "CANCELED" && dto.status !== "CANCELED") throw new BadRequestException("Una suscripción cancelada no puede reactivarse; crea una nueva");
     const activeKey = dto.status === "CANCELED" || !subscription.planId ? null : subscriptionIdentityKey(storeId, subscription.planId, {
       id: subscription.customerId,
@@ -139,6 +146,9 @@ export class SubscriptionsService {
   private async cancelUnpaidIntent(tx: Prisma.TransactionClient, paymentIntentId: string): Promise<boolean> {
     const canceled = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: { in: [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED] } }, data: { status: PaymentIntentStatus.CANCELED } });
     if (canceled?.count) return true;
+    // An abandoned bank QR never expires on our side: after ~25 h it is dead and the renewal must not stay stuck on it.
+    const stale = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: PaymentIntentStatus.REQUIRES_ACTION, updatedAt: { lt: staleQrCutoff() } }, data: { status: PaymentIntentStatus.CANCELED } });
+    if (stale?.count) return true;
     const current = await tx.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { status: true } });
     return current?.status === PaymentIntentStatus.CANCELED;
   }
@@ -172,9 +182,14 @@ export class SubscriptionsService {
     const existingIntentId = rows[0]?.paymentIntentId;
     if (existingIntentId) {
       const existingIntent = await tx.paymentIntent.findUnique({ where: { id: existingIntentId } });
-      if (existingIntent && (!forceNew || (existingIntent.status !== PaymentIntentStatus.FAILED && existingIntent.status !== PaymentIntentStatus.CANCELED))) return { intent: existingIntent, created: false };
+      const staleQr = existingIntent?.status === PaymentIntentStatus.REQUIRES_ACTION && existingIntent.updatedAt < staleQrCutoff();
+      if (existingIntent && !staleQr && (!forceNew || (existingIntent.status !== PaymentIntentStatus.FAILED && existingIntent.status !== PaymentIntentStatus.CANCELED))) return { intent: existingIntent, created: false };
       if (existingIntent?.status === PaymentIntentStatus.FAILED) {
         await tx.paymentIntent.update({ where: { id: existingIntent.id }, data: { status: PaymentIntentStatus.CANCELED } });
+      }
+      if (staleQr) {
+        const canceled = await tx.paymentIntent.updateMany({ where: { id: existingIntent!.id, status: PaymentIntentStatus.REQUIRES_ACTION }, data: { status: PaymentIntentStatus.CANCELED } });
+        if (!canceled.count) return { intent: existingIntent!, created: false }; // it moved on (paid or processing) while we looked
       }
       if (rows[0]?.orderId) await tx.storeOrder.updateMany({ where: { id: rows[0].orderId, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
     }
@@ -245,6 +260,19 @@ export class SubscriptionsService {
     return subscriptionTerms(subscription, plan, now);
   }
 
+  /** Once per subscription and mode: the engine only bills a product subscription in the mode it was born in. */
+  private logOriginSkip(subscriptionId: string, storeLivemode: boolean) {
+    const key = `${subscriptionId}:${storeLivemode}`;
+    if (this.loggedOriginSkips.has(key)) return;
+    this.loggedOriginSkips.add(key);
+    this.logger.debug(`Skipping renewals of ${subscriptionId}: it was created ${storeLivemode ? "in test mode" : "in live mode"} but the store is ${storeLivemode ? "live" : "not live"}`);
+  }
+
+  private async storeLivemode(merchantId: string, store: { status: string }) {
+    const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId }, select: { status: true } });
+    return merchant.status === MerchantStatus.ACTIVE && store.status === "ACTIVE";
+  }
+
   async generateSubscriptionInvoices(merchantId: string, storeId: string) {
     const store = await ownedStore(this.prisma, merchantId, storeId);
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId }, select: { status: true } });
@@ -252,62 +280,74 @@ export class SubscriptionsService {
     const now = new Date();
     const generationHorizon = new Date(now.getTime() + 720 * 3_600_000);
     const candidates = await this.prisma.customerSubscription.findMany({ where: { merchantId, storeId, status: "ACTIVE", nextBillingAt: { lte: generationHorizon } } });
+    const origins = await originLivemodes(this.prisma, candidates);
     let created = 0;
     let paymentLinksCreated = 0;
     let emailsSent = 0;
     const charges: Array<{ invoiceId: string; paymentIntentId: string; checkoutUrl: string; amount: number; currency: string }> = [];
     for (const subscription of candidates) {
-      const terms = await this.termsFor(subscription, storeId, now);
-      if (!terms) continue;
-      const generationAt = new Date(subscription.nextBillingAt.getTime() - terms.noticeHours * 3_600_000);
-      if (generationAt > now) continue;
-      if (terms.product) {
-        const availability = await this.renewalAvailability(subscription);
-        if (availability === "gone") { await this.endGoneSubscription(store.name, subscription); continue; }
-        if (availability === "out_of_stock") { await this.skipOutOfStockPeriod(store.name, subscription, terms); continue; }
-      }
-      const pendingApplies = !!subscription.pendingFrom && subscription.pendingFrom <= now && !!subscription.pendingUnitAmount;
-      const outcome = await this.prisma.$transaction(async (tx) => {
-        const existing = await tx.subscriptionInvoice.findUnique({ where: { subscriptionId_periodStart: { subscriptionId: subscription.id, periodStart: subscription.nextBillingAt } } });
-        const invoice = existing ?? await tx.subscriptionInvoice.upsert({
-          where: { subscriptionId_periodStart: { subscriptionId: subscription.id, periodStart: subscription.nextBillingAt } },
-          create: { subscriptionId: subscription.id, merchantId, storeId, periodStart: subscription.nextBillingAt, amount: terms.amount, currency: terms.currency, dueAt: subscription.nextBillingAt },
-          update: {},
+      try {
+        const terms = await this.termsFor(subscription, storeId, now);
+        if (!terms) continue;
+        if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); continue; }
+        const generationAt = new Date(subscription.nextBillingAt.getTime() - terms.noticeHours * 3_600_000);
+        if (generationAt > now) continue;
+        if (terms.product) {
+          const availability = await this.renewalAvailability(subscription);
+          if (availability === "gone") { await this.endGoneSubscription(store.name, subscription); continue; }
+          if (availability === "out_of_stock") { await this.skipOutOfStockPeriod(store.name, subscription, terms); continue; }
+        }
+        const pendingApplies = !!subscription.pendingFrom && subscription.pendingFrom <= now && !!subscription.pendingUnitAmount;
+        const outcome = await this.prisma.$transaction(async (tx) => {
+          const existing = await tx.subscriptionInvoice.findUnique({ where: { subscriptionId_periodStart: { subscriptionId: subscription.id, periodStart: subscription.nextBillingAt } } });
+          const invoice = existing ?? await tx.subscriptionInvoice.upsert({
+            where: { subscriptionId_periodStart: { subscriptionId: subscription.id, periodStart: subscription.nextBillingAt } },
+            create: { subscriptionId: subscription.id, merchantId, storeId, periodStart: subscription.nextBillingAt, amount: terms.amount, currency: terms.currency, dueAt: subscription.nextBillingAt },
+            update: {},
+          });
+          const ensured = await this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId);
+          await tx.customerSubscription.updateMany({
+            where: { id: subscription.id, status: "ACTIVE", nextBillingAt: subscription.nextBillingAt },
+            data: {
+              nextBillingAt: advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count), nextAmountOverride: null,
+              ...(pendingApplies ? { unitAmount: subscription.pendingUnitAmount, pendingUnitAmount: null, pendingFrom: null } : {}),
+            },
+          });
+          return { invoice, intent: ensured.intent, invoiceCreated: !existing, paymentLinkCreated: ensured.created };
         });
-        const ensured = await this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId);
-        await tx.customerSubscription.updateMany({
-          where: { id: subscription.id, status: "ACTIVE", nextBillingAt: subscription.nextBillingAt },
-          data: {
-            nextBillingAt: advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count), nextAmountOverride: null,
-            ...(pendingApplies ? { unitAmount: subscription.pendingUnitAmount, pendingUnitAmount: null, pendingFrom: null } : {}),
-          },
-        });
-        return { invoice, intent: ensured.intent, invoiceCreated: !existing, paymentLinkCreated: ensured.created };
-      });
-      if (outcome.invoiceCreated) created += 1;
-      if (outcome.paymentLinkCreated) paymentLinksCreated += 1;
-      const checkoutUrl = paymentCheckoutUrl(this.config, outcome.intent.clientSecret);
-      charges.push({ invoiceId: outcome.invoice.id, paymentIntentId: outcome.intent.id, checkoutUrl, amount: outcome.invoice.amount, currency: outcome.invoice.currency });
-      if (outcome.paymentLinkCreated && await this.sendChargeNotice(store.name, subscription, terms, outcome.invoice, checkoutUrl, "first")) {
-        emailsSent += 1;
-        await this.prisma.subscriptionInvoice.update({ where: { id: outcome.invoice.id }, data: { initialNoticeAt: new Date() } });
+        if (outcome.invoiceCreated) created += 1;
+        if (outcome.paymentLinkCreated) paymentLinksCreated += 1;
+        const checkoutUrl = paymentCheckoutUrl(this.config, outcome.intent.clientSecret);
+        charges.push({ invoiceId: outcome.invoice.id, paymentIntentId: outcome.intent.id, checkoutUrl, amount: outcome.invoice.amount, currency: outcome.invoice.currency });
+        if (outcome.paymentLinkCreated && await this.sendChargeNotice(store.name, subscription, terms, outcome.invoice, checkoutUrl, "first")) {
+          emailsSent += 1;
+          await this.prisma.subscriptionInvoice.update({ where: { id: outcome.invoice.id }, data: { initialNoticeAt: new Date() } });
+        }
+      } catch (error) {
+        this.logger.error(`Renewal generation failed for subscription ${subscription.id}: ${(error as Error).message}`);
       }
     }
 
     const invoicesWithoutLinks = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", paymentIntentId: null }, take: 200 });
     for (const invoice of invoicesWithoutLinks) {
-      const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
-      if (!subscription) continue;
-      const terms = await this.termsFor(subscription, storeId, now);
-      if (!terms) continue;
-      const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId));
-      if (!ensured.created) continue;
-      paymentLinksCreated += 1;
-      const checkoutUrl = paymentCheckoutUrl(this.config, ensured.intent.clientSecret);
-      charges.push({ invoiceId: invoice.id, paymentIntentId: ensured.intent.id, checkoutUrl, amount: invoice.amount, currency: invoice.currency });
-      if (await this.sendChargeNotice(store.name, subscription, terms, invoice, checkoutUrl, "first")) {
-        emailsSent += 1;
-        await this.prisma.subscriptionInvoice.update({ where: { id: invoice.id }, data: { initialNoticeAt: new Date() } });
+      try {
+        const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
+        if (!subscription || subscription.status !== "ACTIVE") continue;
+        const terms = await this.termsFor(subscription, storeId, now);
+        if (!terms) continue;
+        const invoiceOrigins = await originLivemodes(this.prisma, [subscription]);
+        if (!originMatchesStore(subscription, invoiceOrigins, livemode)) { this.logOriginSkip(subscription.id, livemode); continue; }
+        const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId));
+        if (!ensured.created) continue;
+        paymentLinksCreated += 1;
+        const checkoutUrl = paymentCheckoutUrl(this.config, ensured.intent.clientSecret);
+        charges.push({ invoiceId: invoice.id, paymentIntentId: ensured.intent.id, checkoutUrl, amount: invoice.amount, currency: invoice.currency });
+        if (await this.sendChargeNotice(store.name, subscription, terms, invoice, checkoutUrl, "first")) {
+          emailsSent += 1;
+          await this.prisma.subscriptionInvoice.update({ where: { id: invoice.id }, data: { initialNoticeAt: new Date() } });
+        }
+      } catch (error) {
+        this.logger.error(`Renewal link generation failed for invoice ${invoice.id}: ${(error as Error).message}`);
       }
     }
     return { created, paymentLinksCreated, emailsSent, charges };
@@ -317,6 +357,7 @@ export class SubscriptionsService {
     const now = new Date();
     const initialCutoff = new Date(now.getTime() - 12 * 3_600_000);
     const lastCutoff = new Date(now.getTime() - LAST_REMINDER_AFTER_DAYS * DAY_MS);
+    const livemode = await this.storeLivemode(merchantId, store);
     const invoices = await this.prisma.subscriptionInvoice.findMany({
       where: {
         merchantId, storeId, status: "DUE",
@@ -332,13 +373,21 @@ export class SubscriptionsService {
     let skipped = 0;
     for (const invoice of invoices) {
       const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
-      if (!subscription || !subscription.customerEmail || !invoice.paymentIntentId) { skipped += 1; continue; }
-      const [terms, intent] = await Promise.all([
+      if (!subscription || subscription.status !== "ACTIVE" || !subscription.customerEmail || !invoice.paymentIntentId) { skipped += 1; continue; }
+      const [terms, intent, origins] = await Promise.all([
         this.termsFor(subscription, storeId, now),
         this.prisma.paymentIntent.findUnique({ where: { id: invoice.paymentIntentId } }),
+        originLivemodes(this.prisma, [subscription]),
       ]);
       if (!terms || !intent || intent.status === PaymentIntentStatus.SUCCEEDED || intent.status === PaymentIntentStatus.CANCELED) { skipped += 1; continue; }
-      const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, paymentCheckoutUrl(this.config, intent.clientSecret), invoice.reminderCount >= 1 ? "last" : "reminder");
+      if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); skipped += 1; continue; }
+      let clientSecret = intent.clientSecret;
+      if (intent.status === PaymentIntentStatus.REQUIRES_ACTION && intent.updatedAt < staleQrCutoff()) {
+        // The abandoned QR is dead; the reminder must carry a working link.
+        const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId));
+        clientSecret = ensured.intent.clientSecret;
+      }
+      const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, paymentCheckoutUrl(this.config, clientSecret), invoice.reminderCount >= 1 ? "last" : "reminder");
       if (!sent) { skipped += 1; continue; }
       await this.prisma.subscriptionInvoice.update({ where: { id: invoice.id }, data: { lastReminderAt: new Date(), reminderCount: { increment: 1 } } });
       delivered += 1;
@@ -351,14 +400,13 @@ export class SubscriptionsService {
     if (!invoice) throw new NotFoundException("Subscription invoice not found");
     if (invoice.status === "PAID") throw new BadRequestException("Este cobro ya fue pagado");
     if (invoice.status === "CANCELED") throw new BadRequestException("Este cobro fue cancelado");
-    const [subscription, merchant] = await Promise.all([
-      this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } }),
-      this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId }, select: { status: true } }),
-    ]);
+    if (invoice.status === "MISSED" || invoice.status === "SKIPPED") throw new BadRequestException("Esta entrega ya no está pendiente de pago");
+    const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
     if (!subscription) throw new NotFoundException("Subscription not found");
     const terms = await this.termsFor(subscription, storeId);
     if (!terms) throw new NotFoundException("Subscription plan not found");
-    const livemode = merchant.status === MerchantStatus.ACTIVE && store.status === "ACTIVE";
+    const livemode = await this.storeLivemode(merchantId, store);
+    if (!originMatchesStore(subscription, await originLivemodes(this.prisma, [subscription]), livemode)) throw new BadRequestException("Esta suscripción se creó en otro modo (prueba o producción) y no se puede cobrar desde el modo actual de la tienda");
     const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId, regenerate));
     const checkoutUrl = paymentCheckoutUrl(this.config, ensured.intent.clientSecret);
     const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, checkoutUrl, "reminder");
@@ -399,7 +447,7 @@ export class SubscriptionsService {
   async expireMissedRenewals(merchantId: string, storeId: string) {
     const store = await ownedStore(this.prisma, merchantId, storeId);
     const cutoff = new Date(Date.now() - MISSED_AFTER_DAYS * DAY_MS);
-    const invoices = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", orderId: { not: null }, dueAt: { lte: cutoff } }, take: 200 });
+    const invoices = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", orderId: { not: null }, dueAt: { lte: cutoff } }, orderBy: { dueAt: "asc" }, take: 200 });
     let missed = 0;
     let paused = 0;
     for (const invoice of invoices) {
@@ -412,6 +460,7 @@ export class SubscriptionsService {
         const subscription = await tx.customerSubscription.update({ where: { id: invoice.subscriptionId }, data: { missedCount: { increment: 1 } } });
         const pause = subscription.missedCount >= 2
           && (await tx.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE" }, data: { status: "PAUSED", pausedAt: new Date() } })).count === 1;
+        if (pause) await this.cancelOpenRenewal(tx, subscription.id); // a paused subscription must not keep a payable renewal open
         return { subscription, pause };
       });
       if (!result) continue;

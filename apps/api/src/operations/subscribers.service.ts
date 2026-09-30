@@ -5,10 +5,12 @@ import { PrismaService } from "../prisma/prisma.service";
 import { readProductExtras, readProductVariants, selectedExtrasAmount } from "../stores/product-pricing";
 import { ownedStore, paymentCheckoutUrl, DAY_MS } from "./operations-helpers";
 import { DEVELOPMENT_ORDER_TRACKING_SECRET, SubscriptionsService } from "./subscriptions.service";
+import { isLiveOrigin, originLivemodes } from "./subscription-origin";
 import { readSubscriptionManageToken } from "./subscription-manage-token";
-import { advanceBillingDate, cadenceLabel, isCadence, monthlyFactor, REPRICE_NOTICE_DAYS, subscriptionPrices, subscriptionTerms } from "./subscription-pricing";
+import { advanceBillingDate, cadenceLabel, isCadence, monthlyFactor, REPRICE_NOTICE_DAYS, subscriptionConsentText, subscriptionPrices, subscriptionTerms } from "./subscription-pricing";
 import type { ListSubscribersQuery, PublicSubscriptionActionDto } from "./dto/subscribers.dto";
 
+const STATE_CHANGED = "El estado de la suscripción cambió; actualiza la página e inténtalo de nuevo.";
 type Action = "skip" | "pause" | "resume" | "cancel";
 
 @Injectable()
@@ -51,7 +53,9 @@ export class SubscribersService {
       if (subscription.status !== "ACTIVE") throw new BadRequestException("Solo puedes pausar una suscripción activa");
       return this.prisma.$transaction(async (tx) => {
         await this.subscriptions.cancelOpenRenewal(tx, subscription.id);
-        return tx.customerSubscription.update({ where: { id: subscription.id }, data: { status: "PAUSED", pausedAt: new Date() } });
+        const paused = await tx.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE" }, data: { status: "PAUSED", pausedAt: new Date() } });
+        if (!paused.count) throw new ConflictException(STATE_CHANGED);
+        return tx.customerSubscription.findUniqueOrThrow({ where: { id: subscription.id } });
       });
     }
     if (action === "resume") {
@@ -59,7 +63,11 @@ export class SubscribersService {
       const earliest = new Date(Date.now() + (terms.noticeHours + 1) * 3_600_000);
       let next = subscription.nextBillingAt;
       while (next < earliest) next = advanceBillingDate(next, terms.interval, terms.count);
-      return this.prisma.customerSubscription.update({ where: { id: subscription.id }, data: { status: "ACTIVE", pausedAt: null, missedCount: 0, nextBillingAt: next } });
+      return this.prisma.$transaction(async (tx) => {
+        const resumed = await tx.customerSubscription.updateMany({ where: { id: subscription.id, status: "PAUSED" }, data: { status: "ACTIVE", pausedAt: null, missedCount: 0, nextBillingAt: next } });
+        if (!resumed.count) throw new ConflictException(STATE_CHANGED);
+        return tx.customerSubscription.findUniqueOrThrow({ where: { id: subscription.id } });
+      });
     }
     if (subscription.status !== "ACTIVE") throw new BadRequestException("Solo puedes saltar entregas de una suscripción activa");
     return this.prisma.$transaction(async (tx) => {
@@ -134,23 +142,33 @@ export class SubscribersService {
     const offers = await this.prisma.productSubscriptionOption.findMany({ where: { paymentLinkId: subscription.paymentLinkId! } });
     const offer = offers.find(option => option.cadence === dto.cadence);
     if (!dto.cadence || !offer) throw new BadRequestException("Esa frecuencia ya no está disponible.");
+    if (dto.cadence === subscription.cadence) throw new BadRequestException("Ya tienes esa frecuencia.");
     const product = await this.prisma.paymentLink.findFirst({ where: { id: subscription.paymentLinkId!, status: "ACTIVE" } });
     if (!product) throw new BadRequestException("Este producto ya no está disponible.");
     const unitAmount = this.lockedUnit(product, subscription, offer.discountPercent);
     if (unitAmount === null) throw new BadRequestException("La presentación que elegiste ya no está disponible.");
     const updated = await this.prisma.customerSubscription.update({ where: { id: subscription.id }, data: {
       cadence: dto.cadence, discountPercent: offer.discountPercent, unitAmount, pendingUnitAmount: null, pendingFrom: null,
+      // The buyer agreed to a different cadence: the record of what they accepted must say so.
+      consentText: subscriptionConsentText(dto.cadence), consentAt: new Date(),
     } });
     return this.view(updated);
   }
 
   private async view(subscription: CustomerSubscription) {
-    const [store, offers, open, history] = await Promise.all([
+    const [store, offers, open, history, product] = await Promise.all([
       this.prisma.store.findUnique({ where: { id: subscription.storeId }, select: { name: true } }),
       this.prisma.productSubscriptionOption.findMany({ where: { paymentLinkId: subscription.paymentLinkId! } }),
       this.prisma.subscriptionInvoice.findFirst({ where: { subscriptionId: subscription.id, status: "DUE" }, orderBy: { periodStart: "desc" } }),
       this.prisma.subscriptionInvoice.findMany({ where: { subscriptionId: subscription.id }, orderBy: { periodStart: "desc" }, take: 5 }),
+      this.prisma.paymentLink.findFirst({ where: { id: subscription.paymentLinkId!, status: "ACTIVE" } }),
     ]);
+    const fee = Number((subscription.fulfillment as { fee?: unknown } | null)?.fee) || 0;
+    // What one delivery would cost under each cadence, with the same helper the change itself uses.
+    const optionAmount = (discountPercent: number) => {
+      const unit = product ? this.lockedUnit(product, subscription, discountPercent) : null;
+      return unit === null ? null : unit * (subscription.quantity ?? 1) + fee;
+    };
     const intent = open?.paymentIntentId ? await this.prisma.paymentIntent.findUnique({ where: { id: open.paymentIntentId } }) : null;
     const terms = subscriptionTerms(subscription, null);
     const cadence = isCadence(subscription.cadence) ? subscription.cadence : "MONTHLY";
@@ -164,7 +182,7 @@ export class SubscribersService {
       openPayment: open && intent?.status === PaymentIntentStatus.REQUIRES_PAYMENT_METHOD
         ? { checkoutUrl: paymentCheckoutUrl(this.config, intent.clientSecret), amount: open.amount, dueAt: open.dueAt.toISOString() } : null,
       history: history.map(entry => ({ periodStart: entry.periodStart.toISOString(), status: entry.status, amount: entry.amount })),
-      cadenceOptions: offers.filter(offer => isCadence(offer.cadence)).map(offer => ({ cadence: offer.cadence, label: cadenceLabel(offer.cadence as never), discountPercent: offer.discountPercent })),
+      cadenceOptions: offers.filter(offer => isCadence(offer.cadence)).map(offer => ({ cadence: offer.cadence, label: cadenceLabel(offer.cadence as never), discountPercent: offer.discountPercent, amount: optionAmount(offer.discountPercent) })),
     };
   }
 
@@ -213,10 +231,8 @@ export class SubscribersService {
 
   /** Plan subscriptions count as live; product subscriptions are live when their first order was paid in live mode. */
   private async liveIds(subscriptions: CustomerSubscription[]) {
-    const orderIds = [...new Set(subscriptions.map(subscription => subscription.sourceOrderId).filter((id): id is string => !!id))];
-    const orders = orderIds.length ? await this.prisma.storeOrder.findMany({ where: { id: { in: orderIds } }, select: { id: true, paymentIntent: { select: { livemode: true } } } }) : [];
-    const liveOrders = new Set(orders.filter(order => order.paymentIntent.livemode).map(order => order.id));
-    return new Set(subscriptions.filter(subscription => !subscription.sourceOrderId || liveOrders.has(subscription.sourceOrderId)).map(subscription => subscription.id));
+    const origins = await originLivemodes(this.prisma, subscriptions);
+    return new Set(subscriptions.filter(subscription => isLiveOrigin(subscription, origins)).map(subscription => subscription.id));
   }
 
   private async rows(subscriptions: CustomerSubscription[]) {
@@ -248,6 +264,7 @@ export class SubscribersService {
 
   async resend(merchantId: string, storeId: string, id: string) {
     const subscription = await this.owned(merchantId, storeId, id);
+    if (subscription.status !== "ACTIVE") throw new BadRequestException("Solo puedes reenviar el enlace de una suscripción activa");
     const open = await this.prisma.subscriptionInvoice.findFirst({ where: { subscriptionId: subscription.id, status: "DUE" }, orderBy: { periodStart: "desc" } });
     if (!open) throw new NotFoundException("No hay una entrega pendiente de pago");
     const result = await this.subscriptions.remindSubscriptionInvoice(merchantId, storeId, open.id, false);

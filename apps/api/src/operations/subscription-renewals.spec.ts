@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common";
 import { SubscriptionsService } from "./subscriptions.service";
 
 function makePrisma() {
@@ -9,7 +10,7 @@ function makePrisma() {
     subscriptionInvoice: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn(), findFirst: jest.fn(), upsert: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     paymentLink: { findFirst: jest.fn() },
     paymentIntent: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    storeOrder: { create: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    storeOrder: { create: jest.fn(), findMany: jest.fn().mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: true } }]), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     storeOrderStatusEvent: { create: jest.fn() },
     deliveryAssignment: { create: jest.fn() },
     $queryRaw: jest.fn().mockResolvedValue([{ paymentIntentId: null, orderId: null }]),
@@ -24,7 +25,7 @@ const productSubscription = {
   itemName: "Café 500 g", quantity: 2, cadence: "MONTHLY", discountPercent: 10, unitAmount: 7200, currency: "BOB", pendingUnitAmount: null, pendingFrom: null,
   fulfillment: { method: "delivery", zoneId: "zone_1", zoneName: "Centro", fee: 1500, address: "Calle 1" }, customerName: "Ana", customerEmail: "ana@mail.com",
   customerPhone: "70000000", status: "ACTIVE", missedCount: 0, amountOverride: null, nextAmountOverride: null,
-  nextBillingAt: new Date(Date.now() + 48 * 3_600_000),
+  nextBillingAt: new Date(Date.now() + 48 * 3_600_000), sourceOrderId: "order_1",
 };
 
 describe("product subscription renewals", () => {
@@ -146,6 +147,152 @@ describe("product subscription renewals", () => {
       expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(false);
       expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
       expect(prisma.storeOrder.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("abandoned QR renewals (I1)", () => {
+    const hours = (n: number) => new Date(Date.now() - n * 3_600_000);
+    const dueInvoice = { id: "inv_1", subscriptionId: productSubscription.id, orderId: "order_r1", paymentIntentId: "pi_r1", status: "DUE", periodStart: new Date(), dueAt: new Date(Date.now() - 8 * 86_400_000), amount: 15900, currency: "BOB", reminderCount: 0 };
+
+    it("cancelOpenRenewal cancels a REQUIRES_ACTION intent idle for more than 25 hours", async () => {
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
+      prisma.paymentIntent.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+      expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(true);
+      const second = prisma.paymentIntent.updateMany.mock.calls[1][0];
+      expect(second.where).toMatchObject({ id: "pi_r1", status: "REQUIRES_ACTION" });
+      expect(second.where.updatedAt.lt.getTime()).toBeLessThan(hours(24.9).getTime());
+      expect(second.where.updatedAt.lt.getTime()).toBeGreaterThan(hours(25.1).getTime());
+      expect(second.data).toEqual({ status: "CANCELED" });
+      expect(prisma.subscriptionInvoice.updateMany).toHaveBeenCalledWith({ where: { id: "inv_1", status: "DUE" }, data: { status: "SKIPPED" } });
+    });
+
+    it("leaves a fresh REQUIRES_ACTION intent alone", async () => {
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
+      prisma.paymentIntent.updateMany.mockResolvedValue({ count: 0 });
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_ACTION" });
+      expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(false);
+      expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("expire takes the oldest misses first", async () => {
+      await service.expireMissedRenewals("merchant_1", "store_1");
+      expect(prisma.subscriptionInvoice.findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: { dueAt: "asc" } }));
+    });
+
+    it("manual reminder regenerates the link when the previous QR went stale", async () => {
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
+      prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+      prisma.$queryRaw.mockResolvedValue([{ paymentIntentId: "pi_r1", orderId: "order_r1" }]);
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_ACTION", updatedAt: hours(30), clientSecret: "old" });
+      const result = await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false);
+      expect(paymentIntents.createInTransaction).toHaveBeenCalledTimes(1);
+      expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_r1", status: "REQUIRES_ACTION" }, data: { status: "CANCELED" } });
+      expect(result.regenerated).toBe(true);
+      expect(result.checkoutUrl).toContain("pi_r1_secret");
+    });
+
+    it("manual reminder keeps a fresh QR", async () => {
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
+      prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+      prisma.$queryRaw.mockResolvedValue([{ paymentIntentId: "pi_r1", orderId: "order_r1" }]);
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_ACTION", updatedAt: hours(2), clientSecret: "old" });
+      const result = await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false);
+      expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+      expect(result.regenerated).toBe(false);
+    });
+
+    it("the scheduled reminder sends a fresh link instead of a dead QR", async () => {
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([{ ...dueInvoice, dueAt: new Date(Date.now() - 1000) }]);
+      prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+      prisma.$queryRaw.mockResolvedValue([{ paymentIntentId: "pi_r1", orderId: "order_r1" }]);
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_ACTION", updatedAt: hours(30), clientSecret: "old" });
+      await service.sendDueSubscriptionReminders("merchant_1", "store_1");
+      expect(paymentIntents.createInTransaction).toHaveBeenCalledTimes(1);
+      expect(email.send.mock.calls[0][0].body).toContain("pi_r1_secret");
+    });
+  });
+
+  describe("livemode follows the subscription's origin (I3)", () => {
+    it("does not bill a test-origin subscription under a store that is now live", async () => {
+      prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
+      const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+      expect(prisma.subscriptionInvoice.upsert).not.toHaveBeenCalled();
+      expect(email.send).not.toHaveBeenCalled();
+      expect(result.created).toBe(0);
+    });
+    it("does not bill a live-origin subscription under a store that is no longer live", async () => {
+      prisma.merchant.findUniqueOrThrow.mockResolvedValue({ status: "SUSPENDED" });
+      const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+      expect(email.send).not.toHaveBeenCalled();
+      expect(result.created).toBe(0);
+    });
+    it("bills a test-origin subscription in a test store, with livemode false", async () => {
+      prisma.merchant.findUniqueOrThrow.mockResolvedValue({ status: "SUSPENDED" });
+      prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
+      await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(paymentIntents.createInTransaction).toHaveBeenCalledWith(expect.anything(), "merchant_1", false, expect.anything());
+    });
+    it("refuses a manual reminder across modes", async () => {
+      prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue({ id: "inv_1", subscriptionId: productSubscription.id, status: "DUE" });
+      prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+      await expect(service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false)).rejects.toThrow(/modo/);
+      expect(email.send).not.toHaveBeenCalled();
+    });
+    it("scheduled reminders skip a cross-mode subscription", async () => {
+      prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([{ id: "inv_1", subscriptionId: productSubscription.id, orderId: "order_r1", paymentIntentId: "pi_r1", status: "DUE", reminderCount: 0, dueAt: new Date(Date.now() - 1000), amount: 15900, currency: "BOB" }]);
+      prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_PAYMENT_METHOD", clientSecret: "x" });
+      await service.sendDueSubscriptionReminders("merchant_1", "store_1");
+      expect(email.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("pausing and reminders (I4)", () => {
+    it("auto-pause also cancels the next open renewal", async () => {
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([{ id: "inv_2", subscriptionId: productSubscription.id, orderId: "order_r2", paymentIntentId: "pi_r2", status: "DUE", dueAt: new Date(Date.now() - 8 * 86_400_000) }]);
+      prisma.customerSubscription.update.mockResolvedValue({ ...productSubscription, missedCount: 2 });
+      const cancel = jest.spyOn(service, "cancelOpenRenewal").mockResolvedValue(true);
+      await service.expireMissedRenewals("merchant_1", "store_1");
+      expect(cancel).toHaveBeenCalledWith(prisma, productSubscription.id);
+    });
+    it("does not remind a paused subscription", async () => {
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([{ id: "inv_1", subscriptionId: productSubscription.id, orderId: "order_r1", paymentIntentId: "pi_r1", status: "DUE", reminderCount: 0, dueAt: new Date(Date.now() - 1000), amount: 15900, currency: "BOB" }]);
+      prisma.customerSubscription.findFirst.mockResolvedValue({ ...productSubscription, status: "PAUSED" });
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_PAYMENT_METHOD", clientSecret: "x" });
+      const result = await service.sendDueSubscriptionReminders("merchant_1", "store_1");
+      expect(email.send).not.toHaveBeenCalled();
+      expect(result.skipped).toBe(1);
+    });
+  });
+
+  describe("one failing subscription (I5)", () => {
+    it("logs it and still bills the others", async () => {
+      const second = { ...productSubscription, id: "cm1sub0000000000000000002", customerEmail: "bea@mail.com" };
+      prisma.customerSubscription.findMany.mockResolvedValue([productSubscription, second]);
+      prisma.paymentLink.findFirst.mockRejectedValueOnce(new Error("boom"));
+      const warn = jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+      const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(productSubscription.id));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("boom"));
+      expect(paymentIntents.createInTransaction).toHaveBeenCalledTimes(1);
+      expect(result.created).toBe(1);
+    });
+  });
+
+  describe("legacy and manual guards (M2-M4)", () => {
+    it("M2: the legacy status route refuses product subscriptions", async () => {
+      prisma.customerSubscription.findFirst.mockResolvedValue({ ...productSubscription, paymentLinkId: "p1" });
+      await expect(service.updateSubscriptionStatus("merchant_1", "store_1", productSubscription.id, { status: "PAUSED" } as never)).rejects.toThrow("Gestiona esta suscripción desde Suscripciones");
+    });
+    it("M3: refuses to remind a missed or skipped invoice", async () => {
+      for (const status of ["MISSED", "SKIPPED"]) {
+        prisma.subscriptionInvoice.findFirst.mockResolvedValue({ id: "inv_1", subscriptionId: productSubscription.id, status });
+        await expect(service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false)).rejects.toThrow(BadRequestException);
+      }
     });
   });
 });
