@@ -175,58 +175,142 @@ describe("product subscription renewals", () => {
         prisma.paymentIntent.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValue({ count: 1 });
         prisma.paymentIntent.findUnique.mockResolvedValue(banecoIntent(age, extra));
       };
+      const pre = (outcome: string) => ({ invoiceId: "inv_1", outcome }) as never;
+      const txOrder: string[] = [];
+      beforeEach(() => {
+        txOrder.length = 0;
+        prisma.$transaction.mockImplementation((callback: (tx: unknown) => unknown) => { txOrder.push("tx-open"); return callback(prisma); });
+        paymentIntents.resolveStaleBanecoQr.mockImplementation(async () => { txOrder.push("bank"); return "unpaid"; });
+      });
       it("uses a 49 hour cutoff: a 30 hour old QR is left alone and the bank is not asked", async () => {
         setupCancel(30);
-        expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(false);
+        expect(await service.cancelOpenRenewal(prisma, productSubscription.id, pre("not-applicable"))).toBe(false);
+        expect(await service.staleQrOutcome("pi_r1")).toBe("not-applicable");
         expect(paymentIntents.resolveStaleBanecoQr).not.toHaveBeenCalled();
         expect(prisma.paymentIntent.updateMany).toHaveBeenCalledTimes(1);
       });
-      it("cancels a 50 hour old QR the bank reports unpaid, with the 49 hour cutoff in the guard", async () => {
+      it("cancels a 50 hour old QR the pre-check found unpaid, with the 49 hour cutoff in the guard, and never calls the bank inside", async () => {
         setupCancel(50);
-        paymentIntents.resolveStaleBanecoQr.mockResolvedValue("unpaid");
-        expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(true);
-        expect(paymentIntents.resolveStaleBanecoQr).toHaveBeenCalledWith(expect.objectContaining({ id: "pi_r1", railId: "baneco_qr" }));
+        expect(await service.cancelOpenRenewal(prisma, productSubscription.id, pre("unpaid"))).toBe(true);
+        expect(paymentIntents.resolveStaleBanecoQr).not.toHaveBeenCalled();
         const guard = prisma.paymentIntent.updateMany.mock.calls[1][0];
         expect(guard.where.updatedAt.lt.getTime()).toBeLessThan(hours(48.9).getTime());
         expect(guard.where.updatedAt.lt.getTime()).toBeGreaterThan(hours(49.1).getTime());
       });
-      it("does not cancel when the bank says the QR was paid", async () => {
-        setupCancel(50);
-        paymentIntents.resolveStaleBanecoQr.mockResolvedValue("paid");
-        expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(false);
-        expect(prisma.paymentIntent.updateMany).toHaveBeenCalledTimes(1);
+      it("does not cancel when the pre-check says paid, unknown, or was not run", async () => {
+        for (const precheck of [pre("paid"), pre("unknown"), undefined]) {
+          prisma.paymentIntent.updateMany.mockClear();
+          setupCancel(50);
+          expect(await service.cancelOpenRenewal(prisma, productSubscription.id, precheck)).toBe(false);
+          expect(prisma.paymentIntent.updateMany).toHaveBeenCalledTimes(1);
+        }
         expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
-      });
-      it("does not cancel when the bank status is unknown", async () => {
-        setupCancel(50);
-        paymentIntents.resolveStaleBanecoQr.mockResolvedValue("unknown");
-        expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(false);
-        expect(prisma.paymentIntent.updateMany).toHaveBeenCalledTimes(1);
+        expect(paymentIntents.resolveStaleBanecoQr).not.toHaveBeenCalled();
       });
       it("skips the bank for a test-mode intent", async () => {
         setupCancel(50, { livemode: false });
-        expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(true);
+        expect(await service.staleQrOutcome("pi_r1")).toBe("not-applicable");
+        expect(await service.cancelOpenRenewal(prisma, productSubscription.id, pre("not-applicable"))).toBe(true);
         expect(paymentIntents.resolveStaleBanecoQr).not.toHaveBeenCalled();
       });
-      it("expire does not count a miss when the QR was paid at the bank", async () => {
-        prisma.subscriptionInvoice.findMany.mockResolvedValue([dueInvoice]);
-        prisma.paymentIntent.updateMany.mockResolvedValue({ count: 0 });
-        prisma.paymentIntent.findUnique.mockResolvedValue(banecoIntent(60));
+      it("staleQrOutcome returns the bank verdict and turns a thrown error into unknown", async () => {
+        prisma.paymentIntent.findUnique.mockResolvedValue(banecoIntent(50));
         paymentIntents.resolveStaleBanecoQr.mockResolvedValue("paid");
+        expect(await service.staleQrOutcome("pi_r1")).toBe("paid");
+        paymentIntents.resolveStaleBanecoQr.mockRejectedValue(new Error("aborted"));
+        expect(await service.staleQrOutcome("pi_r1")).toBe("unknown");
+      });
+      it("expire asks the bank BEFORE the transaction opens and cancels + marks missed when unpaid", async () => {
+        prisma.subscriptionInvoice.findMany.mockResolvedValue([dueInvoice]);
+        prisma.paymentIntent.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValue({ count: 1 });
+        prisma.paymentIntent.findUnique.mockResolvedValue(banecoIntent(60));
+        prisma.customerSubscription.update.mockResolvedValue({ ...productSubscription, missedCount: 1 });
+        expect(await service.expireMissedRenewals("merchant_1", "store_1")).toEqual({ missed: 1, paused: 0 });
+        expect(txOrder).toEqual(["bank", "tx-open"]);
+        expect(paymentIntents.resolveStaleBanecoQr).toHaveBeenCalledTimes(1);
+      });
+      it.each(["paid", "unknown"])("expire does nothing for the invoice when the bank says %s (no transaction, no miss)", async (verdict) => {
+        prisma.subscriptionInvoice.findMany.mockResolvedValue([dueInvoice]);
+        prisma.paymentIntent.findUnique.mockResolvedValue(banecoIntent(60));
+        paymentIntents.resolveStaleBanecoQr.mockResolvedValue(verdict);
         expect(await service.expireMissedRenewals("merchant_1", "store_1")).toEqual({ missed: 0, paused: 0 });
+        expect(prisma.$transaction).not.toHaveBeenCalled();
         expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
       });
-      it("a reminder keeps a 30 hour old Baneco QR (still payable) but replaces a 50 hour one that the bank says is unpaid", async () => {
-        prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
-        prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
-        prisma.$queryRaw.mockResolvedValue([{ paymentIntentId: "pi_r1", orderId: "order_r1" }]);
-        prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(30), clientSecret: "old" });
-        expect((await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false)).regenerated).toBe(false);
-        prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(50), clientSecret: "old" });
-        paymentIntents.resolveStaleBanecoQr.mockResolvedValue("paid");
-        expect((await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false)).regenerated).toBe(false);
-        paymentIntents.resolveStaleBanecoQr.mockResolvedValue("unpaid");
-        expect((await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false)).regenerated).toBe(true);
+      it("a throwing invoice does not stop the others in expiry", async () => {
+        const second = { ...dueInvoice, id: "inv_2", paymentIntentId: "pi_r2", orderId: "order_r2" };
+        prisma.subscriptionInvoice.findMany.mockResolvedValue([dueInvoice, second]);
+        prisma.paymentIntent.findUnique.mockImplementation(async ({ where }: any) => { if (where.id === "pi_r1") throw new Error("db down"); return { id: "pi_r2", status: "REQUIRES_PAYMENT_METHOD" }; });
+        prisma.customerSubscription.update.mockResolvedValue({ ...productSubscription, missedCount: 1 });
+        const logger = jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+        expect(await service.expireMissedRenewals("merchant_1", "store_1")).toEqual({ missed: 1, paused: 0 });
+        expect(logger).toHaveBeenCalledWith(expect.stringContaining("inv_1"));
+        expect(logger).toHaveBeenCalledWith(expect.stringContaining("db down"));
+      });
+      describe("reminders", () => {
+        beforeEach(() => {
+          prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
+          prisma.customerSubscription.findFirst.mockResolvedValue(productSubscription);
+          prisma.$queryRaw.mockResolvedValue([{ paymentIntentId: "pi_r1", orderId: "order_r1" }]);
+          prisma.subscriptionInvoice.findMany.mockResolvedValue([{ ...dueInvoice, dueAt: new Date(Date.now() - 1000) }]);
+        });
+        it("a manual reminder keeps a 30 hour old Baneco QR (still payable)", async () => {
+          prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(30), clientSecret: "old" });
+          expect((await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false)).regenerated).toBe(false);
+          expect(paymentIntents.resolveStaleBanecoQr).not.toHaveBeenCalled();
+        });
+        it.each(["paid", "unknown"])("a manual reminder on a 50 hour QR the bank reports %s sends no email, no link, cancels and creates nothing, and opens no transaction", async (verdict) => {
+          prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(50), clientSecret: "old" });
+          paymentIntents.resolveStaleBanecoQr.mockResolvedValue(verdict);
+          const result = await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false);
+          expect(result).toMatchObject({ regenerated: false, sent: false, checkoutUrl: null });
+          expect(email.send).not.toHaveBeenCalled();
+          expect(prisma.$transaction).not.toHaveBeenCalled();
+          expect(prisma.paymentIntent.updateMany).not.toHaveBeenCalled();
+          expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+          expect(prisma.subscriptionInvoice.update).not.toHaveBeenCalled();
+        });
+        it("a manual reminder on a 50 hour QR the bank reports unpaid regenerates the link, asking the bank before the transaction", async () => {
+          prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(50), clientSecret: "old" });
+          const result = await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false);
+          expect(txOrder).toEqual(["bank", "tx-open"]);
+          expect(paymentIntents.resolveStaleBanecoQr).toHaveBeenCalledTimes(1);
+          expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_r1", status: "REQUIRES_ACTION" }, data: { status: "CANCELED" } });
+          expect(result).toMatchObject({ regenerated: true, sent: true });
+          expect(result.checkoutUrl).toContain("pi_r1_secret");
+        });
+        it("the scheduled reminder leaves a 30 hour Baneco QR alone (49 h rail cutoff) and sends the existing link", async () => {
+          prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(30), clientSecret: "old" });
+          await service.sendDueSubscriptionReminders("merchant_1", "store_1");
+          expect(paymentIntents.resolveStaleBanecoQr).not.toHaveBeenCalled();
+          expect(prisma.$transaction).not.toHaveBeenCalled();
+          expect(email.send.mock.calls[0][0].body).toContain("old");
+        });
+        it.each(["paid", "unknown"])("the scheduled reminder sends nothing for a 50 hour QR the bank reports %s", async (verdict) => {
+          prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(50), clientSecret: "old" });
+          paymentIntents.resolveStaleBanecoQr.mockResolvedValue(verdict);
+          expect(await service.sendDueSubscriptionReminders("merchant_1", "store_1")).toEqual({ delivered: 0, skipped: 1 });
+          expect(email.send).not.toHaveBeenCalled();
+          expect(prisma.$transaction).not.toHaveBeenCalled();
+          expect(prisma.paymentIntent.updateMany).not.toHaveBeenCalled();
+        });
+        it("the scheduled reminder replaces a 50 hour unpaid QR (bank before transaction) and mails the new link", async () => {
+          prisma.paymentIntent.findUnique.mockResolvedValue({ ...banecoIntent(50), clientSecret: "old" });
+          await service.sendDueSubscriptionReminders("merchant_1", "store_1");
+          expect(txOrder).toEqual(["bank", "tx-open"]);
+          expect(email.send.mock.calls[0][0].body).toContain("pi_r1_secret");
+        });
+        it("a throwing invoice does not stop the others in reminders", async () => {
+          const bad = { ...dueInvoice, id: "inv_bad", dueAt: new Date(Date.now() - 1000) };
+          const good = { ...dueInvoice, id: "inv_good", dueAt: new Date(Date.now() - 1000) };
+          prisma.subscriptionInvoice.findMany.mockResolvedValue([bad, good]);
+          prisma.customerSubscription.findFirst.mockRejectedValueOnce(new Error("db down")).mockResolvedValue(productSubscription);
+          prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_PAYMENT_METHOD", clientSecret: "x" });
+          const logger = jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+          expect(await service.sendDueSubscriptionReminders("merchant_1", "store_1")).toEqual({ delivered: 1, skipped: 1 });
+          expect(logger).toHaveBeenCalledWith(expect.stringContaining("inv_bad"));
+          expect(logger).toHaveBeenCalledWith(expect.stringContaining("db down"));
+        });
       });
     });
 
@@ -379,7 +463,7 @@ describe("product subscription renewals", () => {
       prisma.customerSubscription.update.mockResolvedValue({ ...productSubscription, missedCount: 2 });
       const cancel = jest.spyOn(service, "cancelOpenRenewal").mockResolvedValue(true);
       await service.expireMissedRenewals("merchant_1", "store_1");
-      expect(cancel).toHaveBeenCalledWith(prisma, productSubscription.id);
+      expect(cancel).toHaveBeenCalledWith(prisma, productSubscription.id, { invoiceId: null, outcome: "not-applicable" });
     });
     it("does not remind a paused subscription", async () => {
       prisma.subscriptionInvoice.findMany.mockResolvedValue([{ id: "inv_1", subscriptionId: productSubscription.id, orderId: "order_r1", paymentIntentId: "pi_r1", status: "DUE", reminderCount: 0, dueAt: new Date(Date.now() - 1000), amount: 15900, currency: "BOB" }]);

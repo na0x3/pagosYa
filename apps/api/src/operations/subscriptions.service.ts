@@ -27,6 +27,10 @@ import { originLivemodes, originMatchesStore } from "./subscription-origin";
 export const STALE_QR_HOURS = 25;
 /** Baneco sends a date-only dueDate, so its QR can stay payable for up to ~48 h. */
 export const STALE_BANECO_QR_HOURS = 49;
+/** Bank verdict on an old Baneco QR, resolved BEFORE any transaction opens; "not-applicable" = nothing to ask (other rail, test mode, not stale). */
+export type StaleQrOutcome = "paid" | "unknown" | "unpaid" | "not-applicable";
+export type OpenRenewalPrecheck = { invoiceId: string | null; outcome: StaleQrOutcome };
+const needsBankCheck = (intent: { railId?: string | null; livemode?: boolean }) => intent.railId === "baneco_qr" && intent.livemode !== false;
 const staleQrCutoff = (railId?: string | null, now = Date.now()) => new Date(now - (railId === "baneco_qr" ? STALE_BANECO_QR_HOURS : STALE_QR_HOURS) * 3_600_000);
 
 export const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
@@ -145,7 +149,7 @@ export class SubscriptionsService {
   }
 
   /** True when the intent is (now) CANCELED; false when it is in another live state (e.g. PROCESSING) and must be left alone. */
-  private async cancelUnpaidIntent(tx: Prisma.TransactionClient, paymentIntentId: string): Promise<boolean> {
+  private async cancelUnpaidIntent(tx: Prisma.TransactionClient, paymentIntentId: string, outcome?: StaleQrOutcome): Promise<boolean> {
     const canceled = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: { in: [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED] } }, data: { status: PaymentIntentStatus.CANCELED } });
     if (canceled?.count) return true;
     const current = await tx.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { status: true, railId: true, livemode: true, updatedAt: true } });
@@ -153,22 +157,35 @@ export class SubscriptionsService {
     // An abandoned QR never expires on our side: once it is dead (25 h, 49 h for Baneco) the renewal must not stay stuck on it.
     const cutoff = staleQrCutoff(current.railId);
     if (!current.updatedAt || current.updatedAt >= cutoff) return false;
-    if (!(await this.bankAllowsCancel(paymentIntentId, current))) return false;
+    if (needsBankCheck(current) && outcome !== "unpaid") return false; // the bank was not asked, or said paid/unknown: never cancel it here
     const stale = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: PaymentIntentStatus.REQUIRES_ACTION, updatedAt: { lt: cutoff } }, data: { status: PaymentIntentStatus.CANCELED } });
     return !!stale?.count;
   }
 
-  /** A Baneco QR is cancelled only when the bank confirms it is unpaid; a payment or an unanswered status call blocks the cancel. */
-  private async bankAllowsCancel(paymentIntentId: string, intent: { railId?: string | null; livemode?: boolean }): Promise<boolean> {
-    if (intent.railId !== "baneco_qr" || intent.livemode === false) return true;
-    return (await this.paymentIntents.resolveStaleBanecoQr({ id: paymentIntentId, railId: intent.railId, livemode: intent.livemode })) === "unpaid";
+  /**
+   * Asks the bank about an old Baneco QR. Must run OUTSIDE any transaction (it makes several HTTP calls and a "paid" answer
+   * settles the payment in its own transaction). Anything that is not a stale live Baneco QR is "not-applicable".
+   */
+  async staleQrOutcome(paymentIntentId: string | null | undefined): Promise<StaleQrOutcome> {
+    if (!paymentIntentId) return "not-applicable";
+    const intent = await this.prisma.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { id: true, status: true, railId: true, livemode: true, updatedAt: true } });
+    if (!intent || intent.status !== PaymentIntentStatus.REQUIRES_ACTION || !needsBankCheck(intent)) return "not-applicable";
+    if (!intent.updatedAt || intent.updatedAt >= staleQrCutoff(intent.railId)) return "not-applicable";
+    try { return await this.paymentIntents.resolveStaleBanecoQr({ id: intent.id, railId: intent.railId, livemode: intent.livemode }); }
+    catch (error) { this.logger.warn(`Baneco check failed for ${intent.id}: ${(error as Error).message}`); return "unknown"; }
+  }
+
+  /** Pre-transaction step for cancelOpenRenewal: the bank verdict for the subscription's open renewal. */
+  async precheckOpenRenewal(subscriptionId: string, exceptInvoiceId?: string): Promise<OpenRenewalPrecheck> {
+    const open = await this.prisma.subscriptionInvoice.findFirst({ where: { subscriptionId, status: "DUE", ...(exceptInvoiceId ? { id: { not: exceptInvoiceId } } : {}) }, orderBy: { periodStart: "desc" } });
+    return { invoiceId: open?.id ?? null, outcome: await this.staleQrOutcome(open?.paymentIntentId) };
   }
 
   /** Cancels the open (unpaid) renewal of a subscription; paid orders are never touched. */
-  async cancelOpenRenewal(tx: Prisma.TransactionClient, subscriptionId: string): Promise<boolean> {
+  async cancelOpenRenewal(tx: Prisma.TransactionClient, subscriptionId: string, precheck?: OpenRenewalPrecheck): Promise<boolean> {
     const open = await tx.subscriptionInvoice.findFirst({ where: { subscriptionId, status: "DUE" }, orderBy: { periodStart: "desc" } });
     if (!open) return false;
-    if (open.paymentIntentId && !(await this.cancelUnpaidIntent(tx, open.paymentIntentId))) return false;
+    if (open.paymentIntentId && !(await this.cancelUnpaidIntent(tx, open.paymentIntentId, precheck?.invoiceId === open.id ? precheck.outcome : undefined))) return false;
     if (open.orderId) {
       const order = await tx.storeOrder.updateMany({ where: { id: open.orderId, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
       if (order.count) await tx.storeOrderStatusEvent.create({ data: { orderId: open.orderId, status: OrderFulfillmentStatus.CANCELED } });
@@ -186,7 +203,8 @@ export class SubscriptionsService {
     merchantId: string,
     storeId: string,
     forceNew = false,
-  ) {
+    staleOutcome: StaleQrOutcome = "not-applicable",
+  ): Promise<{ intent: { id: string; clientSecret: string }; created: boolean; blocked?: "paid" | "unknown" }> {
     const rows = await tx.$queryRaw<Array<{ paymentIntentId: string | null; orderId: string | null }>>`
       SELECT "paymentIntentId", "orderId" FROM "SubscriptionInvoice" WHERE id = ${invoice.id} FOR UPDATE
     `;
@@ -194,7 +212,8 @@ export class SubscriptionsService {
     if (existingIntentId) {
       const existingIntent = await tx.paymentIntent.findUnique({ where: { id: existingIntentId } });
       const staleQr = existingIntent?.status === PaymentIntentStatus.REQUIRES_ACTION && existingIntent.updatedAt < staleQrCutoff(existingIntent.railId);
-      if (staleQr && !(await this.bankAllowsCancel(existingIntent!.id, existingIntent!))) return { intent: existingIntent!, created: false }; // paid at the bank or bank unreachable: keep it
+      // Paid at the bank, bank unreachable, or the bank was never asked: do nothing this run; the caller must not send a pay link.
+      if (staleQr && needsBankCheck(existingIntent!) && staleOutcome !== "unpaid") return { intent: existingIntent!, created: false, blocked: staleOutcome === "paid" ? "paid" : "unknown" };
       if (existingIntent && !staleQr && (!forceNew || (existingIntent.status !== PaymentIntentStatus.FAILED && existingIntent.status !== PaymentIntentStatus.CANCELED))) return { intent: existingIntent, created: false };
       if (existingIntent?.status === PaymentIntentStatus.FAILED) {
         await tx.paymentIntent.update({ where: { id: existingIntent.id }, data: { status: PaymentIntentStatus.CANCELED } });
@@ -317,6 +336,8 @@ export class SubscriptionsService {
           if (availability === "gone") { await this.endGoneSubscription(store.name, subscription); continue; }
           if (availability === "out_of_stock") { await this.skipOutOfStockPeriod(store.name, subscription, terms); continue; }
         }
+        const existingInvoice = await this.prisma.subscriptionInvoice.findUnique({ where: { subscriptionId_periodStart: { subscriptionId: subscription.id, periodStart: subscription.nextBillingAt } } });
+        const staleOutcome = await this.staleQrOutcome(existingInvoice?.paymentIntentId); // bank call, before the transaction
         const pendingApplies = !!subscription.pendingFrom && subscription.pendingFrom <= now && !!subscription.pendingUnitAmount;
         const outcome = await this.prisma.$transaction(async (tx) => {
           const existing = await tx.subscriptionInvoice.findUnique({ where: { subscriptionId_periodStart: { subscriptionId: subscription.id, periodStart: subscription.nextBillingAt } } });
@@ -325,7 +346,7 @@ export class SubscriptionsService {
             create: { subscriptionId: subscription.id, merchantId, storeId, periodStart: subscription.nextBillingAt, amount: terms.amount, currency: terms.currency, dueAt: subscription.nextBillingAt },
             update: {},
           });
-          const ensured = await this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId);
+          const ensured = await this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId, false, staleOutcome);
           await tx.customerSubscription.updateMany({
             where: { id: subscription.id, status: "ACTIVE", nextBillingAt: subscription.nextBillingAt },
             data: {
@@ -333,10 +354,11 @@ export class SubscriptionsService {
               ...(pendingApplies ? { unitAmount: subscription.pendingUnitAmount, pendingUnitAmount: null, pendingFrom: null } : {}),
             },
           });
-          return { invoice, intent: ensured.intent, invoiceCreated: !existing, paymentLinkCreated: ensured.created };
+          return { invoice, intent: ensured.intent, invoiceCreated: !existing, paymentLinkCreated: ensured.created, blocked: ensured.blocked };
         });
         if (outcome.invoiceCreated) created += 1;
         if (outcome.paymentLinkCreated) paymentLinksCreated += 1;
+        if (outcome.blocked) continue; // paid at the bank or unconfirmed: no pay link for this invoice
         const checkoutUrl = paymentCheckoutUrl(this.config, outcome.intent.clientSecret);
         charges.push({ invoiceId: outcome.invoice.id, paymentIntentId: outcome.intent.id, checkoutUrl, amount: outcome.invoice.amount, currency: outcome.invoice.currency });
         if (outcome.paymentLinkCreated && await this.sendChargeNotice(store.name, subscription, terms, outcome.invoice, checkoutUrl, "first")) {
@@ -392,25 +414,33 @@ export class SubscriptionsService {
     let delivered = 0;
     let skipped = 0;
     for (const invoice of invoices) {
-      const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
-      if (!subscription || subscription.status !== "ACTIVE" || !subscription.customerEmail || !invoice.paymentIntentId) { skipped += 1; continue; }
-      const [terms, intent, origins] = await Promise.all([
-        this.termsFor(subscription, storeId, now),
-        this.prisma.paymentIntent.findUnique({ where: { id: invoice.paymentIntentId } }),
-        originLivemodes(this.prisma, [subscription], this.logger),
-      ]);
-      if (!terms || !intent || intent.status === PaymentIntentStatus.SUCCEEDED || intent.status === PaymentIntentStatus.CANCELED) { skipped += 1; continue; }
-      if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); skipped += 1; continue; }
-      let clientSecret = intent.clientSecret;
-      if (intent.status === PaymentIntentStatus.REQUIRES_ACTION && intent.updatedAt < staleQrCutoff()) {
-        // The abandoned QR is dead; the reminder must carry a working link.
-        const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId));
-        clientSecret = ensured.intent.clientSecret;
+      try {
+        const subscription = await this.prisma.customerSubscription.findFirst({ where: { id: invoice.subscriptionId, merchantId, storeId } });
+        if (!subscription || subscription.status !== "ACTIVE" || !subscription.customerEmail || !invoice.paymentIntentId) { skipped += 1; continue; }
+        const [terms, intent, origins] = await Promise.all([
+          this.termsFor(subscription, storeId, now),
+          this.prisma.paymentIntent.findUnique({ where: { id: invoice.paymentIntentId } }),
+          originLivemodes(this.prisma, [subscription], this.logger),
+        ]);
+        if (!terms || !intent || intent.status === PaymentIntentStatus.SUCCEEDED || intent.status === PaymentIntentStatus.CANCELED) { skipped += 1; continue; }
+        if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); skipped += 1; continue; }
+        let clientSecret = intent.clientSecret;
+        if (intent.status === PaymentIntentStatus.REQUIRES_ACTION && intent.updatedAt < staleQrCutoff(intent.railId, now.getTime())) {
+          // The abandoned QR is dead; the reminder must carry a working link. The bank is asked first, outside the transaction.
+          const staleOutcome = await this.staleQrOutcome(intent.id);
+          if (staleOutcome === "paid" || staleOutcome === "unknown") { skipped += 1; continue; } // no pay-now email for a paid or unconfirmed invoice
+          const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId, false, staleOutcome));
+          if (ensured.blocked) { skipped += 1; continue; }
+          clientSecret = ensured.intent.clientSecret;
+        }
+        const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, paymentCheckoutUrl(this.config, clientSecret), invoice.reminderCount >= 1 ? "last" : "reminder");
+        if (!sent) { skipped += 1; continue; }
+        await this.prisma.subscriptionInvoice.update({ where: { id: invoice.id }, data: { lastReminderAt: new Date(), reminderCount: { increment: 1 } } });
+        delivered += 1;
+      } catch (error) {
+        skipped += 1;
+        this.logger.error(`Renewal reminder failed for invoice ${invoice.id}: ${(error as Error).message}`);
       }
-      const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, paymentCheckoutUrl(this.config, clientSecret), invoice.reminderCount >= 1 ? "last" : "reminder");
-      if (!sent) { skipped += 1; continue; }
-      await this.prisma.subscriptionInvoice.update({ where: { id: invoice.id }, data: { lastReminderAt: new Date(), reminderCount: { increment: 1 } } });
-      delivered += 1;
     }
     return { delivered, skipped };
   }
@@ -427,7 +457,10 @@ export class SubscriptionsService {
     if (!terms) throw new NotFoundException("Subscription plan not found");
     const livemode = await this.storeLivemode(merchantId, store);
     if (!originMatchesStore(subscription, await originLivemodes(this.prisma, [subscription], this.logger), livemode)) throw new BadRequestException("Esta suscripción se creó en otro modo (prueba o producción) y no se puede cobrar desde el modo actual de la tienda");
-    const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId, regenerate));
+    const staleOutcome = await this.staleQrOutcome(invoice.paymentIntentId); // bank call, before the transaction
+    if (staleOutcome === "paid" || staleOutcome === "unknown") return { checkoutUrl: null, regenerated: false, sent: false, recipient: subscription.customerEmail, blocked: staleOutcome };
+    const ensured = await this.prisma.$transaction((tx) => this.ensureSubscriptionPaymentIntent(tx, livemode, store.name, subscription, terms, invoice, merchantId, storeId, regenerate, staleOutcome));
+    if (ensured.blocked) return { checkoutUrl: null, regenerated: false, sent: false, recipient: subscription.customerEmail, blocked: ensured.blocked };
     const checkoutUrl = paymentCheckoutUrl(this.config, ensured.intent.clientSecret);
     const sent = await this.sendChargeNotice(store.name, subscription, terms, invoice, checkoutUrl, "reminder");
     if (sent) await this.prisma.subscriptionInvoice.update({ where: { id: invoice.id }, data: { lastReminderAt: new Date(), reminderCount: { increment: 1 } } });
@@ -475,29 +508,37 @@ export class SubscriptionsService {
     let missed = 0;
     let paused = 0;
     for (const invoice of invoices) {
-      const owner = ownerById.get(invoice.subscriptionId);
-      if (owner && !originMatchesStore(owner, origins, livemode)) { this.logOriginSkip(owner.id, livemode); continue; }
-      const result = await this.prisma.$transaction(async (tx) => {
-        if (invoice.paymentIntentId && !(await this.cancelUnpaidIntent(tx, invoice.paymentIntentId))) return null;
-        const marked = await tx.subscriptionInvoice.updateMany({ where: { id: invoice.id, status: "DUE" }, data: { status: "MISSED" } });
-        if (!marked.count) return null;
-        const order = await tx.storeOrder.updateMany({ where: { id: invoice.orderId!, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
-        if (order.count) await tx.storeOrderStatusEvent.create({ data: { orderId: invoice.orderId!, status: OrderFulfillmentStatus.CANCELED } });
-        const subscription = await tx.customerSubscription.update({ where: { id: invoice.subscriptionId }, data: { missedCount: { increment: 1 } } });
-        const pause = subscription.missedCount >= 2
-          && (await tx.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE" }, data: { status: "PAUSED", pausedAt: new Date() } })).count === 1;
-        if (pause) await this.cancelOpenRenewal(tx, subscription.id); // a paused subscription must not keep a payable renewal open
-        return { subscription, pause };
-      });
-      if (!result) continue;
-      missed += 1;
-      if (!result.pause) continue;
-      paused += 1;
-      const name = result.subscription.itemName ?? "tu suscripción";
-      await this.sendSubscriptionNotice(result.subscription.customerEmail, `Pausamos tu suscripción · ${store.name}`,
-        `Hola ${result.subscription.customerName}, no recibimos el pago de las dos últimas entregas de ${name}, así que pausamos la suscripción. Puedes reanudarla cuando quieras: ${this.manageUrl(result.subscription.id)}`);
-      await this.sendSubscriptionNotice(store.contactEmail, `Suscripción pausada: ${result.subscription.customerName}`,
-        `La suscripción de ${result.subscription.customerName} a ${name} se pausó tras dos entregas sin pagar. Revísala en Suscripciones.`);
+      try {
+        const owner = ownerById.get(invoice.subscriptionId);
+        if (owner && !originMatchesStore(owner, origins, livemode)) { this.logOriginSkip(owner.id, livemode); continue; }
+        // Bank calls first, outside any transaction: paid or unconfirmed QRs are left for the next run (paid ones are settled by the check itself).
+        const outcome = await this.staleQrOutcome(invoice.paymentIntentId);
+        if (outcome === "paid" || outcome === "unknown") continue;
+        const otherOpen = await this.precheckOpenRenewal(invoice.subscriptionId, invoice.id);
+        const result = await this.prisma.$transaction(async (tx) => {
+          if (invoice.paymentIntentId && !(await this.cancelUnpaidIntent(tx, invoice.paymentIntentId, outcome))) return null;
+          const marked = await tx.subscriptionInvoice.updateMany({ where: { id: invoice.id, status: "DUE" }, data: { status: "MISSED" } });
+          if (!marked.count) return null;
+          const order = await tx.storeOrder.updateMany({ where: { id: invoice.orderId!, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
+          if (order.count) await tx.storeOrderStatusEvent.create({ data: { orderId: invoice.orderId!, status: OrderFulfillmentStatus.CANCELED } });
+          const subscription = await tx.customerSubscription.update({ where: { id: invoice.subscriptionId }, data: { missedCount: { increment: 1 } } });
+          const pause = subscription.missedCount >= 2
+            && (await tx.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE" }, data: { status: "PAUSED", pausedAt: new Date() } })).count === 1;
+          if (pause) await this.cancelOpenRenewal(tx, subscription.id, otherOpen); // a paused subscription must not keep a payable renewal open
+          return { subscription, pause };
+        });
+        if (!result) continue;
+        missed += 1;
+        if (!result.pause) continue;
+        paused += 1;
+        const name = result.subscription.itemName ?? "tu suscripción";
+        await this.sendSubscriptionNotice(result.subscription.customerEmail, `Pausamos tu suscripción · ${store.name}`,
+          `Hola ${result.subscription.customerName}, no recibimos el pago de las dos últimas entregas de ${name}, así que pausamos la suscripción. Puedes reanudarla cuando quieras: ${this.manageUrl(result.subscription.id)}`);
+        await this.sendSubscriptionNotice(store.contactEmail, `Suscripción pausada: ${result.subscription.customerName}`,
+          `La suscripción de ${result.subscription.customerName} a ${name} se pausó tras dos entregas sin pagar. Revísala en Suscripciones.`);
+      } catch (error) {
+        this.logger.error(`Missed-renewal expiry failed for invoice ${invoice.id}: ${(error as Error).message}`);
+      }
     }
     return { missed, paused };
   }

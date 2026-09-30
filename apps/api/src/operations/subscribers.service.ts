@@ -44,15 +44,17 @@ export class SubscribersService {
     if (!terms) throw new BadRequestException("Esta suscripción no se puede modificar");
     if (subscription.status === "CANCELED") throw new BadRequestException("Esta suscripción ya fue cancelada");
     if (action === "cancel") {
+      const precheck = await this.subscriptions.precheckOpenRenewal(subscription.id); // bank call, before the transaction
       return this.prisma.$transaction(async (tx) => {
-        await this.subscriptions.cancelOpenRenewal(tx, subscription.id);
+        await this.subscriptions.cancelOpenRenewal(tx, subscription.id, precheck);
         return tx.customerSubscription.update({ where: { id: subscription.id }, data: { status: "CANCELED", activeKey: null, canceledAt: new Date() } });
       });
     }
     if (action === "pause") {
       if (subscription.status !== "ACTIVE") throw new BadRequestException("Solo puedes pausar una suscripción activa");
+      const precheck = await this.subscriptions.precheckOpenRenewal(subscription.id); // bank call, before the transaction
       return this.prisma.$transaction(async (tx) => {
-        await this.subscriptions.cancelOpenRenewal(tx, subscription.id);
+        await this.subscriptions.cancelOpenRenewal(tx, subscription.id, precheck);
         const paused = await tx.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE" }, data: { status: "PAUSED", pausedAt: new Date() } });
         if (!paused.count) throw new ConflictException(STATE_CHANGED);
         return tx.customerSubscription.findUniqueOrThrow({ where: { id: subscription.id } });
@@ -70,8 +72,9 @@ export class SubscribersService {
       });
     }
     if (subscription.status !== "ACTIVE") throw new BadRequestException("Solo puedes saltar entregas de una suscripción activa");
+    const precheck = await this.subscriptions.precheckOpenRenewal(subscription.id); // bank call, before the transaction
     return this.prisma.$transaction(async (tx) => {
-      if (await this.subscriptions.cancelOpenRenewal(tx, subscription.id)) return tx.customerSubscription.findUniqueOrThrow({ where: { id: subscription.id } });
+      if (await this.subscriptions.cancelOpenRenewal(tx, subscription.id, precheck)) return tx.customerSubscription.findUniqueOrThrow({ where: { id: subscription.id } });
       // cancelOpenRenewal also declines when the payment is in flight; that renewal stays payable, so the date must not move.
       const stillOpen = await tx.subscriptionInvoice.findFirst({ where: { subscriptionId: subscription.id, status: "DUE" }, select: { id: true } });
       if (stillOpen) throw new ConflictException("Tu pago está en proceso; espera a que termine");

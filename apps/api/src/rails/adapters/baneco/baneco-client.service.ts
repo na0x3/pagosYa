@@ -54,6 +54,9 @@ class BanecoApiError extends Error {
  * other Baneco products (account inquiries, batch payouts — §8-9) get
  * wired in later, without touching the PaymentRailAdapter surface.
  */
+/** A hung bank call must fail (and surface as an error) instead of holding its caller. */
+export const BANECO_FETCH_TIMEOUT_MS = 8_000;
+
 @Injectable()
 export class BanecoClientService {
   private readonly logger = new Logger(BanecoClientService.name);
@@ -71,7 +74,7 @@ export class BanecoClientService {
     const url = new URL(`${this.cfg.baseUrl}/api/authentication/encrypt`);
     url.searchParams.set("text", text);
     url.searchParams.set("aesKey", this.cfg.aesKey);
-    const response = await fetch(url, { method: "GET" });
+    const response = await fetch(url, { method: "GET", signal: AbortSignal.timeout(BANECO_FETCH_TIMEOUT_MS) });
     if (!response.ok) throw new BanecoApiError(`Baneco encrypt failed: HTTP ${response.status}`);
     return (await response.text()).replace(/^"|"$/g, "");
   }
@@ -80,6 +83,7 @@ export class BanecoClientService {
     const encryptedPassword = await this.encrypt(this.cfg.password);
     const response = await fetch(`${this.cfg.baseUrl}/api/authentication/authenticate`, {
       method: "POST",
+      signal: AbortSignal.timeout(BANECO_FETCH_TIMEOUT_MS),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userName: this.cfg.username, password: encryptedPassword }),
     });
@@ -112,6 +116,7 @@ export class BanecoClientService {
     const token = await this.getToken();
     const response = await fetch(`${this.cfg.baseUrl}${path}`, {
       ...init,
+      signal: AbortSignal.timeout(BANECO_FETCH_TIMEOUT_MS),
       headers: { ...init.headers, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     });
 

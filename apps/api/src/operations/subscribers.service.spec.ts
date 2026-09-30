@@ -25,6 +25,7 @@ function setup() {
   const email = { send: jest.fn().mockResolvedValue(undefined) };
   const subscriptions: any = {
     cancelOpenRenewal: jest.fn().mockResolvedValue(false),
+    precheckOpenRenewal: jest.fn().mockResolvedValue({ invoiceId: null, outcome: "not-applicable" }),
     sendSubscriptionNotice: jest.fn().mockImplementation((to: string, subject: string, body: string) => email.send({ to, subject, body }).then(() => true)),
     manageUrl: jest.fn().mockReturnValue("https://pagar.test/suscripcion/x"),
     remindSubscriptionInvoice: jest.fn(),
@@ -71,7 +72,7 @@ describe("SubscribersService", () => {
   it("cancel cancels the open renewal and frees the active key", async () => {
     const { prisma, subscriptions, service } = setup();
     await service.act("merchant_1", "store_1", productSubscription.id, "cancel");
-    expect(subscriptions.cancelOpenRenewal).toHaveBeenCalledWith(prisma, productSubscription.id);
+    expect(subscriptions.cancelOpenRenewal).toHaveBeenCalledWith(prisma, productSubscription.id, { invoiceId: null, outcome: "not-applicable" });
     expect(prisma.customerSubscription.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "CANCELED", activeKey: null }) }));
   });
 
