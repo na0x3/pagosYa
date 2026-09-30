@@ -5,6 +5,7 @@ import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
+import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
@@ -355,6 +356,13 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     invoicingReady: () => Boolean(lastInvoicingProfile?.cuis),
     apiBase: () => apiBaseEl.value,
   });
+  // Suscripciones: subscribers and per-product frequencies; the module owns its view.
+  const subscriptionsPanel = mountSubscriptionsPanel({
+    api,
+    storeId: () => currentStoreId,
+    signedIn: () => !!sessionToken,
+    products: () => lastPaymentLinks,
+  });
   // Documentos → Propuestas (D2); an accepted proposal hands its new cobro to the Cobros view.
   const proposals = mountProposalsPanel({
     api,
@@ -619,6 +627,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
+    subscriptions: ["Suscripciones", "Clientes que compran tus productos de forma recurrente."],
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
@@ -783,6 +792,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     syncMerchantStoreWorkspace(nextView);
     if (nextView === "cobros") cobros.show();
+    if (nextView === "subscriptions") subscriptionsPanel.show();
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
@@ -1642,6 +1652,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
       cobros.reset();
+      subscriptionsPanel.reset();
       growth.reset();
       proposals.reset();
       contracts.reset();
