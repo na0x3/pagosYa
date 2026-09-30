@@ -275,7 +275,7 @@ describe("product subscription renewals", () => {
           const result = await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false);
           expect(txOrder).toEqual(["bank", "tx-open"]);
           expect(paymentIntents.resolveStaleBanecoQr).toHaveBeenCalledTimes(1);
-          expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_r1", status: "REQUIRES_ACTION" }, data: { status: "CANCELED" } });
+          expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_r1", status: "REQUIRES_ACTION", updatedAt: { lt: expect.any(Date) } }, data: { status: "CANCELED" } });
           expect(result).toMatchObject({ regenerated: true, sent: true });
           expect(result.checkoutUrl).toContain("pi_r1_secret");
         });
@@ -334,7 +334,7 @@ describe("product subscription renewals", () => {
       prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "REQUIRES_ACTION", updatedAt: hours(30), clientSecret: "old" });
       const result = await service.remindSubscriptionInvoice("merchant_1", "store_1", "inv_1", false);
       expect(paymentIntents.createInTransaction).toHaveBeenCalledTimes(1);
-      expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_r1", status: "REQUIRES_ACTION" }, data: { status: "CANCELED" } });
+      expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_r1", status: "REQUIRES_ACTION", updatedAt: { lt: expect.any(Date) } }, data: { status: "CANCELED" } });
       expect(result.regenerated).toBe(true);
       expect(result.checkoutUrl).toContain("pi_r1_secret");
     });

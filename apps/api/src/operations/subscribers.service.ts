@@ -271,6 +271,7 @@ export class SubscribersService {
     const open = await this.prisma.subscriptionInvoice.findFirst({ where: { subscriptionId: subscription.id, status: "DUE" }, orderBy: { periodStart: "desc" } });
     if (!open) throw new NotFoundException("No hay una entrega pendiente de pago");
     const result = await this.subscriptions.remindSubscriptionInvoice(merchantId, storeId, open.id, false);
+    if (result.blocked || !result.checkoutUrl) throw new ConflictException(result.blocked === "paid" ? "El pago ya se recibió en el banco; actualiza la lista en unos minutos." : "No pudimos confirmar el estado del QR con el banco; intenta de nuevo más tarde.");
     const item = subscription.itemName ?? "tu suscripción";
     return { checkoutUrl: result.checkoutUrl, sent: result.sent, whatsappText: `Hola ${subscription.customerName}, tu pedido de ${item} está listo. Págalo con un toque: ${result.checkoutUrl}` };
   }

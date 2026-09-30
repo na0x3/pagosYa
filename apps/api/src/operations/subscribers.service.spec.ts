@@ -1,5 +1,5 @@
 import { createSubscriptionManageToken } from "./subscription-manage-token";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ConflictException } from "@nestjs/common";
 import { SubscribersService } from "./subscribers.service";
 
 const productSubscription = {
@@ -109,6 +109,26 @@ describe("SubscribersService", () => {
       await expect(service.resend("merchant_1", "store_1", productSubscription.id)).rejects.toThrow(BadRequestException);
       expect(subscriptions.remindSubscriptionInvoice).not.toHaveBeenCalled();
     }
+  });
+
+  it("resend answers 409 with the reason when the reminder is blocked, never a null link", async () => {
+    const cases = [["paid", "El pago ya se recibió en el banco; actualiza la lista en unos minutos."], ["unknown", "No pudimos confirmar el estado del QR con el banco; intenta de nuevo más tarde."]] as const;
+    for (const [blocked, message] of cases) {
+      const { prisma, subscriptions, service } = setup();
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue({ id: "inv_1", subscriptionId: productSubscription.id, status: "DUE" });
+      subscriptions.remindSubscriptionInvoice.mockResolvedValue({ checkoutUrl: null, regenerated: false, sent: false, recipient: "ana@mail.com", blocked });
+      const failure = await service.resend("merchant_1", "store_1", productSubscription.id).catch((error) => error);
+      expect(failure).toBeInstanceOf(ConflictException);
+      expect(failure.message).toBe(message);
+    }
+  });
+
+  it("resend of a normal reminder is unchanged", async () => {
+    const { prisma, subscriptions, service } = setup();
+    prisma.subscriptionInvoice.findFirst.mockResolvedValue({ id: "inv_1", subscriptionId: productSubscription.id, status: "DUE" });
+    subscriptions.remindSubscriptionInvoice.mockResolvedValue({ checkoutUrl: "https://pagar.test/pay/x", regenerated: false, sent: true, recipient: "ana@mail.com" });
+    const result = await service.resend("merchant_1", "store_1", productSubscription.id);
+    expect(result).toEqual({ checkoutUrl: "https://pagar.test/pay/x", sent: true, whatsappText: "Hola Ana, tu pedido de Café 500 g está listo. Págalo con un toque: https://pagar.test/pay/x" });
   });
 
   it("rejects a removed cadence", async () => {

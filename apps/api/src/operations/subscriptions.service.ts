@@ -219,7 +219,7 @@ export class SubscriptionsService {
         await tx.paymentIntent.update({ where: { id: existingIntent.id }, data: { status: PaymentIntentStatus.CANCELED } });
       }
       if (staleQr) {
-        const canceled = await tx.paymentIntent.updateMany({ where: { id: existingIntent!.id, status: PaymentIntentStatus.REQUIRES_ACTION }, data: { status: PaymentIntentStatus.CANCELED } });
+        const canceled = await tx.paymentIntent.updateMany({ where: { id: existingIntent!.id, status: PaymentIntentStatus.REQUIRES_ACTION, updatedAt: { lt: staleQrCutoff(existingIntent!.railId) } }, data: { status: PaymentIntentStatus.CANCELED } });
         if (!canceled.count) return { intent: existingIntent!, created: false }; // it moved on (paid or processing) while we looked
       }
       if (rows[0]?.orderId) await tx.storeOrder.updateMany({ where: { id: rows[0].orderId, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
