@@ -33,6 +33,7 @@ import { StoreGrowthModule } from "./store-growth/store-growth.module";
 import { StoreAnalyticsModule } from "./store-analytics/store-analytics.module";
 import { StoreSeoModule } from "./store-seo/store-seo.module";
 import { RetentionModule } from "./retention/retention.module";
+import { StoreCustomersModule } from "./store-customers/store-customers.module";
 import { EmailWorkspaceModule } from "./email-workspace/email-workspace.module";
 import { DomainsModule } from "./domains/domains.module";
 import { ShippingModule } from "./shipping/shipping.module";
@@ -105,6 +106,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     StoreAnalyticsModule,
     StoreSeoModule,
     RetentionModule,
+    StoreCustomersModule,
     EmailWorkspaceModule,
     DomainsModule,
     ShippingModule,
