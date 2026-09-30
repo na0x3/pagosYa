@@ -473,6 +473,18 @@ export function StandardPagePlaceholder({ title }: { title: string }) {
     <Container><Display>{title}</Display><Lead>Esta página se completa pronto.</Lead></Container>
   </main>;
 }
+export type InfoPageKind = 'about' | 'contact' | 'shipping' | 'faq' | 'refund' | 'privacy' | 'terms' | 'cookies' | 'notfound';
+const INFO_PAGE_TITLES: Record<InfoPageKind, string> = {
+  about: 'Nosotros', contact: 'Contacto', shipping: 'Envíos y entregas', faq: 'Preguntas frecuentes', refund: 'Cambios y devoluciones',
+  privacy: 'Privacidad', terms: 'Términos y condiciones', cookies: 'Cookies y almacenamiento', notfound: 'Página no encontrada',
+};
+/** A store information page: a title and the runtime's empty mount, which fills it from the live store (commerce.js,
+ * `renderInfoPages`). Never put children in the mount: the runtime owns it. */
+export function InfoPage({ kind }: { kind: InfoPageKind }) {
+  return <main id="contenido" className="ui-info-page" data-info-page={kind}>
+    <Container><Display>{INFO_PAGE_TITLES[kind]}</Display><div data-pagosya-page={kind} /></Container>
+  </main>;
+}
 export function Button({ href, children, variant = 'solid', size = 'md', onClick, type = 'button' }: {
   href?: string; children: ReactNode; variant?: 'solid' | 'outline' | 'ghost' | 'link'; size?: 'sm' | 'md' | 'lg'; onClick?: () => void; type?: 'button' | 'submit';
 }) {

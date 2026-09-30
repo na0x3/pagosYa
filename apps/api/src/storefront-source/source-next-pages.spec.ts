@@ -1,6 +1,8 @@
 import { compileNextPreview, nextContentPages, nextPageMarkup, nextProjectScaffold, standardPageRoute, validateNextSources } from './source-next';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { templateStoreDataFile } from './source-templates';
+import { build } from 'esbuild';
+import { kitPath } from '@pagosya/storefront-kit';
 import { SourceValidationError } from './source-validation-error';
 import { nextStoreFiles } from './fixtures/next-store';
 
@@ -99,5 +101,33 @@ describe('standard pages end to end', () => {
   it("writes the not-found page as Next's own 404", () => {
     const scaffold = nextProjectScaffold('tienda', nextContentPages([...nextStoreFiles(), { path: 'components/pages/not-found.tsx', content: '// @pagosya-page\nexport default function NotFound() { return null; }' }]));
     expect(scaffold.some(f => f.path === 'pages/404.tsx')).toBe(true);
+  });
+});
+
+describe('InfoPage', () => {
+  // The inspector behind nextPageMarkup cannot resolve a dynamic prop, so the real component is rendered with React.
+  const render = async (kind: string) => {
+    const bundle = await build({
+      stdin: { contents: `import React from 'react'; import { renderToStaticMarkup } from 'react-dom/server'; import { InfoPage } from ${JSON.stringify(kitPath('ui.tsx'))}; export default (kind) => renderToStaticMarkup(React.createElement(InfoPage, { kind }));`, resolveDir: __dirname, loader: 'js' },
+      bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', logLevel: 'silent',
+    });
+    const module = { exports: {} as any };
+    new Function('module', 'exports', 'require', bundle.outputFiles[0].text)(module, module.exports, require);
+    return module.exports.default(kind) as string;
+  };
+
+  it.each(['about', 'contact', 'shipping', 'faq', 'refund', 'privacy', 'terms', 'cookies', 'notfound'])('%s renders a title and exactly one empty runtime mount', async kind => {
+    const html = await render(kind);
+    expect(html).toMatch(/<h1\b/);
+    expect(html).toContain(`data-info-page="${kind}"`);
+    expect(html.match(new RegExp(`data-pagosya-page="${kind}"`, 'g'))).toHaveLength(1);
+    expect(html).toContain(`<div data-pagosya-page="${kind}"></div>`);
+  });
+
+  it('draws a page the Shell can host: the thin page file still parses inside a template', () => {
+    const page = { path: 'components/pages/faq.tsx', content: "// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nexport default function Page() { return <Shell><InfoPage kind=\"faq\" /></Shell>; }\n" };
+    const markup = nextPageMarkup([...templateSourceFiles('acuarela'), templateStoreDataFile({ name: 'Tienda' }, {}), page], 'pages/faq');
+    expect(markup).toMatch(/<h1\b/);
+    expect(markup).toContain('data-pagosya-page');
   });
 });
