@@ -9,15 +9,15 @@ import { agentDraftPreviews } from './agent/agent-draft-previews';
 jest.setTimeout(180_000);
 
 const configValues = (engine: string) => ({ 'app.openAi.apiKey': 'test-server-key', 'app.openAi.enabled': true, 'app.anthropic.apiKey': 'sk-ant-test', 'app.checkoutOrigin': 'http://localhost:5174', 'app.environment': 'test', 'app.sourceFramework': 'next', 'app.yapiEngine': engine } as Record<string, unknown>);
-async function setup(engine = 'agent') {
+async function setup(engine = 'agent', extra: Record<string, unknown> = {}) {
   const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
   const snapshot = sourceProjectSnapshot({ revision: 1, label: base.label, brief: base.brief, files: base.files } as any);
   const prisma: any = { storeRetention: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceGeneration: { create: jest.fn().mockResolvedValue({ id: 'run-1' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findMany: jest.fn().mockResolvedValue([]) }, store: { findFirst: jest.fn().mockResolvedValue({ slug: 'pausa' }) }, mediaAsset: { findMany: jest.fn().mockResolvedValue([]) } };
   const stores: any = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Pausa', checkoutMode: 'PAYMENT', items: [], categories: [], locations: [] }) };
   const projects: any = { current: jest.fn().mockResolvedValue({ revision: 1, slug: 'pausa' }), version: jest.fn().mockResolvedValue({ revision: 1, snapshot }), save: jest.fn().mockImplementation(async (_m: string, _s: string, value: any) => ({ revision: 2, snapshot: sourceProjectSnapshot(value) })), recentDesignFingerprints: jest.fn().mockResolvedValue([]), prepare: (value: any) => new SourceProjectsService({} as any).prepare(value) };
-  const config: any = { get: jest.fn((key: string) => configValues(engine)[key]) };
+  const config: any = { get: jest.fn((key: string) => ({ ...configValues(engine), ...extra } as Record<string, unknown>)[key]) };
   const uploads: any = { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') };
-  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config), projects, brief: base.brief };
+  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config), projects, prisma, brief: base.brief };
 }
 let callId = 0;
 const turn = (calls: Array<[string, object]>) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 3000, output_tokens: 200 }, output: calls.map(([name, args]) => ({ type: 'function_call', call_id: `c${callId++}`, name, arguments: JSON.stringify(args) })) }));
@@ -146,6 +146,39 @@ describe('generate() with the agent engine', () => {
     jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 240_000, output_tokens: 100 }, output: [{ type: 'function_call', call_id: `c${callId++}`, name: 'edit_file', arguments: JSON.stringify({ path: 'components/home.tsx', search: 'para tu cuerpo', replacement: 'para tu mente' }) }] })));
     await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50))).rejects.toThrow('límite de créditos');
     expect(projects.save).not.toHaveBeenCalled();
+  });
+  const chatgptPlan = { 'app.environment': 'development', 'app.chatgptPlan': { url: 'http://127.0.0.1:4455/v1/responses', secret: 'local-secret' } };
+  const hugeBill = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 240_000, output_tokens: 100 }, output: [{ type: 'function_call', call_id: `c${callId++}`, name: 'edit_file', arguments: JSON.stringify({ path: 'components/home.tsx', search: 'para tu cuerpo', replacement: 'para tu mente' }) }] }), { status: 200 });
+  it('does not stop a ChatGPT-plan run at the credit limit, because it costs nothing', async () => {
+    const { service, brief } = await setup('agent', chatgptPlan);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => hugeBill());
+    // The same bill stops an API run at the credit limit (test above); here only the step limit may end it.
+    const error = await service.generate('m', 's', input(brief)).catch(e => e);
+    expect(String(error.message)).toMatch(/YAPI no pudo terminar/);
+    expect(String(error.message)).not.toMatch(/límite de créditos/);
+  });
+  it('charges a ChatGPT-plan run no credits, and an API run the same work some', async () => {
+    const steps = () => jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título principal.', sections: ['Portada'] }]]));
+    const plan = await setup('agent', chatgptPlan);
+    steps();
+    const free: any = await plan.service.generate('m', 's', input(plan.brief));
+    expect(free.generation.credits).toBe(0);
+    expect(free.generation.rewardCreditsCovered).toBe(0);
+    jest.restoreAllMocks();
+    const api = await setup('agent');
+    steps();
+    const paid: any = await api.service.generate('m', 's', input(api.brief), new SourceRequestBudget(50));
+    expect(paid.generation.credits).toBeGreaterThan(0);
+  });
+  it('keeps the reason a run failed in its receipt, so a FAILED row explains itself', async () => {
+    const { service, prisma, brief } = await setup();
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ error: {} }), { status: 500 }));
+    await service.generate('m', 's', input(brief), new SourceRequestBudget(50)).catch(() => undefined);
+    const failed = prisma.storeSourceGeneration.updateMany.mock.calls.map((call: any[]) => call[0].data).find((data: any) => data.status === 'FAILED');
+    expect(failed.attempts.at(-1).failureReason).toMatch(/500/);
   });
   it('builds with Claude through the agent even where the single engine is the default', async () => {
     const { service, projects, brief } = await setup('single');

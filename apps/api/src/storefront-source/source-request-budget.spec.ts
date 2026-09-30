@@ -29,3 +29,16 @@ it('fails before spending for invalid limits and unpriced models', () => {
   for (const limit of [0, 501, NaN, 1.5]) expect(() => new SourceRequestBudget(limit)).toThrow();
   expect(() => new SourceRequestBudget().reserve('unpriced', 1000, 1000)).toThrow('tarifa');
 });
+
+it('never stops a run that costs nothing, however much the provider would have billed', () => {
+  const budget = new SourceRequestBudget(1, true);
+  for (let turn = 0; turn < 5; turn++) {
+    const call = budget.reserve('gpt-5.6-sol', 240_000, 20_000, 1024);
+    expect(call.outputTokens).toBe(20_000);
+    call.settle({ input_tokens: 240_000, output_tokens: 20_000 });
+  }
+});
+
+it('still refuses an unpriced model when the run is free, so usage is never left unmeasured', () => {
+  expect(() => new SourceRequestBudget(1, true).reserve('unpriced', 1000, 1000)).toThrow('tarifa');
+});

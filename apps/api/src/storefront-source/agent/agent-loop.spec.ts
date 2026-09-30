@@ -3,7 +3,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { AgentToolbox } from './agent-tools';
-import { runAgent, type AgentModel, type AgentModelTurn } from './agent-loop';
+import { runAgent, agentLimits, AGENT_LIMITS, type AgentModel, type AgentModelTurn } from './agent-loop';
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
@@ -67,5 +67,12 @@ describe('runAgent', () => {
   it('stops when cancelled', async () => {
     const controller = new AbortController(); controller.abort();
     expect(await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], signal: controller.signal, model: scripted([{ calls: [call('list_files', {})] }]) })).toEqual({ status: 'failed', reason: 'cancelled' });
+  });
+});
+
+describe('agent limits', () => {
+  it('gives a free ChatGPT-plan run twice the time, because the bridge is slower than a paid API', () => {
+    expect(agentLimits(false)).toEqual(AGENT_LIMITS);
+    expect(agentLimits(true)).toEqual({ ...AGENT_LIMITS, wallMs: 720_000 });
   });
 });
