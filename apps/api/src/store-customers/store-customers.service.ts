@@ -52,9 +52,10 @@ export class StoreCustomersService {
     return name;
   }
 
-  private link(slug: string, page: string, key: string, token: string) {
-    const url = new URL(`/s/${encodeURIComponent(slug)}/${page}`, this.config.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174');
-    url.searchParams.set(key, token);
+  /** The account pages are served by the checkout app, a trusted origin: a password never passes through the sandboxed store. */
+  private link(slug: string, view: 'verificar' | 'restablecer', token: string) {
+    const url = new URL(`/cuenta/${encodeURIComponent(slug)}/${view}`, this.config.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174');
+    url.searchParams.set('token', token);
     return url.href;
   }
 
@@ -95,7 +96,7 @@ export class StoreCustomersService {
     if (existing && !existing.deletedAt && existing.emailVerifiedAt) return CUSTOMER_GENERIC_ANSWER;
     const customer = existing && !existing.deletedAt ? existing : await this.prisma.storeCustomer.create({ data: { storeId: store.id, email, name, hashedPassword } });
     const token = await this.issueToken(customer.id, 'VERIFY_EMAIL', VERIFY_MS);
-    await this.send(email, `Confirma tu correo en ${store.name}`, `Hola ${customer.name},\n\nConfirma tu correo para activar tu cuenta en ${store.name}:\n${this.link(slug, 'acceso-ingresar.html', 'verify', token)}\n\nEl enlace expira en 24 horas. Si no creaste esta cuenta, ignora este mensaje.`);
+    await this.send(email, `Confirma tu correo en ${store.name}`, `Hola ${customer.name},\n\nConfirma tu correo para activar tu cuenta en ${store.name}:\n${this.link(slug, 'verificar', token)}\n\nEl enlace expira en 24 horas. Si no creaste esta cuenta, ignora este mensaje.`);
     return CUSTOMER_GENERIC_ANSWER;
   }
 
@@ -142,7 +143,7 @@ export class StoreCustomersService {
     const customer = email ? await this.prisma.storeCustomer.findUnique({ where: { storeId_email: { storeId: store.id, email } } }) : null;
     if (customer && !customer.deletedAt && customer.emailVerifiedAt) {
       const token = await this.issueToken(customer.id, 'RESET_PASSWORD', RESET_MS);
-      await this.send(email, `Restablece tu contraseña en ${store.name}`, `Hola ${customer.name},\n\nUsa este enlace para elegir una contraseña nueva en ${store.name}:\n${this.link(slug, 'acceso-restablecer-contrasena.html', 'token', token)}\n\nEl enlace expira en 1 hora. Si no lo pediste, ignora este mensaje.`);
+      await this.send(email, `Restablece tu contraseña en ${store.name}`, `Hola ${customer.name},\n\nUsa este enlace para elegir una contraseña nueva en ${store.name}:\n${this.link(slug, 'restablecer', token)}\n\nEl enlace expira en 1 hora. Si no lo pediste, ignora este mensaje.`);
     }
     return CUSTOMER_GENERIC_ANSWER;
   }

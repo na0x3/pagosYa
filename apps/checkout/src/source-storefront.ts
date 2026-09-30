@@ -196,7 +196,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         const apiOrigin = new URL(API_BASE_URL, location.origin);
         const articlePrefix = `${apiOrigin.pathname.replace(/\/$/, '')}/stores/public/${encodeURIComponent(slug)}/pages/`;
         const article = url.origin === apiOrigin.origin && url.pathname.startsWith(articlePrefix) && /^[a-z]{2}(?:-[A-Z]{2})?\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(url.pathname.slice(articlePrefix.length));
-        const allowed = article || (url.origin === location.origin && product) || hostedPage || (url.origin === 'https://wa.me' && url.pathname === '/' + phone && phone) || (store.checkoutMode === 'external' && url.href === store.leadCaptureUrl);
+        // The shopper's account pages live on this trusted origin, never in the sandboxed store (spec 2026-09-30-store-customer-accounts-design).
+        const accountPage = url.origin === location.origin && url.pathname.replace(/\/$/, '') === `/cuenta/${encodeURIComponent(slug)}`;
+        const allowed = article || (url.origin === location.origin && product) || hostedPage || (url.origin === 'https://wa.me' && url.pathname === '/' + phone && phone) || (store.checkoutMode === 'external' && url.href === store.leadCaptureUrl) || accountPage;
         if (allowed && ['https:', 'http:'].includes(url.protocol)) location.assign(url.href);
       } catch {}
       return;

@@ -25,7 +25,7 @@ const mimeTypes = new Map([
 ]);
 
 function responsePath(pathname) {
-  if (pathname === "/" || pathname === "/index.html" || /^\/track\/[^/]+\/?$/.test(pathname) || /^\/suscripcion\/[^/]+\/?$/.test(pathname) || /^\/d\/[^/]+\/?$/.test(pathname) || /^\/verificar\/[^/]+\/?$/.test(pathname) || /^\/p\/[^/]+\/?$/.test(pathname) || /^\/s\/[^/]+(?:\/p\/[^/]+)?\/?$/.test(pathname)) {
+  if (pathname === "/" || pathname === "/index.html" || /^\/track\/[^/]+\/?$/.test(pathname) || /^\/suscripcion\/[^/]+\/?$/.test(pathname) || /^\/cuenta\/[^/]+(?:\/[a-z]+)?\/?$/.test(pathname) ||/^\/d\/[^/]+\/?$/.test(pathname) || /^\/verificar\/[^/]+\/?$/.test(pathname) || /^\/p\/[^/]+\/?$/.test(pathname) || /^\/s\/[^/]+(?:\/p\/[^/]+)?\/?$/.test(pathname)) {
     return path.join(distDir, "index.html");
   }
   let decoded;
@@ -54,7 +54,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(302, { location: destination.toString(), "cache-control": "no-cache" });
     return response.end();
   }
-  if (url.pathname.startsWith("/track/") || url.pathname.startsWith("/d/") || url.pathname.startsWith("/suscripcion/") || url.searchParams.has("client_secret") || url.searchParams.has("source_owner")) response.setHeader("X-Robots-Tag", "noindex, nofollow");
+  if (url.pathname.startsWith("/track/") || url.pathname.startsWith("/d/") || url.pathname.startsWith("/suscripcion/") || url.pathname.startsWith("/cuenta/") ||url.searchParams.has("client_secret") || url.searchParams.has("source_owner")) response.setHeader("X-Robots-Tag", "noindex, nofollow");
   const filePath = responsePath(url.pathname);
   if (!filePath) {
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });

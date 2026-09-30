@@ -35,7 +35,7 @@ function setup(extra: { orders?: any[]; subscriptions?: any[] } = {}) {
   const mail: any = { send: jest.fn(async () => undefined) };
   const config: any = { get: jest.fn((key: string) => (key === 'app.checkoutOrigin' ? 'https://pay.example' : undefined)) };
   const service = new StoreCustomersService(prisma, config, mail);
-  const tokenFromMail = (index = -1) => { const body = String(mail.send.mock.calls.at(index)![0].body); return new URL(body.match(/https?:\/\/\S+/)![0]).searchParams.get('verify') ?? new URL(body.match(/https?:\/\/\S+/)![0]).searchParams.get('token')!; };
+  const tokenFromMail = (index = -1) => { const body = String(mail.send.mock.calls.at(index)![0].body); return new URL(body.match(/https?:\/\/\S+/)![0]).searchParams.get('token')!; };
   return { service, prisma, mail, customers, sessions, tokens, tokenFromMail };
 }
 const PASSWORD = 'correct horse battery';
@@ -59,7 +59,7 @@ describe('StoreCustomersService', () => {
       expect(JSON.stringify(ctx.customers[0])).not.toContain(PASSWORD);
       const mail = ctx.mail.send.mock.calls[0][0];
       expect(mail.to).toBe('ana@example.com');
-      expect(mail.body).toContain('https://pay.example/s/cafe/acceso-ingresar.html?verify=');
+      expect(mail.body).toContain('https://pay.example/cuenta/cafe/verificar?token=');
       expect(ctx.tokens[0].hashedToken).toMatch(/^sha256:/);
       expect(JSON.stringify(ctx.tokens)).not.toContain(ctx.tokenFromMail());
     });
@@ -172,7 +172,7 @@ describe('StoreCustomersService', () => {
       expect(ctx.mail.send).not.toHaveBeenCalled();
       await expect(ctx.service.forgotPassword('cafe', 'ana@example.com')).resolves.toEqual(CUSTOMER_GENERIC_ANSWER);
       expect(ctx.mail.send).toHaveBeenCalledTimes(1);
-      expect(String(ctx.mail.send.mock.calls[0][0].body)).toContain('https://pay.example/s/cafe/acceso-restablecer-contrasena.html?token=');
+      expect(String(ctx.mail.send.mock.calls[0][0].body)).toContain('https://pay.example/cuenta/cafe/restablecer?token=');
     });
 
     it('resets the password once, revokes every session, and the old password stops working', async () => {

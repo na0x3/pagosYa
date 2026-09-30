@@ -22,6 +22,7 @@ import { escapeHtml } from "./ui/html";
 import { storefrontRouteFromLocation, productIdFromLocation } from "./storefront/routes";
 import { renderOrderTracking } from "./orders/order-tracking";
 import { renderSubscriptionManage } from "./subscriptions/manage-page";
+import { accountRoute, renderAccount } from "./account/account-page";
 import { renderCobroPage } from "./documents/cobro-page";
 import { renderDebtCollection } from "./checkout/debt-collection";
 import { suppressStoreViewForMerchant } from "./storefront/merchant-views";
@@ -122,6 +123,8 @@ async function main() {
     );
   }
 
+  const accountPage = accountRoute(window.location.pathname);
+  if (accountPage) { await renderAccount(accountPage.slug, accountPage.view); observeResize(app); return; }
   if (subscriptionToken) { await renderSubscriptionManage(subscriptionToken); observeResize(app); return; }
   if (trackingToken) {
     await renderOrderTracking(trackingToken);
