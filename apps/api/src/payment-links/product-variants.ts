@@ -3,7 +3,7 @@ import { customAlphabet } from 'nanoid';
 import type { ProductVariantDto } from './dto/create-payment-link.dto';
 
 const variantIdPart = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 12);
-export type ProductVariant = { id: string; name: string; amount: number; stock?: number | null; options?: Array<{ name: string; value: string }>; imageUrl?: string };
+export type ProductVariant = { id: string; name: string; amount: number; stock?: number | null; options?: Array<{ name: string; value: string }>; imageUrl?: string; imageUrls?: string[] };
 const key = (value: string) => value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
 
 export function normalizeProductVariants(variants: ProductVariantDto[] | undefined, existing: ProductVariant[] | null = null): ProductVariant[] {
@@ -42,10 +42,27 @@ export function normalizeProductVariants(variants: ProductVariantDto[] | undefin
     const id = previous?.id || `var_${variantIdPart()}`;
     if (ids.has(id)) throw new BadRequestException('Una opción aparece más de una vez.');
     ids.add(id);
-    const imageUrl = variant.imageUrl !== undefined ? variant.imageUrl : previous?.imageUrl;
+    const dedupe = (urls: string[]) => [...new Set(urls)];
+    let imageUrl: string | undefined;
+    let imageUrls: string[] | undefined;
+    if (Array.isArray(variant.imageUrls) && variant.imageUrls.length) {
+      imageUrls = dedupe(variant.imageUrls);
+      if (imageUrls.length > 8) throw new BadRequestException('Usa hasta 8 fotos por opción.');
+      imageUrl = imageUrls[0];
+    } else if (variant.imageUrls !== undefined) {
+      // An empty array or null explicitly clears this option's photo set.
+    } else if (variant.imageUrl !== undefined) {
+      imageUrl = variant.imageUrl ?? undefined;
+      const kept = previous?.imageUrls;
+      if (imageUrl && kept?.length && kept[0] === imageUrl) imageUrls = kept;
+    } else {
+      imageUrl = previous?.imageUrl;
+      imageUrls = previous?.imageUrls;
+    }
     const result: ProductVariant = { id, name, amount: variant.amount,
       ...(selected?.length ? { options: selected } : {}),
       ...(imageUrl ? { imageUrl } : {}),
+      ...(imageUrls ? { imageUrls } : {}),
     };
     // DTO instances may contain own fields set to undefined. Only an explicit
     // number or null changes stock; omitted fields retain current inventory.

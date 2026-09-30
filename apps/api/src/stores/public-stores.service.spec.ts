@@ -28,6 +28,14 @@ function setup() {
 }
 
 describe('subscription offers', () => {
+  it('exposes valid product content blocks and defaults older products to an empty list', async () => {
+    const { service, prisma } = setup();
+    const block = { id: 'blk_abcdefghijkl', type: 'media', imageUrl: '/v1/uploads/photo.jpg', alt: 'Reclinada' };
+    prisma.paymentLink.findMany.mockResolvedValue([{ ...productRow, contentBlocks: [block] }, { ...productRow, id: 'old' }]);
+    const result = await service.getStorePublic(storeRow.slug);
+    expect(result.items[0]).toMatchObject({ contentBlocks: [block] });
+    expect(result.items[1]).toMatchObject({ contentBlocks: [] });
+  });
   it('publishes offers only when the store switch is on and never for digital items', async () => {
     const { service, prisma } = setup();
     prisma.store.findUnique.mockResolvedValue({ ...storeRow, subscriptionsEnabled: true });

@@ -53,12 +53,48 @@ export class ProductHighlightDto {
   detail?: string;
 }
 
+export class ContentBlockDto {
+  @IsOptional() @IsString() @MaxLength(32)
+  id?: string;
+
+  @IsIn(['media', 'compare'])
+  type!: 'media' | 'compare';
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(160)
+  alt?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(140)
+  caption?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(60)
+  title?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
+  beforeLabel?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
+  afterLabel?: string;
+
+  @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  imageUrl?: string;
+
+  @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  beforeUrl?: string;
+
+  @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  afterUrl?: string;
+}
+
 export class ProductVariantDto {
   @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => ProductOptionValueDto)
   options?: ProductOptionValueDto[];
 
   @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
   imageUrl?: string | null;
+
+  @IsOptional() @IsArray() @ArrayMaxSize(8) @Matches(UPLOADED_FILE_URL_PATTERN, { each: true }) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH, { each: true })
+  imageUrls?: string[] | null;
+
   @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
   @IsOptional()
   @IsString()
@@ -220,6 +256,9 @@ export class CreatePaymentLinkDto {
   @ValidateNested({ each: true })
   @Type(() => ProductHighlightDto)
   highlights?: ProductHighlightDto[];
+
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => ContentBlockDto)
+  contentBlocks?: ContentBlockDto[];
 
   @ApiPropertyOptional({
     description: "Ordered Payment Link ids shown as recommendations on this product's detail page.",

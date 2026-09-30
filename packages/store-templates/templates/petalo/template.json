@@ -1,0 +1,18 @@
+{
+  "id": "petalo",
+  "name": "Pétalo",
+  "category": "belleza",
+  "description": "Lanzamiento de una crema: blanco delicado, nombre en serif a la izquierda, foto de dos modelos y una tarjeta de producto.",
+  "tags": ["cuidado de la piel", "lanzamiento", "delicado", "crema"],
+  "sitePurpose": "shop",
+  "order": -286,
+  "dna": { "display": "instrument-serif", "text": "outfit", "case": "none", "radius": "soft", "border": "none", "button": "block", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "textura", "role": "detail", "demo": "textura.jpg" },
+    { "slot": "rutina", "role": "lifestyle", "demo": "rutina.jpg" }
+  ]
+}

@@ -16,6 +16,7 @@ const properties = {
   stock: nullable({ type: 'integer', minimum: 0, maximum: 1000000 }),
   stockText: nullable({ type: 'string', description: 'Exact current stock quote, such as 5 de cada una, sold out, or sin límite. Required for new combinations. Null preserves existing stock; stock:null with an explicit unlimited quote disables tracking.' }),
   imageUrl: nullable({ type: 'string', description: 'Original uploaded product-photo URL; null preserves an existing assignment.' }),
+  imageUrls: nullable({ type: 'array', maxItems: 8, items: { type: 'string' }, description: 'Original uploaded product-photo URLs for this option; null preserves.' }),
 };
 export const sourceVariantsSchema = { type: 'array', maxItems: 256, items: { type: 'object', additionalProperties: false, required: Object.keys(properties), properties } };
 export const sourceVariantOperationsSchema = { type: 'array', maxItems: 256, items: { type: 'object', additionalProperties: false,
@@ -160,6 +161,10 @@ function changes(raw: any, instruction: string, baseAmount: number, currency: st
     if (typeof raw.imageUrl !== 'string' || !images.has(raw.imageUrl)) throw new BadRequestException('Usa una foto que pertenezca a este producto o a los archivos adjuntos.');
     result.imageUrl = raw.imageUrl;
   }
+  if (raw.imageUrls != null) {
+    if (!Array.isArray(raw.imageUrls) || raw.imageUrls.some((url: unknown) => typeof url !== 'string' || !images.has(url))) throw new BadRequestException('Usa fotos que pertenezcan a este producto o a los archivos adjuntos.');
+    result.imageUrls = raw.imageUrls;
+  }
   if (creating && !result.name) throw new BadRequestException('Indica las opciones de la nueva combinación.');
   if (validateSync(plainToInstance(ProductVariantDto, { name:'Opción', amount:baseAmount, ...result }), {whitelist:true,forbidNonWhitelisted:true}).length) throw new BadRequestException('Revisa los nombres, valores, precio y foto de la combinación.');
   return result;
@@ -206,7 +211,12 @@ export function applyVariantOperations(existing: ProductVariant[], operations: S
       const index = next.findIndex(variant=>variant.id===operation.variantId);
       if (index < 0) throw new BadRequestException('La combinación cambió o ya no existe. Actualiza antes de editar.');
       if (operation.action === 'delete') next.splice(index,1);
-      else next[index] = {...next[index],...operation.changes};
+      else {
+        next[index] = {...next[index],...operation.changes};
+        // A legacy single-photo patch must reach the normalizer as a patch,
+        // not as an explicit request to retain the old multi-photo set.
+        if (operation.changes?.imageUrl !== undefined && operation.changes.imageUrls === undefined) delete next[index].imageUrls;
+      }
     }
   }
   if (!next.length) throw new BadRequestException('Conserva una combinación o marca el producto como agotado.');

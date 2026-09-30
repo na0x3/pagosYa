@@ -1,0 +1,18 @@
+{
+  "id": "arrullo",
+  "name": "Arrullo",
+  "category": "ninos",
+  "description": "Regalos para bebé y cuarto del bebé: neutros cálidos, dos fotos en mitades y una cinta pequeña de envoltura.",
+  "tags": ["bebé", "regalos", "cuarto", "suave"],
+  "sitePurpose": "shop",
+  "order": -280,
+  "dna": { "display": "lora", "text": "nunito", "case": "none", "radius": "round", "border": "none", "button": "pill", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "lifestyle", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "cuarto", "role": "lifestyle", "demo": "cuarto.jpg" },
+    { "slot": "manos", "role": "lifestyle", "demo": "manos.jpg" }
+  ]
+}

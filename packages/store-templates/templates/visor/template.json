@@ -1,0 +1,18 @@
+{
+  "id": "visor",
+  "name": "Visor",
+  "category": "tecnologia",
+  "description": "Cámaras y lentes: fondo blanco, el producto sobre un pedestal y una barra de navegación roja en forma de píldora.",
+  "tags": ["cámaras", "fotografía", "lentes", "precisión"],
+  "sitePurpose": "shop",
+  "order": -292,
+  "dna": { "display": "familjen-grotesk", "text": "manrope", "case": "none", "radius": "pill", "border": "hairline", "button": "pill", "hover": "invert", "press": "sink", "motion": "cinematic", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" },
+    { "slot": "calle", "role": "lifestyle", "demo": "calle.jpg" }
+  ]
+}

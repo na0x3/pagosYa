@@ -2,6 +2,7 @@ import { preserveDialogForms } from './dialog-form-state';
 import { DomainOrderView, DomainSearchResult, DomainShopState, MerchantStudioApi } from './api';
 import { escapeHtml as escape } from './studio-ui';
 import './brand-profile.css';
+import './settings-shell.css';
 
 const STATUS_LABELS: Record<string, string> = {
   AWAITING_PAYMENT: 'Esperando tu pago', REGISTERING: 'Registrando tu dominio',
@@ -41,12 +42,13 @@ export function expiryNotice(expiresAt: string | null | undefined): string {
   return `Vence el ${when} · Renovación automática desactivada.`;
 }
 
-export async function openDomainShop(api: MerchantStudioApi, storeId: string, onConnected?: () => void) {
+/** `host`: draw the panel inside the settings window instead of opening a modal of its own. */
+export async function openDomainShop(api: MerchantStudioApi, storeId: string, onConnected?: () => void, host?: HTMLElement) {
   const dialog = document.createElement('dialog'); dialog.className = 'brand-dialog';
   dialog.setAttribute('aria-label', 'Tu propio dominio');
   let state: DomainShopState | undefined, results: DomainSearchResult[] = [], quote: DomainOrderView | null = null;
   let busy = false, message = '', query = '', connected = false, timer: ReturnType<typeof setInterval> | undefined;
-  document.body.append(dialog); dialog.innerHTML = '<p role="status">Cargando dominios…</p>'; dialog.showModal();
+  (host ?? document.body).append(dialog); dialog.innerHTML = '<p role="status">Cargando dominios…</p>'; if (host) dialog.setAttribute('open', ''); else dialog.showModal();
   dialog.addEventListener('close', () => { clearInterval(timer); dialog.remove(); });
   dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 
@@ -81,16 +83,17 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
 
   function searchSection() {
     if (!state!.available) {
-      return `<p>La compra de dominios estará disponible pronto. Mientras tanto puedes conectar un dominio que ya tengas desde el panel, en <strong>Apariencia → Publica con tu propio dominio</strong>.</p>`;
+      return `<section class="settings-card"><h3>Comprar un dominio</h3><p>La compra de dominios estará disponible pronto. Mientras tanto puedes conectar un dominio que ya tengas desde el panel, en <strong>Apariencia → Publica con tu propio dominio</strong>.</p></section>`;
     }
-    return `<p>Busca entre ${escape(state!.tlds.map(tld => '.' + tld).join(', '))}. Compramos el nombre y lo conectamos a esta tienda, con y sin www.</p>
-      <form id="domain-search" class="brand-import"><div class="brand-fields"><label>Nombre de tu dominio<input name="query" value="${escape(query)}" placeholder="mitienda o mitienda.com" maxlength="100" required autocomplete="off"></label></div><button class="button" type="submit">Buscar dominio</button></form>
-      ${results.length ? `<section class="brand-import"><h3>Resultados</h3>${results.map(row => `<article><strong>${escape(row.hostname)}</strong><p>${row.available ? `${escape(money(row.amount, row.currency))} el primer año · renovación estimada ${escape(money(row.renewalAmount, row.currency))}/año` : 'No disponible para comprar'}</p><button class="button${row.available ? ' button--publish' : ''}" type="button" data-choose="${escape(row.hostname)}" ${row.available ? '' : 'disabled'}>${row.available ? 'Elegir' : 'No disponible'}</button></article>`).join('')}</section>` : ''}`;
+    return `<section class="settings-card"><h3>Comprar un dominio</h3>
+      <form id="domain-search" class="settings-inline"><input name="query" value="${escape(query)}" placeholder="Busca un dominio, p. ej. tu-marca" aria-label="Nombre de tu dominio" maxlength="100" required autocomplete="off"><button type="submit">Buscar</button></form>
+      <p>Busca entre ${escape(state!.tlds.map(tld => '.' + tld).join(', '))}. Los precios son por el primer año y la renovación no es automática. Compramos el nombre y lo conectamos a esta tienda, con y sin www.</p></section>
+      ${results.length ? `<section class="settings-card"><h3>Resultados</h3>${results.map(row => `<article><strong>${escape(row.hostname)}</strong><p>${row.available ? `${escape(money(row.amount, row.currency))} el primer año · renovación estimada ${escape(money(row.renewalAmount, row.currency))}/año` : 'No disponible para comprar'}</p><button class="button${row.available ? ' button--publish' : ''}" type="button" data-choose="${escape(row.hostname)}" ${row.available ? '' : 'disabled'}>${row.available ? 'Elegir' : 'No disponible'}</button></article>`).join('')}</section>` : ''}`;
   }
 
   function reviewSection() {
     if (!quote) return '';
-    return `<form id="domain-checkout" class="brand-import"><h3>${escape(quote.hostname)}</h3>
+    return `<form id="domain-checkout" class="settings-card"><h3>${escape(quote.hostname)}</h3>
       <p><strong>${escape(money(quote.amount, quote.currency))} por el primer año</strong> · Renovación estimada ${escape(money(quote.renewalAmount, quote.currency))}/año.</p>
       <p>El dominio se registra a nombre del titular indicado abajo, que podría recibir un correo para confirmar su dirección.</p>
       <div class="brand-fields">${REGISTRANT_FIELDS.map(([name, label, autocomplete, type]) => `<label>${escape(label)}<input name="${escape(name)}" type="${escape(type || 'text')}" autocomplete="${escape(autocomplete)}" required maxlength="${name === 'country' ? 2 : name === 'zip' ? 20 : 160}" ${name === 'country' ? 'value="BO" pattern="[A-Z]{2}"' : ''}${name === 'phone' ? ' placeholder="+59170000000" pattern="\\+[1-9][0-9]{6,14}"' : ''}></label>`).join('')}</div>
@@ -103,8 +106,10 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
 
   function ordersSection() {
     const orders = state!.orders;
-    if (!orders.length) return '';
-    return `<section class="brand-import"><h3>Tus dominios</h3>${orders.map(order => `<article><strong>${escape(order.hostname)}</strong>
+    if (!orders.length) {
+      return `<section class="settings-card"><h3>Tus dominios</h3><div class="settings-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><strong>Aún no tienes dominios</strong><p>${state!.available ? 'Busca arriba para comprar tu primer dominio.' : 'Cuando conectes un dominio aparecerá aquí.'}</p></div></section>`;
+    }
+    return `<section class="settings-card"><h3>Tus dominios</h3>${orders.map(order => `<article><strong>${escape(order.hostname)}</strong>
       <p>${escape(STATUS_LABELS[order.status] || order.status)}${order.message ? ` · ${escape(order.message)}` : ''}</p>
       ${order.expiresAt ? `<p>${escape(expiryNotice(order.expiresAt))}</p>` : ''}
       ${order.expiresAt && !order.sandbox && !order.contactVerified ? '<p>Revisa el correo del titular y completa la verificación para mantener el dominio activo.</p>' : ''}
@@ -114,7 +119,7 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
 
   function render() {
     dialog.innerHTML = `<header><h2>Tu propio dominio</h2><button class="button" id="domain-close">Cerrar</button></header>
-      ${state!.sandbox && state!.available ? '<p><strong>Modo de prueba.</strong> No se compra ni se publica un dominio real.</p>' : ''}
+      ${state!.sandbox && state!.available ? '<p class="settings-note"><strong>Modo de prueba.</strong> No se compra ni se publica un dominio real.</p>' : ''}
       ${searchSection()}${reviewSection()}${ordersSection()}<p role="status">${escape(message)}</p>`;
 
     dialog.querySelector('#domain-close')!.addEventListener('click', () => dialog.close());

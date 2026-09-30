@@ -1,5 +1,6 @@
 import { requestedSourceVariants, requestedVariantOperations, applyVariantOperations } from './source-product-options';
 import { normalizeProductVariants } from '../payment-links/product-variants';
+import { productPhotoReferences, rewriteProductPhotos } from './source-product-photos';
 // Exercise the same structured-output parsers and transaction path used by chat.
 import { ProductSubscriptionCadence } from '@prisma/client';
 import { SOURCE_PRODUCT_OPTIONS, SOURCE_PRODUCT_SUBSCRIPTIONS, requestedSourceSubscriptions, requestedSubscriptionOperations, sourceSubscriptionsSchema, sourceSubscriptionOperationsSchema } from './source-product-options';
@@ -9,6 +10,31 @@ import { SourceProjectsService } from './source-projects.service';
 
 const raw = { name:null, options:[{name:'Color',value:'Negro'},{name:'Talla',value:'M'}], amount:null, priceText:null, stock:5, stockText:'cinco de cada una', imageUrl:null };
 describe('chat product combinations',()=>{
+  it('resolves every set photo from source references before validating variant operations', () => {
+    const a = '/v1/uploads/11111111-1111-1111-1111-111111111111.jpg';
+    const b = '/v1/uploads/22222222-2222-2222-2222-222222222222.jpg';
+    const first = 'assets/image-aaaaaaaaaaaa.jpg', second = 'https://api.test' + b;
+    const products = [{ variants: [{ ...raw, imageUrls: [first, second] }] }];
+    const operations = [{ variantOperations: [{ action: 'update', changes: { imageUrls: [second] } }] }];
+    expect(productPhotoReferences(products, operations)).toEqual([first, second]);
+    rewriteProductPhotos(products, operations, new Map([[first, a], [second, b]]));
+    expect(products[0].variants[0].imageUrls).toEqual([a, b]);
+    expect(operations[0].variantOperations[0].changes.imageUrls).toEqual([b]);
+    const variants = requestedSourceVariants(products[0].variants, 'Color Negro talla M, cinco de cada una', 12000, 'BOB', new Set([a, b]))!;
+    expect(normalizeProductVariants(variants)[0]).toMatchObject({ imageUrl: a, imageUrls: [a, b] });
+    expect(() => requestedSourceVariants(products[0].variants, 'Color Negro talla M, cinco de cada una', 12000, 'BOB', new Set([a]))).toThrow('pertenezcan');
+  });
+  it('applies legacy photo edits without a stored set overriding them', () => {
+    const a = '/v1/uploads/a.jpg', b = '/v1/uploads/b.jpg', c = '/v1/uploads/c.jpg';
+    const saved = normalizeProductVariants([{ name: 'M', amount: 1000, imageUrls: [a, b] }, { name: 'L', amount: 1000 }]);
+    const update = (changes: any) => applyVariantOperations(saved, [{ action: 'update', variantId: saved[0].id, changes }])[0];
+    expect(update({ imageUrl: c })).toMatchObject({ imageUrl: c });
+    expect(update({ imageUrl: c })).not.toHaveProperty('imageUrls');
+    expect(update({ imageUrl: null })).not.toHaveProperty('imageUrl');
+    expect(update({ imageUrl: null })).not.toHaveProperty('imageUrls');
+    expect(update({ imageUrl: a })).toMatchObject({ imageUrl: a, imageUrls: [a, b] });
+    expect(update({ imageUrls: [b, c], imageUrl: a })).toMatchObject({ imageUrl: b, imageUrls: [b, c] });
+  });
   it('creates real combinations with inherited prices and explicit stock',()=>{
     const values = requestedSourceVariants([raw,{...raw,options:[{name:'Color',value:'Blanco'},{name:'Talla',value:'L'}],amount:14000,priceText:'+Bs 20'}], 'Crea producto Camisa Bs 120, Color Negro M, Blanco L +Bs 20, cinco de cada una',12000,'BOB',new Set())!;
     const variants=normalizeProductVariants(values);

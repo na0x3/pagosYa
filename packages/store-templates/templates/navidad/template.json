@@ -1,0 +1,18 @@
+{
+  "id": "navidad",
+  "name": "Navidad",
+  "category": "hogar",
+  "description": "Decoración navideña: foto festiva oscura, nombre en letra cursiva y tarjetas de producto que suben sobre la imagen.",
+  "tags": ["navidad", "decoración", "adornos", "temporada"],
+  "sitePurpose": "shop",
+  "order": -277,
+  "dna": { "display": "shrikhand", "text": "figtree", "case": "none", "radius": "soft", "border": "none", "button": "pill", "hover": "lift", "press": "pop", "motion": "cinematic", "cart": "drawer", "added": "ribbon", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "mesa", "role": "lifestyle", "demo": "mesa.jpg" },
+    { "slot": "puerta", "role": "lifestyle", "demo": "puerta.jpg" }
+  ]
+}

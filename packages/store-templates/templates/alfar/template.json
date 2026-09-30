@@ -1,0 +1,18 @@
+{
+  "id": "alfar",
+  "name": "Alfar",
+  "category": "arte",
+  "description": "Cerámica hecha a mano: una gran mancha roja con piezas flotando alrededor y un encabezado con línea fina.",
+  "tags": ["cerámica", "alfarería", "hecho a mano", "artesanal"],
+  "sitePurpose": "shop",
+  "order": -288,
+  "dna": { "display": "dm-serif-display", "text": "epilogue", "case": "none", "radius": "none", "border": "hairline", "button": "underline", "hover": "underline-grow", "press": "none", "motion": "calm", "cart": "overlay", "added": "inline", "card": "zoom", "frame": "blob" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "mesa", "role": "lifestyle", "demo": "mesa.jpg" },
+    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "tira",
+  "name": "Tira",
+  "category": "libros",
+  "description": "Cómics modernos y manga: collage azul y amarillo, titular condensado sobre foto y navegación flotante en píldoras.",
+  "tags": ["cómics", "manga", "novela gráfica", "colorido"],
+  "sitePurpose": "shop",
+  "order": -290,
+  "dna": { "display": "big-shoulders-display", "text": "rubik", "case": "upper", "radius": "round", "border": "bold", "button": "sticker", "hover": "lift", "press": "pop", "motion": "playful", "cart": "sheet", "added": "bubble", "card": "tilt", "frame": "blob" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "club", "role": "lifestyle", "demo": "club.jpg" },
+    { "slot": "tienda", "role": "lifestyle", "demo": "tienda.jpg" }
+  ]
+}

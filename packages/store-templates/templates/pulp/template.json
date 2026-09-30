@@ -1,0 +1,18 @@
+{
+  "id": "pulp",
+  "name": "Pulp",
+  "category": "libros",
+  "description": "Cómics de colección: fondo amarillo, titular rojo gigante con serifa gruesa y ráfagas en zigzag.",
+  "tags": ["cómics", "vintage", "colección", "pulp"],
+  "sitePurpose": "shop",
+  "order": -295,
+  "dna": { "display": "bitter", "text": "space-mono", "case": "upper", "radius": "none", "border": "bold", "button": "brutal", "hover": "invert", "press": "sink", "motion": "snappy", "cart": "overlay", "added": "stamp", "card": "zoom", "frame": "inset" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "estante", "role": "lifestyle", "demo": "estante.jpg" },
+    { "slot": "lupa", "role": "detail", "demo": "lupa.jpg" }
+  ]
+}

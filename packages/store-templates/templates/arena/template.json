@@ -1,0 +1,18 @@
+{
+  "id": "arena",
+  "name": "Arena",
+  "category": "deporte",
+  "description": "Merchandising deportivo: degradado morado, atleta recortado y una barra oscura de categorías.",
+  "tags": ["deporte", "camisetas", "hinchas", "entrenamiento"],
+  "sitePurpose": "shop",
+  "order": -283,
+  "dna": { "display": "unbounded", "text": "chivo", "case": "upper", "radius": "soft", "border": "none", "button": "block", "hover": "lift", "press": "pop", "motion": "cinematic", "cart": "drawer", "added": "ribbon", "card": "zoom", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "cancha", "role": "lifestyle", "demo": "cancha.jpg" },
+    { "slot": "hinchada", "role": "lifestyle", "demo": "hinchada.jpg" }
+  ]
+}

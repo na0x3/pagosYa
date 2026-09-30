@@ -1,0 +1,18 @@
+{
+  "id": "afiche",
+  "name": "Afiche",
+  "category": "arte",
+  "description": "Afiches y láminas: titular grande en grotesca, cinta negra arriba y un collage de pósters.",
+  "tags": ["afiches", "láminas", "decoración", "retro"],
+  "sitePurpose": "shop",
+  "order": -285,
+  "dna": { "display": "chivo", "text": "space-mono", "case": "none", "radius": "none", "border": "hairline", "button": "underline", "hover": "invert", "press": "sink", "motion": "snappy", "cart": "drawer", "added": "stamp", "card": "zoom", "frame": "inset" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "pared", "role": "lifestyle", "demo": "pared.jpg" },
+    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" }
+  ]
+}

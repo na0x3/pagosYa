@@ -1,0 +1,202 @@
+@font-face{font-family:'Libre Caslon Text';src:url(assets/libre-caslon-text.ttf) format('truetype');font-weight:400 700;font-display:swap}
+@font-face{font-family:'Figtree';src:url(assets/figtree.ttf) format('truetype');font-weight:300 900;font-display:swap}
+/* Tokens sit on :root: the cart drawer and the "added" toast are mounted by the kit outside .ga. */
+:root{--ga-bg:#f6f4f0;--ga-ink:#1a1614;--ga-cadmium:#d1441f;--ga-moss:#3c5a3a;--ga-ochre:#c89a3a;--ga-muted:#6b645c;--ga-line:#dcd7cf;--ga-warm:#e5e0d8;
+  --ga-serif:'Libre Caslon Text',Georgia,serif;--ga-sans:'Figtree',system-ui,sans-serif;--ga-gutter:clamp(16px,4vw,64px);--ga-ease:cubic-bezier(.2,.8,.2,1);
+  --store-background:#f6f4f0;--store-foreground:#1a1614;--store-accent:#1a1614;--store-accent-foreground:#fff;--store-surface:#e5e0d8;
+  --store-heading-font:var(--ga-serif);--store-body-font:var(--ga-sans)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ga-bg);color:var(--ga-ink);font:15px/1.65 var(--ga-sans);-webkit-font-smoothing:antialiased}
+.ga{background:var(--ga-bg);color:var(--ga-ink);font-family:var(--ga-sans);overflow-x:clip}
+.ga img{max-width:100%;display:block}
+a{color:inherit}
+.ga :focus-visible,.ga-cartpanel :focus-visible,.ga-added :focus-visible{outline:1.5px solid var(--ga-ink);outline-offset:3px}
+.ga-status:empty{display:none}
+
+/* Header: a small artist mark in a white tab, quiet nav, icons */
+.ga-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:0 var(--ga-gutter);background:var(--ga-bg);border-bottom:1px solid var(--ga-line)}
+.ga-brand{display:inline-flex;align-items:center;gap:10px;justify-self:start;padding:16px 16px 16px 0;font:400 15px/1.1 var(--ga-serif);letter-spacing:.02em;text-decoration:none;overflow-wrap:anywhere}
+.ga-brand__mark{flex:none;width:14px;height:14px;border:1.5px solid var(--ga-ink);border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--ga-cadmium) 0 40%,transparent 41%)}
+.ga-nav{grid-column:1/-1;display:flex;gap:26px;overflow-x:auto;scrollbar-width:none;padding:2px 0 12px;font-size:13px}
+.ga-nav a{padding:4px 0;white-space:nowrap;text-decoration:none;background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat;transition:background-size .25s var(--ga-ease)}
+.ga-nav a:hover{background-size:100% 1px}
+.ga-tools{grid-column:2;grid-row:1;display:flex;align-items:center}
+.ga-tool{position:relative;display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:none;color:var(--ga-ink);cursor:pointer}
+.ga-tool__count{position:absolute;top:6px;right:3px;display:grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--ga-cadmium);color:#fff;font:600 10px/1 var(--ga-sans)}
+
+/* Shared type */
+.ga-kicker{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ga-cadmium)}
+.ga-title{margin:0;font:400 clamp(28px,3.4vw,46px)/1.1 var(--ga-serif);letter-spacing:-.01em;text-wrap:balance}
+.ga-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 40px;margin-bottom:clamp(24px,3vw,44px)}
+.ga-head__aside{margin:0;max-width:40ch;color:var(--ga-muted)}
+.ga-link{display:inline-block;padding:4px 0;border-bottom:1px solid currentColor;font:600 13px var(--ga-sans);letter-spacing:.06em;text-decoration:none}
+.ga-link:hover{color:var(--ga-cadmium)}
+
+/* portada: the painting fills the screen, a warm-grey caption box sits at the bottom right */
+.ga-hero{position:relative;min-height:min(120vw,680px);background:var(--ga-warm);overflow:hidden}
+.ga-hero__art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ga-hero__caption{position:absolute;right:0;bottom:0;width:min(88%,380px);padding:clamp(18px,2.4vw,32px);background:#dcd7cf}
+.ga-hero__title{margin:0;font:400 clamp(30px,3.6vw,46px)/1.05 var(--ga-serif);letter-spacing:-.01em}
+.ga-hero__sub{margin:8px 0 16px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ga-muted)}
+
+/* obras: the catalog, wide frames with technique lines */
+.ga-shop{padding:clamp(56px,7vw,104px) var(--ga-gutter)}
+.ga-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:44px}
+.ga-card{display:flex;flex-direction:column;min-width:0}
+.ga-card__media{display:block;aspect-ratio:4/5;overflow:hidden;background:var(--ga-warm)}
+.ga-card__media img{width:100%;height:100%;object-fit:cover;transition:transform .8s var(--ga-ease)}
+.ga-card:hover .ga-card__media img{transform:scale(1.02)}
+.ga-card__name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;margin:16px 0 0;font:400 21px/1.25 var(--ga-serif)}
+.ga-card__meta{margin:2px 0 0;font-size:13px;color:var(--ga-muted)}
+.ga-card__price{margin:6px 0 14px;white-space:nowrap;font-weight:600}
+.ga-card__add{align-self:flex-start;margin-top:auto;min-height:44px;padding:0 22px;border:1px solid var(--ga-ink);background:none;color:var(--ga-ink);font:600 12px var(--ga-sans);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background-color .2s,color .2s}
+.ga-card__add:hover{background:var(--ga-ink);color:#fff}
+/* one-product store: keep the lone card centred instead of stranded in a wide row */
+.ga-grid:has(> :only-child){grid-template-columns:minmax(0,min(100%,420px));justify-content:center}
+
+/* artista */
+.ga-artist{display:grid;grid-template-columns:minmax(0,1fr);background:#fff}
+.ga-artist__photo{aspect-ratio:4/5;overflow:hidden}
+.ga-drift{width:100%;height:100%}
+.ga-drift img{width:100%;height:100%;object-fit:cover}
+.ga-artist__copy{padding:clamp(32px,5vw,80px) var(--ga-gutter)}
+.ga-artist__copy p{max-width:48ch;color:var(--ga-muted)}
+.ga-artist__copy .ga-title{margin-bottom:18px}
+
+/* coleccionar */
+.ga-collect{padding:clamp(56px,7vw,104px) var(--ga-gutter)}
+.ga-steps{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:28px;margin:0;padding:0}
+.ga-steps li{padding-top:18px;border-top:1px solid var(--ga-ink)}
+.ga-steps__n{display:block;font:400 34px/1 var(--ga-serif);color:var(--ga-cadmium)}
+.ga-steps__title{display:block;margin-top:8px;font:400 22px var(--ga-serif)}
+.ga-steps__text{display:block;margin-top:6px;max-width:34ch;color:var(--ga-muted)}
+
+/* serie: a rail that scrolls inside its own box */
+.ga-series{padding:0 0 clamp(56px,7vw,104px) var(--ga-gutter)}
+.ga-series .ga-head{padding-right:var(--ga-gutter)}
+.ga-rail{display:flex;gap:18px;margin:0;padding:0 var(--ga-gutter) 8px 0;list-style:none;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin}
+.ga-rail li{flex:none;width:min(72vw,300px);scroll-snap-align:start}
+.ga-rail a{display:block;text-decoration:none}
+.ga-rail img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--ga-warm)}
+.ga-rail__name{display:block;margin-top:10px;font:400 18px var(--ga-serif)}
+.ga-rail__note{display:block;font-size:13px;color:var(--ga-muted)}
+
+/* exposiciones */
+.ga-shows{padding:clamp(56px,7vw,104px) var(--ga-gutter);background:var(--ga-ink);color:#f0ede6}
+.ga-shows .ga-title{color:#fff}
+.ga-shows__list{list-style:none;margin:0;padding:0;border-top:1px solid #ffffff40}
+.ga-shows__list li{padding:20px 0;border-bottom:1px solid #ffffff40}
+.ga-shows__date{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ga-ochre)}
+.ga-shows__title{display:block;margin-top:4px;font:400 clamp(22px,2.6vw,32px)/1.15 var(--ga-serif)}
+.ga-shows__place{display:block;margin-top:2px;color:#b9b4aa}
+
+/* boletin */
+.ga-news{padding:clamp(56px,7vw,104px) var(--ga-gutter);text-align:center}
+.ga-news__inner{max-width:640px;margin:0 auto}
+.ga-news__title{margin:0;font:400 clamp(28px,3.4vw,44px)/1.1 var(--ga-serif);text-wrap:balance}
+.ga-news__text{margin:12px 0 26px;color:var(--ga-muted)}
+.ga-news__button{display:flex;align-items:stretch;width:100%;padding:0;border:0;border-bottom:1px solid var(--ga-ink);background:none;cursor:pointer;text-align:left}
+.ga-news__field{flex:1;padding:14px 2px;color:var(--ga-muted)}
+.ga-news__submit{display:grid;place-items:center;padding:0 4px;font:600 12px var(--ga-sans);letter-spacing:.1em;text-transform:uppercase}
+.ga-news__status{margin:14px 0 0;font-weight:600}
+.ga-news__status:empty{display:none}
+
+/* Footer */
+.ga-footer{padding:clamp(44px,6vw,80px) var(--ga-gutter) 24px;background:#fff;border-top:1px solid var(--ga-line)}
+.ga-footer p{margin:0}
+.ga-footer__top{display:grid;grid-template-columns:1fr 1fr;gap:36px 24px}
+.ga-footer__about{grid-column:1/-1}
+.ga-footer__name{font:400 clamp(26px,3vw,36px)/1 var(--ga-serif)}
+.ga-footer__lead{max-width:36ch;margin-top:12px!important;color:var(--ga-muted)}
+.ga-footer__col{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-size:14px}
+.ga-footer__col a,.ga-footer__link{padding:4px 0;border:0;background:none;color:inherit;font:inherit;text-decoration:none;cursor:pointer}
+.ga-footer__col a:hover,.ga-footer__link:hover{text-decoration:underline;text-underline-offset:4px}
+.ga-footer__col p:not(.ga-footer__heading){margin-top:6px;color:var(--ga-muted)}
+.ga-footer__heading{margin-bottom:6px!important;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ga-cadmium)}
+.ga-footer__note{margin-top:36px!important;padding-top:18px;border-top:1px solid var(--ga-line);font-size:12.5px;color:var(--ga-muted)}
+
+/* Artwork page: a wall mock under the painting, certificate notes beside it */
+.ga-page{min-height:60vh;padding:clamp(24px,4vw,56px) var(--ga-gutter) clamp(56px,7vw,96px)}
+.ga-pdp{padding:clamp(20px,3.5vw,48px) var(--ga-gutter) clamp(56px,7vw,96px)}
+.ga-pdp__grid{display:grid;gap:28px}
+.ga-pdp__grid>*{min-width:0}
+.ga-pdp__left{display:grid;gap:22px;align-content:start}
+.ga-pdp__wall{margin:0}
+.ga-pdp__wall img{width:100%;aspect-ratio:3/2;object-fit:cover}
+.ga-pdp__wall figcaption{margin-top:8px;font-size:13px;color:var(--ga-muted)}
+.ga-pdp__info{display:grid;gap:14px;align-content:start}
+.ga-pdp__notes{list-style:none;display:grid;gap:12px;margin:4px 0;padding:0}
+.ga-pdp__notes li{display:grid;padding-top:12px;border-top:1px solid var(--ga-line)}
+.ga-pdp__notes b{font:400 17px var(--ga-serif)}
+.ga-pdp__notes span{font-size:14px;color:var(--ga-muted)}
+.ga-pdp__band{margin-top:clamp(48px,6vw,88px)}
+
+/* Cart drawer: white, a thin frame around thumbnails */
+.ga-cartpanel{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;background:#fff;color:var(--ga-ink);font:15px/1.55 var(--ga-sans)}
+.ga-cartpanel__head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid var(--ga-line)}
+.ga-cartpanel__title{margin:0;font:400 26px/1 var(--ga-serif)}
+.ga-cartpanel__close{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:none;color:var(--ga-ink);cursor:pointer}
+.ga-cartpanel__lines{flex:1;padding:4px 24px}
+.ga-cartpanel__empty{padding:56px 24px;text-align:center;color:var(--ga-muted)}
+.ga-cartpanel__empty p{margin:0}
+.ga-cartpanel__empty-title{margin-bottom:8px!important;font:400 22px/1.2 var(--ga-serif);color:var(--ga-ink)}
+.ga-cartpanel__suggestions{padding:0 24px}
+.ga-cartpanel__foot{display:grid;gap:12px;padding:20px 24px 24px;border-top:1px solid var(--ga-line)}
+.ga-cartpanel__total{font:400 26px/1.2 var(--ga-serif)}
+.ga-cartpanel__note,.ga-cartpanel__policies{font-size:12.5px;color:var(--ga-muted)}
+.ga-line{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--ga-line)}
+.ga-line__photo{width:76px;height:96px;object-fit:cover;padding:4px;border:1px solid var(--ga-line);background:#fff}
+.ga-line__name{margin:0;font:400 17px/1.25 var(--ga-serif);overflow-wrap:anywhere}
+.ga-line__meta{margin:2px 0 0;font-size:12.5px;color:var(--ga-muted)}
+.ga-line:last-child{border-bottom:0}
+.ga-line__qty{margin-top:10px}
+.ga-line__qty>*{display:inline-flex;align-items:center;border:1px solid var(--ga-line)}
+.ga-line__qty button{min-width:34px;min-height:34px;cursor:pointer}
+.ga-line__end{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:8px}
+.ga-line__total{margin:0;font-size:14px;font-weight:600;white-space:nowrap}
+.ga-line__remove{min-height:32px;padding:0;border:0;background:none;color:var(--ga-muted);font:500 12px var(--ga-sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* The kit's checkout and pay buttons, framed as outlined blocks that fill on hover */
+.ga-cartpanel__action [data-checkout],.ga-review__fields [data-pay]{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:54px;padding:0 20px;border:1px solid var(--ga-ink);background:var(--ga-ink);color:#fff;font:600 13px var(--ga-sans);letter-spacing:.08em;text-transform:uppercase;text-align:left;cursor:pointer;transition:background-color .2s,color .2s}
+.ga-cartpanel__action [data-checkout]:hover,.ga-review__fields [data-pay]:hover{background:#fff;color:var(--ga-ink)}
+.ga-cartpanel__action [data-checkout]:disabled,.ga-review__fields [data-pay]:disabled{opacity:.55;cursor:not-allowed}
+
+/* "Added" toast */
+.ga-added{display:grid;grid-template-columns:56px minmax(0,1fr);align-items:center;gap:10px 14px;width:100%;color:var(--ga-ink);font:14px/1.4 var(--ga-sans)}
+.ga-added:has(.ga-added__photo[hidden]){grid-template-columns:minmax(0,1fr)}
+.ga-added__photo{width:56px;height:70px;object-fit:cover;background:var(--ga-warm)}
+.ga-added p{margin:0}
+.ga-added__kicker{font:400 17px/1.2 var(--ga-serif)}
+.ga-added__message{margin-top:2px!important;font-size:13px;color:var(--ga-muted)}
+.ga-added__open{grid-column:1/-1;min-height:42px;border:1px solid var(--ga-ink);background:none;color:var(--ga-ink);font:600 12px var(--ga-sans);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.ga-added__open:hover{background:var(--ga-ink);color:#fff}
+
+/* Checkout review */
+.ga-page--checkout{max-width:1240px;margin:0 auto}
+.ga-page--checkout h1{margin:18px 0 2px;font:400 clamp(32px,3.6vw,48px)/1.1 var(--ga-serif)}
+.ga-review{display:grid;gap:32px;margin-top:clamp(24px,3vw,40px)}
+.ga-review__col{min-width:0}
+.ga-review__col--summary{padding:24px;background:#fff;border:1px solid var(--ga-line)}
+.ga-review__heading{margin:0 0 16px;font:400 24px/1.1 var(--ga-serif)}
+
+@media (min-width:900px){
+  .ga-header{position:sticky;top:0;z-index:30;grid-template-columns:auto minmax(0,1fr) auto;gap:32px}
+  .ga-nav{grid-column:2;grid-row:1;justify-content:center;gap:34px;padding:0}
+  .ga-tools{grid-column:3}
+  .ga-hero{min-height:min(56vw,760px)}
+  .ga-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:56px 32px}
+  .ga-artist{grid-template-columns:minmax(0,5fr) minmax(0,6fr)}
+  .ga-artist__photo{aspect-ratio:auto;min-height:620px}
+  .ga-artist__copy{align-self:center}
+  .ga-steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
+  .ga-rail li{width:min(24vw,320px)}
+  .ga-shows__list li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr) minmax(0,2fr);align-items:baseline;gap:24px}
+  .ga-shows__title{margin-top:0}
+  .ga-footer__top{grid-template-columns:2fr 1fr 1fr}
+  .ga-footer__about{grid-column:auto}
+  .ga-pdp__grid{grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:clamp(32px,4.5vw,72px);align-items:start}
+  .ga-review{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:56px;align-items:start}
+  .ga-review__col--summary{order:2}
+}
+@media (min-width:1200px){.ga-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:56px 24px}}
+@media (prefers-reduced-motion:reduce){.ga *,.ga-cartpanel *,.ga-added *{transition:none!important;animation:none!important}}

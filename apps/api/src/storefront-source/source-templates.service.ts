@@ -12,12 +12,12 @@ import { sourcePublicApiUrl } from './source-store-config';
 @Injectable()
 export class SourceTemplatesService {
   /** The template registry; replaceable in tests. */
-  registry: Pick<typeof registry, 'listTemplates' | 'templateManifest' | 'templateSourceFiles'> = registry;
+  registry: Pick<typeof registry, 'galleryTemplates' | 'templateManifest' | 'templateSourceFiles'> = registry;
 
   constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly config: ConfigService) {}
 
   list() {
-    return this.registry.listTemplates().map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
+    return this.registry.galleryTemplates().map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */

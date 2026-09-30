@@ -1,4 +1,4 @@
-import { listTemplates } from '@pagosya/store-templates';
+import { galleryTemplates } from '@pagosya/store-templates';
 import { sourceSitePurpose, sourceSitePurposePrompt } from './source-site-purpose';
 import { sourceWebsiteReferenceContext, sourceWebsiteReferenceCaptures } from './source-website-reference';
 import { STORE_KNOWLEDGE_RULES, type StoreKnowledge } from '../store-knowledge/store-knowledge';
@@ -64,10 +64,10 @@ type ConversationInput = {
 };
 
 const imageRoles = ['logo', 'product', 'business', 'background', 'team', 'reference', 'unknown', 'unused'];
-const templateIds = listTemplates().map(template => template.id);
+const templateIds = galleryTemplates().map(template => template.id);
 /** The same for every merchant, so it sits in the cached instructions. */
 export const SOURCE_TEMPLATE_CATALOG = `Plantillas: complete designer-made shops a NEW shop can start from. Exact ids:
-${listTemplates().map(template => `- ${template.id}: ${template.name} (${template.category}; ${template.tags.join(', ')}) — ${template.description}`).join('\n')}
+${galleryTemplates().map(template => `- ${template.id}: ${template.name} (${template.category}; ${template.tags.join(', ')}) — ${template.description}`).join('\n')}
 startFrom: for a new shop, "template" when the merchant wants to start from a Plantilla or leaves the choice to you, "scratch" when they ask for a design from scratch ("desde cero", "algo propio"), otherwise "unknown".
 templates: when action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
 chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".

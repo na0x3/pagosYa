@@ -128,9 +128,16 @@ describe('SourceTemplatesService', () => {
     await expect(templates.preview('m1', 'store-1', 'nada')).rejects.toThrow('Esa plantilla no existe.');
   });
 
-  it('lists templates without file details', () => {
+  it('lists the gallery templates without file details', () => {
     const { templates } = service(0);
-    templates.registry = { ...templates.registry, listTemplates: () => [manifest] };
+    templates.registry = { ...templates.registry, galleryTemplates: () => [manifest] };
     expect(templates.list()).toEqual([{ id: 'prueba', name: 'Prueba', category: 'comida', description: 'Una tienda de prueba.', tags: [], order: 1 }]);
+  });
+
+  it('still previews a template the owner hid from the gallery', async () => {
+    const { templates, projects } = service(0);
+    (projects as any).prepare = jest.fn(async (input: any) => ({ schemaVersion: 1, brief: input.brief, files: input.files }));
+    templates.registry = { ...templates.registry, galleryTemplates: () => [] };
+    await expect(templates.preview('m1', 'store-1', 'prueba')).resolves.toBeDefined();
   });
 });

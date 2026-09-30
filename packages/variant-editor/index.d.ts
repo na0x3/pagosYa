@@ -1,5 +1,5 @@
-export type VariantDraft = { id?: string; name: string; amount: string; stock?: string; legacySharedStock?: boolean; stockDirty?: boolean; autoStock?: boolean; imageDirty?: boolean; options?: Array<{name: string; value: string}>; imageUrl?: string };
-export type VariantInput = {id?: string; name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null};
+export type VariantDraft = { id?: string; name: string; amount: string; stock?: string; legacySharedStock?: boolean; stockDirty?: boolean; autoStock?: boolean; imageDirty?: boolean; options?: Array<{name: string; value: string}>; imageUrl?: string; imageUrls?: string[] };
+export type VariantInput = {id?: string; name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null; imageUrls?: string[] | null};
 export type EditorConfig = {variants?: VariantDraft[]; onChange?: (rows: VariantDraft[]) => void; photos?: () => string[]; basePrice?: () => string};
 declare global {
   var PagosYaProductOptions: {

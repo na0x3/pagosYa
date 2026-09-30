@@ -341,6 +341,7 @@ export class PublicStoresService implements OnModuleDestroy {
         tags: item.tags,
         specifications: Array.isArray(item.specifications) ? item.specifications : [],
         highlights: Array.isArray(item.highlights) ? item.highlights : [],
+        contentBlocks: readContentBlocks(item.contentBlocks),
         recommendedProductIds: item.recommendedProductIds,
         // null = unlimited/not tracked; 0 means genuinely sold out, both are
         // meaningfully different from "in stock" and the storefront needs to
@@ -420,3 +421,4 @@ export class PublicStoresService implements OnModuleDestroy {
     };
   }
 }
+import { readContentBlocks } from '../payment-links/product-content-blocks';

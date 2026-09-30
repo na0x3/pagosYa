@@ -1,0 +1,18 @@
+{
+  "id": "asana",
+  "name": "Asana",
+  "category": "deporte",
+  "description": "Ropa de yoga y entrenamiento: composición dividida y mínima, nombre con letras espaciadas y botón de contorno fino.",
+  "tags": ["yoga", "activewear", "minimalista", "bienestar"],
+  "sitePurpose": "shop",
+  "order": -287,
+  "dna": { "display": "outfit", "text": "manrope", "case": "none", "radius": "none", "border": "hairline", "button": "outline", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "still", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
+    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+  ]
+}

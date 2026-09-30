@@ -108,6 +108,103 @@ describe('Inline storefront product options', () => {
   }
   afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
+  it('renders content blocks in order, escapes text and keeps native compare keyboard controls', async () => {
+    const hostile = '<img src=x onerror=alert(1)>';
+    const { w, query, click } = await shop({ items: [{ ...product(), contentBlocks: [
+      { type: 'media', imageUrl: 'https://shop.test/angle.jpg', alt: hostile, caption: hostile + '35°' },
+      { type: 'compare', title: hostile, beforeUrl: 'https://shop.test/a.jpg', afterUrl: 'https://shop.test/b.jpg', beforeLabel: 'Recta', afterLabel: '35°', alt: 'Silla recta y reclinada' },
+    ] }] });
+    click('.menu-add');
+    expect([...w.document.querySelectorAll('[data-part="block"]')].map((b: any) => b.dataset.partType)).toEqual(['media', 'compare']);
+    expect(query('[data-part="block-media"]').getAttribute('alt')).toBe(hostile);
+    expect(query('figcaption').textContent).toBe(hostile + '35°');
+    expect(query('figcaption img')).toBeNull(); expect(query('[data-part-compare] h3 img')).toBeNull();
+    expect(query('.product-detail__layout').nextElementSibling).toBe(query('[data-part="blocks"]'));
+    const range = query('.pd-compare__range');
+    expect(range.type).toBe('range'); expect(range.getAttribute('aria-label')).toBe('Comparar: Recta y 35°');
+    range.value = '30'; range.dispatchEvent(new w.Event('input', { bubbles: true }));
+    expect(query('.product-detail__compare').style.getPropertyValue('--pd-compare')).toBe('30%');
+    const key = new w.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    range.dispatchEvent(key); expect(key.defaultPrevented).toBe(false);
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+  });
+
+  it('drops unsafe content blocks and renders no empty wrapper', async () => {
+    const { query, click } = await shop({ items: [{ ...product(), contentBlocks: [
+      { type: 'media', imageUrl: 'javascript:alert(1)', alt: 'x' },
+      { type: 'compare', beforeUrl: 'https://shop.test/a.jpg', afterUrl: 'javascript:alert(1)', alt: 'x' },
+      { type: 'unknown', imageUrl: 'https://shop.test/a.jpg', alt: 'x' },
+    ] }] });
+    click('.menu-add'); expect(query('[data-part="blocks"]')).toBeNull();
+  });
+
+  it('caps content rendering at six blocks and retains the runtime marker', async () => {
+    const { w, click } = await shop({ items: [{ ...product(), contentBlocks: Array.from({ length: 9 }, (_, i) => ({ type: 'media', imageUrl: `https://shop.test/${i}.jpg`, alt: `f${i}` })) }] });
+    click('.menu-add'); expect(w.document.querySelectorAll('[data-part="block"]')).toHaveLength(6);
+    expect(commerce).toContain('pagosya-product-content:v1');
+  });
+
+  it('shows a colour photo set, navigates within it and preserves its position on a size choice', async () => {
+    const red = ['https://shop.test/r1.jpg', 'https://shop.test/r2.jpg', 'https://shop.test/r3.jpg'];
+    const blue = ['https://shop.test/b1.jpg', 'https://shop.test/b2.jpg'];
+    const { w, query, click, choose } = await shop({ items: [{ ...product(), variants: [
+      { ...variant('rs', 'Rojo', 'S'), imageUrls: red },
+      { ...variant('rm', 'Rojo', 'M'), imageUrls: red },
+      { ...variant('bm', 'Azul', 'M'), imageUrls: blue },
+    ] }] });
+    click('.menu-add');
+    const thumbs = () => [...w.document.querySelectorAll('[data-product-image] img')].map((i: any) => i.getAttribute('src'));
+    expect(thumbs()).toHaveLength(6);
+    choose(0, 'Rojo'); expect(thumbs()).toEqual(red);
+    expect(query('[data-product-count]').textContent).toBe('1 / 3');
+    click('[data-product-next]'); expect(query('.product-detail__photo').src).toBe(red[1]);
+    const photo = query('.product-detail__photo');
+    choose(1, 'M'); expect(query('.product-detail__photo')).toBe(photo);
+    expect(query('[data-product-count]').textContent).toBe('2 / 3');
+    click('[data-product-image="2"]'); expect(query('.product-detail__photo').src).toBe(red[2]);
+    click('[data-product-next]'); expect(query('.product-detail__photo').src).toBe(red[0]);
+    choose(0, 'Azul'); expect(thumbs()).toEqual(blue);
+    expect(query('[data-product-count]').textContent).toBe('1 / 2');
+    click('[data-product-close]'); click('.menu-add'); expect(thumbs()).toHaveLength(6);
+  });
+
+  it('restores the full gallery from a photo set when the chosen colour has no photos', async () => {
+    const { w, query, click, choose } = await shop({ items: [{ ...product(), variants: [
+      { ...variant('rs', 'Rojo', 'S'), imageUrls: ['https://shop.test/r1.jpg', 'https://shop.test/r2.jpg'] },
+      variant('bs', 'Azul', 'S'),
+    ] }] });
+    click('.menu-add'); choose(0, 'Rojo');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(2);
+    choose(0, 'Azul');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(3);
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+  });
+
+  it('uses the chosen size photo set and drops unsafe photos', async () => {
+    const { w, query, click, choose } = await shop({ items: [{ ...product(), variants: [
+      { ...variant('rs', 'Rojo', 'S'), imageUrls: ['https://shop.test/s1.jpg', 'https://shop.test/s2.jpg', 'javascript:alert(1)'] },
+      { ...variant('rm', 'Rojo', 'M'), imageUrls: ['https://shop.test/m1.jpg', 'https://shop.test/m2.jpg'] },
+    ] }] });
+    click('.menu-add'); choose(1, 'S');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(2);
+    choose(1, 'M'); expect(query('.product-detail__photo').src).toBe('https://shop.test/m1.jpg');
+    expect(query('img[src^="javascript:"]')).toBeNull();
+  });
+
+  it('keeps a legacy single-photo colour on the full gallery and jumps to its photo', async () => {
+    const { w, query, click, choose } = await shop(); click('.menu-add');
+    const before = w.document.querySelectorAll('[data-product-image]').length;
+    choose(0, 'Azul');
+    expect(w.document.querySelectorAll('[data-product-image]')).toHaveLength(before);
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
+  });
+
+  it('keeps products without photo sets free of empty content wrappers', async () => {
+    const { query, click } = await shop(); click('.menu-add');
+    expect(query('.product-detail__thumbnails')).not.toBeNull();
+    expect(query('[data-part="blocks"]')).toBeNull();
+  });
+
   it.each(['', ' style="display:none!important;margin-top:7px"'])('reveals a generated CSS-hidden cart mount only while the platform drawer is open (%s)', async inline => {
     // Reduced reproduction of beauty-auto-1's literal RuntimeSlots component and stylesheet.
     const { w, query, click } = await shop({

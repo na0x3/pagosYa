@@ -1,0 +1,76 @@
+{
+  "id": "colita",
+  "name": "Colita",
+  "category": "mascotas",
+  "description": "Tienda de mascotas alegre: barra flotante amarilla, perros felices desde arriba y una caja central que invita.",
+  "tags": [
+    "mascotas",
+    "perros",
+    "gatos",
+    "juguetes"
+  ],
+  "sitePurpose": "shop",
+  "order": -200,
+  "dna": {
+    "display": "chivo",
+    "text": "outfit",
+    "case": "none",
+    "radius": "round",
+    "border": "bold",
+    "button": "bubbly",
+    "hover": "lift",
+    "press": "squash",
+    "motion": "playful",
+    "cart": "sheet",
+    "added": "bubble",
+    "card": "tilt",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "perro",
+      "role": "lifestyle",
+      "demo": "perro.jpg"
+    },
+    {
+      "slot": "gato",
+      "role": "lifestyle",
+      "demo": "gato.jpg"
+    },
+    {
+      "slot": "cachorro",
+      "role": "lifestyle",
+      "demo": "cachorro.jpg"
+    },
+    {
+      "slot": "senior",
+      "role": "lifestyle",
+      "demo": "senior.jpg"
+    },
+    {
+      "slot": "comida",
+      "role": "lifestyle",
+      "demo": "comida.jpg"
+    }
+  ]
+}

@@ -298,7 +298,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
   }
 
-  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> } & ProductFiscalMapping): Promise<{ id: string; name: string }> {
+  createProduct(storeId: string, input: { name: string; description: string | null; contentBlocks?: import('./product-content-blocks-editor').ContentBlockInput[]; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null; imageUrls?: string[] | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> } & ProductFiscalMapping): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 
@@ -314,8 +314,8 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}) }) });
+  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}) }) });
   }
 
   /** The agent's latest clean draft while it builds; files only when newer than `since`. */
@@ -327,7 +327,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/progress?requestId=${encodeURIComponent(requestId)}`, { signal });
   }
 
-  estimateSource(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; assetUrls: string[] }): Promise<SourceGenerationEstimate> {
+  estimateSource(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; assetUrls: string[]; selection?: { sectionId: string } }): Promise<SourceGenerationEstimate> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/estimate`, { method: 'POST', body: JSON.stringify(body) });
   }
 
@@ -353,7 +353,7 @@ export class MerchantStudioApi {
   finishSourceTest(storeId: string, experimentId: string, publicationVersion: number, apply: boolean): Promise<SourcePublication> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/experiments/finish`, { method: 'POST', body: JSON.stringify({ experimentId, publicationVersion, apply }) });
   }
-  sourceAlternative(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string }): Promise<SourceRevision> {
+  sourceAlternative(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; selection?: { sectionId: string } }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/alternative`, { method: 'POST', body: JSON.stringify(body) });
   }
   sourceState(storeId: string, before?: number): Promise<SourceState> {
@@ -380,7 +380,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}`);
   }
 
-  generateSource(storeId: string, body: { revision: number; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel }): Promise<SourceRevision> {
+  generateSource(storeId: string, body: { revision: number; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; selection?: { sectionId: string } }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/generate`, { method: "POST", body: JSON.stringify(body) });
   }
 

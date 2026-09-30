@@ -1,0 +1,18 @@
+{
+  "id": "plata",
+  "name": "Plata",
+  "category": "moda",
+  "description": "Joyería de plata y cuentas: editorial en blanco y negro, serif ligera y una tarjetita de oferta sobre la foto.",
+  "tags": ["joyería", "plata", "minimalista", "editorial"],
+  "sitePurpose": "shop",
+  "order": -298,
+  "dna": { "display": "newsreader", "text": "manrope", "case": "none", "radius": "none", "border": "hairline", "button": "underline", "hover": "underline-grow", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "still", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
+    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+  ]
+}

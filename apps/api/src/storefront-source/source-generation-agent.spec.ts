@@ -54,6 +54,62 @@ describe('generate() with the agent engine', () => {
     expect(files.some(f => f.encoding === 'base64')).toBe(false);
     expect(agentDraftPreviews.get('s')).toEqual({ at: null });
   });
+  describe('the product page theme', () => {
+    const themeArgs = (args: object) => ({ preset: null, swatch: null, gallery: null, blocks: null, divider: null, enter: null, css: null, ...args });
+    const savedDna = (projects: any) => {
+      const config = projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'config.js').content;
+      return JSON.parse(config.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, '')).dna;
+    };
+    const ficha = (brief: any) => ({ ...input(brief), instruction: 'Mejora la ficha de producto para que se vea artesanal' });
+
+    it('saves a theme chosen for a request about the product page, even though no file changed', async () => {
+      const { service, projects, brief } = await setup();
+      jest.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(turn([['set_product_card_theme', themeArgs({ swatch: 'square', gallery: 'stack' })]]))
+        .mockResolvedValueOnce(turn([['verify', {}]]))
+        .mockResolvedValueOnce(turn([['finish', { summary: 'Ficha más artesanal.', sections: [] }]]));
+      await service.generate('m', 's', ficha(brief), new SourceRequestBudget(50));
+      expect(savedDna(projects)).toMatchObject({ swatch: 'square', gallery: 'stack', blocks: 'plain', divider: 'none', enter: 'none' });
+    });
+
+    it('refuses the theme tool for a request that does not concern the product page', async () => {
+      const { service, projects, brief } = await setup();
+      const fetchMock = jest.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(turn([['set_product_card_theme', themeArgs({ swatch: 'square' })]]))
+        .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+        .mockResolvedValueOnce(turn([['verify', {}]]))
+        .mockResolvedValueOnce(turn([['finish', { summary: 'Título.', sections: ['Portada'] }]]));
+      await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
+      expect(JSON.stringify(JSON.parse((fetchMock.mock.calls[1] as any)[1].body).input)).toContain('Este pedido no cambia la ficha de producto.');
+      expect(savedDna(projects).swatch).not.toBe('square');
+    });
+
+    it('keeps a preset\'s CSS when the browser check passes and drops it, keeping the params, when it fails', async () => {
+      const check = jest.spyOn(require('./product-theme-check'), 'checkProductThemeOnSnapshot').mockResolvedValue([]);
+      const passing = await setup();
+      jest.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(turn([['set_product_card_theme', themeArgs({ preset: 'workshop' })]]))
+        .mockResolvedValueOnce(turn([['verify', {}]]))
+        .mockResolvedValueOnce(turn([['finish', { summary: 'Taller.', sections: [] }]]));
+      await passing.service.generate('m', 's', ficha(passing.brief), new SourceRequestBudget(50));
+      expect(savedDna(passing.projects)).toMatchObject({ swatch: 'square', gallery: 'stack' });
+      expect(savedDna(passing.projects).productCss).toContain('[data-pagosya-product][data-style] [data-part="gallery"]');
+      expect(check).toHaveBeenCalledTimes(1);
+
+      jest.restoreAllMocks();
+      jest.spyOn(require('./product-theme-check'), 'checkProductThemeOnSnapshot').mockResolvedValueOnce([{ control: 'buy', viewport: 'mobile', reason: 'covered by another element' }]);
+      const failing = await setup();
+      jest.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(turn([['set_product_card_theme', themeArgs({ preset: 'workshop' })]]))
+        .mockResolvedValueOnce(turn([['verify', {}]]))
+        .mockResolvedValueOnce(turn([['verify', {}]]))
+        .mockResolvedValueOnce(turn([['finish', { summary: 'Taller.', sections: [] }]]));
+      await failing.service.generate('m', 's', ficha(failing.brief), new SourceRequestBudget(50));
+      const dna = savedDna(failing.projects);
+      expect(dna).toMatchObject({ swatch: 'square', gallery: 'stack' });
+      expect(dna.productCss).toBeUndefined();
+    });
+  });
   it('fails without saving when the agent stops at a limit with an unverified draft', async () => {
     const { service, projects, brief } = await setup();
     jest.spyOn(globalThis, 'fetch').mockImplementation(async () => turn([['edit_file', { path: 'components/home.tsx', search: 'para tu cuerpo', replacement: 'para tu mente' }]]));

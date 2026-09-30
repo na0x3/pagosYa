@@ -1,6 +1,45 @@
 import { nextStoreFiles } from './fixtures/next-store';
 import { sourceSectionScope, validateSourceEditScope, validateSourceArtwork, sourceHomeRegions, sourceDesignAfterSectionEdit, requestsArtwork } from './source-edit-scope';
 
+import { sourceSectionScopePrompt } from './source-edit-scope';
+
+describe('an explicit section selection', () => {
+  const withPrep = () => { const files = nextStoreFiles(); files[1].content = files[1].content.replace('</main>', '<section id="preparacion" className="prep"><h2>Preparación</h2></section></main>'); return files; };
+
+  it('scopes a request that names no section to the selected one', () => {
+    const scope = sourceSectionScope(withPrep(), 'hazlo más grande', 'preparacion');
+    expect(scope).toMatchObject({ add: false, targets: ['preparacion'], selected: 'preparacion' });
+    expect(scope!.original.map(region => region.id)).toEqual(['menu', 'preparacion']);
+  });
+  it('says the selected section is gone instead of editing the whole page', () => {
+    expect(() => sourceSectionScope(nextStoreFiles(), 'hazlo más grande', 'ghost')).toThrow('La sección seleccionada ya no existe. Vuelve a seleccionarla.');
+  });
+  it('lets a whole-site redesign win over a selection', () => {
+    expect(sourceSectionScope(withPrep(), 'Rediseña todo el sitio con otro estilo', 'preparacion')).toBeUndefined();
+  });
+  it('keeps an add-a-section request as an addition', () => {
+    expect(sourceSectionScope(withPrep(), 'agrega una sección de preguntas frecuentes', 'preparacion')).toMatchObject({ add: true, targets: [] });
+  });
+  it('behaves exactly as before when no section is selected', () => {
+    expect(() => sourceSectionScope(nextStoreFiles(), 'Mejora esta sección')).toThrow('identificar');
+    expect(sourceSectionScope(nextStoreFiles(), 'hazlo más grande')).toBeUndefined();
+    expect(sourceSectionScope(nextStoreFiles(), 'hazlo más grande', undefined)).toBeUndefined();
+  });
+  it('tells the model which section was explicitly selected, and only then', () => {
+    const selected = sourceSectionScopePrompt(sourceSectionScope(withPrep(), 'hazlo más grande', 'preparacion'));
+    expect(selected).toContain('explicitly selected section "preparacion"');
+    expect(sourceSectionScopePrompt(sourceSectionScope(withPrep(), 'Mejora la preparación'))).not.toContain('explicitly selected');
+  });
+  it('an edit inside the selected section passes validation and one outside it is refused', () => {
+    const before = withPrep();
+    const inside = withPrep(); inside[1].content = inside[1].content.replace('<h2>Preparación</h2>', '<h2>Preparación cuidada</h2>');
+    const outside = withPrep(); outside[1].content = outside[1].content.replace('Nuestra carta', 'Un diseño nuevo');
+    const scope = sourceSectionScope(before, 'hazlo más grande', 'preparacion');
+    expect(() => validateSourceEditScope(before, inside, 'hazlo más grande', scope)).not.toThrow();
+    expect(() => validateSourceEditScope(before, outside, 'hazlo más grande', scope)).toThrow();
+  });
+});
+
 const request = 'haz una seccion de la preparacion de la hamburguesa, y enfoca que los materiales son 100% organicos';
 const section = '<section id="preparacion" className="prep"><h2>Preparación orgánica</h2><p>Ingredientes 100% orgánicos.</p></section>';
 const candidate = () => {

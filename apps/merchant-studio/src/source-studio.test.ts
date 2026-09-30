@@ -97,7 +97,7 @@ it('sends the tapped design direction as the choice', async () => {
   card.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalled());
   expect(sent.mock.calls[0][1]).toBe('Usar Retro americana');
-  expect(sent.mock.calls[0].at(-1)).toBe('retro-americana');
+  expect(sent.mock.calls[0][10]).toBe('retro-americana');
 });
 
 it('shows the store appearing while YAPI builds, from its latest clean draft, and drops the draft when the build ends', async () => {

@@ -21,7 +21,7 @@ export function productPhotoReferences(products: unknown, operations: unknown): 
   const items = [products, operations].flatMap(list => Array.isArray(list) ? list as Photos[] : []).filter(item => item && typeof item === 'object');
   return [...new Set(items.flatMap(item => [
     ...(Array.isArray(item.imageUrls) ? item.imageUrls : []),
-    ...variantsOf(item).map((variant: any) => variant.imageUrl),
+    ...variantsOf(item).flatMap((variant: any) => [variant.imageUrl, ...(Array.isArray(variant.imageUrls) ? variant.imageUrls : [])]),
   ]).filter((ref): ref is string => typeof ref === 'string' && !!ref))];
 }
 
@@ -31,7 +31,10 @@ export function rewriteProductPhotos(products: unknown, operations: unknown, res
   for (const item of [products, operations].flatMap(list => Array.isArray(list) ? list as Photos[] : [])) {
     if (!item || typeof item !== 'object') continue;
     if (Array.isArray(item.imageUrls)) item.imageUrls = item.imageUrls.map(swap);
-    for (const variant of variantsOf(item) as any[]) if ('imageUrl' in variant) variant.imageUrl = swap(variant.imageUrl);
+    for (const variant of variantsOf(item) as any[]) {
+      if ('imageUrl' in variant) variant.imageUrl = swap(variant.imageUrl);
+      if (Array.isArray(variant.imageUrls)) variant.imageUrls = variant.imageUrls.map(swap);
+    }
   }
 }
 

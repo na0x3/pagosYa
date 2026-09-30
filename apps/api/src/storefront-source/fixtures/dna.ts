@@ -8,6 +8,8 @@ export const validDna = (): SourceDesignDna => ({
   motion: { personality: 'playful' },
   layout: { grammar: 'collage', density: 'airy' },
   surfaces: { cart: 'sheet', added: 'ribbon', product: 'story-led', review: 'ticket', card: 'second-photo' },
+  productCard: { swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none' },
   motifs: [{ for: 'product', target: 'Café de altura', meaning: 'El vapor de una taza recién servida', behavior: 'steam', trigger: 'add-to-cart', placement: 'cart' }],
   signature: 'Cada pedido se sella como un boleto de tren antiguo.',
+  productCss: '',
 });

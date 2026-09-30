@@ -1,0 +1,18 @@
+{
+  "id": "acuarela",
+  "name": "Acuarela",
+  "category": "arte",
+  "description": "Materiales de arte: nombre rojo gigante en letra condensada, foto colorida de pinturas y cajas, botón redondeado.",
+  "tags": ["pinturas", "pinceles", "papel", "materiales"],
+  "sitePurpose": "shop",
+  "order": -284,
+  "dna": { "display": "bebas-neue", "text": "figtree", "case": "upper", "radius": "pill", "border": "none", "button": "pill", "hover": "lift", "press": "pop", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
+    { "slot": "mesa", "role": "lifestyle", "demo": "mesa.jpg" }
+  ]
+}

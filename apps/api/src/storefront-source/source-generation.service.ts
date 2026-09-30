@@ -74,6 +74,7 @@ import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source
 import { kitPath } from '@pagosya/storefront-kit';
 import { AgentWorkspace } from './agent/agent-workspace';
 import { AgentToolbox, type AgentStep } from './agent/agent-tools';
+import { applyProductThemeToDesign, instructionConcernsProductCard, productThemeRuntime } from './product-theme';
 import { runAgent, AGENT_LIMITS } from './agent/agent-loop';
 import { openAiAgentModel } from './agent/agent-model';
 import { agentInstructions, agentOpening } from './agent/agent-prompt';
@@ -353,7 +354,7 @@ export class SourceGenerationService {
     const editExisting = !!previous && !migrating;
     const oldFiles = previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path));
     const targetedEditPaths = requestProfile.targetedFeature === 'marquee' ? sourceMarqueeEditPaths(oldFiles) : undefined;
-    const sectionScope = execution?.candidate ? undefined : sourceSectionScope(oldFiles, dto.instruction);
+    const sectionScope = execution?.candidate ? undefined : sourceSectionScope(oldFiles, dto.instruction, dto.selection?.sectionId);
     const context = useNext ? { files: oldFiles, omitted: [] as string[] } : sourceTaskContext(oldFiles, dto.instruction.split('Pedido actual del comercio:').at(-1)!);
     const creative = !previous || redesign;
     const narrativePlanning = this.narrativePlanning();
@@ -485,6 +486,8 @@ export class SourceGenerationService {
     const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string }> = [];
     let generated!: { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
     let agentOutcome: { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>> } | undefined;
+    /** The product page theme the agent chose (already sanitized and browser-checked); merged into the accepted design below. */
+    let agentTheme: AgentToolbox['pendingTheme'] = null;
     let compiledNext: SourceProjectFileDto[] = [];
     const editSchema = useNext ? { ...sourceEditSchema, properties: { ...sourceEditSchema.properties, appends: { ...sourceEditSchema.properties.appends, items: { ...sourceEditSchema.properties.appends.items, properties: { ...sourceEditSchema.properties.appends.items.properties, path: { type: 'string', enum: ['styles/globals.css'] } } } } } } : sourceEditSchema;
     const baseSchema = editExisting ? { ...editSchema, required: [...editSchema.required, 'products', 'productOperations'], properties: { ...editSchema.properties, products: sourceProductsSchema, productOperations: sourceProductOperationsSchema } } : outputSchema;
@@ -652,6 +655,8 @@ export class SourceGenerationService {
           catch (error) { autoRepairs.length = saved.repairs; motifFiles = saved.motifs; return repairDiagnostic(error); }
         };
         const toolbox = new AgentToolbox({ workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, gate,
+          // A whole-store design may always set the product page theme; a local edit only when it concerns the product page.
+          themeAllowed: isNew || redesign || instructionConcernsProductCard(dto.instruction),
           // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
           onPreview: files => agentDraftPreviews.set(storeId, files.filter(file => !(file.encoding === 'base64' && previousFiles.some(saved => saved.path === file.path)))) });
         const onTurn = async ({ body, durationMs, status }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => {
@@ -676,8 +681,9 @@ export class SourceGenerationService {
           accepted = outcome.status === 'finished' || outcome.status === 'limit' && toolbox.draftIsClean() && await gate(workspace.files()) === null;
         } finally { agentDraftPreviews.clear(storeId); }
         if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? ' porque se canceló' : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
-        if (editExisting && !workspace.changedPaths().length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
+        if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
         autoRepairs.push(...toolbox.repairs);
+        agentTheme = toolbox.pendingTheme;
         const summary = toolbox.finished?.summary.trim() || 'Cambios de YAPI';
         generated.label = summary.split('\n')[0].slice(0, 120);
         agentOutcome = { summary, sections: toolbox.finished?.sections ?? [], steps: toolbox.steps.map(({ thumbnail: _thumbnail, ...step }) => step) };
@@ -797,7 +803,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         }
       }
       }
-    const acceptedDesign = sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope);
+    const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
     if (sectionScope) visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), acceptedDesign);
     // Carry forward previously bundled assets on an edit, without carrying old private configuration.
     const previousAssets = retainedAssets;
@@ -818,7 +824,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
     const productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
     // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
-    const dna = sourceRuntimeDna(acceptedDesign?.concepts[acceptedDesign.selected]?.dna, storeId, productPageStyle);
+    // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
+    const dna = { ...sourceRuntimeDna(acceptedDesign?.concepts[acceptedDesign.selected]?.dna, storeId, productPageStyle), ...(agentTheme ? productThemeRuntime(agentTheme) : {}) };
     // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
     const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
     const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));

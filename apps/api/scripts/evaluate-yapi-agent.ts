@@ -13,6 +13,16 @@ import { SourceRequestBudget } from '../src/storefront-source/source-request-bud
 import { writeFileSync } from 'node:fs';
 import { captureAgentDraft } from '../src/storefront-source/agent/agent-capture';
 
+/** The product card theme in a candidate's config.js (null when it has no DNA). */
+function productThemeOf(candidate: any): { productCard: Record<string, string>; productCss: string } | null {
+  const content: string | undefined = candidate?.files?.find((file: { path: string }) => file.path === 'config.js')?.content;
+  try {
+    const dna = JSON.parse(content?.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] ?? '{}').dna;
+    if (!dna) return null;
+    return { productCard: Object.fromEntries(['swatch', 'gallery', 'blocks', 'divider', 'enter'].map(key => [key, String(dna[key] ?? '')])), productCss: typeof dna.productCss === 'string' ? dna.productCss : '' };
+  } catch { return null; }
+}
+
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : undefined; };
 
 async function main() {
@@ -39,6 +49,13 @@ async function main() {
       rows.push({ run, status: 'ok', seconds: Math.round((Date.now() - started) / 1000), credits: result.generation?.credits ?? 0, modelCalls: result.generation?.attempts?.length ?? 0 });
       // --shot <file.jpg>: a desktop screenshot of the built candidate, to judge the design itself.
       const shot = arg('shot');
+      // The product page theme YAPI chose; --theme-out <file.json> keeps it so scripts/compare-product-themes.ts can compare two stores.
+      const theme = productThemeOf(result.candidate);
+      if (theme) {
+        console.log(`  ficha: ${Object.entries(theme.productCard).map(([key, value]) => `${key}=${value}`).join(' ')} · css ${theme.productCss ? `${(theme.productCss.match(/\{/g) ?? []).length} reglas` : 'ninguno'}`);
+        const out = arg('theme-out');
+        if (out) writeFileSync(out.replace(/(\.json)?$/i, `-${run}.json`), JSON.stringify(theme, null, 2));
+      }
       if (shot && result.candidate) writeFileSync(shot.replace(/(\.jpe?g)?$/i, `-${run}.jpg`), Buffer.from((await captureAgentDraft(result.candidate, 1280)).image.split(',')[1], 'base64'));
       console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {

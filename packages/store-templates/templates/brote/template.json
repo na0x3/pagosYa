@@ -1,0 +1,71 @@
+{
+  "id": "brote",
+  "name": "Brote",
+  "category": "hogar",
+  "description": "Esenciales sostenibles para el hogar: bodegones cálidos, un gran nombre en serif y cero plástico.",
+  "tags": [
+    "sostenible",
+    "jabones",
+    "hogar",
+    "natural"
+  ],
+  "sitePurpose": "shop",
+  "order": -230,
+  "dna": {
+    "display": "fraunces",
+    "text": "outfit",
+    "case": "none",
+    "radius": "pill",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "bano",
+      "role": "lifestyle",
+      "demo": "bano.jpg"
+    },
+    {
+      "slot": "cocina",
+      "role": "lifestyle",
+      "demo": "cocina.jpg"
+    },
+    {
+      "slot": "limpieza",
+      "role": "lifestyle",
+      "demo": "limpieza.jpg"
+    },
+    {
+      "slot": "recarga",
+      "role": "lifestyle",
+      "demo": "recarga.jpg"
+    }
+  ]
+}

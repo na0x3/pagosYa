@@ -2,6 +2,9 @@ import { SOURCE_MOTION_MODES, SOURCE_SCROLL_FEELS, type SourceMotionMode, type S
 import { IsInt, Min, Max, IsIn as IsModelIn } from 'class-validator';
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../source-generation-policy';
 import { IsIn, IsUUID, ArrayMaxSize, IsArray, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
+import { SourceSelectionDto } from './source-selection.dto';
 import { SourceProjectRevisionDto } from './save-source-project.dto';
 export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsIn(['shop', 'service', 'portfolio', 'editorial']) sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
@@ -21,4 +24,6 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) templateId?: string;
   /** A design direction card the merchant tapped (sub-project 2); only valid against the last set YAPI offered. */
   @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) directionId?: string;
+  /** A section the merchant picked in the preview (visual selection editor); scopes the edit to it. */
+  @IsOptional() @ValidateNested() @Type(() => SourceSelectionDto) selection?: SourceSelectionDto;
 }

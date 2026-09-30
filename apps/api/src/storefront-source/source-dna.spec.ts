@@ -157,8 +157,10 @@ describe('identity libraries (T2b) DNA values', () => {
 
   it('never seeds a T2b value, so stores seeded before them keep exactly the DNA they had', () => {
     const all = Array.from({ length: 50 }, (_, i) => defaultDna(`store-${i}`));
-    expect(createHash('sha256').update(JSON.stringify(all)).digest('hex')).toBe('6b24050e210099c82f1bd48afee26df3daaabc4f1c08a62998b6a02f5d9fa84b');
-    expect(defaultDna('cafe-luna')).toEqual({ version: 1, type: { display: 'bebas-neue', text: 'rubik', case: 'upper', tracking: 'tight' }, shape: { radius: 'none', border: 'hairline', frame: 'inset' }, buttons: { form: 'stamp', hover: 'invert', press: 'pop' }, motion: { personality: 'calm' }, layout: { grammar: 'magazine', density: 'dense' }, surfaces: { cart: 'drawer', added: 'bubble', product: 'dense', review: 'notebook', card: 'zoom' }, motifs: [], signature: '' });
+    // The product card fields joined later with fixed defaults: without them the DNA is byte-for-byte what it was.
+    const withoutProductCard = all.map(({ productCard: _card, productCss: _css, ...rest }) => rest);
+    expect(createHash('sha256').update(JSON.stringify(withoutProductCard)).digest('hex')).toBe('6b24050e210099c82f1bd48afee26df3daaabc4f1c08a62998b6a02f5d9fa84b');
+    expect(defaultDna('cafe-luna')).toEqual({ version: 1, type: { display: 'bebas-neue', text: 'rubik', case: 'upper', tracking: 'tight' }, shape: { radius: 'none', border: 'hairline', frame: 'inset' }, buttons: { form: 'stamp', hover: 'invert', press: 'pop' }, motion: { personality: 'calm' }, layout: { grammar: 'magazine', density: 'dense' }, surfaces: { cart: 'drawer', added: 'bubble', product: 'dense', review: 'notebook', card: 'zoom' }, productCard: { swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none' }, motifs: [], signature: '', productCss: '' });
     const forms = new Set(Array.from({ length: 500 }, (_, i) => defaultDna(`seed-${i}`).buttons.form));
     for (const form of ['sticker', 'ticket', 'bubbly', 'brutal']) expect(forms.has(form as any)).toBe(false);
   });

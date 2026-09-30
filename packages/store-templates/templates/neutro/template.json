@@ -1,0 +1,18 @@
+{
+  "id": "neutro",
+  "name": "Neutro",
+  "category": "producto-unico",
+  "description": "Una base limpia para cualquier marca: degradado suave, título grande a la izquierda y una barra de navegación en caja.",
+  "tags": ["base", "limpia", "versátil", "marca"],
+  "sitePurpose": "shop",
+  "order": -276,
+  "dna": { "display": "outfit", "text": "manrope", "case": "none", "radius": "soft", "border": "hairline", "button": "block", "hover": "fill", "press": "sink", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "equipo", "role": "lifestyle", "demo": "equipo.jpg" },
+    { "slot": "empaque", "role": "product", "demo": "empaque.jpg" }
+  ]
+}

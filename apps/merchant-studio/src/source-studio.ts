@@ -24,7 +24,8 @@ import { renderSourcePublication } from './source-publication';
 import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
-import { sourcePreviewDocument, receivePreviewNavigation, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
+import { QUICK_ACTIONS, createSelectionState, matchEditableText } from './source-selection';
+import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
 import './source-studio.css';
 import './source-browser.css';
@@ -88,11 +89,47 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const directEditor = createDirectEditor(api);
   const loadPreviewImages = createPreviewImageLoader(API_BASE_URL);
   let previewRender = 0;
+  // Section selection (Wix-style): the merchant clicks a part of the preview and the next request is scoped to it.
+  const selection = createSelectionState();
+  let selectMode = false, platformHint = false, editableField: { id: string; value: string } | null = null, selectionRequest = 0;
+  let fieldsCache: { key: string; fields: import('./source-visual-fields').VisualField[] } | null = null;
+  function syncSelectMode(frame: HTMLIFrameElement | null = app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')) {
+    try { frame?.contentWindow?.postMessage({ type: 'pagosya:source-edit-mode', on: selectMode, ...(selection.get() ? { selectedId: selection.get()!.sectionId } : {}) }, '*'); } catch { /* frame is gone */ }
+  }
+  window.addEventListener('keydown', event => { if (event.key === 'Escape' && (selection.get() || platformHint)) { clearSelection(); renderSelection(); scheduleEstimate(); } });
+  function clearSelection() { selection.clear(); platformHint = false; editableField = null; selectionRequest++; }
+  function renderSelection() { const host = app.querySelector<HTMLElement>('[data-selection-host]'); if (host) host.innerHTML = selectionMarkup(); syncSelectMode(); }
+  function takeSelection(picked: { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }) {
+    if (!selectMode) return;
+    clearSelection();
+    if (picked.kind === 'platform') platformHint = true;
+    else if (picked.sectionId) {
+      selection.set({ sectionId: picked.sectionId, label: picked.label || picked.sectionId });
+      const request = selectionRequest, key = `${storeId}:${version?.revision}`;
+      if (picked.text && version) void (async () => {
+        try {
+          if (fieldsCache?.key !== key) fieldsCache = { key, fields: (await api.sourceVisualFields(storeId, version!.revision)).fields };
+          if (request !== selectionRequest) return;
+          const match = matchEditableText(picked.text, fieldsCache.fields);
+          if (match) { editableField = { id: match.id, value: match.value }; renderSelection(); }
+        } catch { /* the shortcut is optional */ }
+      })();
+    }
+    renderSelection();
+  }
+  function selectionMarkup() {
+    const current = selection.get();
+    if (platformHint) return '<p class="selection-hint" data-selection-hint role="status">Esa parte la administra pagosYa.</p>';
+    if (!current) return '';
+    return `<div class="selection-panel"><span class="selection-chip" data-selection-chip>Sección: ${escape(current.label)} <button type="button" aria-label="Quitar selección" data-selection-clear>×</button></span><div class="selection-actions" role="group" aria-label="Acciones rápidas para esta sección">${QUICK_ACTIONS.map(action => `<button type="button" data-quick-action="${escape(action.id)}">${escape(action.label)}</button>`).join('')}${editableField ? '<button type="button" data-selection-edit-text>Editar texto</button>' : ''}</div></div>`;
+  }
   let previewNavigation: Partial<PreviewNavigation> = {};
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
+    const picked = receivePreviewSelection(event, previewFrame);
+    if (picked) { takeSelection(picked); return; }
     const next = receivePreviewNavigation(event, previewFrame, version?.snapshot);
     if (!next) return;
     if (next.newTab && version) {
@@ -103,14 +140,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       const tab = window.open(url.href, '_blank');
       if (tab) { tab.opener = null; return; }
     }
-    page = next.page; previewNavigation = next; render();
+    page = next.page; previewNavigation = next; clearSelection(); render();
   });
   async function renderPreview(frame: HTMLIFrameElement) {
     const request = ++previewRender;
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, editing: visualEditing });
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => syncSelectMode(frame), { once: true }); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, editing: visualEditing }); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -238,7 +275,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         generationSettings.scrollFeel = ['native', 'soft', 'cinematic'].includes(config.scrollFeel) ? config.scrollFeel : 'soft';
       } catch { generationSettings.motion = 'subtle'; generationSettings.scrollFeel = 'soft'; }
     }
-    draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; scheduleEstimate();
+    draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; clearSelection(); fieldsCache = null; scheduleEstimate();
     // A saved design shows at once; the browser checks load every page at four widths and report when done.
     if (version) { if (waitForChecks) { render(); await runChecks(); } else void runChecks(); }
   }
@@ -293,6 +330,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     chatExpanded = true;
     const submittedAssets = assets;
     const submittedInstruction = instruction;
+    const submittedSelection = selection.get();
     const submittedAsPhoto = productPhoto;
     productPhoto = false;
     const knownMessageIds = new Set(messages.map(message => message.id));
@@ -317,9 +355,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined);
         stopProgress();
-        succeeded = true; pendingSubmission = null; generating = false; liveDraft = null;
+        succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; generating = false; liveDraft = null;
         productPhoto = false;
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
@@ -408,7 +446,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (!storeId) return;
     estimateTimer = window.setTimeout(async () => {
       try {
-        const result = await api.estimateSource(storeId, { ...generationSettings, revision: state.revision, instruction: instruction || (state.revision ? 'Ajustar mi sitio' : 'Crear mi sitio'), assetUrls: assets.map(a => a.url || 'pending-upload') });
+        const result = await api.estimateSource(storeId, { ...generationSettings, revision: state.revision, instruction: instruction || (state.revision ? 'Ajustar mi sitio' : 'Crear mi sitio'), assetUrls: assets.map(a => a.url || 'pending-upload'), ...(selection.get() ? { selection: { sectionId: selection.get()!.sectionId } } : {}) });
         if (request !== estimateRequest) return;
         if (!result?.estimate || !Number.isFinite(result.estimate.minCredits) || !Number.isFinite(result.estimate.maxCredits)) {
           throw new Error('No se pudo estimar el costo. Vuelve a intentarlo.');
@@ -517,6 +555,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
             ${!storeId ? '<section class="remote-empty-state"><strong>No hay una tienda todavía.</strong><p>Crea una tienda en el dashboard para comenzar.</p></section>' : ''}
           </div>
           <div class="source-compose-area">${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
+          <div data-selection-host>${selectionMarkup()}</div>
           ${renderStudioComposer({ busy: locked || historical() || !storeId, source: true, instruction, attachments: productPhoto ? '' : attachmentBatch(), suggestions: setup || productPhoto ? [] : version ? [
             { label: 'Crear producto', action: 'create-product' },
             { label: 'Rediseñar sitio', instruction: 'Rediseña todo mi sitio con una dirección visual nueva basada en mi negocio, mis fotos y mis referencias. Conserva los productos y los datos confirmados.' },
@@ -527,7 +566,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ] })}</div>
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
-          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked, checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
+          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked, checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
           ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : generating && liveDraft ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">Borrador en vivo · YAPI sigue trabajando</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : generating ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
@@ -578,6 +617,21 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
     app.querySelector('#source-visual-edit')?.addEventListener('click', () => { if (!busy && !dirty() && !visualEditPending) { visualEditing = !visualEditing; mode = 'preview'; render(); } });
+    app.querySelector('#source-select-mode')?.addEventListener('click', () => { selectMode = !selectMode; if (!selectMode) clearSelection(); render(); });
+    app.querySelector('[data-selection-host]')?.addEventListener('click', event => {
+      const target = event.target as Element;
+      if (target.closest('[data-selection-clear]')) { clearSelection(); renderSelection(); scheduleEstimate(); return; }
+      const quick = target.closest<HTMLElement>('[data-quick-action]');
+      if (quick) {
+        const action = QUICK_ACTIONS.find(item => item.id === quick.dataset.quickAction);
+        if (action) { instruction = action.instruction; const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) field.value = instruction; scheduleEstimate(); focusComposer(); }
+        return;
+      }
+      if (target.closest('[data-selection-edit-text]') && editableField && !busy && !dirty()) {
+        const wanted = editableField.value;
+        selectMode = false; clearSelection(); visualEditing = true; mode = 'preview'; render(); directEditor.select(wanted, 'text');
+      }
+    });
     app.querySelector('#source-back-stores')?.addEventListener('click', () => notifyParent({ type: 'pagosya:workspace', view: 'stores' }));
     app.querySelector('#source-chat-toggle')?.addEventListener('click', () => { chatExpanded = !chatExpanded; render(); app.querySelector<HTMLElement>('#source-chat-toggle')?.focus(); });
     app.querySelector('[data-composer-action="create-product"]')?.addEventListener('click', () => {

@@ -1,0 +1,18 @@
+{
+  "id": "obra",
+  "name": "Obra",
+  "category": "construccion",
+  "description": "Constructora: paquetes de servicio con precio, proyectos con antes y después, y un botón para cotizar tu obra.",
+  "tags": ["construcción", "remodelación", "servicios", "cotizar"],
+  "sitePurpose": "shop",
+  "order": -300,
+  "dna": { "display": "oswald", "text": "chivo", "case": "upper", "radius": "none", "border": "bold", "button": "block", "hover": "invert", "press": "sink", "motion": "snappy", "cart": "drawer", "added": "inline", "card": "still", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "antes", "role": "lifestyle", "demo": "antes.jpg" },
+    { "slot": "despues", "role": "lifestyle", "demo": "despues.jpg" }
+  ]
+}

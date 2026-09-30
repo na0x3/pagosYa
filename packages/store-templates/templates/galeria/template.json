@@ -1,0 +1,18 @@
+{
+  "id": "galeria",
+  "name": "Galería",
+  "category": "arte",
+  "description": "Obras originales de una pintora: cuadro a pantalla completa, leyenda en una caja serif y un logo pequeño.",
+  "tags": ["pintura", "obra original", "arte", "galería"],
+  "sitePurpose": "shop",
+  "order": -293,
+  "dna": { "display": "libre-caslon-text", "text": "figtree", "case": "none", "radius": "none", "border": "none", "button": "outline", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "still", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
+    { "slot": "pared", "role": "lifestyle", "demo": "pared.jpg" }
+  ]
+}

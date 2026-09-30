@@ -1,0 +1,18 @@
+{
+  "id": "historieta",
+  "name": "Historieta",
+  "category": "libros",
+  "description": "Tienda de cómics: puntos de semitono, un panel de historia con globo de texto y un naranja rojizo con botón amarillo.",
+  "tags": ["cómics", "historietas", "coleccionables", "retro"],
+  "sitePurpose": "shop",
+  "order": -299,
+  "dna": { "display": "anton", "text": "nunito", "case": "upper", "radius": "soft", "border": "bold", "button": "sticker", "hover": "lift", "press": "pop", "motion": "playful", "cart": "overlay", "added": "stamp", "card": "tilt", "frame": "inset" },
+  "photos": [
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "tienda", "role": "lifestyle", "demo": "tienda.jpg" },
+    { "slot": "lectura", "role": "lifestyle", "demo": "lectura.jpg" }
+  ]
+}

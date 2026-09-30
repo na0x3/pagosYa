@@ -1,0 +1,18 @@
+{
+  "id": "dron",
+  "name": "Dron",
+  "category": "tecnologia",
+  "description": "Drones: paisaje de montaña con retícula tipo HUD, letra monoespaciada y el producto en un recuadro.",
+  "tags": ["drones", "cámaras aéreas", "tecnología", "montaña"],
+  "sitePurpose": "shop",
+  "order": -282,
+  "dna": { "display": "sora", "text": "space-mono", "case": "none", "radius": "none", "border": "hairline", "button": "block", "hover": "invert", "press": "sink", "motion": "cinematic", "cart": "sheet", "added": "toast", "card": "zoom", "frame": "bleed" },
+  "photos": [
+    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "lifestyle", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
+    { "slot": "campo", "role": "lifestyle", "demo": "campo.jpg" },
+    { "slot": "control", "role": "product", "demo": "control.jpg" }
+  ]
+}

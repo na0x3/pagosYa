@@ -1,0 +1,76 @@
+{
+  "id": "enchufe",
+  "name": "Enchufe",
+  "category": "tecnologia",
+  "description": "Gadgets y accesorios: paneles grises redondeados, titulares directos y comparación de productos.",
+  "tags": [
+    "tecnología",
+    "gadgets",
+    "accesorios",
+    "audio"
+  ],
+  "sitePurpose": "shop",
+  "order": -190,
+  "dna": {
+    "display": "familjen-grotesk",
+    "text": "manrope",
+    "case": "none",
+    "radius": "round",
+    "border": "none",
+    "button": "pill",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "snappy",
+    "cart": "overlay",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "rounded"
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "audio",
+      "role": "lifestyle",
+      "demo": "audio.jpg"
+    },
+    {
+      "slot": "carga",
+      "role": "lifestyle",
+      "demo": "carga.jpg"
+    },
+    {
+      "slot": "hogar",
+      "role": "lifestyle",
+      "demo": "hogar.jpg"
+    },
+    {
+      "slot": "accesorios",
+      "role": "lifestyle",
+      "demo": "accesorios.jpg"
+    },
+    {
+      "slot": "escritorio",
+      "role": "lifestyle",
+      "demo": "escritorio.jpg"
+    }
+  ]
+}

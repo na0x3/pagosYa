@@ -7,6 +7,7 @@ type Mount = { storeId: string; version: SourceVersion; locked: boolean; close()
 
 export function createDirectEditor(api: MerchantStudioApi) {
   let host: HTMLElement | null = null, options: Mount | null = null;
+  let queued: { value: unknown; kind: unknown } | null = null;
   let key = '', fields: VisualField[] = [], selected = '', draft = '', error = '', hint = '', pending = false, loading = false;
   let loadRequest = 0, undoRevision: number | null = null, undoKey = '';
   const choose = (field: VisualField) => { selected = field.id; draft = field.value; error = ''; hint = ''; };
@@ -47,6 +48,13 @@ export function createDirectEditor(api: MerchantStudioApi) {
     catch (cause) { error = cause instanceof Error ? cause.message : 'No pudimos deshacer el cambio.'; }
     finally { pending = false; current.pending(false); draw(); }
   }
+  function applySelect(value: unknown, kind: unknown) {
+    if (typeof value !== 'string' || value.length > 3000 || !['text', 'image'].includes(String(kind))) return;
+    const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
+    const matches = fields.filter(field => field.kind === kind && normalize(field.value) === normalize(value));
+    if (matches.length === 1) choose(matches[0]);
+    else hint = matches.length > 1 ? 'Este contenido aparece más de una vez. Elige el elemento en la lista.' : 'Este elemento es personalizado. Selecciona otro elemento o pide el ajuste a YAPI.';
+  }
   return {
     mount(element: HTMLElement, input: Mount) {
       host = element; options = input;
@@ -58,18 +66,16 @@ export function createDirectEditor(api: MerchantStudioApi) {
         void api.sourceVisualFields(input.storeId, input.version.revision).then(result => {
           if (request !== loadRequest || result.revision !== options?.version.revision) return;
           fields = result.fields; if (fields[0]) choose(fields[0]);
+          if (queued) { const next = queued; queued = null; applySelect(next.value, next.kind); }
         }).catch(cause => { if (request === loadRequest) error = cause instanceof Error ? cause.message : 'No pudimos cargar los elementos.'; })
           .finally(() => { if (request === loadRequest) { loading = false; draw(); } });
       }
       draw();
     },
     select(value: unknown, kind: unknown) {
-      if (typeof value !== 'string' || value.length > 3000 || !['text', 'image'].includes(String(kind))) return;
-      const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
-      const matches = fields.filter(field => field.kind === kind && normalize(field.value) === normalize(value));
-      if (matches.length === 1) choose(matches[0]);
-      else hint = matches.length > 1 ? 'Este contenido aparece más de una vez. Elige el elemento en la lista.' : 'Este elemento es personalizado. Selecciona otro elemento o pide el ajuste a YAPI.';
-      draw(); host?.querySelector<HTMLElement>('[data-direct-value]')?.focus();
+      // Opened from the section chip: the fields are still loading, so choose once they arrive.
+      if (loading) { queued = { value, kind }; return; }
+      applySelect(value, kind); draw(); host?.querySelector<HTMLElement>('[data-direct-value]')?.focus();
     },
   };
 }
