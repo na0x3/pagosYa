@@ -68,6 +68,15 @@ describe("createSubscriptionsFromOrder", () => {
     await expect(createSubscriptionsFromOrder(tx as never, { intent: { ...intent({ cart: [subscriptionLine] }), customerEmail: null }, order, manage, now })).resolves.toMatchObject({ created: 0 });
   });
 
+  it("stores BOB when the first payment was converted to USD by dLocal", async () => {
+    const tx = makeTx();
+    const fx = { originalAmount: 14400, originalCurrency: "BOB", rate: 6.96, convertedAt: now.toISOString() };
+    const result = await createSubscriptionsFromOrder(tx as never, { intent: { ...intent({ cart: [subscriptionLine], fx }), currency: "USD" }, order, manage, now });
+    expect(tx.customerSubscription.createMany.mock.calls[0][0].data[0].currency).toBe("BOB");
+    expect(result.emailBlock).toContain("144.00 BOB");
+    expect(result.emailBlock).not.toContain("USD");
+  });
+
   it("snapshots zone delivery with its fee", async () => {
     const tx = makeTx();
     await createSubscriptionsFromOrder(tx as never, { intent: intent({ cart: [subscriptionLine], shipping: { id: "zone_1", name: "Centro", amount: 1500, address: "Calle 1" } }), order: { ...order, fulfillmentMethod: "delivery", fulfillmentLocationId: null, fulfillmentLocationName: null }, manage, now });

@@ -2,6 +2,7 @@ import { Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { advanceBillingDate, cadenceInterval, cadenceLabel, isCadence, productSubscriptionKey, type Cadence } from "./subscription-pricing";
 import { subscriptionManageUrl } from "./subscription-manage-token";
+import { lineCurrencyFor } from "../international/fx";
 
 /**
  * Runs inside the payment's success transaction (applyRailResult). It must never throw on the data it reads:
@@ -27,6 +28,8 @@ function objectOf(value: unknown): Record<string, unknown> {
 
 export async function createSubscriptionsFromOrder(tx: Prisma.TransactionClient, input: EnrollmentInput): Promise<EnrollmentResult> {
   const now = input.now ?? new Date();
+  // Cart amounts are BOB even when dLocal rewrote the intent to USD for the charge.
+  const currency = lineCurrencyFor(input.intent);
   const metadata = objectOf(input.intent.metadata);
   if (metadata.subscription) return NONE; // a renewal payment, not a first order
   const lines = (Array.isArray(metadata.cart) ? metadata.cart : []).filter(line => !!objectOf(line).subscription) as CartLine[];
@@ -72,7 +75,7 @@ export async function createSubscriptionsFromOrder(tx: Prisma.TransactionClient,
     info.set(activeKey, { name: itemName, cadence, amount: lockedUnitAmount * quantity + fulfillment.fee, next: nextBillingAt });
     rows.push({
       merchantId: input.order.merchantId, storeId: input.order.storeId, paymentLinkId: product.id, variantId, extraIds, itemName, quantity, cadence,
-      discountPercent: Number(line.subscription?.discountPercent) || 0, unitAmount: lockedUnitAmount, currency: input.intent.currency,
+      discountPercent: Number(line.subscription?.discountPercent) || 0, unitAmount: lockedUnitAmount, currency,
       customerName: input.intent.customerName?.trim() || "Cliente", customerEmail: email, customerPhone: input.intent.customerPhone,
       consumerUserId: input.intent.consumerUserId, activeKey, status: "ACTIVE", startedAt: now, nextBillingAt,
       fulfillment, sourceOrderId: input.order.id,
@@ -90,7 +93,7 @@ export async function createSubscriptionsFromOrder(tx: Prisma.TransactionClient,
     ? await tx.customerSubscription.findMany({ where: { sourceOrderId: input.order.id, activeKey: { in: fresh.map(row => row.activeKey!) } }, select: { id: true, activeKey: true } })
     : [];
 
-  const money = (amount: number) => `${(amount / 100).toFixed(2)} ${input.intent.currency}`;
+  const money = (amount: number) => `${(amount / 100).toFixed(2)} ${currency}`;
   const blocks = createdRows.map(row => {
     const entry = info.get(row.activeKey!)!;
     return `Suscripción: ${entry.name} · ${cadenceLabel(entry.cadence)}\nPróxima entrega: ${entry.next.toISOString().slice(0, 10)} · ${money(entry.amount)}\nTe enviaremos un enlace para pagar antes de cada entrega; no se cobra nada automáticamente.\nAdministra tu suscripción: ${subscriptionManageUrl(input.manage.checkoutOrigin, row.id, input.manage.secret)}`;
