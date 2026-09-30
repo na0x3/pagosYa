@@ -283,7 +283,7 @@ export class SourceChatService {
     let retryDecision: SourceConversationDecision | undefined;
     let retryFingerprint = '';
     try {
-      const budget = new SourceRequestBudget(input.maxCredits);
+      const budget = this.generation.newBudget(input.maxCredits);
       const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
       if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets, current.revision);
       if (previous && input.sitePurpose && input.sitePurpose !== sourceSitePurpose((previous.snapshot as unknown as SourceProjectSnapshot)?.brief) && !sourceRedesignRequested(input.instruction)) {

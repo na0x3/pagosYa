@@ -173,6 +173,12 @@ describe('generate() with the agent engine', () => {
     const paid: any = await api.service.generate('m', 's', input(api.brief), new SourceRequestBudget(50));
     expect(paid.generation.credits).toBeGreaterThan(0);
   });
+  it('hands out an unmetered budget in ChatGPT-plan mode and a capped one otherwise', async () => {
+    const plan = await setup('agent', chatgptPlan), api = await setup('agent');
+    expect(() => plan.service.newBudget(1).reserve('gpt-5.6-sol', 240_000, 20_000, 1024)).not.toThrow();
+    const capped = api.service.newBudget(1);
+    expect(() => capped.reserve('gpt-5.6-sol', 240_000, 20_000, 1024)).toThrow('límite restante');
+  });
   it('keeps the reason a run failed in its receipt, so a FAILED row explains itself', async () => {
     const { service, prisma, brief } = await setup();
     jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ error: {} }), { status: 500 }));

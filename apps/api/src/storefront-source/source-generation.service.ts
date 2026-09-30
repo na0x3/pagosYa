@@ -220,6 +220,9 @@ export class SourceGenerationService {
       cartRecommendationsEnabled: data.cartRecommendationsEnabled, cartRecommendationProductIds: data.cartRecommendationProductIds, bundles: data.bundles };
   }
 
+  /** The allowance of one request. On the merchant's own ChatGPT plan nothing is billed, so nothing caps the run. */
+  newBudget(maxCredits?: number) { return new SourceRequestBudget(maxCredits, Boolean(this.config.get('app.chatgptPlan'))); }
+
   async estimate(merchantId: string, storeId: string, dto: Pick<SendSourceMessageDto, 'revision' | 'instruction' | 'model' | 'maxCredits' | 'assetUrls' | 'sitePurpose'>) {
     const current = await this.projects.current(merchantId, storeId);
     if (current.revision !== dto.revision) throw new ConflictException('El proyecto cambió. Recarga antes de generar.');
@@ -238,7 +241,7 @@ export class SourceGenerationService {
     return { aiUsage, models: Object.entries(SOURCE_MODELS).map(([id, model]) => ({ id, label: model.label })), defaultModel: 'auto', defaultMaxCredits: DEFAULT_MAX_CREDITS, billingMode: 'usage', runs };
   }
 
-  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = new SourceRequestBudget(dto.maxCredits, Boolean(this.config.get('app.chatgptPlan'))), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void }) {
+  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void }) {
     execution?.signal?.throwIfAborted();
     // On the merchant's own ChatGPT plan nothing is billed: no credit allowance, no credits charged, more time per run.
     const chatgptPlan = Boolean(this.config.get('app.chatgptPlan')), freeRun = Boolean(execution?.free) || chatgptPlan;
