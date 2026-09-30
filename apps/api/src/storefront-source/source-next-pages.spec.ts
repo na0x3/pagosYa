@@ -1,6 +1,7 @@
 import { compileNextPreview, nextContentPages, nextPageMarkup, nextProjectScaffold, standardPageRoute, validateNextSources } from './source-next';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { templateStoreDataFile } from './source-templates';
+import { SourceValidationError } from './source-validation-error';
 import { nextStoreFiles } from './fixtures/next-store';
 
 // Compiles real Next.js projects and renders 61 templates.
@@ -39,9 +40,14 @@ describe('standard page routes', () => {
     expect(nextContentPages([...base(), file(path)]).map(p => p.path)).toEqual(commerce);
   });
 
-  it('fails naming both files when two produce the same page', () => {
-    expect(() => nextContentPages([...base(), file('components/page-faq.tsx'), file('components/pages/faq.tsx')])).toThrow(/components\/page-faq\.tsx.*components\/pages\/faq\.tsx.*faq\.html/);
-    expect(() => nextContentPages([...base(), file('components/pages/checkout.tsx')])).toThrow(/components\/checkout\.tsx.*components\/pages\/checkout\.tsx.*checkout\.html/);
+  it('fails with a Spanish message for the merchant and a diagnostic naming both files for the repair', () => {
+    const collide = (files: Array<{ path: string; content: string }>) => { try { nextContentPages(files); } catch (error) { return error as SourceValidationError; } throw new Error('expected a collision'); };
+    const faq = collide([...base(), file('components/page-faq.tsx'), file('components/pages/faq.tsx')]);
+    expect(faq).toBeInstanceOf(SourceValidationError);
+    expect(faq.diagnostic).toMatch(/components\/page-faq\.tsx.*components\/pages\/faq\.tsx.*faq\.html/);
+    expect(faq.message).toMatch(/misma dirección/);
+    expect(faq.message).not.toMatch(/components\/|\.html|\.tsx/);
+    expect(collide([...base(), file('components/pages/checkout.tsx')]).diagnostic).toMatch(/components\/checkout\.tsx.*components\/pages\/checkout\.tsx.*checkout\.html/);
   });
 
   it('still routes only the pages a non-shop site has, as before', () => {

@@ -1,6 +1,7 @@
 import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
 import { isSourceMotifFile } from './source-motifs';
 import { BadGatewayException } from '@nestjs/common';
+import { SourceValidationError } from './source-validation-error';
 import { build } from 'esbuild';
 import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
@@ -51,7 +52,7 @@ export function nextContentPages(files: SourceProjectFileDto[], purpose: SourceS
   const owners = new Map<string, string>();
   for (const page of pages) {
     const owner = `components/${page.name}.tsx`, other = owners.get(page.path);
-    if (other) throw new BadGatewayException(`${other} y ${owner} producen la misma página ${page.path}. Cambia el nombre de uno.`);
+    if (other) throw new SourceValidationError(`${other} and ${owner} both produce ${page.path}. Rename one of them.`, 'Dos páginas de tu tienda tienen la misma dirección. Cambia el nombre de una de ellas.');
     owners.set(page.path, owner);
   }
   return pages;
