@@ -5,6 +5,7 @@ import { DomainOrder, PaymentIntentStatus, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentIntentsService } from '../payment-intents/payment-intents.service';
+import { DomainFxRate } from './domain-fx-rate';
 import { assertDomainCommerceReady, domainCommerceConfig, domainPrice } from './domain-commerce.config';
 import { DomainCheckoutDto, DomainRegistrantDto } from './domain-commerce.dto';
 import { DomainAvailability, NamecomProvider, DomainProviderError } from './namecom.provider';
@@ -50,7 +51,7 @@ export class DomainCommerceService {
   private warning = false;
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService,
     private readonly payments: PaymentIntentsService, private readonly registrar: NamecomProvider,
-    private readonly hosting: CloudflareHostingProvider) {}
+    private readonly hosting: CloudflareHostingProvider, private readonly fx: DomainFxRate) {}
 
   private async ownedStore(merchantId: string, storeId: string, purchasing = false) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
@@ -70,13 +71,13 @@ export class DomainCommerceService {
   async list(merchantId: string, storeId: string) {
     const store = await this.ownedStore(merchantId, storeId);
     let available = store.status !== 'ARCHIVED';
-    try { assertDomainCommerceReady(this.config); } catch { available = false; }
+    try { assertDomainCommerceReady(this.config, this.fx.current()); } catch { available = false; }
     const orders = await this.prisma.domainOrder.findMany({ where: { storeId, status: { not: 'QUOTED' } }, orderBy: { createdAt: 'desc' }, take: 100, include: { paymentIntent: { select: { clientSecret: true, status: true } } } });
     return { available, sandbox: domainCommerceConfig(this.config)?.sandbox ?? true, tlds: TLDS, orders: orders.map(row => this.present(row)) };
   }
   async search(merchantId: string, storeId: string, input: string) {
     await this.ownedStore(merchantId, storeId, true);
-    const c = assertDomainCommerceReady(this.config);
+    const c = assertDomainCommerceReady(this.config, this.fx.current());
     const query = input.trim().toLowerCase();
     const names = query.includes('.') ? [purchasableHostname(query)] : TLDS.map(tld => purchasableHostname(`${query}.${tld}`));
     const rows = await this.registrar.availability(names);
@@ -88,7 +89,7 @@ export class DomainCommerceService {
   }
   async quote(merchantId: string, storeId: string, value: string) {
     await this.ownedStore(merchantId, storeId, true);
-    const c = assertDomainCommerceReady(this.config), hostname = purchasableHostname(value);
+    const c = assertDomainCommerceReady(this.config, this.fx.current()), hostname = purchasableHostname(value);
     const row = (await this.registrar.availability([hostname])).find(item => item.domainName === hostname);
     if (!supported(row)) throw new ConflictException('Este dominio no está disponible para comprar. Busca otro nombre.');
     return this.present(await this.prisma.domainOrder.create({ data: { storeId, hostname, sandbox: c.sandbox,
@@ -97,7 +98,7 @@ export class DomainCommerceService {
   }
   async checkout(merchantId: string, storeId: string, dto: DomainCheckoutDto) {
     await this.ownedStore(merchantId, storeId, true);
-    const c = assertDomainCommerceReady(this.config);
+    const c = assertDomainCommerceReady(this.config, this.fx.current());
     const platform = await this.prisma.merchant.findFirst({ where: { id: c.platformMerchantId, status: 'ACTIVE' } });
     if (!platform || platform.id === merchantId) throw new BadRequestException('La cuenta de cobro de dominios no está disponible.');
     if (dto.accepted !== true) throw new BadRequestException('Confirma los datos del titular y el precio anual.');
@@ -163,7 +164,7 @@ export class DomainCommerceService {
     return hosted;
   }
   private async advance(order: DomainOrder) {
-    const c = assertDomainCommerceReady(this.config);
+    const c = assertDomainCommerceReady(this.config, this.fx.current());
     if (order.sandbox !== c.sandbox) return; // An environment switch must never promote a sandbox purchase.
     const payment = order.paymentIntentId ? await this.prisma.paymentIntent.findUnique({ where: { id: order.paymentIntentId }, include: { transactions: { where: { type: 'REFUND', status: 'SUCCEEDED' } } } }) : null;
     if (!payment) return;

@@ -308,6 +308,8 @@ export default (): { app: AppConfig } => {
       token: process.env.NAMECOM_API_TOKEN ?? '',
       platformMerchantId: process.env.DOMAIN_PLATFORM_MERCHANT_ID ?? '',
       bobPerUsd: Number(process.env.DOMAIN_BOB_PER_USD ?? 0),
+      // Live quote used for bobPerUsd (DolarApi); bobPerUsd above is the fallback.
+      fxSource: process.env.DOMAIN_FX_SOURCE === 'binance' ? 'binance' : 'oficial',
       markupPercent: Number(process.env.DOMAIN_MARKUP_PERCENT ?? 0),
       cloudflareToken: process.env.DOMAIN_CLOUDFLARE_API_TOKEN ?? '',
       cloudflareZoneId: process.env.DOMAIN_CLOUDFLARE_ZONE_ID ?? '',

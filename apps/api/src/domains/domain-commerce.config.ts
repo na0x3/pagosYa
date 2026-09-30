@@ -5,14 +5,18 @@ export interface DomainCommerceConfig {
   enabled: boolean; sandbox: boolean; username: string; token: string;
   platformMerchantId: string; bobPerUsd: number; markupPercent: number;
   cloudflareToken: string; cloudflareZoneId: string; target: string;
+  /** Which DolarApi quote feeds the live rate: 'oficial' (default) or 'binance'. */
+  fxSource?: 'oficial' | 'binance';
 }
 
 export function domainCommerceConfig(config: ConfigService): DomainCommerceConfig {
   return config.get<DomainCommerceConfig>('app.domainCommerce')!;
 }
 
-export function assertDomainCommerceReady(config: ConfigService): DomainCommerceConfig {
-  const c = domainCommerceConfig(config);
+/** `rate` is the effective BOB/USD (live, else env); omitted, the configured value is used. */
+export function assertDomainCommerceReady(config: ConfigService, rate?: number): DomainCommerceConfig {
+  const base = domainCommerceConfig(config);
+  const c = rate === undefined || !base ? base : { ...base, bobPerUsd: rate };
   if (!c?.enabled || !c.username || !c.token || !c.platformMerchantId ||
       !Number.isFinite(c.bobPerUsd) || c.bobPerUsd <= 0 ||
       !Number.isFinite(c.markupPercent) || c.markupPercent < 0 ||
