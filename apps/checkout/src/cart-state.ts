@@ -1,6 +1,7 @@
 import type { Store, StoreItem } from "./api";
 const CART_VARIANT_SEPARATOR = "::";
 const CART_EXTRAS_SEPARATOR = "~~";
+const CART_CADENCE_SEPARATOR = "@@";
 
 type SelectableExtra = Store["items"][number]["extras"][number];
 
@@ -33,17 +34,22 @@ export function pickedExtrasLabel(extras: Array<{ id?: string; name: string }>, 
   return [...picks.values()].map((pick) => (pick.count > 1 ? `${pick.name} ×${pick.count}` : pick.name)).join(separator);
 }
 
-export function cartItemKey(paymentLinkId: string, variantId?: string, extraIds: string[] = []): string {
+export type CartCadence = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+const isCartCadence = (value: unknown): value is CartCadence => value === "WEEKLY" || value === "BIWEEKLY" || value === "MONTHLY";
+
+export function cartItemKey(paymentLinkId: string, variantId?: string, extraIds: string[] = [], cadence?: CartCadence): string {
   const base = variantId ? `${paymentLinkId}${CART_VARIANT_SEPARATOR}${variantId}` : paymentLinkId;
   const normalizedExtras = [...extraIds].sort();
-  return normalizedExtras.length ? `${base}${CART_EXTRAS_SEPARATOR}${normalizedExtras.join(",")}` : base;
+  const withExtras = normalizedExtras.length ? `${base}${CART_EXTRAS_SEPARATOR}${normalizedExtras.join(",")}` : base;
+  return cadence ? `${withExtras}${CART_CADENCE_SEPARATOR}${cadence}` : withExtras;
 }
 
-export function parseCartItemKey(key: string): { paymentLinkId: string; variantId?: string; extraIds: string[] } {
-  const [base, encodedExtras = ""] = key.split(CART_EXTRAS_SEPARATOR, 2);
+export function parseCartItemKey(key: string): { paymentLinkId: string; variantId?: string; extraIds: string[]; cadence?: CartCadence } {
+  const [withExtras, cadence] = key.split(CART_CADENCE_SEPARATOR, 2);
+  const [base, encodedExtras = ""] = withExtras.split(CART_EXTRAS_SEPARATOR, 2);
   const [paymentLinkId, variantId] = base.split(CART_VARIANT_SEPARATOR, 2);
   const extraIds = encodedExtras.split(",").filter(Boolean);
-  return { paymentLinkId, ...(variantId ? { variantId } : {}), extraIds };
+  return { paymentLinkId, ...(variantId ? { variantId } : {}), extraIds, ...(isCartCadence(cadence) ? { cadence } : {}) };
 }
 
 function cartStorageKey(storeId: string) { return `pagosya_cart_${storeId}`; }
@@ -60,9 +66,10 @@ export function restoreCart(store: Store, productStockLimit: (item: StoreItem) =
     for (const [key, qty] of Object.entries(saved)) {
       // Drop entries for items archived/deleted since the cart was saved, and any
       // corrupt values — a stale or tampered cart must never crash the storefront.
-      const { paymentLinkId, variantId, extraIds } = parseCartItemKey(key);
+      const { paymentLinkId, variantId, extraIds, cadence } = parseCartItemKey(key);
       const item = store.items.find((candidate) => candidate.id === paymentLinkId);
       if (!item || !Number.isInteger(qty) || qty <= 0) continue;
+      if (cadence && !(store.subscriptionsEnabled && item.subscriptionOptions?.some((option) => option.cadence === cadence))) continue;
       const variants = (item.variants ?? []);
       if (variants.length > 0 && (!variantId || !variants.some((variant) => variant.id === variantId))) continue;
       if (variants.length === 0 && variantId) continue;
@@ -74,7 +81,7 @@ export function restoreCart(store: Store, productStockLimit: (item: StoreItem) =
 
       const variant = variants.find((candidate) => candidate.id === variantId);
       const optionKey = cartItemKey(item.id, variantId);
-      const cartKey = cartItemKey(item.id, variantId, extraIds);
+      const cartKey = cartItemKey(item.id, variantId, extraIds, cadence);
       const alreadyLoaded = loadedByProduct.get(item.id) ?? 0;
       const alreadyLoadedForOption = loadedByOption.get(optionKey) ?? 0;
       const productLimit = productStockLimit(item);

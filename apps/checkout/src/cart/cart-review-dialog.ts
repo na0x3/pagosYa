@@ -19,6 +19,7 @@ import { suppressStoreViewForMerchant } from "../storefront/merchant-views";
 import { cartLineEntries, cartRecommendationEntries, cartFulfillmentState, cartModeNote, cartActionLabel } from "./cart-review";
 import { renderStoreRoute, navigateWithinStore } from "../storefront/navigation";
 import { updateCartBar } from "./cart-bar";
+import { cadenceLabel, subscriptionConsentText } from "./subscription-choice";
 
 
 export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: Store): void {
@@ -35,6 +36,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
   const emailOnlyLeadCheckout = store.checkoutMode === "external";
   const recommendations = cartRecommendationEntries(store);
   const fulfillment = cartFulfillmentState(store, lines);
+  const subscriptionCadence = lines.find((line) => line.cadence)?.cadence;
   const fulfillmentHtml = fulfillment.locations.length ? `<section class="cart-fulfillment" aria-labelledby="cart-fulfillment-title">
     <div class="cart-fulfillment-head"><h3 id="cart-fulfillment-title">¿Cómo recibirás tu pedido?</h3><p>Solo mostramos ubicaciones con stock para todo tu carrito.</p></div>
     <div class="cart-fulfillment-methods" role="radiogroup" aria-label="Modalidad de entrega">
@@ -63,7 +65,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
       </header>
       <div class="cart-review-scroll" data-retention-cart-host>
         <div class="cart-review-lines">
-          ${lines.map(({ key, product, variant, extras, quantity, unitAmount }) => {
+          ${lines.map(({ key, product, variant, extras, quantity, unitAmount, cadence }) => {
             const image = assetUrl(product.imageUrls[0] || null);
             const available = optionStock(product, variant);
             const productLimit = productStockLimit(product);
@@ -72,7 +74,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
             const visibleStock = stockStatus(remainingStock(product, variant), store.showLowStockToCustomers === true);
             return `<article class="cart-review-line" data-cart-key="${escapeHtml(key)}">
               ${image ? `<img src="${escapeHtml(image)}" alt="">` : `<span class="cart-review-placeholder" aria-hidden="true">${escapeHtml(initials(product.name))}</span>`}
-              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${escapeHtml(pickedExtrasLabel(extras))}</span>` : ""}<small>${formatAmount(unitAmount, product.currency)} c/u</small>${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
+              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${escapeHtml(pickedExtrasLabel(extras))}</span>` : ""}<small>${formatAmount(unitAmount, product.currency)} c/u</small>${cadence ? `<small class="cart-line-subscription">${escapeHtml(cadenceLabel(cadence).replace(/^./, (letter) => letter.toUpperCase()))} · puedes cancelar cuando quieras</small>` : ""}${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
               <div class="cart-review-quantity" aria-label="Cantidad de ${escapeHtml(product.name)}">
                 <button type="button" data-cart-change="-1" aria-label="Quitar una unidad">−</button><span>${quantity}</span><button type="button" data-cart-change="1" aria-label="Agregar una unidad" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
               </div>
@@ -112,10 +114,11 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
         </form>` : ""}
       </div>
       <footer class="cart-review-footer">
+        ${subscriptionCadence && store.checkoutMode === "payment" && !contactCheckout ? `<label class="subscription-consent"><input type="checkbox" name="subscriptionConsent"> <span>${escapeHtml(subscriptionConsentText(subscriptionCadence))}</span></label>` : ""}
         ${promo ? `<div class="cart-review-subtotal"><span>Subtotal</span><span>${formatAmount(subtotal, currency)}</span></div><div class="cart-review-discount"><span>Código ${escapeHtml(promo.code)}</span><strong>−${formatAmount(promoDiscount, currency)}</strong></div>` : ""}
         <div class="cart-review-total"><span>${cartCount()} ${cartCount() === 1 ? "producto" : "productos"}</span><strong>${formatAmount(checkoutTotal, currency)}</strong></div>
         <p>${freeOrder ? `${ICON_EXTERNAL}<span>Pedido gratis: pagosYa enviará la selección a la tienda</span>` : store.checkoutMode === "payment" ? `${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span>` : store.checkoutMode === "whatsapp" ? `${ICON_WHATSAPP}<span>No se realizará ningún cobro en pagosYa</span>` : `${ICON_EXTERNAL}<span>pagosYa enviará tu correo y selección a la tienda</span>`}</p>
-        <button type="${contactCheckout ? "submit" : "button"}" ${contactCheckout ? 'form="store-lead-form"' : ""} class="primary" id="cart-confirm" ${fulfillment.locations.length && !fulfillment.selectedLocation ? "disabled" : ""}>${escapeHtml(cartActionLabel(store, freeOrder))}</button>
+        <button type="${contactCheckout ? "submit" : "button"}" ${contactCheckout ? 'form="store-lead-form"' : ""} class="primary" id="cart-confirm" ${(fulfillment.locations.length && !fulfillment.selectedLocation) || (subscriptionCadence && store.checkoutMode === "payment" && !contactCheckout) ? "disabled" : ""}>${escapeHtml(cartActionLabel(store, freeOrder))}</button>
         <span class="cart-checkout-error" role="alert" hidden></span>
       </footer>
     </div>`;
@@ -123,7 +126,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
   (window as any).PAGOSYA_RETENTION_REFRESH?.();
   const quoteRoot = dialog.querySelector<HTMLElement>('[data-cart-quote]');
   const quotedFulfillment = quoteRoot ? mountCartQuote(quoteRoot, {
-    slug, items: lines.map(line => ({ paymentLinkId: line.product.id, variantId: line.variant?.id, extraIds: line.extras.map(extra => extra.id), quantity: line.quantity })),
+    slug, items: lines.map(line => ({ paymentLinkId: line.product.id, variantId: line.variant?.id, extraIds: line.extras.map(extra => extra.id), quantity: line.quantity, ...(line.cadence ? { subscriptionCadence: line.cadence } : {}) })),
     credits: store.creditsEnabled, promoCode: promo?.code, shipping: store.shippingEnabled === true && !lines.every(line => line.product.fulfillmentType === 'DIGITAL'), pickup: store.shippingPickupEnabled !== false,
     fulfillment: fulfillment.selectedLocation && fulfillment.method ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method } : undefined,
     address: previousAddress, carriers: store.shippingCarriersEnabled === true, destination: previousDestination, money: formatAmount,
@@ -259,6 +262,12 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
     return;
   }
 
+  const consentBox = dialog.querySelector<HTMLInputElement>('input[name="subscriptionConsent"]');
+  consentBox?.addEventListener("change", () => {
+    const confirm = dialog.querySelector<HTMLButtonElement>("#cart-confirm");
+    if (confirm) confirm.disabled = !consentBox.checked || Boolean(fulfillment.locations.length && !fulfillment.selectedLocation);
+  });
+
   dialog.querySelector<HTMLButtonElement>("#cart-confirm")?.addEventListener("click", async () => {
     const confirmButton = dialog.querySelector<HTMLButtonElement>("#cart-confirm")!;
     const checkoutError = dialog.querySelector<HTMLElement>(".cart-checkout-error")!;
@@ -295,17 +304,20 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
     try {
       const items = [...cart.entries()].map(([key, quantity]) => {
         const selected = parseCartItemKey(key);
-        return { paymentLinkId: selected.paymentLinkId, ...(selected.variantId ? { variantId: selected.variantId } : {}), ...(selected.extraIds.length ? { extraIds: selected.extraIds } : {}), quantity };
+        return { paymentLinkId: selected.paymentLinkId, ...(selected.variantId ? { variantId: selected.variantId } : {}), ...(selected.extraIds.length ? { extraIds: selected.extraIds } : {}), ...(selected.cadence ? { subscriptionCadence: selected.cadence } : {}), quantity };
       });
       const activePromo = activePromoForStore(store);
       const selectedFulfillment = quotedFulfillment ? quotedFulfillment() : fulfillment.selectedLocation && fulfillment.method
         ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method }
         : undefined;
       if (selectedFulfillment?.fulfillmentMethod) { state.activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod); state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'delivery' }); }
-      const result = await checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token());
+      const result = await (subscriptionCadence
+        ? checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token(), true)
+        : checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token()));
       customerContact.deliveryRequested = result.fulfillmentMethod === "delivery";
       state.activeOrderTrackingToken = result.trackingToken;
       state.linkHeader = { storeName: result.storeName, description: result.cartDescription, contactPhone: result.contactPhone, contactEmail: result.contactEmail };
+      if (subscriptionCadence) { try { sessionStorage.setItem("pagosya_subscription_checkout", "1"); } catch { /* the hint is optional */ } }
       cart.clear();
       saveCart(store);
       dialog.close();

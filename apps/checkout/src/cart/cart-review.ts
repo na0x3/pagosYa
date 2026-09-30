@@ -2,6 +2,7 @@
 import { parseCartItemKey, pickedExtras } from "../cart-state";
 import { Store, assetUrl, StoreLocation } from "../api";
 import { state } from "../state";
+import { subscriptionUnitAmount } from "./subscription-choice";
 import { cart, itemExtras, selectedUnitAmount, productStockLimit, itemVariants, optionStock } from "./cart";
 import { productImagePosition } from "../storefront/catalog";
 import { publicStoreLocations, locationCanFulfillCart } from "../storefront/locations";
@@ -29,7 +30,8 @@ export function cartLineEntries(store: Store) {
     if (!product) return [];
     const variant = product.variants.find((candidate) => candidate.id === selected.variantId);
     const extras = pickedExtras(itemExtras(product), selected.extraIds);
-    return [{ key, product, variant, extras, quantity, unitAmount: selectedUnitAmount(product, variant, extras) }];
+    const cadence = selected.cadence;
+    return [{ key, product, variant, extras, quantity, cadence, unitAmount: cadence ? subscriptionUnitAmount(product, variant, extras, cadence) : selectedUnitAmount(product, variant, extras) }];
   });
 }
 

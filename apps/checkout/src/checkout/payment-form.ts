@@ -114,6 +114,7 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
   const brand = applyCheckoutBranding(app, session.branding);
   const tokens = TEST_TOKENS[state.selectedType];
   const storeCheckout = isStoreCheckout(session);
+  const subscriptionCheckout = storeCheckout && (() => { try { return sessionStorage.getItem("pagosya_subscription_checkout") === "1"; } catch { return false; } })();
   document.body.classList.toggle('store-payment-page', storeCheckout || sourcePaymentPreview);
   const recipient = checkoutRecipientDetails(session);
   const fulfillment = session.metadata?.fulfillment as { method?: string; address?: string; locationName?: string } | undefined;
@@ -162,7 +163,8 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
           </div>
           <div class="field">
             <label for="customerEmail">Correo electrónico</label>
-            <input id="customerEmail" type="email" autocomplete="email" placeholder="tu@gmail.com" value="${escapeHtml(customerContact.email)}" aria-describedby="customerEmailError"${invalid("customerEmail")} />
+            <input id="customerEmail" type="email" autocomplete="email" placeholder="tu@gmail.com" value="${escapeHtml(customerContact.email)}" aria-describedby="customerEmailError"${invalid("customerEmail")}${subscriptionCheckout ? " required" : ""} />
+            ${subscriptionCheckout ? '<p class="field-hint">Te enviaremos aquí los enlaces de tus próximas entregas.</p>' : ""}
             ${fieldError("customerEmail")}
           </div>
           <div class="field">
