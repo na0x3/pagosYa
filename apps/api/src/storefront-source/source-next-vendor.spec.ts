@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { nextStoreFiles } from './fixtures/next-store';
-import { compileNextPreview } from './source-next';
+import { compileNextPreview, nextVendorScript } from './source-next';
 
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
 
@@ -10,6 +10,12 @@ const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checko
 jest.setTimeout(120_000);
 
 describe('compiled pages share one vendor script', () => {
+  it('builds the vendor script once per process, because every save, verify and screenshot compiles', async () => {
+    const first = nextVendorScript();
+    expect(nextVendorScript()).toBe(first);
+    expect((await first).length).toBeGreaterThan(100_000);
+  });
+
   it('compiles React, ReactDOM and motion once, and each page script stays small', async () => {
     const out = await compileNextPreview(nextStoreFiles(), 'shop');
     const vendor = out.find(file => file.path === '_compiled/vendor.js');

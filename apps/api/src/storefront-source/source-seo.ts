@@ -17,7 +17,7 @@ export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSna
   // stable URL — it is an ordinary page whose pretty pageUrl below IS its real, final canonical,
   // so its sitemap/llms.txt entry and its baked canonical agree with each other (and with the
   // pretty URL the runtime independently sets in commerce.js).
-  const pages = snapshot.files.filter(f => f.path.endsWith('.html') && !['product.html', 'checkout.html', 'coleccion.html'].includes(f.path) && !sourceSeoCopy(f.content).noindex);
+  const pages = snapshot.files.filter(f => f.path.endsWith('.html') && !['product.html', 'checkout.html', 'coleccion.html', '404.html'].includes(f.path) && !sourceSeoCopy(f.content).noindex);
   const pageUrl = (path: string) => sourcePageUrl(home, path);
   const products: Array<{ id: string; name: string }> = Array.isArray(config.data?.items) ? config.data.items : [];
   const urls = [...pages.map(f => pageUrl(f.path)), ...products.map(p => `${home.replace(/\/$/, '')}/p/${encodeURIComponent(p.id)}`)];
@@ -30,7 +30,7 @@ export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSna
     // fallback here is neutral `home`, never a guess. checkout never enters search. productos.html
     // has one fixed meaning, so pageUrl(file.path) below already IS its real canonical — no
     // fallback needed, and it agrees with both the sitemap entry above and the runtime value.
-    const privatePage = file.path === 'checkout.html';
+    const privatePage = file.path === 'checkout.html' || file.path === '404.html';
     const runtimeFallbackPage = ['product.html', 'coleccion.html'].includes(file.path);
     const canonical = runtimeFallbackPage || privatePage ? home : pageUrl(file.path);
     const head = seoHead({ title: copy.title || name, description: copy.description || config.data?.tagline || name, canonical, graph: [], noindex: privatePage || copy.noindex });

@@ -21,6 +21,7 @@ export function sourceStoreConfigData(publicStore: SourcePublicStore, apiUrl: UR
   return {
     storeName: publicStore.storeName, creditsEnabled: publicStore.creditsEnabled, digitalGoodsEnabled: publicStore.digitalGoodsEnabled, shippingEnabled: publicStore.shippingEnabled, shippingPickupEnabled: publicStore.shippingPickupEnabled, shippingCarriersEnabled: publicStore.shippingCarriersEnabled, bundlesEnabled: publicStore.bundlesEnabled, subscriptionsEnabled: publicStore.subscriptionsEnabled, logoUrl: publicStore.logoUrl, tagline: publicStore.tagline, checkoutMode: firstRevision ? "payment" : publicStore.checkoutMode,
     contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
+    aboutText: publicStore.aboutText, contactEmail: publicStore.contactEmail, policies: publicStore.policies,
     contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
     categories: publicStore.categories, locations: publicStore.locations,
     cartRecommendationsEnabled: publicStore.cartRecommendationsEnabled, cartRecommendationProductIds: publicStore.cartRecommendationProductIds, bundles: publicStore.bundles,

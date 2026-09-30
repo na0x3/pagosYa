@@ -11,3 +11,9 @@ it('the build progress styles move nothing', () => {
 it('the live draft badge does not pulse', () => {
   expect(css('source-studio.css')).not.toMatch(/live-draft-pulse|\.live-draft-badge::before\{[^}]*animation/);
 });
+
+it('the running step is a still dot, not a lopsided ring left over from the spinner, and no orphan stage rule remains', () => {
+  const progress = css('source-build-progress.css');
+  expect(progress).not.toMatch(/\.build-state\.is-running\s*\{[^}]*border-top-color/);
+  expect(progress).not.toContain('yapi-stage__scene');
+});

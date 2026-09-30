@@ -131,3 +131,21 @@ describe('StoreSeoService — React homepages, collections and locale (task 5.4)
     expect((await seo.document('cafe')).head).toContain('<meta property="og:locale" content="es_BO">');
   });
 });
+
+it('keeps the not-found page out of the sitemap and llms.txt and never asks to index it', () => {
+  const snapshot: any = {
+    schemaVersion: 1, brief: { audience: 'private' },
+    files: [
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'cafe', checkoutOrigin: 'https://shops.example', data: { storeName: 'Café', items: [] } }) + ';' },
+      { path: 'index.html', content: '<html><head><title>Café</title></head><body><h1>Café</h1></body></html>' },
+      { path: 'nosotros.html', content: '<html><head><title>Nosotros</title></head><body><h1>Nosotros</h1></body></html>' },
+      { path: '404.html', content: '<html><head><title>No encontrada</title></head><body><h1>No encontrada</h1></body></html>' },
+    ],
+  };
+  const files = withSourceSeo(snapshot).files;
+  expect(files.find(f => f.path === 'sitemap.xml')!.content).toContain('nosotros.html');
+  expect(files.find(f => f.path === 'sitemap.xml')!.content).not.toContain('404');
+  expect(files.find(f => f.path === 'llms.txt')!.content).not.toContain('404');
+  expect(files.find(f => f.path === '404.html')!.content).toContain('noindex');
+  expect(files.find(f => f.path === 'nosotros.html')!.content).not.toContain('noindex');
+});

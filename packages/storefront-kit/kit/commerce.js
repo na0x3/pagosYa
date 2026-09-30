@@ -1101,20 +1101,24 @@
   // Outside preview, demo and hosted the store is only trusted once the live copy arrived (`ready`), so a page never
   // flashes "no disponible" while it loads; `force` fills from whatever the store holds when that fetch failed.
   function renderInfoPages(force = false) {
-    if (!force && !ready) return;
-    document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
+    const live = force || ready;
+    if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
       slot.innerHTML = INFO_LINKS.filter(([kind]) => infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('');
       slot.hidden = !slot.innerHTML;
     });
     let unavailable = false;
     document.querySelectorAll('[data-pagosya-page]').forEach(mount => {
       const kind = mount.getAttribute('data-pagosya-page');
+      // The fixed pages need no store data, so they never wait for it.
       if (kind === 'notfound') { mount.innerHTML = '<p>La página que buscas no existe.</p><p><a href="index.html">Volver al inicio</a></p>'; return; }
+      if (kind === 'cookies') { mount.innerHTML = `<div class="pagosya-info">${COOKIES_BODY}</div>`; return; }
+      if (!live) return;
       const html = infoBody(kind);
       mount.innerHTML = html ? `<div class="pagosya-info">${html}</div>` : '<p>Esta información aún no está disponible.</p><p><a href="index.html">Volver al inicio</a></p>';
       if (!html) unavailable = true;
     });
-    if (document.querySelector('[data-pagosya-page]')) setNoindex(unavailable);
+    // A failed live fetch (`force`) says nothing about the page, so it never asks search engines to drop it.
+    if (live && document.querySelector('[data-pagosya-page]')) setNoindex(unavailable && !force);
   }
   let policyDialog;
   function openPolicy(key, trigger) {

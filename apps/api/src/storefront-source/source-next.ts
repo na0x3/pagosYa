@@ -22,6 +22,16 @@ export const isNextSource = (files: SourceProjectFileDto[] = []) => files.some(f
 export const NEXT_VENDOR_PATH = '_compiled/vendor.js';
 const VENDOR_ENTRY = `import * as react from 'react'; import * as jsx from 'react/jsx-runtime'; import * as dom from 'react-dom'; import * as client from 'react-dom/client'; import * as motion from 'motion/react';
 (window as any).__pagosyaVendor = { 'react': react, 'react/jsx-runtime': jsx, 'react-dom': dom, 'react-dom/client': client, 'motion/react': motion };`;
+let vendorScript: Promise<string> | undefined;
+/** React, ReactDOM and motion for every page, built once per process: every save, agent verify and screenshot compiles. */
+export function nextVendorScript(): Promise<string> {
+  vendorScript ??= build({
+    stdin: { contents: VENDOR_ENTRY, sourcefile: 'vendor-entry.ts', resolveDir: process.cwd(), loader: 'ts' }, bundle: true, write: false,
+    platform: 'browser', charset: 'utf8', format: 'iife', target: 'es2022', minify: true, define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent',
+    plugins: [{ name: 'vendor-resolve', setup(builder) { builder.onResolve({ filter: /^(?:react|react\/jsx-runtime|react-dom|react-dom\/client|motion\/react)$/ }, args => ({ path: require.resolve(args.path) })); } }],
+  }).then(result => result.outputFiles[0].text).catch(error => { vendorScript = undefined; throw error; });
+  return vendorScript;
+}
 export const nextPages = [{ name: 'home', path: 'index.html' }, { name: 'product', path: 'product.html' }, { name: 'checkout', path: 'checkout.html' }] as const;
 
 /** Folders under components/ whose files are standard store pages (spec 2026-09-30-store-page-architecture). The value
@@ -676,12 +686,7 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
   // React, ReactDOM and motion are compiled once into a shared script every page loads first. Each page used to embed its own
   // ~400 KB copy, which pushed a store with the nine information pages over the 8 MiB source limit.
   try {
-    const vendor = await build({
-      stdin: { contents: VENDOR_ENTRY, sourcefile: 'vendor-entry.ts', resolveDir: process.cwd(), loader: 'ts' }, bundle: true, write: false,
-      platform: 'browser', charset: 'utf8', format: 'iife', target: 'es2022', minify: true, define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent',
-      plugins: [{ name: 'vendor-resolve', setup(builder) { builder.onResolve({ filter: /^(?:react|react\/jsx-runtime|react-dom|react-dom\/client|motion\/react)$/ }, args => ({ path: require.resolve(args.path) })); } }],
-    });
-    compiled.push({ path: NEXT_VENDOR_PATH, content: vendor.outputFiles[0].text });
+    compiled.push({ path: NEXT_VENDOR_PATH, content: await nextVendorScript() });
   } catch (error: any) {
     throw new SourceValidationError(`The shared vendor script failed to compile: ${String(error.errors?.[0]?.text || error.message).slice(0, 450)}`);
   }

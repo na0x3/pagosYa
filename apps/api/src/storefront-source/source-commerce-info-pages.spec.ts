@@ -7,7 +7,7 @@ const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checko
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 
 const base = { storeName: 'Marca', items: [{ id: 'p1', name: 'Café', amount: 2000, currency: 'BOB', stock: null, imageUrls: [] }] };
-async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Record<string, unknown>) {
+async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Record<string, unknown>, fetchImpl?: () => Promise<unknown>) {
   const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido</button><section data-pagosya-catalog></section><section data-pagosya-cart></section><main><div data-pagosya-page="${kind}"></div></main><footer><nav data-pagosya-pages></nav></footer><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
   const w = dom.window;
   w.HTMLElement.prototype.scrollIntoView = () => {};
@@ -17,7 +17,7 @@ async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Re
   const data = { ...base, ...extra };
   w.PAGOSYA_PREVIEW = !live;
   w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data };
-  w.fetch = jest.fn(async () => ({ ok: true, json: async () => ({ ...data, ...live }) }));
+  w.fetch = jest.fn(fetchImpl ?? (async () => ({ ok: true, json: async () => ({ ...data, ...live }) })));
   w.eval(commerce);
   await new Promise(resolve => setTimeout(resolve, 60));
   return w;
@@ -118,6 +118,35 @@ describe('information pages in the storefront runtime', () => {
     expect(mount(w).textContent).toContain('Cambios en 7 días.');
     expect(noindex(w)).toBeNull();
     w.close();
+  });
+});
+
+describe('information pages while the live store is slow or unavailable', () => {
+  const never = () => new Promise<never>(() => {});
+  const down = async () => ({ ok: false, status: 429, json: async () => ({}) });
+
+  it('shows the fixed pages at once, without waiting for the live store', async () => {
+    for (const kind of ['cookies', 'notfound']) {
+      const w = await shop(kind, {}, {}, never);
+      expect({ kind, text: mount(w).textContent!.length > 20 }).toEqual({ kind, text: true });
+      w.close();
+    }
+  });
+
+  it('does not show "no disponible" for a page that needs store data while that data is still loading', async () => {
+    const w = await shop('refund', { policies: { returns: 'Cambios en 7 días.' } }, {}, never);
+    expect(mount(w).textContent).not.toContain(UNAVAILABLE);
+    w.close();
+  });
+
+  it('falls back to the published data when the live store fails, and never asks search engines to drop the page for it', async () => {
+    const w = await shop('refund', { policies: { returns: 'Cambios en 7 días.' } }, {}, down);
+    expect(mount(w).textContent).toContain('Cambios en 7 días.');
+    expect(noindex(w)).toBeNull();
+    const empty = await shop('refund', {}, {}, down);
+    expect(mount(empty).textContent).toContain(UNAVAILABLE);
+    expect(noindex(empty)).toBeNull();
+    w.close(); empty.close();
   });
 });
 
