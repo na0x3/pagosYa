@@ -76,6 +76,13 @@ describe('kit cart with subscription lines', () => {
     expect(text.replace(/ /g, ' ')).toMatch(/Subtotal\s*Bs\s*120/);
   });
 
+  it('the cart line says what is paid today and what the subscription costs afterwards', () => {
+    const w = runtime(catalog(), [{ id: 'tea', quantity: 1, subscriptionCadence: 'MONTHLY' }, { id: 'coffee', quantity: 2, subscriptionCadence: 'MONTHLY' }]);
+    const text = w.document.querySelector('[data-pagosya-cart]').textContent.replace(/\s+/g, ' ').replace(/\u00a0/g, ' ');
+    expect(text).toContain('Bs 30,00 hoy, luego Bs 45,00 / cada mes');
+    expect(text).toContain('Bs 90,00 c/u');
+  });
+
   it('asks for consent only at payment and sends it with the cadence', async () => {
     const w = runtime(catalog(), [{ id: 'coffee', quantity: 1, subscriptionCadence: 'MONTHLY' }]);
     const label = w.document.querySelector('.commerce-consent');
@@ -150,6 +157,21 @@ describe('kit product page choice', () => {
     buy(w).click();
     expect(serialized(w)).toEqual([{ id: 'coffee', quantity: 1 }, { id: 'coffee', quantity: 1, subscriptionCadence: 'WEEKLY' }]);
     expect(w.document.querySelector('[data-subscription-price]').textContent.replace(/\u00a0/g, ' ')).toBe('Bs 95,00 cada semana');
+  });
+
+  it('says "hoy, luego" on the product page when a sale makes the first order cheaper than the locked price', () => {
+    const w = boot('tea');
+    choose(w, 'subscribe');
+    // One-time sale 40% off (Bs 30) beats 50 - 10% (Bs 45), which is what the subscriber keeps paying.
+    expect(w.document.querySelector('[data-subscription-price]').textContent.replace(/\u00a0/g, ' ')).toBe('Bs 30,00 hoy, luego Bs 45,00 / cada mes');
+  });
+
+  it('keeps the plain price when first order and locked price match', () => {
+    const w = boot('coffee');
+    choose(w, 'subscribe', 'MONTHLY');
+    const text = w.document.querySelector('[data-subscription-price]').textContent.replace(/\u00a0/g, ' ');
+    expect(text).toBe('Bs 90,00 cada mes');
+    expect(text).not.toContain('hoy');
   });
 
   it('blocks a second frequency inline with the API message', () => {

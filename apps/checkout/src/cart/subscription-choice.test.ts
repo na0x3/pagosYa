@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { cartItemKey, parseCartItemKey } from "../cart-state";
 import { cart, cartTotal } from "./cart";
-import { CADENCE_CONFLICT_MESSAGE, cartCadenceConflict, subscriptionsAvailable, subscriptionChoiceHtml, subscriptionConsentText, subscriptionUnitAmount } from "./subscription-choice";
+import { CADENCE_CONFLICT_MESSAGE, cartCadenceConflict, subscriptionsAvailable, subscriptionChoiceHtml, subscriptionConsentText, subscriptionPriceText, subscriptionRecurringAmount, subscriptionUnitAmount } from "./subscription-choice";
 
 const item = { id: "p1", name: "Café", amount: 8000, currency: "BOB", discountPercent: null, discountStartsAt: null, discountEndsAt: null, variants: [], extras: [],
   subscriptionOptions: [{ cadence: "WEEKLY", discountPercent: 5 }, { cadence: "MONTHLY", discountPercent: 10 }] } as never;
@@ -73,5 +73,27 @@ describe("subscriptionsAvailable", () => {
     expect(subscriptionsAvailable({ subscriptionsEnabled: false, checkoutMode: "payment" } as never)).toBe(false);
     expect(subscriptionsAvailable({ checkoutMode: "payment" } as never)).toBe(false);
     for (const checkoutMode of ["whatsapp", "external"]) expect(subscriptionsAvailable({ subscriptionsEnabled: true, checkoutMode } as never)).toBe(false);
+  });
+});
+
+describe("first-order price versus the locked price (I8)", () => {
+  const past = new Date(Date.now() - 3_600_000).toISOString();
+  const future = new Date(Date.now() + 3_600_000).toISOString();
+  const onSale = { ...(item as object), discountPercent: 30, discountStartsAt: past, discountEndsAt: future } as never;
+  it("the locked unit ignores a scheduled sale, the first order does not", () => {
+    expect(subscriptionRecurringAmount(onSale, undefined, [], "MONTHLY")).toBe(7200);
+    expect(subscriptionUnitAmount(onSale, undefined, [], "MONTHLY")).toBe(5600);
+  });
+  it("adds extras at full price to both", () => {
+    const extras = [{ id: "e1", name: "Molido", amount: 500 }] as never;
+    expect(subscriptionRecurringAmount(item, undefined, extras, "MONTHLY")).toBe(7700);
+  });
+  it("prints today and later only when they differ", () => {
+    expect(subscriptionPriceText(5600, 7200, "BOB", "MONTHLY")).toBe("56.00 BOB hoy, luego 72.00 BOB / cada mes");
+    expect(subscriptionPriceText(7200, 7200, "BOB", "MONTHLY")).toBe("72.00 BOB / cada mes");
+  });
+  it("the choice fieldset shows the split during a sale and the plain price otherwise", () => {
+    expect(subscriptionChoiceHtml(onSale, "MONTHLY")).toContain("56.00 BOB hoy, luego 72.00 BOB / cada mes");
+    expect(subscriptionChoiceHtml(item, "MONTHLY")).not.toContain("hoy, luego");
   });
 });

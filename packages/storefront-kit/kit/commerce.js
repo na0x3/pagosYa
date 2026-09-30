@@ -274,6 +274,16 @@
     const offer = offerFor(p, cadence), base = variant ? variant.amount : p.amount, oneTime = price(variant ? { ...p, amount: variant.amount } : p);
     return offer ? Math.min(oneTime, Math.round(base * (100 - offer.discountPercent) / 100)) : oneTime;
   };
+  /* What the subscriber keeps paying: the discounted base, ignoring any scheduled one-time sale. */
+  const subscriptionRecurringPrice = (p, variant, cadence) => {
+    const offer = offerFor(p, cadence), base = variant ? variant.amount : p.amount;
+    return offer ? Math.round(base * (100 - offer.discountPercent) / 100) : subscriptionPrice(p, variant, cadence);
+  };
+  /* "Bs 30 hoy, luego Bs 45 / cada mes" when a sale makes the first order cheaper than the locked price; else "Bs 45 cada mes". */
+  const subscriptionPriceNote = (p, variant, cadence) => {
+    const today = subscriptionPrice(p, variant, cadence), later = subscriptionRecurringPrice(p, variant, cadence);
+    return today === later ? `${money(today, p.currency)} ${CADENCE_TEXT[cadence]}` : `${money(today, p.currency)} hoy, luego ${money(later, p.currency)} / ${CADENCE_TEXT[cadence]}`;
+  };
   const keyCadence = key => { try { const parsed = JSON.parse(key); return Array.isArray(parsed) ? parsed[3] : undefined; } catch { return undefined; } };
   /* The API takes one frequency per order: the message to show when `cadence` differs from one already in the cart. */
   const cadenceConflict = cadence => cadence && [...cart.keys()].some(key => { const existing = keyCadence(key); return existing && existing !== cadence; }) ? CADENCE_CONFLICT : '';
@@ -843,7 +853,7 @@
     const groups = optionGroups(selectedProduct), variant = groups ? selectedVariant() : undefined;
     if (note) {
       note.hidden = !cadence || (groups && !variant);
-      if (!note.hidden) note.textContent = `${money(subscriptionPrice(selectedProduct, variant || undefined, cadence), selectedProduct.currency)} ${CADENCE_TEXT[cadence]}`;
+      if (!note.hidden) note.textContent = subscriptionPriceNote(selectedProduct, variant || undefined, cadence);
     }
     showCadenceConflict(cadence);
   }
@@ -2639,11 +2649,13 @@
       const listUnit = (variant ? variant.amount : p.amount) + (line.extras || []).reduce((sum, e) => sum + e.amount, 0);
       const saved = listUnit > amount ? (listUnit - amount) * quantity : 0;
       savings += saved;
-      const unitCopy = quantity > 1 || saved ? `<p class="order-item__unit">${money(amount, p.currency)} c/u${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
+      const laterUnit = line.cadence ? subscriptionRecurringPrice(p, variant, line.cadence) : amount;
+      const later = laterUnit !== amount ? `hoy, luego ${money(laterUnit, p.currency)} / ${CADENCE_TEXT[line.cadence]}` : '';
+      const unitCopy = quantity > 1 || saved || later ? `<p class="order-item__unit">${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
       const few = Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? `<p class="order-item__stock">${p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`}</p>` : '';
       rows.push(`<li class="order-item"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
       lineViews.push({ id, p, name, amount, quantity, image, option,
-        unit: quantity > 1 || saved ? `${money(amount, p.currency)} c/u${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
+        unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
     document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });

@@ -19,7 +19,7 @@ import { suppressStoreViewForMerchant } from "../storefront/merchant-views";
 import { cartLineEntries, cartRecommendationEntries, cartFulfillmentState, cartModeNote, cartActionLabel } from "./cart-review";
 import { renderStoreRoute, navigateWithinStore } from "../storefront/navigation";
 import { updateCartBar } from "./cart-bar";
-import { cadenceLabel, subscriptionConsentText } from "./subscription-choice";
+import { cadenceLabel, subscriptionConsentText, subscriptionPriceText, subscriptionRecurringAmount } from "./subscription-choice";
 
 
 export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: Store): void {
@@ -76,7 +76,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
             const visibleStock = stockStatus(remainingStock(product, variant), store.showLowStockToCustomers === true);
             return `<article class="cart-review-line" data-cart-key="${escapeHtml(key)}">
               ${image ? `<img src="${escapeHtml(image)}" alt="">` : `<span class="cart-review-placeholder" aria-hidden="true">${escapeHtml(initials(product.name))}</span>`}
-              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${escapeHtml(pickedExtrasLabel(extras))}</span>` : ""}<small>${formatAmount(unitAmount, product.currency)} c/u</small>${cadence ? `<small class="cart-line-subscription">${escapeHtml(cadenceLabel(cadence).replace(/^./, (letter) => letter.toUpperCase()))} · puedes cancelar cuando quieras</small>` : ""}${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
+              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${escapeHtml(pickedExtrasLabel(extras))}</span>` : ""}<small>${cadence && subscriptionRecurringAmount(product, variant, extras, cadence) !== unitAmount ? escapeHtml(subscriptionPriceText(unitAmount, subscriptionRecurringAmount(product, variant, extras, cadence), product.currency, cadence)) : `${formatAmount(unitAmount, product.currency)} c/u`}</small>${cadence ? `<small class="cart-line-subscription">${escapeHtml(cadenceLabel(cadence).replace(/^./, (letter) => letter.toUpperCase()))} · puedes cancelar cuando quieras</small>` : ""}${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
               <div class="cart-review-quantity" aria-label="Cantidad de ${escapeHtml(product.name)}">
                 <button type="button" data-cart-change="-1" aria-label="Quitar una unidad">−</button><span>${quantity}</span><button type="button" data-cart-change="1" aria-label="Agregar una unidad" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
               </div>

@@ -6,7 +6,7 @@ const view = {
   nextBillingAt: "2026-11-01T15:00:00.000Z", status: "ACTIVE",
   openPayment: { checkoutUrl: "https://pagar.test/#client_secret=x", amount: 15900, dueAt: "2026-11-01T15:00:00.000Z" },
   history: [{ periodStart: "2026-10-01T15:00:00.000Z", status: "PAID", amount: 15900 }],
-  cadenceOptions: [{ cadence: "MONTHLY", label: "cada mes", discountPercent: 10 }, { cadence: "WEEKLY", label: "cada semana", discountPercent: 5 }],
+  cadenceOptions: [{ cadence: "MONTHLY", label: "cada mes", discountPercent: 10, amount: 7200 }, { cadence: "WEEKLY", label: "cada semana", discountPercent: 5, amount: 7600 }],
 };
 
 describe("manageViewHtml", () => {
@@ -19,6 +19,15 @@ describe("manageViewHtml", () => {
     expect(html).not.toContain('data-action="resume"');
     expect(html).toContain("Pagado");
     expect(html).toContain("No se cobra nada automáticamente.");
+  });
+  it("shows the per-delivery price in each frequency option", () => {
+    const html = manageViewHtml(view as never);
+    expect(html).toContain("cada mes · 72.00 BOB");
+    expect(html).toContain("cada semana · 76.00 BOB");
+  });
+  it("still renders an option whose price could not be computed", () => {
+    const html = manageViewHtml({ ...view, cadenceOptions: [{ cadence: "MONTHLY", label: "cada mes", discountPercent: 0, amount: null }] } as never);
+    expect(html).toContain(">cada mes<");
   });
   it("offers resume for a paused one and nothing for a canceled one", () => {
     expect(manageViewHtml({ ...view, status: "PAUSED", openPayment: null } as never)).toContain('data-action="resume"');

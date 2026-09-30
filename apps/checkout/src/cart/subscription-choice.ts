@@ -37,6 +37,20 @@ export function subscriptionUnitAmount(item: StoreItem, variant: StoreItem["vari
   return unit + selectedExtrasAmount(extras);
 }
 
+/** What the subscriber keeps paying every delivery: the discounted base plus extras, ignoring a one-time sale. */
+export function subscriptionRecurringAmount(item: StoreItem, variant: StoreItem["variants"][number] | undefined, extras: StoreItem["extras"], cadence: CartCadence): number {
+  const offer = item.subscriptionOptions?.find((option) => option.cadence === cadence);
+  const base = variant?.amount ?? item.amount;
+  return (offer ? Math.round(base * (100 - offer.discountPercent) / 100) : discountedProductAmount(item, base)) + selectedExtrasAmount(extras);
+}
+
+/** "72.00 BOB / cada mes", or "60.00 BOB hoy, luego 72.00 BOB / cada mes" when a sale makes today's order cheaper. */
+export function subscriptionPriceText(today: number, recurring: number, currency: string, cadence: CartCadence): string {
+  return today === recurring
+    ? `${formatAmount(today, currency)} / ${LABEL[cadence]}`
+    : `${formatAmount(today, currency)} hoy, luego ${formatAmount(recurring, currency)} / ${LABEL[cadence]}`;
+}
+
 export function subscriptionChoiceHtml(item: StoreItem, selected: CartCadence | null, variant?: StoreItem["variants"][number], extras: StoreItem["extras"] = [], conflict: string | null = null): string {
   const offers = item.subscriptionOptions ?? [];
   if (!offers.length) return "";
@@ -47,7 +61,7 @@ export function subscriptionChoiceHtml(item: StoreItem, selected: CartCadence | 
   return `<fieldset class="subscription-choice">
     <legend class="sr-only">Cómo quieres comprarlo</legend>
     <label><input type="radio" name="purchaseMode" value="once" ${selected ? "" : "checked"}> <span>Compra única</span> <strong>${formatAmount(oneTime, item.currency)}</strong></label>
-    <label><input type="radio" name="purchaseMode" value="subscribe" ${selected ? "checked" : ""}> <span>${best > 0 ? `Suscríbete y ahorra hasta ${best}%` : "Suscríbete"}</span> <strong>${formatAmount(subscribed, item.currency)} / ${escapeHtml(LABEL[current.cadence])}</strong></label>
+    <label><input type="radio" name="purchaseMode" value="subscribe" ${selected ? "checked" : ""}> <span>${best > 0 ? `Suscríbete y ahorra hasta ${best}%` : "Suscríbete"}</span> <strong>${escapeHtml(subscriptionPriceText(subscribed, subscriptionRecurringAmount(item, variant, extras, current.cadence), item.currency, current.cadence))}</strong></label>
     ${offers.length > 1 ? `<select name="subscriptionCadence" aria-label="Frecuencia" ${selected ? "" : "disabled"}>${offers.map((offer) => `<option value="${offer.cadence}" ${offer.cadence === current.cadence ? "selected" : ""}>${escapeHtml(LABEL[offer.cadence])}${offer.discountPercent ? ` · −${offer.discountPercent}%` : ""}</option>`).join("")}</select>` : `<input type="hidden" name="subscriptionCadence" value="${current.cadence}">`}
     ${conflict ? `<p class="subscription-choice__conflict" role="alert">${escapeHtml(conflict)}</p>` : ""}
     <p class="subscription-choice__note">Te enviamos un enlace para pagar antes de cada entrega. No se cobra automáticamente. Cancela cuando quieras.</p>

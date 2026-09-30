@@ -15,7 +15,7 @@ export function manageViewHtml(view: SubscriptionManageView, confirmingCancel = 
     : `<button type="button" class="quiet" data-action="cancel">Cancelar suscripción</button>`;
   const actions = view.status === "ACTIVE"
     ? `<button type="button" data-action="skip">Saltar la próxima</button>
-       <label>Frecuencia <select name="cadence">${view.cadenceOptions.map(option => `<option value="${escapeHtml(option.cadence)}" ${option.cadence === view.cadence ? "selected" : ""}>${escapeHtml(option.label)}${option.discountPercent ? ` · −${option.discountPercent}%` : ""}</option>`).join("")}</select></label>
+       <label>Frecuencia <select name="cadence">${view.cadenceOptions.map(option => `<option value="${escapeHtml(option.cadence)}" ${option.cadence === view.cadence ? "selected" : ""}>${escapeHtml(option.label)}${typeof option.amount === "number" ? ` · ${escapeHtml(formatAmount(option.amount, view.currency))}` : ""}${option.discountPercent ? ` · −${option.discountPercent}%` : ""}</option>`).join("")}</select></label>
        <button type="button" data-action="change_cadence">Cambiar frecuencia</button>
        <button type="button" data-action="pause">Pausar</button>${cancel}`
     : view.status === "PAUSED" ? `<button type="button" class="primary" data-action="resume">Reanudar</button>${cancel}` : "";

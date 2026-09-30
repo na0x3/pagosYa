@@ -660,7 +660,7 @@ export interface SubscriptionManageView {
   nextBillingAt: string; status: "ACTIVE" | "PAUSED" | "CANCELED";
   openPayment: { checkoutUrl: string; amount: number; dueAt: string } | null;
   history: Array<{ periodStart: string; status: string; amount: number }>;
-  cadenceOptions: Array<{ cadence: string; label: string; discountPercent: number }>;
+  cadenceOptions: Array<{ cadence: string; label: string; discountPercent: number; amount?: number | null }>;
 }
 
 export async function fetchSubscription(token: string): Promise<SubscriptionManageView> {
