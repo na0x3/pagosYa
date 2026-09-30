@@ -135,11 +135,19 @@ export class SubscriptionsService {
     catch (error) { this.logger.warn(`Subscription notice failed for ${to}: ${(error as Error).message}`); return false; }
   }
 
+  /** True when the intent is (now) CANCELED; false when it is in another live state (e.g. PROCESSING) and must be left alone. */
+  private async cancelUnpaidIntent(tx: Prisma.TransactionClient, paymentIntentId: string): Promise<boolean> {
+    const canceled = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, status: { in: [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED] } }, data: { status: PaymentIntentStatus.CANCELED } });
+    if (canceled?.count) return true;
+    const current = await tx.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { status: true } });
+    return current?.status === PaymentIntentStatus.CANCELED;
+  }
+
   /** Cancels the open (unpaid) renewal of a subscription; paid orders are never touched. */
   async cancelOpenRenewal(tx: Prisma.TransactionClient, subscriptionId: string): Promise<boolean> {
     const open = await tx.subscriptionInvoice.findFirst({ where: { subscriptionId, status: "DUE" }, orderBy: { periodStart: "desc" } });
     if (!open) return false;
-    if (open.paymentIntentId) await tx.paymentIntent.updateMany({ where: { id: open.paymentIntentId, status: { in: [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED] } }, data: { status: PaymentIntentStatus.CANCELED } });
+    if (open.paymentIntentId && !(await this.cancelUnpaidIntent(tx, open.paymentIntentId))) return false;
     if (open.orderId) {
       const order = await tx.storeOrder.updateMany({ where: { id: open.orderId, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
       if (order.count) await tx.storeOrderStatusEvent.create({ data: { orderId: open.orderId, status: OrderFulfillmentStatus.CANCELED } });
@@ -396,9 +404,9 @@ export class SubscriptionsService {
     let paused = 0;
     for (const invoice of invoices) {
       const result = await this.prisma.$transaction(async (tx) => {
+        if (invoice.paymentIntentId && !(await this.cancelUnpaidIntent(tx, invoice.paymentIntentId))) return null;
         const marked = await tx.subscriptionInvoice.updateMany({ where: { id: invoice.id, status: "DUE" }, data: { status: "MISSED" } });
         if (!marked.count) return null;
-        if (invoice.paymentIntentId) await tx.paymentIntent.updateMany({ where: { id: invoice.paymentIntentId, status: { in: [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED] } }, data: { status: PaymentIntentStatus.CANCELED } });
         const order = await tx.storeOrder.updateMany({ where: { id: invoice.orderId!, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
         if (order.count) await tx.storeOrderStatusEvent.create({ data: { orderId: invoice.orderId!, status: OrderFulfillmentStatus.CANCELED } });
         const subscription = await tx.customerSubscription.update({ where: { id: invoice.subscriptionId }, data: { missedCount: { increment: 1 } } });

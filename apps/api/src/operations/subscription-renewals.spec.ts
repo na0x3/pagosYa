@@ -8,7 +8,7 @@ function makePrisma() {
     customerSubscription: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     subscriptionInvoice: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn(), findFirst: jest.fn(), upsert: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     paymentLink: { findFirst: jest.fn() },
-    paymentIntent: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+    paymentIntent: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     storeOrder: { create: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     storeOrderStatusEvent: { create: jest.fn() },
     deliveryAssignment: { create: jest.fn() },
@@ -119,5 +119,33 @@ describe("product subscription renewals", () => {
     await service.sendDueSubscriptionReminders("merchant_1", "store_1");
     expect(prisma.subscriptionInvoice.findMany.mock.calls[0][0].where.OR).toEqual(expect.arrayContaining([expect.objectContaining({ orderId: { not: null }, reminderCount: 1 })]));
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ subject: expect.stringContaining("Último recordatorio") }));
+  });
+
+  describe("renewal whose payment is in flight", () => {
+    const dueInvoice = { id: "inv_1", subscriptionId: productSubscription.id, orderId: "order_r1", paymentIntentId: "pi_r1", status: "DUE", dueAt: new Date(Date.now() - 8 * 86_400_000) };
+    beforeEach(() => {
+      prisma.paymentIntent.updateMany.mockResolvedValue({ count: 0 });
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "PROCESSING" });
+    });
+    it("expire leaves invoice, order and missedCount untouched", async () => {
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([dueInvoice]);
+      const result = await service.expireMissedRenewals("merchant_1", "store_1");
+      expect(result).toEqual({ missed: 0, paused: 0 });
+      expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
+      expect(prisma.storeOrder.updateMany).not.toHaveBeenCalled();
+      expect(prisma.customerSubscription.update).not.toHaveBeenCalled();
+    });
+    it("expire still counts the miss when the intent was already canceled", async () => {
+      prisma.paymentIntent.findUnique.mockResolvedValue({ id: "pi_r1", status: "CANCELED" });
+      prisma.subscriptionInvoice.findMany.mockResolvedValue([dueInvoice]);
+      prisma.customerSubscription.update.mockResolvedValue({ ...productSubscription, missedCount: 1 });
+      expect(await service.expireMissedRenewals("merchant_1", "store_1")).toEqual({ missed: 1, paused: 0 });
+    });
+    it("cancelOpenRenewal declines and changes nothing", async () => {
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue(dueInvoice);
+      expect(await service.cancelOpenRenewal(prisma, productSubscription.id)).toBe(false);
+      expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
+      expect(prisma.storeOrder.updateMany).not.toHaveBeenCalled();
+    });
   });
 });
