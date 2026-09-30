@@ -302,6 +302,14 @@ export class SubscriptionsService {
         const terms = await this.termsFor(subscription, storeId, now);
         if (!terms) continue;
         if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); continue; }
+        if (subscription.paymentLinkId && advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count) <= now) {
+          // More than a whole period overdue (e.g. after a suspension): skip the missed periods instead of billing one per run.
+          const earliest = new Date(now.getTime() + terms.noticeHours * 3_600_000);
+          let next = subscription.nextBillingAt;
+          while (next <= earliest) next = advanceBillingDate(next, terms.interval, terms.count);
+          await this.prisma.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE", nextBillingAt: subscription.nextBillingAt }, data: { nextBillingAt: next } });
+          continue;
+        }
         const generationAt = new Date(subscription.nextBillingAt.getTime() - terms.noticeHours * 3_600_000);
         if (generationAt > now) continue;
         if (terms.product) {

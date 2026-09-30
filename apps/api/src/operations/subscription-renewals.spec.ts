@@ -315,6 +315,47 @@ describe("product subscription renewals", () => {
     });
   });
 
+  describe("a long-overdue subscription (N2)", () => {
+    it("rolls a 5-week-overdue monthly-free weekly subscription forward without a burst of invoices", async () => {
+      const overdue = new Date(Date.now() - 35 * 86_400_000);
+      prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, cadence: "WEEKLY", nextBillingAt: overdue }]);
+      const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(result.created).toBe(0);
+      expect(prisma.subscriptionInvoice.upsert).not.toHaveBeenCalled();
+      expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+      expect(email.send).not.toHaveBeenCalled();
+      const roll = prisma.customerSubscription.updateMany.mock.calls.find(([arg]: any[]) => arg.where.nextBillingAt?.getTime() === overdue.getTime())![0];
+      expect(roll.where).toEqual({ id: productSubscription.id, status: "ACTIVE", nextBillingAt: overdue });
+      const next: Date = roll.data.nextBillingAt;
+      expect((next.getTime() - overdue.getTime()) % (7 * 86_400_000)).toBe(0);
+      expect(next.getTime()).toBeGreaterThan(Date.now() + 72 * 3_600_000);
+      expect(next.getTime() - 7 * 86_400_000).toBeLessThanOrEqual(Date.now() + 72 * 3_600_000);
+    });
+    it("then bills exactly one invoice for the next upcoming period", async () => {
+      const overdue = new Date(Date.now() - 35 * 86_400_000);
+      prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, cadence: "WEEKLY", nextBillingAt: overdue }]);
+      await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      const rolled: Date = prisma.customerSubscription.updateMany.mock.calls[0][0].data.nextBillingAt;
+      prisma.customerSubscription.updateMany.mockClear();
+      prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, cadence: "WEEKLY", nextBillingAt: new Date(Date.now() + 48 * 3_600_000) }]);
+      const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(result.created).toBe(1);
+      expect(rolled.getTime()).toBeGreaterThan(Date.now());
+      expect(paymentIntents.createInTransaction).toHaveBeenCalledTimes(1);
+    });
+    it("bills normally when only slightly overdue (less than one period)", async () => {
+      prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, cadence: "WEEKLY", nextBillingAt: new Date(Date.now() - 2 * 86_400_000) }]);
+      const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(result.created).toBe(1);
+    });
+    it("does not roll a cross-mode subscription", async () => {
+      prisma.storeOrder.findMany.mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: false } }]);
+      prisma.customerSubscription.findMany.mockResolvedValue([{ ...productSubscription, cadence: "WEEKLY", nextBillingAt: new Date(Date.now() - 35 * 86_400_000) }]);
+      await service.generateSubscriptionInvoices("merchant_1", "store_1");
+      expect(prisma.customerSubscription.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe("pausing and reminders (I4)", () => {
     it("auto-pause also cancels the next open renewal", async () => {
       prisma.subscriptionInvoice.findMany.mockResolvedValue([{ id: "inv_2", subscriptionId: productSubscription.id, orderId: "order_r2", paymentIntentId: "pi_r2", status: "DUE", dueAt: new Date(Date.now() - 8 * 86_400_000) }]);
