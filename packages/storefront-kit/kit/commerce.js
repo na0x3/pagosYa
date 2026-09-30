@@ -1048,6 +1048,74 @@
     const present = keys.filter(key => typeof storePolicies()[key] === 'string' && storePolicies()[key].trim());
     return present.length ? `<nav class="pagosya-policies" aria-label="Políticas de la tienda">${present.map(key => `<button type="button" data-pagosya-policy="${key}">${escape(POLICY_TITLES[key])}</button>`).join('')}</nav>` : '';
   }
+  // Information pages (spec 2026-09-30-store-content-pages-design): each `data-pagosya-page` mount is filled from the
+  // live store with escaped text, and `data-pagosya-pages` links only the pages that have something to show.
+  const INFO_LINKS = [
+    ['about', 'nosotros.html', 'Nosotros'], ['contact', 'contacto.html', 'Contacto'], ['shipping', 'envios.html', 'Envíos y entregas'],
+    ['faq', 'faq.html', 'Preguntas frecuentes'], ['refund', 'reembolsos.html', 'Cambios y devoluciones'], ['privacy', 'privacidad.html', 'Privacidad'],
+    ['terms', 'terminos.html', 'Términos y condiciones'], ['cookies', 'cookies.html', 'Cookies y almacenamiento'],
+  ];
+  const infoText = value => (typeof value === 'string' ? value.trim() : '');
+  const infoParagraphs = text => text.split(/\n{2,}/).map(paragraph => `<p>${escape(paragraph).replace(/\n/g, '<br>')}</p>`).join('');
+  const policyText = key => infoText(storePolicies()[key]);
+  const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const infoLocations = () => (Array.isArray(store.locations) ? store.locations.filter(place => place && typeof place.name === 'string') : []);
+  const placeNames = places => places.map(place => escape(place.name)).join(', ');
+  function placeHours(place) {
+    const rows = (Array.isArray(place.openingHours) ? place.openingHours : []).filter(row => row && Number.isInteger(row.day) && row.day >= 0 && row.day <= 6);
+    return rows.map(row => `${WEEKDAYS[row.day]}: ${row.closed ? 'cerrado' : `${escape(row.open)} a ${escape(row.close)}`}`).join(' · ');
+  }
+  function placeList(keep = () => true) {
+    const items = infoLocations().filter(keep).map(place => `<li><strong>${escape(place.name)}</strong>${place.address ? `<br>${escape(place.address)}` : ''}${placeHours(place) ? `<br>${placeHours(place)}` : ''}<br>${[place.pickupEnabled && 'Retiro en tienda', place.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ') || 'Sin métodos de entrega disponibles'}</li>`);
+    return items.length ? `<ul class="pagosya-info__list">${items.join('')}</ul>` : '';
+  }
+  const phoneLink = () => { const phone = infoText(store.contactPhone); return /^\+?[0-9][0-9 ()-]{5,24}$/.test(phone) ? `<a href="tel:${escape(phone.replace(/[^0-9+]/g, ''))}">${escape(phone)}</a>` : ''; };
+  const emailLink = () => { const email = infoText(store.contactEmail); return /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/.test(email) ? `<a href="mailto:${escape(email)}">${escape(email)}</a>` : ''; };
+  function faqBody() {
+    const places = infoLocations(), delivering = places.filter(place => place.deliveryEnabled), pickup = places.filter(place => place.pickupEnabled);
+    const entries = [];
+    if (store.shippingEnabled || delivering.length) entries.push(['¿Hacen envíos?', delivering.length ? `Sí, entregamos a domicilio desde: ${placeNames(delivering)}.` : 'Sí, hacemos envíos.']);
+    if (pickup.length || store.shippingPickupEnabled) entries.push(['¿Puedo retirar mi pedido?', pickup.length ? `Sí, puedes retirarlo en: ${placeNames(pickup)}.` : 'Sí, puedes retirar tu pedido.']);
+    if (places.length) entries.push(['¿Dónde están?', `<ul class="pagosya-info__list">${places.map(place => `<li><strong>${escape(place.name)}</strong>${place.address ? ` — ${escape(place.address)}` : ''}</li>`).join('')}</ul>`]);
+    if (store.checkoutMode === 'payment') entries.push(['¿Cómo pago?', 'Pagas con QR o tarjeta desde la tienda, con pago seguro procesado por pagosYa.']);
+    const contact = [phoneLink(), emailLink()].filter(Boolean);
+    if (contact.length) entries.push(['¿Cómo los contacto?', contact.join(' · ')]);
+    return entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
+  }
+  const COOKIES_BODY = '<p>Esta tienda no usa cookies.</p><p>Para funcionar guarda algunos datos en el almacenamiento de tu navegador. Esos datos no salen de tu dispositivo, salvo lo que envías al hacer un pedido.</p><ul class="pagosya-info__list"><li><strong>Tu carrito:</strong> para que no pierdas lo que elegiste al cambiar de página.</li><li><strong>Tu elección de privacidad:</strong> si aceptaste o rechazaste las estadísticas; se recuerda 180 días.</li><li><strong>Estadísticas de visita</strong> (solo si las aceptas): identificadores anónimos de visitante y de visita para contar cuántas personas ven la tienda.</li><li><strong>Código de referido:</strong> si llegaste con un enlace de un socio, se recuerda durante la visita.</li><li><strong>Avisos de la tienda:</strong> si cerraste un aviso o tienes un enlace para recuperar un pedido, se recuerda durante la visita.</li></ul>';
+  const infoBody = kind => ({
+    about: () => [infoText(store.tagline) && `<p class="pagosya-info__lead">${escape(infoText(store.tagline))}</p>`, infoText(store.aboutText) && infoParagraphs(infoText(store.aboutText))].filter(Boolean).join(''),
+    contact: () => [phoneLink() && `<p>Teléfono: ${phoneLink()}</p>`, emailLink() && `<p>Correo: ${emailLink()}</p>`, placeList()].filter(Boolean).join(''),
+    shipping: () => [policyText('delivery') && infoParagraphs(policyText('delivery')), placeList(place => place.pickupEnabled || place.deliveryEnabled)].filter(Boolean).join(''),
+    refund: () => (policyText('returns') ? infoParagraphs(policyText('returns')) : ''),
+    privacy: () => (policyText('privacy') ? infoParagraphs(policyText('privacy')) : ''),
+    terms: () => (policyText('terms') ? infoParagraphs(policyText('terms')) : ''),
+    faq: faqBody,
+    cookies: () => COOKIES_BODY,
+  })[kind]?.() || '';
+  function setNoindex(on) {
+    let meta = document.head.querySelector('meta[data-pagosya-noindex]');
+    if (on && !meta) { meta = document.createElement('meta'); meta.name = 'robots'; meta.content = 'noindex'; meta.setAttribute('data-pagosya-noindex', ''); document.head.append(meta); }
+    else if (!on && meta) meta.remove();
+  }
+  // Outside preview, demo and hosted the store is only trusted once the live copy arrived (`ready`), so a page never
+  // flashes "no disponible" while it loads; `force` fills from whatever the store holds when that fetch failed.
+  function renderInfoPages(force = false) {
+    if (!force && !ready) return;
+    document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
+      slot.innerHTML = INFO_LINKS.filter(([kind]) => infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('');
+      slot.hidden = !slot.innerHTML;
+    });
+    let unavailable = false;
+    document.querySelectorAll('[data-pagosya-page]').forEach(mount => {
+      const kind = mount.getAttribute('data-pagosya-page');
+      if (kind === 'notfound') { mount.innerHTML = '<p>La página que buscas no existe.</p><p><a href="index.html">Volver al inicio</a></p>'; return; }
+      const html = infoBody(kind);
+      mount.innerHTML = html ? `<div class="pagosya-info">${html}</div>` : '<p>Esta información aún no está disponible.</p><p><a href="index.html">Volver al inicio</a></p>';
+      if (!html) unavailable = true;
+    });
+    if (document.querySelector('[data-pagosya-page]')) setNoindex(unavailable);
+  }
   let policyDialog;
   function openPolicy(key, trigger) {
     const text = storePolicies()[key];
@@ -1452,6 +1520,7 @@
     const drawerPolicies = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
     if (drawerPolicies) cartDrawer.insertAdjacentHTML('beforeend', drawerPolicies);
     document.querySelectorAll('[data-pagosya-policies]').forEach(slot => { slot.innerHTML = policyLinks(); slot.hidden = !slot.innerHTML; });
+    renderInfoPages();
   }
   renderPolicyLinks();
   let drawerSlot, drawerPlaceholder, drawerWasHidden, drawerDisplay, drawerHadStyle, drawerOverflow, drawerTrigger;
@@ -3560,7 +3629,7 @@
       store = await response.json(); ready = true; category = "all"; renderPolicyLinks();
       restoreCart(saved);
       render(); message("");
-    } catch (error) { ready = false; render(); message(error.message); }
+    } catch (error) { ready = false; renderInfoPages(true); render(); message(error.message); }
   }
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
