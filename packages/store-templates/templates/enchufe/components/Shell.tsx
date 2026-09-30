@@ -47,6 +47,7 @@ export function Footer() {
       </div>
     </div>
     <p className="ec-footer__note"><span>{store.city ? `Enviamos desde ${store.city} a toda Bolivia` : 'Envíos a toda Bolivia'}</span><span>Pagos seguros con QR y tarjeta</span></p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

@@ -16,6 +16,7 @@ export function Footer() {
     <p className="li-footer__name">{store.name}</p>
     <nav aria-label="Pie de página">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="li-footer__legal">{store.tagline || 'Obras para vivir con ellas.'}{store.city ? ` — ${store.city}` : ''} — Pagos seguros con pagosYa</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

@@ -50,6 +50,7 @@ export function Footer() {
       </div>
     </div>
     <p className="ob-footer__note">{store.name} · Hecho en Bolivia</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

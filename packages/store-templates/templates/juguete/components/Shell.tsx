@@ -17,6 +17,7 @@ export function Footer() {
     <p>{store.tagline || 'Juguetes para crecer jugando.'}</p>
     <nav aria-label="Pie de página">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="ju-footer__legal">{store.city ? `${store.city} · ` : ''}Pagos seguros con pagosYa</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

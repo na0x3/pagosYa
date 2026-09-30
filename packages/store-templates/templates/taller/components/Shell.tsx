@@ -19,6 +19,7 @@ export function Footer() {
     </div>
     <nav className="ta-footer__links" aria-label="Pie de página">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="ta-footer__note">{store.city ? `Atendemos en ${store.city} · ` : ''}Paga con QR o tarjeta</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

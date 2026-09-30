@@ -23,6 +23,7 @@ export function Footer() {
     <p className="ch-footer__line">{store.tagline || 'Cosas lindas que te alegran el día.'}</p>
     <nav aria-label="Pie de página">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="ch-footer__legal">{store.city ? `${store.city} · ` : ''}Pagos seguros con pagosYa</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

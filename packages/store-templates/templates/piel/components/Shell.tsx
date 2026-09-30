@@ -16,6 +16,7 @@ export function Footer() {
     <p className="pi-footer__name">{store.name}</p>
     <nav className="pi-footer__links" aria-label="Pie de página">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="pi-footer__note">{store.tagline || 'Básicos que se sienten como tu piel.'}{store.city ? ` · ${store.city}` : ''}</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

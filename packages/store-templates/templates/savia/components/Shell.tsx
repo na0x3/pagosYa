@@ -50,6 +50,7 @@ export function Footer() {
       </div>
     </div>
     <p className="sv-footer__note">Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

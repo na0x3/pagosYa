@@ -41,6 +41,7 @@ export function Footer() {
       </div>
     </div>
     <p className="lg-footer__note">Los suplementos no reemplazan una dieta variada. Consulta a tu médico antes de empezar. {store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta.</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

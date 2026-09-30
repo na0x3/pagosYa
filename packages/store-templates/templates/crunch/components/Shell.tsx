@@ -16,6 +16,7 @@ export function Footer() {
     <div><p className="cr-footer__name">{store.name}</p><p className="cr-footer__line">{store.tagline || 'Pequeños antojos, gran sabor.'}</p></div>
     <nav aria-label="Pie de página">{links.map(link => <a key={link.label} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="cr-footer__legal">{store.city ? `${store.city} · ` : ''}Pagos seguros con pagosYa</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

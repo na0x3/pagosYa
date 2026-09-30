@@ -31,6 +31,7 @@ export function Footer() {
       <button type="button" className="hi-footer__link" data-cart-open>Ver carrito</button>
     </nav>
     <p className="hi-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

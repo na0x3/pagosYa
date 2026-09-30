@@ -56,6 +56,7 @@ export function Footer() {
       </div>
     </div>
     <p className="gr-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 

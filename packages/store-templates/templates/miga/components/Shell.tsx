@@ -17,6 +17,7 @@ export function Footer() {
     <p>{store.tagline || 'Horneamos todos los días, con paciencia y mantequilla.'}</p>
     <nav aria-label="Pie de página">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href="checkout.html">Mi pedido</a></nav>
     <p className="mi-footer__legal">{store.city ? `${store.city} · ` : ''}Pagos seguros con pagosYa</p>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
 
