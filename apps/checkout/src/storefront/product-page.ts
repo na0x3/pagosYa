@@ -17,7 +17,7 @@ import { previewBlueprintButton, bindPreviewBlueprints } from "../preview-editor
 import { bindInternalStoreLinks, bindTimedDiscountSchedule } from "./navigation";
 import { updateCartBar } from "../cart/cart-bar";
 import { bindCartCheckout } from "../cart/cart-review-dialog";
-import { subscriptionChoiceHtml, cartCadenceConflict } from "../cart/subscription-choice";
+import { subscriptionChoiceHtml, cartCadenceConflict, subscriptionsAvailable } from "../cart/subscription-choice";
 
 /** The frequency each product page has picked; absent means Compra única. Survives the page re-rendering itself. */
 const selectedCadenceByItem = new Map<string, CartCadence>();
@@ -73,7 +73,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
   const selectedVariant = selectedVariantFor(item);
   const selectedExtras = selectedExtrasFor(item);
   const selectedStock = optionStock(item, selectedVariant);
-  const offeredCadence = store.subscriptionsEnabled ? selectedCadenceByItem.get(item.id) : undefined;
+  const offeredCadence = subscriptionsAvailable(store) ? selectedCadenceByItem.get(item.id) : undefined;
   const selectedCadence = offeredCadence && item.subscriptionOptions?.some((option) => option.cadence === offeredCadence) ? offeredCadence : null;
   const cadenceConflict = cartCadenceConflict(cart.keys(), selectedCadence);
   const key = cartItemKey(item.id, selectedVariant?.id, selectedExtras.map((extra) => extra.id), selectedCadence ?? undefined);
@@ -231,7 +231,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
         ${optionGroups.length && Object.keys(optionSelection).length ? '<button type="button" class="product-options-clear">Limpiar selección</button>' : ''}
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
-        ${store.subscriptionsEnabled && item.subscriptionOptions?.length ? `<div data-subscription-slot>${subscriptionChoiceHtml(item, selectedCadence, selectedVariant, selectedExtras, cadenceConflict)}</div>` : ""}
+        ${subscriptionsAvailable(store) && item.subscriptionOptions?.length ? `<div data-subscription-slot>${subscriptionChoiceHtml(item, selectedCadence, selectedVariant, selectedExtras, cadenceConflict)}</div>` : ""}
         <div class="product-detail-purchase">
           <div>
             <span class="product-detail-selection-title">${selectionLabels.length ? 'Tu selección' : 'Tu producto'}</span>

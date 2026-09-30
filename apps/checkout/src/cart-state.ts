@@ -1,4 +1,5 @@
 import type { Store, StoreItem } from "./api";
+import { subscriptionsAvailable } from "./cart/subscription-choice";
 const CART_VARIANT_SEPARATOR = "::";
 const CART_EXTRAS_SEPARATOR = "~~";
 const CART_CADENCE_SEPARATOR = "@@";
@@ -69,7 +70,7 @@ export function restoreCart(store: Store, productStockLimit: (item: StoreItem) =
       const { paymentLinkId, variantId, extraIds, cadence } = parseCartItemKey(key);
       const item = store.items.find((candidate) => candidate.id === paymentLinkId);
       if (!item || !Number.isInteger(qty) || qty <= 0) continue;
-      if (cadence && !(store.subscriptionsEnabled && item.subscriptionOptions?.some((option) => option.cadence === cadence))) continue;
+      if (cadence && !(subscriptionsAvailable(store) && item.subscriptionOptions?.some((option) => option.cadence === cadence))) continue;
       const variants = (item.variants ?? []);
       if (variants.length > 0 && (!variantId || !variants.some((variant) => variant.id === variantId))) continue;
       if (variants.length === 0 && variantId) continue;

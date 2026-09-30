@@ -26,12 +26,14 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
   const previousAddress = dialog.querySelector<HTMLInputElement>("[data-address]")?.value || "";
   const previousDestination = readDestinationDraft(dialog);
   const currency = store.items[0]?.currency || "BOB";
-  const lines = cartLineEntries(store);
+  const pricedLines = cartLineEntries(store);
+  const freeOrder = store.checkoutMode === "payment" && pricedLines.length > 0 && pricedLines.every((line) => line.unitAmount * line.quantity === 0);
+  // A fully free cart goes through the contact/lead path, which creates no subscription: its lines are one-time.
+  const lines = freeOrder ? pricedLines.map((line) => ({ ...line, cadence: undefined })) : pricedLines;
   const promo = activePromoForStore(store);
   const subtotal = cartTotal(store.items);
   const promoDiscount = promoDiscountAmount(store);
   const checkoutTotal = subtotal - promoDiscount;
-  const freeOrder = store.checkoutMode === "payment" && lines.length > 0 && lines.every((line) => line.unitAmount * line.quantity === 0);
   const contactCheckout = store.checkoutMode === "external" || freeOrder;
   const emailOnlyLeadCheckout = store.checkoutMode === "external";
   const recommendations = cartRecommendationEntries(store);

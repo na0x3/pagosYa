@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { cartItemKey, parseCartItemKey } from "../cart-state";
 import { cart, cartTotal } from "./cart";
-import { CADENCE_CONFLICT_MESSAGE, cartCadenceConflict, subscriptionChoiceHtml, subscriptionConsentText, subscriptionUnitAmount } from "./subscription-choice";
+import { CADENCE_CONFLICT_MESSAGE, cartCadenceConflict, subscriptionsAvailable, subscriptionChoiceHtml, subscriptionConsentText, subscriptionUnitAmount } from "./subscription-choice";
 
 const item = { id: "p1", name: "Café", amount: 8000, currency: "BOB", discountPercent: null, discountStartsAt: null, discountEndsAt: null, variants: [], extras: [],
   subscriptionOptions: [{ cadence: "WEEKLY", discountPercent: 5 }, { cadence: "MONTHLY", discountPercent: 10 }] } as never;
@@ -64,5 +64,14 @@ describe("cartCadenceConflict", () => {
     expect(cartCadenceConflict(keys, "WEEKLY")).toBeNull();
     expect(cartCadenceConflict(keys, null)).toBeNull();
     expect(cartCadenceConflict([cartItemKey("p1")], "MONTHLY")).toBeNull();
+  });
+});
+
+describe("subscriptionsAvailable", () => {
+  it("is true only for an enabled store in payment mode", () => {
+    expect(subscriptionsAvailable({ subscriptionsEnabled: true, checkoutMode: "payment" } as never)).toBe(true);
+    expect(subscriptionsAvailable({ subscriptionsEnabled: false, checkoutMode: "payment" } as never)).toBe(false);
+    expect(subscriptionsAvailable({ checkoutMode: "payment" } as never)).toBe(false);
+    for (const checkoutMode of ["whatsapp", "external"]) expect(subscriptionsAvailable({ subscriptionsEnabled: true, checkoutMode } as never)).toBe(false);
   });
 });

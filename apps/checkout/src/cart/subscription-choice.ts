@@ -1,11 +1,15 @@
 /** Compra única vs. Suscríbete y ahorra: the choice on a product page, its price rule and the consent wording. */
-import type { StoreItem } from "../api";
+import type { Store, StoreItem } from "../api";
 import { parseCartItemKey, type CartCadence } from "../cart-state";
 import { discountedProductAmount, selectedExtrasAmount } from "./cart";
 import { escapeHtml, formatAmount } from "../ui/html";
 
 const LABEL: Record<CartCadence, string> = { WEEKLY: "cada semana", BIWEEKLY: "cada dos semanas", MONTHLY: "cada mes" };
 export const cadenceLabel = (cadence: CartCadence) => LABEL[cadence];
+
+/** Subscriptions are only offered where checkout can record consent and create them: the online-payment flow. */
+export const subscriptionsAvailable = (store: Pick<Store, "subscriptionsEnabled" | "checkoutMode">): boolean =>
+  store.subscriptionsEnabled === true && store.checkoutMode === "payment";
 
 /** Same wording the API rejects with when a cart mixes frequencies. */
 export const CADENCE_CONFLICT_MESSAGE = "Por ahora solo puedes suscribirte a una frecuencia por pedido. Separa las frecuencias en pedidos distintos.";

@@ -2,7 +2,7 @@
 import { parseCartItemKey, pickedExtras } from "../cart-state";
 import { Store, assetUrl, StoreLocation } from "../api";
 import { state } from "../state";
-import { subscriptionUnitAmount } from "./subscription-choice";
+import { subscriptionUnitAmount, subscriptionsAvailable } from "./subscription-choice";
 import { cart, itemExtras, selectedUnitAmount, productStockLimit, itemVariants, optionStock } from "./cart";
 import { productImagePosition } from "../storefront/catalog";
 import { publicStoreLocations, locationCanFulfillCart } from "../storefront/locations";
@@ -30,7 +30,7 @@ export function cartLineEntries(store: Store) {
     if (!product) return [];
     const variant = product.variants.find((candidate) => candidate.id === selected.variantId);
     const extras = pickedExtras(itemExtras(product), selected.extraIds);
-    const cadence = selected.cadence;
+    const cadence = subscriptionsAvailable(store) ? selected.cadence : undefined;
     return [{ key, product, variant, extras, quantity, cadence, unitAmount: cadence ? subscriptionUnitAmount(product, variant, extras, cadence) : selectedUnitAmount(product, variant, extras) }];
   });
 }
