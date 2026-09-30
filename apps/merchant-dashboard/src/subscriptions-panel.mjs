@@ -32,7 +32,7 @@ export function mountSubscriptionsPanel(deps) {
   async function loadSubscribers(append = false) {
     const mine = ++generation;
     const params = new URLSearchParams(Object.entries({ ...state.filters, ...(append && state.nextCursor ? { cursor: state.nextCursor } : {}) }).filter(([, value]) => value));
-    const [summary, page] = await Promise.all([append && state.summary ? state.summary : deps.api(base("/summary")), deps.api(base(params.size ? `?${params}` : ""))]);
+    const [summary, page] = await Promise.all([append && state.summary ? state.summary : deps.api(base("/summary")), deps.api(base(params.toString() ? `?${params}` : ""))]);
     if (mine !== generation) return;
     state = { ...state, loading: false, summary, items: append ? [...state.items, ...page.items] : page.items, nextCursor: page.nextCursor };
     render();
