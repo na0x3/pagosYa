@@ -1058,6 +1058,17 @@
   ];
   // The shopper's account is served by the checkout app on its own origin, never inside the store, where authored code runs.
   const accountUrl = () => { try { return config.slug && config.checkoutOrigin ? new URL(`/cuenta/${encodeURIComponent(config.slug)}`, config.checkoutOrigin).href : ''; } catch { return ''; } };
+  // The gate pages (components/auth, components/account) only point at the trusted account app; this fills in where.
+  const ACCOUNT_GATE_PATHS = { login: '', register: '/registro', 'forgot-password': '/recuperar', 'reset-password': '/recuperar', orders: '/pedidos', addresses: '/direcciones', profile: '/perfil', subscriptions: '/suscripciones' };
+  function renderAccountGates() {
+    const base = accountUrl();
+    document.querySelectorAll('a[data-pagosya-account]').forEach(link => {
+      const view = link.getAttribute('data-pagosya-account');
+      if (!view) return;
+      if (base && Object.prototype.hasOwnProperty.call(ACCOUNT_GATE_PATHS, view)) { link.setAttribute('href', base + ACCOUNT_GATE_PATHS[view]); link.removeAttribute('aria-disabled'); return; }
+      link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.textContent = 'Cuenta no disponible';
+    });
+  }
   document.addEventListener('click', event => {
     const link = event.target.closest && event.target.closest('[data-pagosya-account]');
     if (link && hosted) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
@@ -1137,6 +1148,7 @@
   // Outside preview, demo and hosted the store is only trusted once the live copy arrived (`ready`), so a page never
   // flashes "no disponible" while it loads; `force` fills from whatever the store holds when that fetch failed.
   function renderInfoPages(force = false) {
+    renderAccountGates();
     const live = force || ready;
     if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
       const account = accountUrl();
