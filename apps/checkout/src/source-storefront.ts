@@ -1,3 +1,4 @@
+import { isAccountDestination } from './account-destinations';
 import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
@@ -197,7 +198,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         const articlePrefix = `${apiOrigin.pathname.replace(/\/$/, '')}/stores/public/${encodeURIComponent(slug)}/pages/`;
         const article = url.origin === apiOrigin.origin && url.pathname.startsWith(articlePrefix) && /^[a-z]{2}(?:-[A-Z]{2})?\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(url.pathname.slice(articlePrefix.length));
         // The shopper's account pages live on this trusted origin, never in the sandboxed store (spec 2026-09-30-store-customer-accounts-design).
-        const accountPage = url.origin === location.origin && url.pathname.replace(/\/$/, '') === `/cuenta/${encodeURIComponent(slug)}`;
+        const accountPage = isAccountDestination(url, location.origin, slug);
         const allowed = article || (url.origin === location.origin && product) || hostedPage || (url.origin === 'https://wa.me' && url.pathname === '/' + phone && phone) || (store.checkoutMode === 'external' && url.href === store.leadCaptureUrl) || accountPage;
         if (allowed && ['https:', 'http:'].includes(url.protocol)) location.assign(url.href);
       } catch {}
