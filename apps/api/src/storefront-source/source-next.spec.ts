@@ -1,3 +1,4 @@
+import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 // Compiles real Next.js projects; under a full parallel run this takes well past the 5s default.
 jest.setTimeout(60_000);
 
@@ -379,4 +380,14 @@ it.each([
 it('accepts an ordinary text input', async () => {
   const files = nextStoreFiles().map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace('export default function', 'const Extra = () => <input type="text" aria-label="Nombre" />;\nexport default function') } : f);
   await expect(compileNextPreview(files)).resolves.toBeDefined();
+});
+
+it('keeps the password field filename in repair diagnostics and shows useful Spanish to the merchant', () => {
+  const files = [...nextStoreFiles(), { path: 'components/unsafe-field.tsx', content: 'export const Field = () => <input type="password" />;' }];
+  let error: unknown;
+  try { validateNextSources(files); } catch (caught) { error = caught; }
+  expect(repairDiagnostic(error)).toContain('components/unsafe-field.tsx');
+  const shown = merchantFacingSourceFailure(error) as Error;
+  expect(shown.message).toMatch(/contraseñas.*cuenta segura/i);
+  expect(shown.message).not.toContain('components/');
 });

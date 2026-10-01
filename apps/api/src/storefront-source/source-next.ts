@@ -141,7 +141,10 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
         while (value && ts.isParenthesizedExpression(value)) value = value.expression;
         const literal = value && (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) ? value.text.toLowerCase() : '';
         if ((name === 'type' && literal === 'password') || (/^autocomplete$/i.test(name) && ['current-password', 'new-password'].includes(literal))) {
-          throw new BadGatewayException(`Quita el campo de contraseña de ${file.path}: las contraseñas solo se piden en la cuenta segura de pagosYa.`);
+          throw new SourceValidationError(
+            `Quita el campo de contraseña de ${file.path}: las contraseñas solo se piden en la cuenta segura de pagosYa.`,
+            'Las contraseñas solo se piden en la cuenta segura de pagosYa. Quita el campo de contraseña del diseño para continuar.',
+          );
         }
       }
       ts.forEachChild(node, visit);
