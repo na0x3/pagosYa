@@ -486,6 +486,28 @@ export function InfoPage({ kind }: { kind: InfoPageKind }) {
     <Container><Display>{INFO_PAGE_TITLES[kind]}</Display><div data-pagosya-page={kind} /></Container>
   </main>;
 }
+
+export type AccountGateView = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'orders' | 'addresses' | 'profile' | 'subscriptions';
+const ACCOUNT_GATE_COPY: Record<AccountGateView, { title: string; lead: string; action: string }> = {
+  login: { title: 'Ingresa a tu cuenta', lead: 'Revisa tus pedidos y guarda tus datos para comprar más rápido.', action: 'Ingresar' },
+  register: { title: 'Crea tu cuenta', lead: 'Con una cuenta sigues tus pedidos y guardas tus direcciones.', action: 'Crear cuenta' },
+  'forgot-password': { title: 'Recupera tu contraseña', lead: 'Te enviamos un enlace a tu correo para elegir una contraseña nueva.', action: 'Recuperar contraseña' },
+  'reset-password': { title: 'Elige una contraseña nueva', lead: 'Pide un enlace a tu correo y desde ahí eliges la contraseña nueva.', action: 'Pedir un enlace' },
+  orders: { title: 'Mis pedidos', lead: 'Mira el estado y el detalle de tus compras.', action: 'Ver mis pedidos' },
+  addresses: { title: 'Mis direcciones', lead: 'Guarda y cambia las direcciones donde recibes tus pedidos.', action: 'Ver mis direcciones' },
+  profile: { title: 'Mi perfil', lead: 'Cambia tus datos, descarga tu información o elimina tu cuenta.', action: 'Ver mi perfil' },
+  subscriptions: { title: 'Mis suscripciones', lead: 'Revisa y administra tus entregas recurrentes.', action: 'Ver mis suscripciones' },
+};
+/** A customer-access or account page: a title, one sentence and one button. The runtime points the button at the shopper's
+ * account on the trusted checkout origin (commerce.js, `renderAccountGates`). It draws no input on purpose: authored store
+ * code runs in a sandbox and must never receive a password or personal data. */
+export function AccountGatePage({ view }: { view: AccountGateView }) {
+  const copy = ACCOUNT_GATE_COPY[view];
+  return <main id="contenido" className="ui-account-gate" data-account-gate={view}>
+    <Container><Display>{copy.title}</Display><Lead>{copy.lead}</Lead>
+      <a className="ui-button" data-variant="solid" href="#" data-pagosya-account={view}>{copy.action}</a></Container>
+  </main>;
+}
 export function Button({ href, children, variant = 'solid', size = 'md', onClick, type = 'button' }: {
   href?: string; children: ReactNode; variant?: 'solid' | 'outline' | 'ghost' | 'link'; size?: 'sm' | 'md' | 'lg'; onClick?: () => void; type?: 'button' | 'submit';
 }) {

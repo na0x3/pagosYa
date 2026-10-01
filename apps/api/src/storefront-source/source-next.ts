@@ -81,7 +81,7 @@ Homepage MUST contain exactly one semantic primary h1, either authored directly 
 Choose the homepage information architecture for this merchant: a narrative landing page, useful catalog, gallery, playful scene or a combination can work. Keep navigation and the primary customer action easy to find. Use anchors for destinations and buttons for actions/state changes. Additional pages are optional when the content earns them. Keep cart access visible on mobile.`;
 
 export function validateNextSources(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop') {
-  if (!Array.isArray(files) || files.length > 24) throw new BadGatewayException('El proyecto React debe contener como máximo 24 archivos de diseño.');
+  if (!Array.isArray(files) || files.length > 32) throw new BadGatewayException('El proyecto React debe contener como máximo 32 archivos de diseño.');
   const seen = new Set<string>();
   const missingAlt: string[] = [];
   for (const file of files) {

@@ -16,10 +16,27 @@ export const CONTENT_PAGE_FILES: SourceProjectFileDto[] = PAGES.map(({ group, fi
   content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nexport default function ${component}() { return <Shell><InfoPage kind="${kind}" /></Shell>; }\n`,
 }));
 
+/** The customer-access and account pages (spec 2026-09-30-store-account-page-files-design). Each is a gate: the template's Shell
+ * around a kit AccountGatePage whose button opens the real form on the trusted checkout origin. No input is ever drawn here. */
+const ACCOUNT_PAGES: Array<{ group: 'auth' | 'account'; file: string; component: string; view: string }> = [
+  { group: 'auth', file: 'login', component: 'Login', view: 'login' }, { group: 'auth', file: 'register', component: 'Register', view: 'register' },
+  { group: 'auth', file: 'forgot-password', component: 'ForgotPassword', view: 'forgot-password' }, { group: 'auth', file: 'reset-password', component: 'ResetPassword', view: 'reset-password' },
+  { group: 'account', file: 'orders', component: 'Orders', view: 'orders' }, { group: 'account', file: 'addresses', component: 'Addresses', view: 'addresses' },
+  { group: 'account', file: 'profile', component: 'Profile', view: 'profile' }, { group: 'account', file: 'subscriptions', component: 'Subscriptions', view: 'subscriptions' },
+];
+
+export const ACCOUNT_PAGE_FILES: SourceProjectFileDto[] = ACCOUNT_PAGES.map(({ group, file, component, view }) => ({
+  path: `components/${group}/${file}.tsx`,
+  content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { AccountGatePage } from '@pagosya/ui';\nexport default function ${component}() { return <Shell><AccountGatePage view="${view}" /></Shell>; }\n`,
+}));
+
+/** Every standard page a store gets: the information and catalog pages, then the account gates. */
+export const STANDARD_PAGE_FILES: SourceProjectFileDto[] = [...CONTENT_PAGE_FILES, ...ACCOUNT_PAGE_FILES];
+
 /** The pages to add to a template's source: none when it has no Shell to host them, and never one the template ships itself. */
 export function contentPagesFor(source: ReadonlyArray<{ path: string }>): SourceProjectFileDto[] {
   if (!source.some(file => file.path === 'components/Shell.tsx')) return [];
-  return CONTENT_PAGE_FILES.filter(page => !source.some(file => file.path === page.path));
+  return STANDARD_PAGE_FILES.filter(page => !source.some(file => file.path === page.path));
 }
 
 const NAV_SLOT = '<nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />';
@@ -37,7 +54,7 @@ function withNavSlot(content: string): string | null {
   return before.trim() === '' ? `${content.slice(0, lineStart)}${before}  ${NAV_SLOT}\n${content.slice(lineStart)}` : `${content.slice(0, close)}${NAV_SLOT}${content.slice(close)}`;
 }
 
-/** Adds the information and catalog pages, and the footer nav slot that links them, to the source of a store that already
+/** Adds the information, catalog and account pages, and the footer nav slot that links them, to the source of a store that already
  * exists (spec 2026-09-30-store-page-architecture-design, sub-project 6). Idempotent; a store with no Shell is left alone. */
 export function withStandardPages(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; added: string[]; slotAdded: boolean } {
   const shell = files.find(file => file.path === 'components/Shell.tsx');
