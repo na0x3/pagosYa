@@ -167,3 +167,24 @@ it('keeps the search page out of the sitemap and llms.txt and never asks to inde
   expect(files.find(f => f.path === 'buscar.html')!.content).toContain('noindex');
   expect(files.find(f => f.path === 'colecciones.html')!.content).not.toContain('noindex');
 });
+
+describe('account gate pages in the source SEO pass', () => {
+  const PRIVATE = ['acceso-ingresar.html', 'acceso-registro.html', 'acceso-olvide-mi-contrasena.html', 'acceso-restablecer-contrasena.html', 'cuenta-pedidos.html', 'cuenta-direcciones.html', 'cuenta-perfil.html', 'cuenta-suscripciones.html'];
+  const page = (title: string) => `<html><head><title>${title}</title></head><body><main><h1>${title}</h1></main></body></html>`;
+  const snapshot = () => ({
+    schemaVersion: 1, brief: {},
+    files: [
+      { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'marca', checkoutOrigin: 'https://pay.test', data: { storeName: 'Marca', items: [] } })};` },
+      { path: 'index.html', content: page('Inicio') },
+      ...PRIVATE.map(path => ({ path, content: page(path) })),
+    ],
+  }) as any;
+
+  it('marks them noindex and leaves them out of the sitemap', () => {
+    const out = withSourceSeo(snapshot());
+    for (const path of PRIVATE) expect(out.files.find((f: any) => f.path === path)!.content).toMatch(/name="robots"[^>]*noindex|noindex[^>]*name="robots"/);
+    const sitemap = out.files.find((f: any) => f.path === 'sitemap.xml')!.content as string;
+    for (const path of PRIVATE) expect(sitemap).not.toContain(path.replace(/\.html$/, ''));
+    expect(sitemap).toContain('https://pay.test/s/marca');
+  });
+});
