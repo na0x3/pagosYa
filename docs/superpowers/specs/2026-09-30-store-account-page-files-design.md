@@ -56,7 +56,7 @@ Eight thin page files, each starting with the `// @pagosya-page` marker:
 | `components/auth/login.tsx` | `acceso-ingresar` | `/cuenta/<slug>` |
 | `components/auth/register.tsx` | `acceso-registro` | `/cuenta/<slug>/registro` |
 | `components/auth/forgot-password.tsx` | `acceso-olvide-mi-contrasena` | `/cuenta/<slug>/recuperar` |
-| `components/auth/reset-password.tsx` | `acceso-restablecer-contrasena` | `/cuenta/<slug>/restablecer` |
+| `components/auth/reset-password.tsx` | `acceso-restablecer-contrasena` | `/cuenta/<slug>/recuperar` (reset links arrive by email, with a token, straight on the checkout app; this page asks for a new link) |
 | `components/account/orders.tsx` | `cuenta-pedidos` | `/cuenta/<slug>/pedidos` |
 | `components/account/addresses.tsx` | `cuenta-direcciones` | `/cuenta/<slug>/direcciones` |
 | `components/account/profile.tsx` | `cuenta-perfil` | `/cuenta/<slug>/perfil` |
@@ -90,6 +90,14 @@ the real form in the page through the platform's trusted-form mechanism is a pos
 A source check fails the build when a file under `components/auth/` or `components/account/` (or any page file) contains
 `type="password"`, `type='password'`, or an `autoComplete` of `current-password` / `new-password`. YAPI's instructions get
 the same rule in plain words. The check exists because the whole design depends on no store code ever handling credentials.
+
+### Where the gates may lead
+
+The checkout app's bridge allows exactly `/cuenta/<slug>` and, new here, `/cuenta/<slug>/` followed by one of `registro`, `recuperar`, `pedidos`, `direcciones`, `perfil`, `suscripciones`. `verificar` and `restablecer` stay off the list: they only work with a token from an email.
+
+### Search engines
+
+The eight pages are private: `noindex`, no canonical entry in the sitemap, like `checkout.html`.
 
 ### Routing
 
