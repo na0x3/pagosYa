@@ -363,3 +363,20 @@ describe('kit templates in React', () => {
     expect(compiledHome.content).toContain('data-cart-slot');
   });
 });
+
+it.each([
+  ['type="password"', '<input type="password" />'],
+  ["type='password'", "<input type='password' />"],
+  ['autoComplete current-password', '<input autoComplete="current-password" />'],
+  ['autoComplete new-password', '<input autoComplete="new-password" />'],
+  ['expression password', '<input type={"password"} />'],
+  ['expression autocomplete', '<input autoComplete={"new-password"} />'],
+])('rejects a password field in store code (%s)', async (_label, markup) => {
+  const files = nextStoreFiles().map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace('export default function', `const Extra = () => ${markup};\nexport default function`) } : f);
+  await expect(compileNextPreview(files)).rejects.toThrow(/contraseña/i);
+});
+
+it('accepts an ordinary text input', async () => {
+  const files = nextStoreFiles().map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace('export default function', 'const Extra = () => <input type="text" aria-label="Nombre" />;\nexport default function') } : f);
+  await expect(compileNextPreview(files)).resolves.toBeDefined();
+});
