@@ -47,6 +47,8 @@ describe('standard pages in the agent context', () => {
   it('tells the model the standard pages are filled by the platform and must never hold policy text', () => {
     const text = agentInstructions('base', 'shop', false);
     expect(text).toContain('STANDARD PAGES');
+    expect(text).toContain('AccountGatePage');
+    expect(text).toMatch(/never add a form, input, password field or script/i);
     expect(text).toMatch(/never (write|hardcode|type)[^.]*(policy|shipping|refund|privacy|terms)/i);
     expect(text).toContain('@pagosya-page');
   });

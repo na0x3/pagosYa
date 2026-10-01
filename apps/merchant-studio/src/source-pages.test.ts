@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { canAddStandardPages, listStorePages, openPagesPanel } from './source-pages';
+import { canAddStandardPages, listStorePages, openPagesPanel, previewPages } from './source-pages';
 
 const file = (path: string, content = 'x') => ({ path, content });
 const PAGE = '// @pagosya-page\nexport default function P() { return null; }';
@@ -30,7 +30,7 @@ describe('canAddStandardPages', () => {
     expect(canAddStandardPages(base)).toBe(true);
   });
   it('is false once the pages and the footer slot are there, and without a Shell', () => {
-    const withPages = [...base.filter(f => f.path !== 'components/Shell.tsx'), file('components/Shell.tsx', SHELL.replace('</footer>', '<nav data-pagosya-pages /></footer>')), ...['about', 'contact', 'shipping', 'faq', 'refund-policy', 'privacy', 'terms', 'cookies', 'not-found'].map(name => file(`components/pages/${name}.tsx`, PAGE)), file('components/catalog/collections.tsx', PAGE), file('components/catalog/search.tsx', PAGE)];
+    const withPages = [...base.filter(f => f.path !== 'components/Shell.tsx'), file('components/Shell.tsx', SHELL.replace('</footer>', '<nav data-pagosya-pages /></footer>')), ...['about', 'contact', 'shipping', 'faq', 'refund-policy', 'privacy', 'terms', 'cookies', 'not-found'].map(name => file(`components/pages/${name}.tsx`, PAGE)), file('components/catalog/collections.tsx', PAGE), file('components/catalog/search.tsx', PAGE), ...['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'account/orders', 'account/addresses', 'account/profile', 'account/subscriptions'].map(key => file(`components/${key}.tsx`, PAGE))];
     expect(canAddStandardPages(withPages)).toBe(false);
     expect(canAddStandardPages([file('components/home.tsx')])).toBe(false);
   });
@@ -63,7 +63,7 @@ describe('openPagesPanel', () => {
   });
 
   it('does not offer it when there is nothing to add, and shows the reason when adding fails', async () => {
-    const full = [...base.filter(f => f.path !== 'components/Shell.tsx'), file('components/Shell.tsx', SHELL.replace('</footer>', '<nav data-pagosya-pages /></footer>')), ...['about', 'contact', 'shipping', 'faq', 'refund-policy', 'privacy', 'terms', 'cookies', 'not-found'].map(name => file(`components/pages/${name}.tsx`, PAGE)), file('components/catalog/collections.tsx', PAGE), file('components/catalog/search.tsx', PAGE)];
+    const full = [...base.filter(f => f.path !== 'components/Shell.tsx'), file('components/Shell.tsx', SHELL.replace('</footer>', '<nav data-pagosya-pages /></footer>')), ...['about', 'contact', 'shipping', 'faq', 'refund-policy', 'privacy', 'terms', 'cookies', 'not-found'].map(name => file(`components/pages/${name}.tsx`, PAGE)), file('components/catalog/collections.tsx', PAGE), file('components/catalog/search.tsx', PAGE), ...['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'account/orders', 'account/addresses', 'account/profile', 'account/subscriptions'].map(key => file(`components/${key}.tsx`, PAGE))];
     await openPagesPanel(api(), 's1', version(full), { onAsk: vi.fn(), onAdded: vi.fn() });
     expect(document.querySelector('[data-add-standard-pages]')).toBeNull();
     document.body.innerHTML = '';
@@ -76,5 +76,34 @@ describe('openPagesPanel', () => {
   it('escapes the names of hand-made pages', async () => {
     await openPagesPanel(api(), 's1', version([...base, file('components/page-a.tsx')]), { onAsk: vi.fn(), onAdded: vi.fn() });
     expect(document.querySelector('dialog img')).toBeNull();
+  });
+});
+
+describe('previewPages', () => {
+  it('names each address and puts the commerce pages first', () => {
+    const files = ['zeta.html', 'nosotros.html', 'checkout.html', 'index.html', 'styles/x.css', 'product.html'].map(path => ({ path, content: '' }));
+    expect(previewPages(files)).toEqual([
+      { url: 'index.html', label: 'Inicio' }, { url: 'product.html', label: 'Producto' }, { url: 'checkout.html', label: 'Pago' },
+      { url: 'nosotros.html', label: 'Nosotros' }, { url: 'zeta.html', label: 'Zeta' },
+    ]);
+  });
+});
+
+describe('account gate pages', () => {
+  const gate = (path: string) => ({ path, content: '// @pagosya-page\nexport default function P() { return null; }\n' });
+  it('are listed as standard pages with their address', () => {
+    const pages = listStorePages([gate('components/auth/login.tsx'), gate('components/account/orders.tsx')]);
+    expect(pages).toEqual([
+      { file: 'components/auth/login.tsx', label: 'Ingresar', url: 'acceso-ingresar.html', standard: true },
+      { file: 'components/account/orders.tsx', label: 'Mis pedidos', url: 'cuenta-pedidos.html', standard: true },
+    ]);
+  });
+  it('are named in the preview picker', () => {
+    expect(previewPages([{ path: 'acceso-ingresar.html', content: '' }, { path: 'cuenta-pedidos.html', content: '' }]).map(p => p.label).sort()).toEqual(['Ingresar', 'Mis pedidos']);
+  });
+  it('make "Agregar páginas estándar" available when only they are missing', () => {
+    const shell = { path: 'components/Shell.tsx', content: 'export function Footer() { return <footer><nav data-pagosya-pages /></footer>; }\nexport default function Shell() { return null; }\n' };
+    const existing = ['pages/about', 'pages/contact', 'pages/shipping', 'pages/faq', 'pages/refund-policy', 'pages/privacy', 'pages/terms', 'pages/cookies', 'pages/not-found', 'catalog/collections', 'catalog/search'].map(key => gate(`components/${key}.tsx`));
+    expect(canAddStandardPages([shell, ...existing])).toBe(true);
   });
 });

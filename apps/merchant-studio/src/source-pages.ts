@@ -9,6 +9,10 @@ export type StorePage = { file: string; label: string; url: string; standard: bo
 
 // Label and address of each standard page, keyed like the API's route table (`group/file`).
 const STANDARD: Record<string, [string, string]> = {
+  'auth/login': ['Ingresar', 'acceso-ingresar.html'], 'auth/register': ['Crear cuenta', 'acceso-registro.html'],
+  'auth/forgot-password': ['Recuperar contraseña', 'acceso-olvide-mi-contrasena.html'], 'auth/reset-password': ['Nueva contraseña', 'acceso-restablecer-contrasena.html'],
+  'account/orders': ['Mis pedidos', 'cuenta-pedidos.html'], 'account/addresses': ['Mis direcciones', 'cuenta-direcciones.html'],
+  'account/profile': ['Mi perfil', 'cuenta-perfil.html'], 'account/subscriptions': ['Mis suscripciones', 'cuenta-suscripciones.html'],
   'pages/about': ['Nosotros', 'nosotros.html'], 'pages/contact': ['Contacto', 'contacto.html'], 'pages/shipping': ['Envíos y entregas', 'envios.html'],
   'pages/faq': ['Preguntas frecuentes', 'faq.html'], 'pages/refund-policy': ['Cambios y devoluciones', 'reembolsos.html'], 'pages/privacy': ['Privacidad', 'privacidad.html'],
   'pages/terms': ['Términos y condiciones', 'terminos.html'], 'pages/cookies': ['Cookies', 'cookies.html'], 'pages/not-found': ['Página no encontrada', '404.html'],
@@ -27,7 +31,7 @@ export function listStorePages(files: SourceFile[]): StorePage[] {
   if (has('components/product.tsx')) pages.push({ file: 'components/product.tsx', label: 'Producto', url: 'product.html', standard: false });
   if (has('components/checkout.tsx')) pages.push({ file: 'components/checkout.tsx', label: 'Pago', url: 'checkout.html', standard: false });
   for (const file of files) {
-    const match = /^components\/(pages|catalog)\/([a-z][a-z0-9-]{0,47})\.tsx$/.exec(file.path);
+    const match = /^components\/(pages|catalog|auth|account)\/([a-z][a-z0-9-]{0,47})\.tsx$/.exec(file.path);
     if (!match || !MARK.test(file.content)) continue;
     const known = STANDARD[`${match[1]}/${match[2]}`];
     pages.push({ file: file.path, label: known?.[0] ?? titleCase(match[2]), url: known?.[1] ?? `${match[2]}.html`, standard: true });
@@ -37,6 +41,16 @@ export function listStorePages(files: SourceFile[]): StorePage[] {
     if (match) pages.push({ file: file.path, label: titleCase(match[1]), url: `${match[1]}.html`, standard: false });
   }
   return pages;
+}
+
+/** Every address the preview can open, named for the merchant; commerce pages first, then the rest alphabetically. */
+export function previewPages(files: SourceFile[]): Array<{ url: string; label: string }> {
+  const names = new Map<string, string>([['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pago']]);
+  for (const [label, url] of Object.values(STANDARD)) names.set(url, label);
+  const order = ['index.html', 'product.html', 'checkout.html'];
+  return files.map(file => file.path).filter(path => /^[a-z0-9-]+\.html$/.test(path))
+    .map(url => ({ url, label: names.get(url) ?? titleCase(url.replace(/\.html$/, '')) }))
+    .sort((a, b) => (order.indexOf(a.url) + 1 || 99) - (order.indexOf(b.url) + 1 || 99) || a.label.localeCompare(b.label));
 }
 
 /** True when the store has a Shell to host the standard pages and is missing some of them or their footer link. */
