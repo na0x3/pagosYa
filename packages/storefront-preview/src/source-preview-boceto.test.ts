@@ -20,7 +20,7 @@ function load() {
   const dom = new JSDOM(sourcePreviewDocument(snapshot, 'index.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
   const w = dom.window; windows.push(w);
   const posted: any[] = [];
-  w.addEventListener('message', (event: any) => { if (String(event.data?.type || '').startsWith('pagosya:boceto-') && event.data.type !== 'pagosya:boceto-mode') posted.push(event.data); });
+  w.addEventListener('message', (event: any) => { if (String(event.data?.type || '').startsWith('pagosya:boceto-') && !['pagosya:boceto-mode','pagosya:boceto-ready'].includes(event.data.type)) posted.push(event.data); });
   const send = (data: unknown) => w.dispatchEvent(new w.MessageEvent('message', { data, source: w }));
   return { w, posted, send };
 }

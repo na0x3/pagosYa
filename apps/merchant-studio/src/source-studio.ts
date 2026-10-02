@@ -666,8 +666,11 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const bocetoHost = app.querySelector<HTMLElement>('[data-source-boceto]');
     if (bocetoHost && version) bocetoPanel.mount(bocetoHost, {
       storeId, version, locked: busy || dirty() || historical(),
-      saved: async revision => { await load(revision); render(); },
-      close: () => { bocetoOpen = false; render(); },
+      // Smooth loop: saves stay silent (no preview reload); the Studio only tracks the new revision so
+      // later requests do not conflict. A full resync happens once, when the merchant closes Boceto.
+      saved: async revision => { state.revision = revision; if (version) version.revision = revision; },
+      close: () => { bocetoOpen = false; void load().then(() => render()); },
+      apply: payload => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:boceto-apply', ...payload }, '*'); } catch { /* frame gone */ } },
     });
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {

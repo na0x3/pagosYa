@@ -24,7 +24,7 @@
     handle.style.cssText = 'position:fixed;display:none;z-index:2147483647;font:12px/1 system-ui;padding:6px 10px;border-radius:999px;border:0;background:#1f6feb;color:#fff;cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.25);touch-action:none';
     document.body.append(handle);
     indicator = document.createElement('div');
-    indicator.style.cssText = 'position:fixed;display:none;z-index:2147483647;height:4px;left:0;right:0;background:#1f6feb;border-radius:2px;pointer-events:none';
+    indicator.style.cssText = 'position:fixed;display:none;z-index:2147483647;height:4px;left:12px;right:12px;background:#1f6feb;border-radius:2px;pointer-events:none;transition:top 90ms ease';
     document.body.append(indicator);
     handle.addEventListener('pointerdown', startDrag);
   }
@@ -53,10 +53,17 @@
     dragging = section;
     section.setAttribute('data-boceto-dragging', '');
     handle.style.display = 'none';
+    // A ghost of the section follows the cursor, Figma-style.
+    var ghost = section.cloneNode(true);
+    ghost.removeAttribute('data-boceto-dragging');
+    ghost.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;width:' + Math.min(section.offsetWidth, 420) + 'px;transform:scale(' + Math.min(1, 320 / Math.max(1, section.offsetWidth)) + ');transform-origin:top left;opacity:.92;border-radius:10px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);max-height:240px;left:' + (event.clientX + 14) + 'px;top:' + (event.clientY + 10) + 'px';
+    document.body.append(ghost);
     if (handle.setPointerCapture) { try { handle.setPointerCapture(event.pointerId); } catch (error) { /* pointer capture is a nicety */ } }
     var move = function (ev) {
+      ghost.style.left = (ev.clientX + 14) + 'px';
+      ghost.style.top = (ev.clientY + 10) + 'px';
       // Auto-scroll near the viewport edges so long pages stay reachable.
-      if (ev.clientY < 70) window.scrollBy(0, -18); else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 18);
+      if (ev.clientY < 70) window.scrollBy(0, -22); else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 22);
       var target = dropTarget(ev.clientY);
       if (!target) { indicator.style.display = 'none'; return; }
       var rect = target.section.getBoundingClientRect();
@@ -66,6 +73,7 @@
     var finish = function (ev) {
       document.removeEventListener('pointermove', move, true);
       document.removeEventListener('pointerup', finish, true);
+      ghost.remove();
       indicator.style.display = 'none';
       section.removeAttribute('data-boceto-dragging');
       dragging = null;
@@ -117,6 +125,26 @@
   }
 
   document.addEventListener('pointerover', function (event) { if (on && !dragging && !editing) setHovered(sectionOf(event.target)); }, true);
+  // Grab anywhere on a section: a real drag starts only after 6px of travel, so clicks and double-clicks survive.
+  document.addEventListener('pointerdown', function (event) {
+    if (!on || dragging || editing || event.button !== 0) return;
+    if (event.target === handle) return;
+    var section = sectionOf(event.target);
+    if (!section) return;
+    var startX = event.clientX, startY = event.clientY;
+    var arm = function (ev) {
+      if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 6) return;
+      cleanup();
+      hovered = section;
+      startDrag(ev);
+    };
+    var cleanup = function () {
+      document.removeEventListener('pointermove', arm, true);
+      document.removeEventListener('pointerup', cleanup, true);
+    };
+    document.addEventListener('pointermove', arm, true);
+    document.addEventListener('pointerup', cleanup, true);
+  }, true);
   document.addEventListener('scroll', placeHandle, true);
   document.addEventListener('click', function (event) {
     if (!on || dragging) return;
@@ -141,7 +169,32 @@
   document.addEventListener('focusout', function () { if (editing) stopEditing(true); }, true);
 
   window.addEventListener('message', function (event) {
-    if (event.source !== parent || !event.data || event.data.type !== 'pagosya:boceto-mode') return;
+    if (event.source !== parent || !event.data) return;
+    if (event.data.type === 'pagosya:boceto-apply') {
+      var root = document.documentElement;
+      var vars = event.data.vars || {};
+      for (var key in vars) if (/^--skb-[a-z-]+$/.test(key) && typeof vars[key] === 'string' && vars[key].length < 200) root.style.setProperty(key, vars[key]);
+      var blocks = event.data.blocks || {};
+      for (var id in blocks) {
+        if (!/^[a-z0-9-]{1,40}$/.test(id)) continue;
+        var section = document.querySelector('[data-skb="' + id + '"]');
+        if (!section) continue;
+        var spec = blocks[id] || {};
+        if (typeof spec.bg === 'string' && /^#[0-9a-f]{6}$/i.test(spec.bg)) section.style.setProperty('--skb-bg', spec.bg);
+        if (typeof spec.ink === 'string' && /^#[0-9a-f]{6}$/i.test(spec.ink)) section.style.setProperty('--skb-ink', spec.ink);
+        if (typeof spec.size === 'string' && /^(s|m|l|xl)$/.test(spec.size)) section.className = section.className.replace(/skb--(s|m|l|xl)/, 'skb--' + spec.size);
+        if (typeof spec.variant === 'string' && /^[a-z-]{2,20}$/.test(spec.variant)) {
+          var media = section.querySelector('[class*="skb-hero__media"]');
+          if (media) media.className = 'skb-hero__media skb-hero__media--' + spec.variant;
+        }
+        if (typeof spec.photo === 'string' && /^assets\/[\w.-]+$/.test(spec.photo)) {
+          var img = section.querySelector('img.skb-hero__img,img.skb-story__img,img.skb-split__img');
+          if (img) img.setAttribute('src', spec.photo);
+        }
+      }
+      return;
+    }
+    if (event.data.type !== 'pagosya:boceto-mode') return;
     on = event.data.on === true;
     if (on) ensure();
     if (!on) { setHovered(null); if (editing) stopEditing(false); }

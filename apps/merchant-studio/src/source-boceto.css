@@ -1,23 +1,37 @@
-/* Boceto: the hand-editing panel for sketch-born stores. */
-.boceto-panel { position: fixed; right: 16px; top: 72px; bottom: 16px; width: 320px; overflow: auto; background: #fff; border: 1px solid #e2e2e2; border-radius: 14px; padding: 14px; z-index: 40; font: 13px/1.5 Arial, Helvetica, sans-serif; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
-.boceto-head { position: relative; }
-.boceto-head h2 { margin: 0; font-size: 16px; }
-.boceto-close { position: absolute; top: 0; right: 0; border: 0; background: none; font-size: 14px; cursor: pointer; color: #666; }
-.boceto-head p { margin: 2px 0 10px; color: #737373; }
-.boceto-style { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin-bottom: 12px; }
-.boceto-swatch { display: flex; align-items: center; gap: 6px; text-transform: capitalize; }
-.boceto-swatch input { inline-size: 34px; block-size: 24px; border: 0; padding: 0; background: none; }
-.boceto-label { display: grid; gap: 3px; margin-bottom: 6px; color: #444; }
-.boceto-input, .boceto-area, .boceto-select { font: inherit; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 8px; width: 100%; box-sizing: border-box; }
-.boceto-area { min-height: 64px; resize: vertical; }
-.boceto-blocks { display: grid; gap: 6px; }
-.boceto-block { border: 1px solid #e7e7e7; border-radius: 10px; padding: 6px 8px; }
-.boceto-block.is-selected { border-color: #1f2a24; }
-.boceto-block__name { font: inherit; border: 0; background: none; cursor: pointer; text-align: left; width: 100%; padding: 2px 0; font-weight: 600; }
-.boceto-block__tools { display: flex; gap: 4px; margin-top: 4px; }
-.boceto-block__tools button { border: 1px solid #ddd; background: #fafafa; border-radius: 6px; cursor: pointer; padding: 2px 8px; }
-.boceto-fields { margin-top: 8px; border-top: 1px dashed #e2e2e2; padding-top: 8px; }
-.boceto-gallery { display: grid; gap: 4px; }
-.boceto-check { display: flex; gap: 6px; align-items: center; }
-.boceto-adder { display: flex; gap: 6px; margin-top: 10px; }
-.boceto-add { border: 1px solid #1f2a24; background: #1f2a24; color: #fff; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+/* Boceto: Figma-style dark inspector. Text edits live on the canvas; this panel is properties only. */
+.bct-panel { position: fixed; right: 12px; top: 68px; bottom: 12px; width: 300px; overflow: auto; background: #2c2c2c; color: #e6e6e6; border-radius: 12px; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; box-shadow: 0 16px 48px rgba(0,0,0,.4); border: 1px solid #3c3c3c; }
+.bct-head { position: sticky; top: 0; background: #2c2c2c; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #3c3c3c; z-index: 1; }
+.bct-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.bct-status { color: #9a9a9a; font-size: 11px; flex: 1; }
+.bct-close { border: 0; background: none; color: #9a9a9a; cursor: pointer; font-size: 13px; padding: 2px 4px; }
+.bct-close:hover { color: #fff; }
+.bct-section { padding: 10px 14px; border-bottom: 1px solid #383838; }
+.bct-section__title { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: #ffffff; }
+.bct-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.bct-row__label { color: #9a9a9a; flex: 0 0 72px; }
+.bct-select { flex: 1; min-width: 0; background: #383838; color: #e6e6e6; border: 1px solid #444; border-radius: 6px; padding: 5px 7px; font: inherit; }
+.bct-segment { display: flex; background: #383838; border-radius: 6px; padding: 2px; gap: 2px; flex: 1; }
+.bct-segment__option { flex: 1; border: 0; background: transparent; color: #bdbdbd; border-radius: 4px; padding: 4px 0; font: inherit; cursor: pointer; }
+.bct-segment__option.is-on { background: #4d4d4d; color: #fff; }
+.bct-color__wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+.bct-color { inline-size: 26px; block-size: 20px; border: 1px solid #555; border-radius: 4px; padding: 0; background: none; }
+.bct-color__hex { color: #bdbdbd; text-transform: uppercase; font-size: 11px; }
+.bct-blocks { display: grid; gap: 4px; }
+.bct-block { border-radius: 8px; background: #333; border: 1px solid transparent; }
+.bct-block.is-selected { border-color: #4f94ff; }
+.bct-block__head { display: flex; align-items: center; gap: 8px; padding: 7px 9px; cursor: pointer; }
+.bct-block__swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); flex: none; }
+.bct-block__name { font-weight: 600; white-space: nowrap; }
+.bct-block__peek { color: #8f8f8f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.bct-block__tools { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
+.bct-block:hover .bct-block__tools, .bct-block.is-selected .bct-block__tools { opacity: 1; }
+.bct-block__tools button { border: 0; background: #444; color: #ccc; border-radius: 4px; width: 20px; height: 20px; cursor: pointer; font-size: 11px; line-height: 1; }
+.bct-block__tools button:hover { background: #555; color: #fff; }
+.bct-props { padding: 2px 9px 8px; }
+.bct-props .bct-section { padding: 6px 0 0; border: 0; }
+.bct-gallery { display: grid; gap: 4px; flex: 1; }
+.bct-check { display: flex; gap: 6px; align-items: center; color: #bdbdbd; }
+.bct-hint { color: #7d7d7d; font-size: 11px; margin: 8px 0 0; }
+.bct-adder { display: flex; gap: 6px; padding: 12px 14px 0; }
+.bct-add { border: 0; background: #4f94ff; color: #fff; border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; white-space: nowrap; }
+.bct-add:disabled { opacity: .4; cursor: default; }
