@@ -74,6 +74,8 @@ export interface AppConfig {
   sourceFramework: 'next' | 'static';
   /** YAPI engine: the tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) or the single JSON call. */
   yapiEngine: 'agent' | 'single';
+  /** Sketch-first new stores: one structured call + deterministic assembly. Default on; YAPI_SKETCH_FIRST=off disables. */
+  yapiSketchFirst: boolean;
   sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
@@ -366,6 +368,7 @@ export default (): { app: AppConfig } => {
     },
     sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
     yapiEngine: process.env.YAPI_ENGINE === 'agent' || process.env.YAPI_ENGINE === 'single' ? process.env.YAPI_ENGINE : 'agent',
+    yapiSketchFirst: process.env.YAPI_SKETCH_FIRST !== 'off',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
     deepSeek: { apiKey: chatgptPlan ? '' : process.env.DEEPSEEK_API_KEY ?? "", enabled: !chatgptPlan && process.env.DEEPSEEK_ENABLED !== "false" },

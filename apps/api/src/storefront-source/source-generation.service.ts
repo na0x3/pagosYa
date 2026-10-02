@@ -39,6 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
+import { assembleSketch, sketchFromResponse, sketchPrompt, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -428,7 +429,9 @@ export class SourceGenerationService {
         creativeThumbnails.push(asset.path);
       }
     }
-    const exploration = creative ? this.exploreDesign() : null;
+    // Sketch-first new stores design through the sketch itself; the concept planner would be a second, slower designer.
+    const sketchFirst = !previous && !execution?.candidate && this.config.get<boolean>('app.yapiSketchFirst') !== false;
+    const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
       const original = assetLegend.find(entry => entry.path === asset.path)?.original;
@@ -547,7 +550,8 @@ export class SourceGenerationService {
     const started = Date.now();
     const runTimeout = agentEngine ? agentLimits(chatgptPlan).wallMs + 30_000 : 240_000;
     const signal = AbortSignal.any([leaseController.signal, AbortSignal.timeout(runTimeout), ...[execution?.signal, sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
-    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
+    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
+    let sketchFile: SourceProjectFileDto | null = null;
     let generated!: { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
     let agentOutcome: { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>>; requirements: AgentToolbox['requirements']; evidence: AgentToolbox['evidence'] } | undefined;
     /** The product page theme the agent chose (already sanitized and browser-checked); merged into the accepted design below. */
@@ -720,7 +724,34 @@ export class SourceGenerationService {
         unusedImagePaths = preflight.unusedImagePaths;
       };
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
-      if (agentEngine) {
+      // Sketch-first (sub-project 2): a brand-new store is one cheap structured call plus deterministic assembly.
+      // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
+      if (agentEngine && sketchFirst) {
+        await progress?.('building');
+        const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: assets.filter(file => /\.(png|jpe?g|webp|avif)$/i.test(file.path)).map(file => file.path) };
+        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchCtx.photos.map(path => ({ path, description: imageUses.find(use => use.url === assetLegend.find(asset => asset.path === path)?.original)?.description })), catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30) });
+        const attempt: (typeof attempts)[number] = { model: plan.model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
+        attempts.push(attempt);
+        let body: any = null;
+        const sketchStarted = Date.now();
+        try {
+          const allocation = budget.reserve(plan.model, Math.ceil(prompt.length / 3) + 2000, 6000, 500);
+          try {
+            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(sourceProviderBody({ model: plan.model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+            body = await response.json().catch(() => null);
+          } finally { allocation.settle(body?.usage); }
+        } catch { /* total: the default sketch below still saves */ }
+        signal.throwIfAborted();
+        attempt.durationMs = Date.now() - sketchStarted;
+        attempt.usage = sourceUsage(plan.model, body?.usage);
+        attempt.status = 'COMPLETED';
+        const { sketch } = sketchFromResponse(body, sketchCtx);
+        generated = { label: `Boceto de ${sketchCtx.storeName}`.slice(0, 120), files: assembleSketch(sketch, sketchCtx) };
+        sketchFile = { path: 'sketch.json', content: JSON.stringify(sketch, null, 2) + '\n' };
+        lenient = true;
+        try { await acceptCandidate(); } finally { lenient = false; }
+      } else if (agentEngine) {
         await progress?.('building');
         const isNew = !previous;
         const workspace = new AgentWorkspace(oldFiles, { redesign: isNew || redesign });
@@ -987,6 +1018,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const saveInput = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
       ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
       ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
+      ...(sketchFile ? [sketchFile] : []),
       { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
       { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
       ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },

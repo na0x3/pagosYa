@@ -323,3 +323,49 @@ describe('generate() with the agent engine', () => {
     expect(projects.save).not.toHaveBeenCalled();
   });
 });
+
+describe('sketch-first new stores', () => {
+  afterEach(() => jest.restoreAllMocks());
+  const sketchJson = JSON.stringify({
+    palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' },
+    fonts: { display: 'anton', text: 'manrope' }, scale: 'm',
+    blocks: [
+      { id: 'h', type: 'hero', variant: 'photo-right', headline: 'Algo dulce', sub: '', cta: 'Ver', bg: 'paper', size: 'l' },
+      { id: 'c', type: 'catalog', kicker: '', title: 'Productos', bg: 'pop', size: 'm' },
+      { id: 'z', type: 'footer', tagline: '', wordmark: 'giant', bg: 'deep', size: 'l' },
+    ],
+  });
+  const sketchResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 300 }, output: [{ content: [{ type: 'output_text', text: sketchJson }] }] }));
+  const newStore = (projects: any) => { projects.current.mockResolvedValue({ revision: 0, slug: 'pausa' }); };
+
+  it('builds a brand-new store from one sketch call, saving the assembled files and sketch.json', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const saved = projects.save.mock.calls[0][2];
+    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('skb-hero');
+    expect(saved.files.find((f: any) => f.path === 'sketch.json')).toBeDefined();
+    expect(saved.label).toContain('Boceto');
+  });
+  it('still saves a default sketch when the provider fails', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const home = projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'components/home.tsx').content;
+    expect(home).toContain('data-pagosya-catalog');
+    expect(home).toContain('skb-footer');
+  });
+  it('an existing store keeps the agent loop', async () => {
+    const { service, projects, brief } = await setup();
+    const fetchMock = jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Listo.', sections: [] }]]));
+    await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
+    expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).tools).toBeDefined();
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json')).toBeUndefined();
+  });
+});
