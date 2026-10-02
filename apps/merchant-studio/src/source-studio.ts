@@ -101,6 +101,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const selection = createSelectionState();
   let selectMode = false, platformHint = false, editableField: { id: string; value: string } | null = null, selectionRequest = 0;
   let fieldsCache: { key: string; fields: import('./source-visual-fields').VisualField[] } | null = null;
+  function syncBocetoMode(frame: HTMLIFrameElement | null = app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')) {
+    try { frame?.contentWindow?.postMessage({ type: 'pagosya:boceto-mode', on: bocetoOpen && mode === 'preview' }, '*'); } catch { /* frame is gone */ }
+  }
   function syncSelectMode(frame: HTMLIFrameElement | null = app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')) {
     try { frame?.contentWindow?.postMessage({ type: 'pagosya:source-edit-mode', on: selectMode, ...(selection.get() ? { selectedId: selection.get()!.sectionId } : {}) }, '*'); } catch { /* frame is gone */ }
   }
@@ -135,6 +138,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
+    if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
+      if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string') bocetoPanel.remoteSelect(event.data.id);
+      if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);
+      if (event.data.type === 'pagosya:boceto-text' && typeof event.data.id === 'string' && typeof event.data.field === 'string' && typeof event.data.value === 'string') bocetoPanel.remoteText(event.data.id, event.data.field, event.data.value.slice(0, 1000));
+      return;
+    }
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
     const picked = receivePreviewSelection(event, previewFrame);
     if (picked) { takeSelection(picked); return; }
@@ -156,7 +165,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => syncSelectMode(frame), { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -678,7 +687,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
-    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => { bocetoOpen = !bocetoOpen; render(); });
+    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => { bocetoOpen = !bocetoOpen; render(); syncBocetoMode(); });
     app.querySelector('#source-visual-edit')?.addEventListener('click', () => { if (!busy && !dirty() && !visualEditPending) { visualEditing = !visualEditing; mode = 'preview'; render(); } });
     app.querySelector('#source-select-mode')?.addEventListener('click', () => { selectMode = !selectMode; if (!selectMode) clearSelection(); render(); });
     app.querySelector('[data-selection-host]')?.addEventListener('click', event => {

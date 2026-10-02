@@ -196,7 +196,40 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     host.replaceChildren(root);
   }
 
+  const setByPath = (block: any, path: string, value: string) => {
+    const parts = path.split('.');
+    let node: any = block;
+    for (let i = 0; i < parts.length - 1; i++) { node = node?.[/^\d+$/.test(parts[i]) ? Number(parts[i]) : parts[i]]; if (node == null) return; }
+    const leaf = parts[parts.length - 1];
+    const key = /^\d+$/.test(leaf) ? Number(leaf) : leaf;
+    if (node == null || typeof node !== 'object') return;
+    node[key] = value.slice(0, MAXLEN[String(leaf)] ?? (path.startsWith('paragraphs') ? 600 : 200));
+  };
   return {
+    /** The preview reported a click on a section: open its form in the panel. */
+    remoteSelect(id: string) {
+      if (!sketch) return;
+      selected = id; draw();
+      if (!/^[a-z0-9-]{1,40}$/.test(id)) return;
+      host?.querySelector(`[data-boceto-block="${id}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    },
+    /** The preview dropped a section at a new position (index over the rendered section order). */
+    remoteReorder(id: string, index: number) {
+      if (!sketch) return;
+      const from = sketch.blocks.findIndex(block => block.id === id);
+      if (from === -1) return;
+      const [block] = sketch.blocks.splice(from, 1);
+      sketch.blocks.splice(Math.max(0, Math.min(index, sketch.blocks.length)), 0, block);
+      selected = id; schedule(); draw();
+    },
+    /** The preview edited a text in place. */
+    remoteText(id: string, field: string, value: string) {
+      if (!sketch || typeof field !== 'string' || !/^[a-z]+(\.\d+)?(\.[a-z]+)?$/.test(field)) return;
+      const block = sketch.blocks.find(item => item.id === id);
+      if (!block) return;
+      setByPath(block, field, value);
+      selected = id; schedule(); draw();
+    },
     mount(target: HTMLElement, options: Mount) {
       host = target; opts = options; note = '';
       const born = options.version.snapshot.files.some(file => file.path === 'sketch.json');

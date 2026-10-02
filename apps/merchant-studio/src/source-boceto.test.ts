@@ -72,3 +72,15 @@ it('renders merchant text through values, never markup', async () => {
   await mount();
   expect(host.innerHTML).not.toContain('<img src=x');
 });
+
+it('remote preview events reorder, select and edit through the panel', async () => {
+  const panel = await mount();
+  (panel as any).remoteReorder('cat', 0);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls[0][1].sketch.blocks.map((b: any) => b.id)).toEqual(['cat', 'intro', 'fin']);
+  (panel as any).remoteText('intro', 'headline', 'Desde la vista previa');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls[1][1].sketch.blocks.find((b: any) => b.id === 'intro').headline).toBe('Desde la vista previa');
+  (panel as any).remoteSelect('fin');
+  expect(host.querySelector('[data-boceto-block="fin"]')!.className).toContain('is-selected');
+});

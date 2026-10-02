@@ -7,6 +7,7 @@ import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
 import accountSlotRuntime from './source-account-slot.js?raw';
 import editModeRuntime from './source-preview-edit-mode.js?raw';
+import bocetoModeRuntime from './source-preview-boceto-mode.js?raw';
 
 export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" | "url" }
 export interface SourceSnapshot { schemaVersion: number; brief: { sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial'; businessType: string; audience: string; primaryAction: string; visualDirection: string; templateId?: string; templateRevision?: number }; files: SourceFile[] }
@@ -196,7 +197,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   flag.textContent += '\n' + videoLoopRuntime;
   if (navigation.accountForms === true) flag.textContent += '\n' + accountSlotRuntime;
   // Edit mode (visual selection) belongs to the Studio preview only: a published, hosted page never carries it.
-  if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime;
+  if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime + '\n' + bocetoModeRuntime;
   policy.after(flag);
   return "<!doctype html>" + doc.documentElement.outerHTML;
 }
