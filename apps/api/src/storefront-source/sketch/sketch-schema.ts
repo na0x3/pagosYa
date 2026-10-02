@@ -62,6 +62,34 @@ const text = (value: unknown, limit: number, fallback = '') => {
 const list = <T>(value: unknown, limit: number, map: (item: unknown) => T | null): T[] =>
   (Array.isArray(value) ? value : []).map(map).filter((item): item is T => item !== null).slice(0, limit);
 
+/** Deterministic guarantee that every provided photo appears somewhere: the hero gets the first photo
+ * when it has none, and any photo no block shows is appended to a gallery (created before the footer
+ * when missing). Used at generation time so "usa estas fotos" always means all of them. */
+export function ensureAllPhotosUsed(sketch: StoreSketch, ctx: SketchContext): StoreSketch {
+  if (!ctx.photos.length) return sketch;
+  const used = new Set<string>();
+  for (const block of sketch.blocks) {
+    if ('photo' in block && block.photo) used.add(block.photo);
+    if (block.type === 'gallery') for (const photo of block.photos) used.add(photo);
+  }
+  const missing = ctx.photos.filter(photo => !used.has(photo));
+  if (!missing.length) return sketch;
+  const blocks = sketch.blocks.map(block => ({ ...block }));
+  const hero = blocks.find(block => block.type === 'hero' && !block.photo) as Extract<SketchBlock, { type: 'hero' }> | undefined;
+  if (hero && missing.length) hero.photo = missing.shift();
+  if (missing.length) {
+    const gallery = blocks.find(block => block.type === 'gallery') as Extract<SketchBlock, { type: 'gallery' }> | undefined;
+    if (gallery) gallery.photos = [...gallery.photos, ...missing].slice(0, 12);
+    else {
+      const footerIndex = blocks.findIndex(block => block.type === 'footer');
+      const ids = new Set(blocks.map(block => block.id));
+      let next = 1; while (ids.has(`b${next}`)) next++;
+      blocks.splice(footerIndex === -1 ? blocks.length : footerIndex, 0, { id: `b${next}`, type: 'gallery', title: 'Galería', photos: missing.slice(0, 12), bg: 'paper', size: 'm' });
+    }
+  }
+  return { ...sketch, blocks };
+}
+
 export function repairSketch(input: unknown, ctx: SketchContext): { sketch: StoreSketch; notes: string[] } {
   const notes: string[] = [];
   const raw = (typeof input === 'object' && input !== null ? input : (input !== undefined && notes.push('input no era un objeto; se usó el boceto base'), {})) as Record<string, unknown>;

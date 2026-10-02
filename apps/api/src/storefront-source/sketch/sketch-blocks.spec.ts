@@ -83,3 +83,22 @@ describe('bake-lab enrichment', () => {
     for (const type of ['announce', 'split'] as const) expect(blockCss(type).length).toBeGreaterThan(0);
   });
 });
+
+describe('inline edit markers', () => {
+  it('text fields carry data-skb-field paths, including array items', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola', sub: 'sub' },
+      { id: 's', type: 'story', title: 'Proceso', paragraphs: ['uno', 'dos'] },
+      { id: 'sp', type: 'split', headline: 'Mezcla', pills: ['6 · Bs38'] },
+    ] }, ctx).sketch;
+    const hero = renderBlock(rich.blocks.find(b => b.type === 'hero')!, rich, ctx);
+    expect(hero).toContain('data-skb-field={"headline"}');
+    expect(hero).toContain('data-skb-field={"sub"}');
+    const story = renderBlock(rich.blocks.find(b => b.type === 'story')!, rich, ctx);
+    expect(story).toContain('data-skb-field={"title"}');
+    expect(story).toContain('data-skb-field={"paragraphs.0"}');
+    expect(story).toContain('data-skb-field={"paragraphs.1"}');
+    const split = renderBlock(rich.blocks.find(b => b.type === 'split')!, rich, ctx);
+    expect(split).toContain('data-skb-field={"pills.0"}');
+  });
+});

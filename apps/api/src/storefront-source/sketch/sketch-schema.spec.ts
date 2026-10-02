@@ -1,4 +1,4 @@
-import { repairSketch, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { ensureAllPhotosUsed, repairSketch, SKETCH_BLOCK_TYPES } from './sketch-schema';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 
@@ -98,5 +98,24 @@ describe('bake-lab enrichment', () => {
     expect(hero.sticker).toBe('Recién horneado');
     const split = sketch.blocks.find(b => b.type === 'split') as any;
     expect(split.pills).toEqual(['6 · Bs38', '9 · Bs54']);
+  });
+});
+
+describe('ensureAllPhotosUsed', () => {
+  const many = { ...ctx, photos: ['assets/a.jpg', 'assets/b.jpg', 'assets/c.jpg'] };
+  it('every provided photo ends up somewhere: hero first, the rest in a gallery', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, many);
+    const filled = ensureAllPhotosUsed(sketch, many);
+    const used = JSON.stringify(filled.blocks);
+    for (const photo of many.photos) expect(used).toContain(photo);
+    expect((filled.blocks.find(b => b.type === 'hero') as any).photo).toBe('assets/a.jpg');
+    expect(filled.blocks.findIndex(b => b.type === 'gallery')).toBeLessThan(filled.blocks.length - 1);
+  });
+  it('changes nothing when all photos are already used', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola', photo: 'assets/a.jpg' },
+      { id: 'g', type: 'gallery', photos: ['assets/b.jpg', 'assets/c.jpg'] },
+    ] }, many);
+    expect(ensureAllPhotosUsed(sketch, many)).toEqual(sketch);
   });
 });

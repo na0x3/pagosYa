@@ -46,9 +46,9 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     `Brief: ${JSON.stringify(input.brief)}`,
     input.catalogNames.length ? `Productos reales del catálogo (el bloque catalog los muestra solo): ${input.catalogNames.join(' · ')}` : 'Catálogo aún vacío.',
     input.photos.length
-      ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras): ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
+      ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras, y usa TODAS: cada foto aparece en algún bloque — hero, split, story o gallery): ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
-    `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. 6-10 bloques, fondos de color variados (paper/accent/deep/pop) al estilo editorial: announce arriba, hero con badge y sticker, un split de color intenso con pills, titulares enormes, wordmark gigante en el footer.`,
+    `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. 7-10 bloques y COLOR DE VERDAD: mínimo 3 bloques con fondo accent, deep o pop (nunca todo paper). El hero manda: badge arriba, titular de 4-8 palabras con carácter, foto, sticker y note con prueba social honesta. Incluye announce arriba, una marquee, un split intenso con pills, wordmark gigante en el footer.`,
     `Fuentes disponibles (ids exactos): ${SOURCE_FONT_IDS.join(', ')}. Personalidades: ${SOURCE_FONT_CATALOG.slice(0, 12).map(font => `${font.id}=${font.personality.join('/')}`).join('; ')}.`,
     'Colores en hex #rrggbb con buen contraste. Textos en español, honestos, sin inventar precios ni promesas.',
   ].join('\n');

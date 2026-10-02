@@ -4,6 +4,7 @@ import type { SketchBlock, SketchContext, StoreSketch } from './sketch-schema';
 /** JSX generators for sketch blocks. Every merchant-controlled string is embedded as a
  * JSON.stringify'd expression — `{"…"}` — so no text can escape JSX or the template literal. */
 const expr = (value: string) => `{${JSON.stringify(value)}}`;
+const editable = (field: string) => `data-skb-field=${expr(field)}`;
 
 /** Readable text colour for a given block background (WCAG contrast, shared with the palette repair). */
 const inkFor = (bg: string, sketch: StoreSketch) => bestInkFor(bg, sketch.palette.ink);
@@ -22,11 +23,11 @@ type Render = (block: SketchBlock & { type: never }, sketch: StoreSketch, ctx: S
 const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { type: T }>, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions) => string } = {
   hero: (b, s, ctx, options) => open(b, s) + `
     <div className="skb-hero__copy">
-      ${b.badge ? `<p className="skb-badge">${expr(b.badge)}</p>` : ''}
-      <${options.h1 ? 'h1' : 'h2'} className="skb-display">${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
-      ${b.sub ? `<p className="skb-lead">${expr(b.sub)}</p>` : ''}
+      ${b.badge ? `<p className="skb-badge" ${editable('badge')}>${expr(b.badge)}</p>` : ''}
+      <${options.h1 ? 'h1' : 'h2'} className="skb-display" ${editable('headline')}>${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
+      ${b.sub ? `<p className="skb-lead" ${editable('sub')}>${expr(b.sub)}</p>` : ''}
       <a className="skb-btn" href=${expr(s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido')}>${expr(b.cta)}</a>
-      ${b.note ? `<p className="skb-note">${expr(b.note)}</p>` : ''}
+      ${b.note ? `<p className="skb-note" ${editable('note')}>${expr(b.note)}</p>` : ''}
     </div>
     ${b.photo ? `<div className=${expr(`skb-hero__media skb-hero__media--${b.variant}`)}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-hero__img')}${b.sticker ? `<p className="skb-sticker" aria-hidden="true">${expr(b.sticker)}</p>` : ''}</div>` : ''}
   </section>`,
@@ -35,9 +36,9 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
   </section>`,
   split: (b, s, ctx, options) => open(b, s) + `
     <div className="skb-split__copy">
-      <${options.h1 ? 'h1' : 'h2'} className="skb-display">${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
-      ${b.body ? `<p className="skb-lead">${expr(b.body)}</p>` : ''}
-      ${b.pills.length ? `<div className="skb-pills">${b.pills.map(pill => `<span className="skb-pill">${expr(pill)}</span>`).join('')}</div>` : ''}
+      <${options.h1 ? 'h1' : 'h2'} className="skb-display" ${editable('headline')}>${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
+      ${b.body ? `<p className="skb-lead" ${editable('body')}>${expr(b.body)}</p>` : ''}
+      ${b.pills.length ? `<div className="skb-pills">${b.pills.map((pill, i) => `<span className="skb-pill" ${editable(`pills.${i}`)}>${expr(pill)}</span>`).join('')}</div>` : ''}
       <a className="skb-btn" href=${expr(b.href)}>${expr(b.cta)}</a>
     </div>
     ${b.photo ? `<div className="skb-split__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-split__img')}</div>` : ''}
@@ -50,8 +51,8 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
   </section>`,
   catalog: (b, s, _ctx, options) => open(b, s) + `
     <div className="skb-head" id="skb-catalogo">
-      ${b.kicker ? `<p className="skb-kicker">${expr(b.kicker)}</p>` : ''}
-      <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
+      ${b.kicker ? `<p className="skb-kicker" ${editable('kicker')}>${expr(b.kicker)}</p>` : ''}
+      <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
     </div>
     <template data-pagosya-product-template>
       <article className="skb-card">
@@ -67,8 +68,8 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
   </section>`,
   story: (b, s, ctx, options) => open(b, s) + `
     <div className="skb-story__copy">
-      <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
-      ${b.paragraphs.map(p => `<p className="skb-lead">${expr(p)}</p>`).join('\n      ')}
+      <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
+      ${b.paragraphs.map((p, i) => `<p className="skb-lead" ${editable(`paragraphs.${i}`)}>${expr(p)}</p>`).join('\n      ')}
     </div>
     ${b.photo ? `<div className="skb-story__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-story__img')}</div>` : ''}
   </section>`,

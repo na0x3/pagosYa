@@ -39,7 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { assembleSketch, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { assembleSketch, ensureAllPhotosUsed, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -753,7 +753,8 @@ export class SourceGenerationService {
         attempt.usage = sourceUsage(model, body?.usage);
         attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
         if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
-        const { sketch, notes, parsed } = sketchFromResponse(body, sketchCtx);
+        const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx);
+        const sketch = ensureAllPhotosUsed(drawn, sketchCtx);
         // A fallen-back attempt is FAILED: absorbed from billing, visible in the receipt, metered like every provider call.
         attempt.status = parsed ? 'COMPLETED' : 'FAILED';
         if (!parsed && !attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida; se usó el boceto base').slice(0, 300);
