@@ -43,8 +43,8 @@ it('screenshots index.html at desktop and mobile without page errors', async () 
   const tinyJpeg = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==';
   const base = [...nextStoreFiles().filter(file => ['config.js', 'commerce.js'].includes(file.path)), { path: 'assets/a.jpg', content: tinyJpeg, encoding: 'base64' as const }];
   const snapshot = await agentPreviewSnapshot({ brief: { businessType: 'Repostería', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Cálida' }, files: base }, files);
-  for (const width of [1280, 390] as const) {
-    const shot = await captureAgentDraft(snapshot, width, undefined, 'index.html', []);
+  for (const width of [1280, 390] as const) for (const page of ['index.html', 'product.html'] as const) {
+    const shot = await captureAgentDraft(snapshot, width, undefined, page, []);
     expect(shot.errors).toEqual([]);
     expect(shot.image.length).toBeGreaterThan(0);
   }

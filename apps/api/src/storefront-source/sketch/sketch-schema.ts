@@ -17,7 +17,7 @@ export type SketchBlock =
   | { id: string; type: 'newsletter'; title: string; note: string; cta: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'footer'; tagline: string; wordmark: 'giant' | 'plain'; bg: SketchBg; size: SketchSize };
 export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; blocks: SketchBlock[] };
-export type SketchContext = { storeName: string; purpose: 'shop' | 'services'; photos: string[] };
+export type SketchContext = { storeName: string; purpose: 'shop' | 'service'; photos: string[] };
 
 export const SKETCH_BLOCK_TYPES = ['hero', 'marquee', 'catalog', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
 
@@ -33,9 +33,25 @@ const hex = (value: unknown): string | null => {
   if (/^#[0-9a-f]{3}$/.test(raw)) return '#' + [...raw.slice(1)].map(c => c + c).join('');
   return null;
 };
-const luminance = (color: string) => {
+/** WCAG 2.x relative luminance and contrast ratio. */
+export const relativeLuminance = (color: string) => {
   const n = parseInt(color.slice(1), 16);
-  return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  const channel = (value: number) => {
+    const c = value / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(n >> 16) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+};
+export const contrastRatio = (a: string, b: string) => {
+  const [low, high] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => x - y);
+  return (high + 0.05) / (low + 0.05);
+};
+/** The highest-contrast readable ink for a background: the preferred ink when it reads, else near-black or white. */
+export const bestInkFor = (bg: string, preferred: string) => {
+  const candidates = [preferred, '#111111', '#ffffff'];
+  const readable = candidates.filter(ink => contrastRatio(bg, ink) >= 4.5);
+  if (readable.length) return readable[0];
+  return candidates.slice(1).sort((a, b) => contrastRatio(bg, b) - contrastRatio(bg, a))[0];
 };
 const text = (value: unknown, limit: number, fallback = '') => {
   const raw = typeof value === 'string' ? value : value == null ? fallback : String(value);
@@ -56,9 +72,9 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     if (value) palette[role] = value;
     else if (rawPalette[role] !== undefined) notes.push(`color ${role} inválido; se usó el color base`);
   }
-  // Readability: ink must contrast with paper.
-  if (Math.abs(luminance(palette.paper) - luminance(palette.ink)) < 0.25) {
-    palette.ink = luminance(palette.paper) > 0.5 ? '#111111' : '#ffffff';
+  // Readability: ink must reach WCAG AA contrast against paper.
+  if (contrastRatio(palette.paper, palette.ink) < 4.5) {
+    palette.ink = bestInkFor(palette.paper, palette.ink);
     notes.push('tinta ilegible sobre el fondo; se ajustó');
   }
 
@@ -81,12 +97,18 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     return undefined;
   };
 
-  // Blocks: keep known types, repair each field, drop the rest.
+  // Blocks: keep known types, repair each field, drop the rest. Ids that are valid and unique are
+  // preserved so Studio selections and chat chips survive reorders; the rest get fresh ones.
   const blocks: SketchBlock[] = [];
+  const keptIds = new Set<string>();
+  const rawId = (value: unknown) => {
+    if (typeof value === 'string' && /^[a-z0-9-]{1,32}$/.test(value) && !keptIds.has(value)) { keptIds.add(value); return value; }
+    return '';
+  };
   for (const item of Array.isArray(raw.blocks) ? raw.blocks : []) {
     const block = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
     const type = block.type as SketchBlock['type'];
-    const base = { id: '', bg: bg(block.bg, 'paper'), size: size(block.size) };
+    const base = { id: rawId(block.id), bg: bg(block.bg, 'paper'), size: size(block.size) };
     switch (type) {
       case 'hero': {
         const heroPhoto = photo(block.photo);
@@ -110,6 +132,11 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     }
   }
 
+  // Size: a page has at most 20 blocks; beyond that the generated file outgrows the source contract.
+  if (blocks.length > 20) { blocks.length = 20; notes.push('demasiados bloques; se conservaron los primeros 20'); }
+  // One catalog only: the commerce runtime reads a single product template and mount.
+  const extraCatalogs = blocks.filter(block => block.type === 'catalog').slice(1);
+  if (extraCatalogs.length) { notes.push('catálogo repetido; se conservó el primero'); for (const extra of extraCatalogs) blocks.splice(blocks.indexOf(extra), 1); }
   // Structure: a shop always sells and every page ends in a footer, exactly one, last.
   if (!blocks.length) blocks.push({ id: '', type: 'hero', variant: 'photo-right', headline: ctx.storeName, sub: '', cta: 'Ver productos', bg: 'paper', size: 'm' });
   if (ctx.purpose === 'shop' && !blocks.some(b => b.type === 'catalog')) {
@@ -120,7 +147,13 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
   const footer = footers[0] ?? { id: '', type: 'footer' as const, tagline: '', wordmark: 'giant' as const, bg: 'deep' as const, size: 'm' as const };
   const body = blocks.filter(b => b.type !== 'footer');
   const ordered = [...body, footer];
-  ordered.forEach((block, index) => { block.id = `b${index + 1}`; });
+  let next = 1;
+  for (const block of ordered) {
+    if (block.id) continue;
+    while (keptIds.has(`b${next}`)) next++;
+    block.id = `b${next++}`;
+    keptIds.add(block.id);
+  }
 
   return { sketch: { palette, fonts, scale, blocks: ordered }, notes };
 }

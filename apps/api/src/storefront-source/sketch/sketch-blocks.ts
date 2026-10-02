@@ -1,36 +1,30 @@
+import { bestInkFor } from './sketch-schema';
 import type { SketchBlock, SketchContext, StoreSketch } from './sketch-schema';
 
 /** JSX generators for sketch blocks. Every merchant-controlled string is embedded as a
  * JSON.stringify'd expression — `{"…"}` — so no text can escape JSX or the template literal. */
 const expr = (value: string) => `{${JSON.stringify(value)}}`;
 
-const luminance = (color: string) => {
-  const n = parseInt(color.slice(1), 16);
-  return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
-};
+/** Readable text colour for a given block background (WCAG contrast, shared with the palette repair). */
+const inkFor = (bg: string, sketch: StoreSketch) => bestInkFor(bg, sketch.palette.ink);
 
-/** Readable text colour for a given block background. */
-const inkFor = (bg: string, sketch: StoreSketch) => {
-  if (luminance(bg) <= 0.5) return '#ffffff';
-  return luminance(sketch.palette.ink) <= 0.45 ? sketch.palette.ink : '#111111';
-};
-
-const open = (block: SketchBlock, sketch: StoreSketch, label?: string) => {
+export type RenderOptions = { h1?: boolean };
+const open = (block: SketchBlock, sketch: StoreSketch, label?: string, extra = '') => {
   const bg = sketch.palette[block.bg];
   return `<section data-skb=${expr(block.id)} className=${expr(`skb skb-${block.type} skb--${block.size}`)}` +
-    (label ? ` aria-label=${expr(label)}` : '') +
+    (label ? ` aria-label=${expr(label)}` : '') + (extra ? ` ${extra}` : '') +
     ` style={{ ['--skb-bg' as string]: ${JSON.stringify(bg)}, ['--skb-ink' as string]: ${JSON.stringify(inkFor(bg, sketch))} }}>`;
 };
 
 const img = (path: string, alt: string, className: string) => `<img className=${expr(className)} src=${expr(path)} alt=${expr(alt)} />`;
 
-type Render = (block: SketchBlock & { type: never }, sketch: StoreSketch, ctx: SketchContext) => string;
-const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { type: T }>, sketch: StoreSketch, ctx: SketchContext) => string } = {
-  hero: (b, s, ctx) => open(b, s) + `
+type Render = (block: SketchBlock & { type: never }, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions) => string;
+const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { type: T }>, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions) => string } = {
+  hero: (b, s, ctx, options) => open(b, s) + `
     <div className="skb-hero__copy">
-      <h1 className="skb-display">${expr(b.headline)}</h1>
+      <${options.h1 ? 'h1' : 'h2'} className="skb-display">${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
       ${b.sub ? `<p className="skb-lead">${expr(b.sub)}</p>` : ''}
-      <a className="skb-btn" href="#skb-catalogo">${expr(b.cta)}</a>
+      <a className="skb-btn" href=${expr(s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido')}>${expr(b.cta)}</a>
     </div>
     ${b.photo ? `<div className=${expr(`skb-hero__media skb-hero__media--${b.variant}`)}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-hero__img')}</div>` : ''}
   </section>`,
@@ -40,10 +34,10 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
       <span aria-hidden="true">${expr(` ${b.text} · ${b.text} · ${b.text} · `)}</span>
     </div>
   </section>`,
-  catalog: (b, s) => open(b, s) + `
+  catalog: (b, s, _ctx, options) => open(b, s) + `
     <div className="skb-head" id="skb-catalogo">
       ${b.kicker ? `<p className="skb-kicker">${expr(b.kicker)}</p>` : ''}
-      <h2 className="skb-title">${expr(b.title)}</h2>
+      <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
     </div>
     <template data-pagosya-product-template>
       <article className="skb-card">
@@ -57,37 +51,41 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
     </template>
     <div className="skb-list" data-pagosya-catalog />
   </section>`,
-  story: (b, s, ctx) => open(b, s) + `
+  story: (b, s, ctx, options) => open(b, s) + `
     <div className="skb-story__copy">
-      <h2 className="skb-title">${expr(b.title)}</h2>
+      <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
       ${b.paragraphs.map(p => `<p className="skb-lead">${expr(p)}</p>`).join('\n      ')}
     </div>
     ${b.photo ? `<div className="skb-story__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-story__img')}</div>` : ''}
   </section>`,
-  reviews: (b, s) => open(b, s) + `
-    <h2 className="skb-title">${expr(b.title)}</h2>
+  reviews: (b, s, _ctx, options) => open(b, s) + `
+    <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
     <div className="skb-reviews__grid">
       ${b.quotes.map(q => `<figure className="skb-review"><blockquote>${expr(q.text)}</blockquote><figcaption>${expr(q.name)}</figcaption></figure>`).join('\n      ')}
     </div>
   </section>`,
-  faq: (b, s) => open(b, s) + `
-    <h2 className="skb-title">${expr(b.title)}</h2>
+  faq: (b, s, _ctx, options) => open(b, s) + `
+    <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
     ${b.items.map(i => `<details className="skb-faq__item"><summary>${expr(i.q)}</summary><p>${expr(i.a)}</p></details>`).join('\n    ')}
   </section>`,
-  banner: (b, s) => open(b, s) + `
-    <h2 className="skb-display skb-banner__headline">${expr(b.headline)}</h2>
+  banner: (b, s, _ctx, options) => open(b, s) + `
+    <${options.h1 ? 'h1' : 'h2'} className="skb-display skb-banner__headline">${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
     <a className="skb-btn" href=${expr(b.href)}>${expr(b.cta)}</a>
   </section>`,
-  gallery: (b, s, ctx) => open(b, s) + `
-    <h2 className="skb-title">${expr(b.title)}</h2>
+  gallery: (b, s, ctx, options) => open(b, s) + `
+    <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
     <div className="skb-gallery__grid">
       ${b.photos.map((p, i) => img(p, `Foto ${i + 1} de ${ctx.storeName}`, 'skb-gallery__img')).join('\n      ')}
     </div>
   </section>`,
-  newsletter: (b, s) => open(b, s) + `
-    <h2 className="skb-title">${expr(b.title)}</h2>
+  newsletter: (b, s, _ctx, options) => open(b, s, undefined, 'data-pagosya-subscribe-block') + `
+    <${options.h1 ? 'h1' : 'h2'} className="skb-title">${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
     ${b.note ? `<p className="skb-lead">${expr(b.note)}</p>` : ''}
-    <a className="skb-btn" href="checkout.html">${expr(b.cta)}</a>
+    <button type="button" className="skb-btn skb-subscribe" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
+      <span className="skb-subscribe__field">Tu correo electrónico</span>
+      <span className="skb-subscribe__submit">${expr(b.cta || 'Suscribirme')}</span>
+    </button>
+    <p role="status" className="skb-subscribe__status" />
   </section>`,
   footer: (b, s, ctx) => open(b, s, 'Pie de página') + `
     ${b.tagline ? `<p className="skb-footer__tagline">${expr(b.tagline)}</p>` : ''}
@@ -97,8 +95,8 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
   </section>`,
 };
 
-export function renderBlock(block: SketchBlock, sketch: StoreSketch, ctx: SketchContext): string {
-  return (generators[block.type] as Render)(block as SketchBlock & { type: never }, sketch, ctx);
+export function renderBlock(block: SketchBlock, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions = {}): string {
+  return (generators[block.type] as Render)(block as SketchBlock & { type: never }, sketch, ctx, options);
 }
 
 const CSS: Record<SketchBlock['type'], string> = {

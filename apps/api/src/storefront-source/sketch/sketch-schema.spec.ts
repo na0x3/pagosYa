@@ -55,3 +55,32 @@ describe('repairSketch', () => {
     expect(sketch.palette.ink === '#111111' || sketch.palette.ink === '#000000').toBe(true);
   });
 });
+
+describe('review fixes', () => {
+  it('keeps valid unique ids stable across reorders (F2)', () => {
+    const blocks = [
+      { id: 'intro', type: 'hero', headline: 'Hola' },
+      { id: 'proceso', type: 'story', title: 'Proceso', paragraphs: ['uno'] },
+    ];
+    const first = repairSketch({ blocks }, ctx).sketch;
+    expect(first.blocks.map(b => b.id)).toEqual(expect.arrayContaining(['intro', 'proceso']));
+    const reordered = repairSketch({ blocks: [blocks[1], blocks[0]] }, ctx).sketch;
+    expect(reordered.blocks.find(b => b.type === 'story')!.id).toBe('proceso');
+    expect(reordered.blocks.find(b => b.type === 'hero')!.id).toBe('intro');
+  });
+  it('caps the number of blocks (F6)', () => {
+    const { sketch } = repairSketch({ blocks: Array.from({ length: 50 }, () => ({ type: 'hero', headline: 'x' })) }, ctx);
+    expect(sketch.blocks.length).toBeLessThanOrEqual(22);
+  });
+  it('keeps only one catalog block (F8)', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'a', type: 'catalog', title: 'Uno' },
+      { id: 'b', type: 'catalog', title: 'Dos' },
+    ] }, ctx);
+    expect(sketch.blocks.filter(b => b.type === 'catalog')).toHaveLength(1);
+  });
+  it('repairs ink to the best WCAG contrast, not a 0.5 luminance split (F7)', () => {
+    const { sketch } = repairSketch({ palette: { paper: '#e35336', ink: '#e35336' } }, ctx);
+    expect(sketch.palette.ink).toBe('#111111');
+  });
+});

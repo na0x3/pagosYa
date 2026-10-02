@@ -1,6 +1,7 @@
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { renderBlock, blockCss, SKETCH_BASE_CSS } from './sketch-blocks';
+import { repairSketch } from './sketch-schema';
 import type { SketchContext, StoreSketch } from './sketch-schema';
 
 /** sketch.json → real Next-source store files. Pure and deterministic: the same function renders the
@@ -15,16 +16,20 @@ const fontFace = (id: string) => `@font-face {
   font-display: swap;
 }`;
 
-export function assembleSketch(sketch: StoreSketch, ctx: SketchContext): SourceProjectFileDto[] {
+export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourceProjectFileDto[] {
+  // Re-repair on entry: assembly stays total even if a caller skips repair, and repair is idempotent.
+  const sketch = repairSketch(input, ctx).sketch;
   const body = sketch.blocks.filter(block => block.type !== 'footer');
   const footer = sketch.blocks.filter(block => block.type === 'footer');
+  // Exactly one h1 per page: the first block that carries a primary heading renders it as the h1.
+  const headingIndex = body.findIndex(block => block.type !== 'marquee');
 
   const shell = `import type { ReactNode } from 'react';
 
 export function Header() {
   return <header className="skb-header">
     <a className="skb-logo" href="index.html">${expr(ctx.storeName)}</a>
-    <button type="button" className="skb-cart" data-cart-open>Mi pedido <span className="skb-cart__count" data-cart-count>0</span></button>
+    ${ctx.purpose === 'shop' ? '<button type="button" className="skb-cart" data-cart-open>Mi pedido <span className="skb-cart__count" data-cart-count>0</span></button>' : ''}
   </header>;
 }
 
@@ -33,6 +38,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     <Header />
     {children}
     <div data-pagosya-cart hidden />
+    ${ctx.purpose === 'service' ? '<div data-pagosya-contact hidden />' : ''}
     <p data-pagosya-status role="status" aria-live="polite" className="skb-status" />
   </div>;
 }
@@ -43,7 +49,7 @@ export default function Shell({ children }: { children: ReactNode }) {
 export default function Home() {
   return <Shell>
     <main id="contenido">
-${body.map(block => '      ' + renderBlock(block, sketch, ctx).split('\n').join('\n      ')).join('\n')}
+${body.map((block, index) => '      ' + renderBlock(block, sketch, ctx, { h1: index === headingIndex }).split('\n').join('\n      ')).join('\n')}
     </main>
 ${footer.map(block => '    ' + renderBlock(block, sketch, ctx).split('\n').join('\n    ')).join('\n')}
   </Shell>;
@@ -106,6 +112,16 @@ body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font
 .skb-cart { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 999px; padding: 0.5em 1.1em; font: inherit; cursor: pointer; }
 .skb-status { padding: 0 clamp(1rem, 5vw, 4rem); min-height: 1.2em; }
 .skb-page { padding: clamp(1rem, 4vw, 2.5rem) clamp(1rem, 5vw, 4rem); }
+.skb-pdp { display: grid; gap: 1.5rem; padding: clamp(1rem, 4vw, 2.5rem) clamp(1rem, 5vw, 4rem); }
+.skb-pdp__crumbs { font-size: 0.9rem; opacity: 0.75; }
+.skb-pdp__grid { display: grid; gap: 2rem; align-items: start; }
+@media (min-width: 900px) { .skb-pdp__grid { grid-template-columns: 1.1fr 1fr; } }
+.skb-pdp__gallery img { width: 100%; height: auto; border-radius: 1rem; display: block; }
+.skb-pdp__info { display: grid; gap: 0.9rem; }
+.skb-pdp__cat { text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.8rem; opacity: 0.7; }
+.skb-pdp__title { font-family: var(--skb-display-font); font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.05; margin: 0; }
+.skb-pdp__price { font-size: 1.4rem; font-weight: 700; }
+.skb-pdp__desc { line-height: 1.6; max-width: 62ch; }
 ${SKETCH_BASE_CSS}${[...new Set(sketch.blocks.map(block => block.type))].map(blockCss).join('\n')}
 `;
 

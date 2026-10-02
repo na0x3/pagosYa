@@ -45,3 +45,20 @@ it('every type has css and base css covers sizes and reduced motion', () => {
   expect(SKETCH_BASE_CSS).toContain('prefers-reduced-motion');
   for (const s of ['s', 'm', 'l', 'xl']) expect(SKETCH_BASE_CSS).toContain(`skb--${s}`);
 });
+
+describe('review fixes', () => {
+  it('newsletter renders the runtime subscribe contract, not a checkout link (F5)', () => {
+    const news = repairSketch({ blocks: [{ id: 'n', type: 'newsletter', title: 'Únete' }] }, ctx).sketch.blocks.find(b => b.type === 'newsletter')!;
+    const out = renderBlock(news, sketch, ctx);
+    expect(out).toContain('data-pagosya-subscribe-block');
+    expect(out).toContain('data-pagosya-subscribe-open');
+    expect(out).not.toContain('<input');
+    expect(out).not.toContain('checkout.html');
+  });
+  it('mid-tone backgrounds get the higher-contrast ink (F7)', () => {
+    const story = repairSketch({ blocks: [{ id: 's', type: 'story', title: 'Proceso', paragraphs: ['uno'], bg: 'accent' }] }, ctx).sketch;
+    const out = renderBlock(story.blocks.find(b => b.type === 'story')!, story, ctx);
+    expect(out).toContain('"#111111"');
+    expect(out).not.toContain('"#ffffff"');
+  });
+});
