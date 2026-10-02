@@ -24,7 +24,7 @@ export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourcePr
   const body = sketch.blocks.filter(block => block.type !== 'footer');
   const footer = sketch.blocks.filter(block => block.type === 'footer');
   // Exactly one h1 per page: the first block that carries a primary heading renders it as the h1.
-  const headingIndex = body.findIndex(block => block.type !== 'marquee');
+  const headingIndex = body.findIndex(block => block.type !== 'marquee' && block.type !== 'announce');
 
   const seen = new Set<string>();
   const navLinks = sketch.blocks.flatMap(block => {

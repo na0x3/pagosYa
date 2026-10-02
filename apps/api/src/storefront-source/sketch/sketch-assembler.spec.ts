@@ -85,3 +85,13 @@ describe('bake-lab enrichment', () => {
     expect(shell).toContain('Productos');
   });
 });
+
+it('an announce-first sketch still gets its h1 on the first heading block', () => {
+  const rich = repairSketch({ blocks: [
+    { id: 'top', type: 'announce', left: 'izq', right: 'der' },
+    { id: 'h', type: 'hero', headline: 'Hola' },
+  ] }, ctx).sketch;
+  const files = assembleSketch(rich, ctx);
+  expect(() => validateNextSources(files, 'shop')).not.toThrow();
+  expect(files.find(f => f.path === 'components/home.tsx')!.content.match(/<h1/g)).toHaveLength(1);
+});
