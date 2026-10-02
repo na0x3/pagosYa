@@ -1,0 +1,21 @@
+/* Boceto: the hand-editing panel for sketch-born stores. */
+.boceto-panel { position: fixed; right: 16px; top: 72px; bottom: 16px; width: 320px; overflow: auto; background: #fff; border: 1px solid #e2e2e2; border-radius: 14px; padding: 14px; z-index: 40; font: 13px/1.5 Arial, Helvetica, sans-serif; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
+.boceto-head h2 { margin: 0; font-size: 16px; }
+.boceto-head p { margin: 2px 0 10px; color: #737373; }
+.boceto-style { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin-bottom: 12px; }
+.boceto-swatch { display: flex; align-items: center; gap: 6px; text-transform: capitalize; }
+.boceto-swatch input { inline-size: 34px; block-size: 24px; border: 0; padding: 0; background: none; }
+.boceto-label { display: grid; gap: 3px; margin-bottom: 6px; color: #444; }
+.boceto-input, .boceto-area, .boceto-select { font: inherit; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 8px; width: 100%; box-sizing: border-box; }
+.boceto-area { min-height: 64px; resize: vertical; }
+.boceto-blocks { display: grid; gap: 6px; }
+.boceto-block { border: 1px solid #e7e7e7; border-radius: 10px; padding: 6px 8px; }
+.boceto-block.is-selected { border-color: #1f2a24; }
+.boceto-block__name { font: inherit; border: 0; background: none; cursor: pointer; text-align: left; width: 100%; padding: 2px 0; font-weight: 600; }
+.boceto-block__tools { display: flex; gap: 4px; margin-top: 4px; }
+.boceto-block__tools button { border: 1px solid #ddd; background: #fafafa; border-radius: 6px; cursor: pointer; padding: 2px 8px; }
+.boceto-fields { margin-top: 8px; border-top: 1px dashed #e2e2e2; padding-top: 8px; }
+.boceto-gallery { display: grid; gap: 4px; }
+.boceto-check { display: flex; gap: 6px; align-items: center; }
+.boceto-adder { display: flex; gap: 6px; margin-top: 10px; }
+.boceto-add { border: 1px solid #1f2a24; background: #1f2a24; color: #fff; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
