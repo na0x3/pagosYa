@@ -1,0 +1,35 @@
+import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchFromResponse } from './sketch-request';
+
+const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
+const response = (text: string) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text }] }] });
+
+it('the schema is a strict object with anyOf blocks', () => {
+  expect(SKETCH_JSON_SCHEMA.type).toBe('object');
+  expect(SKETCH_JSON_SCHEMA.additionalProperties).toBe(false);
+  expect(Array.isArray((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf)).toBe(true);
+  expect((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf).toHaveLength(10);
+});
+
+it('the prompt names the photos, catalog, instruction and real font ids', () => {
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'quiero un sitio dulce y cálido', brief: { businessType: 'Repostería' }, photos: [{ path: 'assets/a.jpg', description: 'galletas' }], catalogNames: ['Caja de rolls'] });
+  expect(prompt).toContain('assets/a.jpg');
+  expect(prompt).toContain('galletas');
+  expect(prompt).toContain('Caja de rolls');
+  expect(prompt).toContain('quiero un sitio dulce y cálido');
+  expect(prompt).toContain('anton');
+});
+
+it('is total: null, garbage text and missing output all yield the usable default', () => {
+  for (const body of [null, undefined, 42, {}, response('this is not json'), response('{"blocks": "nope"')]) {
+    const { sketch } = sketchFromResponse(body, ctx);
+    expect(sketch.blocks.some(b => b.type === 'catalog')).toBe(true);
+    expect(sketch.blocks.at(-1)?.type).toBe('footer');
+  }
+});
+
+it('a valid response round-trips through repair', () => {
+  const { sketch } = sketchFromResponse(response(JSON.stringify({ blocks: [{ id: 'h', type: 'hero', headline: 'Algo dulce', photo: 'assets/a.jpg' }] })), ctx);
+  const hero = sketch.blocks.find(b => b.type === 'hero') as { headline: string; photo?: string };
+  expect(hero.headline).toBe('Algo dulce');
+  expect(hero.photo).toBe('assets/a.jpg');
+});
