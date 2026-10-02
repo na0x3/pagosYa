@@ -119,3 +119,14 @@ describe('ensureAllPhotosUsed', () => {
     expect(ensureAllPhotosUsed(sketch, many)).toEqual(sketch);
   });
 });
+
+it('repairs a steps block with icon names clamped to slug shape', () => {
+  const { sketch } = repairSketch({ blocks: [{ id: 's', type: 'steps', title: 'Así de simple', items: [
+    { icon: 'cookie', title: 'Elige', text: 'Tu antojo' },
+    { icon: '<bad>', title: 'Pagamos', text: '' },
+  ] }] }, ctx);
+  const steps = sketch.blocks.find(b => b.type === 'steps') as any;
+  expect(steps.items).toHaveLength(2);
+  expect(steps.items[0].icon).toBe('cookie');
+  expect(steps.items[1].icon).toBe('sparkles');
+});

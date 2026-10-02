@@ -101,6 +101,22 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const selection = createSelectionState();
   let selectMode = false, platformHint = false, editableField: { id: string; value: string } | null = null, selectionRequest = 0;
   let fieldsCache: { key: string; fields: import('./source-visual-fields').VisualField[] } | null = null;
+  function applyCanvas() {
+    const wrap = app.querySelector<HTMLElement>('.source-frame-wrap');
+    const frame = wrap?.querySelector('iframe');
+    const pill = app.querySelector<HTMLElement>('[data-canvas-zoom]');
+    if (!wrap || !frame) return;
+    if (bocetoOpen && mode === 'preview') {
+      wrap.classList.add('is-boceto-canvas');
+      (frame as HTMLIFrameElement).style.height = canvasHeight + 'px';
+      wrap.style.transform = `translate(${canvasX}px, ${canvasY}px) scale(${canvasZoom})`;
+      if (pill) pill.textContent = Math.round(canvasZoom * 100) + '%';
+    } else {
+      wrap.classList.remove('is-boceto-canvas');
+      (frame as HTMLIFrameElement).style.height = '';
+      wrap.style.transform = '';
+    }
+  }
   function syncBocetoMode(frame: HTMLIFrameElement | null = app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')) {
     try { frame?.contentWindow?.postMessage({ type: 'pagosya:boceto-mode', on: bocetoOpen && mode === 'preview' }, '*'); } catch { /* frame is gone */ }
   }
@@ -139,6 +155,27 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
     if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); return; }
+    if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-size' && Number.isFinite(event.data.height)) {
+      const next = Math.min(20000, Math.max(800, Number(event.data.height)));
+      if (Math.abs(next - canvasHeight) > 24) { canvasHeight = next; applyCanvas(); }
+      return;
+    }
+    if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-wheel') {
+      const { dx, dy, ctrl, x, y } = event.data as { dx: number; dy: number; ctrl: boolean; x: number; y: number };
+      if (ctrl) {
+        const factor = Math.exp(-Number(dy || 0) * 0.01);
+        const zoom = Math.min(2, Math.max(0.15, canvasZoom * factor));
+        // Zoom around the cursor: keep the canvas point under it stable.
+        canvasX = x - (x - canvasX) * (zoom / canvasZoom);
+        canvasY = y - (y - canvasY) * (zoom / canvasZoom);
+        canvasZoom = zoom;
+      } else {
+        canvasX -= Number(dx || 0);
+        canvasY -= Number(dy || 0);
+      }
+      applyCanvas();
+      return;
+    }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
       if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string') bocetoPanel.remoteSelect(event.data.id);
       if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);
@@ -166,7 +203,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -191,6 +228,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let toastTimer: number | undefined;
   let mode = 'preview', mobile = false, page = 'index.html', filePath = 'index.html', draft: string | null = null;
   let bocetoOpen = false;
+  let canvasZoom = 0.82, canvasX = 60, canvasY = 40, canvasHeight = 2400;
   const dirty = () => draft !== null && draft !== version?.snapshot.files.find(f => f.path === filePath)?.content;
   if (embedded) (window as Window & { pagosyaStudioCanLeave?: () => boolean }).pagosyaStudioCanLeave = () => {
     if (productForm?.isBusy) { window.alert('Espera a que termine de guardarse el producto.'); return false; }
@@ -642,7 +680,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
           <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button><button id="source-boceto-tab" title="Edita bloques, textos, colores y fuentes al instante" aria-pressed="${bocetoOpen}" ${disabled(!version || showingDraft() || mode !== 'preview' || !version?.snapshot.files.some(f => f.path === 'sketch.json')) }>Boceto</button></div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
           <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.</span><button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="${bocetoOpen ? 'boceto-canvas' : ''}"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>${bocetoOpen ? '<div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div>' : ''}</div>` : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
@@ -691,7 +729,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
-    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => { bocetoOpen = !bocetoOpen; render(); syncBocetoMode(); });
+    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => { bocetoOpen = !bocetoOpen; render(); syncBocetoMode(); applyCanvas(); });
+    app.querySelector('[data-canvas-in]')?.addEventListener('click', () => { canvasZoom = Math.min(2, canvasZoom * 1.2); applyCanvas(); });
+    app.querySelector('[data-canvas-out]')?.addEventListener('click', () => { canvasZoom = Math.max(0.15, canvasZoom / 1.2); applyCanvas(); });
+    app.querySelector('[data-canvas-fit]')?.addEventListener('click', () => { canvasZoom = 0.82; canvasX = 60; canvasY = 40; applyCanvas(); });
     app.querySelector('#source-visual-edit')?.addEventListener('click', () => { if (!busy && !dirty() && !visualEditPending) { visualEditing = !visualEditing; mode = 'preview'; render(); } });
     app.querySelector('#source-select-mode')?.addEventListener('click', () => { selectMode = !selectMode; if (!selectMode) clearSelection(); render(); });
     app.querySelector('[data-selection-host]')?.addEventListener('click', event => {

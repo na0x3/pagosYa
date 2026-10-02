@@ -74,3 +74,16 @@ it('the photo picker omits reference and unused uploads (M1)', async () => {
   expect(result.photos).toContain('assets/a.jpg');
   expect(result.photos).not.toContain('assets/ref.jpg');
 });
+
+it('bundles any referenced Lucide icon on a hand edit (2k+ catalog)', async () => {
+  const { service, projects, sketch } = setup();
+  const edited = { ...sketch, blocks: [
+    { id: 'st', type: 'steps', title: 'Pasos', items: [{ icon: 'croissant', title: 'Elige', text: 'x' }], bg: 'paper', size: 'm' },
+    ...sketch.blocks,
+  ] };
+  await service.update('m', 's', { revision: 3, sketch: edited });
+  const files = projects.save.mock.calls[0][2].files;
+  const icon = files.find((f: any) => f.path === 'assets/icons/croissant.svg');
+  expect(icon?.content).toContain('<svg');
+  expect(files.some((f: any) => f.path === 'assets/icons/LICENSE.txt')).toBe(true);
+});

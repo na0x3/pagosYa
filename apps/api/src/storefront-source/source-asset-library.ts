@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import type { SourceImageUse } from './source-setup';
 import { withCreativeAssets } from './source-creative-assets';
@@ -11,7 +12,7 @@ export type SourceAssetRole = typeof SOURCE_ASSET_ROLES[number];
 export type SourceAsset = { path: string; role: SourceAssetRole; description: string; references: string[]; kind: 'image' | 'icon' | 'video'; bytes: number; pixels?: { width: number; height: number }; photo?: SourcePhotoFacts };
 const media = /^assets\/.*\.(png|jpe?g|webp|avif|gif|svg|mp4)$/i;
 export const SOURCE_ICON_NAMES = ['shopping-bag', 'shopping-cart', 'arrow-right', 'arrow-left', 'chevron-down', 'chevron-right', 'check', 'x', 'plus', 'minus', 'search', 'menu', 'map-pin', 'clock', 'phone', 'mail', 'truck', 'package', 'heart', 'shield-check', 'credit-card', 'calendar', 'utensils', 'coffee'];
-export const SOURCE_ICON_DIRECTION = `Bundled Lucide icons are available at assets/icons/NAME.svg: ${SOURCE_ICON_NAMES.join(', ')}. Use these exact local paths in img elements or CSS masks (mask-image:url(...) and background:currentColor for tinting). No imports or CDN. Supplied .mp4 files are real video assets: embed their exact bundled paths with HTML video or React video, never img or CSS background-image. Use controls and playsinline for content videos; only decorative backgrounds may autoplay with muted, loop, playsinline, a static fallback and reduced-motion handling. Do not invent unseen video content or generate a replacement drawing. Keep icons at a consistent optical size, with visible text labels for actions and empty alt for decorative icons. Only referenced icons and their license are bundled. visual-assets.json records merchant-confirmed media roles: reference/unused assets must not become storefront content. Do not author or replace this platform-owned manifest.`;
+export const SOURCE_ICON_DIRECTION = `Any Lucide icon (lucide.dev, 2000+) is available at assets/icons/NAME.svg by its exact name. Curated starters: ${SOURCE_ICON_NAMES.join(', ')}. Use these exact local paths in img elements or CSS masks (mask-image:url(...) and background:currentColor for tinting). No imports or CDN. Supplied .mp4 files are real video assets: embed their exact bundled paths with HTML video or React video, never img or CSS background-image. Use controls and playsinline for content videos; only decorative backgrounds may autoplay with muted, loop, playsinline, a static fallback and reduced-motion handling. Do not invent unseen video content or generate a replacement drawing. Keep icons at a consistent optical size, with visible text labels for actions and empty alt for decorative icons. Only referenced icons and their license are bundled. visual-assets.json records merchant-confirmed media roles: reference/unused assets must not become storefront content. Do not author or replace this platform-owned manifest.`;
 
 export function sourceAssetInventory(files: SourceProjectFileDto[]): SourceAsset[] {
   let saved: Array<{ path: string; role: SourceAssetRole; description: string; photo?: unknown }> = [];
@@ -28,17 +29,34 @@ export function sourceAssetInventory(files: SourceProjectFileDto[]): SourceAsset
   });
 }
 
-export async function withSourceAssets(files: SourceProjectFileDto[], previous: SourceProjectFileDto[] = [], legend: Array<{ original: string; path: string }> = [], uses: SourceImageUse[] = [], photos: Record<string, SourcePhotoFacts> = {}) {
-  const result = withCreativeAssets(files.filter(f => f.path !== SOURCE_ASSET_MANIFEST));
-  const source = files.filter(f => /\.(css|html|tsx|jsx)$/.test(f.path)).map(f => f.content).join('\n');
-  // An `assets/icons/${name}.svg` helper never spells the literal path, so a quoted icon name counts as a reference.
-  const dynamicIcons = /assets\/icons\/\$\{/.test(source);
-  for (const name of SOURCE_ICON_NAMES) {
+/** The whole Lucide catalog (2k+ icons, ISC) resolves by name; the kit's own copies win when present. */
+const lucideIconsDir = (() => {
+  try { return join(dirname(require.resolve('lucide-static/package.json')), 'icons'); } catch { return null; }
+})();
+async function iconSvg(name: string): Promise<string | null> {
+  try { return await readFile(kitPath('icons', `${name}.svg`), 'utf8'); } catch { /* not a kit icon */ }
+  if (!lucideIconsDir) return null;
+  try { return await readFile(join(lucideIconsDir, `${name}.svg`), 'utf8'); } catch { return null; }
+}
+
+/** Bundle every referenced assets/icons/<name>.svg into the file set — any Lucide name works. */
+export async function withSourceIcons(result: SourceProjectFileDto[], all: SourceProjectFileDto[] = result): Promise<SourceProjectFileDto[]> {
+  const source = all.filter(f => /\.(css|html|tsx|jsx)$/.test(f.path)).map(f => f.content).join('\n');
+  const named = new Set([...source.matchAll(/assets\/icons\/([a-z0-9-]{2,40})\.svg/g)].map(match => match[1]));
+  // An `assets/icons/${name}.svg` helper never spells the literal path, so a quoted known icon name counts as a reference.
+  if (/assets\/icons\/\$\{/.test(source)) for (const name of SOURCE_ICON_NAMES) if (new RegExp(`["'\`]${name}["'\`]`).test(source)) named.add(name);
+  for (const name of named) {
     const path = `assets/icons/${name}.svg`;
-    const named = dynamicIcons && new RegExp(`["'\`]${name}["'\`]`).test(source);
-    if ((source.includes(path) || named) && !result.some(f => f.path === path)) result.push({ path, content: await readFile(kitPath('icons', `${name}.svg`), 'utf8') });
+    if (result.some(f => f.path === path)) continue;
+    const svg = await iconSvg(name);
+    if (svg) result.push({ path, content: svg });
   }
   if (result.some(f => f.path.startsWith('assets/icons/')) && !result.some(f => f.path === 'assets/icons/LICENSE.txt')) result.push({ path: 'assets/icons/LICENSE.txt', content: await readFile(kitPath('icons/LICENSE.txt'), 'utf8') });
+  return result;
+}
+
+export async function withSourceAssets(files: SourceProjectFileDto[], previous: SourceProjectFileDto[] = [], legend: Array<{ original: string; path: string }> = [], uses: SourceImageUse[] = [], photos: Record<string, SourcePhotoFacts> = {}) {
+  const result = await withSourceIcons(withCreativeAssets(files.filter(f => f.path !== SOURCE_ASSET_MANIFEST)), files);
   const remembered = sourceAssetInventory(previous);
   const assets = sourceAssetInventory(result).filter(a => a.kind !== 'icon').map(asset => {
     const use = uses.find(u => legend.some(l => l.path === asset.path && l.original === u.url));

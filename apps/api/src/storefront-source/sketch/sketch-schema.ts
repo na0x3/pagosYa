@@ -11,6 +11,7 @@ export type SketchBlock =
   | { id: string; type: 'split'; headline: string; body: string; cta: string; href: string; pills: string[]; photo?: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'marquee'; text: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'catalog'; kicker: string; title: string; bg: SketchBg; size: SketchSize }
+  | { id: string; type: 'steps'; title: string; items: Array<{ icon: string; title: string; text: string }>; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'story'; title: string; paragraphs: string[]; photo?: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'reviews'; title: string; quotes: Array<{ text: string; name: string }>; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'faq'; title: string; items: Array<{ q: string; a: string }>; bg: SketchBg; size: SketchSize }
@@ -21,7 +22,7 @@ export type SketchBlock =
 export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; blocks: SketchBlock[] };
 export type SketchContext = { storeName: string; purpose: 'shop' | 'service'; photos: string[] };
 
-export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'marquee', 'catalog', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
+export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'steps', 'marquee', 'catalog', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
 
 const DEFAULT_PALETTE: SketchPalette = { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' };
 const DEFAULT_FONTS = { display: 'fraunces', text: 'epilogue' };
@@ -153,6 +154,7 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
       }
       case 'marquee': blocks.push({ ...base, type, text: text(block.text, LIMITS.short, ctx.storeName) }); break;
       case 'catalog': blocks.push({ ...base, type, kicker: text(block.kicker, 80), title: text(block.title, LIMITS.headline, 'Nuestros productos') }); break;
+      case 'steps': blocks.push({ ...base, type, title: text(block.title, LIMITS.headline, 'Así de simple'), items: list(block.items, 4, i => { const entry = (typeof i === 'object' && i !== null ? i : {}) as Record<string, unknown>; const title = text(entry.title, 60); if (!title) return null; return { icon: typeof entry.icon === 'string' && /^[a-z0-9-]{2,40}$/.test(entry.icon) ? entry.icon : 'sparkles', title, text: text(entry.text, LIMITS.short) }; }) }); break;
       case 'story': {
         const storyPhoto = photo(block.photo);
         blocks.push({ ...base, type, title: text(block.title, LIMITS.headline, 'Nuestra historia'), paragraphs: list(block.paragraphs, LIMITS.list, p => (p == null ? null : text(p, LIMITS.paragraph))), ...(storyPhoto ? { photo: storyPhoto } : {}) });

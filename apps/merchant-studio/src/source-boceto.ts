@@ -13,11 +13,12 @@ type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: 
 const BG_ROLES = ['paper', 'ink', 'accent', 'deep', 'pop'] as const;
 const ROLE_LABEL: Record<string, string> = { paper: 'Papel', ink: 'Tinta', accent: 'Acento', deep: 'Profundo', pop: 'Vivo' };
 const SIZES = ['s', 'm', 'l', 'xl'];
-const TYPE_LABEL: Record<string, string> = { announce: 'Aviso', split: 'Panel doble', hero: 'Portada', marquee: 'Marquesina', catalog: 'Catálogo', story: 'Historia', reviews: 'Reseñas', faq: 'Preguntas', banner: 'Banner', gallery: 'Galería', newsletter: 'Boletín', footer: 'Pie de página' };
+const TYPE_LABEL: Record<string, string> = { announce: 'Aviso', split: 'Panel doble', steps: 'Pasos', hero: 'Portada', marquee: 'Marquesina', catalog: 'Catálogo', story: 'Historia', reviews: 'Reseñas', faq: 'Preguntas', banner: 'Banner', gallery: 'Galería', newsletter: 'Boletín', footer: 'Pie de página' };
 const DEFAULT_BLOCK: Record<string, object> = {
   announce: { type: 'announce', left: 'Hecho fresco cada semana', right: 'Envíos a todo el país', bg: 'pop', size: 's' },
   split: { type: 'split', headline: 'Mezcla y combina', body: 'Arma tu caja a tu manera.', cta: 'Armar mi caja', href: 'checkout.html', pills: ['6 unidades', '12 unidades'], bg: 'accent', size: 'l' },
   hero: { type: 'hero', variant: 'photo-right', headline: 'Un título con carácter', sub: '', cta: 'Ver productos', badge: '', note: '', sticker: '', bg: 'paper', size: 'l' },
+  steps: { type: 'steps', title: 'Así de simple', items: [{ icon: 'sparkles', title: 'Elige', text: 'Lo que más te guste.' }, { icon: 'package', title: 'Preparamos', text: 'Con calma y cuidado.' }, { icon: 'smile', title: 'Disfruta', text: 'Directo a tu puerta.' }], bg: 'paper', size: 'm' },
   marquee: { type: 'marquee', text: 'Hecho con calma · Hecho aquí', bg: 'pop', size: 's' },
   catalog: { type: 'catalog', kicker: '', title: 'Nuestros productos', bg: 'paper', size: 'm' },
   story: { type: 'story', title: 'Nuestra historia', paragraphs: ['Cuenta aquí tu proceso.'], bg: 'accent', size: 'l' },
@@ -144,6 +145,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
         wrap.append(el('label', { className: 'bct-check', text: path.replace(/^assets\//, '').slice(0, 22) }, [box]));
       }
       children.push(row('Fotos', wrap));
+    }
+    if (block.type === 'steps') {
+      const ICONS = ['sparkles', 'cookie', 'package', 'smile', 'heart', 'star', 'truck', 'gift', 'coffee', 'leaf', 'flame', 'clock', 'map-pin', 'shield-check', 'chef-hat', 'croissant', 'cake', 'ice-cream-cone', 'shopping-bag', 'hand-heart'];
+      (block.items || []).forEach((item: any, index: number) => {
+        children.push(row(`Ícono ${index + 1}`, select(ICONS.includes(item.icon) ? item.icon : 'sparkles', ICONS, undefined, next => { item.icon = next; schedule(); })));
+      });
     }
     children.push(el('p', { className: 'bct-hint', text: 'El texto se edita tocándolo dos veces en la página.' }));
     return section(TYPE_LABEL[block.type] || block.type, children);

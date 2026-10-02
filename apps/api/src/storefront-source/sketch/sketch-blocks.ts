@@ -49,6 +49,12 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
       <span aria-hidden="true">${expr(` ${b.text} · ${b.text} · ${b.text} · `)}</span>
     </div>
   </section>`,
+  steps: (b, s, _ctx, options) => open(b, s) + `
+    <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
+    <div className="skb-steps__grid">
+      ${b.items.map((item, i) => `<article className="skb-step"><div className="skb-step__top"><span className="skb-step__icon-wrap"><img className="skb-step__icon" src=${expr(`assets/icons/${item.icon}.svg`)} alt="" aria-hidden="true" /></span><span className="skb-step__number">${expr(String(i + 1).padStart(2, '0'))}</span></div><h3 className="skb-step__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-step__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></article>`).join('\n      ')}
+    </div>
+  </section>`,
   catalog: (b, s, _ctx, options) => open(b, s) + `
     <div className="skb-head" id="skb-catalogo">
       ${b.kicker ? `<p className="skb-kicker" ${editable('kicker')}>${expr(b.kicker)}</p>` : ''}
@@ -141,6 +147,15 @@ const CSS: Record<SketchBlock['type'], string> = {
 .skb-marquee__track { display: inline-flex; animation: skb-scroll 24s linear infinite; font-family: var(--skb-display-font); font-size: clamp(1.4rem, 3.2vw, 2.6rem); text-transform: uppercase; letter-spacing: 0.04em; }
 .skb-marquee__track span { flex: none; }
 @keyframes skb-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }`,
+  steps: `
+.skb-steps__grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.skb-step { background: color-mix(in srgb, var(--skb-bg) 72%, #ffffff 28%); border-radius: 1rem; padding: 1.2rem 1.3rem; }
+.skb-step__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; }
+.skb-step__icon-wrap { width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; background: var(--skb-ink); }
+.skb-step__icon { width: 1.2rem; height: 1.2rem; filter: invert(1); }
+.skb-step__number { font-family: var(--skb-display-font); opacity: 0.55; font-size: 1.1rem; }
+.skb-step__title { margin: 0 0 0.35rem; font-size: 1.1rem; }
+.skb-step__text { margin: 0; font-size: 0.95rem; opacity: 0.85; }`,
   catalog: `
 .skb-list { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .skb-card { background: color-mix(in srgb, var(--skb-bg) 70%, #ffffff 30%); border-radius: 1rem; overflow: hidden; display: flex; flex-direction: column; }

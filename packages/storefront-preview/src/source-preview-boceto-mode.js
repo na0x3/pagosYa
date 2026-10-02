@@ -196,6 +196,20 @@
     }
     if (event.data.type !== 'pagosya:boceto-mode') return;
     on = event.data.on === true;
+    if (on) {
+      var report = function () { try { parent.postMessage({ type: 'pagosya:boceto-size', height: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0) }, '*'); } catch (e) {}
+      };
+      report();
+      setTimeout(report, 600);
+      if (!window.__bocetoWheel) {
+        window.__bocetoWheel = true;
+        document.addEventListener('wheel', function (ev) {
+          if (!on) return;
+          ev.preventDefault();
+          parent.postMessage({ type: 'pagosya:boceto-wheel', dx: ev.deltaX, dy: ev.deltaY, ctrl: ev.ctrlKey || ev.metaKey, x: ev.clientX, y: ev.clientY }, '*');
+        }, { passive: false, capture: true });
+      }
+    }
     if (on) ensure();
     if (!on) { setHovered(null); if (editing) stopEditing(false); }
     placeHandle();

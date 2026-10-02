@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SourceProjectsService } from './source-projects.service';
 import { nextSourceFile } from './source-next';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
-import { sourceAssetInventory } from './source-asset-library';
+import { sourceAssetInventory, withSourceIcons } from './source-asset-library';
 import { assembleSketch, repairSketch, type SketchContext, type StoreSketch } from './sketch';
 import type { SourceProjectSnapshot } from './source-project';
 
@@ -55,11 +55,11 @@ export class SketchStudioService {
     const ctx = await this.context(merchantId, storeId, snapshot);
     const { sketch } = repairSketch(input.sketch, ctx);
     const assembled = assembleSketch(sketch, ctx);
-    const files = [
+    const files = await withSourceIcons([
       ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE),
       ...assembled,
       { path: SKETCH_FILE, content: JSON.stringify(sketch, null, 2) + '\n' },
-    ];
+    ]);
     const saved = await this.projects.save(merchantId, storeId, { revision: input.revision, label: 'Boceto editado', brief: snapshot.brief, files });
     return { revision: saved.revision, sketch };
   }

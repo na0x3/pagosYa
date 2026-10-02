@@ -102,3 +102,16 @@ describe('inline edit markers', () => {
     expect(split).toContain('data-skb-field={"pills.0"}');
   });
 });
+
+it('steps render numbered cards with icon images and editable fields', () => {
+  const rich = repairSketch({ blocks: [{ id: 'st', type: 'steps', title: 'Así de simple', items: [
+    { icon: 'cookie', title: 'Elige', text: 'Tu antojo' },
+    { icon: 'package', title: 'Horneamos', text: 'Al momento' },
+  ] }] }, ctx).sketch;
+  const out = renderBlock(rich.blocks.find(b => b.type === 'steps')!, rich, ctx);
+  expect(out).toContain('assets/icons/cookie.svg');
+  expect(out).toContain('data-skb-field={"items.0.title"}');
+  expect(out).toContain('data-skb-field={"items.1.text"}');
+  expect(out).toContain('01');
+  expect(blockCss('steps').length).toBeGreaterThan(0);
+});

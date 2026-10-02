@@ -1,4 +1,5 @@
 import { SOURCE_FONT_CATALOG, SOURCE_FONT_IDS } from '../source-font-catalog';
+import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { repairSketch, SKETCH_BLOCK_TYPES } from './sketch-schema';
 import type { SketchContext, StoreSketch } from './sketch-schema';
@@ -25,6 +26,7 @@ export const SKETCH_JSON_SCHEMA = {
       block('announce', { left: string, right: string }),
       block('split', { headline: string, body: string, cta: string, href: string, pills: { type: 'array', items: string }, photo: string }),
       block('hero', { variant: { type: 'string', enum: ['photo-right', 'full-bleed', 'stacked'] }, headline: string, sub: string, cta: string, badge: string, note: string, sticker: string, photo: string }),
+      block('steps', { title: string, items: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { icon: string, title: string, text: string }, required: ['icon', 'title', 'text'] } } }),
       block('marquee', { text: string }),
       block('catalog', { kicker: string, title: string }),
       block('story', { title: string, paragraphs: { type: 'array', items: string }, photo: string }),
@@ -50,6 +52,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
     `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. 7-10 bloques y COLOR DE VERDAD: mínimo 3 bloques con fondo accent, deep o pop (nunca todo paper). El hero manda: badge arriba, titular de 4-8 palabras con carácter, foto, sticker y note con prueba social honesta. Incluye announce arriba, una marquee, un split intenso con pills, wordmark gigante en el footer.`,
     `Fuentes disponibles (ids exactos): ${SOURCE_FONT_IDS.join(', ')}. Personalidades: ${SOURCE_FONT_CATALOG.slice(0, 12).map(font => `${font.id}=${font.personality.join('/')}`).join('; ')}.`,
+    `Íconos: el bloque steps lleva un ícono Lucide por paso (cualquier nombre de lucide.dev, ej.: ${SOURCE_ICON_NAMES.slice(0, 24).join(', ')}).`,
     'Colores en hex #rrggbb con buen contraste. Textos en español, honestos, sin inventar precios ni promesas.',
   ].join('\n');
 }
