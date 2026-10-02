@@ -1,6 +1,6 @@
 # Sketch-first YAPI — program overview (2026-10-02)
 
-Status: approved by the owner 2026-10-02 (conversation). Sub-project specs/plans to follow, one at a time.
+Status: approved by the owner 2026-10-02 (conversation). Sub-project 1 built 2026-10-02 (`apps/api/src/storefront-source/sketch/`: schema+repair, 10 block generators, assembler, golden compile/screenshot tests — commits 9982441d, 2a4a622, a726409, 6d3f00f). Sub-projects 2–4 pending.
 
 ## Why
 
