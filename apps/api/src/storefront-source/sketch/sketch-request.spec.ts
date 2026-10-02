@@ -1,4 +1,4 @@
-import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
+import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const response = (text: string) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text }] }] });
@@ -54,4 +54,14 @@ it('photo allowlist drops reference, unused and unknown roles (F3)', () => {
   const photos = sketchPhotoAllowlist(assets, legend, uses);
   expect(photos.map(p => p.path)).toEqual(['assets/a.jpg', 'assets/d.png']);
   expect(photos[0].description).toBe('galletas');
+});
+
+it('the edit prompt carries the current sketch, the instruction and an optional block target', () => {
+  const { sketch } = sketchFromResponse(response(JSON.stringify({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] })), ctx);
+  const targeted = sketchEditPrompt({ sketch, instruction: 'haz el titular más juguetón', targetBlockId: 'h', photos: [{ path: 'assets/a.jpg' }], catalogNames: [] });
+  expect(targeted).toContain('"Hola"');
+  expect(targeted).toContain('haz el titular más juguetón');
+  expect(targeted).toContain('Edita únicamente el bloque h');
+  const untargeted = sketchEditPrompt({ sketch, instruction: 'más color', photos: [], catalogNames: [] });
+  expect(untargeted).not.toContain('Edita únicamente');
 });

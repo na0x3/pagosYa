@@ -54,6 +54,19 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
   ].join('\n');
 }
 
+/** The edit prompt for chat-on-sketch: the whole current sketch travels; the model returns the whole edited sketch. */
+export function sketchEditPrompt(input: { sketch: StoreSketch; instruction: string; targetBlockId?: string; photos: Array<{ path: string; description?: string }>; catalogNames: string[] }): string {
+  return [
+    'Edita este boceto de tienda y devuelve el boceto COMPLETO actualizado como JSON estricto según el esquema.',
+    `Boceto actual: ${JSON.stringify(input.sketch)}`,
+    `Pedido del comercio: ${input.instruction}`,
+    input.targetBlockId ? `Edita únicamente el bloque ${input.targetBlockId}; conserva los demás sin cambios.` : 'Cambia solo lo que el pedido requiere; conserva el resto sin cambios.',
+    input.photos.length ? `Fotos disponibles (solo estas rutas): ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}` : 'No añadas fotos nuevas.',
+    input.catalogNames.length ? `Productos reales: ${input.catalogNames.join(' · ')}` : '',
+    'Textos honestos en español; colores hex con buen contraste.',
+  ].filter(Boolean).join('\n');
+}
+
 export function sketchFromResponse(body: unknown, ctx: SketchContext): { sketch: StoreSketch; notes: string[]; parsed: boolean } {
   let value: unknown;
   try { value = sourceResponseJson(body); } catch { value = undefined; }
