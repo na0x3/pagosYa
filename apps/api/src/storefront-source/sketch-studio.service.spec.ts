@@ -29,6 +29,7 @@ it('reads the current sketch with the revision and real photo paths', async () =
   expect(result.revision).toBe(3);
   expect(result.sketch?.blocks.some(b => b.type === 'hero')).toBe(true);
   expect(result.photos).toEqual(['assets/a.jpg']);
+  expect(result.fonts).toContain('anton');
 });
 
 it('returns sketch null for a store that was not sketch-born', async () => {

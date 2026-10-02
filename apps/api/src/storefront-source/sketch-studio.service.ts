@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SourceProjectsService } from './source-projects.service';
 import { nextSourceFile } from './source-next';
+import { SOURCE_FONT_IDS } from './source-font-catalog';
 import { assembleSketch, repairSketch, type SketchContext, type StoreSketch } from './sketch';
 import type { SourceProjectSnapshot } from './source-project';
 
@@ -30,15 +31,15 @@ export class SketchStudioService {
     };
   }
 
-  async get(merchantId: string, storeId: string): Promise<{ revision: number; sketch: StoreSketch | null; photos: string[] }> {
+  async get(merchantId: string, storeId: string): Promise<{ revision: number; sketch: StoreSketch | null; photos: string[]; fonts: readonly string[] }> {
     const { revision, snapshot } = await this.load(merchantId, storeId);
     const stored = snapshot?.files.find(file => file.path === SKETCH_FILE)?.content;
     const ctx = await this.context(merchantId, storeId, snapshot);
-    if (!stored) return { revision, sketch: null, photos: ctx.photos };
+    if (!stored) return { revision, sketch: null, photos: ctx.photos, fonts: SOURCE_FONT_IDS };
     let parsed: unknown;
     try { parsed = JSON.parse(stored); } catch { parsed = undefined; }
     // Stored sketches re-repair on read, so schema evolutions never break the panel.
-    return { revision, sketch: repairSketch(parsed, ctx).sketch, photos: ctx.photos };
+    return { revision, sketch: repairSketch(parsed, ctx).sketch, photos: ctx.photos, fonts: SOURCE_FONT_IDS };
   }
 
   async update(merchantId: string, storeId: string, input: { revision: number; sketch: unknown }): Promise<{ revision: number; sketch: StoreSketch }> {

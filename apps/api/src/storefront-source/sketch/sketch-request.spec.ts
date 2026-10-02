@@ -1,4 +1,4 @@
-import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchFromResponse } from './sketch-request';
+import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const response = (text: string) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text }] }] });
@@ -32,4 +32,26 @@ it('a valid response round-trips through repair', () => {
   const hero = sketch.blocks.find(b => b.type === 'hero') as { headline: string; photo?: string };
   expect(hero.headline).toBe('Algo dulce');
   expect(hero.photo).toBe('assets/a.jpg');
+});
+
+it('exposes whether the model reply parsed, for honest attempt records (F4)', () => {
+  expect(sketchFromResponse(response('{"blocks": []}'), ctx).parsed).toBe(true);
+  expect(sketchFromResponse(response('not json'), ctx).parsed).toBe(false);
+  expect(sketchFromResponse(null, ctx).parsed).toBe(false);
+});
+
+it('photo allowlist drops reference, unused and unknown roles (F3)', () => {
+  const assets = [{ path: 'assets/a.jpg' }, { path: 'assets/b.jpg' }, { path: 'assets/c.webp' }, { path: 'assets/d.png' }, { path: 'assets/vid.mp4' }];
+  const legend = [
+    { original: 'u/a', path: 'assets/a.jpg' }, { original: 'u/b', path: 'assets/b.jpg' },
+    { original: 'u/c', path: 'assets/c.webp' }, { original: 'u/d', path: 'assets/d.png' },
+  ];
+  const uses = [
+    { url: 'u/a', role: 'product', description: 'galletas' },
+    { url: 'u/b', role: 'reference', description: 'competidor' },
+    { url: 'u/c', role: 'unused', description: '' },
+  ] as any;
+  const photos = sketchPhotoAllowlist(assets, legend, uses);
+  expect(photos.map(p => p.path)).toEqual(['assets/a.jpg', 'assets/d.png']);
+  expect(photos[0].description).toBe('galletas');
 });

@@ -45,15 +45,34 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     input.catalogNames.length ? `Productos reales del catálogo (el bloque catalog los muestra solo): ${input.catalogNames.join(' · ')}` : 'Catálogo aún vacío.',
     input.photos.length
       ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras): ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
-      : 'No hay fotos subidas: no uses los campos photo/photos.',
+      : 'No hay fotos subidas: deja photo como "" y photos como [].',
     `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. 5-9 bloques, fondos de color variados (paper/accent/deep/pop) al estilo editorial: titulares enormes, secciones con bloques de color intensos, wordmark gigante en el footer.`,
     `Fuentes disponibles (ids exactos): ${SOURCE_FONT_IDS.join(', ')}. Personalidades: ${SOURCE_FONT_CATALOG.slice(0, 12).map(font => `${font.id}=${font.personality.join('/')}`).join('; ')}.`,
     'Colores en hex #rrggbb con buen contraste. Textos en español, honestos, sin inventar precios ni promesas.',
   ].join('\n');
 }
 
-export function sketchFromResponse(body: unknown, ctx: SketchContext): { sketch: StoreSketch; notes: string[] } {
-  let parsed: unknown;
-  try { parsed = sourceResponseJson(body); } catch { parsed = undefined; }
-  return repairSketch(parsed, ctx);
+export function sketchFromResponse(body: unknown, ctx: SketchContext): { sketch: StoreSketch; notes: string[]; parsed: boolean } {
+  let value: unknown;
+  try { value = sourceResponseJson(body); } catch { value = undefined; }
+  const parsed = typeof value === 'object' && value !== null;
+  return { ...repairSketch(parsed ? value : undefined, ctx), parsed };
+}
+
+/** The photos a sketch may show: bundled images whose confirmed role allows display.
+ * Reference material, unused uploads and unknown roles never reach a storefront. */
+export function sketchPhotoAllowlist(
+  assets: Array<{ path: string }>,
+  legend: Array<{ original: string; path: string }>,
+  uses: Array<{ url: string; role?: string; description?: string }>,
+): Array<{ path: string; description?: string }> {
+  const FORBIDDEN = new Set(['reference', 'unused', 'unknown']);
+  return assets
+    .filter(asset => /\.(png|jpe?g|webp|avif)$/i.test(asset.path))
+    .flatMap(asset => {
+      const original = legend.find(entry => entry.path === asset.path)?.original;
+      const use = original ? uses.find(entry => entry.url === original) : undefined;
+      if (use?.role && FORBIDDEN.has(use.role)) return [];
+      return [{ path: asset.path, ...(use?.description ? { description: use.description } : {}) }];
+    });
 }

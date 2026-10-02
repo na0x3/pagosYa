@@ -39,7 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { assembleSketch, sketchFromResponse, sketchPrompt, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { assembleSketch, sketchFromResponse, sketchPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -430,7 +430,7 @@ export class SourceGenerationService {
       }
     }
     // Sketch-first new stores design through the sketch itself; the concept planner would be a second, slower designer.
-    const sketchFirst = !previous && !execution?.candidate && this.config.get<boolean>('app.yapiSketchFirst') !== false;
+    const sketchFirst = agentEngine && !previous && !execution?.candidate && this.config.get<boolean>('app.yapiSketchFirst') !== false;
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
@@ -726,27 +726,37 @@ export class SourceGenerationService {
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
       // Sketch-first (sub-project 2): a brand-new store is one cheap structured call plus deterministic assembly.
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
-      if (agentEngine && sketchFirst) {
+      if (sketchFirst) {
         await progress?.('building');
-        const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: assets.filter(file => /\.(png|jpe?g|webp|avif)$/i.test(file.path)).map(file => file.path) };
-        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchCtx.photos.map(path => ({ path, description: imageUses.find(use => use.url === assetLegend.find(asset => asset.path === path)?.original)?.description })), catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30) });
-        const attempt: (typeof attempts)[number] = { model: plan.model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
+        const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
+        const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: sketchPhotos.map(photo => photo.path) };
+        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30) });
+        const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
+        let httpStatus = 0;
         const sketchStarted = Date.now();
         try {
-          const allocation = budget.reserve(plan.model, Math.ceil(prompt.length / 3) + 2000, 6000, 500);
+          const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 2000, 12_000, 500);
           try {
-            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify(sourceProviderBody({ model: plan.model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+            httpStatus = response.status;
             body = await response.json().catch(() => null);
           } finally { allocation.settle(body?.usage); }
-        } catch { /* total: the default sketch below still saves */ }
+        } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
         signal.throwIfAborted();
         attempt.durationMs = Date.now() - sketchStarted;
-        attempt.usage = sourceUsage(plan.model, body?.usage);
-        attempt.status = 'COMPLETED';
-        const { sketch } = sketchFromResponse(body, sketchCtx);
+        attempt.usage = sourceUsage(model, body?.usage);
+        attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
+        if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
+        const { sketch, notes, parsed } = sketchFromResponse(body, sketchCtx);
+        // A fallen-back attempt is FAILED: absorbed from billing, visible in the receipt, metered like every provider call.
+        attempt.status = parsed ? 'COMPLETED' : 'FAILED';
+        if (!parsed && !attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida; se usó el boceto base').slice(0, 300);
+        if (!parsed) autoRepairs.push('Boceto: la respuesta del modelo no sirvió; se usó el boceto base.');
+        autoRepairs.push(...notes.slice(0, 10).map(note => `Boceto: ${note}`));
+        await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
         generated = { label: `Boceto de ${sketchCtx.storeName}`.slice(0, 120), files: assembleSketch(sketch, sketchCtx) };
         sketchFile = { path: 'sketch.json', content: JSON.stringify(sketch, null, 2) + '\n' };
         lenient = true;

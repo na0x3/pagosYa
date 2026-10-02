@@ -358,6 +358,50 @@ describe('sketch-first new stores', () => {
     expect(home).toContain('data-pagosya-catalog');
     expect(home).toContain('skb-footer');
   });
+  it('a Claude pick still sketches through the OpenAI companion model (F1)', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await service.generate('m', 's', { ...input(brief), revision: 0, model: 'claude-sonnet-5' }, new SourceRequestBudget(50));
+    expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).model).toMatch(/^gpt-/);
+    expect(projects.save).toHaveBeenCalled();
+  });
+  it('YAPI_SKETCH_FIRST=off keeps the agent path for new stores (F8)', async () => {
+    const { service, projects, brief } = await setup('agent', { 'app.yapiSketchFirst': false });
+    newStore(projects);
+    jest.spyOn((service as any).designPlanner, 'explore').mockRejectedValue(new Error('planner-reached'));
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await expect(service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50))).rejects.toThrow('planner-reached');
+  });
+  it('a single-engine new store keeps its design planner (F2)', async () => {
+    const { service, projects, brief } = await setup('single');
+    newStore(projects);
+    jest.spyOn((service as any).designPlanner, 'explore').mockRejectedValue(new Error('planner-reached'));
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await expect(service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50))).rejects.toThrow('planner-reached');
+  });
+  it('a failed budget reserve still saves the default sketch (F8)', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(1));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(projects.save).toHaveBeenCalled();
+  });
+  it('a garbage response is a FAILED, metered attempt that still saves (F4)', async () => {
+    const { service, projects, prisma, brief } = await setup();
+    newStore(projects);
+    const metering = { record: jest.fn() };
+    const stores = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Pausa', checkoutMode: 'PAYMENT', items: [], categories: [], locations: [] }) };
+    const rebuilt = new (service.constructor as any)(prisma, stores, projects, { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') }, (service as any).config, undefined, metering);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 500, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: 'not json' }] }] })));
+    const result: any = await rebuilt.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const attempt = result.generation.attempts.find((a: any) => a.phase === 'sketch');
+    expect(attempt.status).toBe('FAILED');
+    expect(attempt.responseStatus).toBe('completed');
+    expect(metering.record).toHaveBeenCalled();
+    expect(result.generation.autoRepairs.join(' ')).toContain('boceto base');
+  });
   it('an existing store keeps the agent loop', async () => {
     const { service, projects, brief } = await setup();
     const fetchMock = jest.spyOn(globalThis, 'fetch')
