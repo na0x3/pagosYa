@@ -1,4 +1,6 @@
 import { SourceChatJobsService } from './source-chat-jobs.service';
+import { SketchStudioController } from './sketch-studio.controller';
+import { SketchStudioService } from './sketch-studio.service';
 import { SourceChatJobsController } from './source-chat-jobs.controller';
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
@@ -30,8 +32,8 @@ import { SourceTemplatesService } from "./source-templates.service";
  * visual review, and publishing. See docs/ARCHITECTURE.md for the pipeline. */
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule],
-  controllers: [SourceChatJobsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController],
-  providers: [SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService],
+  controllers: [SketchStudioController, SourceChatJobsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController],
+  providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
 export class StorefrontSourceModule {}
