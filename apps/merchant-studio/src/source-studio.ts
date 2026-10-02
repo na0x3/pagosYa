@@ -138,6 +138,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
+    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); return; }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
       if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string') bocetoPanel.remoteSelect(event.data.id);
       if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);

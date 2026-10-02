@@ -147,4 +147,5 @@
     if (!on) { setHovered(null); if (editing) stopEditing(false); }
     placeHandle();
   });
+  try { parent.postMessage({ type: 'pagosya:boceto-ready' }, '*'); } catch (error) { /* no parent */ }
 })();
