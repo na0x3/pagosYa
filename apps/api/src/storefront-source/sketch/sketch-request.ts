@@ -22,7 +22,9 @@ export const SKETCH_JSON_SCHEMA = {
     fonts: { type: 'object', additionalProperties: false, properties: { display: string, text: string }, required: ['display', 'text'] },
     scale: size,
     blocks: { type: 'array', items: { anyOf: [
-      block('hero', { variant: { type: 'string', enum: ['photo-right', 'full-bleed', 'stacked'] }, headline: string, sub: string, cta: string, photo: string }),
+      block('announce', { left: string, right: string }),
+      block('split', { headline: string, body: string, cta: string, href: string, pills: { type: 'array', items: string }, photo: string }),
+      block('hero', { variant: { type: 'string', enum: ['photo-right', 'full-bleed', 'stacked'] }, headline: string, sub: string, cta: string, badge: string, note: string, sticker: string, photo: string }),
       block('marquee', { text: string }),
       block('catalog', { kicker: string, title: string }),
       block('story', { title: string, paragraphs: { type: 'array', items: string }, photo: string }),
@@ -46,7 +48,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     input.photos.length
       ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras): ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
-    `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. 5-9 bloques, fondos de color variados (paper/accent/deep/pop) al estilo editorial: titulares enormes, secciones con bloques de color intensos, wordmark gigante en el footer.`,
+    `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. 6-10 bloques, fondos de color variados (paper/accent/deep/pop) al estilo editorial: announce arriba, hero con badge y sticker, un split de color intenso con pills, titulares enormes, wordmark gigante en el footer.`,
     `Fuentes disponibles (ids exactos): ${SOURCE_FONT_IDS.join(', ')}. Personalidades: ${SOURCE_FONT_CATALOG.slice(0, 12).map(font => `${font.id}=${font.personality.join('/')}`).join('; ')}.`,
     'Colores en hex #rrggbb con buen contraste. Textos en español, honestos, sin inventar precios ni promesas.',
   ].join('\n');

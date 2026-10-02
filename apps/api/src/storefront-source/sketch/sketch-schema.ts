@@ -6,7 +6,9 @@ export type SketchPalette = { paper: string; ink: string; accent: string; deep: 
 export type SketchSize = 's' | 'm' | 'l' | 'xl';
 export type SketchBg = keyof SketchPalette;
 export type SketchBlock =
-  | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; photo?: string; bg: SketchBg; size: SketchSize }
+  | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; badge: string; note: string; sticker: string; photo?: string; bg: SketchBg; size: SketchSize }
+  | { id: string; type: 'announce'; left: string; right: string; bg: SketchBg; size: SketchSize }
+  | { id: string; type: 'split'; headline: string; body: string; cta: string; href: string; pills: string[]; photo?: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'marquee'; text: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'catalog'; kicker: string; title: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'story'; title: string; paragraphs: string[]; photo?: string; bg: SketchBg; size: SketchSize }
@@ -19,7 +21,7 @@ export type SketchBlock =
 export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; blocks: SketchBlock[] };
 export type SketchContext = { storeName: string; purpose: 'shop' | 'service'; photos: string[] };
 
-export const SKETCH_BLOCK_TYPES = ['hero', 'marquee', 'catalog', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
+export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'marquee', 'catalog', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
 
 const DEFAULT_PALETTE: SketchPalette = { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' };
 const DEFAULT_FONTS = { display: 'fraunces', text: 'epilogue' };
@@ -112,7 +114,13 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     switch (type) {
       case 'hero': {
         const heroPhoto = photo(block.photo);
-        blocks.push({ ...base, type, variant: ['photo-right', 'full-bleed', 'stacked'].includes(block.variant as string) ? (block.variant as 'photo-right') : 'photo-right', headline: text(block.headline, LIMITS.headline, ctx.storeName), sub: text(block.sub, LIMITS.short), cta: text(block.cta, 60, 'Ver productos'), ...(heroPhoto ? { photo: heroPhoto } : {}) });
+        blocks.push({ ...base, type, variant: ['photo-right', 'full-bleed', 'stacked'].includes(block.variant as string) ? (block.variant as 'photo-right') : 'photo-right', headline: text(block.headline, LIMITS.headline, ctx.storeName), sub: text(block.sub, LIMITS.short), cta: text(block.cta, 60, 'Ver productos'), badge: text(block.badge, 60), note: text(block.note, 120), sticker: text(block.sticker, 40), ...(heroPhoto ? { photo: heroPhoto } : {}) });
+        break;
+      }
+      case 'announce': blocks.push({ ...base, type, left: text(block.left, LIMITS.short), right: text(block.right, LIMITS.short) }); break;
+      case 'split': {
+        const splitPhoto = photo(block.photo);
+        blocks.push({ ...base, type, bg: bg(block.bg, 'accent'), headline: text(block.headline, LIMITS.headline, ctx.storeName), body: text(block.body, LIMITS.paragraph), cta: text(block.cta, 60, 'Ver más'), href: typeof block.href === 'string' && /^(#|index\.html|productos\.html|checkout\.html|galeria\.html)/.test(block.href) ? block.href : 'checkout.html', pills: list(block.pills, LIMITS.list, p => (p == null ? null : text(p, 60))), ...(splitPhoto ? { photo: splitPhoto } : {}) });
         break;
       }
       case 'marquee': blocks.push({ ...base, type, text: text(block.text, LIMITS.short, ctx.storeName) }); break;
@@ -138,7 +146,7 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
   const extraCatalogs = blocks.filter(block => block.type === 'catalog').slice(1);
   if (extraCatalogs.length) { notes.push('catálogo repetido; se conservó el primero'); for (const extra of extraCatalogs) blocks.splice(blocks.indexOf(extra), 1); }
   // Structure: a shop always sells and every page ends in a footer, exactly one, last.
-  if (!blocks.length) blocks.push({ id: '', type: 'hero', variant: 'photo-right', headline: ctx.storeName, sub: '', cta: 'Ver productos', bg: 'paper', size: 'm' });
+  if (!blocks.length) blocks.push({ id: '', type: 'hero', variant: 'photo-right', headline: ctx.storeName, sub: '', cta: 'Ver productos', badge: '', note: '', sticker: '', bg: 'paper', size: 'm' });
   if (ctx.purpose === 'shop' && !blocks.some(b => b.type === 'catalog')) {
     blocks.splice(1, 0, { id: '', type: 'catalog', kicker: '', title: 'Nuestros productos', bg: 'paper', size: 'm' });
     notes.push('faltaba el catálogo; se añadió');

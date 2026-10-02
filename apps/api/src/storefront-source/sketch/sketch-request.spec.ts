@@ -7,7 +7,7 @@ it('the schema is a strict object with anyOf blocks', () => {
   expect(SKETCH_JSON_SCHEMA.type).toBe('object');
   expect(SKETCH_JSON_SCHEMA.additionalProperties).toBe(false);
   expect(Array.isArray((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf)).toBe(true);
-  expect((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf).toHaveLength(10);
+  expect((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf).toHaveLength(12);
 });
 
 it('the prompt names the photos, catalog, instruction and real font ids', () => {

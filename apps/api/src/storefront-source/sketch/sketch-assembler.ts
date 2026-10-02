@@ -16,6 +16,8 @@ const fontFace = (id: string) => `@font-face {
   font-display: swap;
 }`;
 
+const NAV_LABEL: Partial<Record<string, string>> = { catalog: 'Productos', story: 'Nosotros', gallery: 'Galería', faq: 'Preguntas', reviews: 'Reseñas' };
+
 export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourceProjectFileDto[] {
   // Re-repair on entry: assembly stays total even if a caller skips repair, and repair is idempotent.
   const sketch = repairSketch(input, ctx).sketch;
@@ -24,11 +26,19 @@ export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourcePr
   // Exactly one h1 per page: the first block that carries a primary heading renders it as the h1.
   const headingIndex = body.findIndex(block => block.type !== 'marquee');
 
+  const seen = new Set<string>();
+  const navLinks = sketch.blocks.flatMap(block => {
+    const label = NAV_LABEL[block.type];
+    if (!label || seen.has(block.type)) return [];
+    seen.add(block.type);
+    return [`<a href=${expr(`index.html#skb-${block.id}`)}>${expr(label)}</a>`];
+  }).join('');
   const shell = `import type { ReactNode } from 'react';
 
 export function Header() {
   return <header className="skb-header">
     <a className="skb-logo" href="index.html">${expr(ctx.storeName)}</a>
+    ${navLinks ? `<nav className="skb-nav" aria-label="Principal">${navLinks}</nav>` : ''}
     ${ctx.purpose === 'shop' ? '<button type="button" className="skb-cart" data-cart-open>Mi pedido <span className="skb-cart__count" data-cart-count>0</span></button>' : ''}
   </header>;
 }
@@ -109,6 +119,8 @@ export default function Checkout() {
 body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font-family: var(--skb-text-font); }
 .skb-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem clamp(1rem, 5vw, 4rem); background: var(--skb-paper); }
 .skb-logo { font-family: var(--skb-display-font); font-size: 1.4rem; color: inherit; text-decoration: none; font-weight: 700; }
+.skb-nav { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+.skb-nav a { color: inherit; text-decoration: none; font-size: 0.95rem; }
 .skb-cart { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 999px; padding: 0.5em 1.1em; font: inherit; cursor: pointer; }
 .skb-status { padding: 0 clamp(1rem, 5vw, 4rem); min-height: 1.2em; }
 .skb-page { padding: clamp(1rem, 4vw, 2.5rem) clamp(1rem, 5vw, 4rem); }

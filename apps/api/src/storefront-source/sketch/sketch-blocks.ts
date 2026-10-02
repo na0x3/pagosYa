@@ -11,7 +11,7 @@ const inkFor = (bg: string, sketch: StoreSketch) => bestInkFor(bg, sketch.palett
 export type RenderOptions = { h1?: boolean };
 const open = (block: SketchBlock, sketch: StoreSketch, label?: string, extra = '') => {
   const bg = sketch.palette[block.bg];
-  return `<section data-skb=${expr(block.id)} className=${expr(`skb skb-${block.type} skb--${block.size}`)}` +
+  return `<section data-skb=${expr(block.id)} id=${expr(`skb-${block.id}`)} className=${expr(`skb skb-${block.type} skb--${block.size}`)}` +
     (label ? ` aria-label=${expr(label)}` : '') + (extra ? ` ${extra}` : '') +
     ` style={{ ['--skb-bg' as string]: ${JSON.stringify(bg)}, ['--skb-ink' as string]: ${JSON.stringify(inkFor(bg, sketch))} }}>`;
 };
@@ -22,11 +22,25 @@ type Render = (block: SketchBlock & { type: never }, sketch: StoreSketch, ctx: S
 const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { type: T }>, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions) => string } = {
   hero: (b, s, ctx, options) => open(b, s) + `
     <div className="skb-hero__copy">
+      ${b.badge ? `<p className="skb-badge">${expr(b.badge)}</p>` : ''}
       <${options.h1 ? 'h1' : 'h2'} className="skb-display">${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
       ${b.sub ? `<p className="skb-lead">${expr(b.sub)}</p>` : ''}
       <a className="skb-btn" href=${expr(s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido')}>${expr(b.cta)}</a>
+      ${b.note ? `<p className="skb-note">${expr(b.note)}</p>` : ''}
     </div>
-    ${b.photo ? `<div className=${expr(`skb-hero__media skb-hero__media--${b.variant}`)}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-hero__img')}</div>` : ''}
+    ${b.photo ? `<div className=${expr(`skb-hero__media skb-hero__media--${b.variant}`)}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-hero__img')}${b.sticker ? `<p className="skb-sticker" aria-hidden="true">${expr(b.sticker)}</p>` : ''}</div>` : ''}
+  </section>`,
+  announce: (b, s) => open(b, s, 'Avisos') + `
+    <div className="skb-announce__row"><span>${expr(b.left)}</span><span>${expr(b.right)}</span></div>
+  </section>`,
+  split: (b, s, ctx, options) => open(b, s) + `
+    <div className="skb-split__copy">
+      <${options.h1 ? 'h1' : 'h2'} className="skb-display">${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
+      ${b.body ? `<p className="skb-lead">${expr(b.body)}</p>` : ''}
+      ${b.pills.length ? `<div className="skb-pills">${b.pills.map(pill => `<span className="skb-pill">${expr(pill)}</span>`).join('')}</div>` : ''}
+      <a className="skb-btn" href=${expr(b.href)}>${expr(b.cta)}</a>
+    </div>
+    ${b.photo ? `<div className="skb-split__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-split__img')}</div>` : ''}
   </section>`,
   marquee: (b, s) => open(b, s, 'Texto en movimiento') + `
     <div className="skb-marquee__track">
@@ -100,12 +114,27 @@ export function renderBlock(block: SketchBlock, sketch: StoreSketch, ctx: Sketch
 }
 
 const CSS: Record<SketchBlock['type'], string> = {
+  announce: `
+.skb-announce { padding-block: 0.6rem; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.skb-announce__row { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }`,
+  split: `
+.skb-split { display: grid; gap: 0; padding: 0; }
+@media (min-width: 900px) { .skb-split { grid-template-columns: 1fr 1fr; } }
+.skb-split__copy { padding: clamp(2rem, 6vw, 5rem) clamp(1.2rem, 5vw, 4rem); display: grid; gap: 1.1rem; align-content: center; justify-items: start; }
+.skb-split__media { min-height: 320px; }
+.skb-split__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.skb-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.skb-pill { border: 1px solid currentColor; border-radius: 999px; padding: 0.35em 0.9em; font-size: 0.85rem; }`,
   hero: `
 .skb-hero { display: grid; gap: 2rem; align-items: center; }
 @media (min-width: 900px) { .skb-hero { grid-template-columns: 1.1fr 1fr; } }
 .skb-hero__img { width: 100%; height: auto; border-radius: 1.25rem; display: block; }
 .skb-hero__media--full-bleed .skb-hero__img { border-radius: 0; }
-.skb-hero__media--stacked { order: -1; }`,
+.skb-hero__media--stacked { order: -1; }
+.skb-hero__media { position: relative; }
+.skb-badge { display: inline-block; background: color-mix(in srgb, var(--skb-ink) 12%, var(--skb-bg)); border-radius: 999px; padding: 0.35em 1em; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 1rem; }
+.skb-note { font-size: 0.85rem; opacity: 0.75; margin: 0.9rem 0 0; }
+.skb-sticker { position: absolute; top: -1.2rem; right: -0.6rem; width: 6.2rem; height: 6.2rem; border-radius: 50%; background: var(--skb-ink); color: var(--skb-bg); display: grid; place-items: center; text-align: center; font-size: 0.72rem; font-weight: 700; padding: 0.6rem; rotate: 8deg; }`,
   marquee: `
 .skb-marquee { overflow: hidden; padding-block: 1.1em; white-space: nowrap; }
 .skb-marquee__track { display: inline-flex; animation: skb-scroll 24s linear infinite; font-family: var(--skb-display-font); font-size: clamp(1.4rem, 3.2vw, 2.6rem); text-transform: uppercase; letter-spacing: 0.04em; }

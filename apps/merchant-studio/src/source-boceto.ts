@@ -9,9 +9,11 @@ type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: 
 
 const BG_ROLES = ['paper', 'ink', 'accent', 'deep', 'pop'] as const;
 const SIZES = ['s', 'm', 'l', 'xl'];
-const TYPE_LABEL: Record<string, string> = { hero: 'Portada', marquee: 'Marquesina', catalog: 'Catálogo', story: 'Historia', reviews: 'Reseñas', faq: 'Preguntas', banner: 'Banner', gallery: 'Galería', newsletter: 'Boletín', footer: 'Pie de página' };
+const TYPE_LABEL: Record<string, string> = { announce: 'Aviso', split: 'Panel doble', hero: 'Portada', marquee: 'Marquesina', catalog: 'Catálogo', story: 'Historia', reviews: 'Reseñas', faq: 'Preguntas', banner: 'Banner', gallery: 'Galería', newsletter: 'Boletín', footer: 'Pie de página' };
 const TEXT_FIELDS: Record<string, Array<[string, string]>> = {
-  hero: [['headline', 'Título'], ['sub', 'Subtítulo'], ['cta', 'Botón']],
+  announce: [['left', 'Texto izquierdo'], ['right', 'Texto derecho']],
+  split: [['headline', 'Título'], ['body', 'Texto'], ['cta', 'Botón']],
+  hero: [['headline', 'Título'], ['sub', 'Subtítulo'], ['cta', 'Botón'], ['badge', 'Insignia'], ['note', 'Nota pequeña'], ['sticker', 'Sticker de la foto']],
   marquee: [['text', 'Texto']],
   catalog: [['kicker', 'Antetítulo'], ['title', 'Título']],
   story: [['title', 'Título']],
@@ -23,7 +25,9 @@ const TEXT_FIELDS: Record<string, Array<[string, string]>> = {
   footer: [['tagline', 'Lema']],
 };
 const DEFAULT_BLOCK: Record<string, object> = {
-  hero: { type: 'hero', variant: 'photo-right', headline: 'Un título con carácter', sub: '', cta: 'Ver productos', bg: 'paper', size: 'l' },
+  announce: { type: 'announce', left: 'Hecho fresco cada semana', right: 'Envíos a todo el país', bg: 'pop', size: 's' },
+  split: { type: 'split', headline: 'Mezcla y combina', body: 'Arma tu caja a tu manera.', cta: 'Armar mi caja', href: 'checkout.html', pills: ['6 unidades', '12 unidades'], bg: 'accent', size: 'l' },
+  hero: { type: 'hero', variant: 'photo-right', headline: 'Un título con carácter', sub: '', cta: 'Ver productos', badge: '', note: '', sticker: '', bg: 'paper', size: 'l' },
   marquee: { type: 'marquee', text: 'Hecho con calma · Hecho aquí', bg: 'pop', size: 's' },
   catalog: { type: 'catalog', kicker: '', title: 'Nuestros productos', bg: 'paper', size: 'm' },
   story: { type: 'story', title: 'Nuestra historia', paragraphs: ['Cuenta aquí tu proceso.'], bg: 'accent', size: 'l' },
@@ -98,7 +102,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (block.type === 'reviews') form.append(lines(block, 'quotes', 'Reseñas (texto — nombre)', items => items.map((q: any) => `${q.text} — ${q.name}`).join('\n'), value => value.split('\n').filter(Boolean).map(line => { const [text, name] = line.split(' — '); return { text: text || '', name: name || 'Cliente' }; })));
     if (block.type === 'faq') form.append(lines(block, 'items', 'Preguntas (pregunta — respuesta)', items => items.map((i: any) => `${i.q} — ${i.a}`).join('\n'), value => value.split('\n').filter(Boolean).map(line => { const [q, a] = line.split(' — '); return { q: q || '', a: a || '' }; })));
     if (block.type === 'hero') { form.append(choice(block, 'variant', 'Composición', ['photo-right', 'full-bleed', 'stacked'], ['Foto a la derecha', 'Foto completa', 'Apilada'])); form.append(photoPick(block, 'photo')); }
-    if (block.type === 'story') form.append(photoPick(block, 'photo'));
+    if (block.type === 'story' || block.type === 'split') form.append(photoPick(block, 'photo'));
+    if (block.type === 'split') { form.append(field(block, 'href', 'Enlace')); form.append(lines(block, 'pills', 'Pastillas (una por línea)', items => items.join('\n'), value => value.split('\n').filter(Boolean))); }
     if (block.type === 'banner') form.append(field(block, 'href', 'Enlace'));
     if (block.type === 'footer') form.append(choice(block, 'wordmark', 'Nombre gigante', ['giant', 'plain'], ['Sí', 'Discreto']));
     if (block.type === 'gallery') {

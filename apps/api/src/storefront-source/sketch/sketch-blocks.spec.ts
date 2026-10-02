@@ -62,3 +62,24 @@ describe('review fixes', () => {
     expect(out).not.toContain('"#ffffff"');
   });
 });
+
+describe('bake-lab enrichment', () => {
+  it('renders announce, split, hero extras and anchored sections with nav targets', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'top', type: 'announce', left: 'izq', right: 'der' },
+      { id: 'h', type: 'hero', headline: 'Hola', badge: 'DROP', note: 'nota', sticker: 'Fresco', photo: 'assets/a.jpg' },
+      { id: 'sp', type: 'split', headline: 'Mezcla', body: 'b', cta: 'Armar', pills: ['6 · Bs38'], photo: 'assets/a.jpg' },
+    ] }, ctx).sketch;
+    const announce = renderBlock(rich.blocks.find(b => b.type === 'announce')!, rich, ctx);
+    expect(announce).toContain('skb-announce');
+    const hero = renderBlock(rich.blocks.find(b => b.type === 'hero')!, rich, ctx);
+    expect(hero).toContain('skb-badge');
+    expect(hero).toContain('skb-sticker');
+    expect(hero).toContain('skb-note');
+    expect(hero).toContain('id={"skb-h"}');
+    const split = renderBlock(rich.blocks.find(b => b.type === 'split')!, rich, ctx);
+    expect(split).toContain('skb-split');
+    expect(split).toContain('skb-pill');
+    for (const type of ['announce', 'split'] as const) expect(blockCss(type).length).toBeGreaterThan(0);
+  });
+});

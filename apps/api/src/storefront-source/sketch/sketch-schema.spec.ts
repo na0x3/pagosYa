@@ -84,3 +84,19 @@ describe('review fixes', () => {
     expect(sketch.palette.ink).toBe('#111111');
   });
 });
+
+describe('bake-lab enrichment', () => {
+  it('repairs announce and split blocks and hero extras', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'a', type: 'announce', left: 'Cada galleta pesa 150g', right: 'Pide antes del domingo' },
+      { id: 'h', type: 'hero', headline: 'Hola', badge: 'EL DROP SEMANAL', note: '4.9 · 2.400 pedidos', sticker: 'Recién horneado', photo: 'assets/a.jpg' },
+      { id: 'sp', type: 'split', headline: 'Mezcla y combina', body: 'Elige tu caja.', cta: 'Armar caja', pills: ['6 · Bs38', '9 · Bs54'], photo: 'assets/a.jpg' },
+    ] }, ctx);
+    expect(sketch.blocks.map(b => b.type)).toEqual(expect.arrayContaining(['announce', 'hero', 'split']));
+    const hero = sketch.blocks.find(b => b.type === 'hero') as any;
+    expect(hero.badge).toBe('EL DROP SEMANAL');
+    expect(hero.sticker).toBe('Recién horneado');
+    const split = sketch.blocks.find(b => b.type === 'split') as any;
+    expect(split.pills).toEqual(['6 · Bs38', '9 · Bs54']);
+  });
+});

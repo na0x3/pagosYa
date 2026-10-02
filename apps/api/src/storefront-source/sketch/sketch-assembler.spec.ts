@@ -70,3 +70,18 @@ describe('review fixes', () => {
     expect(() => validateNextSources(files, 'shop')).not.toThrow();
   });
 });
+
+describe('bake-lab enrichment', () => {
+  it('the header links to the sections the sketch actually has', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola' },
+      { id: 'g', type: 'gallery', title: 'Galería', photos: ['assets/a.jpg'] },
+      { id: 'f', type: 'faq', title: 'Preguntas', items: [{ q: 'q', a: 'a' }] },
+    ] }, ctx).sketch;
+    const shell = assembleSketch(rich, ctx).find(f => f.path === 'components/Shell.tsx')!.content;
+    expect(shell).toContain('#skb-');
+    expect(shell).toContain('Preguntas');
+    expect(shell).toContain('Galería');
+    expect(shell).toContain('Productos');
+  });
+});
