@@ -1,6 +1,6 @@
 # Sketch-first YAPI — program overview (2026-10-02)
 
-Status: approved by the owner 2026-10-02 (conversation). Sub-project 1 built 2026-10-02 (`apps/api/src/storefront-source/sketch/`: schema+repair, 10 block generators, assembler, golden compile/screenshot tests — commits 9982441d, 2a4a622, a726409, 6d3f00f). Sub-projects 2–4 pending.
+Status: approved by the owner 2026-10-02 (conversation). Sub-project 1 built 2026-10-02 (`apps/api/src/storefront-source/sketch/`: schema+repair, 10 block generators, assembler, golden compile/screenshot tests — commits 9982441d, 2a4a622, a726409, 6d3f00f). Sub-project 2 built 2026-10-02 (`sketch-request.ts` + sketch-first branch in `source-generation.service.ts`, flag `YAPI_SKETCH_FIRST`, commits 8964901, 227e3c0f): a brand-new store is one structured call → repair → deterministic assembly → saved revision with `sketch.json`; the design planner is skipped; any provider failure still saves the default sketch. Sub-projects 3–4 pending.
 
 ## Why
 
