@@ -354,7 +354,9 @@ export class SourceChatService {
       // Readiness comes from the actual brief, not a fixed number of chat turns.
       // A usable brief delegates composition unless a template was explicitly requested.
       const discoveryReplies = Math.max(0, Math.min(2, setupDraft.discoveryReplies || 0));
-      const startFrom = explicitScratch ? 'scratch' : explicitTemplate ? 'template' : setupDraft.startFrom || (decision.startFrom === 'template' || decision.startFrom === 'scratch' ? decision.startFrom : decision.action === 'generate' ? 'scratch' : undefined);
+      // Sketch-first: every new store is born as a 100% editable sketch. Asking for "una plantilla"
+      // builds from scratch too; template cards are no longer offered (old offers stay tappable above).
+      const startFrom = decision.action === 'generate' || explicitScratch || explicitTemplate || setupDraft.startFrom || decision.startFrom === 'template' || decision.startFrom === 'scratch' ? 'scratch' : undefined;
       const newShop = !productPhoto && !current.revision && sitePurpose === 'shop';
       const startChoices = false;
       let templateChoices: TemplateChoice[] | undefined;
@@ -371,12 +373,6 @@ export class SourceChatService {
         decision.generationInstruction = `${decision.generationInstruction || 'Crea la tienda completa desde cero.'}\n${directionBrief(chosenDirection)}`;
       }
 
-      if (!chosenDirection && newShop && decision.action === 'generate' && startFrom === 'template') {
-        templateChoices = rankTemplates(decision.summary, galleryTemplates(), decision.templates);
-        decision.action = 'reply';
-        decision.reply = TEMPLATE_CHOICES_REPLY;
-        decision.generationInstruction = '';
-      }
       setupDraft = { sitePurpose, ...(setupDraft.designReady || newShop && decision.action === 'generate' && startFrom === 'scratch' ? { designReady: true } : {}), pendingCatalogRequest: pendingCatalogRequest(catalogInstruction, !current.revision, setupDraft.pendingCatalogRequest), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined, ...(startFrom ? { startFrom } : {}), ...(chosenDirection ? { directionId: chosenDirection.id, directionOrigin: 'merchant' as const } : {}) };
       if (decision.action === 'reply') {
         await workflow.finish('completed');

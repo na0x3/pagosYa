@@ -509,16 +509,12 @@ it('does not append a template question to a necessary clarification', async () 
   expect(messages.at(-1).content).toBe('¿Qué estilo y colores quieres?');
 });
 
-it('offers three Plantillas when the merchant chooses templates', async () => {
+it('a template request builds a sketch store instead of offering Plantillas (sketch-first)', async () => {
   const { service, dialogue, generation, messages } = firstShop();
   dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería de especialidad', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'unknown', templates: [{ id: 'tostado', reason: 'Hecha para café' }], chosenTemplateId: '', rework: false });
-  const result = await service.send('m', 's', { ...request, revision: 0, instruction: 'Quiero usar una plantilla' });
-  expect(generation.generate).not.toHaveBeenCalled();
-  expect((result as { revision?: unknown }).revision).toBeUndefined();
-  const choices = messages.at(-1).metadata.templateChoices;
-  expect(choices).toHaveLength(3);
-  expect(choices[0]).toEqual({ id: 'tostado', name: 'Tostado', reason: 'Hecha para café' });
-  expect(messages.at(-1).metadata.sourceSetup.answers.context).toBe('Cafetería de especialidad');
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Quiero usar una plantilla' });
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(messages.some((message: any) => message.metadata?.templateChoices)).toBe(false);
 });
 
 it('builds a scratch store from its brief without offering generic design directions', async () => {
@@ -565,13 +561,14 @@ it('refuses a direction that was not offered', async () => {
   await expect(service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Lujo', directionId: 'lujo-sobrio' })).rejects.toThrow('direcciones sugeridas');
 });
 
-it('offers a fresh set when the merchant keeps talking instead of choosing', async () => {
+it('keeps talking after an old template offer but never offers new cards (sketch-first)', async () => {
   const offered = [...discovered(), { role: 'ASSISTANT', content: 'Elegí estas 3 plantillas', metadata: { templateChoices: [{ id: 'tostado', name: 'Tostado', reason: 'r' }], sourceSetup: discovered()[0].metadata.sourceSetup } }];
   const { service, dialogue, generation, messages } = firstShop(offered);
   dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería verde', generationInstruction: 'x', imageUses: [], startFrom: 'template', templates: [{ id: 'huerta', reason: 'Verde' }], chosenTemplateId: '', rework: false });
   await service.send('m', 's', { ...request, revision: 0, instruction: 'Que sea más verde' });
-  expect(generation.generate).not.toHaveBeenCalled();
-  expect(messages.at(-1).metadata.templateChoices[0].id).toBe('huerta');
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(messages.at(-1).metadata?.templateChoices).toBeUndefined();
+  // Old offers stay readable so a tapped legacy card still resolves.
   expect(dialogue.decide.mock.calls[0][1].offeredTemplates).toEqual([{ id: 'tostado', name: 'Tostado' }]);
 });
 
