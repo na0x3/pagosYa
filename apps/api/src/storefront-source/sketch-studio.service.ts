@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SourceProjectsService } from './source-projects.service';
 import { nextSourceFile } from './source-next';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
+import { sourceAssetInventory } from './source-asset-library';
 import { assembleSketch, repairSketch, type SketchContext, type StoreSketch } from './sketch';
 import type { SourceProjectSnapshot } from './source-project';
 
@@ -26,8 +27,14 @@ export class SketchStudioService {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, slug: true } });
     return {
       storeName: store?.name || store?.slug || 'Mi tienda',
-      purpose: (snapshot?.brief as { sitePurpose?: string } | undefined)?.sitePurpose === 'service' ? 'service' : 'shop',
-      photos: (snapshot?.files ?? []).filter(file => PHOTO.test(file.path)).map(file => file.path),
+      // Same mapping as generation: only an explicit shop sells; portfolio/blog/service never get a forced catalog.
+      purpose: (snapshot?.brief as { sitePurpose?: string } | undefined)?.sitePurpose === 'shop' ? 'shop' : 'service',
+      // Explicitly confirmed reference/unused uploads never reach the picker; unlabeled photos stay available.
+      photos: (() => {
+        const files = snapshot?.files ?? [];
+        const roles = new Map(sourceAssetInventory(files).map(asset => [asset.path, asset.role]));
+        return files.filter(file => PHOTO.test(file.path) && !file.path.startsWith('assets/icons/') && !['reference', 'unused'].includes(roles.get(file.path) ?? '')).map(file => file.path);
+      })(),
     };
   }
 

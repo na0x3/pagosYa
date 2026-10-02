@@ -48,7 +48,7 @@ it('lists the blocks and saves a debounced text edit, re-rendering from the resp
   field.value = 'Nuevo título';
   field.dispatchEvent(new Event('input', { bubbles: true }));
   putSketch.mockImplementation(async (_s: any, body: any) => ({ revision: 4, sketch: { ...body.sketch, blocks: body.sketch.blocks.map((b: any) => (b.id === 'intro' ? { ...b, headline: 'REPARADO' } : b)) } } as any));
-  await vi.advanceTimersByTimeAsync(500);
+  await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch).toHaveBeenCalledTimes(1);
   expect(putSketch.mock.calls[0][1].sketch.blocks[0].headline).toBe('Nuevo título');
   await vi.waitFor(() => { if ((host.querySelector('[data-boceto-field="headline"]') as HTMLInputElement)?.value !== 'REPARADO') throw new Error('not re-rendered'); });
@@ -57,11 +57,11 @@ it('lists the blocks and saves a debounced text edit, re-rendering from the resp
 it('move, duplicate, delete and add compose the expected sketch', async () => {
   await mount();
   (host.querySelector('[data-boceto-block="cat"] [data-boceto-move-up]') as HTMLElement).click();
-  await vi.advanceTimersByTimeAsync(500);
+  await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls[0][1].sketch.blocks.map((b: any) => b.id)).toEqual(['cat', 'intro', 'fin']);
   (host.querySelector('[data-boceto-add]') as HTMLSelectElement).value = 'marquee';
   (host.querySelector('[data-boceto-add-button]') as HTMLElement).click();
-  await vi.advanceTimersByTimeAsync(500);
+  await vi.advanceTimersByTimeAsync(1300);
   const added = putSketch.mock.calls[1][1].sketch.blocks;
   expect(added.some((b: any) => b.type === 'marquee')).toBe(true);
   expect(added.at(-1).type).toBe('footer');

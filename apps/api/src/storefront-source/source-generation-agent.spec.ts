@@ -413,3 +413,49 @@ describe('sketch-first new stores', () => {
     expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json')).toBeUndefined();
   });
 });
+
+describe('chat-on-sketch edits', () => {
+  afterEach(() => jest.restoreAllMocks());
+  const bornSketch = {
+    palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' },
+    fonts: { display: 'anton', text: 'manrope' }, scale: 'm',
+    blocks: [
+      { id: 'h', type: 'hero', variant: 'photo-right', headline: 'Algo dulce', sub: '', cta: 'Ver', badge: '', note: '', sticker: '', bg: 'paper', size: 'l' },
+      { id: 'c', type: 'catalog', kicker: '', title: 'Productos', bg: 'pop', size: 'm' },
+      { id: 'z', type: 'footer', tagline: '', wordmark: 'giant', bg: 'deep', size: 'l' },
+    ],
+  };
+  const sketchBorn = async (engine = 'agent') => {
+    const context = await setup(engine);
+    const snapshot = (await context.projects.version()).snapshot;
+    context.projects.version.mockResolvedValue({ revision: 1, snapshot: { ...snapshot, files: [...snapshot.files, { path: 'sketch.json', content: JSON.stringify(bornSketch) }] } });
+    return context;
+  };
+  const editedResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 800, output_tokens: 200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ ...bornSketch, blocks: bornSketch.blocks.map(b => (b.id === 'h' ? { ...b, headline: 'Titular juguetón' } : b)) }) }] }] }));
+
+  it('an ordinary edit updates the sketch with one small call, no agent loop', async () => {
+    const { service, projects, brief } = await sketchBorn();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => editedResponse());
+    await service.generate('m', 's', { ...input(brief), instruction: 'haz el titular más juguetón' }, new SourceRequestBudget(50));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).tools).toBeUndefined();
+    const saved = projects.save.mock.calls[0][2];
+    expect(saved.files.find((f: any) => f.path === 'sketch.json').content).toContain('Titular juguetón');
+    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain(JSON.stringify('Titular juguetón'));
+  });
+  it('a garbage reply keeps the previous revision and reports a retryable failure', async () => {
+    const { service, projects, brief } = await sketchBorn();
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'nope' }] }] })));
+    await expect(service.generate('m', 's', { ...input(brief), instruction: 'haz el titular más juguetón' }, new SourceRequestBudget(50))).rejects.toThrow(/sigue (igual|guardada)/);
+    expect(projects.save).not.toHaveBeenCalled();
+  });
+  it('a redesign request gets a fresh sketch, not an edit', async () => {
+    const { service, projects, brief } = await sketchBorn();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => editedResponse());
+    await service.generate('m', 's', { ...input(brief), instruction: 'Rediseña toda la tienda desde cero' }, new SourceRequestBudget(200));
+    const body = String((fetchMock.mock.calls[0] as any)[1].body);
+    expect(body).toContain('Diseña el boceto');
+    expect(body).not.toContain('Boceto actual');
+    expect(projects.save).toHaveBeenCalled();
+  });
+});

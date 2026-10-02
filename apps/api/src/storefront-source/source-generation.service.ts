@@ -39,7 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { assembleSketch, sketchFromResponse, sketchPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { assembleSketch, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -430,7 +430,10 @@ export class SourceGenerationService {
       }
     }
     // Sketch-first new stores design through the sketch itself; the concept planner would be a second, slower designer.
-    const sketchFirst = agentEngine && !previous && !execution?.candidate && this.config.get<boolean>('app.yapiSketchFirst') !== false;
+    const sketchBorn = previousFiles.some((file: SourceProjectFileDto) => file.path === 'sketch.json');
+    const sketchFlag = this.config.get<boolean>('app.yapiSketchFirst') !== false;
+    const sketchFirst = agentEngine && !execution?.candidate && sketchFlag && (!previous || (sketchBorn && sourceRedesignRequested(dto.instruction)));
+    const sketchEdit = agentEngine && !execution?.candidate && sketchFlag && !sketchFirst && editExisting && sketchBorn;
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
@@ -759,6 +762,46 @@ export class SourceGenerationService {
         await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
         generated = { label: `Boceto de ${sketchCtx.storeName}`.slice(0, 120), files: assembleSketch(sketch, sketchCtx) };
         sketchFile = { path: 'sketch.json', content: JSON.stringify(sketch, null, 2) + '\n' };
+        lenient = true;
+        try { await acceptCandidate(); } finally { lenient = false; }
+      } else if (sketchEdit) {
+        // Chat-on-sketch (sub-project 4): an edit on a sketch-born store edits the sketch itself — one small call,
+        // deterministic assembly, sketch.json stays fresh. A bad reply keeps the previous revision untouched.
+        await progress?.('building');
+        const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: previousFiles.filter((file: SourceProjectFileDto) => /\.(png|jpe?g|webp|avif)$/i.test(file.path)).map((file: SourceProjectFileDto) => file.path) };
+        let current: unknown;
+        try { current = JSON.parse(previousFiles.find((file: SourceProjectFileDto) => file.path === 'sketch.json')!.content); } catch { current = undefined; }
+        const currentSketch = repairSketch(current, sketchCtx).sketch;
+        const prompt = sketchEditPrompt({ sketch: currentSketch, instruction: dto.instruction, targetBlockId: dto.selection?.sectionId?.replace(/^skb-/, ''), photos: sketchCtx.photos.map(path => ({ path })), catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30) });
+        const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
+        attempts.push(attempt);
+        let body: any = null;
+        let httpStatus = 0;
+        const sketchStarted = Date.now();
+        try {
+          const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 2000, 12_000, 500);
+          try {
+            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Edita el boceto según el pedido y devuelve el boceto completo como JSON estricto según el esquema.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+            httpStatus = response.status;
+            body = await response.json().catch(() => null);
+          } finally { allocation.settle(body?.usage); }
+        } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
+        signal.throwIfAborted();
+        attempt.durationMs = Date.now() - sketchStarted;
+        attempt.usage = sourceUsage(model, body?.usage);
+        attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
+        if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
+        const edited = sketchFromResponse(body, sketchCtx);
+        attempt.status = edited.parsed ? 'COMPLETED' : 'FAILED';
+        await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
+        if (!edited.parsed) {
+          if (!attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida').slice(0, 300);
+          throw new BadGatewayException('YAPI no pudo aplicar el cambio al boceto. Tu revisión anterior sigue guardada.');
+        }
+        autoRepairs.push(...edited.notes.slice(0, 10).map(note => `Boceto: ${note}`));
+        generated = { label: 'Boceto actualizado', files: assembleSketch(edited.sketch, sketchCtx) };
+        sketchFile = { path: 'sketch.json', content: JSON.stringify(edited.sketch, null, 2) + '\n' };
         lenient = true;
         try { await acceptCandidate(); } finally { lenient = false; }
       } else if (agentEngine) {

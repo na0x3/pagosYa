@@ -1,6 +1,8 @@
 /* Boceto: the hand-editing panel for sketch-born stores. */
 .boceto-panel { position: fixed; right: 16px; top: 72px; bottom: 16px; width: 320px; overflow: auto; background: #fff; border: 1px solid #e2e2e2; border-radius: 14px; padding: 14px; z-index: 40; font: 13px/1.5 Arial, Helvetica, sans-serif; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
+.boceto-head { position: relative; }
 .boceto-head h2 { margin: 0; font-size: 16px; }
+.boceto-close { position: absolute; top: 0; right: 0; border: 0; background: none; font-size: 14px; cursor: pointer; color: #666; }
 .boceto-head p { margin: 2px 0 10px; color: #737373; }
 .boceto-style { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin-bottom: 12px; }
 .boceto-swatch { display: flex; align-items: center; gap: 6px; text-transform: capitalize; }

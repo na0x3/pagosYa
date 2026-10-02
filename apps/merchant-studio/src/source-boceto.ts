@@ -1,3 +1,4 @@
+import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 
@@ -5,7 +6,7 @@ import './source-boceto.css';
  * Every merchant string reaches the DOM through value/textContent only — never markup. */
 
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; blocks: any[] };
-type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void> };
+type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void };
 
 const BG_ROLES = ['paper', 'ink', 'accent', 'deep', 'pop'] as const;
 const SIZES = ['s', 'm', 'l', 'xl'];
@@ -51,24 +52,48 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let host: HTMLElement | null = null, opts: Mount | null = null;
   let sketch: Sketch | null = null, photos: string[] = [], fonts: string[] = [], revision = 0;
   let selected = '', timer: ReturnType<typeof setTimeout> | null = null, pending = false, note = '';
+  let editSeq = 0, lastSaved = '', statusNode: HTMLElement | null = null, rootNode: HTMLElement | null = null, mountToken = 0;
+  let mountedStore = '', mountedRevision = -1;
 
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(() => void save(), 400); };
+  const status = (text: string) => { if (statusNode) statusNode.textContent = text; };
+  // A longer idle window keeps revisions meaningful and the server load low; typing never loses focus because
+  // saving updates only the status line, never the form.
+  const schedule = () => { editSeq++; if (timer) clearTimeout(timer); timer = setTimeout(() => void save(), 1200); };
   async function save() {
     if (!opts || !sketch || pending) return;
-    pending = true; draw();
+    const payload = JSON.stringify(sketch);
+    if (payload === lastSaved) return;
+    const seqAtSave = editSeq;
+    pending = true; status('Guardando…');
     try {
       const result = await api.putSketch(opts.storeId, { revision, sketch });
-      revision = result.revision; sketch = result.sketch as Sketch; note = '';
-      await opts.saved(revision);
-    } catch {
-      // Total loop: reload the server's truth; the previous revision is intact.
-      try { const fresh = await api.getSketch(opts.storeId); revision = fresh.revision; sketch = fresh.sketch as Sketch; note = 'Se conservó la versión anterior.'; } catch { note = 'Se conservó la versión anterior.'; }
+      revision = result.revision; mountedRevision = result.revision;
+      if (editSeq === seqAtSave) {
+        // Nothing changed while saving: adopt the repaired server truth so repairs show.
+        sketch = result.sketch as Sketch; lastSaved = JSON.stringify(sketch); note = ''; pending = false; draw();
+      } else {
+        // The merchant kept editing: keep their local state and save again.
+        lastSaved = payload; pending = false; status('Guardando…'); schedule();
+      }
+      try { await opts.saved(revision); } catch { /* preview reload is best-effort; the save itself succeeded */ }
+      return;
+    } catch (error) {
+      pending = false;
+      if (error instanceof ApiError && error.status === 409) {
+        // Someone else saved: reload the server's truth; nothing was overwritten.
+        try { const fresh = await api.getSketch(opts.storeId); revision = fresh.revision; sketch = fresh.sketch as Sketch; lastSaved = JSON.stringify(sketch); note = 'El boceto cambió en otra pestaña; se recargó.'; } catch { note = 'Se conservó la versión anterior.'; }
+        draw();
+      } else {
+        // Rate limit or network: keep the merchant's edits and retry shortly.
+        status('Reintentando…');
+        if (timer) clearTimeout(timer); timer = setTimeout(() => void save(), 2500);
+      }
     }
-    pending = false; draw();
   }
 
+  const MAXLEN: Record<string, number> = { headline: 120, title: 120, badge: 60, cta: 60, note: 120, sticker: 40, left: 200, right: 200, text: 200, kicker: 80, sub: 200, tagline: 200, body: 600, href: 200 };
   function field(block: any, key: string, label: string) {
-    const input = el('input', { value: String(block[key] ?? ''), className: 'boceto-input' });
+    const input = el('input', { value: String(block[key] ?? ''), className: 'boceto-input', maxLength: MAXLEN[key] ?? 200 });
     input.dataset.bocetoField = key;
     input.addEventListener('input', () => { block[key] = input.value; schedule(); });
     return el('label', { className: 'boceto-label', text: label }, [input]);
@@ -124,10 +149,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (!host || !opts) return;
     if (!sketch) { host.replaceChildren(); return; }
     const root = el('section', { className: 'boceto-panel' });
-    root.append(el('header', { className: 'boceto-head' }, [
-      el('h2', { text: 'Boceto' }),
-      el('p', { text: pending ? 'Guardando…' : note || '100% editable · se guarda solo' }),
-    ]));
+    const close = el('button', { type: 'button', className: 'boceto-close', text: '✕', title: 'Cerrar' });
+    close.addEventListener('click', () => opts?.close?.());
+    statusNode = el('p', { text: pending ? 'Guardando…' : note || '100% editable · se guarda solo' });
+    root.append(el('header', { className: 'boceto-head' }, [el('h2', { text: 'Boceto' }), statusNode, close]));
     const style = el('div', { className: 'boceto-style' });
     style.append(choice(sketch, 'scale', 'Escala', SIZES, ['S', 'M', 'L', 'XL']));
     style.append(choice(sketch.fonts, 'display', 'Fuente títulos', fonts));
@@ -148,7 +173,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const move = (delta: number) => { const target = index + delta; if (target < 0 || target >= sketch!.blocks.length) return; sketch!.blocks.splice(target, 0, sketch!.blocks.splice(index, 1)[0]); schedule(); draw(); };
       const up = el('button', { type: 'button', text: '↑', title: 'Mover arriba' }); up.dataset.bocetoMoveUp = ''; up.addEventListener('click', () => move(-1));
       const down = el('button', { type: 'button', text: '↓', title: 'Mover abajo' }); down.dataset.bocetoMoveDown = ''; down.addEventListener('click', () => move(1));
-      const dup = el('button', { type: 'button', text: '⧉', title: 'Duplicar' }); dup.dataset.bocetoDuplicate = ''; dup.addEventListener('click', () => { sketch!.blocks.splice(index + 1, 0, { ...JSON.parse(JSON.stringify(block)), id: '' }); schedule(); draw(); });
+      const dup = el('button', { type: 'button', text: '⧉', title: 'Duplicar' }); dup.dataset.bocetoDuplicate = ''; dup.addEventListener('click', () => { let copy = `${block.id}-copia`; let n = 2; while (sketch!.blocks.some(item => item.id === copy)) copy = `${block.id}-copia-${n++}`; sketch!.blocks.splice(index + 1, 0, { ...JSON.parse(JSON.stringify(block)), id: copy.slice(0, 32) }); schedule(); draw(); });
       const kill = el('button', { type: 'button', text: '✕', title: 'Eliminar' }); kill.dataset.bocetoDelete = ''; kill.addEventListener('click', () => { sketch!.blocks.splice(index, 1); schedule(); draw(); });
       tools.append(up, down, dup, kill);
       row.append(title, tools);
@@ -158,7 +183,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     root.append(list);
     const add = el('select', { className: 'boceto-select' }); add.dataset.bocetoAdd = '';
     for (const type of Object.keys(DEFAULT_BLOCK)) add.append(el('option', { value: type, text: TYPE_LABEL[type] }));
-    const addButton = el('button', { type: 'button', className: 'boceto-add', text: '+ Añadir bloque' }); addButton.dataset.bocetoAddButton = '';
+    const addButton = el('button', { type: 'button', className: 'boceto-add', text: '+ Añadir bloque', disabled: sketch.blocks.length >= 20 }); addButton.dataset.bocetoAddButton = '';
     addButton.addEventListener('click', () => {
       const block = { ...JSON.parse(JSON.stringify(DEFAULT_BLOCK[add.value])), id: '' };
       const footerIndex = sketch!.blocks.findIndex(item => item.type === 'footer');
@@ -167,6 +192,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     });
     root.append(el('div', { className: 'boceto-adder' }, [add, addButton]));
     if (opts.locked) root.querySelectorAll('input,select,textarea,button').forEach(node => ((node as HTMLInputElement).disabled = true));
+    rootNode = root;
     host.replaceChildren(root);
   }
 
@@ -174,12 +200,17 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     mount(target: HTMLElement, options: Mount) {
       host = target; opts = options; note = '';
       const born = options.version.snapshot.files.some(file => file.path === 'sketch.json');
-      if (!born) { sketch = null; host.replaceChildren(); return; }
+      if (!born) { sketch = null; mountedStore = ''; host.replaceChildren(); return; }
+      // A re-render of the Studio must not refetch or discard in-progress edits: re-attach the live panel.
+      if (sketch && rootNode && mountedStore === options.storeId && (mountedRevision === options.version.revision || pending || timer)) { host.replaceChildren(rootNode); return; }
+      const token = ++mountToken;
       void api.getSketch(options.storeId).then(result => {
-        revision = result.revision; sketch = result.sketch as Sketch; photos = result.photos; fonts = result.fonts;
+        if (token !== mountToken) return;
+        mountedStore = options.storeId; mountedRevision = result.revision;
+        revision = result.revision; sketch = result.sketch as Sketch; photos = result.photos; fonts = result.fonts; lastSaved = JSON.stringify(sketch);
         if (!sketch) { host?.replaceChildren(); return; }
         draw();
-      }).catch(() => { sketch = null; host?.replaceChildren(); });
+      }).catch(() => { if (token === mountToken) { sketch = null; host?.replaceChildren(); } });
     },
   };
 }

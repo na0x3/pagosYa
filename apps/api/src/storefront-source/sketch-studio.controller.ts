@@ -1,8 +1,9 @@
 import { Body, Controller, Get, Header, Put, Param, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { IsDefined, IsInt, Min } from 'class-validator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
-import { MerchantThrottlerGuard } from './source-compile-budget';
+import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
 import { SketchStudioService } from './sketch-studio.service';
 
 class UpdateSketchDto {
@@ -23,6 +24,8 @@ export class SketchStudioController {
   }
 
   @Put('sketch')
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   update(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: UpdateSketchDto) {
     return this.sketches.update(merchant.id, storeId, body);
   }

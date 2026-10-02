@@ -635,7 +635,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
-      </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
+      </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
     </div>`;
     const pageMenu = app.querySelector<HTMLDetailsElement>('.source-page-menu');
     if (pageMenu) pageMenu.open = pageMenuOpen;
@@ -656,7 +656,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const bocetoHost = app.querySelector<HTMLElement>('[data-source-boceto]');
     if (bocetoHost && version) bocetoPanel.mount(bocetoHost, {
       storeId, version, locked: busy || dirty() || historical(),
-      saved: async revision => { await load(revision, true); render(); },
+      saved: async revision => { await load(revision); render(); },
+      close: () => { bocetoOpen = false; render(); },
     });
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {

@@ -328,3 +328,17 @@ describe('structural composition memory', () => {
     expect(prisma.storeSourceVersion.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe('sketch.json lifecycle (sketch-first C1)', () => {
+  const withSketch = (label: string) => ({ ...input(), label, files: [...input().files, { path: 'sketch.json', content: '{"blocks":[]}' }] });
+  it('a plain save strips a stale sketch.json so Boceto cannot overwrite hand edits', async () => {
+    const { service, read } = setup();
+    await service.save('m1', 's1', withSketch('Texto editado'));
+    expect(read().versions[0].snapshot.files.some((f: any) => f.path === 'sketch.json')).toBe(false);
+  });
+  it('a Boceto save keeps its own sketch.json', async () => {
+    const { service, read } = setup();
+    await service.save('m1', 's1', withSketch('Boceto editado'));
+    expect(read().versions[0].snapshot.files.some((f: any) => f.path === 'sketch.json')).toBe(true);
+  });
+});

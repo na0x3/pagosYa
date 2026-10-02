@@ -56,3 +56,21 @@ it('repairs garbage instead of failing, and rejects a stale revision with 409', 
   projects.current.mockResolvedValue({ revision: 9, slug: 'salv' });
   await expect(service.update('m', 's', { revision: 3, sketch: {} })).rejects.toThrow('El boceto cambió');
 });
+
+it('a portfolio store never gets a catalog forced into its sketch (I1)', async () => {
+  const { service, projects } = setup();
+  const snapshot = (await projects.version()).snapshot;
+  projects.version.mockResolvedValue({ revision: 3, snapshot: { ...snapshot, brief: { ...snapshot.brief, sitePurpose: 'portfolio' } } });
+  const result = await service.update('m', 's', { revision: 3, sketch: { blocks: [{ id: 'h', type: 'hero', headline: 'Obras' }] } });
+  expect(result.sketch.blocks.some(b => b.type === 'catalog')).toBe(false);
+});
+
+it('the photo picker omits reference and unused uploads (M1)', async () => {
+  const { service, projects } = setup();
+  const snapshot = (await projects.version()).snapshot;
+  const files = [...snapshot.files, { path: 'assets/ref.jpg', content: 'x', encoding: 'base64' }, { path: 'visual-assets.json', content: JSON.stringify({ assets: [{ path: 'assets/ref.jpg', role: 'reference', description: '' }] }) }];
+  projects.version.mockResolvedValue({ revision: 3, snapshot: { ...snapshot, files } });
+  const result = await service.get('m', 's');
+  expect(result.photos).toContain('assets/a.jpg');
+  expect(result.photos).not.toContain('assets/ref.jpg');
+});

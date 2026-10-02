@@ -148,6 +148,10 @@ export class SourceProjectsService {
 
   async save(merchantId: string, storeId: string, input: SaveSourceProjectDto, generation?: GenerationSave, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {
     await this.ownedStore(merchantId, storeId);
+    // sketch.json may only travel with a save that derives the components from it (a Boceto edit or a
+    // generation that just assembled them). Any other save edited the components directly, so a carried-over
+    // sketch would be stale and a later Boceto save would silently revert those edits.
+    if (!generation && input.label !== 'Boceto editado') input = { ...input, files: input.files.filter(file => file.path !== 'sketch.json') };
     const snapshot = generation?.prepared ? assertPreparedSource(input, generation.prepared) : await this.prepare(input);
     if (generation?.prepared && (generation.products?.length || generation.productOperations?.length)) throw new BadRequestException('Las operaciones de catálogo deben prepararse por separado.');
     return this.append(storeId, input.revision, input.label, snapshot, null, generation, undefined, fence);
