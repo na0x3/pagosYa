@@ -68,3 +68,12 @@ export function merchantSafeText(text: string, fallback = MERCHANT_FAILURE_FALLB
     : [fallback];
   return [...lead, ...safe].join(' ');
 }
+
+/** Formatting may hide diagnostics, but must never invent a different job outcome. */
+export function merchantMessageText(text: string, metadata: Record<string, unknown>): string {
+  const failed = metadata.failed === true || metadata.adaptationFailed === true;
+  const fallback = failed ? MERCHANT_FAILURE_FALLBACK : typeof metadata.sourceRevision === 'number'
+    ? 'Guardé los cambios de tu tienda. Revisa el resultado en la vista previa.'
+    : 'Revisa la respuesta de YAPI para continuar.';
+  return merchantSafeText(text.replace(/\bdel viewport\b/gi, 'de la pantalla').replace(/\bel viewport\b/gi, 'la pantalla').replace(/\bviewport\b/gi, 'pantalla'), fallback);
+}

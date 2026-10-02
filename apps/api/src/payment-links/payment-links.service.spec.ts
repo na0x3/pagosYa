@@ -477,12 +477,14 @@ describe("PaymentLinksService inventory import", () => {
     expect((prisma as any).$transaction).not.toHaveBeenCalled();
   });
 
-  it("normalizes an arbitrary CSV through OpenAI structured output without creating products", async () => {
+  it.each(['api', 'chatgpt'])("normalizes an arbitrary CSV using %s without creating products", async (mode) => {
     const { service, prisma, config } = makeService();
     config.get.mockImplementation((key: string) => ({
-      "app.openAi.apiKey": "server-key",
+      "app.openAi.apiKey": mode === 'api' ? 'server-key' : '',
       "app.openAi.inventoryModel": "gpt-5.6-sol",
-    } as Record<string, string>)[key]);
+      "app.environment": "development",
+      "app.chatgptPlan": mode === 'chatgpt' ? { url: 'http://127.0.0.1:54321/v1/responses', secret: 'local-secret' } : undefined,
+    } as Record<string, unknown>)[key]);
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -513,8 +515,8 @@ describe("PaymentLinksService inventory import", () => {
       const result = await service.normalizeInventoryCsv("merchant_1", "store_1", "item,cost\nSilpancho,45.50");
       expect(result.products).toEqual([expect.objectContaining({ name: "Silpancho", codigoProducto: "COM-001", amount: 4550 })]);
       expect(prisma.paymentLink.create).not.toHaveBeenCalled();
-      expect(global.fetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer server-key" }),
+      expect(global.fetch).toHaveBeenCalledWith(mode === 'api' ? "https://api.openai.com/v1/responses" : 'http://127.0.0.1:54321/v1/responses', expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: mode === 'api' ? "Bearer server-key" : 'Bearer local-secret' }),
       }));
       const request = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
       expect(request.model).toBe("gpt-5.6-sol");
@@ -667,12 +669,14 @@ describe("PaymentLinksService inventory import", () => {
       .rejects.toThrow("OPENAI_API_KEY");
   });
 
-  it("interprets merchant-owned product photos while preserving confirmed prices and sections", async () => {
+  it.each(['api', 'chatgpt'])("interprets merchant-owned product photos using %s while preserving confirmed prices and sections", async (mode) => {
     const { service, prisma, config } = makeService();
     config.get.mockImplementation((key: string) => ({
-      "app.openAi.apiKey": "server-key",
+      "app.openAi.apiKey": mode === 'api' ? 'server-key' : '',
       "app.openAi.inventoryModel": "gpt-5.6-sol",
-    } as Record<string, string>)[key]);
+      "app.environment": "development",
+      "app.chatgptPlan": mode === 'chatgpt' ? { url: 'http://127.0.0.1:54321/v1/responses', secret: 'local-secret' } : undefined,
+    } as Record<string, unknown>)[key]);
     prisma.mediaAsset.findMany.mockResolvedValue([{
       url: "/v1/uploads/11111111-1111-1111-1111-111111111111.jpg",
       storageKey: "11111111-1111-1111-1111-111111111111.jpg",
@@ -697,6 +701,9 @@ describe("PaymentLinksService inventory import", () => {
         products: [{ imageUrl: "/v1/uploads/11111111-1111-1111-1111-111111111111.jpg", amount: 4550, categoryName: "Cerámica" }],
       });
       expect(result.interpreted).toBe(true);
+      expect(global.fetch).toHaveBeenCalledWith(mode === 'api' ? 'https://api.openai.com/v1/responses' : 'http://127.0.0.1:54321/v1/responses', expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: mode === 'api' ? 'Bearer server-key' : 'Bearer local-secret' }),
+      }));
       expect(prisma.paymentLink.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
         name: "Taza azul",
         amount: 4550,
@@ -720,6 +727,22 @@ describe("PaymentLinksService inventory import", () => {
     await expect(service.interpretAndImportProductImages("merchant_1", "store_1", {
       products: [{ imageUrl: "/v1/uploads/22222222-2222-2222-2222-222222222222.jpg", amount: 1200, categoryName: "Bebidas" }],
     })).rejects.toThrow("no pertenecen");
+  });
+
+  it('does not fall back to a saved paid key or create inventory when the ChatGPT plan is exhausted', async () => {
+    const { service, prisma, config } = makeService();
+    config.get.mockImplementation((key: string) => ({
+      'app.environment': 'development', 'app.openAi.apiKey': 'paid-key-must-not-be-used',
+      'app.chatgptPlan': { url: 'http://127.0.0.1:54321/v1/responses', secret: 'local-secret' },
+    } as Record<string, unknown>)[key]);
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: { code: 'subscription_sharing_usage_limit_exceeded' } }) });
+    try {
+      await expect(service.normalizeInventoryCsv('merchant_1', 'store_1', 'name,price\nTea,5')).rejects.toThrow('No se usó una API de pago');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect((global.fetch as jest.Mock).mock.calls[0][1].headers.Authorization).toBe('Bearer local-secret');
+      expect(prisma.paymentLink.create).not.toHaveBeenCalled();
+    } finally { global.fetch = originalFetch; }
   });
 });
 

@@ -4,6 +4,18 @@ import { SOURCE_MODELS, sourceConversationModel } from './source-generation-poli
 
 const config = (values: Record<string, unknown>) => ({ get: (key: string) => values[key] }) as any;
 
+describe('local ChatGPT plan', () => {
+  const values = { 'app.environment': 'development', 'app.chatgptPlan': { url: 'http://127.0.0.1:54321/v1/responses', secret: 'local-only' }, 'app.openAi.apiKey': 'paid-key', 'app.anthropic.apiKey': 'paid-key' };
+  it('routes GPT requests to the local bridge even when a paid key exists', () => {
+    expect(sourceProvider(config(values), 'gpt-5.6-sol')).toEqual({ name: 'ChatGPT plan', apiKey: 'local-only', endpoint: values['app.chatgptPlan'].url });
+  });
+  it('rejects paid providers and production instead of falling back', () => {
+    expect(() => sourceProvider(config(values), 'claude-sonnet-5')).toThrow('desactivados');
+    expect(() => sourceProvider(config(values), 'deepseek-v4-flash')).toThrow('desactivados');
+    expect(() => sourceProvider(config({ ...values, 'app.environment': 'production' }), 'gpt-5.6-sol')).toThrow('desarrollo local');
+  });
+});
+
 describe('Claude models', () => {
   it('are priced like every other model and recognised as Claude', () => {
     for (const id of ['claude-opus-5-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001']) {

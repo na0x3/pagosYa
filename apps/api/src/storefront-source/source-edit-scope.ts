@@ -58,6 +58,8 @@ export type SectionScope = { add: boolean; targets: string[]; original: Region[]
 export function sourceSectionScope(files: File[], instruction: string, selectedSectionId?: string): SectionScope | undefined {
   const task = currentRequest(instruction);
   if (sourceRedesignRequested(instruction) || !(selectedSectionId || /\b(?:seccion|section)\b/.test(task)) || !content(files, homePath)) return;
+  // Independent pages and compound requests are not a single selected homepage section.
+  if (!selectedSectionId && (/\b(?:paginas?|pages?|tabs?|pestanas?)\b/.test(task) || /\bno\s+(?:una\s+)?seccion\b/.test(task) || (task.match(/\b(?:cambia|anade|agrega|adapta|change|add|update|replace)\b/g) || []).length > 1)) return;
   const original = sourceHomeRegions(files);
   if (!original.length) throw new SourceScopeConflict('No pude delimitar las secciones de esta página.');
   const add = /\b(?:agrega|anade|crea\w*|haz|incorpora|add|create|insert|build)\b.{0,50}\b(?:seccion|section)\b/.test(task);
@@ -156,7 +158,16 @@ export function sourceDesignAfterSectionEdit(design: SourceDesign | undefined, f
   if (layout) {
     layout.sections = sourceHomeRegions(files).map(r => r.id);
     const live = new Set(layout.sections);
-    if (selected.story) selected.story.beats = selected.story.beats.filter(beat => live.has(beat.section));
+    if (selected.story) selected.story.beats = selected.story.beats.filter(beat => live.has(beat.section))
+      .sort((a, b) => layout.sections.indexOf(a.section) - layout.sections.indexOf(b.section));
+    if (selected.composition) {
+      const home = selected.composition.pages.find(page => page.page === 'index.html');
+      const planned = new Map(home?.sections.map(section => [section.id, section]));
+      // An authorized addition has no committed intent/media plan yet. Fall back
+      // to the legacy direction instead of persisting contradictory invented data.
+      if (!home || layout.sections.some(id => !planned.has(id))) delete selected.composition;
+      else home.sections = layout.sections.map(id => planned.get(id)!);
+    }
     if (selected.motion) selected.motion.scenes = selected.motion.scenes.filter(scene => live.has(scene.section));
   }
   return copy;

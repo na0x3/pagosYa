@@ -26,4 +26,6 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) directionId?: string;
   /** A section the merchant picked in the preview (visual selection editor); scopes the edit to it. */
   @IsOptional() @ValidateNested() @Type(() => SourceSelectionDto) selection?: SourceSelectionDto;
+  /** Preview context for phrases such as 'this page'; does not override an explicit global request. */
+  @IsOptional() @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html$/) currentPage?: string;
 }

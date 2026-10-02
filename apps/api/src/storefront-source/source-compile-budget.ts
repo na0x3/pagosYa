@@ -52,7 +52,7 @@ export class MerchantThrottlerGuard extends ThrottlerGuard {
   protected generateKey(context: ExecutionContext, suffix: string, name: string): string {
     const shared = name === 'sustained' && this.reflector.getAllAndOverride<boolean>(COMPILE_BUDGET, [context.getHandler(), context.getClass()]);
     // Hashed like the key the package builds, so no merchant id lands in Redis.
-    return shared ? createHash('sha256').update(`${context.getClass().name}-compile-budget-${suffix}`).digest('hex') : super.generateKey(context, suffix, name);
+    return shared ? createHash('sha256').update(`source-compile-budget-${suffix}`).digest('hex') : super.generateKey(context, suffix, name);
   }
 
   protected async getErrorMessage(_context: ExecutionContext, detail: ThrottlerLimitDetail): Promise<string> {

@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { test, expect } from '@playwright/test';
 
 for (const mobile of [false, true]) test(`create product form saves directly and retains failed uploads (${mobile ? 'mobile' : 'desktop'})`, async ({ page }) => {
@@ -17,7 +18,7 @@ for (const mobile of [false, true]) test(`create product form saves directly and
     else if (/\/versions\/\d+$/.test(path)) body = version;
     else if (path.endsWith('/source-project')) body = { revision: 1, versions: [version] };
     else if (path.endsWith('/estimate')) body = { estimate: { minCredits: 1, maxCredits: 3 } };
-    else if (path.endsWith('/messages')) aiMessages++;
+    else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) aiMessages++;
     else if (path.endsWith('/product-highlights/suggestions')) {
       suggestions++;
       expect(route.request().postDataJSON()).toMatchObject({ name: 'Hamburguesa de la casa', description: 'Carne 150 g, queso y pan artesanal.' });
@@ -32,7 +33,7 @@ for (const mobile of [false, true]) test(`create product form saves directly and
       if (creates === 1) { await route.fulfill({ status: 503, json: { message: 'No se pudo guardar. Intenta otra vez.' } }); return; }
       body = { id: 'p1', name: 'Hamburguesa de la casa' };
     }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   const composer = page.locator('#agent-command');
@@ -110,7 +111,7 @@ test('the product guide saves a specification sheet from Nombre: valor lines', a
     else if (/\/versions\/\d+$/.test(path)) body = version;
     else if (path.endsWith('/source-project')) body = { revision: 1, versions: [version] };
     else if (path.endsWith('/payment_links')) { payload = route.request().postDataJSON(); body = { id: 'p1', name: payload.name }; }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await page.getByRole('button', { name: 'Crear producto', exact: true }).click();
@@ -151,7 +152,7 @@ test('YAPI creates a styled scene from the uploaded product photo only after the
     else if (path.endsWith('/uploads')) { uploads++; body = { url: '/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp', assetId: 'a1' }; }
     else if (path.endsWith('/product-scenes')) { sceneRequest = route.request().postDataJSON(); body = { url: '/v1/uploads/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.jpg', parentUrl: sceneRequest.imageUrl, kind: 'AI_DERIVED' }; }
     else if (path.endsWith('/payment_links')) { payload = route.request().postDataJSON(); body = { id: 'p1', name: payload.name }; }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await page.getByRole('button', { name: 'Crear producto', exact: true }).click();

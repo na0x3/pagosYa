@@ -1,0 +1,24 @@
+.source-pages-dialog { width:min(820px,calc(100vw - 32px)); }
+.source-pages-dialog>header { align-items:flex-start; }
+.source-pages-dialog .source-pages-explainer { margin:0 0 24px; padding:18px 20px; border:1px solid #e0e7d4; border-radius:12px; background:#f5f8ef; color:#35452a; font-size:13px; line-height:1.65; }
+.source-pages-explainer>strong { display:block; font-size:14px; font-weight:600; }
+.source-pages-explainer p { margin:6px 0 0; color:#657357; }
+.source-pages-dialog .source-pages-explainer details { margin-top:12px; border-color:#e0e7d4; }
+.source-pages-dialog .source-pages-explainer summary { min-height:40px; padding:10px 0 0; font-size:12px; }
+.source-pages-dialog .settings-card { gap:0; padding:8px 18px; }
+.source-pages-dialog .settings-card>h3 { display:flex; align-items:center; gap:8px; padding:14px 4px; font-size:14px; }
+.source-pages-count { font-size:11px; font-weight:500; color:#78826c; }
+.source-pages-dialog .settings-row { padding:14px 4px; }
+.source-pages-dialog .settings-row strong { font-size:13px; font-weight:600; }
+.source-pages-dialog .settings-row p { margin-top:4px; font-size:11px; color:#858b7c; }
+.source-pages-dialog .settings-actions button { min-height:38px; padding:8px 12px; font-size:11px; font-weight:500; border-radius:8px; background:#fafbf7; border-color:#e0e5d6; color:#4d5f3c; }
+.source-pages-dialog .settings-actions button:hover:not(:disabled) { background:#eff4e6; border-color:#c5d3b4; }
+@media(max-width:560px) { .source-pages-dialog .settings-row { align-items:flex-start; flex-direction:column; gap:10px; } }
+
+.source-pages-dialog .source-new-page { padding:8px 22px 20px; gap:12px; }
+.source-new-page p,.source-new-page small { margin:0; font-size:12px; line-height:1.6; color:#657357; }
+.source-new-page label { display:grid; gap:7px; font-size:12px; font-weight:500; }
+.source-new-page input,.source-new-page textarea { box-sizing:border-box; width:100%; border:1px solid #dce3d3; border-radius:8px; padding:11px 12px; background:#fff; color:#26331e; font:inherit; font-size:16px; }
+.source-new-page textarea { resize:vertical; min-height:84px; }
+.source-new-page input:focus-visible,.source-new-page textarea:focus-visible { outline:2px solid #638746; outline-offset:2px; }
+.source-new-page button { justify-self:start; min-height:42px; }

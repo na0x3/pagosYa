@@ -31,6 +31,18 @@ describe('AgentWorkspace', () => {
     const ws = new AgentWorkspace(base, { redesign: true });
     expect(ws.edit('components/store-data.tsx', 'Café', 'Otro')).toMatchObject({ ok: false, reason: 'path' });
     expect(ws.write('components/store-data.tsx', 'x')).toMatchObject({ ok: false, reason: 'path' });
+    expect(ws.editBatch('components/store-data.tsx', [{ search: 'Café', replacement: 'Otro' }])).toMatchObject({ ok: false, reason: 'path' });
+  });
+  it('commits an ordered batch once and rolls back all edits if a later search fails', () => {
+    const ws = new AgentWorkspace(base, { redesign: false });
+    const path = 'components/home.tsx';
+    expect(ws.editBatch(path, [{ search: 'Hola', replacement: 'Chau' }, { search: 'missing', replacement: 'x' }])).toMatchObject({ ok: false, reason: 'missing' });
+    expect(ws.read(path)).toBe(base[0].content);
+    expect(ws.version).toBe(0);
+    expect(ws.changedPaths()).toEqual([]);
+    expect(ws.editBatch(path, [{ search: 'Hola', replacement: 'Chau' }, { search: '<h1>Chau</h1>', replacement: '<h1>Bienvenidos</h1>' }])).toEqual({ ok: true });
+    expect(ws.read(path)).toContain('<h1>Bienvenidos</h1>');
+    expect(ws.version).toBe(1);
   });
   it('writes new components, refuses other paths, and replaces a file only when most lines stay or in a redesign', () => {
     const ws = new AgentWorkspace(base, { redesign: false });

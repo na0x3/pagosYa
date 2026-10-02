@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MERCHANT_FAILURE_FALLBACK, merchantSafeText, readsAsDiagnostic } from './source-merchant-copy';
+import { MERCHANT_FAILURE_FALLBACK, merchantMessageText, merchantSafeText, readsAsDiagnostic } from './source-merchant-copy';
 
 describe('merchantSafeText', () => {
   it('drops the leaked diagnostic that reached a merchant and keeps the reassurance', () => {
@@ -76,4 +76,12 @@ describe('merchantSafeText', () => {
       expect(readsAsDiagnostic(authored)).toBe(false);
     }
   });
+});
+
+it('never turns a saved revision into a failure while filtering technical copy', () => {
+  const text = 'Corregí la portada para cubrir toda la altura del viewport. Conservé el video y el logo verde.';
+  expect(merchantMessageText(text, { sourceRevision: 3 })).toBe(text.replace('del viewport', 'de la pantalla'));
+  expect(merchantMessageText('Updated components/home.tsx.', { sourceRevision: 3 })).toContain('Guardé los cambios');
+  expect(merchantMessageText('Error in components/home.tsx.', { failed: true })).toBe(MERCHANT_FAILURE_FALLBACK);
+  expect(merchantMessageText('Error in components/home.tsx.', {})).not.toContain('No pude');
 });

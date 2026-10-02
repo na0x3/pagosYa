@@ -86,18 +86,15 @@ it('sends the tapped Plantilla card as the choice', async () => {
   expect(sent.mock.calls[0][9]).toBe('miga');
 });
 
-it('sends the tapped design direction as the choice', async () => {
+it('does not expose obsolete generic design direction choices', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
     { id: 'a1', role: 'ASSISTANT', content: 'Elige una dirección', createdAt: '2026-09-27', metadata: { directionChoices: [{ id: 'retro-americana', name: 'Retro americana', description: 'd', palette: { background: '#f6ecd6', surface: '#efd9a7', ink: '#2b1d14', accent: '#b5441b' }, fonts: { display: 'bebas-neue', text: 'rubik' } }] } },
   ] } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'Usar Retro americana' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } } as any);
   await mountSourceStudio(app);
-  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
-  card.click();
-  await vi.waitFor(() => expect(sent).toHaveBeenCalled());
-  expect(sent.mock.calls[0][1]).toBe('Usar Retro americana');
-  expect(sent.mock.calls[0][10]).toBe('retro-americana');
+  expect(app.querySelector('[data-direction-choice]')).toBeNull();
+  expect(sent).not.toHaveBeenCalled();
 });
 
 it('shows the store appearing while YAPI builds, from its latest clean draft, and drops the draft when the build ends', async () => {
@@ -110,8 +107,10 @@ it('shows the store appearing while YAPI builds, from its latest clean draft, an
   let finish: (value: any) => void = () => {};
   vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
   await mountSourceStudio(app);
-  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
-  card.click();
+  const composer = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  composer.value = 'Crea mi tienda desde cero';
+  composer.dispatchEvent(new Event('input', { bubbles: true }));
+  app.querySelector('[data-composer]')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   const frame = await vi.waitFor(() => { const found = app.querySelector<HTMLIFrameElement>('.is-live-draft iframe'); expect(found?.srcdoc).toContain('Borrador en vivo'); return found!; }, { timeout: 4000 });
   expect(frame).toBeTruthy();
   expect(app.querySelector('[data-live-draft-badge]')?.textContent).toContain('en vivo');
@@ -140,8 +139,10 @@ it('while YAPI builds nothing animates: no thinking face, stars or code ticker i
   vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
   await mountSourceStudio(app);
   expect(document.querySelector('.star-field')).toBeTruthy();
-  const card = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-direction-choice="retro-americana"]'); expect(found).toBeTruthy(); return found!; });
-  card.click();
+  const composer = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  composer.value = 'Crea mi tienda desde cero';
+  composer.dispatchEvent(new Event('input', { bubbles: true }));
+  app.querySelector('[data-composer]')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   const working = await vi.waitFor(() => { const note = app.querySelector('[data-build-progress]')?.closest('.agent-note'); expect(note).toBeTruthy(); return note!; });
   expect(working.querySelector('.yapi-mark, .is-thinking')).toBeNull();
   expect(app.querySelector('.is-thinking, [data-face]')).toBeNull();
@@ -218,4 +219,63 @@ it('shows no visual-resources or design-improvement tools above the YAPI compose
   await mountSourceStudio(app);
   await vi.waitFor(() => expect(app.querySelector('#agent-command')).toBeTruthy());
   expect(app.querySelector('.source-canvas-tools, [data-source-visual-tools], [data-source-design-jobs]')).toBeNull();
+});
+
+it('retries the original page context after navigating the preview', async () => {
+  const text = 'Rediseña todo mi sitio';
+  const withGallery = { ...version, snapshot: { ...version.snapshot, files: [...version.snapshot.files, { path: 'galeria.html', content: '<h1>Galería</h1>' }] } };
+  vi.mocked(MerchantStudioApi.prototype.sourceVersion).mockResolvedValue(withGallery);
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue({ at: null });
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockImplementationOnce(async () => {
+    vi.mocked(MerchantStudioApi.prototype.sourceConversation).mockResolvedValue({ messages: [
+      { id: 'retry-u', role: 'USER', content: text, metadata: { assetUrls: [] } },
+      { id: 'retry-a', role: 'ASSISTANT', content: 'Falló', metadata: { failed: true } },
+    ] } as any);
+    throw new Error('No se pudo verificar');
+  }).mockResolvedValue({ userMessage: { id: 'done-u', role: 'USER', content: text }, assistantMessage: { id: 'done-a', role: 'ASSISTANT', content: 'Listo' } } as any);
+  await mountSourceStudio(app);
+  const composer = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  composer.value = text; composer.dispatchEvent(new Event('input', { bubbles: true }));
+  app.querySelector('[data-composer]')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(app.querySelector('#source-retry-message')).not.toBeNull());
+  expect(sent.mock.calls[0][12]).toBe('index.html');
+  app.querySelector<HTMLButtonElement>('[data-preview-page="galeria.html"]')!.click();
+  app.querySelector<HTMLButtonElement>('#source-retry-message')!.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
+  expect(sent.mock.calls[1][12]).toBe('index.html');
+});
+
+it.each(['dropdown', 'pages'])('includes the chosen %s navigation in the request', async choice => {
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'Crear tienda' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Recibido' } } as any);
+  await mountSourceStudio(app);
+  const select = app.querySelector<HTMLSelectElement>('#source-navigation-choice')!;
+  select.value = choice; select.dispatchEvent(new Event('change', { bubbles: true }));
+  const input = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  input.value = 'Crear tienda'; input.dispatchEvent(new Event('input', { bubbles: true }));
+  app.querySelector('[data-composer]')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(sent).toHaveBeenCalled());
+  expect(sent.mock.calls[0][1]).toContain(choice === 'dropdown' ? 'menú Tienda desplegable' : 'páginas separadas dentro del mismo sitio');
+  expect(sent.mock.calls[0][1]).toContain(choice === 'dropdown' ? 'No abrir ventanas nuevas' : 'misma pestaña del navegador');
+});
+
+it('shows the images and videos a merchant sent as large attachments in their chat message', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [
+    { id: 'u1', role: 'USER', content: 'haz el footer como esta foto', createdAt: '2026-10-02', metadata: { assetUrls: ['/v1/uploads/peso.webp', '/v1/uploads/clip.mp4', 'javascript:alert(1)'] } },
+  ] } as any);
+  await mountSourceStudio(app);
+  const attachments = await vi.waitFor(() => { const found = app.querySelector('.message--remote-user .message-attachments'); expect(found).toBeTruthy(); return found!; });
+  const image = attachments.querySelector<HTMLImageElement>('img')!;
+  expect(image.src).toMatch(/\/v1\/uploads\/peso\.webp$/);
+  expect(image.closest('a')?.target).toBe('_blank');
+  expect(attachments.querySelector<HTMLVideoElement>('video')?.src).toMatch(/\/v1\/uploads\/clip\.mp4$/);
+  expect(attachments.innerHTML).not.toContain('javascript:');
+  expect(app.querySelector('.message--remote-user p')?.textContent).toBe('haz el footer como esta foto');
+});
+it('renders no attachment block for a message without files', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [{ id: 'u1', role: 'USER', content: 'hola', createdAt: '2026-10-02', metadata: { assetUrls: [] } }] } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('.message--remote-user')).toBeTruthy());
+  expect(app.querySelector('.message-attachments')).toBeNull();
 });

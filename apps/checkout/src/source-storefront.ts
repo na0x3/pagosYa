@@ -1,3 +1,5 @@
+import { sourceAccountBranding } from '@pagosya/shared-types';
+import { mountSourceAccountHost } from '@pagosya/storefront-preview';
 import { isAccountDestination } from './account-destinations';
 import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
@@ -119,7 +121,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
+  const disposeAccount = mountSourceAccountHost(frame, {checkoutOrigin:location.origin,slug,preview:merchantPreview,branding:sourceAccountBranding({...store,name:store.storeName},prepared),navigate:page => { if (prepared.files.some(file => file.path === page)) show(page); }});
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
   // G1: the frame only names moments; consent, the session, dedupe and sending happen here.
@@ -247,7 +250,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       if (shipping && Array.isArray(json.shippingOptions)) for (const option of json.shippingOptions) if (option?.carrierId && typeof option.id === 'string') carrierRates.add(option.id);
       if (checkout) {
         if (typeof json.clientSecret !== 'string' || !json.clientSecret) throw new Error('No se pudo abrir el pago. Intenta de nuevo.');
-        reply(true, {}); window.removeEventListener('message', receive);
+        reply(true, {}); disposeAccount(); window.removeEventListener('message', receive);
         document.body.classList.remove('source-store-page');
         window.history.replaceState({ ...(window.history.state || {}), pagosYaCheckout: { clientSecret: json.clientSecret } }, '', location.href);
         markPrivateStorePage();
@@ -261,7 +264,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     finally { pending.delete(data.action); }
   };
   window.addEventListener('message', receive);
-  window.addEventListener('pagehide', () => { window.removeEventListener('message', receive); window.removeEventListener('pagosya:privacy-change', consentChanged); analytics.dispose(); }, { once: true });
+  window.addEventListener('pagehide', () => { disposeAccount(); window.removeEventListener('message', receive); window.removeEventListener('pagosya:privacy-change', consentChanged); analytics.dispose(); }, { once: true });
   const requestedPage = new URLSearchParams(location.search).get('source_page');
   show(
     routeProduct && prepared.files.some(f => f.path === (settings.productPage || 'product.html')) ? settings.productPage || 'product.html'

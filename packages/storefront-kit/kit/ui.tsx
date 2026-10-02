@@ -128,6 +128,10 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 /* Editorial is a masthead: one wide band of photography, the headline beneath it. It must not read as a second 'split'. */
 .ui-hero[data-variant=editorial] .ui-hero__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--ui-s5) var(--ui-s4);padding-block:var(--ui-s5) var(--ui-s7)}.ui-hero[data-variant=editorial] .ui-hero__copy{grid-column:1/9;position:relative;z-index:1}.ui-hero[data-variant=editorial] .ui-display{max-width:16ch}.ui-hero[data-variant=editorial] .ui-hero__media{order:-1;grid-column:1/13;aspect-ratio:21/9;max-height:min(58dvh,560px);border-radius:var(--ui-radius-media);overflow:hidden;background:var(--ui-surface)}
 .ui-hero[data-variant=typographic]{padding-block:var(--ui-s8) var(--ui-s7);text-align:center}.ui-hero[data-variant=typographic] .ui-display{max-width:14ch;margin-inline:auto;font-size:calc(var(--ui-display) * 1.25)}.ui-hero[data-variant=typographic] .ui-lead{margin-inline:auto}.ui-hero[data-variant=typographic] .ui-row{justify-content:center}.ui-hero[data-variant=typographic] .ui-hero__media{margin:var(--ui-s6) auto 0;width:min(100%,980px);aspect-ratio:16/9;border-radius:var(--ui-radius-media);overflow:hidden}
+.ui-hero[data-variant=contained] .ui-hero__grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--ui-s6);align-items:center;padding-block:var(--ui-s5)}
+.ui-hero[data-variant=contained] .ui-hero__copy{min-width:0}.ui-hero[data-variant=contained] .ui-display{font-size:clamp(32px,4.4vw,64px);max-width:18ch}
+.ui-hero[data-variant=contained] .ui-hero__media{display:flex;justify-content:center;align-items:center;min-width:0}
+.ui-hero[data-variant=contained] .ui-hero__media img{width:auto;height:auto;max-width:100%;max-height:min(64dvh,560px);object-fit:contain;border-radius:var(--ui-radius-media)}
 .ui-hero__actions{margin-top:var(--ui-s5)}
 .ui-hero .ui-display{font-size:calc(var(--ui-display) * 1.3)}
 .ui-video-hero{position:relative;isolation:isolate;display:grid;align-items:end;min-height:min(86dvh,900px);background:var(--ui-ink);color:#fff;overflow:clip}
@@ -151,7 +155,7 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-compare__caption{display:grid;gap:var(--ui-s2);padding-top:var(--ui-s3)}.ui-compare__labels{display:flex;justify-content:space-between;gap:var(--ui-s3);font-size:13px}.ui-compare__label{font-size:14px;font-weight:600}.ui-compare__range{display:block;width:100%;min-height:44px;margin:0;accent-color:var(--ui-accent);cursor:ew-resize}.ui-compare__hint{margin:0;font-size:12px;color:var(--ui-ink-70)}
 @media(max-width:820px){.ui-floating__grid{grid-template-columns:1fr;min-height:0;gap:var(--ui-s5);padding-block:var(--ui-s6)}.ui-floating__stage{height:clamp(300px,95vw,500px);margin-inline:var(--ui-s3)}.ui-floating__item{transform:none!important}.ui-floating .ui-display{max-width:15ch}.ui-video-hero{min-height:78dvh}.ui-video-hero__copy{padding-top:var(--ui-s8);padding-right:0}.ui-video-hero .ui-display{font-size:calc(var(--ui-display) * 1.2)}.ui-parallax-stack{height:clamp(340px,110vw,520px)}.ui-scroll-hero{height:auto}.ui-scroll-hero__stage{position:relative;min-height:78dvh;height:auto}.ui-scroll-hero__media{transform:none!important}.ui-scroll-hero .ui-display{font-size:calc(var(--ui-display) * 1.15)}}
 @media(prefers-reduced-motion:reduce){.ui-video-hero__media>video{transition:none}.ui-floating__item{transform:none!important}}
-@media (max-width:820px){.ui-hero[data-variant=split] .ui-hero__grid,.ui-hero[data-variant=editorial] .ui-hero__grid{grid-template-columns:1fr;min-height:0}.ui-hero[data-variant=editorial] .ui-hero__copy,.ui-hero[data-variant=editorial] .ui-hero__media{grid-column:1/-1;transform:none}.ui-hero[data-variant=editorial] .ui-hero__media{aspect-ratio:3/2;max-height:none}.ui-hero[data-variant=split] .ui-hero__media{order:-1;aspect-ratio:4/5}}
+@media (max-width:820px){.ui-hero[data-variant=contained] .ui-hero__grid{grid-template-columns:1fr;gap:var(--ui-s5)}.ui-hero[data-variant=contained] .ui-hero__media img{max-height:360px}.ui-hero[data-variant=split] .ui-hero__grid,.ui-hero[data-variant=editorial] .ui-hero__grid{grid-template-columns:1fr;min-height:0}.ui-hero[data-variant=editorial] .ui-hero__copy,.ui-hero[data-variant=editorial] .ui-hero__media{grid-column:1/-1;transform:none}.ui-hero[data-variant=editorial] .ui-hero__media{aspect-ratio:3/2;max-height:none}.ui-hero[data-variant=split] .ui-hero__media{order:-1;aspect-ratio:4/5}}
 .ui-showcase{position:relative;height:230vh}.ui-showcase__stage{position:sticky;top:0;height:100dvh;display:grid;place-items:center;overflow:clip}.ui-showcase__media{height:min(62dvh,700px);width:auto;max-width:86vw;aspect-ratio:var(--ui-aspect);border-radius:var(--ui-radius-media);overflow:hidden;will-change:transform;background:var(--ui-surface);box-shadow:var(--ui-shadow)}.ui-showcase__media img{width:100%;height:100%;object-fit:cover}.ui-showcase__copy{position:absolute;inset:auto 0 var(--ui-s6);text-align:center;padding-inline:16px}.ui-showcase__copy>*{margin-inline:auto}.ui-showcase__copy .ui-text{color:inherit}
 .ui-showcase__veil{position:absolute;inset:0;background:linear-gradient(to top,color-mix(in srgb,var(--ui-paper) 92%,transparent),transparent 45%);pointer-events:none}
 .ui-showcase[data-static]{height:auto}.ui-showcase[data-static] .ui-showcase__stage{position:relative;height:auto;padding-block:var(--ui-s7);gap:var(--ui-s5)}.ui-showcase[data-static] .ui-showcase__copy{position:static}.ui-showcase[data-static] .ui-showcase__veil{display:none}
@@ -474,6 +478,23 @@ export function StandardPagePlaceholder({ title }: { title: string }) {
   </main>;
 }
 export type InfoPageKind = 'about' | 'contact' | 'shipping' | 'faq' | 'refund' | 'privacy' | 'terms' | 'cookies' | 'notfound' | 'collections' | 'search';
+// These pages also live inside custom Shells that do not mount StoreTheme. Keep their
+// layout self-contained and scoped, inheriting the store's colors and type tokens.
+const STANDARD_PAGE_CSS = `
+.ui-info-page,.ui-account-gate{box-sizing:border-box;min-height:45vh;padding-block:clamp(40px,6vw,88px);color:inherit;font-family:inherit}
+:where(.ui-info-page,.ui-account-gate) > .ui-container{box-sizing:border-box;width:calc(100% - 48px);max-width:1120px;margin-inline:auto}
+:where(.ui-info-page,.ui-account-gate) .ui-display{max-width:22ch;margin:0 0 28px;font-family:var(--store-heading-font,var(--brand-heading-font,inherit));font-size:clamp(32px,4.5vw,60px);font-weight:var(--ui-display-weight,700);line-height:1.08;letter-spacing:-.025em;text-wrap:balance}
+.ui-info-page [data-pagosya-page]{max-width:72ch;font-size:clamp(16px,1.2vw,18px);line-height:1.75;overflow-wrap:anywhere}
+.ui-info-page [data-pagosya-page=collections],.ui-info-page [data-pagosya-page=search]{max-width:none}
+.ui-info-page [data-pagosya-page] :is(p,ul,ol,dl){margin:0 0 1.25em}
+.ui-info-page [data-pagosya-page] :is(h2,h3){font:inherit;font-family:var(--store-heading-font,inherit);font-weight:700;font-size:1.4em;line-height:1.25;margin:1.8em 0 .6em}
+.ui-info-page [data-pagosya-page] :is(ul,ol){padding-inline-start:1.4em}.ui-info-page [data-pagosya-page] li+li{margin-top:.5em}
+.ui-info-page [data-pagosya-page] a:not([class]){text-decoration:underline;text-underline-offset:.2em}
+.ui-account-gate .ui-lead{font:inherit;font-size:clamp(17px,1.4vw,21px);line-height:1.6;color:inherit;max-width:48ch;margin:0 0 32px}
+.ui-account-gate .ui-button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:48px;max-width:100%;padding:14px 24px;font:inherit;font-weight:700;line-height:1.3;text-align:center;text-decoration:none;border:1px solid currentColor;border-radius:var(--store-radius,var(--ui-radius-control,4px));background:var(--store-accent,var(--brand-accent,#1d1b18));color:var(--store-accent-foreground,var(--brand-accent-foreground,#fff));cursor:pointer}
+.ui-account-gate .ui-button[aria-disabled=true]{opacity:.55;cursor:default}.ui-account-gate .ui-button:focus-visible{outline:3px solid currentColor;outline-offset:4px}
+@media(max-width:600px){:where(.ui-info-page,.ui-account-gate) > .ui-container{width:calc(100% - 32px)}.ui-account-gate .ui-button{width:100%}}
+`;
 const INFO_PAGE_TITLES: Record<InfoPageKind, string> = {
   about: 'Nosotros', contact: 'Contacto', shipping: 'Envíos y entregas', faq: 'Preguntas frecuentes', refund: 'Cambios y devoluciones',
   privacy: 'Privacidad', terms: 'Términos y condiciones', cookies: 'Cookies y almacenamiento', notfound: 'Página no encontrada',
@@ -483,6 +504,7 @@ const INFO_PAGE_TITLES: Record<InfoPageKind, string> = {
  * `renderInfoPages`). Never put children in the mount: the runtime owns it. */
 export function InfoPage({ kind }: { kind: InfoPageKind }) {
   return <main id="contenido" className="ui-info-page" data-info-page={kind}>
+    <style data-pagosya-standard-pages="" dangerouslySetInnerHTML={{ __html: STANDARD_PAGE_CSS }} />
     <Container><Display>{INFO_PAGE_TITLES[kind]}</Display><div data-pagosya-page={kind} /></Container>
   </main>;
 }
@@ -498,12 +520,12 @@ const ACCOUNT_GATE_COPY: Record<AccountGateView, { title: string; lead: string; 
   profile: { title: 'Mi perfil', lead: 'Cambia tus datos, descarga tu información o elimina tu cuenta.', action: 'Ver mi perfil' },
   subscriptions: { title: 'Mis suscripciones', lead: 'Revisa y administra tus entregas recurrentes.', action: 'Ver mis suscripciones' },
 };
-/** A customer-access or account page: a title, one sentence and one button. The runtime points the button at the shopper's
- * account on the trusted checkout origin (commerce.js, `renderAccountGates`). It draws no input on purpose: authored store
- * code runs in a sandbox and must never receive a password or personal data. */
+/** Reserves the inline account slot in Studio and hosted storefronts. The trusted parent renders the form in a sibling iframe;
+ * authored code receives only geometry. Static exports retain the secure account-link fallback below. */
 export function AccountGatePage({ view }: { view: AccountGateView }) {
   const copy = ACCOUNT_GATE_COPY[view];
   return <main id="contenido" className="ui-account-gate" data-account-gate={view}>
+    <style data-pagosya-standard-pages="" dangerouslySetInnerHTML={{ __html: STANDARD_PAGE_CSS }} />
     <Container><Display>{copy.title}</Display><Lead>{copy.lead}</Lead>
       <a className="ui-button" data-variant="solid" href="#" data-pagosya-account={view}>{copy.action}</a></Container>
   </main>;
@@ -604,16 +626,13 @@ export function SiteHeader({ name, tagline, logo, links = [], variant = 'classic
 /* ------------------------------------------------------------------ sections */
 
 export function Hero({ variant, eyebrow, title, lead, image, actions, scrollGrow = false, entrance = false }: {
-  variant?: 'split' | 'fullbleed' | 'editorial' | 'typographic'; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; image?: Img; actions?: ReactNode;
+  variant?: 'contained' | 'split' | 'fullbleed' | 'editorial' | 'typographic'; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; image?: Img; actions?: ReactNode;
   /** The image grows into place as it scrolls into view. */ scrollGrow?: boolean; entrance?: boolean;
 }) {
   const media = image?.src ? <div className={['ui-hero__media', scrollGrow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} eager /></div> : null;
-  // An unstated variant used to mean 'split', so every opening that forgot to say
-  // otherwise arrived as the same copy-left / photo-right picture. And every
-  // photo-shaped variant without a photo is broken on its own terms: split and
-  // editorial leave an empty track, fullbleed puts white text on paper. The
-  // photo-free opening is the only honest answer in that case.
-  const shape = media ? variant || 'editorial' : 'typographic';
+  // With unknown image dimensions, preserve the photograph instead of assuming
+  // a wide crop is suitable. Explicit art-directed variants remain available.
+  const shape = media ? variant || 'contained' : 'typographic';
   const Copy = entrance ? EntranceGroup : 'div';
   const copy = <Copy className="ui-hero__copy">
     {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}

@@ -6,11 +6,12 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { AppModule } from '../src/app.module';
 import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
 import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
-import { SourceRequestBudget } from '../src/storefront-source/source-request-budget';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import type { AgentRequirement } from '../src/storefront-source/agent/agent-task';
 import { captureAgentDraft } from '../src/storefront-source/agent/agent-capture';
 
 /** The product card theme in a candidate's config.js (null when it has no DNA). */
@@ -31,22 +32,41 @@ async function main() {
   const runs = Number(arg('runs') || 1);
   // Studio's default per-request limit (mode A builds cost more than the old 50).
   const credits = Number(arg('credits') || 200);
-  if (!merchantId || !storeId || !instruction || (engine !== 'agent' && engine !== 'single')) throw new Error('Missing --merchant, --store, --instruction or --engine agent|single.');
+  if (!merchantId || !storeId || (!instruction && !arg('suite')) || (engine !== 'agent' && engine !== 'single')) throw new Error('Missing --merchant, --store, --instruction or --engine agent|single.');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
+  // Candidate evaluation must not run recurring billing, delivery or mail jobs.
+  const scheduler = app.get(SchedulerRegistry);
+  for (const name of scheduler.getCronJobs().keys()) scheduler.deleteCronJob(name);
+  for (const name of scheduler.getIntervals()) scheduler.deleteInterval(name);
+  for (const name of scheduler.getTimeouts()) scheduler.deleteTimeout(name);
   const config = app.get(ConfigService);
   const original = config.get.bind(config);
   (config as any).get = (key: string, ...rest: unknown[]) => key === 'app.yapiEngine' ? engine : (original as any)(key, ...rest);
   const generation = app.get(SourceGenerationService);
   const projects = app.get(SourceProjectsService);
-  const rows: Array<{ run: number; status: string; seconds: number; credits: number; modelCalls: number; error?: string }> = [];
-  for (let run = 1; run <= runs; run++) {
+  const suite: Array<{ id: string; instruction: string; requirements: AgentRequirement[] }> = arg('suite') ? JSON.parse(readFileSync(arg('suite')!, 'utf8')) : [{ id:'custom', instruction:instruction!, requirements:[] }];
+  const rows: Array<Record<string, any>> = [];
+  const fixture = arg('fixture') ? JSON.parse(readFileSync(arg('fixture')!, 'utf8')) : null;
+  for (const task of suite) for (let run = 1; run <= runs; run++) {
     const current = await projects.current(merchantId, storeId);
-    const snapshot = (await projects.version(merchantId, storeId, current.revision) as any).snapshot;
+    const snapshot = fixture || (await projects.version(merchantId, storeId, current.revision) as any).snapshot;
     const brief = snapshot.brief;
     const started = Date.now();
+    let attempts: any[] = [];
     try {
-      const result: any = await generation.generate(merchantId, storeId, { revision: current.revision, brief, instruction, maxCredits: credits } as any, new SourceRequestBudget(credits), [], undefined, { candidate: true, free: true, evaluate: true, snapshot });
-      rows.push({ run, status: 'ok', seconds: Math.round((Date.now() - started) / 1000), credits: result.generation?.credits ?? 0, modelCalls: result.generation?.attempts?.length ?? 0 });
+      const result: any = await generation.generate(merchantId, storeId, { revision: current.revision, brief, instruction: task.instruction, model: arg('model') || 'auto', maxCredits: credits } as any, generation.newBudget(credits), [], Object.assign(async () => undefined, { detail: async (step: {label:string}) => { console.log(`[${task.id}] ${step.label}`); } }), { candidate: true, free: true, evaluate: true, snapshot, onAttempts: value => { attempts = value; } });
+      attempts = result.generation?.attempts || attempts;
+      const evidence = [];
+      const errors: string[] = [];
+      for (const page of new Set(task.requirements.map(r => r.page))) for (const width of [1280,390] as const) {
+        const shot = await captureAgentDraft(result.candidate, width, undefined, page, task.requirements);
+        evidence.push(...shot.evidence); errors.push(...shot.errors);
+      }
+      // The evaluator owns these requirements; an agent cannot weaken them to pass.
+      const verified = !!task.requirements.length && evidence.length === task.requirements.length * 2 && evidence.every(e => e.passed) && !errors.length;
+      rows.push({ task:task.id, run, status:verified ? 'verified' : task.requirements.length ? 'false_completion' : 'ungraded', seconds:Math.round((Date.now()-started)/1000), credits:result.generation?.credits || 0, modelCalls:attempts.filter(a=>a.phase==='agent').length, inputTokens:attempts.reduce((n,a)=>n+(a.usage?.inputTokens||0),0), peakInputTokens:Math.max(0,...attempts.map(a=>a.usage?.inputTokens||0)), requirements:task.requirements, evidence, errors, diagnostics:attempts.flatMap(a=>a.diagnostics||[]), summary:result.agent?.summary });
+      const candidateOut = arg('candidate-out');
+      if (candidateOut) writeFileSync(candidateOut + '-' + task.id + '-' + run + '.json', JSON.stringify(result.candidate), {mode:0o600});
       // --shot <file.jpg>: a desktop screenshot of the built candidate, to judge the design itself.
       const shot = arg('shot');
       // The product page theme YAPI chose; --theme-out <file.json> keeps it so scripts/compare-product-themes.ts can compare two stores.
@@ -59,11 +79,13 @@ async function main() {
       if (shot && result.candidate) writeFileSync(shot.replace(/(\.jpe?g)?$/i, `-${run}.jpg`), Buffer.from((await captureAgentDraft(result.candidate, 1280)).image.split(',')[1], 'base64'));
       console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {
-      rows.push({ run, status: 'failed', seconds: Math.round((Date.now() - started) / 1000), credits: 0, modelCalls: 0, error: (error as Error).message.slice(0, 160) });
+      rows.push({ task:task.id, run, status: 'failed', seconds: Math.round((Date.now() - started) / 1000), credits: 0, modelCalls: attempts.filter(a=>a.phase==='agent').length, diagnostics: attempts.flatMap(a=>a.diagnostics||[]), error: (error as Error).message.slice(0, 160) });
     }
+    if (arg('out')) writeFileSync(arg('out')!, JSON.stringify({ engine, providerMode:config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'api', rows },null,2), {mode:0o600});
   }
-  console.table(rows);
-  console.log(`${engine}: ${rows.filter(row => row.status === 'ok').length}/${rows.length} succeeded`);
+  console.table(rows.map(({evidence,requirements,diagnostics,...row})=>row));
+  console.log(`${engine}: ${rows.filter(row => row.status === 'verified').length}/${rows.length} verified`);
   await app.close();
+  if (rows.some(row => row.status === 'failed' || row.status === 'false_completion')) process.exitCode = 1;
 }
 main().catch(error => { console.error(error.message); process.exit(1); });

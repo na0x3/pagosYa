@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { expect, test, type Page } from '@playwright/test';
 
 const photoUrl = '/v1/uploads/abc.png';
@@ -26,11 +27,11 @@ test('DeepSeek selection persists across reload and is sent with the request bud
     if (path.endsWith('/stores')) body = [{id:'s1',name:'Café Aroma',slug:'cafe'}];
     else if (path.endsWith('/source-project')) body = {revision:0,versions:[],nextBefore:null};
     else if (path.endsWith('/conversation')) body = {messages:[],setup};
-    else if (path.endsWith('/messages')) {
+    else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       sent.push(route.request().postDataJSON());
       body = {userMessage:{id:'u1',role:'USER',content:'Crea mi café'},assistantMessage:{id:'a1',role:'ASSISTANT',content:'¿Qué estilo prefieres?'},setup};
     }
-    await route.fulfill({json:body});
+    await route.fulfill({json:finishedChatJob(body)});
   });
   await page.goto('/?source=1');
   await page.getByRole('combobox', {name:'Modelo',exact:true}).selectOption('deepseek-v4-flash');
@@ -39,7 +40,7 @@ test('DeepSeek selection persists across reload and is sent with the request bud
   await page.getByRole('textbox', {name:'Indicación para YAPI'}).fill('Crea mi café');
   await page.getByRole('button', {name:'Enviar a YAPI'}).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({model:'deepseek-v4-flash',maxCredits:50});
+  expect(sent[0]).toMatchObject({model:'deepseek-v4-flash',maxCredits:200});
 });
 
 test('sending text and a photo clears the composer during upload and AI work, including rerenders', async ({page}) => {
@@ -54,7 +55,7 @@ test('sending text and a photo clears the composer during upload and AI work, in
     else if (pathname.endsWith('/source-project')) body={revision:0,versions:[],nextBefore:null};
     else if (pathname.endsWith('/conversation')) body={messages,setup};
     else if (pathname.endsWith('/uploads')) {await upload.promise; body={url:photoUrl};}
-    else if (pathname.endsWith('/messages')) {
+    else if ((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       messageRequests++;
       const sent=route.request().postDataJSON();
       expect(sent).toMatchObject({instruction:text,assetUrls:[photoUrl]});
@@ -63,7 +64,7 @@ test('sending text and a photo clears the composer during upload and AI work, in
       const assistantMessage={id:'a1',role:'ASSISTANT',content:'La usamos en la portada. ¿Prefieres tonos cálidos?',metadata:{}};
       messages.push(userMessage,assistantMessage);body={userMessage,assistantMessage,setup};
     }
-    await route.fulfill({json:body});
+    await route.fulfill({json:finishedChatJob(body)});
   });
   try {
     await page.goto('/?source=1');
@@ -112,7 +113,7 @@ for (const failure of ['upload','unsaved','saved'] as const) {
         uploads++;
         if(failure==='upload' && uploads===1) {await route.fulfill({status:502,json:{message:'No se pudo subir la imagen'}});return;}
         body={url:photoUrl};
-      } else if(pathname.endsWith('/messages')) {
+      } else if((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
         sends++;
         const sent=route.request().postDataJSON();
         expect(sent).toMatchObject({instruction:text,assetUrls:[photoUrl]});
@@ -124,7 +125,7 @@ for (const failure of ['upload','unsaved','saved'] as const) {
         const assistantMessage={id:`a${sends}`,role:'ASSISTANT',content:'Recibí tu foto.',metadata:{}};
         messages.push(userMessage,assistantMessage);body={userMessage,assistantMessage,setup};
       }
-      await route.fulfill({json:body});
+      await route.fulfill({json:finishedChatJob(body)});
     });
     await page.goto('/?source=1');await attachPhoto(page);
     const composer=page.getByRole('textbox',{name:'Indicación para YAPI'});

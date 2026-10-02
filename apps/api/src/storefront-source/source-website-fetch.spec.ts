@@ -55,8 +55,8 @@ it('rejects insecure redirect targets and redirect loops', async () => {
   await expect(read()).rejects.toThrow('Too many');
 });
 it('limits HTML and CSS response sizes and rejects nonmatching content types', async () => {
-  responses({ content: 'a'.repeat(1_000_001) }); await expect(read()).rejects.toThrow('unavailable');
-  responses({ headers: { 'content-type': 'text/css' }, content: 'a'.repeat(300_001) }); await expect(read(undefined, 'css')).rejects.toThrow('unavailable');
+  responses({ content: 'a'.repeat(3_000_001) }); await expect(read()).rejects.toThrow('unavailable');
+  responses({ headers: { 'content-type': 'text/css' }, content: 'a'.repeat(600_001) }); await expect(read(undefined, 'css')).rejects.toThrow('unavailable');
   responses({ headers: { 'content-type': 'application/javascript' } }); await expect(read()).rejects.toThrow('unavailable');
   responses({ status: 403 }); await expect(read()).rejects.toThrow('unavailable');
 });
@@ -83,4 +83,10 @@ it('enforces resource MIME types, byte budgets and DNS pinning for rendered subr
   const calls = jest.mocked(request).mock.calls.length;
   await expect(readSourceReferenceResource('https://internal.example.com/font', 'font', AbortSignal.timeout(1000))).rejects.toThrow('sitio público');
   expect(request).toHaveBeenCalledTimes(calls);
+});
+
+it('accepts a large commerce homepage without dropping the response-size bound', async () => {
+  const html = '<h1>Shop</h1>' + ' '.repeat(2_600_000);
+  responses({ content: html });
+  expect((await read()).content).toBe(html);
 });

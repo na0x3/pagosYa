@@ -11,7 +11,7 @@ import { BadGatewayException, HttpException } from '@nestjs/common';
  * to GENERIC_MERCHANT_FAILURE rather than leaking their diagnostic.
  */
 export const GENERIC_MERCHANT_FAILURE =
-  'YAPI armó un borrador que no pasó las comprobaciones automáticas, así que no lo guardé. Tu revisión anterior sigue intacta.';
+  'YAPI no pudo completar las comprobaciones automáticas. Tu revisión guardada sigue intacta. Puedes reintentar para continuar.';
 
 export class SourceValidationError extends BadGatewayException {
   constructor(

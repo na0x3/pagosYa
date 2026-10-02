@@ -2,6 +2,7 @@ import { BadGatewayException, Injectable, NotFoundException, Optional, ServiceUn
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
+import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
 import { normalizeProductHighlights, PRODUCT_HIGHLIGHT_ICONS, type ProductHighlight } from '../payment-links/product-highlights';
 
 export type ProductHighlightRequest = {
@@ -59,15 +60,16 @@ export class ProductHighlightsService {
 
   /** Suggests highlights for the merchant to review. Nothing is saved until the merchant approves them. */
   async suggest(merchantId: string, storeId: string, input: ProductHighlightRequest): Promise<{ highlights: ProductHighlight[] }> {
-    const apiKey = this.config.get<string>('app.openAi.apiKey');
     const model = this.config.get<string>('app.openAi.inventoryModel') ?? 'gpt-5.6-luna';
-    if (!apiKey || this.config.get<boolean>('app.openAi.enabled') === false) throw new ServiceUnavailableException('Los destacados con YAPI no están configurados en este momento.');
+    const plan = chatgptPlanProvider(this.config, model);
+    const apiKey = plan?.apiKey ?? this.config.get<string>('app.openAi.apiKey');
+    if (!apiKey || !plan && this.config.get<boolean>('app.openAi.enabled') === false) throw new ServiceUnavailableException('Los destacados con YAPI no están configurados en este momento.');
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, name: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada.');
     const started = Date.now();
     let response: Response;
     try {
-      response = await fetch('https://api.openai.com/v1/responses', {
+      response = await fetch(plan?.endpoint ?? 'https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({

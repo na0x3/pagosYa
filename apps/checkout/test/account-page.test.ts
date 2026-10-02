@@ -212,3 +212,47 @@ describe("the account pages", () => {
     expect(stored()).toBeNull();
   });
 });
+
+describe('account form preview', () => {
+  it('shows registration immediately and never creates a real account', async () => {
+    const {app,calls} = await open('registro',{search:'?account_preview=1',session:true});
+    expect(app.querySelector('form[data-form="register"]')).not.toBeNull();
+    fill(app,{name:'Prueba',email:'preview@example.com',password:'example-pass'});
+    submit(app,'register');
+    expect(app.textContent).toContain('Vista previa: no se crean cuentas');
+    expect(calls).toEqual([]);
+    expect(stored().token).toBe(TOKEN);
+  });
+  it('ignores real sessions and keeps preview mode when switching to registration', async () => {
+    const {app,calls} = await open('ingresar',{search:'?account_preview=1',session:true});
+    expect(app.querySelector('form[data-form="login"]')).not.toBeNull();
+    (app.querySelector('a[href$="/registro"]') as HTMLAnchorElement).click();
+    await vi.waitFor(()=>expect(app.querySelector('form[data-form="register"]')).not.toBeNull());
+    expect(location.search).toContain('account_preview=1');
+    submit(app,'register');
+    expect(calls).toEqual([]);
+  });
+});
+
+it('shows preview account states without fetching personal data', async () => {
+  const {app,calls} = await open('pedidos',{search:'?account_preview=1',session:true});
+  expect(app.textContent).toContain('Mis pedidos');
+  expect(app.textContent).toContain('Vista previa');
+  expect(app.querySelector('form[data-form="login"]')).toBeNull();
+  expect(calls).toEqual([]);
+});
+it('toggles password visibility without submitting or losing the typed value', async () => {
+  const {app,calls} = await open('ingresar',{search:'?account_preview=1'});
+  fill(app,{password:'example-password'});
+  const button=app.querySelector<HTMLButtonElement>('[data-password]')!;
+  button.click();
+  const password=app.querySelector<HTMLInputElement>('[name=password]')!;
+  expect(password.type).toBe('text');expect(password.value).toBe('example-password');expect(button.getAttribute('aria-pressed')).toBe('true');
+  button.click();expect(password.type).toBe('password');expect(calls).toEqual([]);
+});
+it('rejects invalid email before making a login request', async () => {
+  const {app,calls} = await open('ingresar');
+  fill(app,{email:'invalid',password:'example-password'});
+  submit(app,'login');
+  expect(calls.some(call=>call.path==='login')).toBe(false);
+});

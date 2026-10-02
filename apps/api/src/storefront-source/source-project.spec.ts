@@ -38,7 +38,7 @@ describe("Independent source artifacts", () => {
     const runtime = { path: 'commerce.js', content: '/* runtime */'.padEnd(200_000, ' ') };
     expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);
     expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'site.js', content: runtime.content }] })).toThrow('Invalid source file content');
-    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'commerce.js', content: ''.padEnd(400_001, ' ') }] })).toThrow('Invalid source file content');
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'commerce.js', content: ''.padEnd(600_001, ' ') }] })).toThrow('Invalid source file content');
   });
 
   it('exports MP4 bytes intact and enforces a separate video budget', () => {

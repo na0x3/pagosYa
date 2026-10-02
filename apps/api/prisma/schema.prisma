@@ -906,6 +906,7 @@ model Store {
   sourceProject                StoreSourceProject?
   sourceGenerations            StoreSourceGeneration[]
   sourceDesignJobs             StoreSourceDesignJob[]
+  sourceChatJobs               StoreSourceChatJob[]
   agentThread                  StoreAgentThread?
   customDomains                CustomDomain[]
   domainOrders                 DomainOrder[]
@@ -1244,6 +1245,8 @@ model StoreVisualProposal {
 // evaluated by the API or the legacy document renderer.
 // Private generation telemetry. No prompts, source, assets or credentials.
 model StoreSourceGeneration {
+  requestJobId   String?
+  heartbeatAt    DateTime @default(now())
   id             String    @id @default(cuid())
   storeId        String
   store          Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -1256,6 +1259,8 @@ model StoreSourceGeneration {
   credits        Int       @default(0)
   status         String    @default("RUNNING")
   attempts       Json      @default("[]")
+  // Private unfinished agent work, reusable only for the same request and source digest.
+  checkpoint     Json?
   durationMs     Int?
   // Who paid for the run when the merchant did not, e.g. "shopify-import" (spec 2026-09-27 §3). Null = the merchant.
   sponsor        String?
@@ -3232,4 +3237,30 @@ model StoreCustomerToken {
   createdAt   DateTime      @default(now())
 
   @@index([customerId, purpose])
+}
+
+// A browser connection is not the lifetime of a YAPI request.
+model StoreSourceChatJob {
+  id                    String   @id @default(cuid())
+  storeId               String
+  store                 Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  merchantId            String
+  requestId             String
+  inputDigest           String
+  input                 Json
+  status                String   @default("QUEUED")
+  activeStoreId         String?  @unique
+  leaseToken            String?
+  leaseUntil            DateTime?
+  attempt               Int      @default(0)
+  sequence              Int      @default(0)
+  result                Json?
+  error                 String?
+  lastCommittedRevision Int?
+  progress              Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([storeId, requestId])
+  @@index([status, leaseUntil, createdAt])
 }

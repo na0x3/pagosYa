@@ -720,6 +720,35 @@
       [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__purchase{grid-template-columns:minmax(0,1fr)}
       [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__quantity{justify-self:start;width:136px}
     }
+    /* Structural product families: use the same live controls in different reading hierarchies. */
+    [data-pagosya-product][data-style] .product-detail__summary,[data-pagosya-product][data-style] .product-detail__buybox,[data-pagosya-product][data-style] .product-detail__details{min-width:0}
+    [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__layout>.product-detail__summary{width:100%;max-width:1000px;padding:24px clamp(16px,4vw,56px);margin:0 auto;box-sizing:border-box}
+    [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__copy[data-story]{max-width:1200px;box-sizing:border-box}
+    [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__buybox{padding:24px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-surface)}
+    [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__buybox .product-detail__purchase{grid-template-columns:minmax(0,1fr)}
+    [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__buybox .product-detail__quantity{justify-self:start;width:136px}
+    [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__photo{object-fit:contain;height:auto;min-height:0;aspect-ratio:1/1}
+    @media(min-width:900px){
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__layout:not([data-no-images]){grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:32px}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__copy[data-split]{padding:0;grid-template-columns:minmax(0,1fr);gap:24px}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__copy[data-split]>div{grid-column:auto;grid-row:auto;position:static}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__layout[data-no-images] .product-detail__copy[data-split]{grid-template-columns:minmax(0,1fr) minmax(300px,.8fr);column-gap:48px}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__layout[data-no-images] .product-detail__buybox{grid-column:2;grid-row:1 / span 2}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__layout[data-no-images] .product-detail__details{grid-column:1}
+      [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__copy[data-story] .product-detail__details{grid-row:1 / span 2}
+      [data-pagosya-product][data-style=image-led][data-pagosya-product-page] .product-detail__layout:not([data-no-images]){grid-template-columns:minmax(0,1.9fr) minmax(300px,1fr)}
+      [data-pagosya-product][data-style=image-led][data-pagosya-product-page] .product-detail__layout[data-no-images] #pagosya-product-title{font-size:clamp(40px,5vw,72px);line-height:1.1}
+    }
+    @media(min-width:1200px){
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__layout:not([data-no-images]){grid-template-columns:minmax(0,1fr) minmax(0,1.8fr)}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__copy[data-split]{grid-template-columns:minmax(0,1fr) minmax(280px,1fr)}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__copy[data-split] .product-detail__buybox{grid-column:2;grid-row:1 / span 2;position:sticky;top:24px}
+      [data-pagosya-product][data-style=dense][data-pagosya-product-page] .product-detail__copy[data-split] .product-detail__details{grid-column:1}
+    }
+    @media(max-width:899px){
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__copy[data-split]{display:flex;flex-direction:column;gap:24px;box-sizing:border-box}
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__copy[data-split]>div{width:100%;box-sizing:border-box}
+    }
     @keyframes pd-roll{0%,100%{transform:translateX(-1.5px)}50%{transform:translateX(1.5px)}}
     @keyframes pd-drip{0%,55%{transform:translateY(0);opacity:1}75%{transform:translateY(2px);opacity:.55}100%{transform:translateY(0);opacity:1}}
     @keyframes pd-sweep{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
@@ -784,6 +813,8 @@
   };
   const rootPath = /(?:^|\/)pages\//.test(window.PAGOSYA_PREVIEW_PAGE || location.pathname) ? "../" : "";
   const pageHref = (page, query = "") => rootPath + page + query;
+  // Older kit pages guessed an authored homepage section that many stores do not have.
+  document.querySelectorAll('.commerce-header a[href="index.html#catalogo"]').forEach(link => { link.href = pageHref('productos.html'); });
   const detail = fullProductPage || document.createElement("dialog");
   detail.setAttribute("data-pagosya-product", "");
   detail.setAttribute("aria-labelledby", "pagosya-product-title");
@@ -1062,6 +1093,18 @@
   const ACCOUNT_GATE_PATHS = { login: '', register: '/registro', 'forgot-password': '/recuperar', 'reset-password': '/recuperar', orders: '/pedidos', addresses: '/direcciones', profile: '/perfil', subscriptions: '/suscripciones' };
   function renderAccountGates() {
     const base = accountUrl();
+    // Account access is a platform baseline even when an authored shell omits it.
+    // Existing local account navigation and the information slot remain authoritative.
+    if (base && !document.querySelector('[data-pagosya-pages],a[data-pagosya-account],a[href="acceso-ingresar.html"],a[href="cuenta-perfil.html"]')) {
+      const nav = document.createElement('nav');
+      nav.className = 'pagosya-info-nav';
+      nav.setAttribute('aria-label', 'Cuenta de cliente');
+      const access = document.createElement('a');
+      access.href = base; access.textContent = 'Mi cuenta';
+      access.setAttribute('data-pagosya-account', '');
+      nav.append(access);
+      (document.querySelector('footer') || document.body).append(nav);
+    }
     document.querySelectorAll('a[data-pagosya-account]').forEach(link => {
       const view = link.getAttribute('data-pagosya-account');
       if (!view) return;
@@ -1312,7 +1355,7 @@
   }
   function openProduct(id, trigger) {
     const p = products().find(p => p.id === id);
-    if (!p) { if (fullProductPage) detail.innerHTML = '<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="index.html#catalogo">Explorar productos</a>'; return; }
+    if (!p) { if (fullProductPage) detail.innerHTML = `<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="${escape(pageHref('productos.html'))}">Explorar productos</a>`; return; }
     track('product_view', undefined, { value: price(p), currency: p.currency });
     analytics('product_view', { productId: p.id }, 'view:' + p.id);
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
@@ -1325,16 +1368,20 @@
     // Stores nearly always author their own way back right above the mount; a second trail beside it reads as a template.
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
-    const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
+    const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('productos.html'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
     detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
-    if (fullProductPage && !images.length && !detail.hasAttribute('data-page-template')) {
+    if (fullProductPage && (!images.length || style === 'dense' || style === 'story-led') && !detail.hasAttribute('data-page-template')) {
       // Mobile reads identity, purchase, then details; desktop places the purchase panel beside both.
       const copy = detail.querySelector('.product-detail__copy'), [summary, buybox, details] = ['summary', 'buybox', 'details'].map(name => Object.assign(document.createElement('div'), { className: 'product-detail__' + name }));
-      for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__highlights,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
+      for (const child of [...copy.children]) (child.matches('.product-detail__pricing,.product-detail__options,.product-detail__box,.product-detail__subscription,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
+      if (style === 'story-led') {
+        detail.querySelector('.product-detail__layout').prepend(summary);
+        copy.dataset.story = '';
+      }
     }
     if (MOTIFS.length) { placeProductMotif(p); placeButtonMotifs(detail); }
     watchHighlights();
@@ -2167,10 +2214,10 @@
     .order-items .order-item>.order-item__body{display:block;min-width:0;margin:0}
     .order-item__photo{display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;background:color-mix(in srgb,currentColor 6%,transparent)}
     .order-item__head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;line-height:1.4;overflow-wrap:anywhere}
-    .order-item__head>span{flex:none;font-variant-numeric:tabular-nums}
+    .order-item__head>span{flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
     .order-item__body>p{margin:4px 0 0;font-size:.875em;line-height:1.45;opacity:.72}
     .order-item__body>.order-item__stock{opacity:1;font-weight:600;color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
-    .order-item__unit s{margin-left:4px}
+    .order-item__unit{white-space:nowrap}.order-item__unit s{margin-left:4px}
     .order-items .order-item .quantity{margin-top:10px}
     .order-savings{display:flex;justify-content:space-between;gap:16px;margin:16px 0 0;font-size:15px}
     .checkout-review__summary>.checkout-review__count{margin:4px 0 8px;font-size:14px;line-height:1.4;opacity:.7}
@@ -2183,7 +2230,7 @@
     .order-recommendations li>span{display:grid;overflow-wrap:anywhere}
     .order-recommendations :is(button,a){min-height:44px;padding:0 14px;display:inline-flex;align-items:center}
     .cart-drawer .order-item{padding:24px 0;border-bottom:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
-    .cart-drawer .order-item>div:first-child,.cart-drawer .order-total{display:flex;justify-content:space-between;gap:20px;overflow-wrap:anywhere}
+    .cart-drawer .order-item>div:first-child:not(.order-item__body),.cart-drawer .order-total{display:flex;justify-content:space-between;gap:20px;overflow-wrap:anywhere}
     .cart-drawer .quantity{display:flex;align-items:center;gap:16px;margin-top:16px}
     .cart-drawer .quantity button{width:44px;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));background:transparent}
     .cart-drawer .order-total{padding:24px 0;font-size:20px}.cart-drawer .order-empty{padding:40px 0;line-height:1.6}
@@ -2375,6 +2422,17 @@
     }
     root.toggleAttribute('data-no-image', !image);
     root.querySelectorAll('[data-product-media]').forEach(media => { media.hidden = !image; });
+    // Hiding an empty photo must not remove the only route to product details.
+    if (!image && ![...root.querySelectorAll('[data-product-link]')].some(link => !link.closest('[hidden]'))) {
+      const link = document.createElement(config.productPage ? 'a' : 'button');
+      link.dataset.productLink = '';
+      link.setAttribute('aria-label', `Ver detalle de ${p.name}`);
+      if (config.productPage) link.href = pageHref(config.productPage, '?id=' + encodeURIComponent(p.id));
+      else { link.type = 'button'; link.dataset.product = p.id; }
+      const name = field('name');
+      if (!name.closest('a,button,[hidden]')) { link.textContent = p.name; name.replaceChildren(link); }
+      else { link.textContent = 'Ver detalle'; root.append(link); }
+    }
     buy.classList.add('menu-add'); buy.type = 'button';
     buy.dataset.add = p.id; buy.disabled = !ready || soldOut(p) || complex;
     buy.setAttribute('aria-label', `${complex ? 'Elegir opciones de' : 'Añadir'} ${p.name}`);
@@ -2637,6 +2695,8 @@
       el.innerHTML = [{ id: "all", name: "Todo" }, ...(store.categories || [])].map((c) => `<button type="button" data-category="${escape(c.id)}" aria-pressed="${category === c.id}">${escape(c.name)}</button>`).join("");
     });
     document.querySelectorAll("[data-pagosya-catalog]").forEach((el) => {
+      // Inventory is live. An empty-at-generation catalog must not stay permanently hidden.
+      el.hidden = false;
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
       const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
       el.dataset.catalogLayout = layout;
@@ -3203,7 +3263,7 @@
     `:root[data-dna-divider=bold] ${PC} .product-detail__blocks{margin-top:32px;padding-top:24px;border-top:3px solid var(--pd-ink)}`,
     /* enter: entrance of the cosmetic parts, only when the shopper allows motion. */
     `@media(prefers-reduced-motion:no-preference){@keyframes pd-enter-fade-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes pd-enter-slide{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}@keyframes pd-enter-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}`
-      + [['fade-up'], ['slide'], ['pop']].map(([name]) => `:root[data-dna-enter=${name}] ${PC} :is([data-part=gallery],[data-part=eyebrow],[data-part=title],[data-part=intro],[data-part=highlights],[data-part=blocks]){animation:pd-enter-${name} var(--motion-slow,520ms) var(--motion-ease,ease) both}`).join('') + '}',
+      + [['fade-up'], ['slide'], ['pop']].map(([name]) => `:root[data-dna-enter=${name}] ${PC} :is([data-part=gallery],[data-part=eyebrow],[data-part=title],[data-part=intro],[data-part=highlights],[data-part=blocks]){animation:pd-enter-${name} var(--motion-slow,520ms) var(--motion-ease-settle,ease) both}`).join('') + '}',
   ];
   const DNA_PAGE_CSS = [
     ...PRODUCT_CARD_CSS,

@@ -1,10 +1,24 @@
 import { agentInstructions, agentOpening } from './agent-prompt';
 
 describe('agent instructions', () => {
-  it('give new stores and redesigns the bold section recipes and the large type scale', () => {
+  it('distinguishes technical checks from independent visual review and bounds scoped repairs without banning product grids', () => {
+    const prompt = agentInstructions('CONTRATOS', 'shop', true, true);
+    expect(prompt).toContain('it is not visual approval');
+    expect(prompt).toContain('[composition:ID]');
+    expect(prompt).toContain('At most one composition repair');
+    expect(prompt).toContain('Valid product grids and deliberate fashion campaign compositions are allowed');
+    expect(prompt).toContain('Never create an unrequested gallery');
+    expect(prompt).toContain('no universal image-count rule');
+    expect(prompt).not.toContain('a small number of supporting images');
+    expect(prompt).not.toContain('Bold, complete, editorial design');
+  });
+  it('follow the merchant reference without forcing a section recipe', () => {
     const creative = agentInstructions('CONTRATOS', 'shop', true, true);
-    for (const section of ['Oferta', 'Historia', 'Producto estrella', 'Comparación', 'Confianza', 'Cifras', 'Preguntas', 'Cierre', 'Pie']) expect(creative).toContain(section);
-    expect(creative).toMatch(/clamp\(3\.2rem, 9vw, 8\.5rem\)/);
+    expect(creative).toContain('REFERENCE-LED DESIGN');
+    expect(creative).toContain('Curate uploaded media');
+    expect(creative).toContain('let the runtime own its empty state');
+    expect(creative).not.toContain('Build these sections in this order');
+    expect(creative).not.toContain('clamp(3.2rem, 9vw, 8.5rem)');
     expect(creative.startsWith('CONTRATOS')).toBe(true);
   });
   it('keep local edits to the requested change', () => {
@@ -15,7 +29,7 @@ describe('agent instructions', () => {
   it('drop commerce-only recipes for sites that do not sell', () => {
     const service = agentInstructions('CONTRATOS', 'service', true, true);
     expect(service).not.toContain('cantidad');
-    expect(service).toContain('Preguntas');
+    expect(service).toContain('primary contact or booking action');
   });
 });
 
@@ -33,7 +47,7 @@ describe('standard pages in the agent context', () => {
 
   it('lists the store pages with their files and addresses so a request names the right file', () => {
     const text = opening();
-    expect(text).toContain('Pages of this store');
+    expect(text).toContain('Project capabilities');
     expect(text).toContain('components/pages/faq.tsx');
     expect(text).toContain('faq.html');
     expect(text).toContain('buscar.html');
@@ -41,14 +55,14 @@ describe('standard pages in the agent context', () => {
   });
 
   it('adds no page list to a store without standard pages or hand-made ones', () => {
-    expect(opening([{ path: 'components/home.tsx', content: 'x' }])).not.toContain('Pages of this store');
+    expect(opening([{ path: 'components/home.tsx', content: 'x' }])).toContain('index.html');
   });
 
   it('tells the model the standard pages are filled by the platform and must never hold policy text', () => {
     const text = agentInstructions('base', 'shop', false);
     expect(text).toContain('STANDARD PAGES');
     expect(text).toContain('AccountGatePage');
-    expect(text).toMatch(/never add a form, input, password field or script/i);
+    expect(text).toMatch(/never add authored password fields or scripts/i);
     expect(text).toMatch(/never (write|hardcode|type)[^.]*(policy|shipping|refund|privacy|terms)/i);
     expect(text).toContain('@pagosya-page');
   });

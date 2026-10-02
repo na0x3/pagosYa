@@ -4,11 +4,18 @@
   "version": "0.1.0",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.9"
   },
   "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:chatgpt": "node scripts/chatgpt-plan.mjs dev",
+    "chatgpt:login": "node scripts/chatgpt-plan.mjs login",
+    "chatgpt:logout": "node scripts/chatgpt-plan.mjs logout",
+    "chatgpt:status": "node scripts/chatgpt-plan.mjs status",
+    "chatgpt:models": "node scripts/chatgpt-plan.mjs models",
+    "chatgpt:smoke": "node scripts/chatgpt-plan.mjs smoke",
+    "test:chatgpt": "node --test scripts/chatgpt-plan/*.test.mjs",
     "dev:db": "node scripts/dev-db.mjs start",
     "dev:db:stop": "node scripts/dev-db.mjs stop",
     "dev:dashboard": "pnpm --filter @pagosya/merchant-dashboard run dev",
@@ -34,6 +41,7 @@
     "embedded-postgres": "18.4.0-beta.17",
     "eslint": "^9.39.4",
     "globals": "16.4.0",
+    "jose": "6.2.8",
     "shadcn": "^4.16.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.59.3"

@@ -1,17 +1,21 @@
+import { storefrontPageIndex } from '@pagosya/shared-types';
 import { sourceAssetInventory } from './source-asset-library';
 import { savedSourceDesign } from './source-design';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { sourceMotionMode } from './source-motion';
 import { isNextSource, nextPageMarkup } from './source-next';
 
-export function sourceSiteContext(files: SourceProjectFileDto[] = []) {
+export function sourceSiteContext(files: SourceProjectFileDto[] = [], currentPage?: string) {
   const design = savedSourceDesign(files);
+  const pageCapabilities = storefrontPageIndex(files);
   // Compiled HTML is only a mounting shell; expose the actual React page content.
   if (isNextSource(files)) files = files.map(f => {
     const page = ({ 'index.html': 'home', 'product.html': 'product', 'checkout.html': 'checkout' } as Record<string, string>)[f.path];
     return page ? { ...f, content: nextPageMarkup(files, page) } : f;
   });
   return {
+    pageCapabilities,
+    ...(currentPage && files.some(f => f.path === currentPage) ? { currentPage } : {}),
     ...(design ? { design: design.concepts[design.selected] } : {}),
     pages: files.filter(f => f.path.endsWith('.html')).map(f => ({ path: f.path, title: f.content.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.slice(0, 200) || '', headings: [...f.content.matchAll(/<h[12]\b[^>]*>([\s\S]*?)<\/h[12]>/gi)].slice(0, 16).map(m => m[1].replace(/<[^>]*>/g, '').slice(0, 200)) })),
     bundledAssets: files.filter(f => f.path.startsWith('assets/')).map(f => ({ path: f.path, references: files.filter(page => page.path.endsWith('.html') && page.content.includes(f.path)).map(page => page.path) })),

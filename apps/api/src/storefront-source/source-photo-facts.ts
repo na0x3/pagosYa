@@ -100,43 +100,48 @@ export function derivePhotoFacts(input: PhotoDerivationInput): Record<string, So
   return facts;
 }
 
-const ratio = (width: number, height: number) => width > 0 && height > 0 ? Math.round((width / height) * 1000) / 1000 : undefined;
+const dimensions = (width: number, height: number) => width > 0 && height > 0 ? { width, height } : undefined;
 
 /** Dimensions come out of the container header, so a 2 MB photograph costs a few dozen bytes to
  * measure. Anything unrecognised returns nothing: a wrong aspect is worse than no aspect, because
  * the card contract compares them. */
-export function imageAspect(bytes: Buffer): number | undefined {
+export function imageDimensions(bytes: Buffer): { width: number; height: number } | undefined {
   try {
-    if (bytes.length >= 24 && bytes.readUInt32BE(0) === 0x89504e47 && bytes.toString('ascii', 12, 16) === 'IHDR') return ratio(bytes.readUInt32BE(16), bytes.readUInt32BE(20));
-    if (bytes.length >= 10 && bytes.toString('ascii', 0, 3) === 'GIF') return ratio(bytes.readUInt16LE(6), bytes.readUInt16LE(8));
-    if (bytes.length >= 30 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP') return webpAspect(bytes);
-    if (bytes.length >= 4 && bytes.readUInt16BE(0) === 0xffd8) return jpegAspect(bytes);
+    if (bytes.length >= 24 && bytes.readUInt32BE(0) === 0x89504e47 && bytes.toString('ascii', 12, 16) === 'IHDR') return dimensions(bytes.readUInt32BE(16), bytes.readUInt32BE(20));
+    if (bytes.length >= 10 && bytes.toString('ascii', 0, 3) === 'GIF') return dimensions(bytes.readUInt16LE(6), bytes.readUInt16LE(8));
+    if (bytes.length >= 30 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP') return webpDimensions(bytes);
+    if (bytes.length >= 4 && bytes.readUInt16BE(0) === 0xffd8) return jpegDimensions(bytes);
   } catch { /* truncated or malformed: no aspect */ }
   return undefined;
 }
 
-function webpAspect(bytes: Buffer): number | undefined {
+function webpDimensions(bytes: Buffer): { width: number; height: number } | undefined {
   const chunk = bytes.toString('ascii', 12, 16);
   // Lossy: the 14-bit dimensions sit after the 3-byte frame tag and the 3-byte sync code.
-  if (chunk === 'VP8 ' && bytes.length >= 30) return ratio(bytes.readUInt16LE(26) & 0x3fff, bytes.readUInt16LE(28) & 0x3fff);
+  if (chunk === 'VP8 ' && bytes.length >= 30) return dimensions(bytes.readUInt16LE(26) & 0x3fff, bytes.readUInt16LE(28) & 0x3fff);
   // Lossless: 14 bits each, packed little-endian right after the 0x2f signature byte.
-  if (chunk === 'VP8L' && bytes.length >= 25) { const packed = bytes.readUInt32LE(21); return ratio((packed & 0x3fff) + 1, ((packed >>> 14) & 0x3fff) + 1); }
+  if (chunk === 'VP8L' && bytes.length >= 25) { const packed = bytes.readUInt32LE(21); return dimensions((packed & 0x3fff) + 1, ((packed >>> 14) & 0x3fff) + 1); }
   // Extended: 24-bit canvas dimensions, stored as one less than the true size.
-  if (chunk === 'VP8X' && bytes.length >= 30) return ratio(bytes.readUIntLE(24, 3) + 1, bytes.readUIntLE(27, 3) + 1);
+  if (chunk === 'VP8X' && bytes.length >= 30) return dimensions(bytes.readUIntLE(24, 3) + 1, bytes.readUIntLE(27, 3) + 1);
   return undefined;
 }
 
 /** Walk the marker segments to the frame header. Restart-interval and entropy-table markers carry
  * no dimensions, and the three arithmetic-coded SOF markers are skipped with the rest. */
-function jpegAspect(bytes: Buffer): number | undefined {
+function jpegDimensions(bytes: Buffer): { width: number; height: number } | undefined {
   let offset = 2;
   while (offset + 9 < bytes.length) {
     if (bytes[offset] !== 0xff) return undefined;
     const marker = bytes[offset + 1];
-    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) return ratio(bytes.readUInt16BE(offset + 7), bytes.readUInt16BE(offset + 5));
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) return dimensions(bytes.readUInt16BE(offset + 7), bytes.readUInt16BE(offset + 5));
     if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { offset += 2; continue; }
     if (marker === 0xda || marker === 0xd9) return undefined; // scan data begins; no frame header found
     offset += 2 + bytes.readUInt16BE(offset + 2);
   }
   return undefined;
+}
+
+export function imageAspect(bytes: Buffer): number | undefined {
+  const size = imageDimensions(bytes);
+  return size ? Math.round(size.width / size.height * 1000) / 1000 : undefined;
 }

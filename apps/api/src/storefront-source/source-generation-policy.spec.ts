@@ -82,3 +82,12 @@ describe('cost controls', () => {
     expect(sourceImageMicroUsd('1024x1024', 0)).toBeNull();
   });
 });
+
+it('routes the observed multi-part dog-food request as substantial work, not a color tweak', () => {
+  const instruction='y cambia la informacion para una tienda que trae comida de perros a bolivia, y adapta mas o menos a los colores de las fotos el sitio, y anade mas secciones con estas fotos';
+  expect(sourceGenerationPlan('auto',7,instruction)).toMatchObject({model:'gpt-5.6-sol',reasoningEffort:'medium'});
+});
+it('routes new independent pages and account changes to a capable model',()=>{
+  expect(sourceGenerationPlan('auto',7,'Crea páginas Servicios y Galería y añádelas al menú').model).toBe('gpt-5.6-sol');
+  expect(sourceGenerationPlan('auto',7,'Cambia el color del botón del login').model).toBe('gpt-5.6-sol');
+});

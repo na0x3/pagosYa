@@ -83,3 +83,15 @@ it('styles inline options with merchant tokens and preserves text quick-add targ
   expect(textAction).toContain('padding:10px 14px');
   expect(textAction).toContain('border-radius:var(--store-radius,var(--brand-radius,0px))');
 });
+
+it('keeps the stock full catalog distinct from the order summary, including legacy snapshots', async () => {
+  const result = await withSourceCommerceDesign([...files(), { path: 'productos.html', content: kit('productos.html') }]);
+  const page = result.find(f => f.path === 'productos.html')!.content;
+  expect(page).toContain('class="commerce-catalog-title"');
+  expect(page).toContain('class="commerce-catalog"');
+  expect(page).toContain('data-pagosya-catalog data-catalog-full');
+  expect(page).toContain('<div data-pagosya-cart hidden></div>');
+  expect(page).not.toContain('<aside class="commerce-order"');
+  expect(result.find(f => f.path === 'commerce-pages.css')!.content).toContain('.commerce-catalog-title');
+  expect(await withSourceCommerceDesign(result)).toEqual(result);
+});

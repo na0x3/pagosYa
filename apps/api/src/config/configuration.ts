@@ -117,6 +117,8 @@ export interface AppConfig {
     forcePathStyle: boolean;
   };
   deepSeek: { apiKey: string; enabled: boolean };
+  /** Local-only authenticated bridge; never carries the user's OAuth tokens. */
+  chatgptPlan?: { url: string; secret: string };
   /** Claude models for YAPI's agent (they run only on the tool-using engine). */
   anthropic: { apiKey: string };
   openAi: {
@@ -273,6 +275,16 @@ function withLocalhostAliases(origins: string[]): string[] {
 
 export default (): { app: AppConfig } => {
   const environment = process.env.NODE_ENV ?? "development";
+  const chatgptPlan = process.env.YAPI_CHATGPT_PLAN_URL
+    ? { url: process.env.YAPI_CHATGPT_PLAN_URL, secret: process.env.YAPI_CHATGPT_PLAN_SECRET ?? '' }
+    : undefined;
+  if (chatgptPlan) {
+    const url = new URL(chatgptPlan.url);
+    if (environment !== 'development' || url.protocol !== 'http:' || url.hostname !== '127.0.0.1'
+      || url.pathname !== '/v1/responses' || url.username || url.password || url.search || url.hash || !chatgptPlan.secret) {
+      throw new Error('ChatGPT plan mode requires the local development launcher: pnpm dev:chatgpt');
+    }
+  }
   const app: AppConfig = {
     environment,
     port: parseInt(process.env.PORT ?? "3000", 10),
@@ -353,12 +365,13 @@ export default (): { app: AppConfig } => {
       forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE !== "false",
     },
     sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
-    yapiEngine: process.env.YAPI_ENGINE === 'agent' || process.env.YAPI_ENGINE === 'single' ? process.env.YAPI_ENGINE : environment === 'development' ? 'agent' : 'single',
+    yapiEngine: process.env.YAPI_ENGINE === 'agent' || process.env.YAPI_ENGINE === 'single' ? process.env.YAPI_ENGINE : 'agent',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
-    deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
-    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY ?? "" },
+    chatgptPlan,
+    deepSeek: { apiKey: chatgptPlan ? '' : process.env.DEEPSEEK_API_KEY ?? "", enabled: !chatgptPlan && process.env.DEEPSEEK_ENABLED !== "false" },
+    anthropic: { apiKey: chatgptPlan ? '' : process.env.ANTHROPIC_API_KEY ?? "" },
     openAi: {
-      apiKey: process.env.OPENAI_API_KEY ?? "",
+      apiKey: chatgptPlan ? '' : process.env.OPENAI_API_KEY ?? "",
       conversationModel: process.env.OPENAI_CONVERSATION_MODEL ?? "gpt-5.6-luna",
       designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-sol",
       inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-sol",

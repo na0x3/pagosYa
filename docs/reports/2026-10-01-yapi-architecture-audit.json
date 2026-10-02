@@ -1,0 +1,215 @@
+{
+  "schema_version": "ecc.agent-architecture-audit.report.v1",
+  "executive_verdict": {
+    "overall_health": "high_risk",
+    "primary_failure_mode": "Contradictory validation contracts and fragmented artifact/run-state ownership",
+    "most_urgent_fix": "Replace checker semantics and explicit test profiles using retained incident fixtures"
+  },
+  "scope": {
+    "target_name": "Yapi merchant generation and editor lifecycle",
+    "model_stack": [
+      "ChatGPT-plan local bridge",
+      "tool-using agent",
+      "legacy single-response engine"
+    ],
+    "layers_to_audit": [
+      "System prompt",
+      "Session history",
+      "Long-term memory",
+      "Distillation",
+      "Active recall",
+      "Tool selection",
+      "Tool execution",
+      "Tool interpretation",
+      "Answer shaping",
+      "Platform rendering",
+      "Hidden repair loops",
+      "Persistence"
+    ],
+    "limitations": [
+      "No population-wide success-rate estimate",
+      "Transport root cause unresolved",
+      "Commerce/security stack not fully audited",
+      "No live model calls or application edits during audit"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "title": "Equivalent CSS colors fail verification",
+      "source_layer": "Tool interpretation",
+      "mechanism": "Literal hex strings are compared to browser-computed RGB strings.",
+      "root_cause": "The check contract lacks semantic value normalization.",
+      "evidence_refs": [
+        "apps/api/src/storefront-source/agent/agent-capture.ts:80",
+        ".yapi-evaluation/audit-checker-contract.json"
+      ],
+      "confidence": 1.0,
+      "recommended_fix": "Normalize expected CSS in the browser and include observed values."
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "title": "Video acceptance contradicts reduced-motion testing",
+      "source_layer": "Tool interpretation",
+      "mechanism": "The sandbox forces reduced motion while the plan requires a visible video whose accessible fallback hides it.",
+      "root_cause": "The test profile is implicit rather than part of the requirement.",
+      "evidence_refs": [
+        "apps/api/src/storefront-source/source-visual-capture.ts:11",
+        "apps/api/src/storefront-source/agent/agent-capture.ts:27",
+        ".yapi-evaluation/audit-checker-contract.json"
+      ],
+      "confidence": 1.0,
+      "recommended_fix": "Define separate normal playback and reduced-motion fallback assertions."
+    },
+    {
+      "id": "F3",
+      "severity": "high",
+      "title": "Model-authored checks become frozen blockers",
+      "source_layer": "Tool selection",
+      "mechanism": "Selectors and literal expectations are fixed after editing and retried as if every failure were an implementation defect.",
+      "root_cause": "Merchant intent and the checker implementation share one model-authored contract.",
+      "evidence_refs": [
+        "apps/api/src/storefront-source/agent/agent-task.ts:16",
+        "apps/api/src/storefront-source/agent/agent-tools.ts:130",
+        "apps/api/src/storefront-source/agent/agent-loop.ts:79"
+      ],
+      "confidence": 0.98,
+      "recommended_fix": "Use typed semantic requirements with separately validated checker bindings and independent coverage."
+    },
+    {
+      "id": "F4",
+      "severity": "high",
+      "title": "Preview, verification and commit lack one artifact identity",
+      "source_layer": "Hidden repair loops",
+      "mechanism": "The workspace, mutating candidate gate, preview preparation and save preparation can process different source representations.",
+      "root_cause": "Several layers own normalization, preparation and acceptance.",
+      "evidence_refs": [
+        "apps/api/src/storefront-source/source-generation.service.ts:593",
+        "apps/api/src/storefront-source/source-generation.service.ts:702",
+        "apps/api/src/storefront-source/agent/agent-tools.ts:175"
+      ],
+      "confidence": 0.95,
+      "recommended_fix": "Prepare an immutable artifact once per digest; verify and commit that exact artifact."
+    },
+    {
+      "id": "F5",
+      "severity": "high",
+      "title": "Run lifecycle and expiry policies disagree",
+      "source_layer": "Persistence",
+      "mechanism": "Process-local jobs may run over 12 minutes, but cleanup expires RUNNING jobs after 10 minutes and recovery excludes INTERRUPTED.",
+      "root_cause": "No unified durable execution contract with heartbeat and lease.",
+      "evidence_refs": [
+        "apps/api/src/storefront-source/source-generation.service.ts:518",
+        "apps/api/src/storefront-source/source-generation.service.ts:527",
+        "apps/api/src/storefront-source/source-generation.service.ts:236"
+      ],
+      "confidence": 0.98,
+      "recommended_fix": "Introduce durable idempotent jobs, fenced leases, heartbeat, resume and cancellation."
+    },
+    {
+      "id": "F6",
+      "severity": "high",
+      "title": "Recovery banner displaces the preview",
+      "source_layer": "Platform rendering",
+      "mechanism": "A fourth grid child is inserted into a three-row canvas layout; the banner occupies the flexible content row.",
+      "root_cause": "Run-state UI lacks stable layout slots and geometry assertions.",
+      "evidence_refs": [
+        "apps/merchant-studio/src/source-studio.ts:593",
+        "apps/merchant-studio/src/source-workspace-design.css:10",
+        "apps/merchant-studio/tests/source-draft-recovery.spec.ts:3"
+      ],
+      "confidence": 1.0,
+      "recommended_fix": "Replace independent editor flags with explicit state views and stable layout slots."
+    },
+    {
+      "id": "F7",
+      "severity": "high",
+      "title": "Failures lose actionable diagnostic categories",
+      "source_layer": "Answer shaping",
+      "mechanism": "The bridge collapses thrown exceptions into connection_unavailable; planning diagnostics are omitted.",
+      "root_cause": "Error taxonomy and stage provenance are not preserved across boundaries.",
+      "evidence_refs": [
+        "scripts/chatgpt-plan/transport.mjs:103",
+        "apps/api/src/storefront-source/agent/agent-tools.ts:98"
+      ],
+      "confidence": 0.95,
+      "recommended_fix": "Preserve safe typed error categories, stage, status, retryability and request correlation."
+    },
+    {
+      "id": "F8",
+      "severity": "high",
+      "title": "Evaluation does not cover the released user path",
+      "source_layer": "Platform rendering",
+      "mechanism": "Development and production engine defaults differ; candidate evaluation bypasses chat and starts from an existing snapshot.",
+      "root_cause": "Component evidence is treated as whole-product readiness.",
+      "evidence_refs": [
+        "apps/api/src/config/configuration.ts:368",
+        "apps/api/scripts/evaluate-yapi-agent.ts:45"
+      ],
+      "confidence": 0.98,
+      "recommended_fix": "Pin the primary engine and gate releases on repeated full UI-to-save scenarios."
+    },
+    {
+      "id": "F9",
+      "severity": "medium",
+      "title": "Request intent passes through overlapping representations",
+      "source_layer": "Session history",
+      "mechanism": "Historical setup, summaries, prose markers, generic design recipes and generated assertions all influence execution.",
+      "root_cause": "Confirmed merchant facts and inferred implementation guidance lack a single typed boundary.",
+      "evidence_refs": [
+        "apps/api/src/storefront-source/source-chat.service.ts:314",
+        "apps/api/src/storefront-source/source-generation.service.ts:398",
+        "apps/api/src/storefront-source/agent/agent-prompt.ts:7"
+      ],
+      "confidence": 0.9,
+      "recommended_fix": "Normalize intent once and preserve explicit choice and asset provenance."
+    }
+  ],
+  "ordered_fix_plan": [
+    {
+      "order": 0,
+      "goal": "Preserve failing fixtures and add safe stage traces",
+      "why_now": "Establish a trustworthy baseline before replacing behavior",
+      "expected_effect": "Reproducible attributed failures"
+    },
+    {
+      "order": 1,
+      "goal": "Replace the verification contract",
+      "why_now": "Proven false negatives currently cause pointless repairs",
+      "expected_effect": "Correct checks for semantic values and motion profiles"
+    },
+    {
+      "order": 2,
+      "goal": "Unify prepared artifact identity",
+      "why_now": "Preview and save must refer to identical verified bytes",
+      "expected_effect": "Digest-bound evidence and commit"
+    },
+    {
+      "order": 3,
+      "goal": "Replace run orchestration with durable jobs",
+      "why_now": "Reloads, retries and expiry need consistent ownership",
+      "expected_effect": "Idempotent, resumable execution"
+    },
+    {
+      "order": 4,
+      "goal": "Rebuild editor run state",
+      "why_now": "Retained work must remain usable and visible",
+      "expected_effect": "Stable preview and truthful status"
+    },
+    {
+      "order": 5,
+      "goal": "Consolidate scratch, template and edit entry paths",
+      "why_now": "Avoid independent implementations diverging",
+      "expected_effect": "One supported execution path"
+    },
+    {
+      "order": 6,
+      "goal": "Run the repeated end-to-end release gate",
+      "why_now": "Unit counts and one success do not establish readiness",
+      "expected_effect": "Evidence-based rollout with rollback"
+    }
+  ],
+  "human_report": "docs/reports/2026-10-01-yapi-architecture-audit.md"
+}

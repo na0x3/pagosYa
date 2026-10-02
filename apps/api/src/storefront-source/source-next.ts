@@ -1,3 +1,4 @@
+import { storefrontPageRoute } from '@pagosya/shared-types';
 import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
 import { isSourceMotifFile } from './source-motifs';
 import { BadGatewayException } from '@nestjs/common';
@@ -36,28 +37,12 @@ export const nextPages = [{ name: 'home', path: 'index.html' }, { name: 'product
 
 /** Folders under components/ whose files are standard store pages (spec 2026-09-30-store-page-architecture). The value
  * is the prefix of the URL for a file the table below does not know. */
-const STANDARD_PAGE_GROUPS: Record<string, string> = { pages: '', catalog: '', auth: 'acceso-', account: 'cuenta-' };
-/** Spanish URL slug of each known page, keyed by `group/file`. */
-const STANDARD_PAGE_SLUGS: Record<string, string> = {
-  'pages/faq': 'faq', 'pages/shipping': 'envios', 'pages/refund-policy': 'reembolsos', 'pages/privacy': 'privacidad', 'pages/terms': 'terminos',
-  'pages/cookies': 'cookies', 'pages/contact': 'contacto', 'pages/about': 'nosotros', 'pages/not-found': '404',
-  'catalog/collections': 'colecciones', 'catalog/search': 'buscar',
-  'auth/login': 'acceso-ingresar', 'auth/register': 'acceso-registro', 'auth/forgot-password': 'acceso-olvide-mi-contrasena', 'auth/reset-password': 'acceso-restablecer-contrasena',
-  'account/orders': 'cuenta-pedidos', 'account/addresses': 'cuenta-direcciones', 'account/profile': 'cuenta-perfil', 'account/downloads': 'cuenta-descargas',
-  'account/payment-methods': 'cuenta-metodos-de-pago', 'account/subscriptions': 'cuenta-suscripciones',
-};
-const STANDARD_PAGE_FILE = /^components\/(pages|catalog|auth|account)\/([a-z][a-z0-9-]{0,47})\.tsx$/;
 /** A file in those folders is a page only when it says so on its first line. Generated stores already keep shared
  * components in subfolders of components/; without this marker they would start producing pages on the next save. */
 const STANDARD_PAGE_MARK = /^\s*\/\/\s*@pagosya-page\b/;
 
 /** The route of a file in one of the standard page folders, or null for any other file (shared components never route). */
-export function standardPageRoute(path: string): { name: string; path: string } | null {
-  const match = STANDARD_PAGE_FILE.exec(path);
-  if (!match) return null;
-  const name = `${match[1]}/${match[2]}`;
-  return { name, path: `${STANDARD_PAGE_SLUGS[name] ?? `${STANDARD_PAGE_GROUPS[match[1]]}${match[2]}`}.html` };
-}
+export const standardPageRoute = storefrontPageRoute;
 
 /** Explicit page-* convention avoids treating shared components as routes; the standard page folders are explicit too. */
 export function nextContentPages(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop'): Array<{ name: string; path: string }> {
@@ -75,7 +60,7 @@ export function nextContentPages(files: SourceProjectFileDto[], purpose: SourceS
 }
 
 export const SOURCE_NEXT_INSTRUCTIONS = `Generate a real Next.js storefront using React, TypeScript and Tailwind CSS 3. The platform supplies the trusted Next.js Pages Router scaffold, package.json, configuration, runtime and build tooling. Return ONLY components/**/*.tsx and styles/globals.css. Required default-export React components: components/home.tsx, components/product.tsx, components/checkout.tsx. Extract a shared Header, Footer and other reusable pieces into components/. Each page must reuse the same actual shared navigation, typography and brand. Use className with complete literal Tailwind utility names, responsive prefixes, arbitrary values and normal React event handlers/useState/useEffect for interaction. Use styles/globals.css for shared tokens, @font-face, runtime commerce selectors (kit surfaces in its pagosya-kit block) and custom animation. The platform adds @tailwind directives. ${SOURCE_CREATIVE_TOOLS}\n${SOURCE_UI_TOOLS}\nReact and relative component imports are available; do not import remote resources, server modules, Next APIs or CSS from components. Do not output framework configuration, HTML files, site.js, styles.css or compiled bundles. Do not use dangerouslySetInnerHTML, eval, new Function, dynamic imports, script tags or authored fetch calls. Use ordinary anchors with index.html, product.html and checkout.html hrefs, because the same components run in isolated preview and Next.js static exports. The framework supplies document/head/scripts and SEO; components return page content, never html/head/body tags.
-The existing PagosYa commerce runtime owns products, prices, cart, checkout, forms, reviews, bundles, loyalty, privacy and payments. Homepage MUST render one empty data-pagosya-catalog mount, an empty hidden data-pagosya-cart mount, data-pagosya-status (role=status aria-live=polite), and a real button with data-cart-open. Product MUST render empty data-pagosya-product-page and data-pagosya-cart mounts, data-pagosya-status, and a real button with data-cart-open (product pages need the same cart access as the homepage). Checkout must render one empty data-pagosya-checkout-page and data-pagosya-status; do not duplicate payment fields/cart markup. The runtime starts after React mounts. Style its menu-item, menu-item__name, menu-item__desc, menu-item__price, menu-add, order-item, order-line, order-field, order-total, order-note, checkout-button, product-page and checkout-page classes in globals.css. It emits pagosya:ready for idempotent decoration; never write into an observed catalog subtree from a MutationObserver. Do not register custom purchase/payment implementations. Never render React children inside these runtime-owned mounts or remove them during unrelated state changes. Style runtime classes in globals.css; Tailwind utilities on the surrounding layout are encouraged. On product pages, let actual product photography lead: allocate roughly half the desktop content width to the main image with thumbnails below, and use full available width above the details on mobile. Keep the entire product visible with object-fit:contain and avoid viewport-height caps that shrink photos in the editor. Start with the product gallery and actual product name, price and purchase action; do not add an oversized generic introductory heading above this mount. Honor explicit merchant layout requests. Homepage and product need usable cart access; all pages need navigation back to index.html. Add the optional contact hook as an empty hidden data-pagosya-contact mount; the runtime owns whether it appears. An optional newsletter block wraps its copy, one real button with data-pagosya-subscribe-open and an empty role=status paragraph in a data-pagosya-subscribe-block element; never add an email input or an onClick to that button, the runtime opens the secure signup form. Every authored intrinsic <img> must include an explicit meaningful alt value, or alt="" plus aria-hidden="true" when purely decorative; a JSX prop spread alone does not satisfy this contract. Location iframes may be normal React JSX with a supported HTTPS map src, title, loading=lazy and responsive sizing. Uploaded assets use literal /assets/... paths. Do not copy reference-site assets or fabricate product photography. Read browser globals only in effects or event handlers so Next.js can prerender the page. Define main and its planned direct section IDs literally in components/home.tsx. For tabs, steps or other multi-view homepages, keep every planned section mounted as a literal direct child of main in plan order and switch views by toggling the hidden attribute, aria attributes or className from state; never wrap planned sections in conditionals, .map(), switch statements or {expressions}. Put runtime hooks in literal JSX with no children; do not hide them behind conditions. Native React/CSS/SVG motion is available with reduced-motion support. Respect the selected motion mode and confirmed brand tokens. Preserve unrelated components and CSS for local edits. A whole-site redesign can replace existing components; legacy HTML supplied during migration is reference material to reconstruct in React while preserving its business content and commerce behavior.
+The existing PagosYa commerce runtime owns products, prices, cart, checkout, forms, reviews, bundles, loyalty, privacy and payments. Homepage MUST render one empty data-pagosya-catalog mount, an empty hidden data-pagosya-cart mount, data-pagosya-status (role=status aria-live=polite), and a real button with data-cart-open. Product MUST render empty data-pagosya-product-page and data-pagosya-cart mounts, data-pagosya-status, and a real button with data-cart-open (product pages need the same cart access as the homepage). Checkout must render one empty data-pagosya-checkout-page and data-pagosya-status; do not duplicate payment fields/cart markup. The runtime starts after React mounts. Style its menu-item, menu-item__name, menu-item__desc, menu-item__price, menu-add, order-item, order-line, order-field, order-total, order-note, checkout-button, product-page and checkout-page classes in globals.css. It emits pagosya:ready for idempotent decoration; never write into an observed catalog subtree from a MutationObserver. Do not register custom purchase/payment implementations. Never render React children inside these runtime-owned mounts or remove them during unrelated state changes. Style runtime classes in globals.css; Tailwind utilities on the surrounding layout are encouraged. On product pages, choose a structure that fits the business and honor the selected productPageStyle: image-led for fashion/art with a dominant gallery and compact purchase column; dense for furniture/electronics with specifications beside a distinct purchase panel; story-led for craft with the actual product title and introduction above its gallery; editorial for a restrained balanced presentation. Do not force every store into an equal image/details split. For food prioritize options and ordering over a long introduction. When photos are absent, use a deliberate title/details and purchase composition without an empty image placeholder. Keep a logical single-column reading order on mobile. Keep the entire product visible with object-fit:contain and avoid viewport-height caps that shrink photos in the editor. Start with the product gallery and actual product name, price and purchase action; do not add an oversized generic introductory heading above this mount. Honor explicit merchant layout requests. Homepage and product need usable cart access; all pages need navigation back to index.html. Add the optional contact hook as an empty hidden data-pagosya-contact mount; the runtime owns whether it appears. An optional newsletter block wraps its copy, one real button with data-pagosya-subscribe-open and an empty role=status paragraph in a data-pagosya-subscribe-block element; never add an email input or an onClick to that button, the runtime opens the secure signup form. Every authored intrinsic <img> must include an explicit meaningful alt value, or alt="" plus aria-hidden="true" when purely decorative; a JSX prop spread alone does not satisfy this contract. Location iframes may be normal React JSX with a supported HTTPS map src, title, loading=lazy and responsive sizing. Uploaded assets use literal /assets/... paths. Do not copy reference-site assets or fabricate product photography. Read browser globals only in effects or event handlers so Next.js can prerender the page. Define main and its planned direct section IDs literally in components/home.tsx. For tabs, steps or other multi-view homepages, keep every planned section mounted as a literal direct child of main in plan order and switch views by toggling the hidden attribute, aria attributes or className from state; never wrap planned sections in conditionals, .map(), switch statements or {expressions}. Put runtime hooks in literal JSX with no children; do not hide them behind conditions. Native React/CSS/SVG motion is available with reduced-motion support. Respect the selected motion mode and confirmed brand tokens. Preserve unrelated components and CSS for local edits. A whole-site redesign can replace existing components; legacy HTML supplied during migration is reference material to reconstruct in React while preserving its business content and commerce behavior.
 Before returning source, perform a strict TypeScript scope pass: every uppercase JSX tag or referenced component name must be declared in that file or explicitly imported from a returned local components/*.tsx file. Shared Header, Footer and other primitives must have one concrete definition and matching imports in every page that uses them; never rely on a symbol existing in another file implicitly. Do not return a page that would produce Cannot find name, module-not-found or JSX intrinsic-element errors.
 Homepage MUST contain exactly one semantic primary h1, either authored directly or supplied by @pagosya/ui Hero, VideoHero, FloatingMedia, ScrollScrubHero or Display with its default as="h1".
 Choose the homepage information architecture for this merchant: a narrative landing page, useful catalog, gallery, playful scene or a combination can work. Keep navigation and the primary customer action easy to find. Use anchors for destinations and buttons for actions/state changes. Additional pages are optional when the content earns them. Keep cart access visible on mobile. Never add password fields (type="password" or autoComplete current-password/new-password) to any file; sign-in forms belong to the platform's secure account pages.`;
@@ -157,7 +142,7 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
   const missing: string[] = [];
   for (const page of nextContentPages(files, purpose)) {
     const markup = nextPageMarkup(files, page.name);
-    const hooks = purpose !== 'shop' ? (page.name === 'home' ? ['data-pagosya-status', 'data-pagosya-contact'] : ['data-pagosya-status']) : page.name === 'home' ? ['data-pagosya-catalog', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : page.name === 'product' ? ['data-pagosya-product-page', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : standardPageRoute(`components/${page.name}.tsx`) ? [] : ['data-pagosya-checkout-page', 'data-pagosya-status'];
+    const hooks = purpose !== 'shop' ? (page.name === 'home' ? ['data-pagosya-status', 'data-pagosya-contact'] : ['data-pagosya-status']) : page.name === 'home' ? ['data-pagosya-catalog', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : page.name === 'product' ? ['data-pagosya-product-page', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : page.name === 'checkout' ? ['data-pagosya-checkout-page', 'data-pagosya-status'] : [];
     for (const hook of hooks) if (!new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup)) missing.push(`${page.name} necesita ${hook} en JSX visible.`);
   }
   const repairable = [
@@ -324,7 +309,10 @@ export function nextPageMarkup(files: SourceProjectFileDto[], name: string): str
 }
 
 export function validateNextDesign(files: SourceProjectFileDto[], design: SourceDesign, purpose: SourceSitePurpose = 'shop') {
-  validateSourceDesignImplementation(design, [{ path: 'index.html', content: nextPageMarkup(files, 'home') }], purpose);
+  // Composition plans can include custom routes. Supplying only the homepage
+  // makes every valid planned gallery appear missing and causes futile repairs.
+  const pages = nextContentPages(files, purpose).map(page => ({ path: page.path, content: nextPageMarkup(files, page.name) }));
+  validateSourceDesignImplementation(design, pages, purpose);
 }
 
 const NEXT_SHARED_FALLBACKS: Record<string, string> = {
@@ -483,8 +471,13 @@ export function repairNextAuthoredMarkup(files: SourceProjectFileDto[]): { files
       return expression;
     };
     const edits: Array<{ start: number; end: number; text: string }> = [];
-    let images = 0, slots = 0;
+    let images = 0, slots = 0, catalogs = 0;
     const visit = (node: ts.Node) => {
+      const opening = ts.isJsxElement(node) ? node.openingElement : ts.isJsxSelfClosingElement(node) ? node : undefined;
+      if (opening && attribute(opening, 'data-pagosya-catalog')) {
+        const hidden = attribute(opening, 'hidden');
+        if (hidden) { edits.push({ start: hidden.getStart(source), end: hidden.end, text: '' }); catalogs++; }
+      }
       if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some(a => ts.isJsxAttribute(a) && COMMERCE_SLOT_ATTRIBUTE.test(a.name.getText(source)))
         && node.children.some(c => !ts.isJsxText(c) || c.text.trim())) {
         // Everything inside goes, images included, so there is nothing further to visit.
@@ -515,6 +508,7 @@ export function repairNextAuthoredMarkup(files: SourceProjectFileDto[]): { files
     for (const edit of edits.sort((a, b) => b.start - a.start || b.end - a.end)) content = content.slice(0, edit.start) + edit.text + content.slice(edit.end);
     if (images) repairs.push(`${file.path}: marked ${images} image${images === 1 ? '' : 's'} without alt text as decorative`);
     if (slots) repairs.push(`${file.path}: emptied ${slots} commerce slot${slots === 1 ? '' : 's'}`);
+    if (catalogs) repairs.push(`${file.path}: kept ${catalogs} live catalog mount${catalogs === 1 ? '' : 's'} visible`);
     return { ...file, content };
   });
   return { files: repairs.length ? repaired : files, repairs };

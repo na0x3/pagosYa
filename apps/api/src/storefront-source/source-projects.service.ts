@@ -1,3 +1,5 @@
+import { sourceRequestContext } from './source-request-context';
+import { assertPreparedSource, type PreparedSourceArtifact } from './source-prepared-artifact';
 import { DesignRetryableConflict } from './source-design-errors';
 import { savedSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
 import { sourceSitePurpose } from './source-site-purpose';
@@ -13,6 +15,7 @@ import { withSourceMotionSettings, type SourceMotionMode, type SourceScrollFeel 
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { withSourceFonts } from './source-fonts';
 import { savedSourceDesign } from './source-design';
+import { compositionFingerprint } from './source-composition-plan';
 import { dnaFingerprint } from './source-dna';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { PaymentLinkStatus, Prisma, type PaymentLink } from "@prisma/client";
@@ -28,7 +31,7 @@ import { kitPath } from '@pagosya/storefront-kit';
 import { applySourceVisualEdit, sourceVisualFields } from './source-visual-edit';
 import type { SourceVisualEditDto } from './dto/source-visual-edit.dto';
 
-type GenerationSave = { id: string; enablePayments?: boolean; products?: SourceProduct[]; productOperations?: SourceProductOperation[]; data: Prisma.StoreSourceGenerationUpdateManyMutationInput };
+type GenerationSave = { id: string; prepared?: PreparedSourceArtifact; enablePayments?: boolean; products?: SourceProduct[]; productOperations?: SourceProductOperation[]; data: Prisma.StoreSourceGenerationUpdateManyMutationInput };
 const summarySelect = { revision: true, label: true, digest: true, restoredFrom: true, createdAt: true } as const;
 /** Cross-store memory window (sub-project 4): recent enough to matter, small enough to stay one cheap indexed read. */
 const RECENT_DESIGN_DAYS = 60;
@@ -58,6 +61,29 @@ export class SourceProjectsService {
       orderBy: { createdAt: 'desc' }, take: RECENT_DESIGN_LIMIT, select: { designFingerprint: true },
     });
     return [...new Set(rows.flatMap(row => row.designFingerprint ? [row.designFingerprint] : []))];
+  }
+
+  /** Read only the small design manifest in PostgreSQL, never transfer bundled
+   * photo bytes or return another merchant's copy/assets to the planner. */
+  async recentCompositionFingerprints(storeId: string, now = new Date()): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ content: string }>>(Prisma.sql`
+      SELECT f->>'content' AS content
+      FROM (
+        SELECT v.snapshot FROM "StoreSourceVersion" v
+        WHERE v."storeId" <> ${storeId}
+          AND v."createdAt" >= ${new Date(now.getTime() - RECENT_DESIGN_DAYS * 86_400_000)}
+        ORDER BY v."createdAt" DESC LIMIT ${RECENT_DESIGN_LIMIT}
+      ) recent,
+      LATERAL jsonb_array_elements(recent.snapshot->'files') f
+      WHERE f->>'path' = ${'design-direction.json'}
+        AND COALESCE(f->>'encoding', 'utf8') <> 'base64'
+    `);
+    const fingerprints = rows.flatMap(row => {
+      const design = savedSourceDesign([{ path: 'design-direction.json', content: row.content }]);
+      const concept = design?.concepts[design.selected];
+      return concept?.composition ? [compositionFingerprint({ composition: concept.composition })] : [];
+    });
+    return [...new Set(fingerprints)];
   }
 
   async current(merchantId: string, storeId: string) {
@@ -115,12 +141,16 @@ export class SourceProjectsService {
     }
     const system = savedSourceVisualSystem(snapshot.files);
     if (system?.version === 3) snapshot = { ...snapshot, files: snapshot.files.map(file => file.path === SOURCE_VISUAL_SYSTEM_FILE ? { ...file, content: JSON.stringify(withSourceStyleTokens(system, snapshot.files), null, 2) + '\n' } : file) };
-    return snapshot;
+    // Draft inspection and final saves share the same commerce presentation.
+    const runtime = await currentSourceRuntime(snapshot);
+    return sourceProjectSnapshot({ ...input, files: runtime.files });
   }
 
   async save(merchantId: string, storeId: string, input: SaveSourceProjectDto, generation?: GenerationSave, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {
     await this.ownedStore(merchantId, storeId);
-    return this.append(storeId, input.revision, input.label, await this.prepare(input), null, generation, undefined, fence);
+    const snapshot = generation?.prepared ? assertPreparedSource(input, generation.prepared) : await this.prepare(input);
+    if (generation?.prepared && (generation.products?.length || generation.productOperations?.length)) throw new BadRequestException('Las operaciones de catálogo deben prepararse por separado.');
+    return this.append(storeId, input.revision, input.label, snapshot, null, generation, undefined, fence);
   }
 
   /** Apply the exact normalized bytes that were reviewed, without recompiling. */
@@ -229,6 +259,7 @@ export class SourceProjectsService {
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         await fence?.(tx);
+        await sourceRequestContext.getStore()?.assertLease(tx, revision + 1, storeId);
         await tx.storeSourceProject.upsert({ where: { storeId }, create: { storeId }, update: {} });
         const updated = await tx.storeSourceProject.updateMany({ where: { storeId, revision }, data: { revision: { increment: 1 } } });
         if (updated.count !== 1) throw new ConflictException("El proyecto cambió en otra sesión. Recarga la revisión antes de guardar.");

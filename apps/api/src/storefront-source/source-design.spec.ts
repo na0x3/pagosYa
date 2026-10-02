@@ -53,7 +53,7 @@ it('persists a coherent story and bounded choreography for newly planned concept
   }
   const checked = validateSourceDesign(value, 1, true, true);
   expect(checked.concepts[1]).toMatchObject({ story: { primaryAction: 'Ver menú' }, motion: { scrollFeel: 'soft', scenes: expect.any(Array) } });
-  expect(checked.concepts[1].motion).toMatchObject({ mode: 'expressive', entrance: 'none', scenes: [{ intensity: 2 }, { intensity: 2 }] });
+  expect(checked.concepts[1].motion).toMatchObject({ mode: 'expressive', entrance: 'none', scenes: [{ intensity: 2 }, { intensity: 1 }] });
   value.concepts[1].story.beats.reverse();
   expect(() => validateSourceDesign(value, 1, true, true)).toThrow('story.beats');
   value.concepts[1].story.beats.reverse(); value.concepts[1].motion.scenes.push({ section: 'menu', kind: 'sequence', intensity: 1 });
@@ -218,9 +218,9 @@ it('carries the type, rhythm, card and masthead rules into the prompts that reac
   expect(SOURCE_DESIGN_CONTRACT).toContain(SOURCE_CARD_AND_MASTHEAD_DIRECTION);
   expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('one image aspect ratio');
   // §8.2 lockup, and the honesty rule that keeps it from being invented.
-  expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('wordmark plus one second line at the label role');
-  expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('four to six navigation entries');
-  expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('cart count badge');
+  expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('compact single-row header');
+  expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).not.toContain('four to six navigation entries');
+  expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('cart count');
   expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('Never invent a tagline');
 });
 
@@ -281,6 +281,7 @@ describe('no stock patterns by default', () => {
     expect(story.properties.eyebrow.minLength).toBe(0);
     const checked = validateSourceDesign(planned(), 1, true, true);
     expect(checked.concepts[1].story?.eyebrow).toBe('');
+    expect(checked.concepts[1].motion).toEqual({ mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [] });
     const missing = planned(); delete missing.concepts[1].story.eyebrow;
     expect(validateSourceDesign(missing, 1, true, true).concepts[1].story?.eyebrow).toBe('');
     const long = planned(); long.concepts[1].story.eyebrow = 'x'.repeat(41);
@@ -323,4 +324,25 @@ describe('soft eyebrow counter', () => {
     }
     expect(sourceEyebrowNote([{ path: 'assets/x.png', content: 'AAAA', encoding: 'base64' }])).toBeNull();
   });
+});
+
+it('keeps legacy designs readable without requiring a composition plan', () => {
+  expect(validateSourceDesign(proposal()).concepts.every(concept => concept.composition === undefined)).toBe(true);
+});
+
+it('enforces planned custom page sections and refuses to silently adopt unplanned sections', () => {
+  const value = proposal() as any;
+  for (const concept of value.concepts) {
+    concept.layout = { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true };
+    const section = { id: 'menu', intent: 'Choose available products.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Shop' };
+    concept.composition = { family: 'catalog-led', rationale: 'Help customers compare available products.', pages: [
+      { page: 'index.html', purpose: 'shopping', rationale: 'Choose products.', sections: [section] },
+      { page: 'craft.html', purpose: 'story', rationale: 'Explain the evidenced craft process.', sections: [{ ...section, id: 'process', intent: 'Explain the making process.', layout: 'text', geometry: 'typographic' }] },
+    ] };
+  }
+  const design = validateSourceDesign(value);
+  const home = { path: 'index.html', content: '<main><section id="menu"><div data-pagosya-catalog></div></section></main>' };
+  expect(() => validateSourceDesignImplementation(design, [home])).toThrow('craft.html');
+  expect(() => validateSourceDesignImplementation(design, [home, { path: 'craft.html', content: '<main><section id="process">The process</section></main>' }])).not.toThrow();
+  expect(adoptTrailingDesignSections(design, home.content.replace('</main>', '<section id="photos"></section></main>'))).toEqual(design);
 });

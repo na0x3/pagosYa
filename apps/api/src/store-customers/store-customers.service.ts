@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,7 +14,7 @@ export const CUSTOMER_GENERIC_ANSWER = { message: 'Si el correo es válido, te e
 const SESSION_MS = 30 * 24 * 3_600_000;
 const VERIFY_MS = 24 * 3_600_000;
 const RESET_MS = 3_600_000;
-const EMAIL = /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/;
+const EMAIL = /^[^\s\x00-\x1f\x7f@<>"'`]+@[^\s\x00-\x1f\x7f@<>"'`]+\.[^\s\x00-\x1f\x7f@<>"'`]+$/;
 const PHONE = /^\+?[0-9][0-9 ()-]{5,24}$/;
 const INVALID_LINK = 'El enlace no es válido o expiró';
 const BAD_LOGIN = 'Correo o contraseña incorrectos';
@@ -48,7 +49,7 @@ export class StoreCustomersService {
 
   private name(input: unknown) {
     const name = typeof input === 'string' ? input.trim() : '';
-    if (!name || name.length > 100) throw new BadRequestException('Escribe tu nombre (hasta 100 caracteres)');
+    if (!name || name.length > 100 || /[\x00-\x1f\x7f]/.test(name)) throw new BadRequestException('Escribe tu nombre (hasta 100 caracteres)');
     return name;
   }
 
@@ -61,26 +62,37 @@ export class StoreCustomersService {
 
   private async send(to: string, subject: string, body: string) {
     try { await this.mail.send({ to, subject, body }); }
-    catch (error) { this.logger.warn(`No se pudo enviar un correo de cliente: ${(error as Error).message}`); }
+    catch { this.logger.warn('No se pudo enviar un correo de cliente'); }
   }
 
   private profile(row: any): CustomerProfile {
     return { id: row.id, storeId: row.storeId, email: row.email, name: row.name, phone: row.phone ?? null, addresses: Array.isArray(row.addresses) ? row.addresses : [], emailVerifiedAt: row.emailVerifiedAt ?? null, createdAt: row.createdAt };
   }
 
-  private async issueToken(customerId: string, purpose: 'VERIFY_EMAIL' | 'RESET_PASSWORD', ttl: number) {
-    await this.prisma.storeCustomerToken.updateMany({ where: { customerId, purpose, usedAt: null }, data: { usedAt: new Date() } });
+  /** Serializable transactions bind verification to the credentials that issued its link and prevent
+   * a concurrent login from escaping a password reset's session revocation. Hashing and mail stay outside. */
+  private async credentials<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try { return await this.prisma.$transaction(work, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
+      catch (error) {
+        if (attempt >= 3 || !['P2034', 'P2002'].includes((error as { code?: string }).code ?? '')) throw error;
+      }
+    }
+  }
+
+  private async issueToken(customerId: string, purpose: 'VERIFY_EMAIL' | 'RESET_PASSWORD', ttl: number, db: Prisma.TransactionClient = this.prisma) {
+    await db.storeCustomerToken.updateMany({ where: { customerId, purpose, usedAt: null }, data: { usedAt: new Date() } });
     const token = newToken();
-    await this.prisma.storeCustomerToken.create({ data: { customerId, purpose, hashedToken: digest(token), expiresAt: new Date(Date.now() + ttl) } });
+    await db.storeCustomerToken.create({ data: { customerId, purpose, hashedToken: digest(token), expiresAt: new Date(Date.now() + ttl) } });
     return token;
   }
 
   /** A token is consumed exactly once, even when two requests race: only the update that flips `usedAt` wins. */
-  private async consumeToken(storeId: string, token: unknown, purpose: 'VERIFY_EMAIL' | 'RESET_PASSWORD') {
+  private async consumeToken(storeId: string, token: unknown, purpose: 'VERIFY_EMAIL' | 'RESET_PASSWORD', db: Prisma.TransactionClient) {
     if (typeof token !== 'string' || !token || token.length > 200) throw new BadRequestException(INVALID_LINK);
-    const row = await this.prisma.storeCustomerToken.findUnique({ where: { hashedToken: digest(token) }, include: { customer: true } });
+    const row = await db.storeCustomerToken.findUnique({ where: { hashedToken: digest(token) }, include: { customer: true } });
     if (!row || row.purpose !== purpose || row.usedAt || row.expiresAt <= new Date() || row.customer.storeId !== storeId || row.customer.deletedAt) throw new BadRequestException(INVALID_LINK);
-    const claimed = await this.prisma.storeCustomerToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
+    const claimed = await db.storeCustomerToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
     if (claimed.count !== 1) throw new BadRequestException(INVALID_LINK);
     return row.customer;
   }
@@ -92,18 +104,25 @@ export class StoreCustomersService {
     if (!email) throw new BadRequestException('Escribe un correo válido');
     // Hashed before looking anything up, so a new address and an existing one cost the same time.
     const hashedPassword = await argon2.hash(password);
-    const existing = await this.prisma.storeCustomer.findUnique({ where: { storeId_email: { storeId: store.id, email } } });
-    if (existing && !existing.deletedAt && existing.emailVerifiedAt) return CUSTOMER_GENERIC_ANSWER;
-    const customer = existing && !existing.deletedAt ? existing : await this.prisma.storeCustomer.create({ data: { storeId: store.id, email, name, hashedPassword } });
-    const token = await this.issueToken(customer.id, 'VERIFY_EMAIL', VERIFY_MS);
-    await this.send(email, `Confirma tu correo en ${store.name}`, `Hola ${customer.name},\n\nConfirma tu correo para activar tu cuenta en ${store.name}:\n${this.link(slug, 'verificar', token)}\n\nEl enlace expira en 24 horas. Si no creaste esta cuenta, ignora este mensaje.`);
+    const issued = await this.credentials(async db => {
+      const existing = await db.storeCustomer.findUnique({ where: { storeId_email: { storeId: store.id, email } } });
+      if (existing && !existing.deletedAt && existing.emailVerifiedAt) return null;
+      // The newest registration owns the pending credentials; every earlier verification link is invalidated.
+      const customer = existing && !existing.deletedAt
+        ? await db.storeCustomer.update({ where: { id: existing.id }, data: { name, hashedPassword } })
+        : await db.storeCustomer.create({ data: { storeId: store.id, email, name, hashedPassword } });
+      return { customer, token: await this.issueToken(customer.id, 'VERIFY_EMAIL', VERIFY_MS, db) };
+    });
+    if (issued) await this.send(email, `Confirma tu correo en ${store.name}`, `Hola ${issued.customer.name},\n\nConfirma tu correo para activar tu cuenta en ${store.name}:\n${this.link(slug, 'verificar', issued.token)}\n\nEl enlace expira en 24 horas. Si no creaste esta cuenta, ignora este mensaje.`);
     return CUSTOMER_GENERIC_ANSWER;
   }
 
   async verifyEmail(slug: string, token: unknown) {
     const store = await findActiveStoreBySlug(this.prisma, slug);
-    const customer = await this.consumeToken(store.id, token, 'VERIFY_EMAIL');
-    await this.prisma.storeCustomer.update({ where: { id: customer.id }, data: { emailVerifiedAt: customer.emailVerifiedAt ?? new Date() } });
+    await this.credentials(async db => {
+      const customer = await this.consumeToken(store.id, token, 'VERIFY_EMAIL', db);
+      await db.storeCustomer.update({ where: { id: customer.id }, data: { emailVerifiedAt: customer.emailVerifiedAt ?? new Date() } });
+    });
     return { ok: true };
   }
 
@@ -112,11 +131,16 @@ export class StoreCustomersService {
     const email = this.email(emailInput);
     const customer = email ? await this.prisma.storeCustomer.findUnique({ where: { storeId_email: { storeId: store.id, email } } }) : null;
     const matches = await argon2.verify(customer?.hashedPassword ?? await dummy(), typeof password === 'string' ? password.slice(0, 128) : '');
-    if (!customer || customer.deletedAt || !matches) throw new UnauthorizedException(BAD_LOGIN);
+    if (!customer || customer.deletedAt || !matches || typeof password !== 'string' || password.length < 8 || password.length > 128) throw new UnauthorizedException(BAD_LOGIN);
     if (!customer.emailVerifiedAt) throw new UnauthorizedException('Confirma tu correo antes de ingresar');
     const token = newToken();
     const expiresAt = new Date(Date.now() + SESSION_MS);
-    await this.prisma.storeCustomerSession.create({ data: { customerId: customer.id, hashedToken: digest(token), expiresAt } });
+    const checkedHash = customer.hashedPassword;
+    await this.credentials(async db => {
+      const current = await db.storeCustomer.findUnique({ where: { id: customer.id } });
+      if (!current || current.deletedAt || !current.emailVerifiedAt || current.hashedPassword !== checkedHash) throw new UnauthorizedException(BAD_LOGIN);
+      await db.storeCustomerSession.create({ data: { customerId: customer.id, hashedToken: digest(token), expiresAt } });
+    });
     return { token, expiresAt, customer: this.profile(customer) };
   }
 
@@ -142,7 +166,7 @@ export class StoreCustomersService {
     const email = this.email(emailInput);
     const customer = email ? await this.prisma.storeCustomer.findUnique({ where: { storeId_email: { storeId: store.id, email } } }) : null;
     if (customer && !customer.deletedAt && customer.emailVerifiedAt) {
-      const token = await this.issueToken(customer.id, 'RESET_PASSWORD', RESET_MS);
+      const token = await this.credentials(db => this.issueToken(customer.id, 'RESET_PASSWORD', RESET_MS, db));
       await this.send(email, `Restablece tu contraseña en ${store.name}`, `Hola ${customer.name},\n\nUsa este enlace para elegir una contraseña nueva en ${store.name}:\n${this.link(slug, 'restablecer', token)}\n\nEl enlace expira en 1 hora. Si no lo pediste, ignora este mensaje.`);
     }
     return CUSTOMER_GENERIC_ANSWER;
@@ -151,9 +175,12 @@ export class StoreCustomersService {
   async resetPassword(slug: string, token: unknown, passwordInput: unknown) {
     const store = await findActiveStoreBySlug(this.prisma, slug);
     const password = this.password(passwordInput);
-    const customer = await this.consumeToken(store.id, token, 'RESET_PASSWORD');
-    await this.prisma.storeCustomer.update({ where: { id: customer.id }, data: { hashedPassword: await argon2.hash(password) } });
-    await this.prisma.storeCustomerSession.updateMany({ where: { customerId: customer.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    const hashedPassword = await argon2.hash(password);
+    await this.credentials(async db => {
+      const customer = await this.consumeToken(store.id, token, 'RESET_PASSWORD', db);
+      await db.storeCustomer.update({ where: { id: customer.id }, data: { hashedPassword } });
+      await db.storeCustomerSession.updateMany({ where: { customerId: customer.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    });
     return { ok: true };
   }
 
@@ -166,15 +193,20 @@ export class StoreCustomersService {
 
   async replaceAddresses(me: CustomerProfile, list: unknown) {
     if (!Array.isArray(list) || list.length > 10) throw new BadRequestException('Puedes guardar hasta 10 direcciones');
+    const ids = new Set<string>();
     const addresses: Address[] = list.map(entry => {
       const item = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {};
       const address: Partial<Address> = {};
       for (const [key, max] of Object.entries(ADDRESS_LIMITS)) {
         const value = item[key] === undefined || item[key] === null ? '' : item[key];
-        if (typeof value !== 'string' || value.length > max) throw new BadRequestException(`El campo ${key} de la dirección es demasiado largo o no es texto`);
+        if (typeof value !== 'string' || value.length > max || value.includes('\0')) throw new BadRequestException(`El campo ${key} de la dirección es demasiado largo o no es texto`);
         (address as any)[key] = value.trim();
       }
+      if (!address.recipient || !address.department || !address.city || !address.street) throw new BadRequestException('Completa destinatario, departamento, ciudad y dirección');
+      if (address.phone && !PHONE.test(address.phone)) throw new BadRequestException('Escribe un teléfono válido para la dirección');
       const given = typeof item.id === 'string' && /^[A-Za-z0-9_-]{6,40}$/.test(item.id) ? item.id : randomUUID();
+      if (ids.has(given)) throw new BadRequestException('Cada dirección debe tener un identificador diferente');
+      ids.add(given);
       return { id: given, ...address } as Address;
     });
     await this.prisma.storeCustomer.update({ where: { id: me.id }, data: { addresses } });
@@ -201,16 +233,22 @@ export class StoreCustomersService {
 
   /** Everything held about the customer, nothing that authenticates them. */
   async exportData(me: CustomerProfile) {
-    return { email: me.email, name: me.name, phone: me.phone, addresses: me.addresses, verifiedAt: me.emailVerifiedAt, createdAt: me.createdAt, orders: await this.orders(me).catch(() => []), subscriptions: await this.subscriptions(me).catch(() => []) };
+    return { email: me.email, name: me.name, phone: me.phone, addresses: me.addresses, verifiedAt: me.emailVerifiedAt, createdAt: me.createdAt, orders: await this.orders(me), subscriptions: await this.subscriptions(me) };
   }
 
   async deleteAccount(me: CustomerProfile, password: unknown) {
     const row = await this.prisma.storeCustomer.findUnique({ where: { storeId_email: { storeId: me.storeId, email: me.email } } });
     const matches = await argon2.verify(row?.hashedPassword ?? await dummy(), typeof password === 'string' ? password.slice(0, 128) : '');
-    if (!row || !matches) throw new UnauthorizedException('La contraseña no es correcta');
-    await this.prisma.storeCustomer.update({ where: { id: row.id }, data: { name: '', phone: null, addresses: [], email: `deleted-${row.id}@deleted.invalid`, hashedPassword: await argon2.hash(newToken()), emailVerifiedAt: null, deletedAt: new Date() } });
-    await this.prisma.storeCustomerSession.updateMany({ where: { customerId: row.id, revokedAt: null }, data: { revokedAt: new Date() } });
-    await this.prisma.storeCustomerToken.deleteMany({ where: { customerId: row.id } });
+    if (!row || row.deletedAt || !matches || typeof password !== 'string' || password.length < 8 || password.length > 128) throw new UnauthorizedException('La contraseña no es correcta');
+    const hashedPassword = await argon2.hash(newToken());
+    const checkedHash = row.hashedPassword;
+    await this.credentials(async db => {
+      const current = await db.storeCustomer.findUnique({ where: { id: row.id } });
+      if (!current || current.deletedAt || current.hashedPassword !== checkedHash) throw new UnauthorizedException('La contraseña no es correcta');
+      await db.storeCustomer.update({ where: { id: row.id }, data: { name: '', phone: null, addresses: [], email: `deleted-${row.id}@deleted.invalid`, hashedPassword, emailVerifiedAt: null, deletedAt: new Date() } });
+      await db.storeCustomerSession.updateMany({ where: { customerId: row.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      await db.storeCustomerToken.deleteMany({ where: { customerId: row.id } });
+    });
     return { ok: true };
   }
 }

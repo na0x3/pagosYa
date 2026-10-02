@@ -5,6 +5,7 @@ import { SOURCE_DNA_DIRECTION, SOURCE_DNA_SCHEMA } from './source-dna';
 import { validDna } from './fixtures/dna';
 
 const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
+  composition: { family: 'menu-led', rationale: 'The cafe needs a clear menu for quick ordering.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Choose from the real menu.', sections: [{ id: 'menu', intent: 'Choose products and order.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Order' }] }] },
   layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true },
   story: { promise: `${name} promise`, eyebrow: 'Hecho cerca', headline: `${name} para compartir hoy`, support: 'Una selección breve y clara para elegir con confianza.', primaryAction: 'Ver menú', beats: [{ section: 'menu', role: 'offer', headline: `${name} del día`, media: 'product' }] },
   motion: { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [{ section: 'menu', kind: 'sequence', intensity: 1 }] },
@@ -47,6 +48,7 @@ it('repairs an inconsistent completed plan once with an actionable layout diagno
 it('accepts an intro planned before the catalog without spending a repair on the flag', async () => {
   const intro = structuredClone(concepts);
   intro[1].layout.sections.unshift('intro');
+  intro[1].composition.pages[0].sections.unshift({ ...intro[1].composition.pages[0].sections[0], id: 'intro', layout: 'campaign', geometry: 'fullbleed' });
   intro[1].story.beats.unshift({ section: 'intro', role: 'opening', headline: 'Una ventana al oficio', media: 'hero' });
   const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts: intro }) }] }] })));
   const request = input();
@@ -116,7 +118,7 @@ it('asks for a DNA per concept in both arms, with room for it in the output budg
     expect(items.properties.dna).toEqual(SOURCE_DNA_SCHEMA);
     expect(body.input[0].content[0].text).toContain(SOURCE_DNA_DIRECTION);
   }
-  expect(reserve.mock.calls.map(call => call[2])).toEqual([5600, 5600]);
+  expect(reserve.mock.calls.map(call => call[2])).toEqual([7200, 7200]);
 });
 
 it('repairs an invalid DNA in code instead of spending the paid retry', async () => {
@@ -127,4 +129,13 @@ it('repairs an invalid DNA in code instead of spending the paid retry', async ()
   expect(mock).toHaveBeenCalledTimes(1);
   expect(result.concepts[1].dna!.buttons.form).not.toBe('sparkle');
   expect(repairs).toEqual(expect.arrayContaining([expect.stringContaining('concepts[1].dna.buttons.form')]));
+});
+
+it('requires composition plans in new output while allowing one bounded repair', async () => {
+  const missing = concepts.map(({ composition: _composition, ...concept }) => concept);
+  const response = (items: unknown) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts: items, selection: { index: 0, rationale: 'Fits.' } }) }] }] }));
+  const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response(missing)).mockResolvedValueOnce(response(concepts));
+  expect((await new SourceDesignPlanner().explore(input())).concepts[0].composition).toBeDefined();
+  expect(mock).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(mock.mock.calls[0][1]!.body as string).text.format.schema.properties.concepts.items.required).toContain('composition');
 });

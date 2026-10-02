@@ -24,12 +24,22 @@ export const SOURCE_MODEL_CHOICES = ['auto', ...Object.keys(SOURCE_MODELS)];
 export const CREDIT_MICRO_USD = 10_000;
 export const DEFAULT_MAX_CREDITS = 50;
 
+/** Conservative execution scope. Unknown requests stay at the composition tier; only one clear cosmetic action is cheap. */
+export function sourceRequestScope(instruction: string) {
+  const task = instruction.split('Pedido actual del comercio:').at(-1)!.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const operations = Math.max(1, (task.match(/\b(?:cambia|cambiar|change|replace|reemplaza|anade|agrega|add|crea|create|adapta|adapt|actualiza|update|elimina|remove|mueve|move|redesigna|redesign)\b/g) || []).length);
+  const surfaces = Object.entries({ home:/\b(?:inicio|home|portada)\b/, account:/login|registro|account|cuenta|contrasena|ingresar/, commerce:/checkout|pago|payment|carrito|cart|producto|product/, pages:/paginas?|pages?|tabs?|pestanas?|menu|navegacion|navigation/ }).filter(([,pattern])=>(pattern as RegExp).test(task)).map(([key])=>key);
+  const capabilities = Object.entries({ assets:/fotos?|photos?|images?|imagenes?|galeria|gallery/, composition:/secciones|sections|informacion|business|negocio|adapta|adapt|redise|redesign/, behavior:/checkout|pago|payment|carrito|cart|reserva|booking|navega|navigation|paginas?|pages?|tabs?|pestanas?|login|registro|account|cuenta|error|bug|no funciona|not working/, cosmetic:/texto|text|titulo|title|color|fuente|font|espacio|spacing|margen|margin|boton|button|copy/ }).filter(([,pattern])=>(pattern as RegExp).test(task)).map(([key])=>key);
+  return { operations, surfaces, capabilities };
+}
+
 export function sourceGenerationPlan(choice: SourceModelChoice = 'auto', revision: number, instruction: string) {
   if (!SOURCE_MODEL_CHOICES.includes(choice)) throw new BadRequestException('Selecciona un modelo disponible.');
   const task = instruction.split('Pedido actual del comercio:').at(-1)!.trim();
   const redesign = /(?:gener|haz|crea|dise[ñn])[a-záéíóúñ]*\s+(?:lo\s+)?de\s+nuevo|regener|redise|redesign|rebuild|marquesina|marquee|animaci|animation|m[aá]s\s+arte/i.test(task);
-  const complex = redesign || /checkout|pago|payment|carrito|cart|reserva|booking|navega|navigation|páginas?|pages?|redise|redesign|error|bug|no funciona|not working/i.test(task);
-  const simple = revision > 0 && task.length < 350 && !complex && /texto|text|título|title|color|fuente|font|espacio|spacing|margen|margin|botón|button|copy/i.test(task);
+  const scope = sourceRequestScope(task);
+  const complex = redesign || scope.operations > 1 || scope.surfaces.length > 1 || scope.capabilities.some(capability => capability !== 'cosmetic');
+  const simple = revision > 0 && scope.operations === 1 && scope.capabilities.length === 1 && scope.capabilities[0] === 'cosmetic' && !complex;
   const model: SourceModel = choice === 'auto' ? complex && revision > 0 ? 'gpt-5.6-sol' : simple ? 'gpt-5.6-luna' : 'gpt-5.6-terra' : choice;
   // DeepSeek low thinking consumed 7.8–9.6k of a 12k allowance in live tests.
   // Code generation uses non-thinking mode; chat still uses low reasoning.

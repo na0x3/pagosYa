@@ -1,11 +1,15 @@
+import { buildIsActive, sourceBuildTransition, type SourceBuildSession, type SourceBuildEvent } from './source-build-session';
+import { renderPagePicker, bindPagePicker } from './source-page-picker';
+import { mountCodeHighlight } from './source-code-highlight';
+import { mountSourceAccountPreview } from './source-account-preview';
+import { codeFileEditable, codeFileForPage, renderCodeBrowser } from './source-code-tree';
 import { composeActionMode } from './source-studio-actions';
-import { renderDirectionChoices, type DirectionChoice } from './source-directions';
 import { createDirectEditor } from './source-direct-editor';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
-import { merchantSafeText } from './source-merchant-copy';
+import { merchantSafeText, merchantMessageText } from './source-merchant-copy';
 import { renderBuildStage, mountBuildStage, type BuildStageState } from './source-build-stage';
 import { mountFace, renderFaceMark } from './source-face';
 import { mountStarField } from './source-star-field';
@@ -44,7 +48,7 @@ const PREMIUM_SOURCE_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'deepseek-v4-pro'
 const PREMIUM_MODEL_TTL_MS = 2 * 60 * 60 * 1000;
 
 type Attachment = { file: File; src: string; url?: string };
-type RetrySubmission = { text: string; assetUrls: string[]; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo' };
+type RetrySubmission = { text: string; assetUrls: string[]; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; currentPage: string; selection?: { sectionId: string }; templateId?: string; directionId?: string };
 export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const params = new URLSearchParams(location.search);
   const embedded = params.get('embedded') === '1' && window.parent !== window;
@@ -60,6 +64,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (fresh && SOURCE_MODEL_OPTIONS.some(([id]) => id === saved.model)) generationSettings.model = saved.model as SourceGenerationSettings['model'];
     else if (!fresh) localStorage.removeItem(SOURCE_MODEL_STORAGE);
   } catch { /* Storage may be disabled; the selector still works in this session. */ }
+  let navigationChoice: '' | 'dropdown' | 'pages' = '';
+  let chatgptPlanMode = false;
   let estimate: SourceGenerationEstimate | null = null, estimateError = '';
   let estimateTimer: number | undefined, estimateRequest = 0;
   let usage: SourceGenerationRun[] | null = null;
@@ -142,22 +148,28 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     }
     page = next.page; previewNavigation = next; clearSelection(); render();
   });
+  let disposeAccountPreview: (() => void) | undefined;
   async function renderPreview(frame: HTMLIFrameElement) {
     const request = ++previewRender;
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => syncSelectMode(frame), { once: true }); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, editing: visualEditing }); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => syncSelectMode(frame), { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
   }
   let stores: MerchantStore[] = [], storeId = '', state: SourceState = { revision: 0, versions: [], nextBefore: null }, version: SourceVersion | null = null;
   let messages: AgentMessage[] = [], assets: Attachment[] = [];
-  let busy = false, generating = false, loading = true, error = '', toast = '', instruction = '';
+  let buildSession: SourceBuildSession = { phase: 'idle' };
+  const transitionBuild = (event: SourceBuildEvent) => { buildSession = sourceBuildTransition(buildSession, event); };
+  const building = () => buildIsActive(buildSession);
+  let busy = false, loading = true, error = '', toast = '', instruction = '';
   // The agent's latest clean draft while it builds (sub-project 3): the store appears in the preview as YAPI works.
-  let liveDraft: { at: number; snapshot: SourceVersion['snapshot'] } | null = null;
-  let pendingSubmission: { text: string; imageCount: number; hasVideo: boolean } | null = null;
+  let liveDraft: { at: number; interrupted?: boolean; snapshot: SourceVersion['snapshot'] } | null = null;
+  let showSavedRevision = false;
+  const showingDraft = () => Boolean(liveDraft && !showSavedRevision && mode === 'preview');
+  let pendingSubmission: { text: string; imageCount: number; hasVideo: boolean; files: Array<{ src: string; video: boolean }> } | null = null;
   let buildStage: { update(state: BuildStageState): void; destroy(): void } | null = null;
   let idleFace: { destroy(): void } | null = null;
   // YAPI's stars play over the whole Studio until a site exists (source-star-field.ts). The layer lives on <body>,
@@ -169,7 +181,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const dirty = () => draft !== null && draft !== version?.snapshot.files.find(f => f.path === filePath)?.content;
   if (embedded) (window as Window & { pagosyaStudioCanLeave?: () => boolean }).pagosyaStudioCanLeave = () => {
     if (productForm?.isBusy) { window.alert('Espera a que termine de guardarse el producto.'); return false; }
-    if (busy) { window.alert('YAPI está trabajando. Espera a que termine antes de cambiar de tienda o salir.'); return false; }
+    if (busy && buildSession.phase !== 'running') { window.alert('YAPI está trabajando. Espera a que termine antes de cambiar de tienda o salir.'); return false; }
     return !(dirty() || instruction.trim() || assets.length || productForm?.hasChanges) || window.confirm('Tienes un mensaje, imágenes o código sin guardar. ¿Descartarlos y salir de esta tienda?');
   };
   window.addEventListener('message', event => {
@@ -223,7 +235,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     } catch { /* A saved preview remains usable offline; generation fetches the current catalog again. */ }
   }
   function previewSnapshot() {
-    if (generating && liveDraft) return liveDraft.snapshot;
+    if (showingDraft()) return liveDraft!.snapshot;
     return { ...version!.snapshot, files: version!.snapshot.files.map(f => {
       if (f.path === filePath && draft !== null) return { ...f, content: draft };
       if (f.path !== 'config.js' || !liveCatalog || historical()) return f;
@@ -240,7 +252,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const historical = () => false;
   const disabled = (condition: boolean) => condition ? 'disabled' : '';
   const clearAssets = () => { productPhoto = false; assets.forEach(a => URL.revokeObjectURL(a.src)); assets = []; };
-  window.addEventListener('beforeunload', event => { if (dirty() || busy || instruction.trim() || assets.length) { event.preventDefault(); event.returnValue = ''; } });
+  window.addEventListener('beforeunload', event => { if (dirty() || busy && buildSession.phase !== 'running' || instruction.trim() || assets.length) { event.preventDefault(); event.returnValue = ''; } });
 
   async function action(task: () => Promise<void>) {
     if (busy) return;
@@ -249,12 +261,13 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       error = e instanceof Error ? e.message : 'No pudimos completar la solicitud.';
       if (e instanceof ApiError && e.status === 401) { sessionStorage.removeItem(SESSION_STORAGE_KEY); api.setToken(''); clearAssets(); notifyParent({ type: 'pagosya:session-expired' }); }
     } finally {
-      busy = false; loading = false; generating = false; liveDraft = null; render();
+      busy = false; loading = false; if (building()) transitionBuild({ type: 'interrupt' }); render();
       window.clearTimeout(toastTimer);
       if (toast) toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 4000);
     }
   }
   async function load(_revision?: number, waitForChecks = false) {
+    liveDraft = null; showSavedRevision = false;
     const [project, conversation, catalog] = await Promise.all([api.sourceState(storeId), api.sourceConversation(storeId), api.sourceCatalog(storeId).catch(() => null)]);
     liveCatalog = catalog;
     state = project; messages = conversation.messages; setup = conversation.setup || null;
@@ -270,6 +283,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       } catch { generationSettings.motion = 'subtle'; generationSettings.scrollFeel = 'soft'; }
     }
     draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; clearSelection(); fieldsCache = null; scheduleEstimate();
+    await refreshInterruptedDraft().catch(() => {});
     // A saved design shows at once; the browser checks load every page at four widths and report when done.
     if (version) { if (waitForChecks) { render(); await runChecks(); } else void runChecks(); }
   }
@@ -277,6 +291,21 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     stores = await api.listStores();
     storeId = embedded ? stores.find(s => s.id === params.get('store'))?.id || '' : stores.find(s => s.id === sessionStorage.getItem('pagosya_current_store_id'))?.id || stores[0]?.id || '';
     if (storeId) await load();
+    if (storeId) {
+      const selectedStore = storeId;
+      const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
+      if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status)) {
+        const job = latest.job;
+        // Boot's action finishes first, then the restored job owns the editor state.
+        window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {
+          transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
+          const stop = watchBuildProgress(selectedStore, job.requestId);
+          try { await api.waitSourceChatJob(selectedStore, job); transitionBuild({ type: 'complete' }); await load(); }
+          finally { stop(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); }
+        }); }, 0);
+      }
+    }
+
   }
   /**
    * Polls land every 1.5s. The stage updates in place rather than re-rendering,
@@ -294,6 +323,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (details && expanded !== undefined) details.open = expanded;
     if (stream && atBottom) stream.scrollTop = stream.scrollHeight;
   }
+  async function refreshInterruptedDraft() {
+    const selectedStore = storeId, revision = state.revision;
+    const result = await api.sourceDraftPreview(selectedStore);
+    if (storeId !== selectedStore || state.revision !== revision || !result.interrupted || !result.at || !result.files) return;
+    const saved = version?.snapshot.files.filter(file => file.encoding === 'base64' && !result.files!.some(next => next.path === file.path)) || [];
+    liveDraft = { at: result.at, interrupted: true, snapshot: { ...(version?.snapshot ?? {}), files: [...result.files, ...saved] } as SourceVersion['snapshot'] };
+    showSavedRevision = false;
+    mode = 'preview';
+  }
   function watchBuildProgress(selectedStore: string, requestId: string) {
     const controller = new AbortController(); let timer: number | undefined;
     const poll = async () => {
@@ -302,10 +340,11 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         if (controller.signal.aborted || storeId !== selectedStore) return;
         if (result.progress) { buildProgress = result.progress; updateBuildProgress(); }
         const draft = await api.sourceDraftPreview(selectedStore, liveDraft?.at, controller.signal);
-        if (!controller.signal.aborted && storeId === selectedStore && generating && draft.at && draft.files) {
+        if (!controller.signal.aborted && storeId === selectedStore && building() && draft.at && draft.files) {
           // Photos the saved revision already has are not resent; keep them from the current version.
           const saved = version?.snapshot.files.filter(file => file.encoding === 'base64' && !draft.files!.some(next => next.path === file.path)) || [];
           const hadDraft = Boolean(liveDraft);
+          showSavedRevision = false;
           liveDraft = { at: draft.at, snapshot: { ...(version?.snapshot ?? {}), files: [...draft.files, ...saved] } as SourceVersion['snapshot'] };
           const frame = app.querySelector<HTMLIFrameElement>('.is-live-draft iframe');
           if (hadDraft && frame) void renderPreview(frame); else render();
@@ -316,20 +355,30 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     timer = window.setTimeout(poll, 500);
     return () => { controller.abort(); window.clearTimeout(timer); };
   }
-  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string) {
+  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string, retry?: RetrySubmission) {
     if (!text.trim() && assets.length) text = 'Te comparto estas imágenes para el sitio.';
     if (!text.trim() || busy || dirty() || historical()) return;
+    if (!retry && navigationChoice) {
+      text += navigationChoice === 'dropdown'
+        ? '\n\nNavegación elegida: menú Tienda desplegable con enlaces reales a categorías o colecciones dentro del mismo sitio. Accesible con teclado y móvil. No abrir ventanas nuevas ni inventar categorías.'
+        : '\n\nNavegación elegida: enlaces visibles a páginas separadas dentro del mismo sitio, en la misma pestaña del navegador. Usar páginas con contenido real, con regreso a Inicio y navegación móvil.';
+    }
     chatExpanded = true;
     const submittedAssets = assets;
     const submittedInstruction = instruction;
-    const submittedSelection = selection.get();
+    // Preview navigation after a failure must not turn Retry into a new request.
+    const submittedSelection = retry ? retry.selection : selection.get();
+    const submittedPage = retry ? retry.currentPage : page;
     const submittedAsPhoto = productPhoto;
     productPhoto = false;
     const knownMessageIds = new Set(messages.map(message => message.id));
     // The submitted request has its own state; the composer is for the next draft.
     instruction = ''; assets = []; retrySubmission = null;
-    pendingSubmission = { text, imageCount: retryAssetUrls?.length ?? submittedAssets.length, hasVideo: retryAssetUrls ? retryAssetUrls.some(url => /\.mp4$/i.test(url)) : submittedAssets.some(a => a.file.type === 'video/mp4') };
-    generating = true; buildProgress = null; buildStatus = submittedAssets.some(asset => !asset.url) ? 'Subiendo tus archivos…' : 'Enviando tu pedido…';
+    pendingSubmission = { text, imageCount: retryAssetUrls?.length ?? submittedAssets.length, hasVideo: retryAssetUrls ? retryAssetUrls.some(url => /\.mp4$/i.test(url)) : submittedAssets.some(a => a.file.type === 'video/mp4'),
+      // The blobs stay valid until the request ends, so the merchant sees what they sent while YAPI works.
+      files: retryAssetUrls ? [] : submittedAssets.map(a => ({ src: a.src, video: a.file.type === 'video/mp4' })) };
+    showSavedRevision = false; mode = 'preview';
+    transitionBuild({ type: 'submit' }); buildProgress = null; buildStatus = submittedAssets.some(asset => !asset.url) ? 'Subiendo tus archivos…' : 'Enviando tu pedido…';
     await action(async () => {
       let sentToApi = false, succeeded = false;
       let stopProgress = () => {};
@@ -347,10 +396,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); });
         stopProgress();
-        succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; generating = false; liveDraft = null;
-        productPhoto = false;
+        succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
+        productPhoto = false; navigationChoice = '';
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
         if (result.revision) {
@@ -377,24 +426,28 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         }
         if (!succeeded) {
           if (persisted) {
-            if (!answered) retrySubmission = { text, assetUrls: submittedUrls, setupAction };
+            if (!answered) retrySubmission = { text, assetUrls: submittedUrls, setupAction, currentPage: submittedPage, selection: submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, templateId, directionId };
           } else {
             instruction = submittedAsPhoto ? submittedInstruction : text; assets = submittedAssets; productPhoto = submittedAsPhoto;
           }
+        }
+        if (!succeeded) {
+          if (liveDraft) liveDraft.interrupted = true;
+          await refreshInterruptedDraft().catch(() => {});
         }
         throw e;
       } finally {
         stopProgress();
         if (assets !== submittedAssets) submittedAssets.forEach(asset => URL.revokeObjectURL(asset.src));
-        pendingSubmission = null; generating = false; liveDraft = null; scheduleEstimate();
+        pendingSubmission = null; if (building()) transitionBuild({ type: 'interrupt' }); scheduleEstimate();
         if (usage !== null) await api.sourceUsage(storeId).then(result => { usage = result.runs; aiUsage = result.aiUsage || []; }).catch(() => { usage = null; });
       }
     });
   }
   function checkKey() { return JSON.stringify([storeId, version?.revision, version ? previewSnapshot().files : []]); }
-  function checksPassed() { return !dirty() && !checking && checksKey === checkKey() && Boolean(checks?.length) && !sourceChecksBlockPublishing(checks!); }
+  function checksPassed() { return !showingDraft() && !dirty() && !checking && checksKey === checkKey() && Boolean(checks?.length) && !sourceChecksBlockPublishing(checks!); }
   async function runChecks(force = false) {
-    if (!version || dirty()) return;
+    if (!version || dirty() || showingDraft()) return;
     const key = checkKey(), checkedStoreId = storeId, checkedRevision = version.revision;
     if (!force && key === checksKey) return;
     checkAbort?.abort(); const controller = new AbortController(); checkAbort = controller;
@@ -444,13 +497,16 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           throw new Error('No se pudo estimar el costo. Vuelve a intentarlo.');
         }
         estimate = result;
+        const nextPlanMode = result.billingMode === 'chatgpt-plan';
+        if (chatgptPlanMode !== nextPlanMode) { chatgptPlanMode = nextPlanMode; render(); }
       } catch (e) { if (request !== estimateRequest) return; estimateError = e instanceof Error ? e.message : 'No se pudo estimar. Vuelve a intentarlo.'; }
       updateEstimate();
     }, 600);
   }
   function estimateText() {
     if (estimateError) return estimateError;
-    if (!estimate) return 'Calculando estimación…';
+    if (!estimate) return chatgptPlanMode ? 'Modo ChatGPT local · sin créditos API.' : 'Calculando estimación…';
+    if (estimate.billingMode === 'chatgpt-plan') return 'Modo ChatGPT local · usa tu plan de ChatGPT, sin créditos API. Se aplican los límites de tu plan.';
     return `${Math.min(generationSettings.maxCredits, estimate.estimate.minCredits)}–${Math.min(generationSettings.maxCredits, estimate.estimate.maxCredits)} créditos estimados · límite ${generationSettings.maxCredits}. ${estimate.reason}`;
   }
   function updateEstimate() {
@@ -458,11 +514,25 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (output) output.textContent = estimateText();
   }
   function generationControls(locked: boolean) {
-    return `<section class="source-generation-controls" aria-label="Modelo y créditos"><div class="source-generation-fields"><label>Modelo<select id="source-model" ${disabled(locked)}>${SOURCE_MODEL_OPTIONS.map(([id, label]) => `<option value="${id}" ${generationSettings.model === id ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div><details class="source-credit-details source-disclosure" ${creditsOpen ? 'open' : ''}><summary>Créditos</summary><div class="source-disclosure-panel"><label>Límite por solicitud<input id="source-credit-limit" type="number" min="1" max="500" step="1" value="${generationSettings.maxCredits}" ${disabled(locked)}></label><p data-source-estimate role="status">${escape(estimateText())}</p><p>Créditos de uso · sin compra de saldo. Si falla, 0 créditos YAPI; las llamadas API sí pueden tener costo. El modelo elegido se usa para generar tu sitio; la conversación usa siempre un modelo económico. Un modelo avanzado vuelve a Auto tras unas horas. El límite se aplica al costo API estimado de conversación, generación y hasta una reparación. DeepSeek se estima con tarifa máxima; su factura puede ser menor. Para imágenes, elige Flash Vision.</p><button type="button" class="text-button" id="source-usage" ${disabled(locked)}>Ver uso reciente</button>${usage ? `<ol class="source-usage-list">${usage.length ? usage.map(run => `<li>${run.revision ? 'Cambios guardados' : run.status === 'RUNNING' ? 'En curso' : 'Sin cambios guardados'} · ${escape(run.model)} · ${run.credits} créditos${run.durationMs !== null ? ` · ${Math.round(run.durationMs / 1000)} s` : ''}</li>`).join('') : '<li>Todavía no hay generaciones.</li>'}</ol>` : ''}${usage && aiUsage.length ? `<p>Costo API calculado de las últimas ${aiUsage.length} llamadas, incluidas conversación y análisis: USD ${(aiUsage.reduce((sum, row) => sum + (row.usage?.providerMicroUsd || 0), 0) / 1000000).toFixed(4)}${aiUsage.some(row => typeof row.usage?.providerMicroUsd !== 'number') ? ' · Hay llamadas cuyo costo no se pudo calcular.' : ''}</p>` : ''}</div></details></section>`;
+    return `<section class="source-generation-controls" aria-label="Modelo y créditos"><div class="source-generation-fields"><label>Modelo<select id="source-model" ${disabled(locked)}>${SOURCE_MODEL_OPTIONS.map(([id, label]) => `<option value="${id}" ${generationSettings.model === id ? 'selected' : ''} ${chatgptPlanMode && id !== 'auto' && !id.startsWith('gpt-') ? 'disabled' : ''}>${label}</option>`).join('')}</select></label></div><details class="source-credit-details source-disclosure" ${creditsOpen ? 'open' : ''}><summary>${chatgptPlanMode ? 'Plan de ChatGPT' : 'Créditos'}</summary><div class="source-disclosure-panel"><label ${chatgptPlanMode ? 'hidden' : ''}>Límite por solicitud<input id="source-credit-limit" type="number" min="1" max="500" step="1" value="${generationSettings.maxCredits}" ${disabled(locked)}></label><p data-source-estimate role="status">${escape(estimateText())}</p><p ${chatgptPlanMode ? 'hidden' : ''}>Créditos de uso · sin compra de saldo. Si falla, 0 créditos YAPI; las llamadas API sí pueden tener costo. El modelo elegido se usa para generar tu sitio; la conversación usa siempre un modelo económico. Un modelo avanzado vuelve a Auto tras unas horas. El límite se aplica al costo API estimado de conversación, generación y hasta una reparación. DeepSeek se estima con tarifa máxima; su factura puede ser menor. Para imágenes, elige Flash Vision.</p><button type="button" class="text-button" id="source-usage" ${disabled(locked)}>Ver uso reciente</button>${usage ? `<ol class="source-usage-list">${usage.length ? usage.map(run => `<li>${run.revision ? 'Cambios guardados' : run.status === 'RUNNING' ? 'En curso' : 'Sin cambios guardados'} · ${escape(run.model)} · ${run.credits} créditos${run.durationMs !== null ? ` · ${Math.round(run.durationMs / 1000)} s` : ''}</li>`).join('') : '<li>Todavía no hay generaciones.</li>'}</ol>` : ''}${usage && aiUsage.length && !chatgptPlanMode ? `<p>Costo API calculado de las últimas ${aiUsage.length} llamadas, incluidas conversación y análisis: USD ${(aiUsage.reduce((sum, row) => sum + (row.usage?.providerMicroUsd || 0), 0) / 1000000).toFixed(4)}${aiUsage.some(row => typeof row.usage?.providerMicroUsd !== 'number') ? ' · Hay llamadas cuyo costo no se pudo calcular.' : ''}</p>` : ''}</div></details></section>`;
   }
   function attachmentBatch() {
     if (!assets.length) return '';
     return `<section class="batch-card is-complete" aria-label="Archivos adjuntos"><div class="batch-card__header"><strong>${assets.length} ${assets.some(a => a.file.type === 'video/mp4') ? 'archivos' : 'imágenes'}</strong><span class="batch-state is-ready">Listas para enviar</span></div><div class="batch-thumbs">${assets.map((a, i) => `<figure class="batch-thumb is-ready">${a.file.type === 'video/mp4' ? `<video src="${a.src}" controls autoplay muted loop playsinline preload="auto" aria-label="${escape(a.file.name)}"></video>` : `<img src="${a.src}" alt="${escape(a.file.name)}">`}<button class="source-remove-asset" type="button" data-remove-asset="${i}" aria-label="Quitar ${escape(a.file.name)}" ${disabled(busy)}>${icon('plus')}</button></figure>`).join('')}</div><div class="batch-card__footer">Hasta 24 archivos · imágenes: 6 MB · videos MP4: 20 MB en total</div></section>`;
+  }
+  /** The files a merchant sent stay visible in their message: large, tappable to open full size. Only upload paths and http(s) URLs render. */
+  function sentAttachments(metadata: JsonRecord) {
+    const urls = Array.isArray(metadata.assetUrls) ? (metadata.assetUrls as unknown[]).filter((url): url is string => typeof url === 'string') : [];
+    return attachmentGallery(urls.flatMap(url => {
+      if (/^\/(?:api\/)?v1\/uploads\//.test(url)) return [{ src: new URL(url, new URL(API_BASE_URL, location.href)).href }];
+      return /^https?:\/\//i.test(url) ? [{ src: url }] : [];
+    }));
+  }
+  function attachmentGallery(files: Array<{ src: string; video?: boolean }>) {
+    const items = files.map(({ src, video }) => video || /\.mp4(?:$|\?)/i.test(src)
+      ? `<video src="${escape(src)}" controls muted playsinline preload="metadata" aria-label="Video adjunto"></video>`
+      : `<a href="${escape(src)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagen adjunta en tamaño completo"><img src="${escape(src)}" alt="Imagen adjunta" loading="lazy"></a>`);
+    return items.length ? `<div class="message-attachments" data-count="${items.length}">${items.join('')}</div>` : '';
   }
   function chatMessage(message: AgentMessage) {
     const user = message.role === 'USER';
@@ -470,14 +540,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const clarification = metadata.clarification as { options?: Array<{ label: string; value: string }> } | undefined;
     // merchantSafeText runs last: it is the guard for messages stored before the
     // API gate existed, whose diagnostics no rewording above can make readable.
-    const visibleContent = user ? message.content : merchantSafeText(message.content
+    const visibleContent = user ? message.content : merchantMessageText(message.content
       .replaceAll('Guardé el borrador', 'Guardé los cambios de tu tienda')
       .replaceAll('Tu revisión anterior sigue guardada.', 'Tus cambios anteriores siguen guardados.')
-      .replaceAll('No se guardó ninguna revisión nueva.', 'No se guardaron cambios nuevos.'));
-    return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div><p>${escape(visibleContent)}</p>
-      ${!user ? renderBuildProgress(metadata.progress) : ''}
+      .replaceAll('No se guardó ninguna revisión nueva.', 'No se guardaron cambios nuevos.'), metadata);
+    return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div>${user ? sentAttachments(metadata) : ''}<p>${escape(visibleContent)}</p>
+      ${!user ? renderBuildProgress(metadata.progress, false, metadata.sourceRevision ? 'saved' : 'reply') : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
-      ${!user && Array.isArray(metadata.directionChoices) ? renderDirectionChoices(metadata.directionChoices as DirectionChoice[], busy || dirty() || historical() || state.revision > 0 || message.id !== latestDirectionChoicesId()) : ''}
+      ${!user && (metadata.startChoices || Array.isArray(metadata.templateChoices)) && !state.revision ? `<div class="source-empty-actions"><button type="button" class="button" data-start-scratch ${disabled(busy || dirty())}>Crear desde cero</button>${metadata.startChoices ? `<button type="button" class="button button--secondary" data-choose-template ${disabled(busy || dirty())}>Usar una plantilla</button>` : ''}</div>` : ''}
       ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || (state.revision > 0 && !templateUntouched()) || message.id !== latestTemplateChoicesId()) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
       ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
@@ -492,9 +562,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function latestTemplateChoicesId() {
     return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.templateChoices)).at(-1)?.id;
   }
-  function latestDirectionChoicesId() {
-    return messages.filter(message => Array.isArray((message.metadata as JsonRecord | undefined)?.directionChoices)).at(-1)?.id;
-  }
+
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);
     return `<details class="source-store-menu source-disclosure"><summary>Mi tienda</summary><nav class="source-disclosure-panel" aria-label="Herramientas de mi tienda">
@@ -511,6 +579,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     void send(`Construye un borrador completo de mi tienda a partir del único producto de esta foto. Te delego el diseño, los colores y la composición. Usa esta imagen como foto del producto, conserva los datos confirmados y no inventes precio, stock, reseñas ni condiciones de entrega. No publiques. ${instruction.trim().slice(0, 11000)}`, 'product-photo');
   }
   function render() {
+    const pageMenuOpen = Boolean(app.querySelector<HTMLDetailsElement>('.source-page-menu')?.open);
     const oldStream = app.querySelector<HTMLElement>('[data-agent-stream]');
     const oldScroll = oldStream?.scrollTop || 0;
     const nearBottom = !oldStream || oldStream.scrollHeight - oldScroll - oldStream.clientHeight < 70;
@@ -534,19 +603,19 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         <a class="product-mark" href="/" aria-label="pagosYa Merchant Studio"><img src="${import.meta.env.BASE_URL}logo-mark.png" alt=""><span>pagosYa</span><i></i><strong>Merchant Studio</strong></a>
         <div class="connected-store-select"><span>Mi tienda</span><strong>${escape(store?.name || 'Sin tienda')}</strong></div>
         <div class="save-state">${icon('check')} ${dirty() ? 'Cambios sin guardar' : version ? version.revision === state.publication?.revision && state.publication.active ? 'Diseño publicado' : 'Diseño guardado' : 'Conectado'}</div>
-        <div class="top-actions"><button class="button button--ghost" id="source-logout" ${disabled(locked)}>Salir</button><button class="button button--publish" id="${embedded ? 'source-top-export' : 'source-export'}" ${disabled(locked || !version)}>Descargar ZIP</button></div>
+        <div class="top-actions"><button class="button button--ghost" id="source-logout" ${disabled(locked)}>Salir</button><button class="button button--publish" id="${embedded ? 'source-top-export' : 'source-export'}" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button></div>
       </header>
       <div class="studio-workspace">
-        <aside class="agent-panel ${chatExpanded || generating || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
-          <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || generating || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
+        <aside class="agent-panel ${chatExpanded || building() || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
+          <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || building() || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
           <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div>
             ${messages.length ? messages.map(chatMessage).join('') : `<section class="conversation-welcome">${renderFaceMark({ size: 30 })}<strong>Tu sitio empieza con una conversación.</strong><p data-setup-prompt>${escape(setup?.prompt || `Antes de crear el sitio de ${store?.name || 'tu negocio'}, aclaremos tu negocio y el estilo que buscas. ¿Qué vendes y a quién quieres llegar?`)}</p></section>`}
-            ${generating ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request><p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta"><strong>YAPI</strong></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div></article>` : ''}
+            ${building() ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request>${attachmentGallery(pendingSubmission.files)}<p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount && !pendingSubmission.files.length ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta"><strong>YAPI</strong></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div></article>` : ''}
             ${dirty() ? '<p class="source-chat-hint">Guarda o descarta la edición de código antes de pedir otro cambio.</p>' : ''}
             ${error ? `<p class="auth-error" role="alert">${escape(merchantSafeText(error))}</p>${retrySubmission ? `<button type="button" class="button button--secondary" id="source-retry-message" ${disabled(locked || historical() || Boolean(instruction.trim()) || assets.length > 0)}>Reintentar mensaje</button>` : ''}` : ''}
             ${!storeId ? '<section class="remote-empty-state"><strong>No hay una tienda todavía.</strong><p>Crea una tienda en el dashboard para comenzar.</p></section>' : ''}
           </div>
-          <div class="source-compose-area">${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
+          <div class="source-compose-area">${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}<label class="source-purpose-choice source-navigation-choice">¿Cómo se navegará tu sitio?<select id="source-navigation-choice" ${disabled(locked)}><option value="" ${!navigationChoice ? 'selected' : ''}>${version ? 'Conservar navegación actual' : 'Elegir navegación'}</option><option value="dropdown" ${navigationChoice === 'dropdown' ? 'selected' : ''}>Tienda con menú desplegable</option><option value="pages" ${navigationChoice === 'pages' ? 'selected' : ''}>Páginas separadas en el mismo sitio</option></select></label>
           <div data-selection-host>${selectionMarkup()}</div>
           ${renderStudioComposer({ busy: locked || historical() || !storeId, source: true, instruction, attachments: productPhoto ? '' : attachmentBatch(), suggestions: setup || productPhoto ? [] : version ? [
             { label: 'Crear producto', action: 'create-product' },
@@ -558,12 +627,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ] })}</div>
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
-          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked, checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : generating && liveDraft ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">Borrador en vivo · YAPI sigue trabajando</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : generating ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button></div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
+          <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.</span><button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
     </div>`;
+    const pageMenu = app.querySelector<HTMLDetailsElement>('.source-page-menu');
+    if (pageMenu) pageMenu.open = pageMenuOpen;
     bind(); updateChecks();
     // render() replaced the DOM, so the previous stage's timer and game are gone.
     buildStage?.destroy();
@@ -576,8 +648,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const idleStage = app.querySelector<HTMLElement>('.inspiration-stage [data-face]');
     idleFace = idleStage ? mountFace(idleStage) : null;
     // The playground fills the page while there is no site; while YAPI builds nothing animates, so the stars leave.
-    if (!version && !generating && !starField) starField = mountStarField(document.body);
-    if ((version || generating) && starField) { starField.destroy(); starField = null; }
+    if (!version && !building() && !starField) starField = mountStarField(document.body);
+    if ((version || building()) && starField) { starField.destroy(); starField = null; }
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {
       storeId, version, locked: busy || dirty() || historical(),
@@ -591,9 +663,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (stream && productForm) { stream.append(productForm.element); stream.scrollTop = oldScroll; }
     else if (stream) stream.scrollTop = nearBottom ? stream.scrollHeight : oldScroll;
     const editor = app.querySelector<HTMLTextAreaElement>('#source-code');
-    if (editor) editor.value = draft ?? version!.snapshot.files.find(f => f.path === filePath)?.content ?? '';
+    if (editor) { const file = version!.snapshot.files.find(f => f.path === filePath); editor.value = file?.encoding === 'base64' ? `Recurso multimedia: ${file.path}` : draft ?? file?.content ?? ''; mountCodeHighlight(editor, file?.encoding === 'base64' ? '' : filePath); }
     const frame = app.querySelector<HTMLIFrameElement>('iframe');
-    if (frame && (version || (generating && liveDraft))) void renderPreview(frame);
+    if (frame && (version || showingDraft())) void renderPreview(frame);
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
@@ -636,6 +708,8 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       app.querySelector<HTMLButtonElement>(`#source-${step === 'publish' ? 'publish' : step}`)?.click();
     });
     for (const section of ['credits', 'digital', 'redirects'] as const) app.querySelector(`#source-${section}`)?.addEventListener('click', () => { if (!busy && !dirty() && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCommercePlatform(api, storeId, section); } });
+    app.querySelectorAll('[data-start-scratch]').forEach(button => button.addEventListener('click', () => void send('Quiero crear mi tienda desde cero, sin usar plantillas.')));
+    app.querySelectorAll('[data-choose-template]').forEach(button => button.addEventListener('click', () => void send('Quiero usar una plantilla.')));
     app.querySelectorAll('[data-start-photo]').forEach(button => button.addEventListener('click', () => { if (!busy && !dirty() && !historical() && !assets.length) app.querySelector<HTMLInputElement>('[data-product-photo-input]')?.click(); }));
     app.querySelector('[data-product-photo-input]')?.addEventListener('change', event => {
       const files = Array.from((event.target as HTMLInputElement).files || []);
@@ -651,6 +725,10 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('.source-store-menu nav')?.addEventListener('click', event => { if ((event.target as Element).closest('button')) { const details = app.querySelector<HTMLDetailsElement>('.source-store-menu'); if (details) { details.open = false; details.querySelector<HTMLElement>('summary')?.focus(); } } });
     app.querySelectorAll<HTMLButtonElement>('[data-business-view]').forEach(button => button.onclick = () => { if (!busy && !dirty()) notifyParent({type:'pagosya:workspace',view:button.dataset.businessView}); });
     app.querySelector('#source-retention')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({ type: 'pagosya:workspace', view: 'marketing', tab: 'program' }); else void openRetention(api, storeId, () => void refreshCatalog()); } });
+    bindPagePicker(app, {
+      select: next => { if (busy || dirty()) return; page = next; previewNavigation = {}; clearSelection(); render(); },
+      manage: () => { if (!busy && storeId && version) app.querySelector<HTMLButtonElement>('#source-pages')?.click(); },
+    });
     app.querySelector('#source-pages')?.addEventListener('click', () => { if (!busy && storeId && version) void openPagesPanel(api, storeId, version, { onAsk: text => { visualEditing = false; instruction = text; render(); focusComposer(); scheduleEstimate(); }, onAdded: () => void load() }); });
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
     app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'shipping'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
@@ -689,9 +767,9 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       toast = 'Diseño publicado. Los clientes ya pueden verlo.'; publicationChanged();
     }));
     on('source-alternative', () => void action(async () => {
-      generating = true; testsExpanded = true;
+      transitionBuild({ type: 'submit' }); testsExpanded = true;
       const saved = await api.sourceAlternative(storeId, { ...generationSettings, revision: state.revision, instruction: 'Mejora la claridad de compra conservando la identidad de la marca.' });
-      await load(saved.revision); toast = 'Alternativa guardada. Revísala antes de iniciar la prueba.';
+      await load(saved.revision); transitionBuild({ type: 'complete' }); toast = 'Alternativa guardada. Revísala antes de iniciar la prueba.';
     }));
     on('source-test-start', () => void action(async () => {
       if (!version || !checksPassed()) throw new Error('Completa las comprobaciones antes de iniciar la prueba.');
@@ -709,11 +787,12 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     on('source-test-apply', () => finishTest(true));
     on('source-start', focusComposer);
     on('source-retry-message', () => {
-      if (retrySubmission && !instruction.trim() && !assets.length) void send(retrySubmission.text, retrySubmission.setupAction, retrySubmission.assetUrls);
+      if (retrySubmission && !instruction.trim() && !assets.length) void send(retrySubmission.text, retrySubmission.setupAction, retrySubmission.assetUrls, retrySubmission.templateId, retrySubmission.directionId, retrySubmission);
     });
     on('source-usage', () => void action(async () => { if (usage) { usage = null; aiUsage = []; } else { const result = await api.sourceUsage(storeId); usage = result.runs; aiUsage = result.aiUsage || []; } }));
     // render() replaces the select, so hand the caret back to its replacement:
     // choosing what to create must not drop a keyboard merchant onto the body.
+    app.querySelector('#source-navigation-choice')?.addEventListener('change', event => { navigationChoice = (event.target as HTMLSelectElement).value as typeof navigationChoice; });
     app.querySelector('#source-site-purpose')?.addEventListener('change', event => { generationSettings.sitePurpose = (event.target as HTMLSelectElement).value as SourceGenerationSettings['sitePurpose']; scheduleEstimate(); render(); app.querySelector<HTMLSelectElement>('#source-site-purpose')?.focus({ preventScroll: true }); });
     app.querySelector('#source-model')?.addEventListener('change', event => { generationSettings.model = (event.target as HTMLSelectElement).value as SourceGenerationSettings['model']; try { localStorage.setItem(SOURCE_MODEL_STORAGE, JSON.stringify({ model: generationSettings.model, at: Date.now() })); } catch {} scheduleEstimate(); });
     app.querySelector('#source-credit-limit')?.addEventListener('change', event => { const input = event.target as HTMLInputElement; if (!input.checkValidity()) { input.reportValidity(); input.value = String(generationSettings.maxCredits); return; } generationSettings.maxCredits = Number(input.value); scheduleEstimate(); });
@@ -737,7 +816,6 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     }));
     app.querySelectorAll<HTMLButtonElement>('[data-clarification]').forEach(button => button.addEventListener('click', () => void send(button.dataset.clarification || '')));
     app.querySelectorAll<HTMLButtonElement>('[data-template-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.templateName || ''}`, undefined, undefined, button.dataset.templateChoice)));
-    app.querySelectorAll<HTMLButtonElement>('[data-direction-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.directionName || ''}`, undefined, undefined, undefined, button.dataset.directionChoice)));
     app.querySelector('[data-action="open-upload"]')?.addEventListener('click', () => app.querySelector<HTMLInputElement>('[data-image-input]')?.click());
     app.querySelector('[data-image-input]')?.addEventListener('change', event => {
       const files = Array.from((event.target as HTMLInputElement).files || []);
@@ -754,15 +832,19 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     });
     app.querySelectorAll<HTMLButtonElement>('[data-remove-asset]').forEach(button => button.addEventListener('click', () => { const [removed] = assets.splice(Number(button.dataset.removeAsset), 1); URL.revokeObjectURL(removed.src); productPhoto = false; scheduleEstimate(); render(); }));
     on('source-export', () => void action(async () => { const blob = await api.exportSource(storeId, version!.revision); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `storefront-r${version!.revision}.zip`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }));
-    on('source-preview-tab', () => { mode = 'preview'; render(); }); on('source-code-tab', () => { mode = 'code'; if (version?.snapshot.files.some(f => f.path === 'storefront-framework.json') && !filePath.startsWith('components/') && filePath !== 'styles/globals.css') filePath = 'components/home.tsx'; render(); }); on('source-width', () => { mobile = !mobile; render(); });
+    on('source-cancel-job', () => { if (buildSession.phase !== 'running') return; void api.cancelSourceChatJob(storeId, buildSession.jobId).catch(error => { toast = error instanceof Error ? error.message : 'No se pudo cancelar el pedido.'; render(); }); });
+    on('source-toggle-saved', () => { showSavedRevision = !showSavedRevision; page = 'index.html'; previewNavigation = {}; clearSelection(); render(); if (showSavedRevision) void runChecks(); });
+    on('source-preview-tab', () => { mode = 'preview'; render(); }); on('source-code-tab', () => { if (!dirty() && version) filePath = codeFileForPage(version.snapshot.files, page); mode = 'code'; render(); }); on('source-width', () => { mobile = !mobile; render(); });
+    app.querySelectorAll<HTMLButtonElement>('[data-code-file]').forEach(button => button.addEventListener('click', () => { if (busy || dirty()) return; filePath = button.dataset.codeFile!; draft = null; render(); }));
     app.querySelector('#source-file')?.addEventListener('change', event => { filePath = (event.target as HTMLSelectElement).value; draft = null; render(); });
     app.querySelector('#source-code')?.addEventListener('input', event => {
+      if (!version || !codeFileEditable(version.snapshot.files, filePath)) return;
       draft = (event.target as HTMLTextAreaElement).value;
-      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
+      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-code-file], [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
       app.querySelector<HTMLButtonElement>('#source-save')!.disabled = busy || !dirty() || historical();
       app.querySelector<HTMLButtonElement>('#source-discard')!.disabled = busy || !dirty();
     });
-    on('source-save', () => void action(async () => { const result = await api.editSourceFile(storeId, state.revision, filePath, draft!); await load(result.revision); toast = 'Cambios guardados.'; }));
+    on('source-save', () => void action(async () => { if (!version || !codeFileEditable(version.snapshot.files, filePath) || draft === null) return; const savedFile = filePath, savedPage = page; const result = await api.editSourceFile(storeId, state.revision, filePath, draft!); await load(result.revision); filePath = savedFile; page = savedPage; toast = 'Cambios guardados.'; }));
     on('source-discard', () => { draft = null; render(); });
   }
   render();

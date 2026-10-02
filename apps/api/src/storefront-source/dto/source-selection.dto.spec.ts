@@ -29,6 +29,10 @@ describe('selection on the request bodies', () => {
     expect(errors(SendSourceMessageDto, message)).toEqual([]);
     expect(errors(GenerateSourceProjectDto, generate)).toEqual([]);
   });
+  it('accepts a local current page and rejects traversal and external URLs', () => {
+    expect(errors(SendSourceMessageDto, { ...message, currentPage: 'acceso-ingresar.html' })).toEqual([]);
+    for (const currentPage of ['../index.html', 'https://example.com', 'index.html?secret=1']) expect(errors(GenerateSourceProjectDto, { ...generate, currentPage })).not.toEqual([]);
+  });
   it('accepts a well-formed selection on both bodies', () => {
     expect(errors(SendSourceMessageDto, { ...message, selection: { sectionId: 'hero' } })).toEqual([]);
     expect(errors(GenerateSourceProjectDto, { ...generate, selection: { sectionId: 'hero' } })).toEqual([]);

@@ -11,12 +11,17 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4312",
     trace: "retain-on-failure",
   },
-  webServer: {
+  webServer: [{
     command: "pnpm dev",
     url: "http://127.0.0.1:4312",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
-  },
+  }, {
+    command: "pnpm --filter @pagosya/checkout exec vite --host 127.0.0.1 --port 5175 --strictPort",
+    url: "http://127.0.0.1:5175",
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+  }],
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],

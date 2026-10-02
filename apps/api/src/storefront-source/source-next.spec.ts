@@ -10,6 +10,13 @@ import { creativeStoreFiles } from './fixtures/creative-store';
 import { withCreativeAssets } from './source-creative-assets';
 
 describe('Next.js storefront compilation', () => {
+  it('removes a permanently hidden catalog while preserving the intentionally hidden cart', () => {
+    const files = nextStoreFiles().map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace('data-pagosya-catalog', 'data-pagosya-catalog hidden') } : f);
+    const fixed = repairNextAuthoredMarkup(files);
+    expect(fixed.files.find(f => f.path === 'components/home.tsx')!.content).not.toContain('data-pagosya-catalog hidden');
+    expect(fixed.repairs).toContain('components/home.tsx: kept 1 live catalog mount visible');
+    expect(repairNextAuthoredMarkup(fixed.files).repairs).toEqual([]);
+  });
   it('compiles the pagosya-kit block of globals.css into the served store kit CSS, linked after the store stylesheet', async () => {
     const source = nextStoreFiles().map(f => f.path === 'styles/globals.css' ? { ...f, content: f.content + '\n/* pagosya-kit:start */\n.cart-drawer{background:rgb(9,8,7)}\n.product-detail__buy{border-radius:3px}\n/* pagosya-kit:end */\n' } : f);
     const compiled = await compileNextPreview(source);

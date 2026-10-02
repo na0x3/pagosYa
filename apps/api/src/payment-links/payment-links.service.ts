@@ -3,6 +3,7 @@ import { normalizeProductHighlights } from "./product-highlights";
 import { normalizeContentBlocks, readContentBlocks } from './product-content-blocks';
 import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
 import { PaymentLinkStatus, Prisma } from "@prisma/client";
 import { customAlphabet } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
@@ -570,7 +571,9 @@ export class PaymentLinksService {
 
   async interpretAndImportProductImages(merchantId: string, storeId: string, dto: ImportProductImagesDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
-    const apiKey = this.config.get<string>("app.openAi.apiKey");
+    const model = this.config.get<string>('app.openAi.inventoryModel') ?? 'gpt-5.6-luna';
+    const plan = chatgptPlanProvider(this.config, model);
+    const apiKey = plan?.apiKey ?? this.config.get<string>("app.openAi.apiKey");
     if (!apiKey) {
       throw new ServiceUnavailableException("La interpretación de productos con IA no está configurada. Agrega OPENAI_API_KEY en el servidor.");
     }
@@ -610,11 +613,11 @@ export class PaymentLinksService {
 
     let response: Response;
     try {
-      response = await fetch("https://api.openai.com/v1/responses", {
+      response = await fetch(plan?.endpoint ?? "https://api.openai.com/v1/responses", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: this.config.get<string>("app.openAi.inventoryModel") ?? "gpt-5.6-luna",
+          model,
           input: [
             { role: "developer", content: [{ type: "input_text", text: prompt }] },
             { role: "user", content: imageContent.flat() },
@@ -634,6 +637,7 @@ export class PaymentLinksService {
       error?: { message?: string };
     };
     if (!response.ok) {
+      if (plan) throw new ServiceUnavailableException('ChatGPT no pudo interpretar las fotos. Revisa tu sesión y los límites de tu plan. No se usó una API de pago; tus fotos siguen guardadas.');
       this.logger.warn(`OpenAI product image interpretation returned ${response.status}: ${body.error?.message ?? "unknown error"}`);
       throw new BadGatewayException("El intérprete no pudo procesar estas fotos. Intenta con imágenes más claras.");
     }
@@ -675,7 +679,9 @@ export class PaymentLinksService {
 
   async normalizeInventoryCsv(merchantId: string, storeId: string, csv: string, imageFileNames: string[] = []) {
     await this.ownedStoreOrThrow(merchantId, storeId);
-    const apiKey = this.config.get<string>("app.openAi.apiKey");
+    const model = this.config.get<string>('app.openAi.inventoryModel') ?? 'gpt-5.6-luna';
+    const plan = chatgptPlanProvider(this.config, model);
+    const apiKey = plan?.apiKey ?? this.config.get<string>("app.openAi.apiKey");
     if (!apiKey) {
       throw new ServiceUnavailableException("La importación con IA no está configurada. Agrega OPENAI_API_KEY en el servidor.");
     }
@@ -711,11 +717,11 @@ export class PaymentLinksService {
         : `Registro de referencia del inicio del archivo (solo contexto; no lo devuelvas en este lote):\n${reference.text}`;
       let response: Response;
       try {
-        response = await fetch("https://api.openai.com/v1/responses", {
+        response = await fetch(plan?.endpoint ?? "https://api.openai.com/v1/responses", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: this.config.get<string>("app.openAi.inventoryModel") ?? "gpt-5.6-luna",
+            model,
             input: [
               { role: "developer", content: [{ type: "input_text", text: prompt }] },
               { role: "user", content: [{ type: "input_text", text: [
@@ -740,6 +746,7 @@ export class PaymentLinksService {
         error?: { message?: string };
       };
       if (!response.ok) {
+        if (plan) throw new ServiceUnavailableException('ChatGPT no pudo revisar el inventario. Revisa tu sesión y los límites de tu plan. No se usó una API de pago ni se crearon productos.');
         this.logger.warn(`OpenAI inventory batch ${batchIndex + 1}/${batches.length} returned ${response.status}: ${body.error?.message ?? "unknown error"}`);
         throw new BadGatewayException("El asistente de importación no pudo procesar este archivo.");
       }

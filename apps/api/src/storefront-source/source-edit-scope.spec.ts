@@ -130,3 +130,19 @@ it('allows only the DNA motif files the platform declared, never an unrequested 
   // A reference the previous revision already had is not new art.
   expect(() => validateSourceArtwork(after, after, request, [])).not.toThrow();
 });
+
+it('prunes and reorders existing composition sections without inventing a plan for additions', () => {
+  const planned = (id: string) => ({ id, intent: 'Choose real products.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Shop' });
+  const original: any = { selected: 0, concepts: [{ layout: { sections: ['intro', 'menu', 'story'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false },
+    story: { beats: ['intro', 'menu', 'story'].map(section => ({ section, role: 'offer', headline: 'Real products', media: 'product' })) },
+    composition: { family: 'catalog-led', rationale: 'Choose products.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Choose products.', sections: ['intro', 'menu', 'story'].map(planned) }] },
+  }] };
+  const scope = { add: false, targets: ['intro'], original: [] };
+  const files = [{ path: 'components/home.tsx', content: '<main><section id="story"></section><section id="menu"></section></main>' }];
+  const result = sourceDesignAfterSectionEdit(original, files, scope)!;
+  expect(result.concepts[0].composition!.pages[0].sections.map(s => s.id)).toEqual(['story', 'menu']);
+  expect(result.concepts[0].story!.beats.map(s => s.section)).toEqual(['story', 'menu']);
+  expect(original.concepts[0].composition.pages[0].sections.map((s: any) => s.id)).toEqual(['intro', 'menu', 'story']);
+  files[0].content = '<main><section id="menu"></section><section id="new"></section></main>';
+  expect(sourceDesignAfterSectionEdit(original, files, scope)!.concepts[0].composition).toBeUndefined();
+});

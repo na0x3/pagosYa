@@ -84,9 +84,16 @@ export async function checkProductTheme(page: Page): Promise<ThemeCheckFailure[]
 export async function checkProductThemeOnSnapshot(snapshot: SourceProjectSnapshot, options: { signal?: AbortSignal } = {}): Promise<ThemeCheckFailure[]> {
   const runtime = await currentSourceRuntime(snapshot);
   const config = parseConfig(runtime);
-  const product = config.data?.items?.[0];
-  if (!config.productPage || !product) return [{ control: 'page', viewport: 'desktop', reason: 'the store has no product page to check' }];
-  const demo = { ...runtime, files: runtime.files.map(f => f.path === 'config.js' ? { ...f, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, demo: true })};` } : f) };
+  if (!config.productPage) return [{ control: 'page', viewport: 'desktop', reason: 'the store has no product page to check' }];
+  // Test future purchasing controls even when the merchant has no products yet.
+  // This fixture exists only in the isolated browser copy, never in the snapshot or DB.
+  const product = config.data?.items?.[0] || {
+    id: '__theme_probe__', name: 'Producto de comprobación con un nombre largo para validar el diseño',
+    description: 'Dato temporal de prueba.', amount: 12900, currency: 'BOB', stock: 3, imageUrls: [],
+    variants: [{ id: '__theme_probe_variant__', name: 'Estándar', amount: 12900, stock: 3, options: [{ name: 'Tamaño', value: 'Estándar' }] }],
+  };
+  const data = config.data?.items?.length ? config.data : { ...config.data, items: [product] };
+  const demo = { ...runtime, files: runtime.files.map(f => f.path === 'config.js' ? { ...f, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data, demo: true })};` } : f) };
   return withVisualSandbox(demo, '', options.signal, true, async context => {
     const page = await context.newPage();
     page.setDefaultTimeout(5000);

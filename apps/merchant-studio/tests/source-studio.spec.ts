@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { expect, test } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -20,6 +21,8 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   let recorded: any;
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     let body: any = {};
     if (pathname.endsWith('/dashboard/login')) body = { token: 'test-session', user: { email: 'test@example.com' } };
     else if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe-aroma' }];
@@ -29,11 +32,11 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
     else if (pathname.endsWith('/versions/1/checks')) recorded = route.request().postDataJSON();
     else if (pathname.endsWith('/versions/1')) body = version;
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [version], nextBefore: null };
-    else if (/\/(messages|generate)$/.test(pathname)) {
+    else if ((/\/(chat-jobs|generate)$/.test(pathname) && route.request().method() === 'POST')) {
       paid.push(pathname); submitted = route.request().postDataJSON();
       body = { userMessage: { id: 'repair-u', role: 'USER', content: submitted.instruction }, assistantMessage: { id: 'repair-a', role: 'ASSISTANT', content: 'Solicitud recibida.' } };
     }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await page.getByLabel('Correo', { exact: true }).fill('test@example.com');
@@ -58,6 +61,8 @@ test('empty catalog is one pending setup step in chat and keeps publishing block
   const version = { revision: 1, label: 'Borrador sin productos', snapshot: copy };
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     let body: any = {};
     if (pathname.endsWith('/dashboard/login')) body = { token: 'test-session', user: { email: 'test@example.com' } };
     else if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe-aroma' }];
@@ -65,7 +70,7 @@ test('empty catalog is one pending setup step in chat and keeps publishing block
     else if (pathname.endsWith('/catalog')) body = { items: [] };
     else if (pathname.endsWith('/versions/1')) body = version;
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [version], nextBefore: null };
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await page.getByLabel('Correo', { exact: true }).fill('test@example.com');
@@ -82,12 +87,14 @@ test('source studio generates, previews commerce, edits a file, restores and dow
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/v1/**',async route=>{
     const url=new URL(route.request().url());const pathname=url.pathname;const method=route.request().method();
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && method === 'GET') return route.fulfill({ json: { job: null } });
     let body:any={};
     if (pathname.endsWith('/estimate')) { await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ model: 'gpt-5.6-terra', reason: 'Diseño y composición del sitio.', maxCredits: 50, estimate: { minCredits: 4, maxCredits: 16 } }) }); return; }
     if(pathname.endsWith('/dashboard/login')) body={token:'test-session',user:{email:'test@example.com'}};
     else if(pathname.endsWith('/stores'))body=[{id:'s1',name:'Café Aroma',slug:'cafe-aroma'}];
     else if(pathname.endsWith('/conversation'))body={messages};
-    else if(pathname.endsWith('/messages')) {generated=route.request().postDataJSON();revision++;versions.unshift({revision,label:'Carta propia',snapshot:structuredClone(snapshot)});const userMessage={id:`u${revision}`,role:'USER',content:generated.instruction,metadata:{},createdAt:new Date().toISOString()};const assistantMessage={id:`a${revision}`,role:'ASSISTANT',content:'Preparé la carta. Dime qué ajustamos.',metadata:{sourceRevision:revision,label:'Carta propia'},createdAt:new Date().toISOString()};messages.push(userMessage,assistantMessage);body={userMessage,assistantMessage,revision:versions[0]};}
+    else if((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {generated=route.request().postDataJSON();revision++;versions.unshift({revision,label:'Carta propia',snapshot:structuredClone(snapshot)});const userMessage={id:`u${revision}`,role:'USER',content:generated.instruction,metadata:{},createdAt:new Date().toISOString()};const assistantMessage={id:`a${revision}`,role:'ASSISTANT',content:'Preparé la carta. Dime qué ajustamos.',metadata:{sourceRevision:revision,label:'Carta propia'},createdAt:new Date().toISOString()};messages.push(userMessage,assistantMessage);body={userMessage,assistantMessage,revision:versions[0]};}
     else if(pathname.endsWith('/file')) {patch=route.request().postDataJSON();const copy=structuredClone(versions[0].snapshot);copy.files.find((f:any)=>f.path===patch.path).content=patch.content;revision++;versions.unshift({revision,label:'Edición',snapshot:copy});body=versions[0];}
     else if(pathname.endsWith('/restore')) {const target=Number(pathname.split('/').at(-2));revision++;versions.unshift({revision,label:'Restaurada',restoredFrom:target,snapshot:structuredClone(versions.find(v=>v.revision===target).snapshot)});body=versions[0];}
     else if(pathname.endsWith('/export')) {await route.fulfill({status:200,contentType:'application/zip',body:Buffer.from('PK-test-download')});return;}
@@ -97,7 +104,7 @@ test('source studio generates, previews commerce, edits a file, restores and dow
     else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${method} ${pathname}`);
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(finishedChatJob(body))});
   });
   await page.goto('/?source=1');await page.getByLabel('Correo',{exact:true}).fill('test@example.com');await page.getByLabel('Contraseña').fill('test-password');await page.getByRole('button',{name:'Entrar al Studio',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Tu negocio, tu sitio.'})).toBeVisible();
@@ -130,6 +137,8 @@ test('a design YAPI saves shows in the preview while the site checks are still r
   const messages: any[] = [];
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     let body: any = {};
     if (pathname.endsWith('/dashboard/login')) body = { token: 'test-session', user: { email: 'test@example.com' } };
     else if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe-aroma' }];
@@ -142,7 +151,7 @@ test('a design YAPI saves shows in the preview while the site checks are still r
     else if (/\/versions\/\d+$/.test(pathname)) body = versions.find(v => v.revision === Number(pathname.split('/').at(-1)));
     else if (pathname.endsWith('/source-project')) body = { revision, versions, nextBefore: null };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
-    else if (pathname.endsWith('/messages')) {
+    else if ((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       const instruction = route.request().postDataJSON().instruction;
       revision = 2; versions = [second, first];
       const userMessage = { id: 'u2', role: 'USER', content: instruction, metadata: {}, createdAt: new Date().toISOString() };
@@ -150,7 +159,7 @@ test('a design YAPI saves shows in the preview while the site checks are still r
       messages.push(userMessage, assistantMessage);
       body = { userMessage, assistantMessage, revision: second };
     }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await page.getByLabel('Correo', { exact: true }).fill('test@example.com');
@@ -193,6 +202,8 @@ test('failed chat generation preserves the request and permits retry', async ({ 
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     let body: any;
     if (pathname.endsWith('/estimate')) { await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ model: 'gpt-5.6-terra', reason: 'Diseño y composición del sitio.', maxCredits: 50, estimate: { minCredits: 4, maxCredits: 16 } }) }); return; }
     if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe' }];
@@ -200,7 +211,7 @@ test('failed chat generation preserves the request and permits retry', async ({ 
     else if (pathname.endsWith('/catalog')) body = structuredClone(snapshotCatalog);
     else if (pathname.endsWith('/source-project')) body = { revision, versions: revision ? [saved] : [], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = saved;
-    else if (pathname.endsWith('/messages')) {
+    else if ((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       calls++;
       if (calls === 1) {
         messages.push({ id: 'failed', role: 'ASSISTANT', content: 'No pude completar esta revisión.', metadata: { failed: true } });
@@ -212,7 +223,7 @@ test('failed chat generation preserves the request and permits retry', async ({ 
     } else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected route ${pathname}`);
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(finishedChatJob(body)) });
   });
   await page.goto('/?source=1');
   const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
@@ -235,6 +246,8 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'browser-session'));
   await context.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     if (route.request().method() !== 'GET' && !pathname.endsWith('/estimate')) writes.push(pathname);
     let body: any;
     if (pathname.endsWith('/estimate')) { await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ model: 'gpt-5.6-terra', reason: 'Diseño y composición del sitio.', maxCredits: 50, estimate: { minCredits: 4, maxCredits: 16 } }) }); return; }
@@ -246,7 +259,7 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
     else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(finishedChatJob(body)) });
   });
   await page.goto('/?source=1');
   const open = page.getByRole('button', { name: 'Ver en navegador', exact: true });
@@ -289,6 +302,8 @@ test('free conversation is the default and model plus credit cap reach generatio
   let usageReads = 0;
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     let body: any;
     if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe' }];
     else if (pathname.endsWith('/conversation')) body = { messages: [], setup: { step: 'conversation', prompt: 'Cuéntame qué quieres crear. Puedes compartir fotos o empezar con lo que tienes.', options: [] } };
@@ -296,13 +311,13 @@ test('free conversation is the default and model plus credit cap reach generatio
     else if (pathname.endsWith('/source-project')) body = { revision: 0, versions: [], nextBefore: null };
     else if (pathname.endsWith('/estimate')) { const input = route.request().postDataJSON(); estimates.push(input); body = { model: input.model, maxCredits: input.maxCredits, reason: 'Modelo elegido por ti.', estimate: { minCredits: 1, maxCredits: 3 } }; }
     else if (pathname.endsWith('/usage')) { usageReads++; body = { runs: [{ id: 'r1', status: 'FAILED', revision: null, credits: 0, maxCredits: 8, model: 'gpt-5.6-luna', durationMs: 2500 }] }; }
-    else if (pathname.endsWith('/messages')) {
+    else if ((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       sent = route.request().postDataJSON();
       await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ message: 'No consumió créditos. Vuelve a intentarlo.' }) }); return;
     } else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(finishedChatJob(body)) });
   });
   await page.goto('/?source=1');
   await expect(page.getByRole('combobox', { name: 'Modelo', exact: true })).toHaveValue('auto');
@@ -339,6 +354,8 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
   sample.files.find(f => f.path === 'styles.css')!.content += '\n.menu-item { display:flex; flex-direction:column; padding:20px; }.menu-item__price{display:block;min-height:24px}.menu-add { position:absolute; bottom:80px; height:44px; width:100%; }';
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     let body: any;
     if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma' }];
     else if (pathname.endsWith('/conversation')) body = { messages: [] };
@@ -349,7 +366,7 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
     else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(pathname);
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(finishedChatJob(body)) });
   });
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test'));
   await page.goto('/?source=1');
@@ -377,14 +394,16 @@ test('first-site creation starts in chat and preserves the message after a failu
   let sent: any;
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
-    if (pathname.endsWith('/messages')) {
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
+    if ((pathname.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       sent = route.request().postDataJSON();
       await route.fulfill({status:502,json:{message:'Prueba de recuperación'}}); return;
     }
     const body = pathname.endsWith('/stores') ? [{id:'s1',name:'Café Aroma',slug:'cafe'}]
       : pathname.endsWith('/conversation') ? {messages:[],setup:{step:'conversation',prompt:'Cuéntame qué quieres crear.',options:[]}}
       : pathname.endsWith('/source-project') ? {revision:0,versions:[],nextBefore:null} : {};
-    await route.fulfill({json:body});
+    await route.fulfill({json:finishedChatJob(body)});
   });
   await page.goto('/?source=1');
   await expect(page.getByRole('button',{name:'Crear con lo que tenemos'})).toHaveCount(0);
@@ -405,10 +424,12 @@ test('the idle canvas never takes focus from the merchant setting up their first
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/draft-preview')) return route.fulfill({ json: { at: null } });
+    if (pathname.endsWith('/chat-jobs') && route.request().method() === 'GET') return route.fulfill({ json: { job: null } });
     const body = pathname.endsWith('/stores') ? [{id:'s1',name:'Café Aroma',slug:'cafe'}]
       : pathname.endsWith('/conversation') ? {messages:[],setup:{step:'conversation',prompt:'Cuéntame qué quieres crear.',options:[]}}
       : pathname.endsWith('/source-project') ? {revision:0,versions:[],nextBefore:null} : {};
-    await route.fulfill({json:body});
+    await route.fulfill({json:finishedChatJob(body)});
   });
   await page.goto('/?source=1');
   const active = () => page.evaluate(() => { const el = document.activeElement as HTMLElement | null; return el ? el.id || el.tagName.toLowerCase() : 'none'; });

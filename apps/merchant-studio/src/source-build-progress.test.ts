@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { renderBuildProgress } from './source-build-progress';
 
 describe('the agent steps in the build progress', () => {
+  it('distinguishes a conversational reply from a completed build, while preserving failures', () => {
+    const progress = { status: 'completed', startedAt: 0, updatedAt: 1000, steps: [{ stage: 'interpreting', label: 'Interpretando tu pedido', status: 'completed' }] };
+    expect(renderBuildProgress(progress, false, 'reply')).toContain('Respuesta preparada');
+    expect(renderBuildProgress(progress, false, 'reply')).not.toContain('Trabajo completado');
+    expect(renderBuildProgress(progress, false, 'saved')).toContain('Trabajo completado');
+    expect(renderBuildProgress({ ...progress, status: 'failed' }, false, 'reply')).toContain('Trabajo interrumpido');
+  });
   const progress = { status: 'running', startedAt: 0, updatedAt: 1000, steps: [{ stage: 'building', label: 'Construyendo los cambios', startedAt: 0, status: 'running', details: [
     { label: 'Editó components/home.tsx' },
     { label: 'Tomó una captura (celular)', thumbnail: 'data:image/jpeg;base64,QUJD' },

@@ -1,4 +1,5 @@
 import { Reflector } from '@nestjs/core';
+import { SourceAssetsController } from './source-assets.controller';
 import { SourceProjectsController } from './source-projects.controller';
 import { CompileBudget, MerchantThrottlerGuard, SUSTAINED_COMPILES_PER_HOUR } from './source-compile-budget';
 
@@ -32,6 +33,7 @@ describe('compile budget', () => {
     const keyFor = (handler: any) => subject.generateKey(context(handler), 'merchant:m1', 'sustained');
     const budgeted = [proto.save, proto.editFile, proto.setMotion, proto.visualEdit, proto.generate].map(keyFor);
     expect(new Set(budgeted).size).toBe(1);
+    expect(subject.generateKey(context(SourceAssetsController.prototype.roles, SourceAssetsController),'merchant:m1','sustained')).toBe(budgeted[0]);
     // A read must never be able to spend what a recompile is allowed.
     expect(keyFor(proto.state)).not.toBe(budgeted[0]);
     expect(subject.generateKey(context(proto.save), 'merchant:m1', 'default')).not.toBe(budgeted[0]);
@@ -55,7 +57,7 @@ describe('compile budget', () => {
     const budgeted = Object.getOwnPropertyNames(proto)
       .filter(name => name !== 'constructor' && typeof proto[name] === 'function')
       .filter(name => reflector.get<number>(limitKey('sustained'), proto[name]) !== undefined);
-    expect(new Set(budgeted)).toEqual(new Set(['save', 'editFile', 'setMotion', 'visualEdit', 'generate']));
+    expect(new Set(budgeted)).toEqual(new Set(['save', 'editFile', 'setMotion', 'visualEdit', 'generate', 'addStandardPages', 'contactForm', 'restore']));
     expect(reflector.get<number>(limitKey('sustained'), proto.save)).toBe(SUSTAINED_COMPILES_PER_HOUR);
     // Stacking the two decorators must not cost the route its burst limit.
     expect(reflector.get<number>(limitKey('default'), proto.setMotion)).toBe(12);

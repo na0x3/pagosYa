@@ -13,7 +13,7 @@ function withinDeadline<T>(task: Promise<T>, signal: AbortSignal): Promise<T> {
 /** Every redirect and stylesheet gets its own URL/DNS validation and pinned connection. */
 export type SourceReferenceResourceKind = 'html' | 'css' | 'script' | 'image' | 'font';
 const resourceTypes: Record<SourceReferenceResourceKind, RegExp> = { html: /^text\/html\b/i, css: /^text\/css\b/i, script: /^(?:text|application)\/(?:javascript|ecmascript)\b/i, image: /^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)\b/i, font: /^(?:font\/(?:woff2?|ttf|otf)|application\/(?:font-woff|x-font-ttf|vnd.ms-fontobject|octet-stream))\b/i };
-const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 1_000_000, css: 300_000, script: 1_000_000, image: 2_000_000, font: 500_000 };
+const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 3_000_000, css: 600_000, script: 1_000_000, image: 2_000_000, font: 500_000 };
 
 export async function readSourceReferenceResource(raw: string, kind: SourceReferenceResourceKind, signal: AbortSignal, consume?: (bytes: number) => void): Promise<{ url: string; body: Buffer; contentType: string }> {
   let url = publicBrandUrl(raw);

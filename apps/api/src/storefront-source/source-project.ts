@@ -19,7 +19,8 @@ const SECRET = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:sk_live_|sk
 
 /** commerce.js is platform code (the kit plus its motion runtime), never authored by a merchant, and is
  * replaced with the current runtime when a page renders; it outgrew the 180 KB budget for authored files. */
-const MAX_COMMERCE_RUNTIME = 400_000;
+// The installed bundle includes commerce, consent, retention, video and motion.
+const MAX_COMMERCE_RUNTIME = 600_000;
 
 function reject(message: string): never {
   throw new BadRequestException(message);

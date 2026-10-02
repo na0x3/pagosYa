@@ -58,8 +58,8 @@ export function sourceCheckoutBranding(store: StoreIdentity, snapshot?: { files?
   const resolve = (value: string | undefined, depth = 0): string => !value || depth > 8 ? '' : value.replace(/var\((--[\w-]+)(?:,\s*([^()]*))?\)/g, (_, key, fallback) => resolve(variables[key] || body[key] || fallback, depth + 1));
   const token = (...keys: string[]) => keys.map(k => resolve(variables[k] || body[k])).find(Boolean);
   const fallbackFont = /classic|editorial|artisan|luxury/.test(store.fontStyle || '') ? 'Georgia, serif' : 'system-ui, sans-serif';
-  const bodyFont = resolve(body['font-family']) || token('--brand-body-font', '--font-body', '--sans') || fallbackFont;
-  const headingFont = resolve(heading['font-family']) || token('--brand-heading-font', '--font-heading', '--serif') || bodyFont;
+  const bodyFont = resolve(body['font-family']) || token('--store-body-font', '--brand-body-font', '--font-body', '--sans') || fallbackFont;
+  const headingFont = resolve(heading['font-family']) || token('--store-heading-font', '--brand-heading-font', '--font-heading', '--serif') || bodyFont;
   const fonts: CheckoutBranding['fonts'] = [];
   const fontSheets = [...sheets, ...(entry ? [{ path: entry.path, content: [...entry.content.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m => m[1]).join('\n') }] : [])];
   for (const sheet of fontSheets) for (const match of sheet.content.matchAll(/@font-face\s*\{([^}]+)\}/gi)) {
@@ -73,7 +73,22 @@ export function sourceCheckoutBranding(store: StoreIdentity, snapshot?: { files?
     const ext = path.split('.').pop();
     if (file && /^(ttf|woff2?|otf)$/.test(ext || '')) fonts.push({family,source:`data:font/${ext};base64,${file.content}`,weight:match[1].match(/font-weight\s*:\s*([^;]+)/i)?.[1].trim() || '100 900',style:match[1].match(/font-style\s*:\s*([^;]+)/i)?.[1].trim() || 'normal'});
   }
-  return normalizeCheckoutBranding({logoUrl:store.logoUrl,background:resolve(body.background || body['background-color']) || token('--brand-background', '--background', '--cream', '--paper') || store.backgroundColor,
-    surface:token('--brand-surface', '--surface', '--paper'),foreground:resolve(body.color) || token('--brand-foreground', '--foreground', '--ink'),accent:token('--brand-accent', '--accent', '--primary', '--green') || store.accentColor,
-    accentForeground:token('--brand-accent-foreground'),bodyFont,headingFont,radius:token('--brand-radius', '--radius'),fonts}, store.name);
+  return normalizeCheckoutBranding({logoUrl:store.logoUrl,background:resolve(body.background || body['background-color']) || token('--store-background', '--brand-background', '--background', '--cream', '--paper') || store.backgroundColor,
+    surface:token('--store-surface', '--brand-surface', '--surface', '--paper'),foreground:resolve(body.color) || token('--store-foreground', '--brand-foreground', '--foreground', '--ink'),accent:token('--store-accent', '--brand-accent', '--accent', '--primary', '--green') || store.accentColor,
+    accentForeground:token('--store-accent-foreground', '--brand-accent-foreground'),bodyFont,headingFont,radius:token('--store-radius', '--brand-radius', '--radius'),fonts}, store.name);
+}
+
+/** Account-only tokens override the shared identity without changing payment branding. */
+export function sourceAccountBranding(store: StoreIdentity, snapshot?: { files?: SourceFile[] } | null): CheckoutBranding {
+  const base = sourceCheckoutBranding(store, snapshot);
+  const overrides: Record<string, string> = {};
+  const keys: Record<string,string> = { background:'background', foreground:'foreground', accent:'accent', 'accent-foreground':'accentForeground', radius:'radius' };
+  for (const file of snapshot?.files || []) {
+    if (!file.path.endsWith('.css') || file.encoding === 'base64') continue;
+    for (const block of file.content.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)}/g)) {
+      if (!block[1].split(',').some(selector => selector.trim() === ':root')) continue;
+      for (const match of block[2].matchAll(/--account-(background|foreground|accent-foreground|accent|radius)\s*:\s*([^;{}]+)\s*;?/g)) overrides[keys[match[1]]] = match[2].trim();
+    }
+  }
+  return normalizeCheckoutBranding({ ...base, ...overrides }, store.name);
 }

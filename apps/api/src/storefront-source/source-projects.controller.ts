@@ -36,6 +36,8 @@ export class SourceProjectsController {
   }
 
   @Patch('contact-form')
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   contactForm(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: ContactFormDto) {
     return this.projects.setContactForm(merchant.id, storeId, input.revision, input.enabled);
   }
@@ -150,6 +152,7 @@ export class SourceProjectsController {
 
   @Post("versions/:revision/restore")
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   restore(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Param("revision", ParseIntPipe) revision: number, @Body() input: SourceProjectRevisionDto) {
     return this.projects.restore(merchant.id, storeId, revision, input.revision);
   }

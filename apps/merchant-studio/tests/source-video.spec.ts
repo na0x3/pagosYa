@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +28,7 @@ for (const mobile of [false, true]) test(`MP4 upload, playback and saved resourc
       expect(route.request().headers()['content-type']).toContain('multipart/form-data');
       expect(route.request().postDataBuffer()!.toString()).toContain('Content-Type: video/mp4');
       body = { url: uploadUrl };
-    } else if (path.endsWith('/messages')) {
+    } else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       expect(route.request().postDataJSON()).toMatchObject({ assetUrls: [uploadUrl], instruction: 'Pon este video en la portada' });
       revision = 2;
       const userMessage = { id: 'u1', role: 'USER', content: 'Pon este video en la portada', metadata: { assetUrls: [uploadUrl] } };
@@ -37,7 +38,7 @@ for (const mobile of [false, true]) test(`MP4 upload, playback and saved resourc
     } else if (/\/versions\/\d+$/.test(path)) body = version();
     else if (path.endsWith('/source-project')) body = { revision, versions: [version()], nextBefore: null };
     else if (path.endsWith('/assets')) body = { revision, assets: [{ path: videoPath, kind: 'video', role: 'background', description: 'Video de portada', references: ['index.html'], bytes: bytes.length }], icons: [], iconLibrary: 'Lucide' };
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   const picker = page.locator('[data-image-input]');

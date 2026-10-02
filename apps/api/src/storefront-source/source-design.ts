@@ -1,3 +1,5 @@
+import { SOURCE_COMPOSITION_PLAN_SCHEMA, validateSourceCompositionPlan, type SourceCompositionPlan } from './source-composition-plan';
+import { SOURCE_MEDIA_DESIGN_CONTRACT } from './source-media-design';
 import { SOURCE_ICON_DIRECTION } from './source-asset-library';
 import { BadGatewayException } from '@nestjs/common';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
@@ -7,7 +9,7 @@ import { SOURCE_SCROLL_FEELS, type SourceScrollFeel } from './source-motion';
 import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
 
 export const SOURCE_DESIGN_FILE = 'design-direction.json';
-export const SOURCE_PRODUCT_PRESENTATION_DIRECTION = `The platform renders every product page and quick view inside the empty data-pagosya-product-page mount, in the editorial, dense, image-led or story-led presentation chosen by layout.productPage. Image-led uses an expansive uncropped photo beside purchasing details; story-led places the photo above a readable product story and purchasing details. Do not write CSS for [data-pagosya-product], [data-pagosya-product-page] or any .product-detail__ class; the runtime ignores those rules. The product page takes its identity from the tokens in :root (background, foreground, accent, accent-foreground, surface, border, radius, body-font, heading-font), so choose them with the product page in mind: the accent fills the purchase button and must contrast with accent-foreground, and heading-font sets the product title. Keep the header and footer of product.html consistent with the homepage. The page's own identity (swatch shape, gallery layout, block frames, divider, entrance) comes from the concept's dna.productCard and dna.productCss described in the design DNA: never restyle the product page in your own CSS. Header search and cart actions are icon-only buttons with accessible names, and the cart shows its count in a small badge. Never place a second static product configurator beside the mount, and never pad a product with fabricated reviews, certifications, benefits, shipping guarantees or nutrition claims. On local edits apply this guidance only to the requested scope.`;
+export const SOURCE_PRODUCT_PRESENTATION_DIRECTION = `The platform renders every product page and quick view inside the empty data-pagosya-product-page mount, in the editorial, dense, image-led or story-led presentation chosen by layout.productPage. Image-led uses a dominant gallery beside a compact purchase column; dense separates specifications from a purchase panel; story-led puts the real product title and introduction above the gallery, with details and purchasing below. Editorial keeps a balanced image/details composition. Choose the structure for the business rather than giving every store the same split. Photo-less pages retain a deliberate title/details and purchase hierarchy. Do not write CSS for [data-pagosya-product], [data-pagosya-product-page] or any .product-detail__ class; the runtime ignores those rules. The product page takes its identity from the tokens in :root (background, foreground, accent, accent-foreground, surface, border, radius, body-font, heading-font), so choose them with the product page in mind: the accent fills the purchase button and must contrast with accent-foreground, and heading-font sets the product title. Keep the header and footer of product.html consistent with the homepage. The page's own identity (swatch shape, gallery layout, block frames, divider, entrance) comes from the concept's dna.productCard and dna.productCss described in the design DNA: never restyle the product page in your own CSS. Header search and cart actions are icon-only buttons with accessible names, and the cart shows its count in a small badge. Never place a second static product configurator beside the mount, and never pad a product with fabricated reviews, certifications, benefits, shipping guarantees or nutrition claims. On local edits apply this guidance only to the requested scope.`;
 const fields = ['name', 'premise', 'opening', 'flow', 'typography', 'imagery', 'mobile'] as const;
 export { SOURCE_PRODUCT_PAGE_STYLES, type SourceProductPageStyle } from './source-dna';
 export type SourceDesignLayout = { sections: string[]; catalogSection: string; standaloneIntro: boolean; productsInOpening: boolean; productPage?: SourceProductPageStyle };
@@ -24,13 +26,13 @@ export type SourceMotionChoreography = {
   mode: 'subtle' | 'expressive'; scrollFeel: SourceScrollFeel; entrance: typeof SOURCE_ENTRANCE_KINDS[number];
   scenes: Array<{ section: string; kind: typeof SOURCE_SCENE_KINDS[number]; intensity: 1 | 2 | 3 }>;
 };
-export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna };
+export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna; composition?: SourceCompositionPlan };
 export type SourceDesign = { concepts: SourceDesignConcept[]; selected: number; selection?: { source: 'planner' | 'forced'; rationale: string | null } };
 export const sourceDesignSchema = {
   type: 'object', additionalProperties: false, required: ['concepts', 'selected'], properties: {
     selected: { type: 'integer', minimum: 0, maximum: 2 },
     concepts: { type: 'array', minItems: 3, maxItems: 3, items: {
-      type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion', 'dna'],
+      type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion', 'dna', 'composition'],
       properties: { ...Object.fromEntries(fields.map(field => [field, { type: 'string', minLength: 1, maxLength: field === 'name' ? 80 : 500 }])),
         layout: { type: 'object', additionalProperties: false, required: ['sections', 'catalogSection', 'standaloneIntro', 'productsInOpening', 'productPage'], properties: {
           productPage: { type: 'string', enum: [...SOURCE_PRODUCT_PAGE_STYLES] },
@@ -49,7 +51,7 @@ export const sourceDesignSchema = {
             section: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, kind: { type: 'string', enum: [...SOURCE_SCENE_KINDS] }, intensity: { type: 'integer', minimum: 1, maximum: 3 },
           } } },
         } },
-        dna: SOURCE_DNA_SCHEMA,
+        dna: SOURCE_DNA_SCHEMA, composition: SOURCE_COMPOSITION_PLAN_SCHEMA,
       },
     } },
   },
@@ -68,7 +70,7 @@ function fitProse(text: string, max: number) {
 }
 
 /** dnaOptions.seed (the store id) seeds field defaults per concept; repairs collects what was fixed in code. */
-export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[] } = {}): SourceDesign {
+export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[]; requireComposition?: boolean } = {}): SourceDesign {
   const fail = (detail = '') => { throw new BadGatewayException('La propuesta necesita tres composiciones distintas y una dirección de diseño válida.' + (detail ? ' ' + detail : '')); };
   if (!value || !Number.isInteger(value.selected) || value.selected < 0 || value.selected > 2 || (selected !== undefined && value.selected !== selected)
     || !Array.isArray(value.concepts) || value.concepts.length !== 3) return fail();
@@ -90,6 +92,10 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       const standaloneIntro = layout.standaloneIntro || layout.sections[0] !== layout.catalogSection;
       if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa editorial, dense, image-led o story-led.`);
       result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
+    }
+    if (dnaOptions.requireComposition || concept.composition !== undefined) {
+      if (!result.layout) return fail(`concepts[${index}].composition requires layout.`);
+      result.composition = validateSourceCompositionPlan(concept.composition, result.layout.sections);
     }
     const story = concept.story;
     const choreography = concept.motion;
@@ -137,27 +143,6 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
   // Catch copied proposals without pretending a string comparison measures visual originality.
   if (new Set(concepts.map((c: SourceDesignConcept) => normalize(c.opening))).size !== 3
     || new Set(concepts.map((c: SourceDesignConcept) => normalize(c.flow))).size !== 3) return fail('Los tres opening y los tres flow deben ser distintos.');
-  // Fresh YAPI designs default to a clear brand reveal and two purposeful page beats.
-  // Explicit Studio motion settings still turn this choreography down or off at runtime.
-  if (requireNarrative) {
-    const chosen = concepts[value.selected];
-    const layout = chosen.layout!;
-    const motion = chosen.motion!;
-    const targetScenes = Math.min(2, layout.sections.length);
-    const scenes: SourceMotionChoreography['scenes'] = (motion.scenes as SourceMotionChoreography['scenes'])
-      .slice(0, targetScenes).map(scene => ({ ...scene, intensity: Math.max(2, scene.intensity) as 2 | 3 }));
-    const usedSections = new Set(scenes.map(scene => scene.section));
-    const usedKinds = new Set(scenes.map(scene => scene.kind));
-    for (const section of layout.sections) {
-      if (scenes.length >= targetScenes) break;
-      if (usedSections.has(section)) continue;
-      const kind = !usedKinds.has('sequence') ? 'sequence' : 'text-fill';
-      scenes.push({ section, kind, intensity: 2 });
-      usedSections.add(section);
-      usedKinds.add(kind);
-    }
-    chosen.motion = { ...motion, mode: 'expressive', scrollFeel: motion.scrollFeel === 'native' ? 'soft' : motion.scrollFeel, entrance: 'none', scenes };
-  }
   const metadata = value.selection;
   const selection = metadata && ['planner', 'forced'].includes(metadata.source)
     ? { source: metadata.source as 'planner' | 'forced', rationale: typeof metadata.rationale === 'string' && metadata.rationale.trim().length <= 400 ? metadata.rationale.trim() || null : null } : undefined;
@@ -178,6 +163,9 @@ const mainBlocks = (main: HtmlElement) => main.childNodes.filter(isHtmlElement).
 
 /** Blocks added after the complete planned sequence (e.g. merchant-requested tabs) extend the layout; the planned opening never changes. */
 export function adoptTrailingDesignSections(design: SourceDesign, homeHtml: string): SourceDesign {
+  // New plans explicitly commit the purpose and hierarchy of every section.
+  // A later edit must update that plan instead of silently adding a photo wall.
+  if (design.concepts[design.selected]?.composition) return design;
   const layout = design.concepts[design.selected]?.layout;
   const main = layout && homeMain(homeHtml);
   if (!layout || !main) return design;
@@ -202,6 +190,14 @@ export function validateSourceDesignImplementation(design: SourceDesign, files: 
   const ids = sections.map(node => attr(node, 'id'));
   if (!ids.length) return fail(`main no contiene bloques literales; se esperaban ${layout.sections.join(' → ')}. Renderiza cada sección planificada como hijo directo de main, sin condiciones, .map() ni {expresiones}; para pestañas, mantenlas montadas y alterna hidden o className.`);
   if (JSON.stringify(ids) !== JSON.stringify(layout.sections)) return fail(`los bloques directos de main deben seguir ${layout.sections.join(' → ')}; encontrados ${ids.map(id => id || '(sin id)').join(' → ')}. No añadas una portada fuera del plan.`);
+  for (const page of design.concepts[design.selected].composition?.pages ?? []) {
+    if (page.page === 'index.html') continue;
+    const pageMain = homeMain(files.find(file => file.path === page.page)?.content ?? '');
+    const actual = pageMain ? mainBlocks(pageMain).map(node => attr(node, 'id')) : [];
+    if (JSON.stringify(actual) !== JSON.stringify(page.sections.map(section => section.id))) {
+      throw new BadGatewayException(`El diseño elegido no coincide con ${page.page}: main debe contener ${page.sections.map(section => section.id).join(' → ')}.`);
+    }
+  }
   if (purpose !== 'shop') return;
   const catalogs = htmlDescendants(main).filter(node => attr(node, 'data-pagosya-catalog') !== undefined);
   const catalogSection = sections.find(node => attr(node, 'id') === layout.catalogSection)!;
@@ -298,9 +294,12 @@ Declare two radii, controls and media, with media ${SOURCE_MEDIA_TO_CONTROL_RADI
 
 /** §6 generator half and §8.2. One card contract per store; a masthead that reads as a shop. */
 export const SOURCE_CARD_AND_MASTHEAD_DIRECTION = `Card contract. Declare one catalog card contract and make every card obey it: one image aspect ratio, one order of name / price / action, one action treatment, one image treatment, with the shared ratio set once on the catalog element. A featured card may differ, but deliberately and completely, with a different span and a different composition; never by one card placing its action on another row or stretching to leave a void mid-tile.
-Masthead. The header carries the wordmark plus one second line at the label role, four to six navigation entries where the catalog supports them, and a right-hand cluster of icon-only controls with accessible names and a cart count badge. The second line uses confirmed merchant data only, such as the real city, founding year, materials or method. Never invent a tagline, city, year, material or claim to fill the lockup; omit the line when that data is not confirmed.`;
+Masthead. Use a clear wordmark, only useful navigation destinations and accessible controls with a cart count. A compact single-row header is valid. Do not require a second line or a navigation-entry quota. The second line uses confirmed merchant data only, such as the real city, founding year, materials or method. Never invent a tagline, city, year, material or claim to fill the lockup; omit the line when that data is not confirmed.`;
 
-export const SOURCE_CREATIVE_DIRECTION = `You are the creative director and frontend designer of this merchant's storefront. Make a specific, memorable visual identity and carry it through every customer page. Work from the merchant's products, people, place, materials, cultural references and buying behavior. Choose a composition that would feel wrong with an unrelated business's name pasted into it.
+export const SOURCE_CREATIVE_DIRECTION = `${SOURCE_MEDIA_DESIGN_CONTRACT}
+The merchant's explicit visual brief and inspected website reference constrain every concept. Keep the reference's dominant image treatment, hierarchy, density and spacing where requested. Vary only choices the merchant left open; novelty must not override the reference. Plan a clear primary image and a restrained supporting sequence. When all supplied photos are requested, distribute them across useful sections or product surfaces with clear hierarchy; do not default to an overlapping photo stack or an archive wall. Never require a preset palette, section quota, giant type or motion style unrelated to the brief.
+The catalog mount stays visible even with zero products. The commerce runtime owns empty, loading, error and populated states; never write permanent "coming soon" or "no products" copy around it. Products added later must appear without regenerating the design.
+You are the creative director and frontend designer of this merchant's storefront. Make a specific, memorable visual identity and carry it through every customer page. Work from the merchant's products, people, place, materials, cultural references and buying behavior. Choose a composition that would feel wrong with an unrelated business's name pasted into it.
 There is NO mandatory hero format, homepage section list, section count, section order, spacing scale, color family, card shape, symmetry, font pairing or illustration style. A catalog can open the page; a product, image, wordmark, story or interaction can be the focal point. Choose what this business earns. Omit unsupported sections and redundant purchasing instructions instead of filling a long page. A merchant's precise design request takes priority over novelty. On a fresh design or authorized redesign, vary density, alignment, scale and image treatment deliberately; do not repeat one heading/text/card treatment down the page.
 Choose the homepage structure and action hierarchy for the business and the merchant’s request. Storytelling, catalogs, galleries and interactive scenes may share the page or have their own destinations. Keep the buying path discoverable and navigation understandable; there is no required CTA count or section-to-page split.
 Compose WITH the actual assets: name the image paths, roles, crops and focal points; preserve the real product's appearance and logo. Reference screenshots guide composition; photos explicitly supplied as content remain content across later edits, even if they contain other brands. If photos are absent, choose a confident typographic, interactive or menu-based concept. Custom SVG/CSS drawings, mascots and sticker-library artwork require an explicit current request for illustration; do not introduce them merely to fill space or replace existing photos. Do not fabricate photographs or leave empty photo placeholders. Typography may mix appropriate local/system families and uploaded fonts; define a complete hierarchy and mobile scale. Gradients, textures, image backgrounds and expressive layout are available when they serve this concept and the merchant's brief.
@@ -314,7 +313,7 @@ Before returning files, review the implementation against the selected concept: 
 /** Stock patterns that make stores look alike; the concept may still argue for one. */
 export const SOURCE_STOCK_PATTERNS = 'Avoid these stock patterns unless the concept argues for one: an uppercase eyebrow above every heading; a centred hero with two buttons; three icon-and-text columns; a generic "Why choose us" block; a testimonial carousel without real reviews.';
 
-export const SOURCE_STORY_MOTION_CONTRACT = `For each concept, commit to story and motion objects before writing code. story turns the page into one coherent argument: a short promise; an optional eyebrow (leave it empty unless the concept argues for a small label), a headline of roughly 3–9 words, one or two supporting sentences and one primary action; then one beat for every layout section in the same order. Each beat states its role, truthful headline and media role. The catalog/principal-content beat must prove or present the offer. Do not repeat the opening headline in later beats or invent claims. motion names the saved choreography: subtle or expressive, native/soft/cinematic scroll feel, no full-screen entrance (entrance is always none) and up to two section scenes. The selected concept should feel bold: open straight onto the page, then use two different purposeful scene types across different story sections when the layout has at least two sections. A conventional text column beside one static image is not a signature opening; compose scale, cropping, layers and motion into a recognizable first scene. Use scrub-media only with an approved local poster/video and always keep a static mobile/reduced-motion reading order. Use parallax-stack only for approved imagery. Keep motion off commerce controls, forms and long body copy.
+export const SOURCE_STORY_MOTION_CONTRACT = `For each concept, commit to story and motion objects before writing code. story turns the page into one coherent argument: a short promise; an optional eyebrow (leave it empty unless the concept argues for a small label), a headline of roughly 3–9 words, one or two supporting sentences and one primary action; then one beat for every layout section in the same order. Each beat states its role, truthful headline and media role. The catalog/principal-content beat must prove or present the offer. Do not repeat the opening headline in later beats or invent claims. motion names the saved choreography: subtle or expressive, native/soft/cinematic scroll feel, no full-screen entrance (entrance is always none) and up to two section scenes. Choose motion to match the merchant brief and inspected reference. A restrained concept may use native scrolling and zero scenes; never add scenes or increase intensity to meet a quota. A clear static opening with deliberate typography and photography is valid. Use scrub-media only with an approved local poster/video and always keep a static mobile/reduced-motion reading order. Use parallax-stack only for approved imagery. Keep motion off commerce controls, forms and long body copy.
 ${SOURCE_STOCK_PATTERNS}`;
 
 /** Layout-only control arm for matched benchmarks. Production generation uses SOURCE_DESIGN_CONTRACT. */

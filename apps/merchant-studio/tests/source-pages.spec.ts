@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -148,7 +149,7 @@ test('opening a selected product in the browser preserves its query', async ({ p
   await context.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const body = path.endsWith('/stores') ? [{id:'s1', name:'Taller Alba', slug:'alba'}] : path.endsWith('/conversation') ? {messages:[]} : path.endsWith('/source-project') ? {revision:1, versions:[saved], nextBefore:null} : path.endsWith('/versions/1') ? saved : path.endsWith('/catalog') ? data : {};
-    await route.fulfill({json: body});
+    await route.fulfill({json: finishedChatJob(body)});
   });
   await page.goto('/?source=1');
   await page.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('link', {name:'Ver detalle de Bolso de algodón'}).click();
@@ -171,8 +172,8 @@ test('image-only messages do not invent a logo role and show contextual replies'
     else if (path.endsWith('/source-project')) body = {revision:0, versions:[], nextBefore:null};
     else if (path.endsWith('/conversation')) body = {messages:[], setup:{step,prompt:'Cuéntame qué quieres crear. Puedes adjuntar imágenes.',options:[]}};
     else if (path.endsWith('/uploads')) body = {url:'/v1/uploads/abc.png'};
-    else if (path.endsWith('/messages')) {sent=route.request().postDataJSON(); body={userMessage:{id:'u1',role:'USER',content:sent.instruction},assistantMessage:{id:'a1',role:'ASSISTANT',content:'¿Esta imagen es tu logo o una referencia de estilo?',metadata:{sourceSetup:{step}}},setup:{step,prompt:'Cuéntame sobre tu marca.',options:[]}};}
-    await route.fulfill({json:body});
+    else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) {sent=route.request().postDataJSON(); body={userMessage:{id:'u1',role:'USER',content:sent.instruction},assistantMessage:{id:'a1',role:'ASSISTANT',content:'¿Esta imagen es tu logo o una referencia de estilo?',metadata:{sourceSetup:{step}}},setup:{step,prompt:'Cuéntame sobre tu marca.',options:[]}};}
+    await route.fulfill({json:finishedChatJob(body)});
   });
   await page.goto('/?source=1');
   await page.locator('[data-image-input]').setInputFiles({name:'logo.png',mimeType:'image/png',buffer:Buffer.from(await page.evaluate(() => {const canvas = document.createElement('canvas'); canvas.width=32; canvas.height=32; canvas.getContext('2d')!.fillRect(0,0,32,32); return canvas.toDataURL('image/png').split(',')[1];}), 'base64')});

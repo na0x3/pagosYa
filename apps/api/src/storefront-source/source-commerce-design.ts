@@ -5,7 +5,10 @@ import { kitPath } from '@pagosya/storefront-kit';
 
 const attribute = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2];
 const block = (html: string, name: string) => html.match(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, 'i'))?.[0];
-const normalize = (html: string) => html.replace(/\s+/g, ' ').trim();
+// Recognize the previous stock shell too, so existing stores still inherit their brand.
+const normalize = (html: string) => html.replace(/href=(["'])index\.html#catalogo\1/g, 'href="productos.html"').replace(/\s+/g, ' ').trim();
+const STOCK_CATALOG_ORDER = '<aside class="commerce-order" aria-label="Tu pedido"><h2>Tu pedido</h2><div data-pagosya-cart></div></aside>';
+const CATALOG_STYLE = '\n.commerce-catalog{max-width:1200px;margin:0 auto;padding:clamp(20px,4vw,48px)}.commerce-catalog-title{font-family:var(--store-heading-font,var(--brand-heading-font,inherit));font-size:clamp(28px,4vw,48px);line-height:1.15;margin:0 0 24px}.commerce-catalog-return{display:inline-flex;align-items:center;min-height:44px;margin-top:24px;color:inherit;text-underline-offset:4px}\n';
 
 /** Share the homepage's design with stock commerce pages; custom page content stays authored. */
 export async function withSourceCommerceDesign(files: SourceProjectFileDto[], trustedTemplate?: string): Promise<SourceProjectFileDto[]> {
@@ -22,7 +25,10 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[], tr
   const homeClasses = attribute(home.match(/<body\b[^>]*>/i)?.[0] || '', 'class');
   const routes = new Set(files.map(file => file.path));
   return files.map(file => {
-    if (file.path === 'commerce-pages.css') return file.content.trimStart().startsWith('@layer pagosya-commerce') ? file : { ...file, content: `@layer pagosya-commerce {\n${file.content}\n}\n` };
+    if (file.path === 'commerce-pages.css') {
+      const css = file.content.includes('.commerce-catalog-title') ? file.content : file.content + CATALOG_STYLE;
+      return { ...file, content: css.trimStart().startsWith('@layer pagosya-commerce') ? css : `@layer pagosya-commerce {\n${css}\n}\n` };
+    }
     if (file.path === 'index.html' || !file.path.endsWith('.html') || file.encoding === 'base64') return file;
     // Also match productos.html/coleccion.html (data-catalog-full): they share product.html's
     // stock shell and must adopt the store's brand styles and a customized header/footer too.
@@ -34,6 +40,13 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[], tr
     };
     const rebase = (html: string) => html.replace(/\b(href|src)\s*=\s*(["'])(.*?)\2/gi, (_match, name, quote, url) => `${name}=${quote}${relative(url)}${quote}`);
     let content = file.content;
+    // Upgrade only the exact stock catalog anatomy. The cart remains available
+    // through its normal trigger/checkout; it should not dominate an empty catalog.
+    if (/data-catalog-full/.test(content) && content.includes(STOCK_CATALOG_ORDER)) {
+      content = content.replace(STOCK_CATALOG_ORDER, '<a class="commerce-catalog-return" href="index.html">Volver a la tienda</a><div data-pagosya-cart hidden></div>')
+        .replace('id="commerce-content" tabindex="-1"', 'id="commerce-content" class="commerce-catalog" tabindex="-1"')
+        .replace('class="commerce-page-title"', 'class="commerce-catalog-title"');
+    }
     let stockShell = false;
     for (const [name, shared] of [['header', homeHeader], ['footer', homeFooter]] as const) {
       const current = block(content, name), stock = block(template, name);

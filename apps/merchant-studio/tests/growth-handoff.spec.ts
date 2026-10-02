@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -11,13 +12,13 @@ async function mockApi(page: Page, sent: string[]) {
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname;
-    if (path.endsWith('/messages')) sent.push(path);
+    if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) sent.push(path);
     let body: unknown = {};
     if (path.endsWith('/stores')) body = [{ id: 's1', name: 'Casa Luz', slug: 'casa-luz' }];
     else if (path.endsWith('/source-project')) body = { revision: 0, versions: [], nextBefore: null };
     else if (path.endsWith('/conversation')) body = { messages: [], setup: { step: 'conversation', prompt: 'Cuéntame qué quieres crear.', options: [] } };
     else if (path.includes('fiscal') || path.includes('siat')) body = [];
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
 }
 async function host(page: Page, src: string, script: string) {

@@ -301,3 +301,30 @@ describe('adding the standard pages to a store that already exists', () => {
     expect(Reflect.getMetadata('path', handler)).toBe('standard-pages');
   });
 });
+
+
+describe('structural composition memory', () => {
+  const plan = { family:'catalog-led', rationale:'Private merchant positioning', pages:[{ page:'index.html', purpose:'shopping', rationale:'Private brand story', sections:[{id:'menu',intent:'Compare available products',layout:'product-grid',geometry:'grid',media:[],mobile:'grid',primaryAction:'Shop'}] }] };
+  const content = (composition: any = plan) => JSON.stringify({selected:1,concepts:['Market','Workshop','Object'].map(name=>({name,premise:'Private merchant product offering',opening:name+' opening',flow:name+' flow',typography:'Fraunces / Instrument Sans',imagery:'None',mobile:'Stack',layout:{sections:['menu'],catalogSection:'menu',standaloneIntro:false,productsInOpening:true},...(composition ? {composition} : {})}))});
+  it('returns only distinct structural digests and ignores absent/malformed legacy plans', async () => {
+    const {service,prisma} = setup();
+    const different = structuredClone(plan); different.pages[0].sections[0].geometry = 'split';
+    prisma.$queryRaw = jest.fn().mockResolvedValue([{content:content()},{content:content()},{content:content(different)},{content:content(null)},{content:'invalid JSON'}]);
+    const result = await service.recentCompositionFingerprints('s1');
+    expect(result).toHaveLength(2);
+    expect(result.every(item => /^[a-f0-9]{24}$/.test(item))).toBe(true);
+    expect(JSON.stringify(result)).not.toMatch(/Private|merchant|brand|Market/);
+  });
+  it('extracts only the bounded design file server-side rather than loading bundled images', async () => {
+    const {service,prisma} = setup(); prisma.$queryRaw=jest.fn().mockResolvedValue([]);
+    const now = new Date('2026-10-02T12:00:00Z');
+    expect(await service.recentCompositionFingerprints('s1',now)).toEqual([]);
+    const query=prisma.$queryRaw.mock.calls[0][0];
+    expect(query.text).toContain("f->>'content' AS content");
+    expect(query.text).toContain('jsonb_array_elements');
+    expect(query.text).toContain('LIMIT');
+    expect(query.text).toContain('v."storeId" <>');
+    expect(query.values).toEqual(expect.arrayContaining(['s1',new Date('2026-08-03T12:00:00Z'),40,'design-direction.json']));
+    expect(prisma.storeSourceVersion.findMany).not.toHaveBeenCalled();
+  });
+});

@@ -50,7 +50,7 @@ describe('composition selection', () => {
     expect(new Set(suggestions.map(s => s.hero)).size).toBe(3);
     expect(suggestions.every(s => s.family === 'beauty-editorial')).toBe(true);
     const firstDirections = new Set(Array.from({ length: 20 }, (_, seed) => sourceUiCompositions({ ...input, seed: String(seed) })[0].direction));
-    const reachable = SOURCE_COMPOSITION_FAMILIES.find(family => family.id === 'beauty-editorial')!.directions.filter(direction => direction.minImages <= 3).length;
+    const reachable = SOURCE_COMPOSITION_FAMILIES.find(family => family.id === 'beauty-editorial')!.directions.filter(direction => direction.minImages <= 3 && direction.scene !== 'before-after').length;
     expect(firstDirections.size).toBe(reachable);
   });
 
@@ -188,7 +188,7 @@ describe('grammar-aligned families', () => {
     expect(sourceUiCompositions(input)[0].family).not.toBe('brutalist-raw');
     expect(sourceUiCompositions({ ...input, grammar: 'brutalist' })[0].family).toBe('brutalist-raw');
     expect(sourceUiCompositions({ ...input, grammar: 'magazine' })[0].family).toBe('magazine-spread');
-    expect(sourceUiCompositions({ ...input, grammar: 'collage' }).every(s => s.family === 'collage-cutout')).toBe(true);
+    expect(sourceUiCompositions({ ...input, grammar: 'collage' })[0].family).toBe('collage-cutout');
     // An unknown grammar is ignored rather than trusted.
     expect(sourceUiCompositions({ ...input, grammar: 'nonsense' })).toEqual(sourceUiCompositions(input));
   });
@@ -219,4 +219,13 @@ describe('grammar-aligned families', () => {
       for (const name of named) expect(families).toContain(name);
     }
   });
+});
+
+it('never treats a large upload count as permission for a gallery, collage or comparison', () => {
+  for (let seed = 0; seed < 20; seed++) {
+    const choices = sourceUiCompositions({ seed: String(seed), brief: 'Furniture shop', assets: photos(12) });
+    expect(choices.some(c => ['gallery', 'floating-media', 'parallax-stack', 'before-after', 'video'].includes(c.scene!))).toBe(false);
+  }
+  const lookbook = Array.from({ length: 20 }, (_, seed) => sourceUiCompositions({ seed: String(seed), brief: 'Furniture lookbook', assets: photos(12) })).flat();
+  expect(lookbook.some(c => c.scene === 'gallery')).toBe(true);
 });

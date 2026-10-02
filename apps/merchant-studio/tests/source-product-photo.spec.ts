@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { expect, test, type Page } from '@playwright/test';
 
 async function boot(page: Page, failMessage = false) {
@@ -11,7 +12,7 @@ async function boot(page: Page, failMessage = false) {
     else if (path.endsWith('/conversation')) json = {messages,setup:{step:'conversation',prompt:'¿Qué vendes?',options:[]}};
     else if (path.endsWith('/estimate')) json = {model:'gpt-5.6-luna',maxCredits:50,estimate:{minCredits:4,maxCredits:12}};
     else if (path.endsWith('/uploads')) { uploads++; json={url:'/v1/uploads/abc.png'}; }
-    else if (path.endsWith('/messages')) {
+    else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       const body = route.request().postDataJSON(); sent.push(body);
       const userMessage = {id:`u${sent.length}`,role:'USER',content:body.instruction,metadata:{assetUrls:body.assetUrls}};
       messages.push(userMessage);
@@ -19,7 +20,7 @@ async function boot(page: Page, failMessage = false) {
       const assistantMessage={id:`a${sent.length}`,role:'ASSISTANT',content:'Foto recibida. Precio pendiente.'}; messages.push(assistantMessage);
       json={userMessage,assistantMessage,setup:null};
     }
-    await route.fulfill({json});
+    await route.fulfill({json:finishedChatJob(json)});
   });
   await page.goto('/?source=1');
   await expect(page.getByRole('button',{name:'Crear tienda desde una foto',exact:true})).toBeVisible();

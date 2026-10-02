@@ -21,7 +21,7 @@ export function renderInspiration(options: { busy: boolean; disabled: boolean; c
         <span class="inspiration-eyebrow">${options.busy ? 'YAPI ESTÁ CREANDO' : 'TU PRÓXIMA IDEA'}</span>
         <h1>Tu negocio, tu sitio.</h1>
         <p>${options.busy ? 'Tu diseño está tomando forma. Puedes seguir el proceso en la conversación.' : 'Cuéntale a YAPI qué quieres crear. Tu idea, tus fotos y tu marca darán forma al diseño.'}</p>
-        ${options.commerce === false ? '' : `<div class="source-empty-actions"><button type="button" class="button" data-open-templates ${options.disabled ? 'disabled' : ''}>Elegir una plantilla</button><button type="button" class="button button--secondary" data-start-photo ${options.disabled ? 'disabled' : ''}>Crear tienda desde una foto <span aria-hidden="true">↗</span></button></div>`}
+        ${options.commerce === false ? '' : `<div class="source-empty-actions"><button type="button" class="button" data-start-scratch ${options.disabled ? 'disabled' : ''}>Crear desde cero</button><button type="button" class="button" data-open-templates ${options.disabled ? 'disabled' : ''}>Elegir una plantilla</button><button type="button" class="button button--secondary" data-start-photo ${options.disabled ? 'disabled' : ''}>Crear tienda desde una foto <span aria-hidden="true">↗</span></button></div>`}
         <small>Tu sitio aparecerá aquí</small>
       </div>
       <div class="inspiration-stage">

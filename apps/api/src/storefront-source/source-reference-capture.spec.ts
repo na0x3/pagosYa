@@ -3,6 +3,7 @@ import { captureSourceReference, sourceReferenceRequestKind, SOURCE_REFERENCE_CS
 import { readSourceReferenceResource } from './source-website-fetch';
 jest.mock('playwright', () => ({ chromium: { launch: jest.fn() } }));
 jest.mock('./source-website-fetch', () => ({ readSourceReferenceResource: jest.fn() }));
+beforeEach(() => jest.clearAllMocks());
 
 it.each([
   ['POST', 'document', 'https://example.com/'], ['GET', 'document', 'https://other.example.com/'],
@@ -22,14 +23,14 @@ it('only allows the initial main document and typed HTTPS render resources', () 
   expect(SOURCE_REFERENCE_CSP).toContain("frame-src 'none'");
 });
 
-it('captures labeled pixels via pinned fulfillment with blocked browser transport and no inherited secrets', async () => {
+it.each([0, 1])('captures only complete pixels through pinned fulfillment (missing=%s)', async missingImages => {
   jest.mocked(readSourceReferenceResource).mockResolvedValue({ url: 'https://example.com/', contentType: 'text/html', body: Buffer.from('<h1>Example</h1>') });
   let handler: any;
   const fulfilled = jest.fn().mockResolvedValue(undefined), aborted = jest.fn().mockResolvedValue(undefined);
-  const page: any = { on: jest.fn(), setViewportSize: jest.fn(), close: jest.fn(), screenshot: jest.fn().mockResolvedValue(Buffer.from('pixels')) };
+  const page: any = { on: jest.fn(), setViewportSize: jest.fn(), close: jest.fn(), waitForSelector: jest.fn().mockResolvedValue(undefined), screenshot: jest.fn().mockResolvedValue(Buffer.from('pixels')) };
   const frame: any = { page: () => page }; page.mainFrame = () => frame;
-  page.evaluate = jest.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(900).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ y: 0, missingImages: 0 }).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ y: 56, missingImages: 0 })
-    .mockResolvedValueOnce(undefined).mockResolvedValueOnce(844).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ y: 0, missingImages: 0 });
+  page.evaluate = jest.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(900).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ y: 0, missingImages }).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ y: 56, missingImages: 0 })
+    .mockResolvedValueOnce(undefined).mockResolvedValueOnce(844).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ y: 0, missingImages });
   page.goto = jest.fn(async () => {
     for (const [type, url] of [['document', 'https://example.com/'], ['fetch', 'https://example.com/private'], ['image', 'https://127.0.0.1/secret']]) {
       await handler({ request: () => ({ method: () => 'GET', resourceType: () => type, url: () => url, frame: () => frame }), fulfill: fulfilled, abort: aborted });
@@ -41,9 +42,11 @@ it('captures labeled pixels via pinned fulfillment with blocked browser transpor
   jest.mocked(chromium.launch).mockResolvedValue(browser as any);
   const result = await captureSourceReference('https://example.com');
   expect(result.status).toBe('captured');
-  expect(result.captures.map(c => [c.viewport, c.y])).toEqual([['desktop', 0], ['desktop', 56], ['mobile', 0]]);
+  expect(result.captures.map(c => [c.viewport, c.y])).toEqual(missingImages ? [['desktop', 56]] : [['desktop', 0], ['desktop', 56], ['mobile', 0]]);
+  if (missingImages) expect(result.limitations.some(line => line.includes('omitted incomplete capture'))).toBe(true);
   expect(result.captures[0].image).toBe('data:image/jpeg;base64,cGl4ZWxz');
-  expect(readSourceReferenceResource).toHaveBeenCalledTimes(2);
+  // The second viewport reuses the bounded, DNS-pinned response.
+  expect(readSourceReferenceResource).toHaveBeenCalledTimes(1);
   expect(aborted).toHaveBeenCalledTimes(4);
   expect(fulfilled.mock.calls[0][0].headers['Content-Security-Policy']).toBe(SOURCE_REFERENCE_CSP);
   const launch = jest.mocked(chromium.launch).mock.calls[0][0]!;

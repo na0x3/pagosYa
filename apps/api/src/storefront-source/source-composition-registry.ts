@@ -163,6 +163,15 @@ export function sourceUiCompositions(input: SourceCompositionInput = {}): Source
   const primary = ranked[0].family;
   const candidates = ranked.flatMap(({ family }, rank) => family.directions
     .filter(direction => direction.minImages <= imageCount)
+    // Counts establish feasibility only. A scene with multiple decorative photos
+    // needs a thematic job; additional uploads never create that job.
+    .filter(direction => {
+      if (direction.scene === 'gallery') return /lookbook|editorial collection|collection story|gallery|galeria|archivo|archive|vintage/.test(text);
+      if (['floating-media', 'parallax-stack'].includes(direction.scene ?? '')) return input.grammar === 'collage' || /collage|cutout|recortes|parallax|floating/.test(text);
+      if (direction.scene === 'before-after') return /before.after|antes.y.despues|comparison pair/.test(text);
+      if (direction.scene === 'video') return (input.assets ?? []).some(asset => asset.kind === 'video' && !['reference', 'unused'].includes(asset.role ?? ''));
+      return true;
+    })
     .map(direction => ({ family, direction, rank, order: hash(`${seed}|${family.id}|${direction.direction}`) })))
     .sort((a, b) => a.rank - b.rank || a.order - b.order).slice(0, 3);
   return candidates.map(({ family, direction }) => {
@@ -176,7 +185,7 @@ export function sourceUiCompositions(input: SourceCompositionInput = {}): Source
   });
 }
 
-export const SOURCE_COMPOSITION_PLANNING = 'Composition candidates are independent starting directions with asset requirements and mobile plans, not a mandatory template. Develop each concept from a different candidate or an explicitly explained custom composition. Merchant instructions, confirmed typography/colors and actual image roles override every candidate. Never force the suggested fonts, sections or effect when they conflict. Borrow visual structure from an owned reference, never its fictional copy, prices or product facts. Keep catalog and purchase controls complete for large catalogs; omit unsupported story sections. A concept may depart from all families when the brief warrants it. Keep all unrelated composition and tokens on later local edits.';
+export const SOURCE_COMPOSITION_PLANNING = 'Composition candidates are independent starting directions with asset requirements and mobile plans, not a mandatory template. Develop each concept from a different candidate or an explicitly explained custom composition. Merchant instructions, confirmed typography/colors and actual image roles override every candidate. Never force the suggested fonts, sections or effect when they conflict. Borrow visual structure from an owned reference, never its fictional copy, prices or product facts. Keep catalog and purchase controls complete for large catalogs; omit unsupported story sections. Product grids, category discovery, useful comparisons and thematic editorial collections are valid. Image quantity establishes feasibility, never a reason for a collage or extra gallery. References such as craft denim, outdoor apparel, travel goods and fashion campaigns teach different buying journeys: choose from product facts and theme, never clone brand claims. A concept may depart from all families when the brief warrants it. Keep all unrelated composition and tokens on later local edits.';
 
 /**
  * What each scene is, as code the model can copy.

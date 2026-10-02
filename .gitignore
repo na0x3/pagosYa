@@ -5,6 +5,7 @@ build/
 !apps/matcho-showcase/build/
 .env
 .env.local
+.yapi-chatgpt/
 *.log
 .pgdata/
 apps/api/uploads/
@@ -53,3 +54,5 @@ examples/premium-benchmark-photos/*
 !examples/premium-benchmark-photos/*/
 examples/premium-benchmark-photos/*/*
 !examples/premium-benchmark-photos/*/scene-*.jpg
+
+.yapi-evaluation/

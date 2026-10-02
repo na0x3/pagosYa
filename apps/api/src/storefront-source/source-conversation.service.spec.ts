@@ -98,7 +98,7 @@ describe('Source conversation interpretation', () => {
   it('sends the existing site inventory even when there are no new attachments', async () => {
     const { service } = setup();
     respond({ ...reply(), imageUses: [] });
-    const site = { pages: [{ path: 'index.html', title: 'QUEMADO', headings: ['Tortas'] }], bundledAssets: [{ path: 'assets/cake.webp', references: ['index.html'] }], visualAssets: [], motion: 'subtle' as const };
+    const site = { pageCapabilities: [], pages: [{ path: 'index.html', title: 'QUEMADO', headings: ['Tortas'] }], bundledAssets: [{ path: 'assets/cake.webp', references: ['index.html'] }], visualAssets: [], motion: 'subtle' as const };
     await service.decide('merchant', { ...input(), assetUrls: [], site });
     const context = JSON.parse(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content[2].text);
     expect(context.existingSite).toEqual(site);
@@ -345,4 +345,12 @@ it('inspects the owned photo and explicitly delegates a draft without fabricated
   expect(body.input[0].content.some((part:any)=>part.type==='input_image')).toBe(true);
   expect(body.instructions).toContain('Do not ask the two discovery questions');
   expect(body.instructions).toContain('No invented prices, stock');
+});
+
+it('stops on a ChatGPT authorization outage and preserves its safe diagnostic', async () => {
+  const { service, config } = setup();
+  config.get.mockImplementation((key:string)=>key==='app.chatgptPlan'?{url:'http://127.0.0.1:1234/v1/responses',secret:'local-test'}:key==='app.environment'?'development':key==='app.openAi.apiKey'?'unused':key==='app.openAi.enabled'?true:'gpt-5.6-sol');
+  fetchMock.mockResolvedValue({ok:false,status:503,headers:new Headers(),json:async()=>({error:{code:'chatgpt_authentication_unavailable',upstreamStatus:500,message:'private upstream details'}})});
+  await expect(service.decide('merchant',input())).rejects.toMatchObject({diagnostic:{code:'provider_http',providerCode:'chatgpt_authentication_unavailable',upstreamStatus:500}});
+  expect(fetchMock).toHaveBeenCalledTimes(1);
 });

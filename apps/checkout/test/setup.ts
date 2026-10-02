@@ -61,3 +61,14 @@ Object.defineProperty(window.HTMLMediaElement.prototype, "pause", {
   writable: true,
   value: () => {},
 });
+
+// jsdom has no matchMedia. Keep a real function available for viewport-specific spies.
+Object.defineProperty(window, 'matchMedia', {
+  configurable: true,
+  writable: true,
+  value: (media: string): MediaQueryList => ({
+    matches: false, media, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {},
+    dispatchEvent() { return true; },
+  }),
+});

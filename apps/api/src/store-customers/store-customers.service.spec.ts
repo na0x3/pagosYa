@@ -32,6 +32,7 @@ function setup(extra: { orders?: any[]; subscriptions?: any[] } = {}) {
     storeOrder: { findMany: jest.fn(async ({ where, take }: any) => (extra.orders ?? []).filter(o => o.storeId === where.storeId && String(o.paymentIntent?.customerEmail).toLowerCase() === where.paymentIntent.customerEmail.equals.toLowerCase()).sort((a, b) => b.createdAt - a.createdAt).slice(0, take ?? 1000)) },
     customerSubscription: { findMany: jest.fn(async ({ where }: any) => (extra.subscriptions ?? []).filter(s => s.storeId === where.storeId && String(s.customerEmail).toLowerCase() === where.customerEmail.equals.toLowerCase())) },
   };
+  prisma.$transaction = jest.fn(async (work: any) => work(prisma));
   const mail: any = { send: jest.fn(async () => undefined) };
   const config: any = { get: jest.fn((key: string) => (key === 'app.checkoutOrigin' ? 'https://pay.example' : undefined)) };
   const service = new StoreCustomersService(prisma, config, mail);
@@ -75,14 +76,17 @@ describe('StoreCustomersService', () => {
       await expect(ctx.service.login('cafe', 'ana@example.com', 'another password')).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('sends a fresh link for an email that registered but never verified, without a second account or a new password', async () => {
+    it('sends a fresh link for an email that registered but never verified, without preserving credentials from an earlier unverified registration', async () => {
       const ctx = setup();
       await ctx.service.register('cafe', { name: 'Ana', email: 'ana@example.com', password: PASSWORD });
+      const oldLink = ctx.tokenFromMail();
       await ctx.service.register('cafe', { name: 'Ana', email: 'ana@example.com', password: 'someone else' });
       expect(ctx.customers).toHaveLength(1);
       expect(ctx.mail.send).toHaveBeenCalledTimes(2);
+      await expect(ctx.service.verifyEmail('cafe', oldLink)).rejects.toBeInstanceOf(BadRequestException);
       await ctx.service.verifyEmail('cafe', ctx.tokenFromMail());
-      await expect(ctx.service.login('cafe', 'ana@example.com', PASSWORD)).resolves.toMatchObject({ token: expect.any(String) });
+      await expect(ctx.service.login('cafe', 'ana@example.com', PASSWORD)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(ctx.service.login('cafe', 'ana@example.com', 'someone else')).resolves.toMatchObject({ token: expect.any(String) });
     });
 
     it('rejects a weak or oversized password and an invalid email before anything is stored', async () => {
@@ -121,6 +125,15 @@ describe('StoreCustomersService', () => {
       await expect(ctx.service.login('cafe', 'ana@example.com', 'wrong password')).rejects.toThrow('Correo o contraseña incorrectos');
       await expect(ctx.service.login('cafe', 'ana@example.com', PASSWORD)).rejects.toThrow('Confirma tu correo');
       await expect(ctx.service.login('cafe', 'ghost@example.com', PASSWORD)).rejects.toThrow('Correo o contraseña incorrectos');
+    });
+
+    it('never accepts a correct 128-character password followed by extra characters', async () => {
+      const ctx = setup(), password = 'x'.repeat(128);
+      await ctx.service.register('cafe', { name: 'Ana', email: 'ana@example.com', password });
+      await ctx.service.verifyEmail('cafe', ctx.tokenFromMail());
+      const session = await ctx.service.login('cafe', 'ana@example.com', password);
+      await expect(ctx.service.login('cafe', 'ana@example.com', password + 'extra')).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(ctx.service.deleteAccount(session.customer, password + 'extra')).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
     it('issues a token stored only as a digest, and authenticates with it in its own store only', async () => {
@@ -215,6 +228,14 @@ describe('StoreCustomersService', () => {
       expect(saved.every((a: any) => typeof a.id === 'string' && a.id.length > 5)).toBe(true);
       await expect(ctx.service.replaceAddresses(me, Array.from({ length: 11 }, (_, i) => address(i)))).rejects.toBeInstanceOf(BadRequestException);
       await expect(ctx.service.replaceAddresses(me, [{ ...address(1), street: 'x'.repeat(300) }])).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects incomplete addresses, invalid phones and duplicate identifiers', async () => {
+      const ctx = setup(), session = await account(ctx);
+      const valid = { id: 'address-1', recipient: 'Ana', department: 'La Paz', city: 'La Paz', street: 'Av. 6', phone: '+59170000000' };
+      for (const list of [[{}], [{ ...valid, street: ' ' }], [{ ...valid, phone: 'bad' }], [valid, valid]]) {
+        await expect(ctx.service.replaceAddresses(session.customer, list)).rejects.toBeInstanceOf(BadRequestException);
+      }
     });
 
     it('lists only this store\'s orders for the verified email, newest first, and none for an unverified one', async () => {

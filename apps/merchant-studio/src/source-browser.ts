@@ -1,3 +1,4 @@
+import { mountSourceAccountPreview } from './source-account-preview';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
 import { sourcePreviewDocument, receivePreviewNavigation, createPreviewImageLoader, type SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml } from './studio-ui';
@@ -25,12 +26,17 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     const hydrated = await createPreviewImageLoader(API_BASE_URL)(snapshot);
     let cart = [];
     try { cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch { /* Start with an empty preview cart. */ }
-    const html = sourcePreviewDocument(hydrated, page, { query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true });
+    const html = sourcePreviewDocument(hydrated, page, { query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true });
     document.title = title;
     app.innerHTML = '<iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>';
     const frame = app.querySelector('iframe')!;
     bindSourcePaymentPreview(() => frame, () => hydrated);
     frame.srcdoc = html;
+    mountSourceAccountPreview(frame, hydrated, nextPage => {
+      if (!hydrated.files.some(file => file.path === nextPage)) return;
+      frame.srcdoc = sourcePreviewDocument(hydrated, nextPage, {paymentForm:true,accountForms:true});
+      const destination = new URL(location.href); destination.searchParams.set('page',nextPage); history.replaceState(null,'',destination.href);
+    });
     const controller = new AbortController();
     window.addEventListener('pagehide', () => controller.abort(), { once: true });
     window.addEventListener('message', event => {
@@ -43,7 +49,7 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
         const tab = window.open(destination.href, '_blank');
         if (tab) { tab.opener = null; return; }
       }
-      frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, paymentForm: true });
+      frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, paymentForm: true, accountForms: true });
       history.replaceState(null, '', destination.href);
     }, { signal: controller.signal });
   } catch (error) {

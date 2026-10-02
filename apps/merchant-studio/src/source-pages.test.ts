@@ -53,6 +53,20 @@ describe('openPagesPanel', () => {
     expect(document.querySelector('dialog')).toBeNull();
   });
 
+  it('prepares an independent page request with working mobile navigation without submitting it', async () => {
+    const onAsk = vi.fn(), add = api();
+    await openPagesPanel(add, 's1', version(), { onAsk, onAdded: vi.fn() });
+    const form = document.querySelector<HTMLFormElement>('[data-new-page]')!;
+    form.querySelector<HTMLInputElement>('input')!.value = 'Servicios';
+    form.querySelector<HTMLTextAreaElement>('textarea')!.value = 'Un listado de servicios y precios';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(onAsk).toHaveBeenCalledWith(expect.stringContaining('página independiente llamada "Servicios"'));
+    expect(onAsk.mock.calls[0][0]).toContain('escritorio y celular');
+    expect(onAsk.mock.calls[0][0]).toContain('servicios y precios');
+    expect((add as any).addStandardPages).not.toHaveBeenCalled();
+    expect(document.querySelector('dialog')).toBeNull();
+  });
+
   it('offers to add the standard pages and reloads the studio when they were added', async () => {
     const add = api();
     const onAdded = vi.fn();

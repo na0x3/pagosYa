@@ -9,3 +9,8 @@ it('refuses empty or missing products before starting a paid visual review', () 
   expect(() => sourceVisualState(snapshot, 'product.html', 'missing')).toThrow('producto real');
   expect(() => sourceVisualState({ ...snapshot, files: snapshot.files.slice(0, 1) }, 'product.html')).toThrow('producto real');
 });
+it('lets agent layout checks inspect an empty state without faking a purchasable product', () => {
+  const empty = { ...snapshot, files: snapshot.files.slice(0, 1) };
+  expect(sourceVisualState(empty, 'product.html', undefined, true)).toEqual({ query: '' });
+  expect(() => sourceVisualState(empty, 'product.html', 'invented', true)).toThrow('producto real');
+});

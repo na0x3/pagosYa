@@ -1,5 +1,43 @@
 import configuration from "./configuration";
 
+describe('local ChatGPT plan configuration', () => {
+  const keys = ['NODE_ENV', 'YAPI_CHATGPT_PLAN_URL', 'YAPI_CHATGPT_PLAN_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY'];
+  let original: Record<string, string | undefined>;
+  beforeEach(() => {
+    original = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+    Object.assign(process.env, { NODE_ENV: 'development', YAPI_CHATGPT_PLAN_URL: 'http://127.0.0.1:54321/v1/responses', YAPI_CHATGPT_PLAN_SECRET: 'test-local-secret', OPENAI_API_KEY: 'paid-openai', ANTHROPIC_API_KEY: 'paid-claude', DEEPSEEK_API_KEY: 'paid-deepseek' });
+  });
+  afterEach(() => {
+    for (const key of keys) { if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key]; }
+  });
+  it('removes all paid AI credentials from app configuration while preserving the original environment', () => {
+    const { app } = configuration();
+    expect(app.openAi.apiKey).toBe('');
+    expect(app.anthropic.apiKey).toBe('');
+    expect(app.deepSeek.apiKey).toBe('');
+    expect(app.deepSeek.enabled).toBe(false);
+    expect(app.chatgptPlan?.secret).toBe('test-local-secret');
+    expect(process.env.OPENAI_API_KEY).toBe('paid-openai');
+  });
+  it('rejects a production launch, remote bridge, and missing local credential', () => {
+    process.env.NODE_ENV = 'production';
+    expect(configuration).toThrow('local development launcher');
+    process.env.NODE_ENV = 'development';
+    process.env.YAPI_CHATGPT_PLAN_URL = 'https://remote.example/v1/responses';
+    expect(configuration).toThrow('local development launcher');
+    process.env.YAPI_CHATGPT_PLAN_URL = 'http://127.0.0.1:54321/v1/responses';
+    delete process.env.YAPI_CHATGPT_PLAN_SECRET;
+    expect(configuration).toThrow('local development launcher');
+  });
+  it('keeps normal API mode unchanged when the local bridge is absent', () => {
+    delete process.env.YAPI_CHATGPT_PLAN_URL;
+    const { app } = configuration();
+    expect(app.openAi.apiKey).toBe('paid-openai');
+    expect(app.anthropic.apiKey).toBe('paid-claude');
+    expect(app.chatgptPlan).toBeUndefined();
+  });
+});
+
 const SECURITY_ENV_KEYS = [
   "NODE_ENV",
   "DATABASE_URL",
@@ -16,6 +54,7 @@ const SECURITY_ENV_KEYS = [
   "DOCUMENT_LINK_SECRET",
   "ANALYTICS_SESSION_SECRET",
   "OPERATIONS_ENCRYPTION_KEY",
+  "EXTENSIONS_ENCRYPTION_KEY",
   "PAGOSYA_WEB_ORIGIN",
   "ADDITIONAL_CORS_ORIGINS",
   "BANECO_QR_ENABLED",
@@ -43,6 +82,7 @@ function setStrongProductionEnv() {
   process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
   process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
   process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+  process.env.EXTENSIONS_ENCRYPTION_KEY = "extensions_" + "g".repeat(48);
   process.env.DOCUMENT_LINK_SECRET = "documents_" + "e".repeat(48);
   process.env.ANALYTICS_SESSION_SECRET = "analytics_" + "f".repeat(48);
   process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
@@ -99,6 +139,7 @@ describe("production security configuration", () => {
     process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
     process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
     process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+    process.env.EXTENSIONS_ENCRYPTION_KEY = "extensions_" + "g".repeat(48);
     process.env.DOCUMENT_LINK_SECRET = "documents_" + "e".repeat(48);
     process.env.ANALYTICS_SESSION_SECRET = "analytics_" + "f".repeat(48);
     process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
@@ -214,11 +255,13 @@ describe("Anthropic", () => {
 describe("YAPI engine", () => {
   const saved = { engine: process.env.YAPI_ENGINE, env: process.env.NODE_ENV };
   afterEach(() => { for (const [key, value] of [["YAPI_ENGINE", saved.engine], ["NODE_ENV", saved.env]] as const) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
-  it("uses the agent in development and the single call elsewhere unless YAPI_ENGINE says otherwise", () => {
+  it("uses the same agent engine in every environment unless explicitly overridden", () => {
     delete process.env.YAPI_ENGINE;
     process.env.NODE_ENV = "development";
     expect(configuration().app.yapiEngine).toBe("agent");
     process.env.NODE_ENV = "test";
+    expect(configuration().app.yapiEngine).toBe("agent");
+    process.env.YAPI_ENGINE = "single";
     expect(configuration().app.yapiEngine).toBe("single");
     process.env.YAPI_ENGINE = "agent";
     expect(configuration().app.yapiEngine).toBe("agent");

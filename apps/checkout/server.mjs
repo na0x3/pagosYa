@@ -1,3 +1,4 @@
+import { protectAccountResponse } from './account-security.mjs';
 import { createStorefrontSeo } from './storefront-seo.mjs';
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
@@ -44,6 +45,7 @@ const server = createServer(async (request, response) => {
   // Delivery checkout may request location only after the buyer presses the
   // explicit consent button. Every other browser capability remains denied.
   applySecurityHeaders(response, { allowEmbedding: true, allowGeolocation: true, storefront: true });
+  protectAccountResponse(new URL(request.url ?? '/', 'http://localhost').pathname, response);
   let continueRequest = false;
   await seo(request, response, () => { continueRequest = true; });
   if (!continueRequest) return;

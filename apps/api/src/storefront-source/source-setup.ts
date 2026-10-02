@@ -16,6 +16,8 @@ export type SourceSetupDraft = {
   startFrom?: 'template' | 'scratch';
   /** The design direction chosen for a from-scratch build (sub-project 2), reused if that build is retried. */
   directionId?: string;
+  directionOrigin?: 'merchant';
+  designReady?: boolean;
 };
 export const newSourceSetup = (): SourceSetupDraft => ({ step: 'conversation', answers: {}, assetUrls: [], imageUses: [] });
 

@@ -1,0 +1,38 @@
+[
+  {
+    "id":"heading",
+    "instruction":"Cambia solamente el título principal de Inicio por ‘Alimento para perros en Bolivia’. Conserva el resto del diseño.",
+    "requirements":[{"id":"r1","description":"Título solicitado","page":"index.html","check":"text","selector":"h1","expected":"Alimento para perros en Bolivia"}]
+  },
+  {
+    "id":"login",
+    "instruction":"En la página Ingresar, cambia el color del botón real del formulario de cuenta a #285a43 y su radio a 12px. Conserva los campos y enlaces de registro y recuperación.",
+    "requirements":[
+      {"id":"r1","description":"Botón real verde","page":"acceso-ingresar.html","check":"style","selector":"form[data-form=login] button[type=submit]","expected":"background-color:rgb(40, 90, 67)"},
+      {"id":"r2","description":"Radio del botón real","page":"acceso-ingresar.html","check":"style","selector":"form[data-form=login] button[type=submit]","expected":"border-radius:12px"}
+    ]
+  },
+  {
+    "id":"multipage",
+    "instruction":"Quiero páginas independientes Servicios y Galería, no más secciones hacia abajo en Inicio. Crea servicios.html con título Servicios y el texto ‘Conoce nuestra selección’. Crea galeria.html con título Galería y una foto real existente de la tienda. Añade ambas al menú compartido, conserva Inicio, y asegúrate de que se puedan abrir en celular.",
+    "requirements":[
+      {"id":"r1","description":"Menú abre Servicios","page":"index.html","check":"navigation","selector":"header a[href='servicios.html']","expected":"servicios.html"},
+      {"id":"r2","description":"Menú abre Galería","page":"index.html","check":"navigation","selector":"header a[href='galeria.html']","expected":"galeria.html"},
+      {"id":"r3","description":"Página Servicios","page":"servicios.html","check":"text","selector":"h1","expected":"Servicios"},
+      {"id":"r4","description":"Página Galería","page":"galeria.html","check":"text","selector":"h1","expected":"Galería"}
+    ]
+  },
+  {
+    "id":"dogfood",
+    "instruction":"Adapta Inicio a una tienda que trae comida para perros a Bolivia. Usa el título ‘Alimento para perros en Bolivia’, añade secciones ‘Nuestra selección’ y ‘Para tu compañero’, usa una paleta cálida naranja y coloca visiblemente las cuatro fotos locales assets/image-a5b618995d92.jpg, assets/image-7f80781682e6.webp, assets/image-16a9f860054d.jpg y assets/image-6464b0c37f06.webp. No inventes precios, entregas ni certificaciones; conserva el catálogo real y el funcionamiento de compra.",
+    "requirements":[
+      {"id":"r1","description":"Negocio solicitado","page":"index.html","check":"text","selector":"h1","expected":"Alimento para perros en Bolivia"},
+      {"id":"r2","description":"Primera sección","page":"index.html","check":"text","selector":"h2","expected":"Nuestra selección"},
+      {"id":"r3","description":"Segunda sección","page":"index.html","check":"text","selector":"h2","expected":"Para tu compañero"},
+      {"id":"r4","description":"Foto uno","page":"index.html","check":"image","selector":"img","expected":"assets/image-a5b618995d92.jpg"},
+      {"id":"r5","description":"Foto dos","page":"index.html","check":"image","selector":"img","expected":"assets/image-7f80781682e6.webp"},
+      {"id":"r6","description":"Foto tres","page":"index.html","check":"image","selector":"img","expected":"assets/image-16a9f860054d.jpg"},
+      {"id":"r7","description":"Foto cuatro","page":"index.html","check":"image","selector":"img","expected":"assets/image-6464b0c37f06.webp"}
+    ]
+  }
+]

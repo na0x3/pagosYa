@@ -66,6 +66,9 @@ function start(name, args, extraEnv = {}) {
 
 async function startOrReuse(name, port, args, extraEnv = {}) {
   if (await portIsOpen(port)) {
+    if (name === 'API' && process.env.YAPI_CHATGPT_PLAN_URL) {
+      throw new Error('ChatGPT plan mode cannot reuse an existing API. Stop the process on port 3001 and retry pnpm dev:chatgpt.');
+    }
     console.log(`${name} already available on http://localhost:${port}; reusing it.`);
     return false;
   }
@@ -91,6 +94,18 @@ function shutdown(code = 0) {
   process.exit(code);
 }
 
+// A killed bridge must not leave an API advertising a disconnected ChatGPT mode.
+if (process.env.YAPI_CHATGPT_PLAN_URL) {
+  const bridge = new URL(process.env.YAPI_CHATGPT_PLAN_URL);
+  const watchBridge = setInterval(async () => {
+    if (!shuttingDown && !(await portIsOpen(Number(bridge.port), bridge.hostname))) {
+      console.error('ChatGPT bridge stopped. Restart with pnpm dev:chatgpt --skip-setup.');
+      shutdown(1);
+    }
+  }, 5000);
+  watchBridge.unref();
+}
+
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
@@ -99,8 +114,11 @@ if (!(await portIsOpen(54329))) {
   await waitForPort(54329);
 }
 
-runOnce(["--filter", "@pagosya/api", "exec", "prisma", "migrate", "deploy"]);
-runOnce(["--filter", "@pagosya/shared-types", "run", "build"]);
+// A restart can reuse the already prepared database and shared types.
+if (!process.argv.includes('--skip-setup')) {
+  runOnce(["--filter", "@pagosya/api", "exec", "prisma", "migrate", "deploy"]);
+  runOnce(["--filter", "@pagosya/shared-types", "run", "build"]);
+}
 
 start("shared types", ["--filter", "@pagosya/shared-types", "run", "dev"]);
 await startOrReuse("API", 3001, ["--filter", "@pagosya/api", "run", "start:dev"], {

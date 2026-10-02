@@ -21,12 +21,20 @@ export class AgentWorkspace {
     return file.content;
   }
   edit(path: string, search: string, replacement: string): AgentEditResult {
+    return this.editBatch(path, [{ search, replacement }]);
+  }
+  /** Apply exact replacements in order, committing only when every search is unique. */
+  editBatch(path: string, edits: Array<{ search: string; replacement: string }>): AgentEditResult {
     if (!this.writable(path) || !this.map.has(path)) return { ok: false, reason: 'path', message: `No existe un archivo editable ${path}.` };
-    const content = this.map.get(path)!.content;
-    const start = search ? content.indexOf(search) : -1;
-    if (start < 0) return { ok: false, reason: 'missing', message: `El texto a reemplazar no está en ${path}. Cópialo exacto del archivo actual.`, excerpt: content.slice(0, 1500) };
-    if (content.indexOf(search, start + 1) !== -1) return { ok: false, reason: 'ambiguous', message: `El texto a reemplazar aparece más de una vez en ${path}; usa un fragmento único.`, excerpt: content.slice(0, 1500) };
-    this.set(path, content.slice(0, start) + replacement + content.slice(start + search.length));
+    const original = this.map.get(path)!.content;
+    let content = original;
+    for (const { search, replacement } of edits) {
+      const start = search ? content.indexOf(search) : -1;
+      if (start < 0) return { ok: false, reason: 'missing', message: `El texto a reemplazar no está en ${path}. Cópialo exacto del archivo actual.`, excerpt: original.slice(0, 1500) };
+      if (content.indexOf(search, start + 1) !== -1) return { ok: false, reason: 'ambiguous', message: `El texto a reemplazar aparece más de una vez en ${path}; usa un fragmento único.`, excerpt: original.slice(0, 1500) };
+      content = content.slice(0, start) + replacement + content.slice(start + search.length);
+    }
+    this.set(path, content);
     return { ok: true };
   }
   write(path: string, content: string): AgentEditResult {
@@ -39,6 +47,10 @@ export class AgentWorkspace {
     return { ok: true };
   }
   files() { return [...this.map.values()].map(file => ({ ...file })); }
+  /** Restore a server-owned checkpoint; normal compile, scope and acceptance checks still apply. */
+  restore(files: SourceProjectFileDto[]) {
+    for (const file of files) if (this.writable(file.path) && this.map.get(file.path)?.content !== file.content) this.set(file.path, file.content);
+  }
   changedPaths() { return [...this.changed]; }
   private writable(path: string) { return nextSourceFile(path) && !AGENT_READ_ONLY.includes(path); }
   private set(path: string, content: string) {

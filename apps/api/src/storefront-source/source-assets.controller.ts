@@ -1,3 +1,4 @@
+import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
 import { BadRequestException, Body, ConflictException, Controller, Get, Header, Param, Patch, Post, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { IsArray, ArrayMaxSize, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -28,7 +29,7 @@ class VisualReviewDto extends SourceProjectRevisionDto {
   @IsOptional() @IsInt() @Min(1) @Max(20) maxCredits?: number;
 }
 
-@UseGuards(MerchantAuthGuard)
+@UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller('v1/stores/:storeId/source-project')
 export class SourceAssetsController {
   constructor(private readonly projects: SourceProjectsService, private readonly review: SourceVisualReviewService) {}
@@ -40,6 +41,8 @@ export class SourceAssetsController {
     return { revision, assets: sourceAssetInventory((saved.snapshot as unknown as SourceProjectSnapshot).files), icons, iconLibrary: 'Lucide 1.31.0' };
   }
   @Patch('assets')
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   async roles(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: AssetRolesDto) {
     const current = await this.projects.current(merchant.id, storeId);
     if (current.revision !== input.revision) throw new ConflictException('El sitio cambió. Actualiza antes de guardar los usos.');

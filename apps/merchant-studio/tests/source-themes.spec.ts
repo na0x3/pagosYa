@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { test, expect } from '@playwright/test';
 
 for (const existing of [false, true]) test(`freeform design without presets (${existing ? 'existing' : 'new'} site)`, async ({ page }) => {
@@ -18,13 +19,13 @@ for (const existing of [false, true]) test(`freeform design without presets (${e
     else if (path.endsWith('/conversation')) body = { messages };
     else if (path.endsWith('/catalog')) body = { items: [] };
     else if (path.endsWith('/estimate')) body = { estimate: { minCredits: 4, maxCredits: 10 } };
-    else if (path.endsWith('/messages')) {
+    else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       const input = route.request().postDataJSON(); requests.push(input);
       const userMessage = { id: 'u' + requests.length, role: 'USER', content: input.instruction };
       const assistantMessage = { id: 'a' + requests.length, role: 'ASSISTANT', content: 'Pedido recibido.' };
       messages.push(userMessage, assistantMessage); body = { userMessage, assistantMessage };
     }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await expect(page.getByRole('button', { name: 'Temas', exact: true })).toHaveCount(0);

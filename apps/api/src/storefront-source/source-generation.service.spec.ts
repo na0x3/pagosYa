@@ -27,6 +27,7 @@ const design = (): designModule.SourceDesign => ({ selected: 0, concepts: ['Menu
   imagery: 'No photos supplied',
   mobile: 'Reflow around the menu',
   layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true, productPage: 'editorial' },
+  composition: { family: 'menu-led', rationale: 'Let neighbors compare the actual menu.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Browse and order from the cafe.', sections: [{ id: 'menu', intent: 'Choose from the live menu', layout: 'product-grid', geometry: name === 'Menu' ? 'contained' : name === 'Poster' ? 'fullbleed' : 'rail', media: [], mobile: 'stack', primaryAction: 'Ver menú' }] }] },
   story: {
     promise: `${name} hecho para el barrio`,
     eyebrow: 'Hecho cerca',
@@ -67,7 +68,7 @@ describe('targeted visual edit scope', () => {
 function setup(framework = 'static') {
   const prisma:any={storeRetention:{findUnique:jest.fn().mockResolvedValue(null)},storeSourceGeneration:{create:jest.fn().mockResolvedValue({id:'run-1'}),updateMany:jest.fn().mockResolvedValue({count:1}),findMany:jest.fn().mockResolvedValue([])},store:{findFirst:jest.fn().mockResolvedValue({slug:'cafe'})},mediaAsset:{findMany:jest.fn().mockResolvedValue([])}};
   const stores:any={getStorePublic:jest.fn().mockResolvedValue({storeName:'Café',checkoutMode:'PAYMENT',items:[],categories:[],locations:[]})};
-  const projects:any={current:jest.fn().mockResolvedValue({revision:0,slug:"cafe"}),save:jest.fn().mockImplementation(async(_m,_s,value)=>({revision:1,snapshot:sourceProjectSnapshot(value)})),version:jest.fn()};
+  const projects:any={prepare:jest.fn(async value=>sourceProjectSnapshot(value)),current:jest.fn().mockResolvedValue({revision:0,slug:"cafe"}),save:jest.fn().mockImplementation(async(_m,_s,value)=>({revision:1,snapshot:sourceProjectSnapshot(value)})),version:jest.fn()};
   const config:any={get:jest.fn((key:string)=>({'app.openAi.apiKey':'test-server-key','app.openAi.enabled':true,'app.checkoutOrigin':'http://localhost:5174','app.environment':'test','app.sourceFramework':framework}[key]))};
   const uploads:any={getBuffer:jest.fn(),contentTypeFor:jest.fn().mockReturnValue('image/png')};
   return {service:new SourceGenerationService(prisma,stores,projects,uploads,config),prisma,projects,config,uploads,stores};
@@ -619,7 +620,7 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ concepts: [] }))
       .mockResolvedValueOnce(response({ concepts: design().concepts }))
       .mockResolvedValueOnce(response({ label: 'Broken', files: [] }));
-    await expect(service.generate('m', 's', input)).rejects.toThrow('no pasó las comprobaciones');
+    await expect(service.generate('m', 's', input)).rejects.toThrow('no pudo completar las comprobaciones');
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(projects.save).not.toHaveBeenCalled();
   });
@@ -1011,6 +1012,17 @@ describe('Independent source generation',()=>{
     expect((result as any).snapshot.files.filter((f: any) => f.path.startsWith('assets/'))).toHaveLength(24);
     expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content.filter((c: any) => c.type === 'input_image')).toHaveLength(6);
   });
+  it('reports ChatGPT mode without exposing private draft checkpoints through usage', async () => {
+    const { service, config, prisma } = setup();
+    const get = config.get.getMockImplementation();
+    config.get.mockImplementation((key: string) => key === 'app.chatgptPlan' ? { url: 'http://localhost:1', secret: 'private' } : get(key));
+    const result = await service.estimate('m', 's', { revision: 0, instruction: 'Create a store' });
+    expect(result.billingMode).toBe('chatgpt-plan');
+    const usage = await service.usage('m', 's');
+    expect(usage.billingMode).toBe('chatgpt-plan');
+    expect(prisma.storeSourceGeneration.findMany.mock.calls[0][0].select.checkpoint).toBeUndefined();
+    expect(JSON.stringify(usage)).not.toContain('private');
+  });
   it('estimates from authored size without loading revision snapshots or history', async () => {
     const { service, projects } = setup(); projects.current.mockResolvedValue({revision: 1});
     projects.authoredSize = jest.fn().mockResolvedValue(4500);
@@ -1079,7 +1091,7 @@ describe('Independent source generation',()=>{
 describe('merchant-facing source failures', () => {
   it('replaces validator jargon but keeps messages already written for merchants', () => {
     const jargon = merchantFacingSourceFailure(new Error('home necesita data-pagosya-catalog en JSX visible.')) as Error;
-    expect(jargon.message).toContain('no pasó las comprobaciones');
+    expect(jargon.message).toContain('no pudo completar las comprobaciones');
     expect(jargon.message).not.toMatch(/data-pagosya|JSX/);
     const plain = new Error('La respuesta de IA superó el espacio disponible para este cambio.');
     expect(merchantFacingSourceFailure(plain)).toBe(plain);

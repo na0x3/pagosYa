@@ -160,7 +160,7 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Portada nueva', agent: { summary: 'Construí tu portada nueva.', sections: ['Portada', 'Productos'], steps: [] } });
     const result = await service.send('m', 's', request);
-    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nGuardé los cambios/);
+    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nGuardé una revisión verificada/);
     expect(result.assistantMessage.metadata).toMatchObject({ agentSummary: 'Construí tu portada nueva.', agentSections: ['Portada', 'Productos'] });
   });
   it('passes the selection to chat and generation and reinterprets after switching providers', async () => {
@@ -183,6 +183,13 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     expect(context.assetUrls).toEqual([]);
     expect(context.site.bundledAssets).toEqual([{ path: 'assets/cake.webp', references: ['index.html'] }]);
     expect(context.budget).toBe(generation.generate.mock.calls[0][3]);
+  });
+  it('passes the current preview page through interpretation and generation', async () => {
+    const { service, projects, dialogue, generation } = setup();
+    projects.version.mockResolvedValue({ snapshot: { files: [{ path: 'acceso-ingresar.html', content: '<h1>Ingresar</h1>' }] } });
+    await service.send('m', 's', { ...request, currentPage: 'acceso-ingresar.html' });
+    expect(dialogue.decide.mock.calls[0][1].site.currentPage).toBe('acceso-ingresar.html');
+    expect(generation.generate.mock.calls[0][2].currentPage).toBe('acceso-ingresar.html');
   });
   it('reuses a validated decision on an immediate identical retry, but reinterprets changed requests', async () => {
     const { service, dialogue, generation } = setup();
@@ -236,6 +243,14 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     await expect(service.send('m','s',request)).rejects.toThrow('unavailable');
     expect(messages).toHaveLength(2);expect(messages[1].metadata.failed).toBe(true);
   });
+  it('explains retries using the active ChatGPT plan instead of API credits', async () => {
+    const { service, generation, messages } = setup();
+    generation.usesChatGptPlan = true;
+    generation.generate.mockRejectedValueOnce(new Error('unavailable'));
+    await expect(service.send('m', 's', request)).rejects.toThrow('unavailable');
+    expect(messages.at(-1).content).toContain('saldo del plan de ChatGPT');
+    expect(messages.at(-1).content).not.toContain('puede consumir créditos de IA');
+  });
   it('carries clarification context and attachments into the generation', async () => {
     const { service, generation, prisma, dialogue } = setup([{role:'USER',content:'Crea mi café'}, {role:'ASSISTANT',content:'¿Qué estilo?',metadata:{clarification:{},assetUrls:['/v1/uploads/a.png']}}]);
     await service.send('m','s',{...request,instruction:'Portada editorial'});
@@ -247,13 +262,13 @@ describe('Source chat in the existing store conversation infrastructure', () => 
 
 
 describe('Conversational first-site setup', () => {
-  it('preserves legacy brand facts while requiring discovery before generation', async () => {
+  it('preserves legacy brand facts and builds once the brief is usable', async () => {
     const { service, projects, dialogue, generation } = setup([{ role: 'ASSISTANT', content: '¿A quién vendes?', metadata: {sourceSetup:{step:'audience',answers:{brand:'Crema y verde'},assetUrls:[]}} }]);
     projects.current.mockResolvedValue({revision:0});
     expect((await service.conversation('m','s')).setup).toMatchObject({step:'conversation',options:[]});
     await service.send('m','s',{revision:0,instruction:'Crea el sitio ahora',setupStep:'logo',setupAction:'generate'});
     expect(dialogue.decide.mock.calls[0][1]).toMatchObject({buildNow:true,draft:{answers:{brand:'Crema y verde'}}});
-    expect(generation.generate).not.toHaveBeenCalled();
+    expect(generation.generate).toHaveBeenCalledTimes(1);
   });
   it('asks again on unrelated replies without assigning them to business fields', async () => {
     const { service, projects, dialogue, generation } = setup(); projects.current.mockResolvedValue({revision:0});
@@ -277,8 +292,6 @@ describe('Conversational first-site setup', () => {
     await service.send('m','s',{revision:0,instruction:'No es mi logo, es el café que vendo',assetUrls:[photo]});
     expect((await service.conversation('m','s')).setup?.prompt).toContain('foto de café');
     dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary,generationInstruction:'Crear el sitio usando la foto del café en la portada y un nombre de texto.',imageUses,startFrom:'scratch'});
-    await service.send('m','s',{revision:0,instruction:'Sí, usa esa foto en la portada'});
-    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary,generationInstruction:'Crear el sitio usando la foto del café en la portada y un nombre de texto.',imageUses,startFrom:'scratch'});
     generation.generate.mockRejectedValueOnce(new Error('timeout'));
     await expect(service.send('m','s',{revision:0,instruction:'Sí, empieza sin más preguntas',model:'gpt-5.6-luna',maxCredits:8})).rejects.toThrow('timeout');
     await service.send('m','s',{revision:0,instruction:'Inténtalo de nuevo',model:'gpt-5.6-luna',maxCredits:8});
@@ -301,16 +314,11 @@ describe('Conversational first-site setup', () => {
     await service.send('m','s',{revision:0,instruction:'Inténtalo de nuevo'});
     expect(dialogue.decide.mock.calls[1][1].assetUrls).toEqual(['/v1/uploads/abc.png']);
   });
-  it('blocks quick creation until two question turns, then forwards generation preferences', async () => {
+  it('builds a usable brief immediately and forwards generation preferences', async () => {
     const { service, projects, generation, dialogue } = setup(); projects.current.mockResolvedValue({revision:0});
     await service.send('m','s',{...request,revision:0,setupAction:'quick',model:'gpt-5.6-luna',maxCredits:8});
     expect(dialogue.decide.mock.calls[0][1].buildNow).toBe(true);
-    expect(generation.generate).not.toHaveBeenCalled();
-    await service.send('m','s',{revision:0,instruction:'Vendo café a vecinos',setupAction:'generate'});
-    expect(generation.generate).not.toHaveBeenCalled();
-    expect((await service.conversation('m','s')).setup?.prompt).toContain('estilo');
-    dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Café de barrio, tonos crema.',generationInstruction:'Crear la tienda de café.',imageUses:[],startFrom:'scratch'});
-    await service.send('m','s',{revision:0,instruction:'Tonos crema, crea el sitio',model:'gpt-5.6-luna',maxCredits:8,setupAction:'generate'});
+    expect(generation.generate).toHaveBeenCalledTimes(1);
     expect(generation.generate.mock.calls[0][2]).toMatchObject({model:'gpt-5.6-luna',maxCredits:8});
   });
   it('restarts without losing the visible conversation or requiring AI', async () => {
@@ -493,18 +501,18 @@ describe('referenceOnlyNotice', () => {
 const discovered = () => [{ role: 'ASSISTANT', content: '¿Qué estilo quieres?', metadata: { sourceSetup: { step: 'conversation', answers: { context: 'Cafetería de especialidad en Santa Cruz' }, assetUrls: [], imageUses: [], discoveryReplies: 2, sitePurpose: 'shop' } } }];
 const firstShop = (messages: any[] = discovered()) => { const env = setup(messages); env.projects.current.mockResolvedValue({ revision: 0 }); return env; };
 
-it('asks whether to start from a template in the second discovery question of a new shop', async () => {
+it('does not append a template question to a necessary clarification', async () => {
   const { service, projects, dialogue, messages } = setup([{ role: 'ASSISTANT', content: '¿Qué ofreces?', metadata: { sourceSetup: { step: 'conversation', answers: {}, assetUrls: [], imageUses: [], discoveryReplies: 1, sitePurpose: 'shop' } } }]);
   projects.current.mockResolvedValue({ revision: 0 });
   dialogue.decide.mockResolvedValue({ action: 'reply', reply: '¿Qué estilo y colores quieres?', summary: 'Cafetería', generationInstruction: '', imageUses: [] });
   await service.send('m', 's', { ...request, revision: 0, instruction: 'Vendo café de especialidad' });
-  expect(messages.at(-1).content).toContain(TEMPLATE_QUESTION);
+  expect(messages.at(-1).content).toBe('¿Qué estilo y colores quieres?');
 });
 
-it('offers three Plantillas instead of generating the first shop', async () => {
+it('offers three Plantillas when the merchant chooses templates', async () => {
   const { service, dialogue, generation, messages } = firstShop();
   dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería de especialidad', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'unknown', templates: [{ id: 'tostado', reason: 'Hecha para café' }], chosenTemplateId: '', rework: false });
-  const result = await service.send('m', 's', { ...request, revision: 0, instruction: 'Elige tú' });
+  const result = await service.send('m', 's', { ...request, revision: 0, instruction: 'Quiero usar una plantilla' });
   expect(generation.generate).not.toHaveBeenCalled();
   expect((result as { revision?: unknown }).revision).toBeUndefined();
   const choices = messages.at(-1).metadata.templateChoices;
@@ -513,15 +521,13 @@ it('offers three Plantillas instead of generating the first shop', async () => {
   expect(messages.at(-1).metadata.sourceSetup.answers.context).toBe('Cafetería de especialidad');
 });
 
-it('offers three named design directions before building a shop from scratch', async () => {
+it('builds a scratch store from its brief without offering generic design directions', async () => {
   const { service, dialogue, generation, messages } = firstShop();
-  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Hamburguesería retro estilo diner', generationInstruction: 'Crea la tienda', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
-  await service.send('m', 's', { ...request, revision: 0, instruction: 'Mejor desde cero' });
-  expect(generation.generate).not.toHaveBeenCalled();
-  const choices = messages.at(-1).metadata.directionChoices;
-  expect(choices).toHaveLength(3);
-  expect(choices[0]).toMatchObject({ id: 'retro-americana', name: 'Retro americana', palette: expect.any(Object), fonts: expect.any(Object) });
-  expect(messages.at(-1).content).toMatch(/direcci/i);
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Skincare con el lenguaje visual de Rhode', generationInstruction: 'Sigue la referencia de Rhode', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Desde cero, como la web de Rhode' });
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(generation.generate.mock.calls[0][2].instruction).toContain('Sigue la referencia de Rhode');
+  expect(messages.some((message: any) => message.metadata?.directionChoices)).toBe(false);
 });
 
 it('builds from scratch with the direction the merchant tapped', async () => {
@@ -599,6 +605,16 @@ it('applies a tapped card, then adapts it for free with the conversation summary
   expect(messages.at(-1).metadata.sourceRevision).toBe(2);
 });
 
+it('uses the ChatGPT-plan budget for template adaptation without an API credit cap', async () => {
+  const { service, generation } = firstShop(withCards());
+  const budget = new SourceRequestBudget(TEMPLATE_ADAPTATION_MAX_CREDITS, true);
+  generation.newBudget.mockReturnValue(budget);
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Miga', templateId: 'miga' });
+  expect(generation.newBudget).toHaveBeenCalledWith(TEMPLATE_ADAPTATION_MAX_CREDITS);
+  expect(generation.generate.mock.calls[0][3]).toBe(budget);
+  for (let turn = 0; turn < 30; turn++) expect(() => budget.reserve('gpt-5.6-terra', 30000, 16000)).not.toThrow();
+});
+
 it('applies a card the merchant names in words', async () => {
   const { service, templates, dialogue } = firstShop(withCards());
   dialogue.decide.mockResolvedValue({ action: 'reply', reply: 'Perfecto', summary: 'Cafetería', generationInstruction: '', imageUses: [], startFrom: 'template', templates: [], chosenTemplateId: 'miga', rework: false });
@@ -629,6 +645,7 @@ it('keeps the applied template when the adaptation fails, and says so plainly', 
   expect(messages.at(-1).metadata.sourceRevision).toBe(1);
   expect(messages.at(-1).content).toContain('Tu tienda ya tiene la plantilla Tostado');
   expect(messages.at(-1).content).not.toContain('position 12');
+  expect(messages.at(-1).metadata.sourceSetup.assetUrls).toEqual(generation.generate.mock.calls[0][2].assetUrls);
 });
 
 it('reworks a template-based store when the merchant asks for a more unique look, as a paid edit', async () => {
@@ -713,9 +730,9 @@ describe('final review fixes', () => {
     await service.send('m', 's', { ...request, revision: 0, instruction: 'Desde cero, por favor' });
     dialogue.decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea', imageUses: [], startFrom: 'unknown', templates: [{ id: 'tostado', reason: 'r' }], chosenTemplateId: '', rework: false });
     await service.send('m', 's', { ...request, revision: 0, instruction: 'Tonos tierra' });
-    // A remembered "desde cero" leads to the one direction question, never to Plantilla cards.
-    expect(generation.generate).not.toHaveBeenCalled();
-    expect(messages.at(-1).metadata.directionChoices).toHaveLength(3);
+    // A remembered scratch choice proceeds without another preset question.
+    expect(generation.generate).toHaveBeenCalledTimes(1);
+    expect(messages.at(-1).metadata.directionChoices).toBeUndefined();
     expect(messages.some((message: any) => message.metadata?.templateChoices)).toBe(false);
   });
 });
@@ -767,4 +784,51 @@ describe('template swaps before any change', () => {
     await expect(service.applyTemplate('m', 's', 'miga', 5)).resolves.toMatchObject({ revision: 6, adapted: false });
     expect(generation.generate).not.toHaveBeenCalled();
   });
+});
+
+it.each([false, true])('retains uploads after a template fallback, including legacy cleared lists (%s)', async legacy => {
+  const uploads = ['/v1/uploads/bread.jpg', '/v1/uploads/cover.mp4'];
+  const discovery = discovered()[0];
+  const prior = { ...discovery, metadata: { sourceSetup: { ...discovery.metadata.sourceSetup, assetUrls: uploads } } };
+  const fallback = { role: 'ASSISTANT', content: 'No pude adaptar', metadata: { sourceRevision: 1, adaptationFailed: true, sourceSetup: { ...discovery.metadata.sourceSetup, assetUrls: legacy ? [] : uploads } } };
+  const { service, generation } = setup([prior, fallback]);
+  await service.send('m', 's', { ...request, instruction: 'Usa mis fotos y el video para la portada' });
+  expect(generation.generate.mock.calls[0][2].assetUrls).toEqual(uploads);
+});
+
+it('uses a custom design when the brief is usable and no template was requested', async () => {
+  const { service, dialogue, generation, templates, messages } = firstShop();
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea', imageUses: [], startFrom: 'unknown' });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Verde y blanco' });
+  expect(messages.at(-1).metadata.startChoices).toBeUndefined();
+  expect(messages.at(-1).metadata.templateChoices).toBeUndefined();
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(templates.apply).not.toHaveBeenCalled();
+});
+it('honors explicit scratch requests even when the model suggests an offered template, and remembers the choice', async () => {
+  const { service, dialogue, generation, templates, messages } = firstShop(withCards());
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea', imageUses: [], startFrom: 'template', chosenTemplateId: 'miga' });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Desde cero, sin plantillas' });
+  expect(messages.at(-1).metadata.sourceSetup.startFrom).toBe('scratch');
+  expect(messages.at(-1).metadata.directionChoices).toBeUndefined();
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería', generationInstruction: 'Crea', imageUses: [], startFrom: 'template' });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Elige tú, empieza ya' });
+  expect(templates.apply).not.toHaveBeenCalled();
+  expect(generation.generate).toHaveBeenCalledTimes(2);
+  expect(generation.generate.mock.calls[0][2].revision).toBe(0);
+  expect(generation.generate.mock.calls[0][2].brief.templateId).toBeUndefined();
+});
+
+
+it('does not turn an automatically ranked direction into a binding merchant palette', async () => {
+  const offered = [...discovered(), { role: 'ASSISTANT', content: 'Opciones', metadata: { directionChoices: rankDirections('Editorial'), sourceSetup: { ...discovered()[0].metadata.sourceSetup, startFrom: 'scratch', directionId: 'editorial-minimal' } } }];
+  const { service, dialogue, generation } = firstShop(offered);
+  dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Luz Papel, editorial azul y blanco, sans', generationInstruction: 'Crea una tienda azul y blanca desde cero', imageUses: [], startFrom: 'scratch', templates: [], chosenTemplateId: '', rework: false });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Elige los detalles y crea la tienda ahora' });
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  const instruction = generation.generate.mock.calls[0][2].instruction;
+  expect(instruction).toContain('azul y blanco');
+  expect(instruction).not.toContain('Dirección visual elegida por el comercio (obligatoria)');
+  expect(instruction).not.toContain('#f7f4ee');
 });

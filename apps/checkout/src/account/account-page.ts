@@ -1,3 +1,5 @@
+import { loginHtml, registerHtml, forgotHtml, resetHtml, accountPreviewHtml } from '@pagosya/shared-types';
+import { accountPreview, accountEmbedded, accountNavigate, bindAccountEmbed } from './account-embed';
 /** A shopper's account in one store (spec 2026-09-30-store-customer-accounts-design), served by the checkout app so a
  * password or personal data never enters the sandboxed store, where authored code runs. Routes: /cuenta/<slug>[/<view>]. */
 import { fetchStore } from "../api";
@@ -28,26 +30,15 @@ const day = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDat
 const path = (slug: string, view: AccountView) => `/cuenta/${encodeURIComponent(slug)}/${view}`;
 const field = (label: string, name: string, type = "text", extra = "") => `<label>${label}<input name="${name}" type="${type}" ${extra}></label>`;
 
-type Context = { slug: string; storeName: string; signedIn: boolean };
+type Context = { slug: string; storeName: string; signedIn: boolean; preview?: boolean };
 
 function shell(context: Context, inner: string): string {
   const nav = context.signedIn
     ? `<nav class="account__nav" aria-label="Mi cuenta">${SIGNED_IN_VIEWS.map(view => `<a href="${escapeHtml(path(context.slug, view))}">${NAV_LABEL[view]}</a>`).join("")}<button type="button" class="quiet" data-logout>Salir</button></nav>`
     : "";
-  return `<main class="account subscription-manage"><header class="account__head"><a class="account__store" href="/s/${encodeURIComponent(context.slug)}">${escapeHtml(context.storeName)}</a>${nav}</header>${inner}<p data-status role="status"></p></main>`;
+  return `<main class="account subscription-manage"><header class="account__head"><a class="account__store" href="/s/${encodeURIComponent(context.slug)}">${escapeHtml(context.storeName)}</a>${nav}</header>${context.preview ? '<aside class="account__preview" role="note">Vista previa · Datos de ejemplo; no se envían datos.</aside>' : ''}${inner}<p data-status role="status"></p></main>`;
 }
 
-const loginHtml = (context: Context, note = "") => shell(context, `<h1>Ingresa a tu cuenta</h1>${note ? `<p>${escapeHtml(note)}</p>` : ""}
-  <form data-form="login" class="card" novalidate>${field("Correo", "email", "email", 'autocomplete="email" required')}${field("Contraseña", "password", "password", 'autocomplete="current-password" required')}<button type="submit" class="primary">Ingresar</button></form>
-  <p><a href="${escapeHtml(path(context.slug, "recuperar"))}">¿Olvidaste tu contraseña?</a> · <a href="${escapeHtml(path(context.slug, "registro"))}">Crear una cuenta</a></p>`);
-const registerHtml = (context: Context) => shell(context, `<h1>Crea tu cuenta</h1>
-  <form data-form="register" class="card" novalidate>${field("Nombre", "name", "text", 'autocomplete="name" maxlength="100" required')}${field("Correo", "email", "email", 'autocomplete="email" required')}${field("Contraseña (8 caracteres o más)", "password", "password", 'autocomplete="new-password" minlength="8" maxlength="128" required')}<button type="submit" class="primary">Crear cuenta</button></form>
-  <p><a href="${escapeHtml(path(context.slug, "ingresar"))}">Ya tengo una cuenta</a></p>`);
-const forgotHtml = (context: Context) => shell(context, `<h1>Recupera tu contraseña</h1><p>Escribe tu correo y te enviamos un enlace para elegir una contraseña nueva.</p>
-  <form data-form="forgot" class="card" novalidate>${field("Correo", "email", "email", 'autocomplete="email" required')}<button type="submit" class="primary">Enviar enlace</button></form>
-  <p><a href="${escapeHtml(path(context.slug, "ingresar"))}">Volver a ingresar</a></p>`);
-const resetHtml = (context: Context) => shell(context, `<h1>Elige una contraseña nueva</h1>
-  <form data-form="reset" class="card" novalidate>${field("Contraseña nueva", "password", "password", 'autocomplete="new-password" minlength="8" maxlength="128" required')}${field("Repite la contraseña", "confirm", "password", 'autocomplete="new-password" required')}<button type="submit" class="primary">Guardar contraseña</button></form>`);
 const invalidLinkHtml = (context: Context) => shell(context, `<h1>Enlace no válido</h1><p role="alert">Este enlace no es válido o ya expiró.</p><p><a href="${escapeHtml(path(context.slug, "recuperar"))}">Pedir un enlace nuevo</a></p>`);
 
 function orderItems(items: unknown): string {
@@ -90,21 +81,23 @@ function say(text: string, error = false) {
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : "No pudimos completar la operación.");
 
 async function go(view: AccountView) {
-  window.history.pushState({}, "", path(state.slug, view));
+  if (accountNavigate(view)) return;
+  window.history.pushState({}, "", path(state.slug, view) + (accountPreview() ? "?account_preview=1" : ""));
   await show(view);
 }
 
 async function show(view: AccountView): Promise<void> {
   state.view = view;
   const slug = state.slug;
-  const token = readSession(slug);
-  const context: Context = { slug, storeName: state.storeName, signedIn: Boolean(token) };
+  const token = accountPreview() ? null : readSession(slug);
+  const context: Context = { slug, storeName: state.storeName, signedIn: Boolean(token), preview: accountPreview() };
   document.title = `Mi cuenta — ${state.storeName}`;
   if (view === "ingresar") { if (token) { await go("pedidos"); return; } app.innerHTML = loginHtml(context); return; }
   if (view === "registro") { app.innerHTML = registerHtml(context); return; }
   if (view === "recuperar") { app.innerHTML = forgotHtml(context); return; }
-  if (view === "restablecer") { state.resetToken = takeToken() || state.resetToken; app.innerHTML = state.resetToken ? resetHtml(context) : invalidLinkHtml(context); return; }
+  if (view === "restablecer") { state.resetToken = takeToken() || state.resetToken; app.innerHTML = (state.resetToken || accountPreview()) ? resetHtml(context) : invalidLinkHtml(context); return; }
   if (view === "verificar") {
+    if (accountPreview()) { app.innerHTML = shell(context, "<h1>Correo confirmado</h1><p>Vista previa de la confirmación de correo.</p>"); return; }
     const link = takeToken();
     app.innerHTML = shell(context, "<h1>Confirmando tu correo…</h1>");
     if (!link) { app.innerHTML = invalidLinkHtml(context); return; }
@@ -112,6 +105,7 @@ async function show(view: AccountView): Promise<void> {
     catch (error) { app.innerHTML = shell(context, `<h1>No pudimos confirmar tu correo</h1><p role="alert">${escapeHtml(messageOf(error))}</p><p><a href="${escapeHtml(path(slug, "registro"))}">Crear la cuenta de nuevo</a></p>`); }
     return;
   }
+  if (accountPreview()) { app.innerHTML = accountPreviewHtml(context, view); return; }
   if (!token) { app.innerHTML = loginHtml(context, "Ingresa para ver tu cuenta."); return; }
   app.innerHTML = shell(context, "<p role=\"status\">Cargando…</p>");
   try {
@@ -129,6 +123,8 @@ async function onSubmit(event: Event) {
   const form = (event.target as HTMLElement).closest<HTMLFormElement>("form[data-form]");
   if (!form) return;
   event.preventDefault();
+  if (accountPreview()) { say("Vista previa: no se crean cuentas ni se envían datos. En la tienda publicada este formulario estará habilitado."); return; }
+  if (!form.reportValidity()) return;
   const name = form.dataset.form;
   const value = (key: string) => (form.elements.namedItem(key) as HTMLInputElement | null)?.value ?? "";
   const slug = state.slug, token = readSession(slug);
@@ -137,7 +133,7 @@ async function onSubmit(event: Event) {
   try {
     if (name === "reset" && value("password") !== value("confirm")) { say("Las contraseñas no coinciden.", true); return; }
     if (name === "delete" && !value("password")) { say("Escribe tu contraseña para eliminar la cuenta.", true); return; }
-    if (button) button.disabled = true;
+    if (button) { button.disabled = true; form.setAttribute('aria-busy', 'true'); }
     if (name === "login") {
       const session = await accountApi.login(slug, { email: value("email"), password: value("password") });
       saveSession(slug, session);
@@ -167,10 +163,25 @@ async function onSubmit(event: Event) {
   } catch (error) {
     if (error instanceof AccountError && error.status === 401 && token && name !== "delete") { clearSession(slug); await show(state.view); return; }
     say(messageOf(error), true);
-  } finally { if (button && button.isConnected) button.disabled = false; }
+  } finally { form.removeAttribute('aria-busy'); if (button && button.isConnected) button.disabled = false; }
 }
 
 async function onClick(event: Event) {
+  const reveal = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-password]');
+  if (reveal) {
+    const input = reveal.closest('label')?.querySelector<HTMLInputElement>('input');
+    if (input) { const visible = input.type === 'password'; input.type = visible ? 'text' : 'password'; reveal.textContent = visible ? 'Ocultar' : 'Mostrar'; reveal.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña'); reveal.setAttribute('aria-pressed', String(visible)); }
+    return;
+  }
+  const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]');
+  if (link && (accountEmbedded() || accountPreview())) {
+    const url = new URL(link.href, location.href);
+    const route = accountRoute(url.pathname);
+    if (route && route.slug === state.slug && url.origin === location.origin) {
+      event.preventDefault(); await go(route.view); return;
+    }
+  }
+  if (accountPreview()) return;
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-logout], [data-remove-address], [data-export], [data-retry]");
   if (!target) return;
   const slug = state.slug, token = readSession(slug);
@@ -201,8 +212,9 @@ export async function renderAccount(slug: string, view: AccountView): Promise<vo
   document.body.classList.remove("store-page", "product-detail-page", "payment-page", "payment-success-page", "debt-collection-page", "subscription-manage-page");
   document.body.classList.add("account-page");
   markPrivateStorePage();
-  const store = await fetchStore(slug).catch(() => null);
+  const store = accountPreview() ? null : await fetchStore(slug).catch(() => null);
   state = { ...state, slug, storeName: store?.storeName || slug, addresses: [], resetToken: slug === state.slug ? state.resetToken : "" };
   if (!bound.has(app)) { bound.add(app); app.addEventListener("submit", onSubmit); app.addEventListener("click", onClick); }
+  if (accountEmbedded()) bindAccountEmbed(app);
   await show(view);
 }

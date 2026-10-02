@@ -145,7 +145,9 @@ async function bootstrap() {
   }
 
   const port = config.get<number>("app.port") ?? 3000;
-  const server = await app.listen(port);
+  const server = config.get('app.chatgptPlan')
+    ? await app.listen(port, '127.0.0.1')
+    : await app.listen(port);
   // Bound slow/abandoned clients so a traffic spike cannot retain sockets and
   // memory indefinitely. Long-running provider calls still have two minutes;
   // uploads use multipart streaming rather than oversized JSON bodies.

@@ -46,3 +46,11 @@
 .build-shot { display: block; width: 160px; max-width: 100%; margin-top: .25rem; border-radius: 8px; border: 1px solid rgb(255 255 255 / 12%); }
 .build-edits summary{cursor:pointer}
 .build-edits ul{list-style:none;margin:.25rem 0 0;padding-left:.75rem;display:grid;gap:.15rem}
+
+/* Files the merchant sent stay visible in their message, large enough to read; a click opens the original. */
+.source-mode .message--remote-user .message-attachments { display: grid; gap: 8px; margin: 0 0 8px; width: min(100%, 340px); }
+.source-mode .message--remote-user .message-attachments[data-count="1"] { grid-template-columns: 1fr; }
+.source-mode .message--remote-user .message-attachments:not([data-count="1"]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.source-mode .message--remote-user .message-attachments a { display: block; border-radius: 12px; overflow: hidden; background: #e2e2e2; }
+.source-mode .message--remote-user .message-attachments img, .source-mode .message--remote-user .message-attachments video { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; border-radius: 12px; background: #e2e2e2; }
+.source-mode .message--remote-user .message-attachments[data-count="1"] img { min-width: min(100%, 280px); }

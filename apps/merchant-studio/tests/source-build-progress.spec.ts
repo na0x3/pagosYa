@@ -1,3 +1,4 @@
+import { finishedChatJob } from './source-chat-job-fixture';
 import { test, expect } from '@playwright/test';
 
 test('chat displays server milestones live and keeps the completed process with the reply', async ({ page }) => {
@@ -24,13 +25,13 @@ test('chat displays server milestones live and keeps the completed process with 
     else if (path.endsWith('/source-project')) body = { revision: 1, versions: [version] };
     else if (path.endsWith('/estimate')) body = { estimate: { minCredits: 1, maxCredits: 3 } };
     else if (path.endsWith('/progress')) { expect(url.searchParams.get('requestId')).toBe(requestId); body = { progress: submitted ? progress() : null }; }
-    else if (path.endsWith('/messages')) {
+    else if ((path.endsWith('/chat-jobs') && route.request().method() === 'POST')) {
       requestId = route.request().postDataJSON().requestId;
       expect(requestId).toMatch(/^[a-f0-9-]{36}$/); submitted = true;
       await responseGate;
       body = { userMessage: { id: 'u1', role: 'USER', content: 'Mejora el título' }, assistantMessage: { id: 'a1', role: 'ASSISTANT', content: 'El título está listo.', metadata: { progress: progress('completed') } } };
     }
-    await route.fulfill({ json: body });
+    await route.fulfill({ json: finishedChatJob(body) });
   });
   await page.goto('/?source=1');
   await page.getByRole('textbox', { name: 'Indicación para YAPI' }).fill('Mejora el título');

@@ -5,6 +5,7 @@ import privacyRuntime from '@pagosya/storefront-kit/kit/privacy.js?raw';
 import commerceRuntime from '@pagosya/storefront-kit/kit/commerce.js?raw';
 import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
+import accountSlotRuntime from './source-account-slot.js?raw';
 import editModeRuntime from './source-preview-edit-mode.js?raw';
 
 export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" | "url" }
@@ -54,7 +55,7 @@ export function hostedAssetSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[] } = {}): string {
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[] } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
@@ -159,6 +160,14 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       }
       const link = event.target.closest('a[href]'); if (!link) return;
       const href = link.getAttribute('href'); if (!href) return;
+      if (link.hasAttribute('data-pagosya-account')) {
+        const routes = {login:'acceso-ingresar.html',register:'acceso-registro.html','forgot-password':'acceso-olvide-mi-contrasena.html','reset-password':'acceso-restablecer-contrasena.html',orders:'cuenta-pedidos.html',addresses:'cuenta-direcciones.html',profile:'cuenta-perfil.html',subscriptions:'cuenta-suscripciones.html'};
+        const page = routes[link.getAttribute('data-pagosya-account') || 'login'];
+        if (page && ${encoded(snapshot.files.filter(f => f.path.endsWith('.html')).map(f => f.path))}.includes(page)) {
+          event.preventDefault(); event.stopImmediatePropagation(); const state = {items:[]}; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart',{detail:state})); parent.postMessage({type:'pagosya:source-navigate',page,cart:state.items},'*'); return;
+        }
+        if (${navigation.hosted !== true}) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+      }
       if (href.startsWith('#')) {
         // Scroll real section anchors without navigating the opaque srcdoc URL.
         // Hash-only application routes (such as checkout) still dispatch hashchange.
@@ -185,6 +194,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       if (fragment) { try { document.getElementById(decodeURIComponent(fragment.slice(1)))?.scrollIntoView(); } catch {} }
     });`;
   flag.textContent += '\n' + videoLoopRuntime;
+  if (navigation.accountForms === true) flag.textContent += '\n' + accountSlotRuntime;
   // Edit mode (visual selection) belongs to the Studio preview only: a published, hosted page never carries it.
   if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime;
   policy.after(flag);

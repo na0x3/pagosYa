@@ -12,6 +12,9 @@ export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "librar
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 export { CHECKOUT_ORIGIN };
 
+export type SourceChatResult = { setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision };
+export type SourceChatJob = { id: string; requestId: string; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'AWAITING_INPUT' | 'BLOCKED' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED' | 'CANCELLED'; sequence: number; result?: SourceChatResult; error?: string; lastCommittedRevision?: number };
+
 export type JsonRecord = Record<string, unknown>;
 
 export interface MerchantStore {
@@ -314,12 +317,37 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}) }) });
+  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void): Promise<SourceChatResult> {
+    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}) }) });
+    onAccepted?.(job);
+    return this.waitSourceChatJob(storeId, job);
+  }
+
+  latestSourceChatJob(storeId: string): Promise<{ job: SourceChatJob | null }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`);
+  }
+  cancelSourceChatJob(storeId: string, id: string): Promise<SourceChatJob> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
+  }
+  async waitSourceChatJob(storeId: string, initial: SourceChatJob): Promise<SourceChatResult> {
+    let job = initial;
+    let consecutiveErrors = 0;
+    while (job.status === 'QUEUED' || job.status === 'RUNNING') {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs/${encodeURIComponent(job.id)}`);
+        consecutiveErrors = 0;
+      } catch (error) {
+        if (++consecutiveErrors >= 15 || error instanceof ApiError && [401, 403, 404].includes(error.status)) throw error;
+      }
+    }
+    if (['COMPLETED', 'AWAITING_INPUT'].includes(job.status) && job.result) return job.result;
+    if (job.result?.assistantMessage?.content) throw new Error(job.result.assistantMessage.content);
+    throw new Error(job.error || 'El pedido se interrumpió. Tu diseño se conserva.');
   }
 
   /** The agent's latest clean draft while it builds; files only when newer than `since`. */
-  sourceDraftPreview(storeId: string, since?: number, signal?: AbortSignal): Promise<{ at: number | null; files?: Array<{ path: string; content: string; encoding?: string }> }> {
+  sourceDraftPreview(storeId: string, since?: number, signal?: AbortSignal): Promise<{ at: number | null; interrupted?: boolean; files?: Array<{ path: string; content: string; encoding?: string }> }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/draft-preview${since !== undefined ? `?since=${since}` : ''}`, { signal });
   }
 
@@ -483,5 +511,5 @@ export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt
 export type SourceMotionMode = 'auto' | 'off' | 'subtle' | 'expressive';
 export type SourceScrollFeel = 'native' | 'soft' | 'cinematic';
 export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial' };
-export type SourceGenerationEstimate = { model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
+export type SourceGenerationEstimate = { billingMode?: 'usage' | 'chatgpt-plan'; model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
 export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };

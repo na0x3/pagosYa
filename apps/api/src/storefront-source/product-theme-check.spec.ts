@@ -59,3 +59,17 @@ describe('checkProductTheme', () => {
     expect(failures.some(f => f.control === 'buy' && /hidden/.test(f.reason))).toBe(true);
   });
 });
+
+it('checks future purchasing controls for an empty store without changing its catalog', async () => {
+  const empty = await themed('');
+  const file = empty.files.find(file => file.path === 'config.js')!;
+  const config = JSON.parse(file.content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, ''));
+  config.data.items = [];
+  file.content = `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};`;
+  const before = JSON.stringify(empty);
+  expect(await checkProductThemeOnSnapshot(empty)).toEqual([]);
+  expect(JSON.stringify(empty)).toBe(before);
+  config.dna.productCss = `${PREFIX} .product-detail__buy{display:none}`;
+  file.content = `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};`;
+  expect((await checkProductThemeOnSnapshot(empty)).some(f => f.control === 'buy' && /hidden/.test(f.reason))).toBe(true);
+});

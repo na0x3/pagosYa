@@ -73,7 +73,7 @@ const product = () => ({
 describe('Inline storefront product options', () => {
   const windows: any[] = [];
   const errors: Error[] = [];
-  async function shop({ items = [product()] as any[], mode = 'preview', fullPage = false, template = '', saved = [] as any[], settings = {}, refreshedItems = items, onStart, content }: { items?: any[]; mode?: string; fullPage?: boolean; template?: string; saved?: any[]; settings?: Record<string, unknown>; refreshedItems?: any[]; onStart?: (w: any) => void; content?: any } = {}) {
+  async function shop({ items = [product()] as any[], mode = 'preview', fullPage = false, template = '', saved = [] as any[], settings = {}, refreshedItems = items, onStart, content, configure }: { items?: any[]; mode?: string; fullPage?: boolean; template?: string; saved?: any[]; settings?: Record<string, unknown>; refreshedItems?: any[]; onStart?: (w: any) => void; configure?: (w: any) => void; content?: any } = {}) {
     const virtualConsole = new VirtualConsole();
     virtualConsole.on('jsdomError', (error: Error) => {
       // jsdom does not implement cascade layers; runtime and event errors still fail.
@@ -94,6 +94,7 @@ describe('Inline storefront product options', () => {
     w.fetch = jest.fn(async (url: string) => ({ ok: true, json: async () => url.endsWith('/store') ? { ...data, items: refreshedItems } : quote }));
     w.PAGOSYA_HOSTED_REQUEST = jest.fn(async (action: string) => ({ ok: true, body: action === 'content' && content ? content : quote }));
     (mode === 'demo' ? w.sessionStorage : w.localStorage).setItem('pagosya:cart:marca', JSON.stringify(saved));
+    configure?.(w);
     w.eval(commerce);
     onStart?.(w);
     await new Promise(resolve => setImmediate(resolve));
@@ -107,6 +108,34 @@ describe('Inline storefront product options', () => {
     return { w, query, click, choose, serialize };
   }
   afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
+
+  it('reveals an old hidden catalog when live products arrive after an empty draft', async () => {
+    const { query } = await shop({ items: [], refreshedItems: [product()], mode: 'live', onStart: w => { w.document.querySelector('[data-pagosya-catalog]').hidden = true; } });
+    const catalog = query('[data-pagosya-catalog]');
+    expect(catalog.hidden).toBe(false);
+    expect(catalog.textContent).toContain('Camisa');
+    expect(catalog.querySelector('[data-product], [data-add]')).not.toBeNull();
+  });
+
+  it('returns from product details and missing products to the catalog page without guessing a section ID', async () => {
+    const existing = await shop({ fullPage: true });
+    expect(existing.query('.product-detail__breadcrumb a').getAttribute('href')).toBe('productos.html');
+    const missing = await shop({ fullPage: true, items: [] });
+    expect(missing.query('[data-pagosya-product-page] a').getAttribute('href')).toBe('productos.html');
+  });
+
+  it('keeps details reachable when a custom card only links its missing photo', async () => {
+    const template = '<template data-pagosya-product-template><article><div data-product-media><a data-product-link><img data-product-field="image"></a></div><h3 data-product-field="name"></h3><span data-product-field="price"></span><button data-product-add>Añadir</button></article></template>';
+    const { query, click } = await shop({ template, items: [{ ...product(), imageUrls: [], variants: [] }] });
+    const card = query('[data-custom-product]');
+    expect(card.querySelector('[data-product-media]').hidden).toBe(true);
+    const link = card.querySelector('h3 [data-product-link]');
+    expect(link.textContent).toBe('Camisa');
+    expect(link.closest('[hidden]')).toBeNull();
+    click('[data-custom-product] h3 [data-product-link]');
+    expect(query('[data-pagosya-product]').open).toBe(true);
+    expect(query('#pagosya-product-title').textContent).toBe('Camisa');
+  });
 
   it('renders content blocks in order, escapes text and keeps native compare keyboard controls', async () => {
     const hostile = '<img src=x onerror=alert(1)>';
@@ -546,6 +575,19 @@ describe('Inline storefront product options', () => {
     expect(query('.product-detail__buybox .product-detail__options')).not.toBeNull();
     expect(query('.product-detail__details [role=tabpanel]')).not.toBeNull();
     expect(w.document.querySelectorAll('.product-detail__buy')).toHaveLength(1);
+  });
+
+  it.each(['dense', 'story-led'])('%s changes the hierarchy while variant selection and buying still work', async style => {
+    const { query, choose, click, serialize } = await shop({ fullPage: true, configure: w => { w.PAGOSYA_CONFIG.productPageStyle = style; },
+    });
+    expect(query('.product-detail__buybox .product-detail__pricing')).not.toBeNull();
+    expect(query('.product-detail__buybox .product-detail__options')).not.toBeNull();
+    expect(query('.product-detail__summary h1').textContent).toBe('Camisa');
+    if (style === 'story-led') expect(query('.product-detail__layout').firstElementChild.className).toBe('product-detail__summary');
+    choose(0, 'Azul'); choose(1, 'M');
+    expect(query('.product-detail__buybox [data-product-total]').textContent).toMatch(/40[,.]00/);
+    click('.product-detail__buy');
+    expect(serialize()).toEqual([{ id: 'shirt', variantId: 'blue-m', quantity: 1 }]);
   });
 
   it('updates simple-product quantity and shows only active discounts', async () => {

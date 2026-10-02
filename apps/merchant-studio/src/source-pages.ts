@@ -1,23 +1,16 @@
+import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import { escapeHtml as escape } from './studio-ui';
 import './brand-profile.css';
 import './settings-shell.css';
+import './source-pages.css';
 
 /** The pages of the store being designed, and the way to ask YAPI to change one or to add the standard ones (sub-project 6 of
  * docs/superpowers/specs/2026-09-30-complete-store-pages-program.md). */
 export type StorePage = { file: string; label: string; url: string; standard: boolean };
 
 // Label and address of each standard page, keyed like the API's route table (`group/file`).
-const STANDARD: Record<string, [string, string]> = {
-  'auth/login': ['Ingresar', 'acceso-ingresar.html'], 'auth/register': ['Crear cuenta', 'acceso-registro.html'],
-  'auth/forgot-password': ['Recuperar contraseña', 'acceso-olvide-mi-contrasena.html'], 'auth/reset-password': ['Nueva contraseña', 'acceso-restablecer-contrasena.html'],
-  'account/orders': ['Mis pedidos', 'cuenta-pedidos.html'], 'account/addresses': ['Mis direcciones', 'cuenta-direcciones.html'],
-  'account/profile': ['Mi perfil', 'cuenta-perfil.html'], 'account/subscriptions': ['Mis suscripciones', 'cuenta-suscripciones.html'],
-  'pages/about': ['Nosotros', 'nosotros.html'], 'pages/contact': ['Contacto', 'contacto.html'], 'pages/shipping': ['Envíos y entregas', 'envios.html'],
-  'pages/faq': ['Preguntas frecuentes', 'faq.html'], 'pages/refund-policy': ['Cambios y devoluciones', 'reembolsos.html'], 'pages/privacy': ['Privacidad', 'privacidad.html'],
-  'pages/terms': ['Términos y condiciones', 'terminos.html'], 'pages/cookies': ['Cookies', 'cookies.html'], 'pages/not-found': ['Página no encontrada', '404.html'],
-  'catalog/collections': ['Colecciones', 'colecciones.html'], 'catalog/search': ['Búsqueda', 'buscar.html'],
-};
+const STANDARD: Record<string, [string, string]> = Object.fromEntries(STOREFRONT_PAGES.filter(page => page.key.includes('/')).map(page => [page.key, [page.label, page.url]]));
 const STANDARD_FILES = Object.keys(STANDARD).map(key => `components/${key}.tsx`);
 const MARK = /^\s*\/\/\s*@pagosya-page\b/;
 const titleCase = (slug: string) => { const words = slug.replace(/-/g, ' '); return words.charAt(0).toUpperCase() + words.slice(1); };
@@ -66,14 +59,16 @@ export async function openPagesPanel(api: MerchantStudioApi, storeId: string, ve
   const files = version.snapshot.files as SourceFile[];
   const pages = listStorePages(files);
   const dialog = document.createElement('dialog');
-  dialog.className = 'brand-dialog';
+  dialog.className = 'brand-dialog source-pages-dialog';
   dialog.setAttribute('aria-label', 'Páginas de tu tienda');
-  const rows = pages.map(page => `<article class="settings-row"><div><strong>${escape(page.label)}</strong><p>${escape(page.url)}${page.standard ? ' · página estándar' : ''}</p></div><div class="settings-actions"><button type="button" class="button" data-ask-page="${escape(page.file)}">Pedir un cambio a YAPI</button></div></article>`).join('');
+  const rows = pages.map(page => `<article class="settings-row"><div><strong>${escape(page.label)}</strong><p>${escape(page.url)}${page.standard ? ' · base estándar' : ''}</p></div><div class="settings-actions"><button type="button" class="button" data-ask-page="${escape(page.file)}">Pedir un cambio a YAPI</button></div></article>`).join('');
   const add = canAddStandardPages(files)
     ? `<section class="settings-card"><h3>Páginas estándar</h3><p>Agrega nosotros, contacto, envíos, preguntas frecuentes, reembolsos, privacidad, términos, cookies, colecciones y búsqueda, con lo que ya escribiste en Ajustes. Queda como una revisión nueva: no se publica hasta que la publiques.</p><button type="button" class="button button--publish" data-add-standard-pages>Agregar páginas estándar</button></section>`
     : '';
-  dialog.innerHTML = `<header><h2>Páginas de tu tienda</h2><button class="button" type="button" data-close-pages>Cerrar</button></header>
-    <section class="settings-card"><h3>Tus páginas</h3>${rows || '<p>Esta tienda aún no tiene páginas de React.</p>'}</section>${add}<p role="status" data-pages-status></p>`;
+  dialog.innerHTML = `<header><div><h2>Páginas de tu tienda</h2><p>Cada página tiene su propia dirección y puede aparecer en el menú.</p></div><button class="button" type="button" data-close-pages>Cerrar</button></header>
+    <section class="source-pages-explainer"><strong>Una base para cada página. El contenido lo pone tu negocio.</strong><p>Al aplicar una plantilla compatible se incluyen páginas estándar con el diseño de tu tienda. YAPI puede personalizarlas o crear otras cuando se lo pides.</p><details><summary>¿Por qué algunas tienen poco contenido?</summary><p>Nosotros, contacto, envíos y políticas toman la información guardada en Ajustes. Si faltan esos datos, la página puede existir sin contenido completo. Búsqueda y colecciones dependen del catálogo; pedidos y perfil dependen de la cuenta del cliente.</p><p>Completa tus datos o pide a YAPI un cambio específico. Las páginas nuevas y los cambios de diseño quedan en un borrador hasta que los publiques.</p></details></section>
+    <form class="settings-card source-new-page" data-new-page><h3>Nueva página</h3><p>Crea una página independiente, como Servicios, Galería o Nuestra historia. YAPI la diseñará y la conectará al menú de tu tienda.</p><label>Nombre de la página<input name="title" required maxlength="80" placeholder="Por ejemplo, Servicios" autocomplete="off" /></label><label>¿Qué quieres mostrar?<textarea name="description" maxlength="1200" rows="3" placeholder="Describe el contenido y el estilo que buscas (opcional)"></textarea></label><button type="submit" class="button button--publish">Preparar pedido a YAPI</button><small>Podrás revisar el pedido antes de enviarlo.</small></form>
+    <section class="settings-card"><h3>Tus páginas <span class="source-pages-count">${pages.length}</span></h3>${rows || '<p>Esta tienda aún no tiene páginas de React.</p>'}</section>${add}<p role="status" data-pages-status></p>`;
   document.body.append(dialog);
   if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
   const close = () => { if (dialog.open && typeof dialog.close === 'function') dialog.close(); dialog.remove(); };
@@ -84,6 +79,15 @@ export async function openPagesPanel(api: MerchantStudioApi, storeId: string, ve
     close();
     hooks.onAsk(`En la página ${page.label} (${page.file}): `);
   }));
+  dialog.querySelector<HTMLFormElement>('[data-new-page]')!.addEventListener('submit', event => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    if (!form.reportValidity()) return;
+    const data = new FormData(form), title = String(data.get('title') ?? '').trim(), description = String(data.get('description') ?? '').trim();
+    if (!title) { form.querySelector<HTMLInputElement>('input')!.focus(); return; }
+    close();
+    hooks.onAsk(`Crea una página independiente llamada ${JSON.stringify(title)}, con su propia dirección. Agrega un enlace al menú de la tienda que funcione en escritorio y celular. Mantén el estilo de la tienda.${description ? ` Contenido: ${description}` : ''}`);
+  });
   const addButton = dialog.querySelector<HTMLButtonElement>('[data-add-standard-pages]');
   addButton?.addEventListener('click', async () => {
     const status = dialog.querySelector<HTMLElement>('[data-pages-status]')!;

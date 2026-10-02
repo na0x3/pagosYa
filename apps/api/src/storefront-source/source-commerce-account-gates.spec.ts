@@ -6,9 +6,9 @@ import { kitPath } from '@pagosya/storefront-kit';
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 
-async function gate(views: string[], config: Record<string, unknown> = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test' }, hosted = false) {
+async function gate(views: string[], config: Record<string, unknown> = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test' }, hosted = false, shell = '<footer><nav data-pagosya-pages></nav></footer>') {
   const anchors = views.map(view => `<a href="#" data-pagosya-account="${view}">Ir</a>`).join('');
-  const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido</button><section data-pagosya-catalog></section><section data-pagosya-cart></section><main>${anchors}</main><footer><nav data-pagosya-pages></nav></footer><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
+  const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido</button><section data-pagosya-catalog></section><section data-pagosya-cart></section><main>${anchors}</main>${shell}<p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
   const w = dom.window;
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -59,4 +59,19 @@ describe('account gate buttons in the storefront runtime', () => {
     expect(w.__messages).toContainEqual({ type: 'pagosya:source-external', url: 'https://pay.test/cuenta/marca/pedidos' });
     w.close();
   });
+});
+
+it('adds working account access when a custom page omitted all account navigation', async () => {
+  const w = await gate([], undefined, false, '<footer></footer>');
+  const links = w.document.querySelectorAll('a[data-pagosya-account]');
+  expect(links).toHaveLength(1);
+  expect(links[0].href).toBe('https://pay.test/cuenta/marca');
+  expect(links[0].textContent).toBe('Mi cuenta');
+  w.close();
+});
+it('preserves the local account page link without adding a second access', async () => {
+  const w = await gate([], undefined, false, '<header><a href="acceso-ingresar.html">Ingresar</a></header>');
+  expect(w.document.querySelectorAll('a[data-pagosya-account]')).toHaveLength(0);
+  expect(w.document.querySelector('a[href="acceso-ingresar.html"]')).toBeTruthy();
+  w.close();
 });

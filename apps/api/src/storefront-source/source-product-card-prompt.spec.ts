@@ -1,4 +1,4 @@
-import { productCardDirection, PRESET_IDS, PRODUCT_CARD_PRESETS } from './source-product-card-presets';
+import { productCardDirection, productCommerceDirection, productCommerceRecipe, PRESET_IDS, PRODUCT_CARD_PRESETS } from './source-product-card-presets';
 import { COSMETIC_PARTS } from './product-theme-css';
 import { SOURCE_DNA_DIRECTION } from './source-dna';
 import { SOURCE_PRODUCT_PRESENTATION_DIRECTION } from './source-design';
@@ -44,4 +44,18 @@ describe('product card guidance for the model', () => {
     expect(prompt).toContain('set_product_card_theme');
     expect(prompt).toMatch(/ficha|product page|product card/i);
   });
+});
+
+it('sends executable commerce recipes to the planner instead of only preset names', () => {
+  const direction = productCommerceDirection();
+  expect(SOURCE_DNA_DIRECTION).toContain(direction);
+  for (const id of PRESET_IDS) {
+    const recipe = productCommerceRecipe(id);
+    expect(direction).toContain(`${id}: ${Object.values(recipe.surfaces).join('/')} ; ${Object.values(recipe.productCard).join('/')}`);
+    expect(direction).toContain(recipe.decision);
+  }
+  expect(direction).toContain('one coherent card family per store');
+  expect(direction).toContain('requires real variants');
+  expect(direction).toContain('actual alternate images');
+  expect(direction.length).toBeLessThan(2900);
 });

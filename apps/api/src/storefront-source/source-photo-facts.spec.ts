@@ -1,4 +1,4 @@
-import { derivePhotoFacts, imageAspect, normalizeSourcePhotoFacts, resolvePhotoShot } from './source-photo-facts';
+import { derivePhotoFacts, imageAspect, imageDimensions, normalizeSourcePhotoFacts, resolvePhotoShot } from './source-photo-facts';
 
 const png = (width: number, height: number) => {
   const bytes = Buffer.alloc(24);
@@ -17,6 +17,8 @@ const jpeg = (width: number, height: number) => {
 };
 
 it('reads aspect out of image headers without decoding pixels', () => {
+  expect(imageDimensions(png(1024, 1536))).toEqual({ width: 1024, height: 1536 });
+  expect(imageDimensions(jpeg(736, 1104))).toEqual({ width: 736, height: 1104 });
   expect(imageAspect(png(1024, 1536))).toBe(0.667);
   expect(imageAspect(jpeg(1536, 1024))).toBe(1.5);
   expect(imageAspect(jpeg(1024, 1024))).toBe(1);

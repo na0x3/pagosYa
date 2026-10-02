@@ -1,4 +1,4 @@
-import { PRESET_IDS, PRODUCT_CARD_PRESETS, presetFor } from './source-product-card-presets';
+import { PRESET_IDS, PRODUCT_CARD_PRESETS, presetFor, productCommerceRecipe } from './source-product-card-presets';
 import { defaultDna, normalizeDna, sourceRuntimeDna, SOURCE_DNA_ENUMS, SOURCE_DNA_RUNTIME_ENUMS, SOURCE_DNA_SCHEMA } from './source-dna';
 import { validDna } from './fixtures/dna';
 import { sanitizeProductThemeCss } from './product-theme-css';
@@ -112,5 +112,26 @@ describe('product card DNA', () => {
     const themed = sourceRuntimeDna({ ...validDna(), productCard: { ...DEFAULTS, swatch: 'square' }, productCss: 'x{}' } as any, 's') as any;
     expect(themed.swatch).toBe('square');
     expect(themed.productCss).toBe('x{}');
+  });
+});
+
+describe('product-led commerce recipes', () => {
+  it('maps concrete product needs through the existing runtime controls without inventing content', () => {
+    const apparel = productCommerceRecipe('atelier');
+    const technical = productCommerceRecipe('catalogue');
+    const craft = productCommerceRecipe('craft');
+    expect(apparel.surfaces).toMatchObject({ product: 'image-led', cart: 'drawer', review: 'split', card: 'swatch-swap' });
+    expect(technical.surfaces).toMatchObject({ product: 'dense', cart: 'page', review: 'split', card: 'quick-look' });
+    expect(craft.surfaces.product).toBe('story-led');
+    for (const id of PRESET_IDS) {
+      const recipe = productCommerceRecipe(id);
+      const dna = { ...validDna(), surfaces: { ...validDna().surfaces, ...recipe.surfaces }, productCard: recipe.productCard };
+      expect(normalizeDna(dna, 'same-store').repairs).toEqual([]);
+      const runtime = sourceRuntimeDna(dna, 'same-store');
+      expect(runtime).toMatchObject(recipe.surfaces);
+      expect(runtime).toMatchObject(recipe.productCard);
+    }
+    apparel.productCard.swatch = 'circle';
+    expect(productCommerceRecipe('atelier').productCard.swatch).toBe('label');
   });
 });

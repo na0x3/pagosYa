@@ -15,12 +15,13 @@
     "@pagosya/store-templates": "workspace:*",
     "@pagosya/storefront-kit": "workspace:*",
     "@pagosya/storefront-preview": "workspace:*",
-    "@pagosya/variant-editor": "workspace:*"
+    "@pagosya/variant-editor": "workspace:*",
+    "highlight.js": "^11.12.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "typescript": "^5.6.3",
-    "vite": "^5.4.8",
-    "vitest": "^3.2.7"
+    "vite": "6.4.3",
+    "vitest": "4.1.11"
   }
 }

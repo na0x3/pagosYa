@@ -1,0 +1,12 @@
+[
+  { "id": "footer-restyle", "instruction": "haz que el footer sea mas bonito: fondo solido intenso con uno de los colores del sitio, texto legal pequeño y links arriba, y el nombre de la tienda gigante pegado abajo. Con los mismos colores del sitio.", "requirements": [] },
+  { "id": "less-whitespace-motion", "instruction": "en algunas partes de una seccion a otra siento que hay muchas partes en blanco, anade mas animaciones y reduce ese espacio en blanco, sino ponle marquesinas moviendose con texto", "requirements": [] },
+  { "id": "bigger-site", "instruction": "quiero que el sitio se vea un poco mas grande, los textos, titulos y botones se ven muy pequeños", "requirements": [] },
+  { "id": "more-colour", "instruction": "usa mas colores en el sitio, secciones con fondos de color llamativos y no solo el crema", "requirements": [] },
+  { "id": "coloured-headlines", "instruction": "pon letras de colores en los titulos grandes, una palabra resaltada con un color de acento", "requirements": [] },
+  { "id": "new-font", "instruction": "cambia la tipografia de los titulos por una condensada y pesada en mayusculas, tipo poster", "requirements": [] },
+  { "id": "product-card-variety", "instruction": "haz que las tarjetas de producto se vean distintas: botones de otro estilo, mas fotos dentro de cada producto y un formato diferente", "requirements": [] },
+  { "id": "trust-strip", "instruction": "cambia el bloque de Retiro en tienda y Pago seguro de cada producto por algo distinto, con iconos o emojis y otro formato", "requirements": [] },
+  { "id": "mobile-polish", "instruction": "mejora el movil: que nada se salga de la pantalla y que los botones sean faciles de tocar", "requirements": [] },
+  { "id": "gallery-story", "instruction": "convierte la galeria en un relato editorial del proceso con etapas claras usando solo las fotos que ya tengo", "requirements": [] }
+]

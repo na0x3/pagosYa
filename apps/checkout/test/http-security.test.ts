@@ -27,3 +27,13 @@ describe('storefront shell CSP', () => {
     );
   });
 });
+
+import { accountFramePolicy, protectAccountResponse } from '../account-security.mjs';
+it('restricts production account embedding to same-origin stores and explicitly configured editors',()=>{
+ const policy=accountFramePolicy({NODE_ENV:'production',MERCHANT_DASHBOARD_ORIGIN:'https://merchant.example',MERCHANT_STUDIO_ORIGIN:'javascript:alert(1)'});
+ expect(policy).toContain("frame-ancestors 'self' https://merchant.example;");
+ expect(policy).not.toContain('frame-ancestors https:');expect(policy).not.toContain('localhost');
+ expect(accountFramePolicy({NODE_ENV:'production',MERCHANT_DASHBOARD_ORIGIN:'https://merchant.example; https://evil.example'})).not.toContain('evil.example');
+ const result=new Map<string,string>();protectAccountResponse('/cuenta/shop/ingresar',{setHeader:(k:string,v:string)=>result.set(k,v)},{NODE_ENV:'production'});
+ expect(result.get('Cache-Control')).toBe('no-store');
+});

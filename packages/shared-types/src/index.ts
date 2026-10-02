@@ -5,3 +5,7 @@ export * from "./site-design";
 export * from "./store-document";
 export * from "./checkout-branding";
 export * from "./comeback-branding";
+
+export * from "./storefront-pages";
+
+export * from './account-forms';
