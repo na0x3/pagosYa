@@ -304,3 +304,57 @@ describe('review fixes (structured selection)', () => {
     expect(block.align).toBe('center');
   });
 });
+
+describe('free layer repair', () => {
+  const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
+  const heroOf = (extra: object) => repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'H', cta: 'Ver', cta2: 'Caja', photo: 'assets/a.jpg', ...extra }] }, ctx).sketch.blocks[0] as any;
+  it('keeps freed parts of the block and drops the rest', () => {
+    const block = heroOf({ free: { 'copy/headline': { x: 10, y: 140, w: 40, r: 8 }, copy: { x: 1, y: 1 }, 'media/photo': { x: 1, y: 1 }, 'copy/badge': { x: 1, y: 1 }, 'copy/actions/cta2': { x: 'a', y: 1 } } });
+    expect(block.free).toEqual({ 'copy/headline': { x: 10, y: 100, w: 40, r: 8 } });
+    expect(heroOf({ free: { copy: { x: 1, y: 1 } } }).free).toBeUndefined();
+  });
+  it('keeps every valid kind of inserted element and repairs or drops the rest', () => {
+    const block = heroOf({ extras: [
+      { id: 'eab1', kind: 'emoji', value: '🍪', x: 10, y: 10, w: 8 },
+      { id: 'eab2', kind: 'text', value: 'x'.repeat(200), x: 10, y: 10 },
+      { id: 'eab3', kind: 'button', value: 'Escríbenos', href: 'https://wa.me/59170000000', x: 10, y: 10 },
+      { id: 'eab4', kind: 'button', value: 'Pedir', href: 'javascript:alert(1)', x: 10, y: 10 },
+      { id: 'eab5', kind: 'photo', value: 'assets/a.jpg', x: 10, y: 10, w: 22 },
+      { id: 'eab6', kind: 'icon', value: 'gift', x: 10, y: 10, r: -8 },
+      { id: 'eab7', kind: 'emoji', value: 'hola', x: 1, y: 1 },
+      { id: 'eab8', kind: 'photo', value: 'assets/otra.jpg', x: 1, y: 1 },
+      { id: 'eab9', kind: 'icon', value: '../x', x: 1, y: 1 },
+      { id: 'ebad', kind: 'video', value: 'x', x: 1, y: 1 },
+      { id: 'eab1', kind: 'text', value: 'mismo id', x: 1, y: 1 },
+      { id: 'eabz', kind: 'text', value: 'sin posición' },
+    ] });
+    expect(block.extras.map((e: any) => [e.kind, e.value.length > 20 ? e.value.length : e.value, e.href])).toEqual([
+      ['emoji', '🍪', undefined], ['text', 120, undefined], ['button', 'Escríbenos', 'https://wa.me/59170000000'], ['button', 'Pedir', 'checkout.html'],
+      ['photo', 'assets/a.jpg', undefined], ['icon', 'gift', undefined], ['text', 'mismo id', undefined],
+    ]);
+    const ids = block.extras.map((e: any) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.every((id: string) => /^e[a-z0-9]{3,10}$/.test(id))).toBe(true);
+    expect(block.extras[5].r).toBe(-8);
+  });
+  it('keeps at most 12 inserted elements and is idempotent', () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({ id: `e00${i.toString(36)}`, kind: 'emoji', value: '✨', x: i, y: i }));
+    const block = heroOf({ extras: many, free: { 'copy/sub': { x: 1, y: 1 } } });
+    expect(block.extras).toHaveLength(12);
+    const once = repairSketch({ blocks: [block] }, ctx).sketch;
+    expect(repairSketch(once, ctx).sketch).toEqual(once);
+  });
+  it('a chat edit keeps free spots and inserted elements by block id; a type change drops the spots only', () => {
+    const current = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'H', free: { 'copy/headline': { x: 5, y: 5 } }, extras: [{ id: 'eab1', kind: 'emoji', value: '✨', x: 1, y: 1 }] }] }, ctx).sketch;
+    const same = carryEditorFields(current, repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Nuevo' }] }, ctx).sketch)[0] as any;
+    expect(same.free).toEqual({ 'copy/headline': { x: 5, y: 5 } });
+    expect(same.extras).toHaveLength(1);
+    const changed = carryEditorFields(current, repairSketch({ blocks: [{ id: 'h', type: 'banner', headline: 'B' }] }, ctx).sketch)[0] as any;
+    expect(changed.free).toBeUndefined();
+    expect(changed.extras).toHaveLength(1);
+  });
+  it('a carried spot whose part the chat edit removed is dropped on the next repair', () => {
+    const block = heroOf({ cta2: '', free: { 'copy/actions/cta2': { x: 1, y: 1 }, 'copy/headline': { x: 2, y: 2 } } });
+    expect(block.free).toEqual({ 'copy/headline': { x: 2, y: 2 } });
+  });
+});

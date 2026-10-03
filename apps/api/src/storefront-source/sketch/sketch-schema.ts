@@ -1,4 +1,4 @@
-import { repairSketchLayout, SKETCH_COPY_ORDER, type SketchGroupLayout } from '@pagosya/shared-types';
+import { repairSketchFree, repairSketchLayout, sketchFreePos, SKETCH_COPY_ORDER, SKETCH_EXTRA_KINDS, SKETCH_EXTRA_MAX, type SketchExtra, type SketchExtraKind, type SketchFreePos, type SketchGroupLayout } from '@pagosya/shared-types';
 import { SOURCE_FONT_IDS } from '../source-font-catalog';
 
 /** The editable sketch a merchant shapes before any site is built (sketch-first YAPI, sub-project 1).
@@ -13,7 +13,7 @@ export type NewsletterForm = 'pill' | 'stacked' | 'underline' | 'card';
 export const NEWSLETTER_FORMS: readonly NewsletterForm[] = ['pill', 'stacked', 'underline', 'card'];
 /** Editor-wide layout controls every block may carry: copy alignment, mirrored photo side, swapped buttons,
  * copy-column element order and per-group layout (spec 2026-10-03-boceto-structure-and-icons-design). */
-export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean; order?: string[]; layout?: Record<string, SketchGroupLayout> };
+export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
 export type StickerPos = { x: number; y: number };
 export type SketchBlock = (
   | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; cta2: string; trust: string; badge: string; note: string; sticker: string; caption: string; photo?: string; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
@@ -62,6 +62,8 @@ const ROLES: readonly (keyof SketchPalette)[] = ['paper', 'ink', 'accent', 'deep
 const BLOCK_BGS: readonly SketchBg[] = [...ROLES, 'tint-accent', 'tint-deep', 'tint-pop'];
 const LIMITS = { headline: 120, short: 200, paragraph: 600, list: 6, galleryPhotos: 6 };
 /** Kickers get their ✦ from CSS; a glyph the model typed itself would double it. */
+/** Where a block button may lead: in-store pages and anchors only. */
+const BLOCK_HREF = /^(#|index\.html|productos\.html|checkout\.html|galeria\.html)/;
 const kickerText = (value: unknown) => (typeof value === 'string' ? value : '').replace(/^[\s✦✧★☆•·◆◇*✶✳︎-]+/u, '').slice(0, 80);
 
 /** Per-channel mix of two hex colors: `weight` of `a` into `1-weight` of `b` (CSS color-mix equivalent). */
@@ -217,6 +219,37 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     return { x: Math.min(100, Math.max(0, Math.round(x * 10) / 10)), y: Math.min(100, Math.max(0, Math.round(y * 10) / 10)) };
   };
   const align = (value: unknown): SketchAlign | undefined => (value === 'center' || value === 'start' || value === 'end' ? value : undefined);
+  // Inserted elements (free layer): known kinds with a valid value and position, unique ids, at most 12.
+  const extras = (value: unknown): SketchExtra[] => {
+    const wanted: Array<{ id: unknown; extra: Omit<SketchExtra, 'id'> }> = [];
+    for (const item of Array.isArray(value) ? value : []) {
+      if (wanted.length >= SKETCH_EXTRA_MAX) break;
+      const raw = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
+      const pos = sketchFreePos(raw);
+      const kind = raw.kind as SketchExtraKind;
+      if (!pos || !SKETCH_EXTRA_KINDS.includes(kind)) continue;
+      const given = typeof raw.value === 'string' ? raw.value.trim() : '';
+      const content = kind === 'emoji' ? (given.length <= 16 && /\p{Extended_Pictographic}/u.test(given) ? given : '')
+        : kind === 'text' ? given.slice(0, 120)
+        : kind === 'button' ? given.slice(0, 40)
+        : kind === 'photo' ? (ctx.photos.includes(given) ? given : '')
+        : /^[a-z0-9-]{2,40}$/.test(given) ? given : '';
+      if (!content) continue;
+      const href = kind === 'button' ? (typeof raw.href === 'string' && (BLOCK_HREF.test(raw.href) || /^https:\/\/wa\.me\/\d{6,15}$/.test(raw.href)) ? raw.href : 'checkout.html') : undefined;
+      wanted.push({ id: raw.id, extra: { kind, value: content, ...pos, ...(href ? { href } : {}) } });
+    }
+    // Valid ids are kept (first come first served); the rest get fresh ones that never collide with a kept id.
+    const valid = (id: unknown): id is string => typeof id === 'string' && /^e[a-z0-9]{3,10}$/.test(id);
+    const reserved = new Set(wanted.map(entry => entry.id).filter(valid));
+    const used = new Set<string>();
+    let fresh = 1;
+    return wanted.map(({ id, extra }) => {
+      let kept = valid(id) && !used.has(id) ? id : '';
+      while (!kept) { const candidate = `ex${String(fresh++).padStart(2, '0')}`; if (!reserved.has(candidate) && !used.has(candidate)) kept = candidate; }
+      used.add(kept);
+      return { id: kept, ...extra };
+    });
+  };
 
   // Blocks: keep known types, repair each field, drop the rest. Ids that are valid and unique are
   // preserved so Studio selections and chat chips survive reorders; the rest get fresh ones.
@@ -246,7 +279,7 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
         const splitOrder = order(block.order, SKETCH_EL_ORDER.split);
         const splitSticker = stickerPos(block.stickerPos);
         const splitAlign = align(block.align);
-        blocks.push({ ...base, type, bg: bg(block.bg, 'accent'), kicker: kickerText(block.kicker), headline: text(block.headline, LIMITS.headline, ctx.storeName), body: text(block.body, LIMITS.paragraph), cta: text(block.cta, 60, 'Ver más'), cta2: text(block.cta2, 60), href: typeof block.href === 'string' && /^(#|index\.html|productos\.html|checkout\.html|galeria\.html)/.test(block.href) ? block.href : 'checkout.html', pills: list(block.pills, LIMITS.list, p => (p == null ? null : text(p, 60))), stats: list(block.stats, 4, s => { const stat = (typeof s === 'object' && s !== null ? s : {}) as Record<string, unknown>; const value = text(stat.value, 20); return value ? { value, label: text(stat.label, 40) } : null; }), boxes: list(block.boxes, 3, b => { const box = (typeof b === 'object' && b !== null ? b : {}) as Record<string, unknown>; const title = text(box.title, 40); const icon = typeof box.icon === 'string' && /^[a-z0-9-]{2,40}$/.test(box.icon) ? box.icon : ''; return title ? { title, text: text(box.text, 80), ...(icon ? { icon } : {}) } : null; }), sticker: text(block.sticker, 40), tag: text(block.tag, 60), ...(splitPhoto ? { photo: splitPhoto } : {}), ...(splitOrder ? { order: splitOrder } : {}), ...(splitSticker ? { stickerPos: splitSticker } : {}), ...(splitAlign ? { align: splitAlign } : {}) });
+        blocks.push({ ...base, type, bg: bg(block.bg, 'accent'), kicker: kickerText(block.kicker), headline: text(block.headline, LIMITS.headline, ctx.storeName), body: text(block.body, LIMITS.paragraph), cta: text(block.cta, 60, 'Ver más'), cta2: text(block.cta2, 60), href: typeof block.href === 'string' && BLOCK_HREF.test(block.href) ? block.href : 'checkout.html', pills: list(block.pills, LIMITS.list, p => (p == null ? null : text(p, 60))), stats: list(block.stats, 4, s => { const stat = (typeof s === 'object' && s !== null ? s : {}) as Record<string, unknown>; const value = text(stat.value, 20); return value ? { value, label: text(stat.label, 40) } : null; }), boxes: list(block.boxes, 3, b => { const box = (typeof b === 'object' && b !== null ? b : {}) as Record<string, unknown>; const title = text(box.title, 40); const icon = typeof box.icon === 'string' && /^[a-z0-9-]{2,40}$/.test(box.icon) ? box.icon : ''; return title ? { title, text: text(box.text, 80), ...(icon ? { icon } : {}) } : null; }), sticker: text(block.sticker, 40), tag: text(block.tag, 60), ...(splitPhoto ? { photo: splitPhoto } : {}), ...(splitOrder ? { order: splitOrder } : {}), ...(splitSticker ? { stickerPos: splitSticker } : {}), ...(splitAlign ? { align: splitAlign } : {}) });
         break;
       }
       case 'marquee': blocks.push({ ...base, type, text: text(block.text, LIMITS.short, ctx.storeName), glyph: MARQUEE_GLYPHS.includes(block.glyph as (typeof MARQUEE_GLYPHS)[number]) ? (block.glyph as string) : '·' }); break;
@@ -262,7 +295,7 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
       case 'faq': blocks.push({ ...base, type, kicker: kickerText(block.kicker), title: text(block.title, LIMITS.headline, 'Preguntas'), items: list(block.items, LIMITS.list, i => { const entry = (typeof i === 'object' && i !== null ? i : {}) as Record<string, unknown>; const q = text(entry.q, LIMITS.short); return q ? { q, a: text(entry.a, LIMITS.paragraph) } : null; }) }); break;
       case 'banner': {
         const bannerSticker = stickerPos(block.stickerPos);
-        blocks.push({ ...base, type, kicker: kickerText(block.kicker), headline: text(block.headline, LIMITS.headline, ctx.storeName), cta: text(block.cta, 60, 'Comprar'), href: typeof block.href === 'string' && /^(#|index\.html|productos\.html|checkout\.html|galeria\.html)/.test(block.href) ? block.href : 'checkout.html', sticker: text(block.sticker, 40), ...(bannerSticker ? { stickerPos: bannerSticker } : {}) });
+        blocks.push({ ...base, type, kicker: kickerText(block.kicker), headline: text(block.headline, LIMITS.headline, ctx.storeName), cta: text(block.cta, 60, 'Comprar'), href: typeof block.href === 'string' && BLOCK_HREF.test(block.href) ? block.href : 'checkout.html', sticker: text(block.sticker, 40), ...(bannerSticker ? { stickerPos: bannerSticker } : {}) });
         break;
       }
       case 'gallery': blocks.push({ ...base, type, kicker: kickerText(block.kicker), title: text(block.title, LIMITS.headline, 'Galería'), photos: list(block.photos, LIMITS.galleryPhotos, p => (typeof p === 'string' && ctx.photos.includes(p) ? p : (p != null && notes.push(`foto inexistente (${String(p).slice(0, 60)}); se quitó`), null))) }); break;
@@ -289,6 +322,11 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
       }
       const layout = repairSketchLayout(kept.type, block.layout);
       if (layout) kept.layout = layout; else delete kept.layout;
+      // Free layer: inserted elements, then freed parts named against the repaired block (never nested).
+      const inserted = extras(block.extras);
+      if (inserted.length) kept.extras = inserted; else delete kept.extras;
+      const free = repairSketchFree(kept, block.free);
+      if (free) kept.free = free; else delete kept.free;
     }
   }
 
@@ -337,13 +375,14 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
 }
 
 /** Editor-only block fields are absent from the model schema, so a chat edit reply resets them; carry them over by id. */
-export const SKETCH_EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos', 'layout'] as const;
+export const SKETCH_EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos', 'layout', 'free', 'extras'] as const;
 export function carryEditorFields(current: StoreSketch, edited: StoreSketch): StoreSketch['blocks'] {
   return edited.blocks.map(block => {
     const before = current.blocks.find(item => item.id === block.id) as Record<string, unknown> | undefined;
     if (!before) return block;
-    // Order and group layout name the parts of one block type; a block the model turned into another type starts fresh.
-    const keys = before.type === block.type ? SKETCH_EDITOR_ONLY : SKETCH_EDITOR_ONLY.filter(key => key !== 'order' && key !== 'layout');
+    // Order, group layout and free spots name the parts of one block type; a block the model turned into another type
+    // starts fresh there (inserted elements belong to the block, so they stay).
+    const keys = before.type === block.type ? SKETCH_EDITOR_ONLY : SKETCH_EDITOR_ONLY.filter(key => key !== 'order' && key !== 'layout' && key !== 'free');
     const carried = Object.fromEntries(keys.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
     return { ...block, ...carried } as typeof block;
   });
