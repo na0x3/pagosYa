@@ -342,7 +342,9 @@ export function carryEditorFields(current: StoreSketch, edited: StoreSketch): St
   return edited.blocks.map(block => {
     const before = current.blocks.find(item => item.id === block.id) as Record<string, unknown> | undefined;
     if (!before) return block;
-    const carried = Object.fromEntries(SKETCH_EDITOR_ONLY.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
+    // Order and group layout name the parts of one block type; a block the model turned into another type starts fresh.
+    const keys = before.type === block.type ? SKETCH_EDITOR_ONLY : SKETCH_EDITOR_ONLY.filter(key => key !== 'order' && key !== 'layout');
+    const carried = Object.fromEntries(keys.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
     return { ...block, ...carried } as typeof block;
   });
 }

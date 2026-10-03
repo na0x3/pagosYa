@@ -293,3 +293,14 @@ describe('structured selection fields', () => {
     expect(blocks[0]).toMatchObject({ headline: 'Nuevo', align: 'center', layout: { copy: { gap: 'l' } } });
   });
 });
+
+describe('review fixes (structured selection)', () => {
+  it('a chat edit that changes a block type does not carry the old copy order or layout', () => {
+    const current = repairSketch({ blocks: [{ id: 'b5', type: 'story', title: 'T', paragraphs: ['a'], order: ['paragraphs', 'title'], layout: { copy: { gap: 'l' } }, align: 'center' }] }, ctx).sketch;
+    const edited = repairSketch({ blocks: [{ id: 'b5', type: 'newsletter', title: 'Únete', note: 'n' }] }, ctx).sketch;
+    const block = carryEditorFields(current, edited)[0] as any;
+    expect(block.order).toBeUndefined();
+    expect(block.layout).toBeUndefined();
+    expect(block.align).toBe('center');
+  });
+});

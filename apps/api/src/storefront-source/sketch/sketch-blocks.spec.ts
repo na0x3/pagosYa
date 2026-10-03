@@ -235,3 +235,13 @@ describe('structured selection markers', () => {
     for (const rule of ['[data-skb-gap="s"]', '[data-skb-dir="column"]', '[data-skb-galign="center"]', '[data-skb-valign="end"]']) expect(SKETCH_BASE_CSS).toContain(rule);
   });
 });
+
+describe('review fixes (layout controls take effect)', () => {
+  it('row alignment beats the block alignment rule and gap containers are grids', () => {
+    const css = SKETCH_BASE_CSS + (['story', 'faq'] as const).map(type => blockCss(type)).join('\n');
+    // .skb + attribute selectors: specificity above `.skb[data-skb-align] :is(.skb-actions…)` (0,3,0).
+    expect(css).toContain('.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="start"]');
+    expect(css).toContain('.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="center"]');
+    expect(css).toContain(':is(.skb-story__copy, .skb-story__paragraphs, .skb-faq__list)[data-skb-gap] { display: grid; }');
+  });
+});

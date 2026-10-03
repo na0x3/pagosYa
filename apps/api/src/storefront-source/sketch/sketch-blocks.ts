@@ -509,15 +509,20 @@ export const SKETCH_BASE_CSS = `
 .skb img { max-width: 100%; }
 .skb-banner__copy { display: grid; gap: 1.6rem; justify-items: center; }
 .skb-newsletter__stack { display: grid; gap: 1rem; justify-items: center; width: 100%; }
+/* Plain-flow containers become grids only once the merchant picks a spacing, so old sketches keep their margins. */
+:is(.skb-story__copy, .skb-story__paragraphs, .skb-faq__list)[data-skb-gap] { display: grid; }
 [data-skb-group][data-skb-gap="s"] { gap: 0.5rem; }
 [data-skb-group][data-skb-gap="m"] { gap: 1.1rem; }
 [data-skb-group][data-skb-gap="l"] { gap: 2rem; }
 :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"] { flex-direction: column; align-items: flex-start; }
 .skb-boxes[data-skb-dir="column"] { grid-template-columns: 1fr; }
-:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="center"] { justify-content: center; }
-:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="end"] { justify-content: flex-end; }
-:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="center"] { align-items: center; }
-:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="end"] { align-items: flex-end; }
+/* Prefixed with .skb so a row's own alignment beats the block-wide .skb[data-skb-align] rules. */
+.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="start"] { justify-content: flex-start; }
+.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="center"] { justify-content: center; }
+.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="end"] { justify-content: flex-end; }
+.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="center"] { align-items: center; }
+.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="end"] { align-items: flex-end; }
+.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="start"] { align-items: flex-start; }
 .skb-boxes[data-skb-galign="center"] { margin-inline: auto; }
 .skb-boxes[data-skb-galign="end"] { margin-left: auto; }
 [data-skb-group][data-skb-valign="start"] { align-self: start; align-content: start; }
