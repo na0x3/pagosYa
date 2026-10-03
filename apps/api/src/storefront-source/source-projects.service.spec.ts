@@ -341,4 +341,18 @@ describe('sketch.json lifecycle (sketch-first C1)', () => {
     await service.save('m1', 's1', withSketch('Boceto editado'));
     expect(read().versions[0].snapshot.files.some((f: any) => f.path === 'sketch.json')).toBe(true);
   });
+  const component = { path: 'components/home.tsx', content: 'export default function Home() { return <main />; }' };
+  const boceto = () => ({ ...input(), label: 'Boceto editado', files: [...input().files, component, { path: 'sketch.json', content: '{"blocks":[]}' }] });
+  it('a save that leaves the page components untouched keeps the boceto (photo upload, asset roles)', async () => {
+    const { service, read } = setup();
+    await service.save('m1', 's1', boceto());
+    await service.save('m1', 's1', { ...boceto(), revision: 1, label: 'Foto añadida al boceto', files: [...boceto().files, { path: 'assets/new.jpg', content: 'abcd', encoding: 'base64' as const }] });
+    expect(read().versions[1].snapshot.files.some((f: any) => f.path === 'sketch.json')).toBe(true);
+  });
+  it('a save that changes a page component still drops the boceto', async () => {
+    const { service, read } = setup();
+    await service.save('m1', 's1', boceto());
+    await service.save('m1', 's1', { ...boceto(), revision: 1, label: 'Edición de components/home.tsx', files: boceto().files.map(f => (f.path === component.path ? { ...f, content: f.content.replace('<main />', '<main>x</main>') } : f)) });
+    expect(read().versions[1].snapshot.files.some((f: any) => f.path === 'sketch.json')).toBe(false);
+  });
 });

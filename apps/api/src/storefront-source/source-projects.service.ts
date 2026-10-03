@@ -146,12 +146,24 @@ export class SourceProjectsService {
     return sourceProjectSnapshot({ ...input, files: runtime.files });
   }
 
+  /** True when every page component (`nextSourceFile`) of the save is byte-identical to the base revision's. */
+  private async componentsUnchanged(merchantId: string, storeId: string, input: SaveSourceProjectDto): Promise<boolean> {
+    if (!input.revision) return false;
+    const base = await this.version(merchantId, storeId, input.revision).catch(() => null);
+    const before = new Map(((base?.snapshot as { files?: Array<{ path: string; content: string }> } | undefined)?.files ?? []).filter(file => nextSourceFile(file.path)).map(file => [file.path, file.content]));
+    const after = input.files.filter(file => nextSourceFile(file.path));
+    return after.length === before.size && after.every(file => before.get(file.path) === file.content);
+  }
+
   async save(merchantId: string, storeId: string, input: SaveSourceProjectDto, generation?: GenerationSave, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {
     await this.ownedStore(merchantId, storeId);
-    // sketch.json may only travel with a save that derives the components from it (a Boceto edit or a
-    // generation that just assembled them). Any other save edited the components directly, so a carried-over
-    // sketch would be stale and a later Boceto save would silently revert those edits.
-    if (!generation && input.label !== 'Boceto editado') input = { ...input, files: input.files.filter(file => file.path !== 'sketch.json') };
+    // sketch.json may only travel with a save that derives the components from it (a Boceto edit or a generation
+    // that just assembled them) or that leaves them byte-identical (a photo upload, asset roles): then the sketch
+    // still describes the page. Any other save edited the components directly, so a carried-over sketch would be
+    // stale and a later Boceto save would silently revert those edits.
+    if (!generation && input.label !== 'Boceto editado' && input.files.some(file => file.path === 'sketch.json') && !(await this.componentsUnchanged(merchantId, storeId, input))) {
+      input = { ...input, files: input.files.filter(file => file.path !== 'sketch.json') };
+    }
     const snapshot = generation?.prepared ? assertPreparedSource(input, generation.prepared) : await this.prepare(input);
     if (generation?.prepared && (generation.products?.length || generation.productOperations?.length)) throw new BadRequestException('Las operaciones de catálogo deben prepararse por separado.');
     return this.append(storeId, input.revision, input.label, snapshot, null, generation, undefined, fence);
