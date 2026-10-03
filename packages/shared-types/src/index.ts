@@ -9,3 +9,4 @@ export * from "./comeback-branding";
 export * from "./storefront-pages";
 
 export * from './account-forms';
+export * from './sketch-structure';
