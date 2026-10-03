@@ -803,3 +803,35 @@ it('menu: Giro acts on free parts; Capas rows open the menu too; locked keeps on
   locked.remoteContext({ id: 'intro', path: 'copy/sub', x: 5, y: 5 });
   expect(menuLabels().filter(([, disabled]) => !disabled).map(([label]) => label)).toEqual(['Seleccionar bloque']);
 });
+
+const stepsSketch = () => ({ ...sketch(), blocks: [{ id: 'st', type: 'steps', title: 'T', note: '', kicker: '', items: [{ icon: 'a', title: 'Uno', text: '' }, { icon: 'b', title: 'Dos', text: '' }, { icon: 'c', title: 'Tres', text: '' }, { icon: 'd', title: 'Cuatro', text: '' }], free: { 'items/3': { x: 5, y: 5 } }, bg: 'paper', size: 'm' }, ...sketch().blocks] });
+
+it('group: Supr removes every picked item of a list (highest first), keeps fixed parts and says so', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: stepsSketch(), photos: [], fonts: ['anton'] } as any);
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'st', path: 'items/0' }, { id: 'st', path: 'items/2' }, { id: 'st', path: 'head/title' }], false);
+  panel.remoteKey('delete');
+  expect(host.querySelector('.bct-status')?.textContent).toContain('1 parte no se puede eliminar');
+  expect(lastSelection()).toMatchObject({ id: '' });
+  await vi.advanceTimersByTimeAsync(1300);
+  const block = putSketch.mock.calls.at(-1)![1].sketch.blocks[0];
+  expect(block.items.map((item: any) => item.title)).toEqual(['Dos', 'Cuatro']);
+  expect(block.free).toEqual({ 'items/1': { x: 5, y: 5 } });
+  expect(block.title).toBe('T');
+  expect(putSketch).toHaveBeenCalledTimes(1);
+});
+
+it('group: several blocks move up/down as a group and delete together, one step each', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'cat', path: '' }, { id: 'fin', path: '' }], false);
+  panel.remoteKey('up');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['cat', 'fin', 'intro']);
+  panel.remoteKey('undo');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['intro', 'cat', 'fin']);
+  panel.remoteSelectMany([{ id: 'intro', path: '' }, { id: 'cat', path: '' }], false);
+  panel.remoteKey('delete');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['fin']);
+});

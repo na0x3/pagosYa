@@ -258,6 +258,18 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   }
   function moveSelection(delta: -1 | 1) {
     if (!sketch || !selected) return;
+    if (others.length) {
+      // Several whole blocks move as one run of blocks, one place up or down; parts do not group-move.
+      const list = picks(), ids = new Set(list.map(pick => pick.id));
+      if (list.some(pick => pick.path || !sketch!.blocks.some(block => block.id === pick.id))) return;
+      const first = sketch.blocks.findIndex(block => ids.has(block.id));
+      const moving = sketch.blocks.filter(block => ids.has(block.id)), rest = sketch.blocks.filter(block => !ids.has(block.id));
+      const at = sketch.blocks.slice(0, first).filter(block => !ids.has(block.id)).length + delta;
+      if (at < 0 || at > rest.length) return;
+      rest.splice(at, 0, ...moving);
+      sketch.blocks = rest;
+      scheduleStructural(); draw(); return;
+    }
     if (!selectedPath) {
       const index = sketch.blocks.findIndex(block => block.id === selected);
       const target = index + delta;
@@ -279,11 +291,23 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     scheduleStructural(); draw();
   }
   function removeSelection() {
-    if (!selected) return;
-    if (!selectedPath) { deleteBlock(selected); return; }
-    const block = selectedBlock();
-    if (!block || !sketchRemoveNode(block, selectedPath)) return;
-    focusNode(selected, selectedPath.split('/').slice(0, -1).join('/'));
+    const list = picks();
+    if (!list.length || !sketch) return;
+    if (list.length === 1) {
+      if (!selectedPath) { deleteBlock(selected); return; }
+      const block = selectedBlock();
+      if (!block || !sketchRemoveNode(block, selectedPath)) return;
+      focusNode(selected, selectedPath.split('/').slice(0, -1).join('/'));
+      scheduleStructural(); draw(); return;
+    }
+    const gone = new Set(list.filter(pick => !pick.path && pick.id !== 'account').map(pick => pick.id));
+    // Items of one list go from the highest index down, so the indices still to remove stay right.
+    const parts = list.filter(pick => pick.path && !gone.has(pick.id)).sort((a, b) => b.path.localeCompare(a.path, undefined, { numeric: true }));
+    let kept = 0;
+    for (const pick of parts) { const block = blockOf(pick.id); if (!block || !sketchRemoveNode(block, pick.path)) kept++; }
+    if (gone.size) sketch.blocks = sketch.blocks.filter(block => !gone.has(block.id));
+    setPicks([]);
+    note = kept ? `${kept} ${kept === 1 ? 'parte no se puede eliminar' : 'partes no se pueden eliminar'}.` : '';
     scheduleStructural(); draw();
   }
   /** Free spots and inserted elements among the picks, with the object that holds each spot. */
@@ -308,7 +332,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   const canRemovePick = (pick: BocetoPick) => { const block = blockOf(pick.id); return Boolean(block) && (pick.path ? sketchCanRemove(block, pick.path) : block.type !== 'account'); };
   function canMovePicks(): boolean {
     const list = picks();
-    if (list.length !== 1 || !sketch) return false;
+    if (!sketch || !list.length) return false;
+    if (list.length > 1) return list.every(pick => !pick.path && sketch!.blocks.some(block => block.id === pick.id));
     const [pick] = list, block = blockOf(pick.id);
     return pick.path ? Boolean(block) && sketchCanMove(block, pick.path) : sketch.blocks.some(item => item.id === pick.id);
   }
