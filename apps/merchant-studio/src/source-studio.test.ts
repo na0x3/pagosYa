@@ -366,3 +366,16 @@ it('review: a failed Generar sitio says so where the merchant is looking', async
   await vi.waitFor(() => expect(app.querySelector('.toast')?.textContent).toContain('No se pudo generar. Inténtalo de nuevo.'));
   expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
 });
+
+it('review: after the Studio clears the chip (Esc), picking the block again brings it back', async () => {
+  bocetoStore();
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
+  (app.querySelector('[data-boceto-tab="yapi"]') as HTMLElement).click();
+  (app.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
+  await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')?.textContent).toContain('Portada'));
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')).toBeNull());
+  (app.querySelector('[data-boceto-node="copy"]') as HTMLElement).click();
+  await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')?.textContent).toContain('Portada'));
+});

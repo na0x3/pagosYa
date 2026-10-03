@@ -514,3 +514,14 @@ it('review: while YAPI works the Boceto locks, says so, and ignores canvas edits
   panel.mount(host, options);
   expect((host.querySelector('[data-boceto-move-up]') as HTMLButtonElement).disabled).toBe(false);
 });
+
+it('review: when the Studio drops the chip, the same block brings it back only once picked again', async () => {
+  const selected = vi.fn();
+  const panel = await mountWith({ selected });
+  panel.remoteSelect('intro', 'copy');
+  panel.forgetSelection();
+  panel.remoteText('intro', 'headline', 'Sigo editando');
+  expect(selected.mock.calls.map(call => call[0])).toEqual([{ id: 'intro', label: 'Portada' }]);
+  panel.remoteSelect('intro', 'copy');
+  expect(selected.mock.calls.map(call => call[0])).toEqual([{ id: 'intro', label: 'Portada' }, { id: 'intro', label: 'Portada' }]);
+});

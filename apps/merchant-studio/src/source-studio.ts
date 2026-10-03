@@ -156,7 +156,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     else if (event.key === '-') { event.preventDefault(); zoomCanvasAt(1 / 1.2, board.clientWidth / 2, board.clientHeight / 2); }
     else if (event.key === '0') { event.preventDefault(); fitCanvas(); }
   });
-  function clearSelection() { selection.clear(); platformHint = false; editableField = null; selectionRequest++; }
+  // In the Boceto the panel also forgets the block, so picking it again brings the chip back.
+  function clearSelection() { selection.clear(); platformHint = false; editableField = null; selectionRequest++; if (bocetoOpen) bocetoPanel.forgetSelection(); }
   function renderSelection() { const host = app.querySelector<HTMLElement>('[data-selection-host]'); if (host) host.innerHTML = selectionMarkup(); syncSelectMode(); }
   function takeSelection(picked: { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }) {
     if (!selectMode) return;

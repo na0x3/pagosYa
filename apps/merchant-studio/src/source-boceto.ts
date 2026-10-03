@@ -122,6 +122,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   /** Side panels sit flush against the walls; each one tucks away behind an arrow and comes back from a tab. */
   const tucked = { layers: false, inspector: false };
   let rightTab: 'design' | 'yapi' = 'design', reportedBlock: string | null = null, reportedYapi = false;
+  /** A block the Studio dropped as chat context: not re-reported until the merchant picks a block again. */
+  let forgottenBlock: string | null = null;
   /** The YAPI tab is on (only offered when the Studio docks a chat, `opts.yapi`). */
   const yapiTab = () => Boolean(opts?.yapi) && rightTab === 'yapi';
   const PANEL_WIDTH = { layers: 240, inspector: 300 };
@@ -201,7 +203,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     revealNext = false;
     const block = selectedBlock();
     const blockId = block && block.id !== 'account' ? String(block.id) : null;
-    if (blockId !== reportedBlock) {
+    if (forgottenBlock && blockId !== forgottenBlock) forgottenBlock = null;
+    if (!forgottenBlock && blockId !== reportedBlock) {
       reportedBlock = blockId;
       opts?.selected?.(blockId ? { id: blockId, label: TYPE_LABEL[block.type] || block.type } : null);
     }
@@ -585,7 +588,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const item = el('button', { type: 'button', className: `bct-node${selected === block.id && selectedPath === node.path ? ' is-selected' : ''}`, text: node.label });
       item.style.paddingLeft = `${10 + depth * 14}px`;
       item.dataset.bocetoNode = node.path;
-      item.addEventListener('click', event => { event.stopPropagation(); selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw(); });
+      item.addEventListener('click', event => { event.stopPropagation(); forgottenBlock = null; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw(); });
       list.append(item);
       if (node.children.length) list.append(nodeList(block, node.children, depth + 1));
     }
@@ -599,7 +602,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     return toggle;
   }
   /** Select a whole block from Capas (a second click on the same block clears it). */
-  const pickBlock = (id: string) => { const same = selected === id && !selectedPath; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw(); };
+  const pickBlock = (id: string) => { forgottenBlock = null; const same = selected === id && !selectedPath; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw(); };
 
   function draw() {
     if (!host || !opts) return;
@@ -732,6 +735,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
 
   return {
     /** Finish any queued or running save (before "Generar sitio" builds from the saved boceto). */
+    /** The Studio cleared the chat's block chip on its own (a request went out, Esc, a page change): stay quiet about
+     * the current block until the merchant picks one again, so the chip and the canvas agree. */
+    forgetSelection() { reportedBlock = null; forgottenBlock = selected && selected !== 'account' ? selected : null; },
     /** Resolves true only when the boceto on screen is the saved one: a failed save must stop "Generar sitio". */
     flush: async () => { await flushSave(); return Boolean(sketch) && !pending && JSON.stringify(sketch) === lastSaved; },
     /** "Cambiar foto" on the canvas: select that block and open the photo picker on that slot. */
@@ -744,6 +750,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     remoteSelect(id: string, path = '') {
       if (!sketch) return;
+      forgottenBlock = null;
       const before = `${selected}|${selectedPath}`;
       focusNode(id, path);
       if (`${selected}|${selectedPath}` !== before) picker = null;
