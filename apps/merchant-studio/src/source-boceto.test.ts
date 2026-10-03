@@ -122,10 +122,11 @@ it('page style controls apply live and save with the sketch', async () => {
 });
 
 it('symmetry: alignment right and photo on the left apply live', async () => {
-  await mount();
+  const panel = await mount();
   (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
-  ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Der.') as HTMLElement).click();
   ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Izquierdo') as HTMLElement).click();
+  panel.remoteSelect('intro', 'copy');
+  ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Der.') as HTMLElement).click();
   expect(lastLook().blocks.intro).toMatchObject({ align: 'end', flip: true });
 });
 
@@ -270,4 +271,50 @@ it('a canvas edit on another block never keeps a part path from the previous blo
   panel.remoteKey('delete');
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((b: any) => b.id)).toEqual(['intro', 'fin']);
+});
+
+const clickSegment = (rowLabel: string, option: string) => {
+  const row = [...host.querySelectorAll('.bct-row')].find(node => node.querySelector('.bct-row__label')?.textContent === rowLabel)!;
+  ([...row.querySelectorAll('.bct-segment__option')].find(node => node.textContent === option) as HTMLElement).click();
+};
+
+it('a selected row group shows direction, spacing and alignment, applied live and saved as layout', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], cta2: 'Caja' }, ...sketch().blocks.slice(1)] }, photos: [], fonts: [] } as any);
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/actions');
+  expect(host.querySelector('.bct-props .bct-section__title')?.textContent).toBe('Botones');
+  clickSegment('Dirección', 'Vertical');
+  clickSegment('Espacio', 'L');
+  clickSegment('Alineación', 'Centro');
+  const live = [...applied].reverse().find(payload => payload.blocks)!.blocks.intro.layout;
+  expect(live).toEqual({ actions: { dir: 'column', gap: 'l', align: 'center' } });
+  clickSegment('Espacio', 'Auto');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].layout).toEqual({ actions: { dir: 'column', align: 'center' } });
+});
+
+it('alignment lives on the copy column now; a leaf shows its name and a remove button when optional', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', '');
+  expect([...host.querySelectorAll('.bct-row__label')].map(node => node.textContent)).not.toContain('Alineación');
+  panel.remoteSelect('intro', 'copy');
+  clickSegment('Alineación', 'Centro');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].align).toBe('center');
+  panel.remoteSelect('intro', 'copy/sub');
+  expect(host.querySelector('.bct-props .bct-section__title')?.textContent).toBe('Bajada');
+  (host.querySelector('[data-boceto-remove-node]') as HTMLElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].sub).toBe('');
+  panel.remoteSelect('intro', 'copy/headline');
+  expect(host.querySelector('[data-boceto-remove-node]')).toBeNull();
+});
+
+it('the back button climbs one level at a time', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/sub');
+  (host.querySelector('.bct-back') as HTMLElement).click();
+  expect(lastSelection()).toMatchObject({ path: 'copy' });
+  (host.querySelector('.bct-back') as HTMLElement).click();
+  expect(lastSelection()).toMatchObject({ path: '' });
 });

@@ -2,7 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
-import { sketchApplyMove, sketchCanMove, sketchFindNode, sketchNodeTree, sketchRemoveNode } from '@pagosya/shared-types';
+import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketchGroup, sketchNodeTree, sketchRemoveNode, SKETCH_TWO_COLUMN } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -25,7 +25,6 @@ const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: str
 ];
 const DEFAULT_STYLE: SketchStyle = { radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns' };
 const PHOTO_BLOCKS = ['hero', 'split', 'story', 'newsletter'];
-const ALIGNABLE = ['hero', 'split', 'steps', 'catalog', 'collections', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'];
 
 const PALETTE_ROLES = ['paper', 'ink', 'accent', 'deep', 'pop'] as const;
 const BG_ROLES = ['paper', 'ink', 'accent', 'deep', 'pop', 'tint-accent', 'tint-deep', 'tint-pop'] as const;
@@ -279,7 +278,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     }
     if (block.type === 'hero') children.push(row('Composición', select(block.variant, ['photo-right', 'full-bleed', 'stacked'], ['Foto derecha', 'Completa', 'Apilada'], next => { block.variant = next; schedule(); })));
     // Symmetry: copy alignment for every content block, and which side the photo sits on.
-    if (ALIGNABLE.includes(block.type)) children.push(row('Alineación', segment(block.align === 'center' || block.align === 'end' ? block.align : 'start', ['start', 'center', 'end'], ['Izq.', 'Centro', 'Der.'], next => { if (next === 'start') delete block.align; else block.align = next; schedule(); draw(); })));
+    if (block.type === 'footer') children.push(row('Alineación', segment(block.align === 'center' || block.align === 'end' ? block.align : 'start', ['start', 'center', 'end'], ['Izq.', 'Centro', 'Der.'], next => { if (next === 'start') delete block.align; else block.align = next; schedule(); draw(); })));
     if (PHOTO_BLOCKS.includes(block.type)) children.push(row('Foto al lado', segment(block.flip ? 'left' : 'right', ['left', 'right'], ['Izquierdo', 'Derecho'], next => { if (next === 'left') block.flip = true; else delete block.flip; schedule(); draw(); })));
     if ((block.type === 'hero' || block.type === 'split') && block.cta2) {
       const swap = el('button', { type: 'button', className: 'bct-chip', text: '⇄ Intercambiar botones' });
@@ -315,8 +314,53 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       remove.addEventListener('click', () => deleteBlock(block.id));
       children.push(remove);
     }
-    children.push(el('p', { className: 'bct-hint', text: 'Toca dos veces un texto para editarlo. Pasa sobre una foto y elige «Cambiar foto». Arrastra un botón sobre el otro para cambiarlos de lugar. Supr elimina el bloque.' }));
+    children.push(el('p', { className: 'bct-hint', text: 'Haz clic otra vez dentro del bloque para elegir una parte (columna, botones, foto…). Toca dos veces un texto para editarlo. Supr elimina lo seleccionado.' }));
     return section(TYPE_LABEL[block.type] || block.type, children);
+  }
+
+  /** Inspector for a group or element inside a block, Figma-style: the controls of what is selected. */
+  function nodeProps(block: any, path: string) {
+    const node = sketchFindNode(sketchNodeTree(block), path);
+    const key = path.split('/').pop()!;
+    const kind = /^\d+$/.test(key) ? undefined : sketchGroup(block.type, key)?.kind;
+    const children: HTMLElement[] = [];
+    const current = (field: string): string => block.layout?.[key]?.[field] ?? '';
+    const setLayout = (field: string, value: string) => {
+      const all = { ...(block.layout || {}) }; const entry = { ...(all[key] || {}) };
+      if (value) entry[field] = value; else delete entry[field];
+      if (Object.keys(entry).length) all[key] = entry; else delete all[key];
+      if (Object.keys(all).length) block.layout = all; else delete block.layout;
+      schedule(); draw();
+    };
+    const gapRow = () => row('Espacio', segment(current('gap'), ['', 's', 'm', 'l'], ['Auto', 'S', 'M', 'L'], next => setLayout('gap', next)));
+    const blockAlign = (values: string[], names: string[]) => row('Alineación', segment(block.align === 'center' || block.align === 'end' ? block.align : 'start', values, names, next => { if (next === 'start') delete block.align; else block.align = next; schedule(); draw(); }));
+    const layoutAllowed = block.type !== 'account';
+    if (kind === 'column') {
+      if (key === 'copy') children.push(blockAlign(['start', 'center', 'end'], ['Izq.', 'Centro', 'Der.']));
+      if (layoutAllowed) children.push(gapRow());
+      if (layoutAllowed && key === 'copy' && SKETCH_TWO_COLUMN.includes(block.type)) children.push(row('Vertical', segment(current('valign'), ['', 'start', 'center', 'end'], ['Auto', 'Arriba', 'Centro', 'Abajo'], next => setLayout('valign', next))));
+    } else if (kind === 'row' && layoutAllowed) {
+      children.push(row('Dirección', segment(current('dir'), ['', 'column'], ['Horizontal', 'Vertical'], next => setLayout('dir', next))));
+      children.push(gapRow());
+      children.push(row('Alineación', segment(current('align'), ['', 'center', 'end'], ['Inicio', 'Centro', 'Final'], next => setLayout('align', next))));
+    } else if (kind === 'head') {
+      children.push(blockAlign(['start', 'center'], ['Izq.', 'Centro']));
+    } else if (kind === 'items' && layoutAllowed) {
+      children.push(gapRow());
+    } else if (kind === 'media') {
+      children.push(row('Foto al lado', segment(block.flip ? 'left' : 'right', ['left', 'right'], ['Izquierdo', 'Derecho'], next => { if (next === 'left') block.flip = true; else delete block.flip; schedule(); draw(); })));
+      children.push(row('Foto', photoButton(block, 'photo')));
+    } else if (!kind) {
+      children.push(el('p', { className: 'bct-hint', text: 'Toca dos veces este texto en el lienzo para editarlo.' }));
+    }
+    if (sketchCanRemove(block, path)) {
+      const remove = el('button', { type: 'button', className: 'bct-remove', text: `Quitar ${String(node?.label ?? '').toLowerCase()}` });
+      remove.dataset.bocetoRemoveNode = '';
+      remove.addEventListener('click', () => removeSelection());
+      children.push(remove);
+    }
+    if (sketchCanMove(block, path)) children.push(el('p', { className: 'bct-hint', text: 'Arrástralo en el lienzo o usa ⌥↑ / ⌥↓ para moverlo.' }));
+    return section(node?.label ?? key, children);
   }
 
   /** A photo slot as a thumbnail button that opens the picker. */
@@ -533,15 +577,17 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     statusNode = el('span', { className: 'bct-status', text: pending ? 'Guardando…' : note || 'Se guarda solo' });
     root.append(el('header', { className: 'bct-head' }, [el('h2', { text: 'Diseño' }), statusNode, close]));
 
-    const selectedBlock = selected ? allBlocks().find(block => block.id === selected) : undefined;
-    const openPicker = selectedBlock && picker && picker.blockId === selectedBlock.id ? pickerPanel(selectedBlock) : null;
+    const current = selectedBlock();
+    const openPicker = current && picker && picker.blockId === current.id ? pickerPanel(current) : null;
     if (openPicker) {
       root.append(el('div', { className: 'bct-props' }, [openPicker]));
-    } else if (selectedBlock) {
-      // Selection-driven, like Figma: the inspector shows what is selected on the canvas.
-      const back = el('button', { type: 'button', className: 'bct-back', text: '← Página' });
-      back.addEventListener('click', () => { selected = ''; draw(); });
-      root.append(el('div', { className: 'bct-props' }, [back, blockProps(selectedBlock)]));
+    } else if (current) {
+      // Selection-driven, like Figma: the inspector shows what is selected on the canvas, one level up at a time.
+      const upPath = selectedPath.split('/').slice(0, -1).join('/');
+      const upNode = upPath ? sketchFindNode(sketchNodeTree(current), upPath) : undefined;
+      const back = el('button', { type: 'button', className: 'bct-back', text: selectedPath ? `← ${upNode?.label ?? (TYPE_LABEL[current.type] || current.type)}` : '← Página' });
+      back.addEventListener('click', () => { if (selectedPath) selectedPath = upPath; else selected = ''; picker = null; draw(); });
+      root.append(el('div', { className: 'bct-props' }, [back, selectedPath ? nodeProps(current, selectedPath) : blockProps(current)]));
     } else {
       const page = section('Página', []);
       const style = { ...DEFAULT_STYLE, ...(sketch.style || {}) };
