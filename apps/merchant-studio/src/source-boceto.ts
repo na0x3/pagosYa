@@ -2,7 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
-import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
+import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_FREE_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -270,7 +270,40 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     focusNode(selected, selectedPath.split('/').slice(0, -1).join('/'));
     scheduleStructural(); draw();
   }
-  const schedule = () => { editSeq++; applyLive(); if (timer) clearTimeout(timer); timer = setTimeout(() => void save(), 1200); };
+  // Ctrl/⌘+Z: every edit keeps the boceto as it was before it (up to 50 steps). A colour dragged in its picker is one step.
+  let undoSteps: string[] = [], redoSteps: string[] = [], baseline = '', stepKey = '', lastStepKey = '';
+  const resetHistory = () => { undoSteps = []; redoSteps = []; baseline = sketch ? JSON.stringify(sketch) : ''; lastStepKey = ''; };
+  const remember = () => {
+    const now = JSON.stringify(sketch);
+    if (!sketch || now === baseline) return;
+    const join = stepKey !== '' && stepKey === lastStepKey;
+    if (baseline && !join) { undoSteps.push(baseline); if (undoSteps.length > 50) undoSteps.shift(); }
+    redoSteps = []; baseline = now; lastStepKey = stepKey;
+  };
+  /** Fields the canvas applies live: going back over them needs no preview reload. */
+  const LIVE_FIELDS = ['free', 'bg', 'size', 'align', 'flip', 'layout', 'form', 'cardRatio', 'cardDesc', 'cardAdd'];
+  const spotless = (extras: any) => JSON.stringify((Array.isArray(extras) ? extras : []).map(({ x, y, w, r, ...rest }: any) => rest));
+  function liveStep(from: any, to: any): boolean {
+    const keys = (a: any, b: any) => [...new Set([...Object.keys(a || {}), ...Object.keys(b || {})])].filter(key => JSON.stringify(a?.[key]) !== JSON.stringify(b?.[key]));
+    if (keys(from, to).some(key => !['palette', 'style', 'blocks', 'account'].includes(key))) return false;
+    const pairs = [...from.blocks.map((block: any, i: number) => [block, to.blocks[i]]), [from.account, to.account]];
+    if (from.blocks.length !== to.blocks.length) return false;
+    return pairs.every(([a, b]) => (!a && !b) || (a && b && a.id === b.id && keys(a, b).every(key => LIVE_FIELDS.includes(key) || (key === 'extras' && spotless(a.extras) === spotless(b.extras)))));
+  }
+  function stepBack(redo = false) {
+    const from = redo ? redoSteps : undoSteps, to = redo ? undoSteps : redoSteps;
+    if (!sketch || opts?.locked || !from.length) return;
+    const target = from.pop()!, now = JSON.stringify(sketch);
+    to.push(now);
+    const live = liveStep(JSON.parse(now), JSON.parse(target));
+    sketch = JSON.parse(target) as Sketch; baseline = target; lastStepKey = '';
+    const block = selectedBlock();
+    if (!block) { selected = ''; selectedPath = ''; } else if (selectedPath && !sketchFindNode(sketchNodeTree(block), selectedPath)) selectedPath = '';
+    picker = null; waPending = null; forgottenBlock = null;
+    if (live) schedule(); else scheduleStructural();
+    draw();
+  }
+  const schedule = () => { remember(); editSeq++; applyLive(); if (timer) clearTimeout(timer); timer = setTimeout(() => void save(), 1200); };
   const scheduleStructural = () => { structural = true; schedule(); };
 
   async function save() {
@@ -286,7 +319,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       revision = result.revision; mountedRevision = result.revision;
       const caughtUp = editSeq === seqAtSave;
       if (caughtUp) {
-        sketch = result.sketch as Sketch; lastSaved = JSON.stringify(sketch); note = ''; pending = false; draw();
+        // The saved boceto comes back repaired: that is the state the next step goes back to.
+        sketch = result.sketch as Sketch; lastSaved = JSON.stringify(sketch); baseline = lastSaved; note = ''; pending = false; draw();
       } else {
         lastSaved = payload; pending = false; status('Guardando…');
         if (reloadAfter) structural = true;
@@ -299,7 +333,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       pending = false;
       if (reloadAfter) structural = true;
       if (error instanceof ApiError && error.status === 409) {
-        try { const fresh = await api.getSketch(opts.storeId); revision = fresh.revision; sketch = fresh.sketch as Sketch; lastSaved = JSON.stringify(sketch); note = 'El boceto cambió en otra pestaña; se recargó.'; } catch { note = 'Se conservó la versión anterior.'; }
+        try { const fresh = await api.getSketch(opts.storeId); revision = fresh.revision; sketch = fresh.sketch as Sketch; lastSaved = JSON.stringify(sketch); resetHistory(); note = 'El boceto cambió en otra pestaña; se recargó.'; } catch { note = 'Se conservó la versión anterior.'; }
         draw();
       } else {
         status('Reintentando…');
@@ -331,7 +365,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   }
   function colorRow(label: string, value: string, onChange: (next: string) => void) {
     const input = el('input', { type: 'color', value, className: 'bct-color' });
-    input.addEventListener('input', () => onChange(input.value));
+    input.addEventListener('input', () => { stepKey = `color:${label}`; try { onChange(input.value); } finally { stepKey = ''; } });
+    input.addEventListener('change', () => { lastStepKey = ''; });
     return row(label, el('div', { className: 'bct-color__wrap' }, [input, el('span', { className: 'bct-color__hex', text: value })]));
   }
   /** Figma-style fill picker: the background roles as color swatches, not words. */
@@ -846,9 +881,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
 
   // ⌥↑ / ⌥↓ move the selection (block or node); Supr/Backspace removes it (Figma-style), unless typing.
   document.addEventListener('keydown', event => {
-    if (!sketch || !selected || !opts || opts.locked || !host?.isConnected) return;
+    if (!sketch || !opts || opts.locked || !host?.isConnected) return;
     const active = document.activeElement as HTMLElement | null;
     if (active && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return;
+    const key = event.key.toLowerCase();
+    if ((event.metaKey || event.ctrlKey) && !event.altKey && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); stepBack(key === 'y' || event.shiftKey); return; }
+    if (!selected) return;
     if ((event.key === 'Delete' || event.key === 'Backspace') && !event.altKey && !event.metaKey && !event.ctrlKey) { event.preventDefault(); removeSelection(); return; }
     if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
     event.preventDefault();
@@ -893,7 +931,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (result === 'reload') scheduleStructural(); else schedule();
       draw();
     },
-    remoteKey(key: 'up' | 'down' | 'delete') {
+    remoteKey(key: 'up' | 'down' | 'delete' | 'undo' | 'redo') {
+      if (key === 'undo' || key === 'redo') { stepBack(key === 'redo'); return; }
       if (!sketch || !selected || opts?.locked) return;
       if (key === 'delete') removeSelection(); else moveSelection(key === 'up' ? -1 : 1);
     },
@@ -911,6 +950,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (!sketch || opts?.locked || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
+      // An inserted text or button with no words would be dropped by the next save: removing it is Eliminar's job.
+      if (/^extras\.\d+\.value$/.test(field) && !value.trim()) { note = 'Un elemento no queda vacío: para quitarlo, selecciónalo y usa Eliminar.'; draw(); return; }
       setByPath(block, field, value);
       if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
     },
@@ -924,18 +965,24 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** A part pulled out of its box (or a free part or inserted element moved or resized) on the canvas. */
     remoteFree(id: string, path: string, x: number, y: number, w?: number) {
-      if (!sketch || opts?.locked) return;
+      if (!sketch) return;
+      // The canvas already moved the part: a drop that cannot be kept puts it back where the saved boceto has it.
+      const refuse = (why = '') => { if (why) { note = why; draw(); } applyLive(); };
+      if (opts?.locked) return refuse();
       const block = allBlocks().find(item => item.id === id);
       const pos = sketchFreePos({ x, y, ...(w !== undefined ? { w } : {}) });
-      if (!block || !pos) return;
+      if (!block || !pos) return refuse();
       if (path.startsWith('extras/')) {
         const extra = (block.extras || []).find((item: any) => `extras/${item.id}` === path);
-        if (!extra) return;
+        if (!extra) return refuse();
         Object.assign(extra, { x: pos.x, y: pos.y }, pos.w !== undefined ? { w: pos.w } : {});
       } else {
         const before = block.free?.[path];
         const next = { ...pos, ...(pos.w === undefined && before?.w !== undefined ? { w: before.w } : {}), ...(before?.r ? { r: before.r } : {}) };
-        if (!sketchSetFree(block, path, next)) return;
+        if (!sketchSetFree(block, path, next)) {
+          const full = !before && Object.keys(block.free || {}).length >= SKETCH_FREE_MAX;
+          return refuse(full ? `Este bloque ya tiene ${SKETCH_FREE_MAX} partes sueltas. Devuelve una a su lugar para soltar otra.` : '');
+        }
       }
       forgottenBlock = null; focusNode(id, path); picker = null;
       schedule(); draw();
@@ -954,7 +1001,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       void api.getSketch(options.storeId).then(result => {
         if (token !== mountToken) return;
         mountedStore = options.storeId; mountedRevision = result.revision;
-        revision = result.revision; sketch = result.sketch as Sketch; photos = result.photos; fonts = result.fonts; lastSaved = JSON.stringify(sketch);
+        revision = result.revision; sketch = result.sketch as Sketch; photos = result.photos; fonts = result.fonts; lastSaved = JSON.stringify(sketch); resetHistory();
         if (!sketch) { host?.replaceChildren(); return; }
         draw();
         // A page built by an older renderer lacks the part markers the canvas drags by: re-save it once, silently,

@@ -381,3 +381,36 @@ it('review: a part that held up its section lands under the pointer after the se
   pointer(w, 'pointerup', w.document, 600, 100); await tick();
   expect(posted.find(m => m.type === 'pagosya:boceto-free')).toEqual({ type: 'pagosya:boceto-free', id: 'h', path: 'copy/headline', x: 59, y: 22.5, w: 20 });
 });
+
+it('review: an inserted text emptied in place keeps its words (a regular field may still empty)', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  const layer = w.document.createElement('div');
+  layer.setAttribute('data-skb-group', 'extras');
+  layer.innerHTML = '<p data-skb-node="eab1" data-skb-free="on" data-skb-field="extras.0.value">Hecho hoy</p>';
+  w.document.querySelector('[data-skb="h"]').append(layer);
+  const extra = layer.firstElementChild;
+  extra.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true })); await tick();
+  extra.textContent = '  ';
+  extra.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await tick();
+  expect(extra.textContent).toBe('Hecho hoy');
+  expect(posted).toContainEqual({ type: 'pagosya:boceto-text', id: 'h', field: 'extras.0.value', value: '' });
+  const sub = w.document.querySelector('[data-skb-field="sub"]');
+  sub.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true })); await tick();
+  sub.textContent = '';
+  sub.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await tick();
+  expect(sub.textContent).toBe('');
+});
+
+it('Ctrl/⌘+Z on the board asks the Studio to go back a step, even with nothing selected; not while typing', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  const press = (init: object) => w.document.dispatchEvent(new w.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }));
+  press({ key: 'z', ctrlKey: true }); press({ key: 'Z', metaKey: true, shiftKey: true }); press({ key: 'y', ctrlKey: true });
+  await tick();
+  expect(posted.filter(message => message.type === 'pagosya:boceto-key')).toEqual([{ type: 'pagosya:boceto-key', key: 'undo' }, { type: 'pagosya:boceto-key', key: 'redo' }, { type: 'pagosya:boceto-key', key: 'redo' }]);
+  const headline = w.document.querySelector('[data-skb-field="headline"]');
+  headline.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true })); await tick();
+  press({ key: 'z', ctrlKey: true }); await tick();
+  expect(posted.filter(message => message.type === 'pagosya:boceto-key')).toHaveLength(3);
+});

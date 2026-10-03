@@ -648,3 +648,83 @@ it('review: turning a gallery photo off keeps a freed photo on the same photo', 
   (host.querySelector('.bct-thumb.is-on') as HTMLElement).click();
   expect(lastLook().blocks.ga.free).toEqual({ 'items/1': { x: 5, y: 5 } });
 });
+
+it('review: a drop the boceto cannot keep (30 spots in the block) puts the part back on the canvas and says why', async () => {
+  const full = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`copy/x${i}`, { x: i, y: i }]));
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], free: full }, ...sketch().blocks.slice(1)] }, photos: [], fonts: ['anton'] } as any);
+  const panel = await mount();
+  const before = applied.length;
+  panel.remoteFree('intro', 'copy/headline', 30, 40);
+  expect(applied.length).toBeGreaterThan(before);
+  expect(lastLook().blocks.intro.free).toEqual(full);
+  expect(host.querySelector('.bct-status')?.textContent).toContain('30 partes sueltas');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch).not.toHaveBeenCalled();
+});
+
+it('review: emptying an inserted text on the canvas keeps its words and points to Eliminar', async () => {
+  const panel = await mount();
+  openBlock('intro');
+  (host.querySelector('[data-boceto-insert="text"]') as HTMLElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  const saves = putSketch.mock.calls.length;
+  panel.remoteText('intro', 'extras.0.value', '   ');
+  expect(host.querySelector('.bct-status')?.textContent).toContain('Eliminar');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.length).toBe(saves);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].extras[0].value).toBe('Escribe aquí');
+});
+
+const pressUndo = (shift = false) => document.dispatchEvent(new KeyboardEvent('keydown', { key: shift ? 'Z' : 'z', ctrlKey: true, shiftKey: shift, bubbles: true, cancelable: true }));
+
+it('undo: Ctrl+Z puts a moved part back live, Ctrl+Shift+Z moves it again, and each saves', async () => {
+  const reload = vi.fn();
+  const panel = await mountWith({ reload });
+  panel.remoteFree('intro', 'copy/headline', 30, 40);
+  panel.remoteFree('intro', 'copy/headline', 50, 60);
+  pressUndo();
+  expect(lastLook().blocks.intro.free).toEqual({ 'copy/headline': { x: 30, y: 40 } });
+  pressUndo();
+  expect(lastLook().blocks.intro.free).toEqual({});
+  pressUndo();
+  expect(lastLook().blocks.intro.free).toEqual({});
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch).not.toHaveBeenCalled();
+  pressUndo(true);
+  expect(lastLook().blocks.intro.free).toEqual({ 'copy/headline': { x: 30, y: 40 } });
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].free).toEqual({ 'copy/headline': { x: 30, y: 40 } });
+  expect(reload).not.toHaveBeenCalled();
+});
+
+it('undo: going back over a section reorder reloads the preview; a new edit clears the steps forward', async () => {
+  const reload = vi.fn();
+  const panel = await mountWith({ reload });
+  panel.remoteReorder('cat', 0);
+  await vi.advanceTimersByTimeAsync(1300);
+  panel.remoteKey('undo');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['intro', 'cat', 'fin']);
+  await vi.waitFor(() => expect(reload).toHaveBeenCalled());
+  panel.remoteText('intro', 'headline', 'Nuevo');
+  panel.remoteKey('redo');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['intro', 'cat', 'fin']);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].headline).toBe('Nuevo');
+});
+
+it('undo: a colour dragged in its picker goes back in one step; nothing while YAPI works', async () => {
+  const panel = await mount();
+  const color = host.querySelector('.bct-color') as HTMLInputElement;
+  const start = color.value;
+  for (const value of ['#111111', '#222222', '#333333']) { color.value = value; color.dispatchEvent(new Event('input')); }
+  color.dispatchEvent(new Event('change'));
+  panel.remoteKey('undo');
+  expect(Object.values(lastLook().vars)).toContain(start);
+  const locked = createBocetoPanel(new MerchantStudioApi());
+  locked.mount(host, { storeId: 's1', version: version(), locked: true, saved: vi.fn(), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  const before = applied.length;
+  locked.remoteKey('undo');
+  expect(applied.length).toBe(before);
+});

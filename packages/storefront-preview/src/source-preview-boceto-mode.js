@@ -2,7 +2,7 @@
  * published site. Idle until the Studio sends { type: 'pagosya:boceto-mode', on: true }. While on:
  *   - hovering a [data-skb] section outlines it and shows a drag handle;
  *   - clicking drills down block → group → element (Figma) and posts pagosya:boceto-select { id, path };
- *     Esc selects the parent, Enter the first child;
+ *     Esc selects the parent, Enter the first child; Ctrl/⌘+Z and Ctrl/⌘+Shift+Z post pagosya:boceto-key undo/redo;
  *   - grabbing a movable part (text, button, card, cajita… — the Studio lists them per block in `movable`) drags it
  *     among its siblings and posts pagosya:boceto-node-move { id, path, order }; a selected movable part drags as a
  *     whole; ⌥↑/⌥↓/Supr are forwarded as pagosya:boceto-key;
@@ -471,6 +471,8 @@
     if (!commit || value === original.replace(/\s+/g, ' ').trim()) { if (!commit) element.textContent = original; return; }
     var section = sectionOf(element);
     if (!section || value.length > 1000) { element.textContent = original; return; }
+    // An inserted element never empties (the Studio keeps its words and says how to remove it).
+    if (!value && /^extras\./.test(element.getAttribute('data-skb-field') || '')) element.textContent = original;
     parent.postMessage({ type: 'pagosya:boceto-text', id: section.getAttribute('data-skb'), field: element.getAttribute('data-skb-field'), value: value }, '*');
   }
 
@@ -542,7 +544,11 @@
   }, true);
 
   document.addEventListener('keydown', function (event) {
-    if (!on || editing || !selection.id) return;
+    if (!on || editing) return;
+    // Ctrl/⌘+Z goes back a step (with Shift, or Ctrl+Y, forward again); the Studio keeps the steps.
+    var key = String(event.key || '').toLowerCase();
+    if ((event.metaKey || event.ctrlKey) && !event.altKey && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: key === 'y' || event.shiftKey ? 'redo' : 'undo' }, '*'); return; }
+    if (!selection.id) return;
     if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: event.key === 'ArrowUp' ? 'up' : 'down' }, '*'); return; }
     if ((event.key === 'Delete' || event.key === 'Backspace') && !event.metaKey && !event.ctrlKey) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: 'delete' }, '*'); return; }
     if (event.key === 'Escape') {
