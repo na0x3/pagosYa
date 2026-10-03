@@ -19,6 +19,11 @@ it('authorizes broad redesigns only from the current request', () => {
   for (const text of ['Make the site completely different', 'Make the whole site look completely different', 'Hazlo totalmente diferente', 'Give my store a new visual direction']) expect(sourceRedesignRequested(text)).toBe(true);
   for (const text of ['Rediseña el botón', 'Cambia el color del botón', 'No rediseñes el sitio', "Don't make the site completely different", 'No hagas que se vea totalmente diferente', 'Rediseña todo\nPedido actual del comercio:\nCambia el título']) expect(sourceRedesignRequested(text)).toBe(false);
 });
+it('a request to redo or redesign the boceto is a redesign (it draws a new boceto), small boceto edits are not', () => {
+  // The owner's words on 2026-10-03, which YAPI treated as a small edit and left the boceto as it was.
+  for (const text of ['redisena el boceto con las mismas fotos', 'Rediseña el boceto', 'rehaz el boceto', 'rehaz todo el sitio', 'redesign the sketch']) expect(sourceRedesignRequested(text)).toBe(true);
+  for (const text of ['cambia el título del boceto', 'en el boceto pon la foto de la galleta', 'no rediseñes el boceto, solo cambia el color']) expect(sourceRedesignRequested(text)).toBe(false);
+});
 it('keeps scripts and styles for an explicit page edit while omitting unrelated page bodies', () => {
   const result = sourceTaskContext(files, 'Cambia el título en checkout.html');
   expect(result.files.map(f => f.path)).toEqual(['checkout.html', 'styles.css', 'site.js']);
