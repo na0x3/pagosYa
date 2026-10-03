@@ -246,23 +246,40 @@
     node.setAttribute('data-boceto-dragging', '');
     clearBoxes();
     var style = window.getComputedStyle(container);
-    var horizontal = container === section ? window.innerWidth >= 900 : (String(style.display).indexOf('flex') !== -1 && String(style.flexDirection).indexOf('column') === -1);
+    var display = String(style.display);
     var siblings = function () { return childrenOf(container).filter(function (child) { return child !== node && segmentOf(child) !== 'sticker'; }); };
-    var target = null;
+    var horizontal = container === section ? window.innerWidth >= 900 : (display.indexOf('flex') !== -1 && String(style.flexDirection).indexOf('column') === -1);
+    // Multi-column grids (steps, categories, reviews, boxes, gallery): drop by the nearest item in 2D.
+    var startLeft = node.getBoundingClientRect().left;
+    var grid = container !== section && display.indexOf('grid') !== -1 && siblings().some(function (child) { return Math.abs(child.getBoundingClientRect().left - startLeft) > 1; });
+    var target = null, alongX = horizontal;
     var move = function (ev) {
       target = null;
       var list = siblings();
-      for (var i = 0; i < list.length; i++) {
-        var rect = list[i].getBoundingClientRect();
-        var before = horizontal ? ev.clientX < rect.left + rect.width / 2 : ev.clientY < rect.top + rect.height / 2;
-        if (before) { target = { node: list[i], before: true }; break; }
-        target = { node: list[i], before: false };
+      if (grid) {
+        var best = null, bestDistance = Infinity;
+        list.forEach(function (child) {
+          var r = child.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          var distance = Math.pow(ev.clientX - cx, 2) + Math.pow(ev.clientY - cy, 2);
+          if (distance < bestDistance) { bestDistance = distance; best = { node: child, cx: cx, cy: cy, height: r.height }; }
+        });
+        if (best) {
+          alongX = Math.abs(ev.clientY - best.cy) < best.height / 2;
+          target = { node: best.node, before: alongX ? ev.clientX < best.cx : ev.clientY < best.cy };
+        }
+      } else {
+        for (var i = 0; i < list.length; i++) {
+          var rect = list[i].getBoundingClientRect();
+          var before = horizontal ? ev.clientX < rect.left + rect.width / 2 : ev.clientY < rect.top + rect.height / 2;
+          if (before) { target = { node: list[i], before: true }; break; }
+          target = { node: list[i], before: false };
+        }
       }
       if (!target) { indicator.style.display = 'none'; return; }
       var box = target.node.getBoundingClientRect();
       indicator.style.display = 'block';
       indicator.style.right = 'auto';
-      if (horizontal) { indicator.style.top = box.top + 'px'; indicator.style.height = box.height + 'px'; indicator.style.width = '4px'; indicator.style.left = (target.before ? box.left : box.right) - 2 + 'px'; }
+      if (alongX) { indicator.style.top = box.top + 'px'; indicator.style.height = box.height + 'px'; indicator.style.width = '4px'; indicator.style.left = (target.before ? box.left : box.right) - 2 + 'px'; }
       else { indicator.style.left = box.left + 'px'; indicator.style.width = box.width + 'px'; indicator.style.height = '4px'; indicator.style.top = (target.before ? box.top : box.bottom) - 2 + 'px'; }
     };
     var finish = function () {
@@ -273,8 +290,11 @@
       node.removeAttribute('data-boceto-dragging');
       elDragging = null;
       if (target) {
-        if (target.before) target.node.before(node); else target.node.after(node);
-        var order = childrenOf(container).map(segmentOf).filter(function (key) { return key !== 'sticker'; });
+        var order = siblings().map(segmentOf);
+        order.splice(order.indexOf(segmentOf(target.node)) + (target.before ? 0 : 1), 0, segmentOf(node));
+        // The copy/media columns swap through the flip attribute the Studio applies live; moving them in the DOM
+        // would leave a later "Foto al lado" change without effect until a reload.
+        if (container !== section) { if (target.before) target.node.before(node); else target.node.after(node); }
         parent.postMessage({ type: 'pagosya:boceto-node-move', id: section.getAttribute('data-skb'), path: fromPath, order: order }, '*');
       }
       drawOverlay();
@@ -400,6 +420,13 @@
       if (sel && typeof sel === 'object' && typeof sel.id === 'string' && typeof sel.path === 'string' && sel.path.length <= 120) {
         selection = { id: sel.id, path: sel.path, label: typeof sel.label === 'string' ? sel.label.slice(0, 60) : '', movable: sel.movable === true,
           movableChildren: Array.isArray(sel.movableChildren) ? sel.movableChildren.filter(function (key) { return typeof key === 'string' && key.length <= 20; }) : [] };
+        // Chosen from the Studio's layer tree: report where the part sits so the board can scroll to it.
+        var revealSection = sel.reveal === true && on ? sectionById(selection.id) : null;
+        var revealNode = revealSection && nodeAt(revealSection, selection.path);
+        if (revealNode) {
+          var revealRect = revealNode.getBoundingClientRect();
+          parent.postMessage({ type: 'pagosya:boceto-reveal', top: revealRect.top + (window.scrollY || 0), height: revealRect.height }, '*');
+        }
       }
       var blocks = event.data.blocks || {};
       for (var id in blocks) {

@@ -5,7 +5,7 @@ import { mountSourceAccountPreview } from './source-account-preview';
 import { codeFileEditable, codeFileForPage, renderCodeBrowser } from './source-code-tree';
 import { composeActionMode } from './source-studio-actions';
 import { createDirectEditor } from './source-direct-editor';
-import { createBocetoPanel } from './source-boceto';
+import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
@@ -212,6 +212,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (event.data.type === 'pagosya:boceto-el-move' && typeof event.data.id === 'string' && typeof event.data.el === 'string' && typeof event.data.x === 'number' && typeof event.data.y === 'number') bocetoPanel.remoteElMove(event.data.id, event.data.el, event.data.x, event.data.y);
       if (event.data.type === 'pagosya:boceto-node-move' && typeof event.data.id === 'string' && typeof event.data.path === 'string' && /^[a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4}$/.test(event.data.path) && Array.isArray(event.data.order) && event.data.order.length <= 12 && event.data.order.every((key: unknown) => typeof key === 'string' && /^[a-zA-Z0-9]{1,20}$/.test(key))) bocetoPanel.remoteNodeMove(event.data.id, event.data.path, event.data.order);
       if (event.data.type === 'pagosya:boceto-key' && ['up', 'down', 'delete'].includes(event.data.key)) bocetoPanel.remoteKey(event.data.key);
+      if (event.data.type === 'pagosya:boceto-reveal' && typeof event.data.top === 'number' && typeof event.data.height === 'number') {
+        const board = canvasBoard();
+        if (board) { canvasY = bocetoRevealY(canvasY, canvasZoom, board.clientHeight, event.data.top, event.data.height); applyCanvas(); }
+      }
       if (event.data.type === 'pagosya:boceto-photo' && typeof event.data.id === 'string' && typeof event.data.slot === 'string') bocetoPanel.remotePhoto(event.data.id, event.data.slot);
       return;
     }

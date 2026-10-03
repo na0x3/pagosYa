@@ -170,3 +170,46 @@ it('live apply: page style on the site root, alignment/flip on sections, photos 
   expect(w.document.querySelector('img[data-skb-photo="photo"]').getAttribute('src')).toBe('data:image/jpeg;base64,BBBB');
   expect(w.document.querySelector('img[data-skb-photo="photos.1"]').getAttribute('src')).toBe('data:image/png;base64,AAAA');
 });
+
+it('review fixes: a reveal request reports where the selected part sits on the page', async () => {
+  const { posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: 'Bajada', movable: true, movableChildren: [], reveal: true } }); await tick();
+  const reveal = posted.find(message => message.type === 'pagosya:boceto-reveal');
+  expect(reveal).toMatchObject({ type: 'pagosya:boceto-reveal' });
+  expect(typeof reveal.top).toBe('number');
+  expect(typeof reveal.height).toBe('number');
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '', movable: true, movableChildren: [] } }); await tick();
+  expect(posted.filter(message => message.type === 'pagosya:boceto-reveal')).toHaveLength(1);
+});
+
+it('review fixes: a copy/media flip drag leaves the columns to the flip attribute instead of moving the DOM', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '', movable: true, movableChildren: [] } }); await tick();
+  const copy = w.document.querySelector('[data-skb-group="copy"]');
+  pointer(w, 'pointerdown', copy.querySelector('h1'), 10, 10);
+  pointer(w, 'pointermove', w.document, 40, 10); await tick();
+  pointer(w, 'pointermove', w.document, 60, 10);
+  pointer(w, 'pointerup', w.document, 60, 10); await tick();
+  expect(posted.find(message => message.type === 'pagosya:boceto-node-move')).toMatchObject({ path: 'copy', order: ['media', 'copy'] });
+  expect(w.document.querySelector('[data-skb="h"]').firstElementChild).toBe(copy);
+});
+
+it('review fixes: items in a multi-column grid drop by nearest position in 2D', async () => {
+  const html = `<!doctype html><html><body><section data-skb="s" id="skb-s"><div data-skb-group="items" style="display:grid">${[0, 1, 2, 3].map(i => `<article data-skb-node="${i}">Paso ${i}</article>`).join('')}</div></section></body></html>`;
+  const dom = new JSDOM(sourcePreviewDocument({ ...(snapshot as any), files: [{ path: 'index.html', content: html }] } as never, 'index.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:boceto-node-move') posted.push(event.data); });
+  const send = (data: unknown) => w.dispatchEvent(new w.MessageEvent('message', { data, source: w }));
+  [...w.document.querySelectorAll('article')].forEach((node: any, i: number) => { node.getBoundingClientRect = () => ({ left: i * 100, right: i * 100 + 90, top: 0, bottom: 50, width: 90, height: 50, x: i * 100, y: 0 }); });
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 's', path: 'items', label: '', movable: false, movableChildren: ['0', '1', '2', '3'] } }); await tick();
+  const first = w.document.querySelector('[data-skb-node="0"]');
+  pointer(w, 'pointerdown', first, 10, 20);
+  pointer(w, 'pointermove', w.document, 60, 20); await tick();
+  pointer(w, 'pointermove', w.document, 260, 25);
+  pointer(w, 'pointerup', w.document, 260, 25); await tick();
+  expect(posted[0]).toMatchObject({ path: 'items/0', order: ['1', '2', '0', '3'] });
+});

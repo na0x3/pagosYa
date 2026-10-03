@@ -11,7 +11,7 @@ import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketch
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; account?: any; blocks: any[] };
 type BlockApply = { layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
-type SelectionPayload = { id: string; path: string; label: string; movable: boolean; movableChildren: string[] };
+type SelectionPayload = { id: string; path: string; label: string; movable: boolean; movableChildren: string[]; reveal?: true };
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
 type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void };
@@ -88,6 +88,15 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLEl
   return node;
 };
 
+/** The board's new vertical pan so a part the canvas reported (page coordinates) is on screen: unchanged when it
+ * already is, otherwise centred. A 40px margin keeps it clear of the floating toolbars. */
+export function bocetoRevealY(canvasY: number, zoom: number, boardHeight: number, top: number, height: number): number {
+  if (!Number.isFinite(top) || !Number.isFinite(height) || !(zoom > 0)) return canvasY;
+  const screenTop = canvasY + top * zoom, screenBottom = screenTop + height * zoom;
+  if (screenTop >= 40 && screenBottom <= boardHeight - 40) return canvasY;
+  return boardHeight / 2 - (top + height / 2) * zoom;
+}
+
 export function createBocetoPanel(api: MerchantStudioApi) {
   let host: HTMLElement | null = null, opts: Mount | null = null;
   let sketch: Sketch | null = null, photos: string[] = [], fonts: string[] = [], revision = 0;
@@ -95,6 +104,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let editSeq = 0, lastSaved = '', statusNode: HTMLElement | null = null, rootNode: HTMLElement | null = null, mountToken = 0;
   let mountedStore = '', mountedRevision = -1;
   const expanded = new Set<string>();
+  /** Set when the selection came from Capas: the canvas scrolls the part into view once. */
+  let revealNext = false;
   // Structural edits (items or blocks added, removed, reordered from the panel) cannot apply live: the next
   // save reloads the preview. Photo swaps apply live as inline data, only for the slots that changed.
   let structural = false;
@@ -150,11 +161,16 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (!block) return { id: '', path: '', label: '', movable: false, movableChildren: [] };
     const tree = sketchNodeTree(block);
     const node = selectedPath ? sketchFindNode(tree, selectedPath) : undefined;
-    const children = node ? node.children : selectedPath ? [] : tree;
+    // At block level nothing inside drags: grabbing a selected block still moves the whole section, as before.
+    const children = node ? node.children : [];
     return { id: block.id, path: node ? selectedPath : '', label: node?.label ?? (TYPE_LABEL[block.type] || block.type),
       movable: node ? sketchCanMove(block, selectedPath) : false, movableChildren: children.filter(child => sketchCanMove(block, child.path)).map(child => child.key) };
   }
-  const syncSelection = () => { try { opts?.apply?.({ selection: selectionPayload() }); } catch { /* frame gone */ } };
+  const syncSelection = () => {
+    const selection: SelectionPayload = { ...selectionPayload(), ...(revealNext ? { reveal: true as const } : {}) };
+    revealNext = false;
+    try { opts?.apply?.({ selection }); } catch { /* frame gone */ }
+  };
   /** Point the selection at a path inside a block, falling back to the nearest node that still exists. */
   function focusNode(id: string, path: string) {
     const block = allBlocks().find(item => item.id === id);
@@ -527,7 +543,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const item = el('button', { type: 'button', className: `bct-node${selected === block.id && selectedPath === node.path ? ' is-selected' : ''}`, text: node.label });
       item.style.paddingLeft = `${10 + depth * 14}px`;
       item.dataset.bocetoNode = node.path;
-      item.addEventListener('click', event => { event.stopPropagation(); selected = block.id; selectedPath = node.path; picker = null; draw(); });
+      item.addEventListener('click', event => { event.stopPropagation(); selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw(); });
       list.append(item);
       if (node.children.length) list.append(nodeList(block, node.children, depth + 1));
     }

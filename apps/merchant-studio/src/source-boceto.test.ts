@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createBocetoPanel } from './source-boceto';
+import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { MerchantStudioApi } from './api';
 
 const sketch = () => ({
@@ -336,4 +336,31 @@ it('selecting on the canvas expands that block in Capas', async () => {
   const panel = await mount();
   panel.remoteSelect('cat', 'head');
   expect(host.querySelector('[data-boceto-block="cat"] [data-boceto-node="head"]')?.classList.contains('is-selected')).toBe(true);
+});
+
+it('a selected block keeps the drag-anywhere section move: its columns only drag once selected', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], photo: 'assets/a.jpg' }, ...sketch().blocks.slice(1)] }, photos: ['assets/a.jpg'], fonts: [] } as any);
+  const panel = await mount();
+  panel.remoteSelect('intro', '');
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: '', movableChildren: [] });
+  panel.remoteSelect('intro', 'copy');
+  expect(lastSelection()).toMatchObject({ path: 'copy', movable: true });
+});
+
+it('choosing a part in Capas asks the canvas to reveal it; canvas clicks do not', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy');
+  expect(lastSelection().reveal).toBeUndefined();
+  (host.querySelector('[data-boceto-node="copy/sub"]') as HTMLElement).click();
+  expect(lastSelection()).toMatchObject({ path: 'copy/sub', reveal: true });
+  panel.remoteSelect('intro', 'copy');
+  expect(lastSelection().reveal).toBeUndefined();
+});
+
+it('reveal pans the board only when the part is off screen, centring it', () => {
+  // board 800px tall, zoom 0.5: a part at page y 400 (screen 40+200=240) is visible → stay.
+  expect(bocetoRevealY(40, 0.5, 800, 400, 100)).toBe(40);
+  // a part at page y 3000 (screen 1540) is below the board → centre it: 400 - (3000 + 50) * 0.5.
+  expect(bocetoRevealY(40, 0.5, 800, 3000, 100)).toBe(400 - 3050 * 0.5);
+  expect(bocetoRevealY(40, 0.5, 800, Number.NaN, 100)).toBe(40);
 });
