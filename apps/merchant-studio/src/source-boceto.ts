@@ -10,11 +10,12 @@ import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketch
 
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; account?: any; blocks: any[] };
-type BlockApply = { layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
-type SelectionPayload = { id: string; path: string; label: string; movable: boolean; movableChildren: string[]; reveal?: true };
+type BlockApply = { movable?: string[]; layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
+type SelectionPayload = { id: string; path: string; label: string; reveal?: true };
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
-type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void };
+/** `resized` runs after a side panel is tucked away or brought back, so the board can refit the page. */
+type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void; resized?: () => void };
 
 const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: string[]; names: string[] }> = [
   { key: 'radius', label: 'Esquinas', values: ['round', 'soft', 'square'], names: ['Redondas', 'Suaves', 'Rectas'] },
@@ -79,6 +80,12 @@ const mixHex = (a: string, b: string, weight: number) => {
 const resolveBg = (palette: Sketch['palette'], bg: string) =>
   bg === 'tint-accent' || bg === 'tint-deep' || bg === 'tint-pop' ? mixHex(palette[bg.slice(5) as 'accent' | 'deep' | 'pop'], palette.paper, 0.16) : (palette[bg as keyof Sketch['palette']] || palette.paper);
 
+/** Every path in the block whose position saves: what the canvas lets the merchant grab and drop beside. */
+const movablePaths = (block: any): string[] => {
+  const walk = (nodes: SketchNode[]): string[] => nodes.flatMap(node => [...(sketchCanMove(block, node.path) ? [node.path] : []), ...walk(node.children)]);
+  return walk(sketchNodeTree(block));
+};
+
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> & { text?: string } = {}, children: HTMLElement[] = []) => {
   const node = document.createElement(tag);
   const { text, ...rest } = props as { text?: string } & Record<string, unknown>;
@@ -106,6 +113,24 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   const expanded = new Set<string>();
   /** Set when the selection came from Capas: the canvas scrolls the part into view once. */
   let revealNext = false;
+  /** Side panels sit flush against the walls; each one tucks away behind an arrow and comes back from a tab. */
+  const tucked = { layers: false, inspector: false };
+  const PANEL_WIDTH = { layers: 240, inspector: 300 };
+  /** The workspace reads these to leave room for the docked panels, so the board fills exactly the space between them. */
+  const dock = () => {
+    const root = (host?.ownerDocument ?? document).documentElement;
+    root.style.setProperty('--bct-left', `${tucked.layers ? 0 : PANEL_WIDTH.layers}px`);
+    root.style.setProperty('--bct-right', `${tucked.inspector ? 0 : PANEL_WIDTH.inspector}px`);
+  };
+  function tuck(side: keyof typeof tucked, value: boolean) { tucked[side] = value; draw(); opts?.resized?.(); }
+  const dockButton = (side: keyof typeof tucked, open: boolean) => {
+    const arrow = (side === 'layers') === open ? '›' : '‹';
+    const button = el('button', { type: 'button', className: open ? `bct-tab bct-tab--${side === 'layers' ? 'left' : 'right'}` : 'bct-dock', text: arrow,
+      title: `${open ? 'Mostrar' : 'Ocultar'} ${side === 'layers' ? 'capas' : 'diseño'}` });
+    button.dataset.bocetoDock = side;
+    button.addEventListener('click', () => tuck(side, !open));
+    return button;
+  };
   // Structural edits (items or blocks added, removed, reordered from the panel) cannot apply live: the next
   // save reloads the preview. Photo swaps apply live as inline data, only for the slots that changed.
   let structural = false;
@@ -150,7 +175,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const bg = resolveBg(sketch.palette, block.bg);
       const slots = changedPhotos.get(block.id);
       const photoMap = slots ? Object.fromEntries([...slots].map(slot => [slot, photoSrc(String(getPath(block, slot) || ''))]).filter(([, src]) => src.startsWith('data:image/'))) : undefined;
-      blocks[block.id] = { bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
+      blocks[block.id] = { movable: opts.locked ? [] : movablePaths(block), bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
     }
     changedPhotos.clear();
     opts.apply({ vars, style: { ...DEFAULT_STYLE, ...(sketch.style || {}) }, blocks });
@@ -158,13 +183,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   const selectedBlock = (): any => (selected ? allBlocks().find(block => block.id === selected) : undefined);
   function selectionPayload(): SelectionPayload {
     const block = selectedBlock();
-    if (!block) return { id: '', path: '', label: '', movable: false, movableChildren: [] };
-    const tree = sketchNodeTree(block);
-    const node = selectedPath ? sketchFindNode(tree, selectedPath) : undefined;
-    // At block level nothing inside drags: grabbing a selected block still moves the whole section, as before.
-    const children = node ? node.children : [];
-    return { id: block.id, path: node ? selectedPath : '', label: node?.label ?? (TYPE_LABEL[block.type] || block.type),
-      movable: node ? sketchCanMove(block, selectedPath) : false, movableChildren: children.filter(child => sketchCanMove(block, child.path)).map(child => child.key) };
+    if (!block) return { id: '', path: '', label: '' };
+    const node = selectedPath ? sketchFindNode(sketchNodeTree(block), selectedPath) : undefined;
+    return { id: block.id, path: node ? selectedPath : '', label: node?.label ?? (TYPE_LABEL[block.type] || block.type) };
   }
   const syncSelection = () => {
     const selection: SelectionPayload = { ...selectionPayload(), ...(revealNext ? { reveal: true as const } : {}) };
@@ -172,13 +193,14 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     try { opts?.apply?.({ selection }); } catch { /* frame gone */ }
   };
   /** Point the selection at a path inside a block, falling back to the nearest node that still exists. */
-  function focusNode(id: string, path: string) {
+  function focusNode(id: string, path: string, expand = true) {
     const block = allBlocks().find(item => item.id === id);
     if (!block) { selected = ''; selectedPath = ''; return; }
     const tree = sketchNodeTree(block);
     let next = path;
     while (next && !sketchFindNode(tree, next)) next = next.split('/').slice(0, -1).join('/');
-    selected = id; selectedPath = next; expanded.add(id);
+    selected = id; selectedPath = next;
+    if (expand) expanded.add(id);
   }
   function moveSelection(delta: -1 | 1) {
     if (!sketch || !selected) return;
@@ -354,7 +376,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (kind === 'column') {
       if (key === 'copy') children.push(blockAlign(['start', 'center', 'end'], ['Izq.', 'Centro', 'Der.']));
       if (layoutAllowed) children.push(gapRow());
-      if (layoutAllowed && key === 'copy' && SKETCH_TWO_COLUMN.includes(block.type)) children.push(row('Vertical', segment(current('valign'), ['', 'start', 'center', 'end'], ['Auto', 'Arriba', 'Centro', 'Abajo'], next => setLayout('valign', next))));
+      // Vertical placement only means something beside a second (photo) column.
+      if (layoutAllowed && key === 'copy' && SKETCH_TWO_COLUMN.includes(block.type) && sketchNodeTree(block).some(item => item.key === 'media')) children.push(row('Vertical', segment(current('valign'), ['', 'start', 'center', 'end'], ['Auto', 'Arriba', 'Centro', 'Abajo'], next => setLayout('valign', next))));
     } else if (kind === 'row' && layoutAllowed) {
       children.push(row('Dirección', segment(current('dir'), ['', 'column'], ['Horizontal', 'Vertical'], next => setLayout('dir', next))));
       children.push(gapRow());
@@ -366,6 +389,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     } else if (kind === 'media') {
       children.push(row('Foto al lado', segment(block.flip ? 'left' : 'right', ['left', 'right'], ['Izquierdo', 'Derecho'], next => { if (next === 'left') block.flip = true; else delete block.flip; schedule(); draw(); })));
       children.push(row('Foto', photoButton(block, 'photo')));
+    } else if (key === 'photo') {
+      children.push(row('Foto', photoButton(block, 'photo')));
+    } else if (block.type === 'gallery' && /^\d+$/.test(key)) {
+      children.push(row('Foto', photoButton(block, `photos.${key}`)));
     } else if (!kind) {
       children.push(el('p', { className: 'bct-hint', text: 'Toca dos veces este texto en el lienzo para editarlo.' }));
     }
@@ -562,9 +589,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   function draw() {
     if (!host || !opts) return;
     if (!sketch) { host.replaceChildren(); return; }
+    // The sketch may have been replaced (conflict reload, server repair) or a part removed: keep the selection on the
+    // nearest part that still exists rather than a stale path.
+    if (selected) focusNode(selected, selectedPath, false);
     // Figma-equal structure: layers on the left, a selection-driven inspector on the right.
     const layers = el('aside', { className: 'bct-layers' });
-    layers.append(el('header', { className: 'bct-layers__head' }, [el('h2', { text: 'Capas' }), el('span', { className: 'bct-layers__count', text: `${sketch.blocks.length} bloques` })]));
+    layers.append(el('header', { className: 'bct-layers__head' }, [el('h2', { text: 'Capas' }), el('span', { className: 'bct-layers__count', text: `${sketch.blocks.length} bloques` }), dockButton('layers', false)]));
     const list = el('div', { className: 'bct-blocks' });
     sketch.blocks.forEach((block, index) => {
       const bg = resolveBg(sketch!.palette, block.bg);
@@ -617,7 +647,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const close = el('button', { type: 'button', className: 'bct-close', text: '✕', title: 'Cerrar' });
     close.addEventListener('click', () => opts?.close?.());
     statusNode = el('span', { className: 'bct-status', text: pending ? 'Guardando…' : note || 'Se guarda solo' });
-    root.append(el('header', { className: 'bct-head' }, [el('h2', { text: 'Diseño' }), statusNode, close]));
+    root.append(el('header', { className: 'bct-head' }, [el('h2', { text: 'Diseño' }), statusNode, dockButton('inspector', false), close]));
 
     const current = selectedBlock();
     const openPicker = current && picker && picker.blockId === current.id ? pickerPanel(current) : null;
@@ -642,8 +672,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       root.append(page);
     }
 
-    const wrap = el('div', { className: 'bct-shell' }, [layers, root]);
-    if (opts.locked) wrap.querySelectorAll('input,select,button:not(.bct-close)').forEach(node => ((node as HTMLInputElement).disabled = true));
+    const wrap = el('div', { className: 'bct-shell' }, [tucked.layers ? dockButton('layers', true) : layers, tucked.inspector ? dockButton('inspector', true) : root]);
+    if (opts.locked) wrap.querySelectorAll('input,select,button:not(.bct-close):not([data-boceto-dock])').forEach(node => ((node as HTMLInputElement).disabled = true));
+    dock();
     rootNode = wrap;
     host.replaceChildren(wrap);
     syncSelection();
@@ -741,6 +772,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
         revision = result.revision; sketch = result.sketch as Sketch; photos = result.photos; fonts = result.fonts; lastSaved = JSON.stringify(sketch);
         if (!sketch) { host?.replaceChildren(); return; }
         draw();
+        // A page built by an older renderer lacks the part markers the canvas drags by: re-save it once, silently,
+        // so the rebuilt page (reloaded into the preview) is fully editable.
+        if (result.stale && !options.locked) { lastSaved = ''; structural = true; void save(); }
       }).catch(() => { if (token === mountToken) { sketch = null; host?.replaceChildren(); } });
     },
   };

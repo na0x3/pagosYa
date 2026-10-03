@@ -3,15 +3,19 @@
  *   - hovering a [data-skb] section outlines it and shows a drag handle;
  *   - clicking drills down block → group → element (Figma) and posts pagosya:boceto-select { id, path };
  *     Esc selects the parent, Enter the first child;
- *   - dragging the handle (or grabbing anywhere) reorders sections live and posts pagosya:boceto-reorder { id, index };
- *   - dragging the selected node (or a movable child of it) reorders it among its siblings and posts
- *     pagosya:boceto-node-move { id, path, order }; ⌥↑/⌥↓/Supr are forwarded as pagosya:boceto-key;
+ *   - grabbing a movable part (text, button, card, cajita… — the Studio lists them per block in `movable`) drags it
+ *     among its siblings and posts pagosya:boceto-node-move { id, path, order }; a selected movable part drags as a
+ *     whole; ⌥↑/⌥↓/Supr are forwarded as pagosya:boceto-key;
+ *   - dragging the handle (or grabbing anything else in a section) reorders sections live and posts pagosya:boceto-reorder { id, index };
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
  *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
 (function () {
   var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, editing = null, elDragging = null;
   var photoChip = null, photoTarget = null;
-  var selection = { id: '', path: '', label: '', movable: false, movableChildren: [] }, boxes = [], hoverBox = null;
+  var selection = { id: '', path: '', label: '' }, boxes = [], hoverBox = null;
+  /** Per block, the paths whose position saves (from the Studio): the only parts that drag and the only drop spots. */
+  var movableByBlock = {};
+  function movableIn(section, node) { var list = movableByBlock[section.getAttribute('data-skb')] || []; return list.indexOf(pathOf(node)) !== -1; }
 
   /** "Cambiar foto": a chip over the hovered photo; clicking it asks the Studio to open its photo picker. */
   function placePhotoChip(img) {
@@ -67,7 +71,7 @@
     return { id: id, path: paths[Math.min(k + 1, paths.length - 1)] };
   }
   function select(id, path) {
-    selection = { id: id, path: path, label: '', movable: false, movableChildren: [] };
+    selection = { id: id, path: path, label: '' };
     drawOverlay();
     parent.postMessage({ type: 'pagosya:boceto-select', id: id, path: path }, '*');
   }
@@ -110,6 +114,10 @@
     var style = document.createElement('style');
     style.textContent = '' +
       '[data-boceto-dragging]{opacity:.35!important}' +
+      // Links and images would start the browser's own drag (which cancels ours) and text would get highlighted.
+      'html[data-boceto-on] [data-skb]{-webkit-user-select:none!important;user-select:none!important}' +
+      'html[data-boceto-on] [data-skb] :is(a,img){-webkit-user-drag:none!important}' +
+      'html[data-boceto-on] [data-skb] [data-boceto-editing]{-webkit-user-select:text!important;user-select:text!important}' +
       '[data-boceto-editing]{outline:2px dashed #1f6feb!important;outline-offset:-2px!important;cursor:text!important}';
     document.head.append(style);
     handle = document.createElement('button');
@@ -228,16 +236,18 @@
     document.addEventListener('pointerup', finish, true);
   }
 
-  /** The node a drag should move: the selection itself when movable, or a movable child of it under the pointer. */
+  /** The node a drag should move: the selection when it is movable and under the pointer, otherwise the deepest
+   * movable part under the pointer (Figma direct manipulation: grab a title or a card and it moves). */
   function dragCandidate(target) {
     var section = sectionOf(target);
-    if (!section || selection.id !== section.getAttribute('data-skb')) return null;
-    var node = nodeAt(section, selection.path);
-    if (!node) return null;
-    if (selection.path && selection.movable && node.contains(target)) return node;
-    return childrenOf(node).filter(function (child) { return child.contains(target) && selection.movableChildren.indexOf(segmentOf(child)) !== -1; })[0] || null;
+    if (!section) return null;
+    var picked = selection.id === section.getAttribute('data-skb') && selection.path ? nodeAt(section, selection.path) : null;
+    if (picked && picked.contains(target) && movableIn(section, picked)) return picked;
+    for (var n = target; n && n !== section; n = n.parentElement) if (selectable(n) && movableIn(section, n)) return n;
+    return null;
   }
-  /** Reorder a node among its siblings (Figma auto layout): rows move along x, columns along y. */
+  /** Reorder a node among its siblings (Figma auto layout): rows move along x, columns along y. Only siblings whose
+   * position saves are drop spots, so a fixed part like the antetítulo never offers one. */
   function startNodeDrag(node) {
     var section = sectionOf(node), container = containerOf(node);
     if (!section || !container) return;
@@ -247,7 +257,7 @@
     clearBoxes();
     var style = window.getComputedStyle(container);
     var display = String(style.display);
-    var siblings = function () { return childrenOf(container).filter(function (child) { return child !== node && segmentOf(child) !== 'sticker'; }); };
+    var siblings = function () { return childrenOf(container).filter(function (child) { return child !== node && movableIn(section, child); }); };
     var horizontal = container === section ? window.innerWidth >= 900 : (display.indexOf('flex') !== -1 && String(style.flexDirection).indexOf('column') === -1);
     // Multi-column grids (steps, categories, reviews, boxes, gallery): drop by the nearest item in 2D.
     var startLeft = node.getBoundingClientRect().left;
@@ -285,6 +295,7 @@
     var finish = function () {
       document.removeEventListener('pointermove', move, true);
       document.removeEventListener('pointerup', finish, true);
+      document.removeEventListener('pointercancel', finish, true);
       indicator.style.display = 'none';
       indicator.style.left = '12px'; indicator.style.right = '12px'; indicator.style.width = 'auto'; indicator.style.height = '4px';
       node.removeAttribute('data-boceto-dragging');
@@ -301,6 +312,8 @@
     };
     document.addEventListener('pointermove', move, true);
     document.addEventListener('pointerup', finish, true);
+    // A cancelled pointer (the browser took over the gesture) must not leave the canvas stuck mid-drag.
+    document.addEventListener('pointercancel', finish, true);
   }
 
   function startEditing(element) {
@@ -351,7 +364,7 @@
       if (sticker && sectionOf(sticker) === section) { startStickerDrag(sticker, ev); return; }
       var drag = dragCandidate(event.target);
       if (drag) {
-        if (pathOf(drag) !== selection.path) select(section.getAttribute('data-skb'), pathOf(drag));
+        if (selection.id !== section.getAttribute('data-skb') || pathOf(drag) !== selection.path) select(section.getAttribute('data-skb'), pathOf(drag));
         startNodeDrag(drag);
         return;
       }
@@ -361,10 +374,14 @@
     var cleanup = function () {
       document.removeEventListener('pointermove', arm, true);
       document.removeEventListener('pointerup', cleanup, true);
+      document.removeEventListener('pointercancel', cleanup, true);
     };
     document.addEventListener('pointermove', arm, true);
     document.addEventListener('pointerup', cleanup, true);
+    document.addEventListener('pointercancel', cleanup, true);
   }, true);
+  // No native drag on the board: it would swallow the pointer events our drags run on (text being edited excepted).
+  document.addEventListener('dragstart', function (event) { if (on && !(editing && editing.contains(event.target))) event.preventDefault(); }, true);
   document.addEventListener('scroll', function () { placeHandle(); if (photoTarget) placePhotoChip(photoTarget); drawOverlay(); }, true);
   window.addEventListener('resize', drawOverlay);
   document.addEventListener('click', function (event) {
@@ -385,8 +402,9 @@
   }, true);
   document.addEventListener('keydown', function (event) {
     if (!editing) return;
-    if (event.key === 'Enter') { event.preventDefault(); stopEditing(true); }
-    if (event.key === 'Escape') { event.preventDefault(); stopEditing(false); }
+    // The key only finishes the edit: stop it here so the selection handler below does not also move the selection.
+    if (event.key === 'Enter') { event.preventDefault(); event.stopImmediatePropagation(); stopEditing(true); }
+    if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); stopEditing(false); }
   }, true);
 
   document.addEventListener('keydown', function (event) {
@@ -418,8 +436,7 @@
       }
       var sel = event.data.selection;
       if (sel && typeof sel === 'object' && typeof sel.id === 'string' && typeof sel.path === 'string' && sel.path.length <= 120) {
-        selection = { id: sel.id, path: sel.path, label: typeof sel.label === 'string' ? sel.label.slice(0, 60) : '', movable: sel.movable === true,
-          movableChildren: Array.isArray(sel.movableChildren) ? sel.movableChildren.filter(function (key) { return typeof key === 'string' && key.length <= 20; }) : [] };
+        selection = { id: sel.id, path: sel.path, label: typeof sel.label === 'string' ? sel.label.slice(0, 60) : '' };
         // Chosen from the Studio's layer tree: report where the part sits so the board can scroll to it.
         var revealSection = sel.reveal === true && on ? sectionById(selection.id) : null;
         var revealNode = revealSection && nodeAt(revealSection, selection.path);
@@ -434,6 +451,7 @@
         var section = document.querySelector('[data-skb="' + id + '"]');
         if (!section) continue;
         var spec = blocks[id] || {};
+        if (Array.isArray(spec.movable)) movableByBlock[id] = spec.movable.filter(function (path) { return typeof path === 'string' && /^[a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4}$/.test(path); }).slice(0, 120);
         if (typeof spec.bg === 'string' && /^#[0-9a-f]{6}$/i.test(spec.bg)) section.style.setProperty('--skb-bg', spec.bg);
         if (typeof spec.ink === 'string' && /^#[0-9a-f]{6}$/i.test(spec.ink)) section.style.setProperty('--skb-ink', spec.ink);
         if (spec.align === 'center' || spec.align === 'end') section.setAttribute('data-skb-align', spec.align);
@@ -495,6 +513,7 @@
       }
     }
     if (on) ensure();
+    if (on) document.documentElement.setAttribute('data-boceto-on', ''); else document.documentElement.removeAttribute('data-boceto-on');
     drawOverlay();
     if (!on) { setHovered(null); placePhotoChip(null); clearBoxes(); placeHoverBox(null); if (editing) stopEditing(false); }
     placeHandle();

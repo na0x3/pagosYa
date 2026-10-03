@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { bocetoRevealY, createBocetoPanel } from './source-boceto';
-import { MerchantStudioApi } from './api';
+import { ApiError, MerchantStudioApi } from './api';
 
 const sketch = () => ({
   palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' },
@@ -212,10 +212,10 @@ it('the account page edits like a block: Capas entry, layout, perks, canvas text
   expect(account.perks).toHaveLength(2);
 });
 
-it('canvas selection paths are mirrored back to the preview with label and movable flags', async () => {
+it('canvas selection paths are mirrored back to the preview with their label', async () => {
   const panel = await mount();
   panel.remoteSelect('intro', 'copy');
-  expect(lastSelection()).toEqual({ id: 'intro', path: 'copy', label: 'Columna de texto', movable: false, movableChildren: ['headline', 'sub', 'actions'] });
+  expect(lastSelection()).toEqual({ id: 'intro', path: 'copy', label: 'Columna de texto' });
   panel.remoteSelect('intro', 'copy/missing');
   expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy' });
   panel.remoteSelect('nope', 'copy');
@@ -267,7 +267,7 @@ it('a canvas edit on another block never keeps a part path from the previous blo
   const panel = await mount();
   panel.remoteSelect('intro', 'copy/sub');
   panel.remoteText('cat', 'title', 'Nuevos');
-  expect(lastSelection()).toEqual({ id: 'cat', path: '', label: 'Catálogo', movable: false, movableChildren: [] });
+  expect(lastSelection()).toEqual({ id: 'cat', path: '', label: 'Catálogo' });
   panel.remoteKey('delete');
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((b: any) => b.id)).toEqual(['intro', 'fin']);
@@ -338,13 +338,14 @@ it('selecting on the canvas expands that block in Capas', async () => {
   expect(host.querySelector('[data-boceto-block="cat"] [data-boceto-node="head"]')?.classList.contains('is-selected')).toBe(true);
 });
 
-it('a selected block keeps the drag-anywhere section move: its columns only drag once selected', async () => {
-  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], photo: 'assets/a.jpg' }, ...sketch().blocks.slice(1)] }, photos: ['assets/a.jpg'], fonts: [] } as any);
+it('the live look lists every part of each block whose position saves, so the canvas lets you grab it directly', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], kicker: 'NUEVO', cta2: 'Caja', photo: 'assets/a.jpg' }, { id: 'st', type: 'steps', title: 'Pasos', items: [{ icon: 'a', title: '1', text: '' }, { icon: 'b', title: '2', text: '' }], bg: 'paper', size: 'm' }, ...sketch().blocks.slice(1)] }, photos: ['assets/a.jpg'], fonts: [] } as any);
   const panel = await mount();
-  panel.remoteSelect('intro', '');
-  expect(lastSelection()).toMatchObject({ id: 'intro', path: '', movableChildren: [] });
-  panel.remoteSelect('intro', 'copy');
-  expect(lastSelection()).toMatchObject({ path: 'copy', movable: true });
+  panel.resync();
+  const look = lastLook();
+  expect(look.blocks.intro.movable).toEqual(['copy', 'copy/headline', 'copy/sub', 'copy/actions', 'copy/actions/cta', 'copy/actions/cta2', 'media']);
+  expect(look.blocks.st.movable).toEqual(['items/0', 'items/1']);
+  expect(look.blocks.cat.movable).toEqual([]);
 });
 
 it('choosing a part in Capas asks the canvas to reveal it; canvas clicks do not', async () => {
@@ -355,6 +356,90 @@ it('choosing a part in Capas asks the canvas to reveal it; canvas clicks do not'
   expect(lastSelection()).toMatchObject({ path: 'copy/sub', reveal: true });
   panel.remoteSelect('intro', 'copy');
   expect(lastSelection().reveal).toBeUndefined();
+});
+
+it('follow-ups: after a conflict reload a stale part falls back to its nearest surviving parent, not the block', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/sub');
+  putSketch.mockRejectedValueOnce(new ApiError('conflict', 409));
+  getSketch.mockResolvedValueOnce({ revision: 5, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], sub: '' }, ...sketch().blocks.slice(1)] }, photos: [], fonts: [] } as any);
+  panel.remoteText('intro', 'headline', 'Otro');
+  await vi.advanceTimersByTimeAsync(1300);
+  await vi.waitFor(() => expect(host.textContent).toContain('se recargó'));
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy' });
+  expect(host.querySelector('.bct-props .bct-section__title')?.textContent).toBe('Columna de texto');
+});
+
+it('follow-ups: a selected photo offers the photo picker, not the text hint', async () => {
+  const withPhoto = { revision: 3, snapshot: { files: [{ path: 'sketch.json' }, { path: 'assets/a.jpg', content: 'AAAA', encoding: 'base64' }] } } as any;
+  getSketch.mockResolvedValue({ revision: 3, sketch: { ...sketch(), blocks: [{ ...sketch().blocks[0], photo: 'assets/a.jpg' }, { id: 'gal', type: 'gallery', title: 'Galería', photos: ['assets/a.jpg'], bg: 'paper', size: 'm' }, sketch().blocks[2]] }, photos: ['assets/a.jpg'], fonts: [] } as any);
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: withPhoto, locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  for (const [id, path] of [['intro', 'media/photo'], ['gal', 'items/0']]) {
+    panel.remoteSelect(id, path);
+    const props = host.querySelector('.bct-props')!;
+    expect(props.querySelector('.bct-photo-slot')).not.toBeNull();
+    expect(props.textContent).not.toContain('Toca dos veces');
+  }
+  (host.querySelector('.bct-props .bct-photo-slot') as HTMLElement).click();
+  expect(host.querySelector('.bct-thumbs--big')).not.toBeNull();
+});
+
+it('follow-ups: "Vertical" shows only when the copy column has a photo column beside it', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [sketch().blocks[0], { ...sketch().blocks[0], id: 'pic', photo: 'assets/a.jpg' }, { id: 'nl', type: 'newsletter', variant: 'center', title: 'Club', note: '', cta: 'Ok', photo: 'assets/a.jpg', bg: 'deep', size: 'm' }, sketch().blocks[2]] }, photos: [], fonts: [] } as any);
+  const panel = await mount();
+  const labels = () => [...host.querySelectorAll('.bct-props .bct-row__label')].map(node => node.textContent);
+  panel.remoteSelect('intro', 'copy');
+  expect(labels()).not.toContain('Vertical');
+  panel.remoteSelect('nl', 'copy');
+  expect(labels()).not.toContain('Vertical');
+  panel.remoteSelect('pic', 'copy');
+  expect(labels()).toContain('Vertical');
+});
+
+it('each side panel tucks away behind its arrow against its wall and comes back from a tab', async () => {
+  const resized = vi.fn();
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: true, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload), resized });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  const root = document.documentElement.style;
+  expect([root.getPropertyValue('--bct-left'), root.getPropertyValue('--bct-right')]).toEqual(['240px', '300px']);
+  const hide = host.querySelector('.bct-layers [data-boceto-dock="layers"]') as HTMLButtonElement;
+  expect([hide.textContent, hide.disabled]).toEqual(['‹', false]);
+  hide.click();
+  expect(host.querySelector('.bct-layers')).toBeNull();
+  expect(root.getPropertyValue('--bct-left')).toBe('0px');
+  expect(resized).toHaveBeenCalledTimes(1);
+  (host.querySelector('.bct-panel [data-boceto-dock="inspector"]') as HTMLElement).click();
+  expect(host.querySelector('.bct-panel')).toBeNull();
+  expect(root.getPropertyValue('--bct-right')).toBe('0px');
+  const tabs = [...host.querySelectorAll('.bct-tab')].map(tab => tab.textContent);
+  expect(tabs).toEqual(['›', '‹']);
+  (host.querySelector('.bct-tab--left') as HTMLElement).click();
+  expect(host.querySelector('.bct-layers')).not.toBeNull();
+  expect(root.getPropertyValue('--bct-left')).toBe('240px');
+});
+
+it('a page built by an older renderer is re-saved once on open and the preview reloads with the editable page', async () => {
+  const reload = vi.fn();
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: sketch(), photos: [], fonts: [], stale: true } as any);
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload), reload });
+  await vi.waitFor(() => expect(putSketch).toHaveBeenCalledTimes(1));
+  expect(putSketch.mock.calls[0][1]).toMatchObject({ revision: 3 });
+  await vi.waitFor(() => expect(reload).toHaveBeenCalledWith(4));
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch).toHaveBeenCalledTimes(1);
+});
+
+it('a stale page in a locked studio is left alone', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: sketch(), photos: [], fonts: [], stale: true } as any);
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: true, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch).not.toHaveBeenCalled();
 });
 
 it('reveal pans the board only when the part is off screen, centring it', () => {

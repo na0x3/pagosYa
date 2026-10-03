@@ -41,7 +41,7 @@ it('stays inert until activated, then clicks drill down block → group → elem
 it('a click elsewhere in the same block selects the child of the common ancestor', async () => {
   const { w, posted, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/actions/cta', label: 'Botón principal', movable: true, movableChildren: [] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/actions/cta', label: 'Botón principal' } }); await tick();
   clickOn(w, '[data-skb-el="sub"]'); await tick();
   clickOn(w, '[data-skb="c"] h2'); await tick();
   expect(selects(posted)).toEqual([['h', 'copy/sub'], ['c', '']]);
@@ -61,12 +61,12 @@ it('clicking block padding selects the block; Esc goes up, Enter goes into the f
 it('draws the selected box with its tag and dotted boxes for its children; nothing for a stale path', async () => {
   const { w, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: 'Columna de texto', movable: true, movableChildren: ['headline', 'sub', 'actions'] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: 'Columna de texto' } }); await tick();
   const selected = w.document.querySelectorAll('[data-boceto-box="selected"]');
   expect(selected).toHaveLength(1);
   expect(selected[0].textContent).toBe('Columna de texto');
   expect(w.document.querySelectorAll('[data-boceto-box="child"]')).toHaveLength(3);
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/gone', label: 'x', movable: false, movableChildren: [] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/gone', label: 'x' } }); await tick();
   expect(w.document.querySelectorAll('[data-boceto-box]')).toHaveLength(0);
 });
 
@@ -88,7 +88,7 @@ const pointer = (w: any, type: string, target: any, x: number, y: number) =>
 it('dragging a movable child of the selection reorders it and posts node-move with the new sibling order', async () => {
   const { w, posted, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: 'Columna de texto', movable: false, movableChildren: ['headline', 'sub', 'actions'] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { movable: ['copy/headline', 'copy/sub', 'copy/actions'] } }, selection: { id: 'h', path: 'copy', label: 'Columna de texto' } }); await tick();
   const headline = w.document.querySelector('[data-skb-el="headline"]');
   pointer(w, 'pointerdown', headline, 10, 10);
   pointer(w, 'pointermove', w.document, 10, 40); await tick();
@@ -102,7 +102,7 @@ it('dragging a movable child of the selection reorders it and posts node-move wi
 it('a child that is not movable drags the whole section instead', async () => {
   const { w, posted, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '', movable: false, movableChildren: [] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '' } }); await tick();
   const headline = w.document.querySelector('[data-skb-el="headline"]');
   pointer(w, 'pointerdown', headline, 10, 10);
   pointer(w, 'pointermove', w.document, 10, 40);
@@ -113,7 +113,7 @@ it('a child that is not movable drags the whole section instead', async () => {
 it('forwards ⌥↑ / ⌥↓ / Supr to the Studio, but never while editing text', async () => {
   const { w, posted, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: '', movable: true, movableChildren: [] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: '' } }); await tick();
   const key = (k: string, alt = false) => w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: k, altKey: alt, bubbles: true, cancelable: true }));
   key('ArrowUp', true); key('ArrowDown', true); key('Delete'); await tick();
   expect(posted.filter(m => m.type === 'pagosya:boceto-key').map(m => m.key)).toEqual(['up', 'down', 'delete']);
@@ -174,19 +174,19 @@ it('live apply: page style on the site root, alignment/flip on sections, photos 
 it('review fixes: a reveal request reports where the selected part sits on the page', async () => {
   const { posted, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: 'Bajada', movable: true, movableChildren: [], reveal: true } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: 'Bajada', reveal: true } }); await tick();
   const reveal = posted.find(message => message.type === 'pagosya:boceto-reveal');
   expect(reveal).toMatchObject({ type: 'pagosya:boceto-reveal' });
   expect(typeof reveal.top).toBe('number');
   expect(typeof reveal.height).toBe('number');
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '', movable: true, movableChildren: [] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '' } }); await tick();
   expect(posted.filter(message => message.type === 'pagosya:boceto-reveal')).toHaveLength(1);
 });
 
 it('review fixes: a copy/media flip drag leaves the columns to the flip attribute instead of moving the DOM', async () => {
   const { w, posted, send } = load();
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '', movable: true, movableChildren: [] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { movable: ['copy', 'media'] } }, selection: { id: 'h', path: 'copy', label: '' } }); await tick();
   const copy = w.document.querySelector('[data-skb-group="copy"]');
   pointer(w, 'pointerdown', copy.querySelector('h1'), 10, 10);
   pointer(w, 'pointermove', w.document, 40, 10); await tick();
@@ -205,11 +205,86 @@ it('review fixes: items in a multi-column grid drop by nearest position in 2D', 
   const send = (data: unknown) => w.dispatchEvent(new w.MessageEvent('message', { data, source: w }));
   [...w.document.querySelectorAll('article')].forEach((node: any, i: number) => { node.getBoundingClientRect = () => ({ left: i * 100, right: i * 100 + 90, top: 0, bottom: 50, width: 90, height: 50, x: i * 100, y: 0 }); });
   send({ type: 'pagosya:boceto-mode', on: true });
-  send({ type: 'pagosya:boceto-apply', selection: { id: 's', path: 'items', label: '', movable: false, movableChildren: ['0', '1', '2', '3'] } }); await tick();
+  send({ type: 'pagosya:boceto-apply', blocks: { s: { movable: ['items/0', 'items/1', 'items/2', 'items/3'] } } }); await tick();
   const first = w.document.querySelector('[data-skb-node="0"]');
   pointer(w, 'pointerdown', first, 10, 20);
   pointer(w, 'pointermove', w.document, 60, 20); await tick();
   pointer(w, 'pointermove', w.document, 260, 25);
   pointer(w, 'pointerup', w.document, 260, 25); await tick();
   expect(posted[0]).toMatchObject({ path: 'items/0', order: ['1', '2', '0', '3'] });
+});
+
+it('follow-ups: Enter and Esc that finish a text edit leave the selection where it was', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: '' } }); await tick();
+  const sub = w.document.querySelector('[data-skb-el="sub"]');
+  for (const key of ['Enter', 'Escape']) {
+    sub.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true })); await tick();
+    expect(sub.getAttribute('contenteditable')).toBeTruthy();
+    sub.dispatchEvent(new w.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })); await tick();
+    expect(sub.getAttribute('contenteditable')).toBeNull();
+  }
+  expect(selects(posted)).toEqual([]);
+});
+
+it('follow-ups: the antetítulo is never a drop spot, so a part dropped above it lands below it', async () => {
+  const html = `<!doctype html><html><body><section data-skb="b" id="skb-b"><div data-skb-group="copy"><p data-skb-node="kicker">NUEVO</p><h2 data-skb-el="headline">Título</h2><a data-skb-el="cta" href="#">Comprar</a></div></section></body></html>`;
+  const dom = new JSDOM(sourcePreviewDocument({ ...(snapshot as any), files: [{ path: 'index.html', content: html }] } as never, 'index.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:boceto-node-move') posted.push(event.data); });
+  const send = (data: unknown) => w.dispatchEvent(new w.MessageEvent('message', { data, source: w }));
+  [...w.document.querySelectorAll('[data-skb-group="copy"] > *')].forEach((node: any, i: number) => { node.getBoundingClientRect = () => ({ left: 0, right: 300, top: i * 40, bottom: i * 40 + 30, width: 300, height: 30, x: 0, y: i * 40 }); });
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { b: { movable: ['copy/headline', 'copy/cta'] } }, selection: { id: 'b', path: 'copy/cta', label: '' } }); await tick();
+  const cta = w.document.querySelector('[data-skb-el="cta"]');
+  pointer(w, 'pointerdown', cta, 10, 95);
+  pointer(w, 'pointermove', w.document, 10, 60); await tick();
+  pointer(w, 'pointermove', w.document, 10, 2);
+  pointer(w, 'pointerup', w.document, 10, 2); await tick();
+  expect(posted[0]).toMatchObject({ path: 'copy/cta', order: ['cta', 'headline'] });
+  expect([...w.document.querySelector('[data-skb-group="copy"]').children].map((node: any) => node.textContent)).toEqual(['NUEVO', 'Comprar', 'Título']);
+});
+
+it('direct manipulation: grabbing a text, a button or a card drags that part with nothing selected', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { movable: ['copy', 'media', 'copy/headline', 'copy/sub', 'copy/actions', 'copy/actions/cta', 'copy/actions/cta2'] } } }); await tick();
+  const drag = async (selector: string, toX: number, toY: number) => {
+    pointer(w, 'pointerdown', w.document.querySelector(selector), 10, 10);
+    pointer(w, 'pointermove', w.document, 10, 40); await tick();
+    pointer(w, 'pointermove', w.document, toX, toY);
+    pointer(w, 'pointerup', w.document, toX, toY); await tick();
+  };
+  await drag('[data-skb-el="headline"]', 10, 60);
+  await drag('[data-skb-node="cta2"]', 10, 60);
+  const moves = posted.filter(message => message.type === 'pagosya:boceto-node-move').map(message => message.path);
+  expect(moves).toEqual(['copy/headline', 'copy/actions/cta2']);
+  expect(selects(posted)).toEqual([['h', 'copy/headline'], ['h', 'copy/actions/cta2']]);
+  expect(posted.some(message => message.type === 'pagosya:boceto-reorder')).toBe(false);
+});
+
+it('direct manipulation: the browser never starts its own drag of a link or photo on the board', async () => {
+  const { w, send } = load();
+  const start = () => { const event = new w.Event('dragstart', { bubbles: true, cancelable: true }); w.document.querySelector('[data-skb-node="cta"]').dispatchEvent(event); return event.defaultPrevented; };
+  expect(start()).toBe(false);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  expect(start()).toBe(true);
+  expect(w.document.documentElement.hasAttribute('data-boceto-on')).toBe(true);
+});
+
+it('direct manipulation: a cancelled pointer ends the drag instead of leaving the board stuck', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { movable: ['copy/headline', 'copy/sub', 'copy/actions'] } } }); await tick();
+  pointer(w, 'pointerdown', w.document.querySelector('[data-skb-el="headline"]'), 10, 10);
+  pointer(w, 'pointermove', w.document, 10, 40); await tick();
+  pointer(w, 'pointercancel', w.document, 10, 40); await tick();
+  expect(w.document.querySelector('[data-boceto-dragging]')).toBeNull();
+  pointer(w, 'pointerdown', w.document.querySelector('[data-skb-el="sub"]'), 10, 10);
+  pointer(w, 'pointermove', w.document, 10, 40); await tick();
+  pointer(w, 'pointermove', w.document, 10, 60);
+  pointer(w, 'pointerup', w.document, 10, 60); await tick();
+  expect(posted.filter(message => message.type === 'pagosya:boceto-node-move').map(message => message.path)).toContain('copy/sub');
 });

@@ -33,6 +33,24 @@ it('reads the current sketch with the revision and real photo paths', async () =
   expect(result.fonts).toContain('anton');
 });
 
+it('flags a page built by an older renderer as stale, and a page the current renderer made as fresh', async () => {
+  const { service, projects } = setup();
+  expect((await service.get('m', 's')).stale).toBe(false);
+  const snapshot = (await projects.version()).snapshot;
+  const old = snapshot.files.map((file: any) => (file.path === 'components/home.tsx' ? { ...file, content: file.content.replace(/ data-skb-(group|node)=\{"[^"]*"\}/g, '') } : file));
+  projects.version.mockResolvedValue({ revision: 3, snapshot: { ...snapshot, files: old } });
+  expect((await service.get('m', 's')).stale).toBe(true);
+});
+
+it('a hand edit leaves the page fresh: what update saves is what get expects', async () => {
+  const { service, projects, sketch } = setup();
+  await service.update('m', 's', { revision: 3, sketch });
+  const saved = projects.save.mock.calls[0][2];
+  projects.version.mockResolvedValue({ revision: 4, snapshot: { schemaVersion: 1, brief: saved.brief, files: saved.files } });
+  projects.current.mockResolvedValue({ revision: 4, slug: 'salv' });
+  expect((await service.get('m', 's')).stale).toBe(false);
+});
+
 it('returns sketch null for a store that was not sketch-born', async () => {
   const { service } = setup(false);
   expect((await service.get('m', 's')).sketch).toBeNull();

@@ -129,14 +129,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
    * (deltaY ≈ ±100) no longer jumps 2.7× per click, which made zooming in or out nearly impossible. */
   const wheelZoomFactor = (deltaY: number) => Math.exp(-Math.max(-24, Math.min(24, deltaY)) * 0.012);
   function canvasBoard() { return app.querySelector<HTMLElement>('.boceto-canvas'); }
-  /** Center the page between the side panels at a zoom that fills the board — no dead whitespace. */
+  /** Center the page on the board at a zoom that fills it — no dead whitespace. The side panels are docked outside
+   * the board, so its whole width is visible. */
   function fitCanvas() {
     const board = canvasBoard();
     if (!board) return;
-    const PANEL_LEFT = 264, PANEL_RIGHT = 324; // layers + inspector, with their margins
-    const visible = Math.max(320, board.clientWidth - PANEL_LEFT - PANEL_RIGHT);
+    const visible = Math.max(320, board.clientWidth);
     canvasZoom = Math.min(1.25, Math.max(0.1, (visible - 56) / 1280));
-    canvasX = PANEL_LEFT + (visible - 1280 * canvasZoom) / 2;
+    canvasX = (visible - 1280 * canvasZoom) / 2;
     canvasY = 28;
     applyCanvas();
   }
@@ -757,6 +757,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         }).catch(() => { /* the next save or closing Boceto resyncs */ });
       },
       close: () => { bocetoOpen = false; void load().then(() => render()); },
+      resized: () => fitCanvas(),
       apply: payload => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:boceto-apply', ...payload }, '*'); } catch { /* frame gone */ } },
     });
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');

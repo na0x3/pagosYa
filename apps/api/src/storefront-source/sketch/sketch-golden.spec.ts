@@ -14,17 +14,29 @@ const fullSketch = () => repairSketch({
     { id: 'h', type: 'hero', headline: 'Algo dulce para mirar despacio', sub: 'Repostería de verdad', cta: 'Ver productos', cta2: 'Armar mi caja', trust: '★ 4.8 · 2.400 pedidos', badge: 'EL DROP SEMANAL', sticker: 'Recién horneado', photo: 'assets/a.jpg', stickerPos: { x: 70, y: 5 }, layout: { copy: { gap: 'l', valign: 'start' }, actions: { dir: 'column', align: 'center' } }, bg: 'paper', size: 'l' },
     { id: 'm', type: 'marquee', text: 'Horneado · Fresco · Artesanal', glyph: '✦', bg: 'pop', size: 's' },
     { id: 'c', type: 'catalog', kicker: 'La vitrina', title: 'Nuestros productos', seeAll: 'VER TODO →', badges: ['NUEVO', 'CLÁSICO', 'FAVORITO'], stripLeft: 'Cada pieza sale del horno el mismo día.', stripRight: 'Pide antes del domingo.', bg: 'tint-pop', size: 'm' },
-    { id: 'co', type: 'collections', title: 'Un antojo para cada día', items: [{ title: 'Chocolate', text: 'Los intensos.', photo: 'assets/a.jpg' }, { title: 'Frutales', text: 'Los frescos.' }], bg: 'paper', size: 'm' },
-    { id: 's', type: 'story', title: 'El proceso', paragraphs: ['Preparación lenta.', 'Horneado al momento.'], order: ['paragraphs', 'title'], photo: 'assets/a.jpg', bg: 'accent', size: 'l' },
-    { id: 'sp', type: 'split', headline: 'Mezcla y combina', body: 'Arma tu caja.', cta: 'Armar caja', cta2: 'Ver sabores', pills: ['6 · Bs38'], stats: [{ value: '150g', label: 'por pieza' }, { value: '24h', label: 'de reposo' }], sticker: 'Ahorra 15%', photo: 'assets/a.jpg', bg: 'deep', size: 'l' },
+    { id: 'co', type: 'collections', title: 'Un antojo para cada día', items: [{ title: 'Chocolate', text: 'Los intensos.', photo: 'assets/a.jpg' }, { title: 'Frutales', text: 'Los frescos.' }], layout: { items: { gap: 'm' } }, bg: 'paper', size: 'm' },
+    { id: 's', type: 'story', title: 'El proceso', paragraphs: ['Preparación lenta.', 'Horneado al momento.'], order: ['paragraphs', 'title'], layout: { paragraphs: { gap: 'l' } }, align: 'end', flip: true, photo: 'assets/a.jpg', bg: 'accent', size: 'l' },
+    { id: 'sp', type: 'split', headline: 'Mezcla y combina', body: 'Arma tu caja.', cta: 'Armar caja', cta2: 'Ver sabores', pills: ['6 · Bs38'], stats: [{ value: '150g', label: 'por pieza' }, { value: '24h', label: 'de reposo' }], boxes: [{ title: 'Caja', text: 'Seis piezas' }], sticker: 'Ahorra 15%', photo: 'assets/a.jpg', align: 'center', layout: { copy: { gap: 's', valign: 'center' }, pills: { dir: 'column', align: 'end' }, stats: { gap: 'l', align: 'start' }, boxes: { align: 'center' } }, bg: 'deep', size: 'l' },
     { id: 'r', type: 'reviews', title: 'Clientes felices', ratingValue: '4.9 / 5', ratingSource: 'En Google', handle: '@salv', quotes: [{ text: 'Riquísimo', name: 'Ana' }, { text: 'Volveré', name: 'Luis' }], photos: ['assets/a.jpg'], bg: 'tint-accent', size: 'm' },
     { id: 'f', type: 'faq', title: 'Preguntas', items: [{ q: '¿Hacen envíos?', a: 'Sí, en toda la ciudad.' }], layout: { items: { gap: 's' } }, bg: 'paper', size: 'm' },
-    { id: 'b', type: 'banner', headline: 'Haz espacio para un poco de alegría', cta: 'Comprar', sticker: 'Hoy', bg: 'pop', size: 'xl' },
+    { id: 'b', type: 'banner', headline: 'Haz espacio para un poco de alegría', cta: 'Comprar', sticker: 'Hoy', align: 'end', layout: { copy: { gap: 'l' } }, bg: 'pop', size: 'xl' },
     { id: 'g', type: 'gallery', title: 'Galería', photos: ['assets/a.jpg'], bg: 'paper', size: 'm' },
-    { id: 'n', type: 'newsletter', variant: 'split', title: 'Únete al club', note: 'Novedades cada semana.', photo: 'assets/a.jpg', bg: 'deep', size: 'm' },
+    { id: 'n', type: 'newsletter', variant: 'split', title: 'Únete al club', note: 'Novedades cada semana.', photo: 'assets/a.jpg', flip: true, layout: { copy: { valign: 'end' } }, bg: 'deep', size: 'm' },
+    { id: 'nc', type: 'newsletter', variant: 'center', title: 'Avisos', note: 'Una vez al mes.', align: 'end', bg: 'paper', size: 'm' },
+    { id: 'a', type: 'announce', left: 'Envíos gratis', right: 'Hecho a mano', layout: { row: { dir: 'row', gap: 's', align: 'center' } }, bg: 'pop', size: 's' },
     { id: 'z', type: 'footer', tagline: 'Hecho con calma.', wordmark: 'giant', bg: 'deep', size: 'l' },
   ],
 }, ctx).sketch;
+
+it('the screenshot fixture exercises every layout setting and the rendered page keeps them', () => {
+  const sketch = fullSketch();
+  const settings = new Set(sketch.blocks.flatMap(block => Object.values(block.layout ?? {}).flatMap(entry => Object.entries(entry).map(([field, value]) => `${field}=${value}`))));
+  expect([...settings].sort()).toEqual(['align=center', 'align=end', 'align=start', 'dir=column', 'dir=row', 'gap=l', 'gap=m', 'gap=s', 'valign=center', 'valign=end', 'valign=start']);
+  expect(new Set(sketch.blocks.map(block => block.align).filter(Boolean))).toEqual(new Set(['center', 'end']));
+  expect(sketch.blocks.filter(block => block.flip).map(block => block.id)).toEqual(['s', 'n']);
+  const markup = assembleSketch(sketch, ctx).map(file => file.content).join('\n');
+  for (const attr of ['data-skb-gap', 'data-skb-dir', 'data-skb-galign', 'data-skb-valign', 'data-skb-align', 'data-skb-flip']) expect(markup).toContain(attr);
+});
 
 it('the full 10-block sketch compiles', async () => {
   await expect(compileNextPreview(assembleSketch(fullSketch(), ctx), 'shop')).resolves.toBeDefined();

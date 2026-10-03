@@ -205,9 +205,23 @@ import { sketchNodeTree } from '@pagosya/shared-types';
 describe('structured selection markers', () => {
   const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
   const sketchWith = (blocks: object[]) => repairSketch({ blocks }, ctx).sketch;
-  const segments = (markup: string) => new Set([...markup.matchAll(/data-skb-(?:group|node|el)=\{"([^"]+)"\}|data-skb-(?:group|node|el)="([^"]+)"/g)].map(m => m[1] ?? m[2]));
-  const all = (nodes: ReturnType<typeof sketchNodeTree>): string[] => nodes.flatMap(node => [node.key, ...all(node.children)]);
-  it('every node of the shared tree is stamped in the rendered block', () => {
+  const marker = (attrs: string, name: string) => attrs.match(new RegExp(`data-skb-${name}=(?:\\{"([^"]+)"\\}|"([^"]+)")`))?.slice(1).find(Boolean);
+  /** Full paths of the marked nodes, read from the markup's nesting exactly as the canvas does: a node's path is its
+   * nearest marked ancestor's path plus its own key (group, then node, then el). */
+  const renderedPaths = (markup: string) => {
+    const found = new Set<string>(); const stack: string[] = [''];
+    for (const [, closing, attrs, selfClosing] of markup.matchAll(/<(\/?)[A-Za-z][\w.]*((?:"[^"]*"|\{(?:[^{}]|\{[^{}]*\})*\}|[^>"{}])*?)(\/?)>/g)) {
+      if (closing) { stack.pop(); continue; }
+      const parent = stack[stack.length - 1];
+      const key = marker(attrs, 'group') ?? marker(attrs, 'node') ?? marker(attrs, 'el');
+      const path = key ? (parent ? `${parent}/${key}` : key) : parent;
+      if (key) found.add(path);
+      if (!selfClosing) stack.push(path);
+    }
+    return found;
+  };
+  const all = (nodes: ReturnType<typeof sketchNodeTree>): string[] => nodes.flatMap(node => [node.path, ...all(node.children)]);
+  it('every node of the shared tree is stamped in the rendered block at its full path', () => {
     const sketch = sketchWith([
       { id: 'h', type: 'hero', headline: 'H', sub: 's', cta: 'a', cta2: 'b', trust: 't', caption: 'c', sticker: 'x', photo: 'assets/a.jpg' },
       { id: 'sp', type: 'split', kicker: 'k', headline: 'H', body: 'b', cta: 'a', pills: ['1', '2'], stats: [{ value: '1', label: 'l' }], boxes: [{ title: 't', text: '' }], tag: 'tg', photo: 'assets/a.jpg' },
@@ -221,8 +235,8 @@ describe('structured selection markers', () => {
       { id: 'a', type: 'announce', left: 'l', right: 'r' },
     ]);
     for (const block of sketch.blocks) {
-      const found = segments(renderBlock(block, sketch, ctx));
-      for (const key of all(sketchNodeTree(block))) expect([block.type, key, found.has(key)]).toEqual([block.type, key, true]);
+      const found = renderedPaths(renderBlock(block, sketch, ctx));
+      for (const path of all(sketchNodeTree(block))) expect([block.type, path, found.has(path)]).toEqual([block.type, path, true]);
     }
   });
   it('emits saved group layout as data attributes and story copy in saved order', () => {
@@ -243,5 +257,14 @@ describe('review fixes (layout controls take effect)', () => {
     expect(css).toContain('.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="start"]');
     expect(css).toContain('.skb :is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="center"]');
     expect(css).toContain(':is(.skb-story__copy, .skb-story__paragraphs, .skb-faq__list)[data-skb-gap] { display: grid; }');
+  });
+});
+
+describe('follow-ups', () => {
+  it('right alignment moves only the text of banners and centred newsletters, never their stacked items', () => {
+    const endRules = SKETCH_BASE_CSS.split('\n').filter(line => line.startsWith('.skb[data-skb-align="end"]'));
+    expect(endRules.length).toBeGreaterThan(0);
+    for (const rule of endRules) for (const stack of ['.skb-banner__copy', '.skb-newsletter__stack']) expect(rule).not.toContain(stack);
+    expect(endRules.join('\n')).toContain('.skb-hero__copy');
   });
 });

@@ -40,15 +40,20 @@ export class SketchStudioService {
     };
   }
 
-  async get(merchantId: string, storeId: string): Promise<{ revision: number; sketch: StoreSketch | null; photos: string[]; fonts: readonly string[] }> {
+  /** `stale`: the saved page is not what the current renderer makes of this sketch (it was built before a renderer
+   * change, e.g. without the part markers the canvas drags by). The Studio re-saves once so the editor works fully. */
+  async get(merchantId: string, storeId: string): Promise<{ revision: number; sketch: StoreSketch | null; photos: string[]; fonts: readonly string[]; stale: boolean }> {
     const { revision, snapshot } = await this.load(merchantId, storeId);
     const stored = snapshot?.files.find(file => file.path === SKETCH_FILE)?.content;
     const ctx = await this.context(merchantId, storeId, snapshot);
-    if (!stored) return { revision, sketch: null, photos: ctx.photos, fonts: SOURCE_FONT_IDS };
+    if (!stored) return { revision, sketch: null, photos: ctx.photos, fonts: SOURCE_FONT_IDS, stale: false };
     let parsed: unknown;
     try { parsed = JSON.parse(stored); } catch { parsed = undefined; }
     // Stored sketches re-repair on read, so schema evolutions never break the panel.
-    return { revision, sketch: repairSketch(parsed, ctx).sketch, photos: ctx.photos, fonts: SOURCE_FONT_IDS };
+    const sketch = repairSketch(parsed, ctx).sketch;
+    const saved = new Map((snapshot?.files ?? []).map(file => [file.path, file.content]));
+    const stale = assembleSketch(sketch, ctx).some(file => saved.get(file.path) !== file.content);
+    return { revision, sketch, photos: ctx.photos, fonts: SOURCE_FONT_IDS, stale };
   }
 
   /** "Subir foto" in Boceto: a merchant-owned upload becomes a store asset (same checks and naming as generation),

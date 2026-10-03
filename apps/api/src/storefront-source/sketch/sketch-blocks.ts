@@ -482,7 +482,8 @@ export const SKETCH_BASE_CSS = `
 .skb[data-skb-align="end"] :is(.skb-actions, .skb-pills, .skb-stats) { justify-content: flex-end; }
 .skb[data-skb-align="end"] .skb-head { flex-direction: row-reverse; }
 .skb[data-skb-align="end"] :is(.skb-lead, .skb-boxes, .skb-subscribe-wrap) { margin-left: auto; }
-.skb[data-skb-align="end"] :is(.skb-hero__copy, .skb-split__copy, .skb-newsletter__copy, .skb-story__copy, .skb-banner__copy, .skb-newsletter__stack) { justify-items: end; }
+/* Banners and centred newsletters stay a centred stack: right alignment moves their text only, as it always has. */
+.skb[data-skb-align="end"] :is(.skb-hero__copy, .skb-split__copy, .skb-newsletter__copy, .skb-story__copy) { justify-items: end; }
 @media (min-width: 900px) {
   .skb[data-skb-flip] :is(.skb-hero__media, .skb-split__media, .skb-story__media, .skb-newsletter__media) { order: -1; }
   .skb-hero[data-skb-flip] { grid-template-columns: 1fr 1.1fr; }

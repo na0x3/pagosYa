@@ -436,7 +436,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project`, { method: "PUT", body: JSON.stringify(body) });
   }
 
-  getSketch(storeId: string): Promise<{ revision: number; sketch: unknown; photos: string[]; fonts: string[] }> {
+  getSketch(storeId: string): Promise<{ revision: number; sketch: unknown; photos: string[]; fonts: string[]; stale?: boolean }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch`);
   }
   addSketchPhoto(storeId: string, body: { revision: number; url: string }): Promise<{ revision: number; path: string; photos: string[] }> {

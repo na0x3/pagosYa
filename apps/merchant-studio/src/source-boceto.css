@@ -1,8 +1,19 @@
 /* Boceto: Figma-equal workspace. Layers on the left, canvas in the middle, inspector on the right;
  * the YAPI conversation leaves the screen while the merchant designs. */
 .studio-workspace.is-boceto .agent-panel { display: none; }
-.bct-panel { position: fixed; right: 12px; top: 68px; bottom: 12px; width: 300px; overflow: auto; background: #2c2c2c; color: #e6e6e6; border-radius: 12px; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; box-shadow: 0 16px 48px rgba(0,0,0,.4); border: 1px solid #3c3c3c; }
-.bct-layers { position: fixed; left: 12px; top: 68px; bottom: 12px; width: 240px; overflow: auto; background: #2c2c2c; color: #e6e6e6; border-radius: 12px; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; box-shadow: 0 16px 48px rgba(0,0,0,.4); border: 1px solid #3c3c3c; display: flex; flex-direction: column; }
+/* Docked like Figma: both panels sit flush against the walls, full height; the board fills exactly the space between
+ * them (the Studio sets --bct-left / --bct-right, 0 when a panel is tucked away behind its arrow). */
+.studio-shell.source-mode .studio-workspace.is-boceto { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 var(--bct-right, 300px) 0 var(--bct-left, 240px); }
+.source-mode .studio-workspace.is-boceto .source-canvas { grid-column: 1; border: 0; border-radius: 0; box-shadow: none; }
+.bct-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 300px; box-sizing: border-box; overflow: auto; background: #2c2c2c; color: #e6e6e6; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; border-left: 1px solid #3c3c3c; }
+.bct-layers { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; box-sizing: border-box; overflow: auto; background: #2c2c2c; color: #e6e6e6; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; border-right: 1px solid #3c3c3c; display: flex; flex-direction: column; }
+.bct-dock { border: 0; background: none; color: #9a9a9a; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; margin-left: auto; }
+.bct-head .bct-dock { margin-left: 0; }
+.bct-dock:hover { color: #fff; }
+.bct-tab { position: fixed; top: 76px; z-index: 41; width: 22px; height: 52px; border: 1px solid #3c3c3c; background: #2c2c2c; color: #e6e6e6; cursor: pointer; font-size: 16px; line-height: 1; padding: 0; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.bct-tab:hover { background: #383838; color: #fff; }
+.bct-tab--left { left: 0; border-left: 0; border-radius: 0 8px 8px 0; }
+.bct-tab--right { right: 0; border-right: 0; border-radius: 8px 0 0 8px; }
 .bct-layers__head { position: sticky; top: 0; background: #2c2c2c; display: flex; align-items: baseline; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #3c3c3c; z-index: 1; }
 .bct-layers__head h2 { margin: 0; font-size: 13px; font-weight: 600; }
 .bct-layers__count { color: #9a9a9a; font-size: 11px; }
@@ -31,15 +42,16 @@
 .bct-color__wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
 .bct-color { inline-size: 26px; block-size: 20px; border: 1px solid #555; border-radius: 4px; padding: 0; background: none; }
 .bct-color__hex { color: #bdbdbd; text-transform: uppercase; font-size: 11px; }
-.bct-blocks { display: grid; gap: 4px; }
+.bct-blocks { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
 .bct-block { border-radius: 8px; background: #333; border: 1px solid transparent; }
 .bct-block.is-selected { border-color: #4f94ff; }
 .bct-block__head { display: flex; align-items: center; gap: 8px; padding: 7px 9px; cursor: pointer; }
 .bct-block__swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); flex: none; }
 .bct-block__name { font-weight: 600; white-space: nowrap; }
 .bct-block__peek { color: #8f8f8f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.bct-block__tools { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
-.bct-block:hover .bct-block__tools, .bct-block.is-selected .bct-block__tools { opacity: 1; }
+/* Hidden tools take no room, so the block's text peek uses the full row until the row is hovered or selected. */
+.bct-block__tools { display: none; gap: 2px; }
+.bct-block:hover .bct-block__tools, .bct-block.is-selected .bct-block__tools { display: flex; }
 .bct-block__tools button { border: 0; background: #444; color: #ccc; border-radius: 4px; width: 20px; height: 20px; cursor: pointer; font-size: 11px; line-height: 1; }
 .bct-block__tools button:hover { background: #555; color: #fff; }
 .bct-props { padding: 2px 14px 8px; }
