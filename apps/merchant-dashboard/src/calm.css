@@ -332,3 +332,57 @@ body.is-logged-in .workspace-yapi:focus-within { border-color: var(--pg-border-s
 .session-profile-actions span { color: #7a7a82; font-size: 12px; }
 .session-profile-actions button { min-height: 42px; padding: 0 18px; background: #18181b; color: #fff; border: 1px solid #18181b; border-radius: 8px; box-shadow: none; font-weight: 600; text-transform: none; }
 .session-profile-actions button:hover:not(:disabled) { background: #2f2f35; transform: none; box-shadow: none; }
+
+/* Diseñar sitio owns the whole screen: the sidebar slides away and returns on
+   demand — hover the left-edge tab (or the sidebar itself) to peek, click it to
+   pin, Escape or the backdrop to close (initSidebarMenuHandle in dashboard.js). */
+body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar {
+  z-index: 4020;
+  width: 240px;
+  box-shadow: 0 0 0 transparent;
+  transform: translateX(calc(-100% - 8px));
+  transition: transform 200ms cubic-bezier(.2, .8, .2, 1), box-shadow 200ms ease;
+}
+body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar:is(.is-store-nav-peeking, .is-store-nav-pinned) {
+  transform: translateX(0);
+  box-shadow: 0 24px 60px rgb(0 0 0 / .18);
+}
+body.is-logged-in[data-dashboard-view="workspace"] #merchantSiteWorkspace { inset: 0; width: 100%; }
+body.is-logged-in[data-dashboard-view="workspace"] .store-fullscreen-nav-handle {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  z-index: 4030;
+  display: inline-flex !important;
+  width: 16px;
+  min-width: 0;
+  height: 64px;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--pg-border);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: var(--pg-bg);
+  color: var(--pg-text-muted);
+  box-shadow: 0 4px 14px rgb(0 0 0 / .08);
+  transform: translateY(-50%);
+  cursor: pointer;
+  transition: width 140ms ease, color 140ms ease;
+}
+body.is-logged-in[data-dashboard-view="workspace"] .store-fullscreen-nav-handle:is(:hover, :focus-visible) { width: 22px; color: var(--pg-text); }
+body.is-logged-in[data-dashboard-view="workspace"] .store-fullscreen-nav-handle svg { width: 12px; height: 12px; }
+body.is-logged-in[data-dashboard-view="workspace"] .store-fullscreen-nav-handle span { display: none; }
+body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar.is-store-nav-pinned ~ .store-fullscreen-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4010;
+  display: block !important;
+  padding: 0;
+  border: 0;
+  background: rgb(5 5 5 / .28);
+}
+@media (prefers-reduced-motion: reduce) {
+  body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar { transition: none; }
+}

@@ -1,4 +1,5 @@
 import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
+import { drawSketchDirection } from './sketch-direction';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const response = (text: string) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text }] }] });
@@ -7,7 +8,12 @@ it('the schema is a strict object with anyOf blocks', () => {
   expect(SKETCH_JSON_SCHEMA.type).toBe('object');
   expect(SKETCH_JSON_SCHEMA.additionalProperties).toBe(false);
   expect(Array.isArray((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf)).toBe(true);
-  expect((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf).toHaveLength(13);
+  expect((SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf).toHaveLength(14);
+  // Tint backgrounds are offered to the model; editor-only fields (order, stickerPos, align) are not.
+  const heroSchema = (SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf.find((b: any) => b.properties.type.enum[0] === 'hero');
+  expect(heroSchema.properties.bg.enum).toContain('tint-accent');
+  expect(heroSchema.properties.order).toBeUndefined();
+  expect(heroSchema.properties.stickerPos).toBeUndefined();
 });
 
 it('the prompt names the photos, catalog, instruction and real font ids', () => {
@@ -17,6 +23,18 @@ it('the prompt names the photos, catalog, instruction and real font ids', () => 
   expect(prompt).toContain('Caja de rolls');
   expect(prompt).toContain('quiero un sitio dulce y cálido');
   expect(prompt).toContain('anton');
+});
+
+it('every generation carries a creative direction, and different draws differ', () => {
+  const a = drawSketchDirection(() => 0);
+  const b = drawSketchDirection(() => 0.99);
+  expect(a.name).not.toBe(b.name);
+  expect(a.lines.join('\n')).not.toBe(b.lines.join('\n'));
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], direction: a });
+  expect(prompt).toContain('DIRECCIÓN CREATIVA');
+  for (const line of a.lines) expect(prompt).toContain(line);
+  // Sin dirección explícita, se sortea una: el prompt nunca sale sin dirección.
+  expect(sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [] })).toContain('DIRECCIÓN CREATIVA');
 });
 
 it('is total: null, garbage text and missing output all yield the usable default', () => {

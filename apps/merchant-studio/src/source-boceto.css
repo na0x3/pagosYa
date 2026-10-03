@@ -1,5 +1,14 @@
-/* Boceto: Figma-style dark inspector. Text edits live on the canvas; this panel is properties only. */
+/* Boceto: Figma-equal workspace. Layers on the left, canvas in the middle, inspector on the right;
+ * the YAPI conversation leaves the screen while the merchant designs. */
+.studio-workspace.is-boceto .agent-panel { display: none; }
 .bct-panel { position: fixed; right: 12px; top: 68px; bottom: 12px; width: 300px; overflow: auto; background: #2c2c2c; color: #e6e6e6; border-radius: 12px; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; box-shadow: 0 16px 48px rgba(0,0,0,.4); border: 1px solid #3c3c3c; }
+.bct-layers { position: fixed; left: 12px; top: 68px; bottom: 12px; width: 240px; overflow: auto; background: #2c2c2c; color: #e6e6e6; border-radius: 12px; padding: 0 0 14px; z-index: 40; font: 12px/1.45 Inter, system-ui, Arial, sans-serif; box-shadow: 0 16px 48px rgba(0,0,0,.4); border: 1px solid #3c3c3c; display: flex; flex-direction: column; }
+.bct-layers__head { position: sticky; top: 0; background: #2c2c2c; display: flex; align-items: baseline; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #3c3c3c; z-index: 1; }
+.bct-layers__head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.bct-layers__count { color: #9a9a9a; font-size: 11px; }
+.bct-layers .bct-blocks { padding: 10px; flex: 1; align-content: start; }
+.bct-remove { border: 0; background: #512b2b; color: #ff9d9d; border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; width: 100%; margin-top: 10px; }
+.bct-remove:hover { background: #663232; color: #ffc1c1; }
 .bct-head { position: sticky; top: 0; background: #2c2c2c; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #3c3c3c; z-index: 1; }
 .bct-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
 .bct-status { color: #9a9a9a; font-size: 11px; flex: 1; }
@@ -10,9 +19,15 @@
 .bct-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
 .bct-row__label { color: #9a9a9a; flex: 0 0 72px; }
 .bct-select { flex: 1; min-width: 0; background: #383838; color: #e6e6e6; border: 1px solid #444; border-radius: 6px; padding: 5px 7px; font: inherit; }
-.bct-segment { display: flex; background: #383838; border-radius: 6px; padding: 2px; gap: 2px; flex: 1; }
-.bct-segment__option { flex: 1; border: 0; background: transparent; color: #bdbdbd; border-radius: 4px; padding: 4px 0; font: inherit; cursor: pointer; }
+.bct-segment { display: flex; flex-wrap: wrap; background: #383838; border-radius: 6px; padding: 2px; gap: 2px; flex: 1; min-width: 0; }
+.bct-segment__option { flex: 1 1 auto; min-width: 34px; border: 0; background: transparent; color: #bdbdbd; border-radius: 4px; padding: 4px 6px; font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
 .bct-segment__option.is-on { background: #4d4d4d; color: #fff; }
+.bct-swatches { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.bct-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #4a4a4a; cursor: pointer; padding: 0; }
+.bct-swatch:hover { border-color: #8a8a8a; }
+.bct-swatch.is-on { border-color: #4f94ff; box-shadow: 0 0 0 2px rgba(79,148,255,.35); }
+.bct-back { border: 0; background: none; color: #9a9a9a; cursor: pointer; font: inherit; font-size: 11px; padding: 8px 0 2px; text-align: left; }
+.bct-back:hover { color: #fff; }
 .bct-color__wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
 .bct-color { inline-size: 26px; block-size: 20px; border: 1px solid #555; border-radius: 4px; padding: 0; background: none; }
 .bct-color__hex { color: #bdbdbd; text-transform: uppercase; font-size: 11px; }
@@ -27,20 +42,61 @@
 .bct-block:hover .bct-block__tools, .bct-block.is-selected .bct-block__tools { opacity: 1; }
 .bct-block__tools button { border: 0; background: #444; color: #ccc; border-radius: 4px; width: 20px; height: 20px; cursor: pointer; font-size: 11px; line-height: 1; }
 .bct-block__tools button:hover { background: #555; color: #fff; }
-.bct-props { padding: 2px 9px 8px; }
+.bct-props { padding: 2px 14px 8px; }
 .bct-props .bct-section { padding: 6px 0 0; border: 0; }
-.bct-gallery { display: grid; gap: 4px; flex: 1; }
-.bct-check { display: flex; gap: 6px; align-items: center; color: #bdbdbd; }
+.bct-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; flex: 1; min-width: 0; }
+.bct-check { display: flex; gap: 6px; align-items: center; color: #bdbdbd; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.bct-check:hover { color: #fff; }
+.bct-check input { flex: none; accent-color: #4f94ff; margin: 0; }
 .bct-hint { color: #7d7d7d; font-size: 11px; margin: 8px 0 0; }
 .bct-adder { display: flex; gap: 6px; padding: 12px 14px 0; }
 .bct-add { border: 0; background: #4f94ff; color: #fff; border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; white-space: nowrap; }
 .bct-add:disabled { opacity: .4; cursor: default; }
 
+/* Boceto toolbar: sketching shows only what sketching needs — pages and "Generar sitio". */
+.boceto-mode-badge { font: 600 12px/1 Inter, system-ui, sans-serif; background: #1f6feb; color: #fff; border-radius: 999px; padding: 6px 12px; }
+.boceto-page-tabs { display: flex; gap: 2px; background: #ececec; border-radius: 999px; padding: 3px; margin-right: auto; }
+.boceto-page-tabs button { border: 0; background: transparent; border-radius: 999px; padding: 6px 14px; font: 500 12.5px/1 inherit; cursor: pointer; color: #555; }
+.boceto-page-tabs button[aria-pressed="true"] { background: #fff; color: #111; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.boceto-page-tabs button:hover { color: #111; }
+
 /* Big canvas: the page floats on a dark Figma-like board; wheel pans, pinch zooms. */
 .boceto-canvas { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #1e1e1e; background-image: radial-gradient(#2a2a2a 1px, transparent 1px); background-size: 22px 22px; }
-.boceto-canvas .source-frame-wrap.is-boceto-canvas { transform-origin: 0 0; width: 1280px; box-shadow: 0 24px 80px rgba(0,0,0,.5); border-radius: 6px; overflow: hidden; background: #fff; position: absolute; }
+.boceto-canvas .source-frame-wrap.is-boceto-canvas { transform-origin: 0 0; width: 1280px; box-shadow: 0 24px 80px rgba(0,0,0,.5); border-radius: 6px; overflow: hidden; background: #fff; position: absolute; will-change: transform; }
 .boceto-canvas .source-frame-wrap.is-boceto-canvas iframe { width: 1280px; border: 0; display: block; }
-.boceto-canvas__hud { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 2px; align-items: center; background: #2c2c2c; border: 1px solid #3c3c3c; border-radius: 8px; padding: 4px; color: #e6e6e6; font: 12px/1 Inter, system-ui, sans-serif; z-index: 5; }
+.boceto-canvas__hud { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 2px; align-items: center; background: #2c2c2c; border: 1px solid #3c3c3c; border-radius: 8px; padding: 4px; color: #e6e6e6; font: 12px/1 Inter, system-ui, sans-serif; z-index: 45; }
 .boceto-canvas__hud button { border: 0; background: transparent; color: #cfcfcf; cursor: pointer; font: inherit; padding: 5px 9px; border-radius: 5px; }
 .boceto-canvas__hud button:hover { background: #3d3d3d; color: #fff; }
 .boceto-canvas__hud [data-canvas-zoom] { min-width: 42px; text-align: center; color: #9a9a9a; }
+
+/* Inspector controls: chips, photo pickers, the icon catalog and item lists. */
+.bct-chip { border: 1px solid #4a4a4a; background: #383838; color: #e6e6e6; border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 11px; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.bct-chip:hover:not(:disabled) { border-color: #6a6a6a; color: #fff; }
+.bct-chip:disabled { opacity: .4; cursor: default; }
+.bct-photo-slot { position: relative; flex: 1; height: 56px; border: 1px solid #4a4a4a; border-radius: 6px; background: #383838; color: #9a9a9a; padding: 0; overflow: hidden; cursor: pointer; font: inherit; font-size: 11px; display: grid; place-items: center; }
+.bct-photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bct-photo-slot__label { position: absolute; right: 5px; bottom: 5px; background: rgba(0,0,0,.65); color: #fff; border-radius: 4px; padding: 2px 6px; font-size: 10px; }
+.bct-photo-slot:hover { border-color: #4f94ff; }
+.bct-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; flex: 1; min-width: 0; }
+.bct-thumbs--big { grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+.bct-thumb { aspect-ratio: 1; border: 2px solid transparent; border-radius: 6px; background: #383838; padding: 0; overflow: hidden; cursor: pointer; opacity: .55; }
+.bct-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bct-thumb.is-on { opacity: 1; border-color: #4f94ff; }
+.bct-thumb:hover:not(:disabled) { opacity: 1; }
+.bct-thumb:disabled { cursor: default; opacity: .25; }
+.bct-thumbs--big .bct-thumb { opacity: 1; }
+.bct-icons { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 8px 0; max-height: 320px; overflow: auto; }
+.bct-icon { aspect-ratio: 1; border: 1px solid #444; border-radius: 6px; background: #333; color: #e6e6e6; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.bct-icon svg { width: 18px; height: 18px; }
+.bct-icon:hover { border-color: #8a8a8a; color: #fff; }
+.bct-icon.is-on { border-color: #4f94ff; background: #24364f; }
+.bct-list { margin: 10px 0 4px; display: grid; gap: 4px; }
+.bct-list__title { margin: 0 0 2px; color: #9a9a9a; font-size: 11px; }
+.bct-list__row { display: flex; align-items: center; gap: 6px; background: #333; border-radius: 6px; padding: 5px 6px 5px 9px; }
+.bct-list__peek { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #cfcfcf; }
+.bct-list__kill { border: 0; background: none; color: #8a8a8a; cursor: pointer; font-size: 11px; padding: 2px 4px; }
+.bct-list__kill:hover { color: #ff9d9d; }
+.bct-section input[type="search"] { width: 100%; box-sizing: border-box; }
+.bct-layers__group { margin: 4px 14px 2px; color: #8a8a8a; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.bct-block--page { margin: 0 10px; }
+.bct-upload { width: 100%; margin: 6px 0 2px; }

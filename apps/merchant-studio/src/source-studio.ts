@@ -117,6 +117,29 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       wrap.style.transform = '';
     }
   }
+  /** Zoom around a point given in board (canvas container) coordinates. */
+  function zoomCanvasAt(factor: number, x: number, y: number) {
+    const zoom = Math.min(3, Math.max(0.1, canvasZoom * factor));
+    canvasX = x - (x - canvasX) * (zoom / canvasZoom);
+    canvasY = y - (y - canvasY) * (zoom / canvasZoom);
+    canvasZoom = zoom;
+    applyCanvas();
+  }
+  /** One wheel notch moves a bounded step: trackpad pinches stay fine-grained and a mouse wheel
+   * (deltaY ≈ ±100) no longer jumps 2.7× per click, which made zooming in or out nearly impossible. */
+  const wheelZoomFactor = (deltaY: number) => Math.exp(-Math.max(-24, Math.min(24, deltaY)) * 0.012);
+  function canvasBoard() { return app.querySelector<HTMLElement>('.boceto-canvas'); }
+  /** Center the page between the side panels at a zoom that fills the board — no dead whitespace. */
+  function fitCanvas() {
+    const board = canvasBoard();
+    if (!board) return;
+    const PANEL_LEFT = 264, PANEL_RIGHT = 324; // layers + inspector, with their margins
+    const visible = Math.max(320, board.clientWidth - PANEL_LEFT - PANEL_RIGHT);
+    canvasZoom = Math.min(1.25, Math.max(0.1, (visible - 56) / 1280));
+    canvasX = PANEL_LEFT + (visible - 1280 * canvasZoom) / 2;
+    canvasY = 28;
+    applyCanvas();
+  }
   function syncBocetoMode(frame: HTMLIFrameElement | null = app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')) {
     try { frame?.contentWindow?.postMessage({ type: 'pagosya:boceto-mode', on: bocetoOpen && mode === 'preview' }, '*'); } catch { /* frame is gone */ }
   }
@@ -124,6 +147,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     try { frame?.contentWindow?.postMessage({ type: 'pagosya:source-edit-mode', on: selectMode, ...(selection.get() ? { selectedId: selection.get()!.sectionId } : {}) }, '*'); } catch { /* frame is gone */ }
   }
   window.addEventListener('keydown', event => { if (event.key === 'Escape' && (selection.get() || platformHint)) { clearSelection(); renderSelection(); scheduleEstimate(); } });
+  // Figma-style zoom keys while the Boceto board is open: ⌘/Ctrl + acerca, − aleja, 0 ajusta.
+  window.addEventListener('keydown', event => {
+    if (!bocetoOpen || mode !== 'preview' || !(event.metaKey || event.ctrlKey)) return;
+    const board = canvasBoard();
+    if (!board) return;
+    if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomCanvasAt(1.2, board.clientWidth / 2, board.clientHeight / 2); }
+    else if (event.key === '-') { event.preventDefault(); zoomCanvasAt(1 / 1.2, board.clientWidth / 2, board.clientHeight / 2); }
+    else if (event.key === '0') { event.preventDefault(); fitCanvas(); }
+  });
   function clearSelection() { selection.clear(); platformHint = false; editableField = null; selectionRequest++; }
   function renderSelection() { const host = app.querySelector<HTMLElement>('[data-selection-host]'); if (host) host.innerHTML = selectionMarkup(); syncSelectMode(); }
   function takeSelection(picked: { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }) {
@@ -156,30 +188,31 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const previewFrame = app.querySelector('iframe');
     if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); return; }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-size' && Number.isFinite(event.data.height)) {
-      const next = Math.min(20000, Math.max(800, Number(event.data.height)));
+      const next = Math.min(20000, Math.max(360, Number(event.data.height)));
       if (Math.abs(next - canvasHeight) > 24) { canvasHeight = next; applyCanvas(); }
       return;
     }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-wheel') {
       const { dx, dy, ctrl, x, y } = event.data as { dx: number; dy: number; ctrl: boolean; x: number; y: number };
       if (ctrl) {
-        const factor = Math.exp(-Number(dy || 0) * 0.01);
-        const zoom = Math.min(2, Math.max(0.15, canvasZoom * factor));
-        // Zoom around the cursor: keep the canvas point under it stable.
-        canvasX = x - (x - canvasX) * (zoom / canvasZoom);
-        canvasY = y - (y - canvasY) * (zoom / canvasZoom);
-        canvasZoom = zoom;
+        // The cursor arrives in iframe-page coordinates; convert to board space so the point
+        // under the cursor actually stays put while zooming.
+        zoomCanvasAt(wheelZoomFactor(Number(dy || 0)), canvasX + Number(x || 0) * canvasZoom, canvasY + Number(y || 0) * canvasZoom);
       } else {
         canvasX -= Number(dx || 0);
         canvasY -= Number(dy || 0);
+        applyCanvas();
       }
-      applyCanvas();
       return;
     }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
       if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string') bocetoPanel.remoteSelect(event.data.id);
       if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);
       if (event.data.type === 'pagosya:boceto-text' && typeof event.data.id === 'string' && typeof event.data.field === 'string' && typeof event.data.value === 'string') bocetoPanel.remoteText(event.data.id, event.data.field, event.data.value.slice(0, 1000));
+      if (event.data.type === 'pagosya:boceto-el-reorder' && typeof event.data.id === 'string' && Array.isArray(event.data.order)) bocetoPanel.remoteElReorder(event.data.id, event.data.order.filter((key: unknown): key is string => typeof key === 'string').slice(0, 12));
+      if (event.data.type === 'pagosya:boceto-el-move' && typeof event.data.id === 'string' && typeof event.data.el === 'string' && typeof event.data.x === 'number' && typeof event.data.y === 'number') bocetoPanel.remoteElMove(event.data.id, event.data.el, event.data.x, event.data.y);
+      if (event.data.type === 'pagosya:boceto-photo' && typeof event.data.id === 'string' && typeof event.data.slot === 'string') bocetoPanel.remotePhoto(event.data.id, event.data.slot);
+      if (event.data.type === 'pagosya:boceto-swap' && typeof event.data.id === 'string') bocetoPanel.remoteSwap(event.data.id);
       return;
     }
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
@@ -635,6 +668,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const oldScroll = oldStream?.scrollTop || 0;
     const nearBottom = !oldStream || oldStream.scrollHeight - oldScroll - oldStream.clientHeight < 70;
     const locked = busy || visualEditPending || dirty() || Boolean(productForm);
+    const inBoceto = Boolean(bocetoOpen && version && mode === 'preview');
     if (!sessionStorage.getItem(SESSION_STORAGE_KEY)) {
       if (embedded) { notifyParent({ type: 'pagosya:session-expired' }); app.innerHTML = '<p>Tu sesión terminó. Vuelve a entrar desde el panel.</p>'; return; }
       app.innerHTML = renderStudioLogin({ busy, error });
@@ -656,7 +690,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         <div class="save-state">${icon('check')} ${dirty() ? 'Cambios sin guardar' : version ? version.revision === state.publication?.revision && state.publication.active ? 'Diseño publicado' : 'Diseño guardado' : 'Conectado'}</div>
         <div class="top-actions"><button class="button button--ghost" id="source-logout" ${disabled(locked)}>Salir</button><button class="button button--publish" id="${embedded ? 'source-top-export' : 'source-export'}" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button></div>
       </header>
-      <div class="studio-workspace">
+      <div class="studio-workspace${inBoceto ? ' is-boceto' : ''}">
         <aside class="agent-panel ${chatExpanded || building() || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
           <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || building() || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
           <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div>
@@ -678,9 +712,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ] })}</div>
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
-          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button><button id="source-boceto-tab" title="Edita bloques, textos, colores y fuentes al instante" aria-pressed="${bocetoOpen}" ${disabled(!version || showingDraft() || mode !== 'preview' || !version?.snapshot.files.some(f => f.path === 'sketch.json')) }>Boceto</button></div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
+          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button><button id="source-boceto-tab" title="Edita bloques, textos, colores y fuentes al instante" aria-pressed="${bocetoOpen}" ${disabled(!version || showingDraft() || mode !== 'preview' || !version?.snapshot.files.some(f => f.path === 'sketch.json')) }>Boceto</button></div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div>`}</header>
           <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.</span><button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? `<div class="${bocetoOpen ? 'boceto-canvas' : ''}"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>${bocetoOpen ? '<div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div>' : ''}</div>` : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
@@ -707,6 +741,17 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       // Smooth loop: saves stay silent (no preview reload); the Studio only tracks the new revision so
       // later requests do not conflict. A full resync happens once, when the merchant closes Boceto.
       saved: async revision => { state.revision = revision; if (version) version.revision = revision; },
+      // Structural edits (items or blocks added, removed, reordered from the panel) need the rebuilt page:
+      // only the preview frame re-renders, so the canvas zoom, pan and panels stay where they are.
+      reload: revision => {
+        const reloadStore = storeId;
+        void api.sourceVersion(reloadStore, revision).then(fresh => {
+          if (storeId !== reloadStore || state.revision !== revision || !bocetoOpen) return;
+          version = fresh;
+          const frame = app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe');
+          if (frame) void renderPreview(frame);
+        }).catch(() => { /* the next save or closing Boceto resyncs */ });
+      },
       close: () => { bocetoOpen = false; void load().then(() => render()); },
       apply: payload => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:boceto-apply', ...payload }, '*'); } catch { /* frame gone */ } },
     });
@@ -729,10 +774,29 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
-    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => { bocetoOpen = !bocetoOpen; render(); syncBocetoMode(); applyCanvas(); });
-    app.querySelector('[data-canvas-in]')?.addEventListener('click', () => { canvasZoom = Math.min(2, canvasZoom * 1.2); applyCanvas(); });
-    app.querySelector('[data-canvas-out]')?.addEventListener('click', () => { canvasZoom = Math.max(0.15, canvasZoom / 1.2); applyCanvas(); });
-    app.querySelector('[data-canvas-fit]')?.addEventListener('click', () => { canvasZoom = 0.82; canvasX = 60; canvasY = 40; applyCanvas(); });
+    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => { bocetoOpen = !bocetoOpen; render(); syncBocetoMode(); if (bocetoOpen) fitCanvas(); else applyCanvas(); });
+    // Boceto's own page tabs: look at the sketch's other pages; editing happens on Inicio.
+    app.querySelectorAll<HTMLButtonElement>('[data-boceto-page]').forEach(button => button.addEventListener('click', () => {
+      if (page === button.dataset.bocetoPage) return;
+      page = button.dataset.bocetoPage!; previewNavigation = {}; clearSelection(); render();
+      fitCanvas(); syncBocetoMode();
+    }));
+    app.querySelector('#source-boceto-generate')?.addEventListener('click', () => {
+      if (busy) return;
+      bocetoOpen = false; page = 'index.html';
+      void action(load).then(() => { toast = 'Sitio generado desde tu boceto. Revísalo y publícalo cuando quieras.'; render(); });
+    });
+    app.querySelector('[data-canvas-in]')?.addEventListener('click', () => { const board = canvasBoard(); if (board) zoomCanvasAt(1.2, board.clientWidth / 2, board.clientHeight / 2); });
+    app.querySelector('[data-canvas-out]')?.addEventListener('click', () => { const board = canvasBoard(); if (board) zoomCanvasAt(1 / 1.2, board.clientWidth / 2, board.clientHeight / 2); });
+    app.querySelector('[data-canvas-fit]')?.addEventListener('click', fitCanvas);
+    // Zoom and pan also work from the dark board around the page, not only over the iframe.
+    const board = canvasBoard();
+    board?.addEventListener('wheel', event => {
+      event.preventDefault();
+      const rect = board.getBoundingClientRect();
+      if (event.ctrlKey || event.metaKey) zoomCanvasAt(wheelZoomFactor(event.deltaY), event.clientX - rect.left, event.clientY - rect.top);
+      else { canvasX -= event.deltaX; canvasY -= event.deltaY; applyCanvas(); }
+    }, { passive: false });
     app.querySelector('#source-visual-edit')?.addEventListener('click', () => { if (!busy && !dirty() && !visualEditPending) { visualEditing = !visualEditing; mode = 'preview'; render(); } });
     app.querySelector('#source-select-mode')?.addEventListener('click', () => { selectMode = !selectMode; if (!selectMode) clearSelection(); render(); });
     app.querySelector('[data-selection-host]')?.addEventListener('click', event => {

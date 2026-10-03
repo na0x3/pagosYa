@@ -103,6 +103,90 @@ describe('inline edit markers', () => {
   });
 });
 
+describe('abundance upgrades (SP1+SP2)', () => {
+  it('hero renders dual CTAs, trust row and draggable element keys in saved order', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola', sub: 's', cta: 'Comprar', cta2: 'Armar caja', trust: '★ 4.8 · 2.400 pedidos', badge: 'DROP', note: 'n', order: ['headline', 'badge', 'sub', 'actions', 'trust', 'note'] },
+    ] }, ctx).sketch;
+    const hero = renderBlock(rich.blocks.find(b => b.type === 'hero')!, rich, ctx);
+    expect(hero).toContain('skb-btn--ghost');
+    expect(hero).toContain('skb-trust');
+    expect(hero).toContain('data-skb-el="actions"');
+    expect(hero.indexOf('data-skb-el="headline"')).toBeLessThan(hero.indexOf('data-skb-el="badge"'));
+  });
+  it('split renders stats with editable fields and a sticker, tinted sections resolve to hex', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'sp', type: 'split', headline: 'Mezcla', stats: [{ value: '150g', label: 'por galleta' }], sticker: 'Ahorra 15%', photo: 'assets/a.jpg', bg: 'tint-deep' },
+    ] }, ctx).sketch;
+    const split = renderBlock(rich.blocks.find(b => b.type === 'split')!, rich, ctx);
+    expect(split).toContain('skb-stat__value');
+    expect(split).toContain('data-skb-field={"stats.0.value"}');
+    expect(split).toContain('skb-sticker');
+    expect(split).toMatch(/--skb-bg.*#[0-9a-f]{6}/);
+  });
+  it('a saved sticker drag position lands as inline left/top percentages', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola', sticker: 'Fresco', photo: 'assets/a.jpg', stickerPos: { x: 12.5, y: 80 } },
+    ] }, ctx).sketch;
+    const hero = renderBlock(rich.blocks.find(b => b.type === 'hero')!, rich, ctx);
+    expect(hero).toContain('"12.5%"');
+    expect(hero).toContain('"80%"');
+  });
+  it('catalog carries badge CSS vars, seeAll, name+price row and the microcopy strip', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'c', type: 'catalog', title: 'Productos', badges: ['NUEVO', 'CLÁSICO'], seeAll: 'VER TODO →', stripLeft: 'Cada galleta pesa 150g', stripRight: 'Pide antes del domingo' },
+    ] }, ctx).sketch;
+    const catalog = renderBlock(rich.blocks.find(b => b.type === 'catalog')!, rich, ctx);
+    expect(catalog).toContain('--skb-badge-1');
+    expect(catalog).toContain('skb-see');
+    expect(catalog).toContain('skb-card__row');
+    expect(catalog).toContain('skb-strip');
+    expect(catalog).toContain('data-pagosya-product-template');
+    expect(catalog).toContain('data-pagosya-catalog');
+  });
+  it('collections renders tint-cycled cards with arrow chips; reviews renders rating, stars and handle tile', () => {
+    const rich = repairSketch({ blocks: [
+      { id: 'co', type: 'collections', title: 'Antojos', items: [{ title: 'Chocolate', text: 'Intensos', photo: 'assets/a.jpg' }] },
+      { id: 'r', type: 'reviews', title: 'Felices', ratingValue: '4.9 / 5', ratingSource: 'Google', handle: '@salv', quotes: [{ text: 'Rico', name: 'Ana' }], photos: ['assets/a.jpg'] },
+    ] }, ctx).sketch;
+    const collections = renderBlock(rich.blocks.find(b => b.type === 'collections')!, rich, ctx);
+    expect(collections).toContain('skb-collection__arrow');
+    expect(collections).toContain('data-skb-field={"items.0.title"}');
+    const reviews = renderBlock(rich.blocks.find(b => b.type === 'reviews')!, rich, ctx);
+    expect(reviews).toContain('skb-rating__value');
+    expect(reviews).toContain('skb-review__stars');
+    expect(reviews).toContain('skb-reviews__handle');
+    expect(reviews).toContain('@salv');
+  });
+  it('newsletter split variant renders photo + copy and keeps the subscribe contract', () => {
+    const rich = repairSketch({ blocks: [{ id: 'n', type: 'newsletter', variant: 'split', title: 'Únete', photo: 'assets/a.jpg' }] }, ctx).sketch;
+    const news = renderBlock(rich.blocks.find(b => b.type === 'newsletter')!, rich, ctx);
+    expect(news).toContain('skb-newsletter__grid');
+    expect(news).toContain('data-pagosya-subscribe-open');
+    expect(news).not.toContain('<input');
+  });
+  it('marquee speed follows size and the glyph separates repetitions', () => {
+    const rich = repairSketch({ blocks: [{ id: 'm', type: 'marquee', text: 'Fresco', glyph: '✦', size: 's' }] }, ctx).sketch;
+    const marquee = renderBlock(rich.blocks.find(b => b.type === 'marquee')!, rich, ctx);
+    expect(marquee).toContain('--skb-marquee-dur');
+    expect(marquee).toContain('18s');
+    expect(marquee).toContain('✦');
+  });
+  it('footer renders brand column, legal line and keeps the pages nav', () => {
+    const rich = repairSketch({ blocks: [{ id: 'f', type: 'footer', tagline: 'Hecho con calma', wordmark: 'giant' }] }, ctx).sketch;
+    const footer = renderBlock(rich.blocks.at(-1)!, rich, ctx);
+    expect(footer).toContain('skb-footer__grid');
+    expect(footer).toContain('skb-footer__legal');
+    expect(footer).toContain('data-pagosya-pages');
+    expect(footer).toContain('skb-wordmark');
+  });
+  it('collections css exists and tint vars drive the card cycling', () => {
+    expect(blockCss('collections')).toContain('skb-tint-2');
+    expect(blockCss('catalog')).toContain('--skb-card-badge');
+    expect(blockCss('reviews')).toContain('skb-tint-3');
+  });
+});
+
 it('steps render numbered cards with icon images and editable fields', () => {
   const rich = repairSketch({ blocks: [{ id: 'st', type: 'steps', title: 'Así de simple', items: [
     { icon: 'cookie', title: 'Elige', text: 'Tu antojo' },

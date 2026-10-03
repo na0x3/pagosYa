@@ -95,3 +95,17 @@ it('an announce-first sketch still gets its h1 on the first heading block', () =
   expect(() => validateNextSources(files, 'shop')).not.toThrow();
   expect(files.find(f => f.path === 'components/home.tsx')!.content.match(/<h1/g)).toHaveLength(1);
 });
+
+it('shops get designed login and sign-up pages that wrap the trusted gate and never draw an input', () => {
+  const sketch = repairSketch({ account: { layout: 'split', kicker: '✦ TU CUENTA', title: 'Bienvenido al laboratorio', lead: 'Pedidos y direcciones en un lugar.', perks: [{ icon: 'truck', text: 'Sigue tus envíos' }] }, blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, { storeName: 'salv', purpose: 'shop', photos: [] }).sketch;
+  const files = assembleSketch(sketch, { storeName: 'salv', purpose: 'shop', photos: [] });
+  for (const [path, view] of [['components/auth/login.tsx', 'login'], ['components/auth/register.tsx', 'register']] as const) {
+    const page = files.find(file => file.path === path)!.content;
+    expect(page.startsWith('// @pagosya-page')).toBe(true);
+    expect(page).toContain(`<AccountGatePage view={"${view}"} />`);
+    expect(page).toContain('Bienvenido al laboratorio');
+    expect(page).toContain('assets/icons/truck.svg');
+    expect(page).not.toMatch(/<input|<form|password/i);
+  }
+  expect(assembleSketch(sketch, { storeName: 'salv', purpose: 'service', photos: [] }).some(file => file.path.startsWith('components/auth/'))).toBe(false);
+});

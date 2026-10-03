@@ -1,4 +1,4 @@
-import { ensureAllPhotosUsed, repairSketch, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { contrastRatio, ensureAllPhotosUsed, ensureBandRhythm, mixHex, repairSketch, resolveBg, SKETCH_BLOCK_TYPES } from './sketch-schema';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 
@@ -111,12 +111,88 @@ describe('ensureAllPhotosUsed', () => {
     expect((filled.blocks.find(b => b.type === 'hero') as any).photo).toBe('assets/a.jpg');
     expect(filled.blocks.findIndex(b => b.type === 'gallery')).toBeLessThan(filled.blocks.length - 1);
   });
-  it('changes nothing when all photos are already used', () => {
+  it('leaves the blocks alone when all photos are already used, and lends the hero photo to the account page', () => {
     const { sketch } = repairSketch({ blocks: [
       { id: 'h', type: 'hero', headline: 'Hola', photo: 'assets/a.jpg' },
       { id: 'g', type: 'gallery', photos: ['assets/b.jpg', 'assets/c.jpg'] },
     ] }, many);
-    expect(ensureAllPhotosUsed(sketch, many)).toEqual(sketch);
+    const placed = ensureAllPhotosUsed(sketch, many);
+    expect(placed.blocks).toEqual(sketch.blocks);
+    expect(placed.account.photo).toBe('assets/a.jpg');
+  });
+});
+
+describe('tinted surfaces (SP1)', () => {
+  it('mixHex mixes per channel and resolveBg derives soft tints near paper', () => {
+    expect(mixHex('#000000', '#ffffff', 0)).toBe('#ffffff');
+    expect(mixHex('#000000', '#ffffff', 1)).toBe('#000000');
+    const { sketch } = repairSketch({}, ctx);
+    const tint = resolveBg(sketch.palette, 'tint-accent');
+    expect(tint).toMatch(/^#[0-9a-f]{6}$/);
+    // Tints stay close to paper, so the repaired page ink keeps WCAG AA contrast on them.
+    expect(contrastRatio(tint, sketch.palette.ink)).toBeGreaterThanOrEqual(4.5);
+    expect(resolveBg(sketch.palette, 'paper')).toBe(sketch.palette.paper);
+  });
+  it('accepts tint backgrounds on blocks and keeps them through repair', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola', bg: 'tint-pop' }] }, ctx);
+    expect(sketch.blocks.find(b => b.type === 'hero')!.bg).toBe('tint-pop');
+  });
+});
+
+describe('band rhythm (SP3)', () => {
+  it('rotates the second of two adjacent same-bg sections to a tint, sparing strips and the footer', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola', bg: 'paper' },
+      { id: 'c', type: 'catalog', title: 'Productos', bg: 'paper' },
+      { id: 'm', type: 'marquee', text: 'Fresco', bg: 'paper' },
+      { id: 's', type: 'story', title: 'Historia', paragraphs: ['uno'], bg: 'paper' },
+      { id: 'f', type: 'footer', tagline: 'fin', bg: 'deep' },
+    ] }, ctx);
+    const varied = ensureBandRhythm(sketch);
+    expect(varied.blocks.find(b => b.id === 'c')!.bg).not.toBe('paper');
+    expect(varied.blocks.find(b => b.id === 'm')!.bg).toBe('paper');
+    expect(varied.blocks.find(b => b.id === 'f')!.bg).toBe('deep');
+    // repairSketch itself never rewrites backgrounds: Boceto hand edits survive saves.
+    expect(sketch.blocks.find(b => b.id === 'c')!.bg).toBe('paper');
+  });
+});
+
+describe('element order and sticker position (SP4)', () => {
+  it('keeps a valid reorder, completes missing keys and drops unknown ones', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola', order: ['actions', 'headline', 'hack'] }] }, ctx);
+    expect((sketch.blocks.find(b => b.type === 'hero') as any).order).toEqual(['actions', 'headline', 'badge', 'sub', 'trust', 'note']);
+  });
+  it('omits a default-order array and clamps sticker positions into the section', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola', order: ['badge', 'headline', 'sub', 'actions', 'trust', 'note'], stickerPos: { x: 140, y: -3 }, align: 'center' },
+    ] }, ctx);
+    const hero = sketch.blocks.find(b => b.type === 'hero') as any;
+    expect(hero.order).toBeUndefined();
+    expect(hero.stickerPos).toEqual({ x: 100, y: 0 });
+    expect(hero.align).toBe('center');
+  });
+});
+
+describe('new block fields (SP2)', () => {
+  it('repairs collections, split stats and reviews rating/photos', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'co', type: 'collections', title: 'Antojos', items: [{ title: 'Chocolate', text: 'Intensos', photo: 'assets/a.jpg' }, { title: '', text: 'sin título' }] },
+      { id: 'sp', type: 'split', headline: 'Hecho a mano', stats: [{ value: '150g', label: 'por galleta' }, { value: '', label: 'vacío' }], sticker: 'Ahorra 15%' },
+      { id: 'r', type: 'reviews', title: 'Felices', ratingValue: '4.9 / 5', ratingSource: 'Google', handle: '@salv', quotes: [{ text: 'Rico', name: 'Ana' }], photos: ['assets/a.jpg', 'assets/nope.jpg'] },
+      { id: 'ca', type: 'catalog', title: 'Productos', badges: ['NUEVO', 'CL"ÁSICO\\'], seeAll: 'VER TODO →', stripLeft: 'izq', stripRight: 'der' },
+    ] }, ctx);
+    const collections = sketch.blocks.find(b => b.type === 'collections') as any;
+    expect(collections.items).toEqual([{ title: 'Chocolate', text: 'Intensos', photo: 'assets/a.jpg' }]);
+    const split = sketch.blocks.find(b => b.type === 'split') as any;
+    expect(split.stats).toEqual([{ value: '150g', label: 'por galleta' }]);
+    expect(split.sticker).toBe('Ahorra 15%');
+    const reviews = sketch.blocks.find(b => b.type === 'reviews') as any;
+    expect(reviews.ratingValue).toBe('4.9 / 5');
+    expect(reviews.photos).toEqual(['assets/a.jpg']);
+    const catalog = sketch.blocks.find(b => b.type === 'catalog') as any;
+    // Badge text feeds CSS content strings, so quotes and backslashes are stripped.
+    expect(catalog.badges).toEqual(['NUEVO', 'CLÁSICO']);
+    expect(catalog.seeAll).toBe('VER TODO →');
   });
 });
 
@@ -129,4 +205,64 @@ it('repairs a steps block with icon names clamped to slug shape', () => {
   expect(steps.items).toHaveLength(2);
   expect(steps.items[0].icon).toBe('cookie');
   expect(steps.items[1].icon).toBe('sparkles');
+});
+
+describe('fuller, varied sketches', () => {
+  const byId = (sketch: { blocks: unknown[] }, id: string) => sketch.blocks.find(block => (block as { id: string }).id === id) as any;
+  const many = { ...ctx, photos: ['assets/1.jpg', 'assets/2.jpg', 'assets/3.jpg', 'assets/4.jpg', 'assets/5.jpg', 'assets/6.jpg', 'assets/7.jpg', 'assets/8.jpg', 'assets/9.jpg', 'assets/10.jpg', 'assets/11.jpg', 'assets/12.jpg'] };
+
+  it('strips glyphs the model typed into kickers (the design adds its own ✦)', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 's', type: 'story', kicker: '✦ ✦ ARCHIVO DE TEXTURAS', title: 't', paragraphs: [] }] }, ctx);
+    expect((sketch.blocks[0] as any).kicker).toBe('ARCHIVO DE TEXTURAS');
+  });
+
+  it('repairs page style role by role and defaults the rest', () => {
+    const { sketch } = repairSketch({ style: { radius: 'square', buttons: 'neon', header: 'center' }, blocks: [] }, ctx);
+    expect(sketch.style).toEqual({ radius: 'square', buttons: 'pill', cards: 'bleed', header: 'center', footer: 'columns' });
+  });
+
+  it('spreads photos into real slots before any gallery, and never builds a wall', () => {
+    const drawn = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'x' },
+      { id: 'sp', type: 'split', headline: 'y' },
+      { id: 'st', type: 'story', title: 'z', paragraphs: [] },
+      { id: 'co', type: 'collections', title: 'c', items: [{ title: 'A', text: '' }, { title: 'B', text: '' }] },
+      { id: 'r', type: 'reviews', title: 'r', quotes: [{ text: 'bien', name: 'Ana' }] },
+      { id: 'n', type: 'newsletter', title: 'n' },
+    ] }, many).sketch;
+    const placed = ensureAllPhotosUsed(drawn, many);
+    const by = (id: string) => placed.blocks.find(b => b.id === id) as any;
+    expect(by('h').photo).toBe('assets/1.jpg');
+    expect(by('sp').photo).toBe('assets/2.jpg');
+    expect(by('st').photo).toBe('assets/3.jpg');
+    expect(by('co').items.every((item: any) => item.photo)).toBe(true);
+    expect(by('n')).toMatchObject({ photo: expect.any(String), variant: 'split' });
+    expect(by('r').photos).toHaveLength(3);
+    const gallery = placed.blocks.find(b => b.type === 'gallery') as any;
+    expect(gallery.photos.length).toBeLessThanOrEqual(6);
+  });
+
+  it('keeps editor layout controls only where they make sense', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'x', align: 'end', flip: true, swap: true },
+      { id: 'f', type: 'faq', title: 'q', items: [], align: 'center', flip: true, swap: true },
+      { id: 'g', type: 'gallery', title: 'g', photos: [], align: 'sideways' },
+    ] }, ctx);
+    expect(byId(sketch, 'h')).toMatchObject({ align: 'end', flip: true, swap: true });
+    expect(byId(sketch, 'f')).toMatchObject({ align: 'center' });
+    expect(byId(sketch, 'f').flip).toBeUndefined();
+    expect(byId(sketch, 'f').swap).toBeUndefined();
+    expect(byId(sketch, 'g').align).toBeUndefined();
+  });
+
+  it('newsletter forms and box icons are allowlisted', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'n', type: 'newsletter', title: 'n', form: 'card' },
+      { id: 'm', type: 'newsletter', title: 'm', form: '<script>' },
+      { id: 's', type: 'split', headline: 's', boxes: [{ title: 'Regalos', text: 'Desde 25', icon: 'gift' }, { title: 'Eventos', icon: '../x' }] },
+    ] }, ctx);
+    expect((byId(sketch, 'n') as any).form).toBe('card');
+    expect(byId(sketch, 'm').form).toBe('pill');
+    expect(byId(sketch, 's').boxes).toEqual([{ title: 'Regalos', text: 'Desde 25', icon: 'gift' }, { title: 'Eventos', text: '' }]);
+  });
 });

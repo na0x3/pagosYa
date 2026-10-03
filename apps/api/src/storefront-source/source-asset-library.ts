@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import type { SourceImageUse } from './source-setup';
@@ -37,6 +37,19 @@ async function iconSvg(name: string): Promise<string | null> {
   try { return await readFile(kitPath('icons', `${name}.svg`), 'utf8'); } catch { /* not a kit icon */ }
   if (!lucideIconsDir) return null;
   try { return await readFile(join(lucideIconsDir, `${name}.svg`), 'utf8'); } catch { return null; }
+}
+
+let iconNames: Promise<string[]> | null = null;
+/** Search the whole catalog by name for the Boceto icon picker: starters first, then every Lucide match. */
+export async function searchSourceIcons(query: string, limit = 60): Promise<Array<{ name: string; svg: string }>> {
+  iconNames ??= (async () => {
+    const all = lucideIconsDir ? (await readdir(lucideIconsDir)).filter(file => file.endsWith('.svg')).map(file => file.slice(0, -4)) : [];
+    return [...new Set([...SOURCE_ICON_NAMES, ...all])];
+  })().catch(() => [...SOURCE_ICON_NAMES]);
+  const words = query.toLowerCase().trim().split(/[\s-]+/).filter(word => /^[a-z0-9]{1,30}$/.test(word));
+  const names = (await iconNames).filter(name => words.every(word => name.includes(word))).slice(0, Math.min(120, Math.max(1, limit)));
+  const found = await Promise.all(names.map(async name => ({ name, svg: await iconSvg(name) })));
+  return found.filter((icon): icon is { name: string; svg: string } => Boolean(icon.svg));
 }
 
 /** Bundle every referenced assets/icons/<name>.svg into the file set — any Lucide name works. */

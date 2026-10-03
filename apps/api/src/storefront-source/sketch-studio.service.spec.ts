@@ -19,8 +19,9 @@ function setup(withSketch = true) {
     version: jest.fn().mockResolvedValue({ revision: 3, snapshot }),
     save: jest.fn().mockImplementation(async (_m: string, _s: string, input: any) => ({ revision: 4, label: input.label })),
   };
-  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', name: 'salv', slug: 'salv' }) } };
-  return { service: new SketchStudioService(projects, prisma), projects, sketch };
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', name: 'salv', slug: 'salv' }) }, mediaAsset: { findFirst: jest.fn().mockResolvedValue({ url: '/v1/uploads/abc-1.jpg' }) } };
+  const uploads: any = { getBuffer: jest.fn().mockResolvedValue(Buffer.from('fake-jpeg-bytes')) };
+  return { service: new SketchStudioService(projects, prisma, uploads), projects, sketch, prisma, uploads };
 }
 
 it('reads the current sketch with the revision and real photo paths', async () => {
@@ -86,4 +87,26 @@ it('bundles any referenced Lucide icon on a hand edit (2k+ catalog)', async () =
   const icon = files.find((f: any) => f.path === 'assets/icons/croissant.svg');
   expect(icon?.content).toContain('<svg');
   expect(files.some((f: any) => f.path === 'assets/icons/LICENSE.txt')).toBe(true);
+});
+
+describe('addPhoto (Boceto "Subir foto")', () => {
+  it('turns an owned upload into a store asset and lists it for the picker', async () => {
+    const { service, projects } = setup();
+    const result = await service.addPhoto('m', 's', { revision: 3, url: '/v1/uploads/abc-1.jpg' });
+    expect(result.revision).toBe(4);
+    expect(result.path).toMatch(/^assets\/image-[a-f0-9]{12}\.jpg$/);
+    expect(result.photos).toContain(result.path);
+    const saved = projects.save.mock.calls.at(-1)[2];
+    expect(saved.files.find((file: any) => file.path === result.path)).toMatchObject({ encoding: 'base64' });
+  });
+
+  it('refuses uploads from another merchant, odd URLs and oversize files', async () => {
+    const { service, prisma, uploads } = setup();
+    await expect(service.addPhoto('m', 's', { revision: 3, url: '../../etc/passwd' })).rejects.toThrow();
+    prisma.mediaAsset.findFirst.mockResolvedValueOnce(null);
+    await expect(service.addPhoto('m', 's', { revision: 3, url: '/v1/uploads/abc-1.jpg' })).rejects.toThrow('no pertenece');
+    uploads.getBuffer.mockResolvedValueOnce(Buffer.alloc(2_000_001));
+    await expect(service.addPhoto('m', 's', { revision: 3, url: '/v1/uploads/abc-1.jpg' })).rejects.toThrow('2 MB');
+    await expect(service.addPhoto('m', 's', { revision: 2, url: '/v1/uploads/abc-1.jpg' })).rejects.toThrow('cambió');
+  });
 });

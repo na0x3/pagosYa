@@ -1,5 +1,7 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { SourceProjectsService } from './source-projects.service';
 import { nextSourceFile } from './source-next';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
@@ -14,7 +16,7 @@ const PHOTO = /\.(png|jpe?g|webp|avif)$/i;
  * model-free — a PUT repairs whatever arrives, reassembles the store and saves it as a new revision. */
 @Injectable()
 export class SketchStudioService {
-  constructor(private readonly projects: SourceProjectsService, private readonly prisma: PrismaService) {}
+  constructor(private readonly projects: SourceProjectsService, private readonly prisma: PrismaService, private readonly uploads: UploadsService) {}
 
   private async load(merchantId: string, storeId: string) {
     const current = await this.projects.current(merchantId, storeId);
@@ -47,6 +49,29 @@ export class SketchStudioService {
     try { parsed = JSON.parse(stored); } catch { parsed = undefined; }
     // Stored sketches re-repair on read, so schema evolutions never break the panel.
     return { revision, sketch: repairSketch(parsed, ctx).sketch, photos: ctx.photos, fonts: SOURCE_FONT_IDS };
+  }
+
+  /** "Subir foto" in Boceto: a merchant-owned upload becomes a store asset (same checks and naming as generation),
+   * saved as a new revision so the photo picker can use it right away. */
+  async addPhoto(merchantId: string, storeId: string, input: { revision: number; url: string }): Promise<{ revision: number; path: string; photos: string[] }> {
+    const match = /^\/v1\/uploads\/([a-f0-9-]+\.(png|jpe?g|webp))$/i.exec(input.url);
+    if (!match) throw new BadRequestException('Elige una foto JPG, PNG o WebP subida a tu tienda.');
+    const owned = await this.prisma.mediaAsset.findFirst({ where: { merchantId, url: input.url }, select: { url: true } });
+    if (!owned) throw new BadRequestException('Esa foto no pertenece a tu tienda.');
+    const { revision, snapshot } = await this.load(merchantId, storeId);
+    if (!snapshot || revision !== input.revision) throw new ConflictException('El boceto cambió. Recarga.');
+    const bytes = await this.uploads.getBuffer(match[1]);
+    if (!bytes) throw new BadRequestException('La foto ya no está disponible. Súbela de nuevo.');
+    if (bytes.length > 2_000_000) throw new BadRequestException('Cada foto debe ocupar menos de 2 MB.');
+    const path = `assets/image-${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.${match[2].toLowerCase()}`;
+    let saved = revision;
+    let files = snapshot.files;
+    if (!files.some(file => file.path === path)) {
+      files = [...files, { path, content: bytes.toString('base64'), encoding: 'base64' as const }];
+      saved = (await this.projects.save(merchantId, storeId, { revision, label: 'Foto añadida al boceto', brief: snapshot.brief, files })).revision;
+    }
+    const ctx = await this.context(merchantId, storeId, { ...snapshot, files });
+    return { revision: saved, path, photos: ctx.photos };
   }
 
   async update(merchantId: string, storeId: string, input: { revision: number; sketch: unknown }): Promise<{ revision: number; sketch: StoreSketch }> {

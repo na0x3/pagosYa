@@ -45,13 +45,13 @@ it('is a properties inspector: no text inputs, text edits live on the canvas', a
   await mount();
   (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
   expect(host.querySelector('input[type="text"], textarea, input:not([type])')).toBeNull();
-  expect(host.textContent).toContain('tocándolo dos veces');
+  expect(host.textContent).toContain('Toca dos veces');
 });
 
 it('a background change applies live to the preview and saves silently after the idle window', async () => {
   await mount();
   (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
-  const vivo = [...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Vivo') as HTMLElement;
+  const vivo = host.querySelector('.bct-props .bct-swatch[title="Vivo"]') as HTMLElement;
   vivo.click();
   expect(applied.length).toBeGreaterThan(0);
   const last = applied.at(-1);
@@ -77,8 +77,133 @@ it('move, add and remote events compose the sketch', async () => {
   expect(blocks.find((b: any) => b.id === 'intro').headline).toBe('Desde el canvas');
 });
 
+it('element drags from the canvas persist order and sticker position, defaults stay clean', async () => {
+  const panel = await mount();
+  (panel as any).remoteElReorder('intro', ['actions', 'headline']);
+  (panel as any).remoteElMove('intro', 'sticker', 140.26, -3);
+  await vi.advanceTimersByTimeAsync(1300);
+  const saved = putSketch.mock.calls.at(-1)[1].sketch.blocks.find((b: any) => b.id === 'intro');
+  expect(saved.order).toEqual(['actions', 'headline', 'badge', 'sub', 'trust', 'note']);
+  expect(saved.stickerPos).toEqual({ x: 100, y: 0 });
+  (panel as any).remoteElReorder('intro', ['badge', 'headline', 'sub', 'actions', 'trust', 'note']);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks.find((b: any) => b.id === 'intro').order).toBeUndefined();
+});
+
+it('tint backgrounds resolve to derived pastels in the live apply and save as roles', async () => {
+  await mount();
+  (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
+  const pastel = host.querySelector('.bct-props .bct-swatch[title="Pastel acento"]') as HTMLElement;
+  pastel.click();
+  const last = applied.at(-1);
+  expect(last.blocks.intro.bg).toMatch(/^#[0-9a-f]{6}$/);
+  expect(last.blocks.intro.bg).not.toBe('#f6ecd9');
+  expect(last.vars['--skb-tint-1']).toBe(last.blocks.intro.bg);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].bg).toBe('tint-accent');
+});
+
 it('renders merchant text through textContent, never markup', async () => {
   getSketch.mockResolvedValue({ revision: 3, sketch: { ...sketch(), blocks: [{ id: 'x', type: 'hero', variant: 'stacked', headline: '<img src=x onerror=alert(1)>', sub: '', cta: '', badge: '', note: '', sticker: '', bg: 'paper', size: 'm' }] }, photos: [], fonts: ['anton'] } as any);
   await mount();
   expect(host.innerHTML).not.toContain('<img src=x');
+});
+
+it('page style controls apply live and save with the sketch', async () => {
+  await mount();
+  const square = [...host.querySelectorAll('.bct-segment__option')].find(b => b.textContent === 'Rectas') as HTMLElement;
+  square.click();
+  expect(applied.at(-1).style.radius).toBe('square');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.style.radius).toBe('square');
+});
+
+it('symmetry: alignment right and photo on the left apply live', async () => {
+  await mount();
+  (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Der.') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Izquierdo') as HTMLElement).click();
+  expect(applied.at(-1).blocks.intro).toMatchObject({ align: 'end', flip: true });
+});
+
+it('adding a review is structural: the preview reloads after the save', async () => {
+  const reload = vi.fn();
+  getSketch.mockResolvedValue({ revision: 3, sketch: { ...sketch(), blocks: [...sketch().blocks.slice(0, 2), { id: 'rev', type: 'reviews', title: 'Clientes', quotes: [{ text: 'Rico', name: 'Ana', place: '' }], photos: [], bg: 'paper', size: 'm' }, sketch().blocks[2]] }, photos: [], fonts: ['anton'] } as any);
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload), reload });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block="rev"]')) throw new Error('not ready'); });
+  (host.querySelector('[data-boceto-block="rev"] .bct-block__head') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-chip')].find(b => b.textContent === '+ Añadir reseña') as HTMLElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks.find((b: any) => b.id === 'rev').quotes).toHaveLength(2);
+  expect(reload).toHaveBeenCalledWith(4);
+});
+
+it('"Cambiar foto" from the canvas opens the picker and swaps the photo live as inline data', async () => {
+  const withPhotos = { revision: 3, snapshot: { files: [{ path: 'sketch.json' }, { path: 'assets/a.jpg', content: 'AAAA', encoding: 'base64' }, { path: 'assets/b.jpg', content: 'BBBB', encoding: 'base64' }] } } as any;
+  getSketch.mockResolvedValue({ revision: 3, sketch: sketch(), photos: ['assets/a.jpg', 'assets/b.jpg'], fonts: ['anton'] } as any);
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: withPhotos, locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  (panel as any).remotePhoto('intro', 'photo');
+  const thumbs = host.querySelectorAll('.bct-thumbs--big .bct-thumb');
+  expect(thumbs).toHaveLength(2);
+  (thumbs[1] as HTMLElement).click();
+  expect(applied.at(-1).blocks.intro.photos).toEqual({ photo: 'data:image/jpeg;base64,BBBB' });
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].photo).toBe('assets/b.jpg');
+});
+
+it('the icon picker searches the catalog and sets the step icon', async () => {
+  const icons = vi.spyOn(MerchantStudioApi.prototype, 'sketchIcons').mockResolvedValue([{ name: 'gift', svg: '<svg viewBox="0 0 24 24"></svg>' }, { name: 'bad', svg: '<svg onload="x()"></svg>' }]);
+  getSketch.mockResolvedValue({ revision: 3, sketch: { ...sketch(), blocks: [{ id: 'st', type: 'steps', title: 'Pasos', items: [{ icon: 'sparkles', title: 'Uno', text: '' }], bg: 'paper', size: 'm' }, sketch().blocks[2]] }, photos: [], fonts: ['anton'] } as any);
+  await mount();
+  (host.querySelector('[data-boceto-block="st"] .bct-block__head') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-chip')].find(b => b.textContent?.includes('sparkles')) as HTMLElement).click();
+  await vi.waitFor(() => { if (!host.querySelector('.bct-icon')) throw new Error('no icons'); });
+  expect(host.querySelectorAll('.bct-icon')).toHaveLength(1);
+  (host.querySelector('.bct-icon[title="gift"]') as HTMLElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].items[0].icon).toBe('gift');
+  expect(icons).toHaveBeenCalled();
+});
+
+it('"Subir foto nueva" uploads, adds the photo to the store and drops it into the open slot', async () => {
+  vi.useRealTimers();
+  const images = await import('./source-images');
+  vi.spyOn(images, 'prepareSourceImage').mockImplementation(async file => file);
+  const upload = vi.spyOn(MerchantStudioApi.prototype, 'upload').mockResolvedValue({ url: '/v1/uploads/abc-1.jpg', assetId: 'a1' });
+  const add = vi.spyOn(MerchantStudioApi.prototype, 'addSketchPhoto').mockResolvedValue({ revision: 5, path: 'assets/image-0123456789ab.jpg', photos: ['assets/a.jpg', 'assets/image-0123456789ab.jpg'] });
+  const saved = vi.fn().mockResolvedValue(undefined);
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: false, saved, apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  (panel as any).remotePhoto('intro', 'photo');
+  const input = host.querySelector('.bct-section input[type="file"]') as HTMLInputElement;
+  Object.defineProperty(input, 'files', { value: [new File(['x'], 'nueva.jpg', { type: 'image/jpeg' })] });
+  input.dispatchEvent(new Event('change'));
+  await vi.waitFor(() => { if (!add.mock.calls.length) throw new Error('not added'); });
+  expect(upload).toHaveBeenCalled();
+  expect(add).toHaveBeenCalledWith('s1', { revision: 3, url: '/v1/uploads/abc-1.jpg' });
+  expect(saved).toHaveBeenCalledWith(5);
+  await vi.waitFor(() => { if (!applied.at(-1)?.blocks?.intro?.photos) throw new Error('no live photo'); });
+  expect(applied.at(-1).blocks.intro.photos.photo).toMatch(/^data:image\/jpeg;base64,/);
+  await vi.waitFor(() => { if (!putSketch.mock.calls.length) throw new Error('not saved'); }, { timeout: 3000 });
+  expect(putSketch.mock.calls.at(-1)[1]).toMatchObject({ revision: 5 });
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].photo).toBe('assets/image-0123456789ab.jpg');
+});
+
+it('the account page edits like a block: Capas entry, layout, perks, canvas text', async () => {
+  getSketch.mockResolvedValue({ revision: 3, sketch: { ...sketch(), account: { id: 'account', type: 'account', layout: 'split', kicker: 'TU CUENTA', title: 'Hola', lead: 'l', perks: [{ icon: 'gift', text: 'Ofertas' }], bg: 'tint-accent' } }, photos: [], fonts: ['anton'] } as any);
+  const panel = await mount();
+  (host.querySelector('[data-boceto-block="account"] .bct-block__head') as HTMLElement).click();
+  expect(host.textContent).toContain('Cuenta · ingreso y registro');
+  expect(host.querySelector('.bct-remove')).toBeNull();
+  ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Centrado') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-chip')].find(b => b.textContent === '+ Añadir beneficio') as HTMLElement).click();
+  (panel as any).remoteText('account', 'title', 'Bienvenido de vuelta');
+  await vi.advanceTimersByTimeAsync(1300);
+  const account = putSketch.mock.calls.at(-1)[1].sketch.account;
+  expect(account).toMatchObject({ layout: 'center', title: 'Bienvenido de vuelta' });
+  expect(account.perks).toHaveLength(2);
 });

@@ -39,7 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { assembleSketch, ensureAllPhotosUsed, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { assembleSketch, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -733,7 +733,8 @@ export class SourceGenerationService {
         await progress?.('building');
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
         const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: sketchPhotos.map(photo => photo.path) };
-        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30) });
+        const direction = drawSketchDirection();
+        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30), direction });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
@@ -754,7 +755,10 @@ export class SourceGenerationService {
         attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
         if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
         const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx);
-        const sketch = ensureAllPhotosUsed(drawn, sketchCtx);
+        // Fresh generations get the band-rhythm pass (no two adjacent same-bg sections). Boceto hand
+        // edits and chat edits never pass through it, so deliberate layouts survive.
+        const placed = ensureBandRhythm(ensureAllPhotosUsed(drawn, sketchCtx));
+        const sketch = { ...placed, style: direction.style, blocks: placed.blocks.map(block => (block.type === 'newsletter' ? { ...block, form: direction.newsletterForm } : block)) };
         // A fallen-back attempt is FAILED: absorbed from billing, visible in the receipt, metered like every provider call.
         attempt.status = parsed ? 'COMPLETED' : 'FAILED';
         if (!parsed && !attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida; se usó el boceto base').slice(0, 300);
@@ -801,6 +805,16 @@ export class SourceGenerationService {
           throw new BadGatewayException('YAPI no pudo aplicar el cambio al boceto. Tu revisión anterior sigue guardada.');
         }
         autoRepairs.push(...edited.notes.slice(0, 10).map(note => `Boceto: ${note}`));
+        // Page style and per-block layout (alignment, flip, swap, element order, sticker spot) are editor-only and
+        // absent from the model schema, so the edit reply would reset them; carry them over by block id.
+        edited.sketch.style = currentSketch.style;
+        const EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos'] as const;
+        edited.sketch.blocks = edited.sketch.blocks.map(block => {
+          const before = currentSketch.blocks.find(item => item.id === block.id) as Record<string, unknown> | undefined;
+          if (!before) return block;
+          const carried = Object.fromEntries(EDITOR_ONLY.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
+          return { ...block, ...carried } as typeof block;
+        });
         generated = { label: 'Boceto actualizado', files: assembleSketch(edited.sketch, sketchCtx) };
         sketchFile = { path: 'sketch.json', content: JSON.stringify(edited.sketch, null, 2) + '\n' };
         lenient = true;

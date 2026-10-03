@@ -1,7 +1,7 @@
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
-import { renderBlock, blockCss, SKETCH_BASE_CSS } from './sketch-blocks';
-import { repairSketch } from './sketch-schema';
+import { renderBlock, renderAccount, blockCss, ACCOUNT_CSS, SKETCH_BASE_CSS } from './sketch-blocks';
+import { bestInkFor, mixHex, repairSketch } from './sketch-schema';
 import type { SketchContext, StoreSketch } from './sketch-schema';
 
 /** sketch.json → real Next-source store files. Pure and deterministic: the same function renders the
@@ -16,7 +16,7 @@ const fontFace = (id: string) => `@font-face {
   font-display: swap;
 }`;
 
-const NAV_LABEL: Partial<Record<string, string>> = { catalog: 'Productos', story: 'Nosotros', gallery: 'Galería', faq: 'Preguntas', reviews: 'Reseñas' };
+const NAV_LABEL: Partial<Record<string, string>> = { catalog: 'Productos', collections: 'Colecciones', story: 'Nosotros', gallery: 'Galería', faq: 'Preguntas', reviews: 'Reseñas' };
 
 export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourceProjectFileDto[] {
   // Re-repair on entry: assembly stays total even if a caller skips repair, and repair is idempotent.
@@ -33,18 +33,19 @@ export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourcePr
     seen.add(block.type);
     return [`<a href=${expr(`index.html#skb-${block.id}`)}>${expr(label)}</a>`];
   }).join('');
+  const siteAttrs = (Object.keys(sketch.style) as (keyof typeof sketch.style)[]).map(key => `data-skb-${key}=${expr(sketch.style[key])}`).join(' ');
   const shell = `import type { ReactNode } from 'react';
 
 export function Header() {
   return <header className="skb-header">
     <a className="skb-logo" href="index.html">${expr(ctx.storeName)}</a>
     ${navLinks ? `<nav className="skb-nav" aria-label="Principal">${navLinks}</nav>` : ''}
-    ${ctx.purpose === 'shop' ? '<button type="button" className="skb-cart" data-cart-open>Mi pedido <span className="skb-cart__count" data-cart-count>0</span></button>' : ''}
+    ${ctx.purpose === 'shop' ? '<div className="skb-header__actions"><a className="skb-account" data-pagosya-account="" href="acceso-ingresar.html">Mi cuenta</a><button type="button" className="skb-cart" data-cart-open>Mi pedido <span className="skb-cart__count" data-cart-count>0</span></button></div>' : ''}
   </header>;
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="skb-site">
+  return <div className="skb-site" ${siteAttrs}>
     <Header />
     {children}
     <div data-pagosya-cart hidden />
@@ -99,7 +100,7 @@ export default function Product() {
   const checkout = `import { Header } from './Shell';
 
 export default function Checkout() {
-  return <div className="skb-site">
+  return <div className="skb-site" ${siteAttrs}>
     <Header />
     <main id="contenido" className="skb-page" data-pagosya-checkout-page />
     <p data-pagosya-status role="status" aria-live="polite" className="skb-status" />
@@ -115,6 +116,14 @@ export default function Checkout() {
   --skb-text-font: ${JSON.stringify(fontFamily(sketch.fonts.text))}, sans-serif;
   --skb-paper: ${sketch.palette.paper};
   --skb-page-ink: ${sketch.palette.ink};
+  --skb-accent: ${sketch.palette.accent};
+  --skb-accent-ink: ${bestInkFor(sketch.palette.accent, sketch.palette.ink)};
+  --skb-deep: ${sketch.palette.deep};
+  --skb-pop: ${sketch.palette.pop};
+  --skb-pop-ink: ${bestInkFor(sketch.palette.pop, sketch.palette.ink)};
+  --skb-tint-1: ${mixHex(sketch.palette.accent, sketch.palette.paper, 0.16)};
+  --skb-tint-2: ${mixHex(sketch.palette.deep, sketch.palette.paper, 0.16)};
+  --skb-tint-3: ${mixHex(sketch.palette.pop, sketch.palette.paper, 0.16)};
 }
 body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font-family: var(--skb-text-font); }
 .skb-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem clamp(1rem, 5vw, 4rem); background: var(--skb-paper); }
@@ -122,6 +131,9 @@ body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font
 .skb-nav { display: flex; gap: 1.1rem; flex-wrap: wrap; }
 .skb-nav a { color: inherit; text-decoration: none; font-size: 0.95rem; }
 .skb-cart { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 999px; padding: 0.5em 1.1em; font: inherit; cursor: pointer; }
+.skb-header__actions { display: flex; align-items: center; gap: 1rem; }
+.skb-account { color: inherit; text-decoration: none; font-size: 0.92rem; }
+.skb-account:hover { text-decoration: underline; text-underline-offset: 3px; }
 .skb-status { padding: 0 clamp(1rem, 5vw, 4rem); min-height: 1.2em; }
 .skb-page { padding: clamp(1rem, 4vw, 2.5rem) clamp(1rem, 5vw, 4rem); }
 .skb-pdp { display: grid; gap: 1.5rem; padding: clamp(1rem, 4vw, 2.5rem) clamp(1rem, 5vw, 4rem); }
@@ -134,7 +146,18 @@ body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font
 .skb-pdp__title { font-family: var(--skb-display-font); font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.05; margin: 0; }
 .skb-pdp__price { font-size: 1.4rem; font-weight: 700; }
 .skb-pdp__desc { line-height: 1.6; max-width: 62ch; }
-${SKETCH_BASE_CSS}${[...new Set(sketch.blocks.map(block => block.type))].map(blockCss).join('\n')}
+${SKETCH_BASE_CSS}${[...new Set(sketch.blocks.map(block => block.type))].map(blockCss).join('\n')}${ctx.purpose === 'shop' ? ACCOUNT_CSS : ''}
+`;
+
+  const accountPage = (view: 'login' | 'register', component: string) => `// @pagosya-page
+import Shell from '../Shell';
+import { AccountGatePage } from '@pagosya/ui';
+
+export default function ${component}() {
+  return <Shell>
+    ${renderAccount(sketch, ctx, view)}
+  </Shell>;
+}
 `;
 
   return [
@@ -143,5 +166,7 @@ ${SKETCH_BASE_CSS}${[...new Set(sketch.blocks.map(block => block.type))].map(blo
     { path: 'components/product.tsx', content: product },
     { path: 'components/checkout.tsx', content: checkout },
     { path: 'styles/globals.css', content: css },
+    // Designed shopper access pages; the remaining account pages stay the platform defaults added on save.
+    ...(ctx.purpose === 'shop' ? ([['login', 'Login'], ['register', 'Register']] as const).map(([view, component]) => ({ path: `components/auth/${view}.tsx`, content: accountPage(view, component) })) : []),
   ];
 }

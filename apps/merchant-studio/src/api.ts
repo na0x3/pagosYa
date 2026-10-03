@@ -439,6 +439,12 @@ export class MerchantStudioApi {
   getSketch(storeId: string): Promise<{ revision: number; sketch: unknown; photos: string[]; fonts: string[] }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch`);
   }
+  addSketchPhoto(storeId: string, body: { revision: number; url: string }): Promise<{ revision: number; path: string; photos: string[] }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch/photos`, { method: "POST", body: JSON.stringify(body) });
+  }
+  sketchIcons(storeId: string, query: string): Promise<Array<{ name: string; svg: string }>> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch/icons?q=${encodeURIComponent(query.slice(0, 60))}`);
+  }
   putSketch(storeId: string, body: { revision: number; sketch: unknown }): Promise<{ revision: number; sketch: unknown }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch`, { method: "PUT", body: JSON.stringify(body) });
   }
