@@ -9,6 +9,15 @@ export type SketchReorder = { kind: 'order' } | { kind: 'array'; field: string }
 export type SketchGroup = { key: string; parent: string; kind: SketchGroupKind; reorder: SketchReorder };
 export type SketchGroupLayout = { gap?: 's' | 'm' | 'l'; dir?: 'row' | 'column'; align?: 'start' | 'center' | 'end'; valign?: 'start' | 'center' | 'end' };
 export type SketchNode = { path: string; key: string; label: string; children: SketchNode[] };
+/** Free layer (spec 2026-10-03-boceto-free-layer-design): a freed part's spot and an inserted element, in percentages
+ * of the part's positioning box (its section, or the photo column for parts inside it); `r` is degrees. */
+export type SketchFreePos = { x: number; y: number; w?: number; r?: number };
+export type SketchExtraKind = 'emoji' | 'text' | 'button' | 'photo' | 'icon';
+export type SketchExtra = SketchFreePos & { id: string; kind: SketchExtraKind; value: string; href?: string };
+export const SKETCH_EXTRA_KINDS: readonly SketchExtraKind[] = ['emoji', 'text', 'button', 'photo', 'icon'];
+export const SKETCH_EXTRA_LABEL: Record<SketchExtraKind, string> = { emoji: 'Emoji', text: 'Texto', button: 'Botón', photo: 'Foto', icon: 'Ícono' };
+export const SKETCH_EXTRA_MAX = 12;
+export const SKETCH_FREE_MAX = 30;
 
 /** Copy-column elements that reorder, in default order (hero/split keep the keys saved before this module). */
 export const SKETCH_COPY_ORDER: Record<string, readonly string[]> = {
@@ -95,8 +104,7 @@ function label(type: string, key: string, parentPath: string): string {
 
 const filled = (value: unknown) => (typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) ? value.length > 0 : value != null && value !== false);
 
-/** The block's nodes as the canvas renders them (the renderer stamps the same keys), skipping empty optional parts. */
-export function sketchNodeTree(block: any): SketchNode[] {
+function partsTree(block: any): SketchNode[] {
   const type = String(block?.type ?? '');
   const make = (parent: string, key: string, children: (path: string) => SketchNode[] = () => []): SketchNode => {
     const path = parent ? `${parent}/${key}` : key;
@@ -130,6 +138,15 @@ export function sketchNodeTree(block: any): SketchNode[] {
   }
 }
 
+/** The block's nodes as the canvas renders them (the renderer stamps the same keys), skipping empty optional parts;
+ * inserted elements come last, under "Elementos sueltos". */
+export function sketchNodeTree(block: any): SketchNode[] {
+  const nodes = partsTree(block);
+  const extras = Array.isArray(block?.extras) && block.type !== 'account' ? block.extras.filter((extra: any) => extra && typeof extra.id === 'string') : [];
+  if (!extras.length) return nodes;
+  return [...nodes, { path: 'extras', key: 'extras', label: 'Elementos sueltos', children: extras.map((extra: any) => ({ path: `extras/${extra.id}`, key: extra.id, label: SKETCH_EXTRA_LABEL[extra.kind as SketchExtraKind] ?? 'Elemento', children: [] })) }];
+}
+
 export function sketchFindNode(nodes: SketchNode[], path: string): SketchNode | undefined {
   for (const node of nodes) {
     if (node.path === path) return node;
@@ -138,10 +155,87 @@ export function sketchFindNode(nodes: SketchNode[], path: string): SketchNode | 
   return undefined;
 }
 
+const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
+const tenth = (value: number) => Math.round(value * 10) / 10;
+const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+export function sketchFreePos(raw: unknown): SketchFreePos | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const { x, y, w, r } = raw as Record<string, unknown>;
+  if (!finite(x) || !finite(y)) return undefined;
+  const turn = finite(r) ? clamp(Math.round(r), -180, 180) : 0;
+  return { x: clamp(tenth(x), 0, 100), y: clamp(tenth(y), 0, 100), ...(finite(w) ? { w: clamp(tenth(w), 5, 100) } : {}), ...(turn ? { r: turn } : {}) };
+}
+
+/** The sticker is already free and the column photo is its column's content; top-level groups stay in the flow. */
+const NEVER_FREE = ['sticker', 'photo'];
+const freeShape = (block: any, path: string) => Boolean(path) && block?.type !== 'account' && path.includes('/') && !path.startsWith('extras/') && !NEVER_FREE.includes(path.split('/').pop()!);
+const freeMap = (block: any): Record<string, SketchFreePos> => (block?.free && typeof block.free === 'object' && !Array.isArray(block.free) ? block.free : {});
+const insideFree = (free: Record<string, unknown>, path: string) => Object.keys(free).some(other => path.startsWith(`${other}/`));
+
+export function sketchCanFree(block: any, path: string): boolean {
+  return freeShape(block, path) && Boolean(sketchFindNode(sketchNodeTree(block), path));
+}
+
+/** What the canvas may pull out of its box: freeable parts with no freed part around them (freed ones included). */
+export function sketchFreeablePaths(block: any): string[] {
+  const free = freeMap(block);
+  const walk = (nodes: SketchNode[]): string[] => nodes.flatMap(node => [...(freeShape(block, node.path) && !insideFree(free, node.path) ? [node.path] : []), ...walk(node.children)]);
+  return walk(sketchNodeTree(block));
+}
+
+/** Frees a part at a spot (or moves it). Positions never nest: freed parts inside it rejoin it. */
+export function sketchSetFree(block: any, path: string, pos: SketchFreePos): boolean {
+  const current = freeMap(block);
+  if (!sketchCanFree(block, path) || insideFree(current, path)) return false;
+  const next: Record<string, SketchFreePos> = Object.fromEntries(Object.entries(current).filter(([other]) => !other.startsWith(`${path}/`)));
+  next[path] = pos;
+  if (Object.keys(next).length > SKETCH_FREE_MAX) return false;
+  block.free = next;
+  return true;
+}
+
+/** "Volver a su lugar": the part (and anything freed inside it) goes back into its box. */
+export function sketchUnfree(block: any, path: string): void {
+  const next = Object.fromEntries(Object.entries(freeMap(block)).filter(([other]) => other !== path && !other.startsWith(`${path}/`)));
+  if (Object.keys(next).length) block.free = next; else delete block.free;
+}
+
+export function repairSketchFree(block: any, raw: unknown): Record<string, SketchFreePos> | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
+  const out: Record<string, SketchFreePos> = {};
+  for (const [path, value] of Object.entries(raw)) {
+    if (Object.keys(out).length >= SKETCH_FREE_MAX) break;
+    const pos = sketchFreePos(value);
+    if (pos && sketchCanFree(block, path)) out[path] = pos;
+  }
+  for (const path of Object.keys(out)) if (insideFree(out, path)) delete out[path];
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** The node path of the group an array field fills (`reviews`/`quotes` → `items`). */
+export function sketchListPath(type: string, field: string): string | undefined {
+  const group = sketchGroups(type).find(item => item.reorder.kind === 'array' && item.reorder.field === field);
+  return group ? (group.parent ? `${group.parent}/${group.key}` : group.key) : undefined;
+}
+
+/** Array items are keyed by index: when items move or go, their free spots follow (or go with them). */
+function remapFree(block: any, parentPath: string, map: (index: number) => number | null) {
+  const prefix = `${parentPath}/`;
+  const next: Record<string, SketchFreePos> = {};
+  for (const [path, pos] of Object.entries(freeMap(block))) {
+    const [head, ...rest] = path.startsWith(prefix) ? path.slice(prefix.length).split('/') : [''];
+    if (!/^\d+$/.test(head)) { next[path] = pos; continue; }
+    const to = map(Number(head));
+    if (to !== null) next[[parentPath, String(to), ...rest].join('/')] = pos;
+  }
+  if (Object.keys(next).length) block.free = next; else delete block.free;
+}
+
 const split = (path: string) => { const parts = path.split('/'); const key = parts.pop() ?? ''; return { key, parent: parts.join('/') }; };
 
 export function sketchCanMove(block: any, path: string): boolean {
-  if (!path) return false;
+  if (!path || Object.prototype.hasOwnProperty.call(freeMap(block), path)) return false;
   const { key, parent } = split(path);
   const rule = sketchReorder(block, parent);
   switch (rule.kind) {
@@ -172,6 +266,7 @@ export function sketchApplyMove(block: any, parentPath: string, nextOrder: strin
       const permutation = picks.length === list.length && picks.every(n => Number.isInteger(n) && n >= 0 && n < list.length) && new Set(picks).size === picks.length;
       if (!permutation) return null;
       block[rule.field] = picks.map(n => list[n]);
+      remapFree(block, parentPath, from => picks.indexOf(from));
       return 'reload';
     }
     case 'flip': if (nextOrder[0] === 'media') block.flip = true; else delete block.flip; return 'live';
@@ -191,6 +286,7 @@ const OPTIONAL = ['badge', 'sub', 'trust', 'note', 'kicker', 'cta2', 'caption', 
 export function sketchCanRemove(block: any, path: string): boolean {
   if (!path) return false;
   const { key, parent } = split(path);
+  if (parent === 'extras') return Array.isArray(block.extras) && block.extras.some((extra: any) => extra?.id === key);
   const rule = sketchReorder(block, parent);
   if (rule.kind === 'array') return /^\d+$/.test(key) && Array.isArray(block[rule.field]) && Number(key) < block[rule.field].length;
   return OPTIONAL.includes(key) && filled(block[key]);
@@ -199,9 +295,20 @@ export function sketchCanRemove(block: any, path: string): boolean {
 export function sketchRemoveNode(block: any, path: string): boolean {
   if (!sketchCanRemove(block, path)) return false;
   const { key, parent } = split(path);
+  if (parent === 'extras') {
+    block.extras = block.extras.filter((extra: any) => extra?.id !== key);
+    if (!block.extras.length) delete block.extras;
+    return true;
+  }
   const rule = sketchReorder(block, parent);
-  if (rule.kind === 'array') { block[rule.field].splice(Number(key), 1); return true; }
+  if (rule.kind === 'array') {
+    const gone = Number(key);
+    block[rule.field].splice(gone, 1);
+    remapFree(block, parent, index => (index === gone ? null : index > gone ? index - 1 : index));
+    return true;
+  }
   block[key] = '';
   if (key === 'sticker') delete block.stickerPos;
+  sketchUnfree(block, path);
   return true;
 }

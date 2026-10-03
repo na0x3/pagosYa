@@ -1,4 +1,4 @@
-import { repairSketchLayout, sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketchNodeTree, sketchRemoveNode, sketchReorder, SKETCH_COPY_ORDER } from '@pagosya/shared-types';
+import { repairSketchFree, repairSketchLayout, sketchApplyMove, sketchCanFree, sketchFreeablePaths, sketchFreePos, sketchListPath, sketchSetFree, sketchUnfree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchNodeTree, sketchRemoveNode, sketchReorder, SKETCH_COPY_ORDER } from '@pagosya/shared-types';
 
 const hero = () => ({ id: 'h', type: 'hero', variant: 'photo-right', headline: 'Hola', sub: 'sub', cta: 'Ver', cta2: 'Caja', trust: '★ 4.8', badge: '', note: '', sticker: 'Fresco', caption: 'pie', photo: 'assets/a.jpg', bg: 'paper', size: 'l' }) as any;
 
@@ -91,5 +91,71 @@ describe('sketch structure', () => {
     expect(repairSketchLayout('steps', { items: { gap: 's' }, head: { align: 'center' } })).toEqual({ items: { gap: 's' } });
     expect(repairSketchLayout('hero', 'nope')).toBeUndefined();
     expect(repairSketchLayout('marquee', { copy: { gap: 's' } })).toBeUndefined();
+  });
+});
+
+describe('free layer', () => {
+  const steps = () => ({ id: 's', type: 'steps', kicker: '', title: 'T', note: '', items: [{ icon: 'a', title: '1', text: '' }, { icon: 'b', title: '2', text: '' }, { icon: 'c', title: '3', text: '' }], bg: 'paper', size: 'm' }) as any;
+  it('frees any inner part but never a top-level group, the sticker, the column photo or the account page', () => {
+    const block = hero();
+    for (const path of ['copy/headline', 'copy/actions', 'copy/actions/cta', 'copy/actions/cta2', 'media/caption']) expect(sketchCanFree(block, path)).toBe(true);
+    for (const path of ['', 'copy', 'media', 'media/photo', 'media/sticker', 'copy/missing', 'extras/eab1']) expect(sketchCanFree(block, path)).toBe(false);
+    expect(sketchCanFree({ ...hero(), cta2: '' }, 'copy/actions/cta2')).toBe(false);
+    expect(sketchCanFree({ ...hero(), photo: undefined }, 'sticker')).toBe(false);
+    expect(sketchCanFree(steps(), 'items/1')).toBe(true);
+    expect(sketchCanFree({ id: 'account', type: 'account', kicker: 'K', title: 'T', lead: 'L', perks: [{ icon: 'x', text: 'p' }] }, 'intro/title')).toBe(false);
+  });
+  it('lists extras last as "Elementos sueltos", labelled by kind', () => {
+    const tree = sketchNodeTree({ ...hero(), extras: [{ id: 'eab1', kind: 'emoji', value: '✨', x: 1, y: 1 }, { id: 'ecd2', kind: 'button', value: 'Pedir', x: 2, y: 2 }] });
+    const extras = tree[tree.length - 1];
+    expect([extras.path, extras.label]).toEqual(['extras', 'Elementos sueltos']);
+    expect(extras.children.map(node => [node.path, node.label])).toEqual([['extras/eab1', 'Emoji'], ['extras/ecd2', 'Botón']]);
+    expect(sketchNodeTree(hero()).some(node => node.key === 'extras')).toBe(false);
+  });
+  it('a freed part no longer reorders, and nothing inside it is freeable', () => {
+    const block = { ...steps(), free: { 'items/1': { x: 1, y: 1 } } };
+    expect(sketchCanMove(block, 'items/1')).toBe(false);
+    expect(sketchCanMove(block, 'items/0')).toBe(true);
+    const row = { ...hero(), free: { 'copy/actions': { x: 1, y: 1 } } };
+    expect(sketchFreeablePaths(row)).toContain('copy/actions');
+    expect(sketchFreeablePaths(row)).not.toContain('copy/actions/cta');
+  });
+  it('positions never nest: freeing a row rejoins its freed button; a button inside a freed row is refused', () => {
+    const block = { ...hero(), free: { 'copy/actions/cta': { x: 1, y: 1 } } };
+    expect(sketchSetFree(block, 'copy/actions', { x: 5, y: 6 })).toBe(true);
+    expect(block.free).toEqual({ 'copy/actions': { x: 5, y: 6 } });
+    expect(sketchSetFree(block, 'copy/actions/cta2', { x: 1, y: 1 })).toBe(false);
+    expect(sketchSetFree(block, 'copy', { x: 1, y: 1 })).toBe(false);
+    sketchUnfree(block, 'copy/actions');
+    expect(block.free).toBeUndefined();
+  });
+  it('free spots follow their item when a list is reordered or shortened', () => {
+    const moved = { ...steps(), free: { 'items/0': { x: 1, y: 1 } } };
+    expect(sketchApplyMove(moved, 'items', ['2', '0', '1'])).toBe('reload');
+    expect(moved.free).toEqual({ 'items/1': { x: 1, y: 1 } });
+    const cut = { ...steps(), free: { 'items/2': { x: 2, y: 2 }, 'items/0': { x: 3, y: 3 } } };
+    expect(sketchRemoveNode(cut, 'items/0')).toBe(true);
+    expect(cut.free).toEqual({ 'items/1': { x: 2, y: 2 } });
+    const single = { ...hero(), free: { 'copy/sub': { x: 1, y: 1 } } };
+    expect(sketchRemoveNode(single, 'copy/sub')).toBe(true);
+    expect(single.free).toBeUndefined();
+  });
+  it('an inserted element is removed by id', () => {
+    const block = { ...hero(), extras: [{ id: 'eab1', kind: 'emoji', value: '✨', x: 1, y: 1 }] };
+    expect(sketchCanRemove(block, 'extras/eab1')).toBe(true);
+    expect(sketchCanRemove(block, 'extras/zzzz')).toBe(false);
+    expect(sketchRemoveNode(block, 'extras/eab1')).toBe(true);
+    expect(block.extras).toBeUndefined();
+  });
+  it('clamps positions and repairs a free map', () => {
+    expect(sketchFreePos({ x: 140.04, y: -3, w: 2, r: 8.6 })).toEqual({ x: 100, y: 0, w: 5, r: 9 });
+    expect(sketchFreePos({ x: 1, y: 2, r: 0 })).toEqual({ x: 1, y: 2 });
+    expect(sketchFreePos({ x: 'a', y: 2 })).toBeUndefined();
+    expect(repairSketchFree(hero(), { 'copy/headline': { x: 1, y: 2 }, copy: { x: 1, y: 1 }, 'media/sticker': { x: 1, y: 1 }, 'copy/nope': { x: 1, y: 1 }, 'copy/sub': 'x' })).toEqual({ 'copy/headline': { x: 1, y: 2 } });
+    expect(repairSketchFree(hero(), { 'copy/actions/cta': { x: 1, y: 1 }, 'copy/actions': { x: 2, y: 2 } })).toEqual({ 'copy/actions': { x: 2, y: 2 } });
+    expect(repairSketchFree(hero(), [])).toBeUndefined();
+    expect(sketchListPath('reviews', 'quotes')).toBe('items');
+    expect(sketchListPath('split', 'pills')).toBe('copy/pills');
+    expect(sketchListPath('hero', 'pills')).toBeUndefined();
   });
 });
