@@ -42,8 +42,10 @@ export function sourceHomeRegions(files: File[]): Region[] {
         if (!ts.isJsxElement(child) && !ts.isJsxSelfClosingElement(child)) continue;
         const opening = ts.isJsxElement(child) ? child.openingElement : child;
         const attr = opening.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(source) === 'id') as ts.JsxAttribute | undefined;
-        if (attr?.initializer && ts.isStringLiteral(attr.initializer)) {
-          regions.push({ id: attr.initializer.text, start: child.getStart(source), end: child.end, text: child.getText(source) });
+        // id="hero" or, as Boceto blocks write it, id={"skb-hero"}: both are a literal, never evaluated.
+        const literal = attr?.initializer && ts.isJsxExpression(attr.initializer) ? attr.initializer.expression : attr?.initializer;
+        if (literal && ts.isStringLiteral(literal)) {
+          regions.push({ id: literal.text, start: child.getStart(source), end: child.end, text: child.getText(source) });
         }
       }
       return;

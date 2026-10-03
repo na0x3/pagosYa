@@ -146,3 +146,16 @@ it('prunes and reorders existing composition sections without inventing a plan f
   files[0].content = '<main><section id="menu"></section><section id="new"></section></main>';
   expect(sourceDesignAfterSectionEdit(original, files, scope)!.concepts[0].composition).toBeUndefined();
 });
+
+describe('a Boceto store (sketch-born)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { assembleSketch, repairSketch } = require('./sketch');
+  const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: [] as string[] };
+  const files = () => assembleSketch(repairSketch({ blocks: [{ id: 'intro', type: 'hero', headline: 'Hola' }, { id: 'faq', type: 'faq', title: 'P', items: [{ q: 'q', a: 'a' }] }] }, ctx).sketch, ctx);
+  it('finds its block sections, whose ids are JSX string expressions', () => {
+    expect(sourceHomeRegions(files()).map(region => region.id)).toEqual(expect.arrayContaining(['skb-intro', 'skb-faq']));
+  });
+  it('scopes a chat request to the block picked in the Boceto', () => {
+    expect(sourceSectionScope(files(), 'Pedido actual del comercio: hazlo más grande', 'skb-faq')).toMatchObject({ targets: ['skb-faq'], selected: 'skb-faq' });
+  });
+});
