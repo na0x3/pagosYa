@@ -28,6 +28,9 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
+const lastLook = () => [...applied].reverse().find(payload => payload.vars || payload.blocks || payload.style);
+const lastSelection = () => [...applied].reverse().find(payload => payload.selection)?.selection;
+
 const mount = async (withSketch = true) => {
   const panel = createBocetoPanel(new MerchantStudioApi());
   panel.mount(host, { storeId: 's1', version: version(withSketch), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload) });
@@ -54,7 +57,7 @@ it('a background change applies live to the preview and saves silently after the
   const vivo = host.querySelector('.bct-props .bct-swatch[title="Vivo"]') as HTMLElement;
   vivo.click();
   expect(applied.length).toBeGreaterThan(0);
-  const last = applied.at(-1);
+  const last = lastLook();
   expect(last.blocks.intro.bg).toBe('#f2c94c');
   expect(putSketch).not.toHaveBeenCalled();
   await vi.advanceTimersByTimeAsync(1300);
@@ -79,13 +82,13 @@ it('move, add and remote events compose the sketch', async () => {
 
 it('element drags from the canvas persist order and sticker position, defaults stay clean', async () => {
   const panel = await mount();
-  (panel as any).remoteElReorder('intro', ['actions', 'headline']);
+  (panel as any).remoteNodeMove('intro', 'copy/actions', ['actions', 'headline']);
   (panel as any).remoteElMove('intro', 'sticker', 140.26, -3);
   await vi.advanceTimersByTimeAsync(1300);
   const saved = putSketch.mock.calls.at(-1)[1].sketch.blocks.find((b: any) => b.id === 'intro');
   expect(saved.order).toEqual(['actions', 'headline', 'badge', 'sub', 'trust', 'note']);
   expect(saved.stickerPos).toEqual({ x: 100, y: 0 });
-  (panel as any).remoteElReorder('intro', ['badge', 'headline', 'sub', 'actions', 'trust', 'note']);
+  (panel as any).remoteNodeMove('intro', 'copy/headline', ['badge', 'headline', 'sub', 'actions', 'trust', 'note']);
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)[1].sketch.blocks.find((b: any) => b.id === 'intro').order).toBeUndefined();
 });
@@ -95,7 +98,7 @@ it('tint backgrounds resolve to derived pastels in the live apply and save as ro
   (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
   const pastel = host.querySelector('.bct-props .bct-swatch[title="Pastel acento"]') as HTMLElement;
   pastel.click();
-  const last = applied.at(-1);
+  const last = lastLook();
   expect(last.blocks.intro.bg).toMatch(/^#[0-9a-f]{6}$/);
   expect(last.blocks.intro.bg).not.toBe('#f6ecd9');
   expect(last.vars['--skb-tint-1']).toBe(last.blocks.intro.bg);
@@ -113,7 +116,7 @@ it('page style controls apply live and save with the sketch', async () => {
   await mount();
   const square = [...host.querySelectorAll('.bct-segment__option')].find(b => b.textContent === 'Rectas') as HTMLElement;
   square.click();
-  expect(applied.at(-1).style.radius).toBe('square');
+  expect(lastLook().style.radius).toBe('square');
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)[1].sketch.style.radius).toBe('square');
 });
@@ -123,7 +126,7 @@ it('symmetry: alignment right and photo on the left apply live', async () => {
   (host.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
   ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Der.') as HTMLElement).click();
   ([...host.querySelectorAll('.bct-props .bct-segment__option')].find(b => b.textContent === 'Izquierdo') as HTMLElement).click();
-  expect(applied.at(-1).blocks.intro).toMatchObject({ align: 'end', flip: true });
+  expect(lastLook().blocks.intro).toMatchObject({ align: 'end', flip: true });
 });
 
 it('adding a review is structural: the preview reloads after the save', async () => {
@@ -149,7 +152,7 @@ it('"Cambiar foto" from the canvas opens the picker and swaps the photo live as 
   const thumbs = host.querySelectorAll('.bct-thumbs--big .bct-thumb');
   expect(thumbs).toHaveLength(2);
   (thumbs[1] as HTMLElement).click();
-  expect(applied.at(-1).blocks.intro.photos).toEqual({ photo: 'data:image/jpeg;base64,BBBB' });
+  expect(lastLook().blocks.intro.photos).toEqual({ photo: 'data:image/jpeg;base64,BBBB' });
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].photo).toBe('assets/b.jpg');
 });
@@ -186,8 +189,8 @@ it('"Subir foto nueva" uploads, adds the photo to the store and drops it into th
   expect(upload).toHaveBeenCalled();
   expect(add).toHaveBeenCalledWith('s1', { revision: 3, url: '/v1/uploads/abc-1.jpg' });
   expect(saved).toHaveBeenCalledWith(5);
-  await vi.waitFor(() => { if (!applied.at(-1)?.blocks?.intro?.photos) throw new Error('no live photo'); });
-  expect(applied.at(-1).blocks.intro.photos.photo).toMatch(/^data:image\/jpeg;base64,/);
+  await vi.waitFor(() => { if (!lastLook()?.blocks?.intro?.photos) throw new Error('no live photo'); });
+  expect(lastLook().blocks.intro.photos.photo).toMatch(/^data:image\/jpeg;base64,/);
   await vi.waitFor(() => { if (!putSketch.mock.calls.length) throw new Error('not saved'); }, { timeout: 3000 });
   expect(putSketch.mock.calls.at(-1)[1]).toMatchObject({ revision: 5 });
   expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].photo).toBe('assets/image-0123456789ab.jpg');
@@ -206,4 +209,65 @@ it('the account page edits like a block: Capas entry, layout, perks, canvas text
   const account = putSketch.mock.calls.at(-1)[1].sketch.account;
   expect(account).toMatchObject({ layout: 'center', title: 'Bienvenido de vuelta' });
   expect(account.perks).toHaveLength(2);
+});
+
+it('canvas selection paths are mirrored back to the preview with label and movable flags', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy');
+  expect(lastSelection()).toEqual({ id: 'intro', path: 'copy', label: 'Columna de texto', movable: false, movableChildren: ['headline', 'sub', 'actions'] });
+  panel.remoteSelect('intro', 'copy/missing');
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy' });
+  panel.remoteSelect('nope', 'copy');
+  expect(lastSelection()).toMatchObject({ id: '', path: '' });
+});
+
+it('a node move from the canvas updates order live; ⌥↓ moves the selected element and reloads', async () => {
+  const reload = vi.fn();
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload), reload });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  panel.remoteNodeMove('intro', 'copy/headline', ['sub', 'headline', 'actions']);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].order).toEqual(['sub', 'headline', 'actions', 'badge', 'trust', 'note']);
+  expect(reload).not.toHaveBeenCalled();
+  panel.remoteSelect('intro', 'copy/sub');
+  panel.remoteKey('down');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].order).toEqual(['headline', 'sub', 'actions', 'badge', 'trust', 'note']);
+  await vi.waitFor(() => expect(reload).toHaveBeenCalled());
+});
+
+it('Supr removes an optional element but never the headline; at block level it still deletes the block', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/sub');
+  panel.remoteKey('delete');
+  panel.remoteSelect('intro', 'copy/headline');
+  panel.remoteKey('delete');
+  await vi.advanceTimersByTimeAsync(1300);
+  const saved = putSketch.mock.calls.at(-1)![1].sketch.blocks[0];
+  expect([saved.sub, saved.headline]).toEqual(['', 'Algo dulce']);
+  panel.remoteSelect('cat', '');
+  panel.remoteKey('delete');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((b: any) => b.id)).toEqual(['intro', 'fin']);
+});
+
+it('refuses hostile node moves', async () => {
+  const panel = await mount();
+  panel.remoteNodeMove('intro', 'copy/headline', Array.from({ length: 50 }, (_, i) => `k${i}`));
+  panel.remoteNodeMove('intro', 'copy', ['media', 'copy']);
+  await vi.advanceTimersByTimeAsync(1300);
+  const saved = putSketch.mock.calls.at(-1)?.[1].sketch.blocks[0];
+  expect(saved?.order).toBeUndefined();
+  expect(saved?.flip).toBeUndefined();
+});
+
+it('a canvas edit on another block never keeps a part path from the previous block', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/sub');
+  panel.remoteText('cat', 'title', 'Nuevos');
+  expect(lastSelection()).toEqual({ id: 'cat', path: '', label: 'Catálogo', movable: false, movableChildren: [] });
+  panel.remoteKey('delete');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((b: any) => b.id)).toEqual(['intro', 'fin']);
 });

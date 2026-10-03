@@ -186,7 +186,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
-    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); return; }
+    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); bocetoPanel.resync(); return; }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-size' && Number.isFinite(event.data.height)) {
       const next = Math.min(20000, Math.max(360, Number(event.data.height)));
       if (Math.abs(next - canvasHeight) > 24) { canvasHeight = next; applyCanvas(); }
@@ -206,13 +206,13 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
-      if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string') bocetoPanel.remoteSelect(event.data.id);
+      if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string' && event.data.id.length <= 40) bocetoPanel.remoteSelect(event.data.id, typeof event.data.path === 'string' && /^([a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4})?$/.test(event.data.path) ? event.data.path : '');
       if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);
       if (event.data.type === 'pagosya:boceto-text' && typeof event.data.id === 'string' && typeof event.data.field === 'string' && typeof event.data.value === 'string') bocetoPanel.remoteText(event.data.id, event.data.field, event.data.value.slice(0, 1000));
-      if (event.data.type === 'pagosya:boceto-el-reorder' && typeof event.data.id === 'string' && Array.isArray(event.data.order)) bocetoPanel.remoteElReorder(event.data.id, event.data.order.filter((key: unknown): key is string => typeof key === 'string').slice(0, 12));
       if (event.data.type === 'pagosya:boceto-el-move' && typeof event.data.id === 'string' && typeof event.data.el === 'string' && typeof event.data.x === 'number' && typeof event.data.y === 'number') bocetoPanel.remoteElMove(event.data.id, event.data.el, event.data.x, event.data.y);
+      if (event.data.type === 'pagosya:boceto-node-move' && typeof event.data.id === 'string' && typeof event.data.path === 'string' && /^[a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4}$/.test(event.data.path) && Array.isArray(event.data.order) && event.data.order.length <= 12 && event.data.order.every((key: unknown) => typeof key === 'string' && /^[a-zA-Z0-9]{1,20}$/.test(key))) bocetoPanel.remoteNodeMove(event.data.id, event.data.path, event.data.order);
+      if (event.data.type === 'pagosya:boceto-key' && ['up', 'down', 'delete'].includes(event.data.key)) bocetoPanel.remoteKey(event.data.key);
       if (event.data.type === 'pagosya:boceto-photo' && typeof event.data.id === 'string' && typeof event.data.slot === 'string') bocetoPanel.remotePhoto(event.data.id, event.data.slot);
-      if (event.data.type === 'pagosya:boceto-swap' && typeof event.data.id === 'string') bocetoPanel.remoteSwap(event.data.id);
       return;
     }
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
@@ -236,7 +236,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }

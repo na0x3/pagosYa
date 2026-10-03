@@ -2,6 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
+import { sketchApplyMove, sketchCanMove, sketchFindNode, sketchNodeTree, sketchRemoveNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -9,8 +10,9 @@ import { prepareSourceImage } from './source-images';
 
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; account?: any; blocks: any[] };
-type BlockApply = { bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
-type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply> };
+type BlockApply = { layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
+type SelectionPayload = { id: string; path: string; label: string; movable: boolean; movableChildren: string[] };
+type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
 type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void };
 
@@ -31,11 +33,6 @@ const ROLE_LABEL: Record<string, string> = { paper: 'Papel', ink: 'Tinta', accen
 const SIZES = ['s', 'm', 'l', 'xl'];
 const TYPE_LABEL: Record<string, string> = { announce: 'Aviso', split: 'Panel doble', steps: 'Pasos', hero: 'Portada', marquee: 'Marquesina', catalog: 'Catálogo', collections: 'Colecciones', story: 'Historia', reviews: 'Reseñas', faq: 'Preguntas', banner: 'Banner', gallery: 'Galería', newsletter: 'Boletín', footer: 'Pie de página', account: 'Cuenta · ingreso y registro' };
 const MARQUEE_GLYPHS = ['·', '✦', '•', '◆', '★'];
-/** The copy elements the canvas can drag, per block type (mirrors SKETCH_EL_ORDER in the API). */
-const EL_ORDER: Record<string, string[]> = {
-  hero: ['badge', 'headline', 'sub', 'actions', 'trust', 'note'],
-  split: ['headline', 'body', 'pills', 'stats', 'boxes', 'actions'],
-};
 /** Item lists the inspector can grow and shrink; text itself is edited on the canvas. */
 const LISTS: Record<string, Array<{ key: string; label: string; max: number; make: () => any; peek: (item: any) => string }>> = {
   account: [{ key: 'perks', label: 'beneficio', max: 4, make: () => ({ icon: 'sparkles', text: 'Un beneficio de tener cuenta' }), peek: item => item.text }],
@@ -95,9 +92,10 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLEl
 export function createBocetoPanel(api: MerchantStudioApi) {
   let host: HTMLElement | null = null, opts: Mount | null = null;
   let sketch: Sketch | null = null, photos: string[] = [], fonts: string[] = [], revision = 0;
-  let selected = '', timer: ReturnType<typeof setTimeout> | null = null, pending = false, note = '';
+  let selected = '', selectedPath = '', timer: ReturnType<typeof setTimeout> | null = null, pending = false, note = '';
   let editSeq = 0, lastSaved = '', statusNode: HTMLElement | null = null, rootNode: HTMLElement | null = null, mountToken = 0;
   let mountedStore = '', mountedRevision = -1;
+  const expanded = new Set<string>();
   // Structural edits (items or blocks added, removed, reordered from the panel) cannot apply live: the next
   // save reloads the preview. Photo swaps apply live as inline data, only for the slots that changed.
   let structural = false;
@@ -142,11 +140,60 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const bg = resolveBg(sketch.palette, block.bg);
       const slots = changedPhotos.get(block.id);
       const photoMap = slots ? Object.fromEntries([...slots].map(slot => [slot, photoSrc(String(getPath(block, slot) || ''))]).filter(([, src]) => src.startsWith('data:image/'))) : undefined;
-      blocks[block.id] = { bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
+      blocks[block.id] = { bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
     }
     changedPhotos.clear();
     opts.apply({ vars, style: { ...DEFAULT_STYLE, ...(sketch.style || {}) }, blocks });
   };
+  const selectedBlock = (): any => (selected ? allBlocks().find(block => block.id === selected) : undefined);
+  function selectionPayload(): SelectionPayload {
+    const block = selectedBlock();
+    if (!block) return { id: '', path: '', label: '', movable: false, movableChildren: [] };
+    const tree = sketchNodeTree(block);
+    const node = selectedPath ? sketchFindNode(tree, selectedPath) : undefined;
+    const children = node ? node.children : selectedPath ? [] : tree;
+    return { id: block.id, path: node ? selectedPath : '', label: node?.label ?? (TYPE_LABEL[block.type] || block.type),
+      movable: node ? sketchCanMove(block, selectedPath) : false, movableChildren: children.filter(child => sketchCanMove(block, child.path)).map(child => child.key) };
+  }
+  const syncSelection = () => { try { opts?.apply?.({ selection: selectionPayload() }); } catch { /* frame gone */ } };
+  /** Point the selection at a path inside a block, falling back to the nearest node that still exists. */
+  function focusNode(id: string, path: string) {
+    const block = allBlocks().find(item => item.id === id);
+    if (!block) { selected = ''; selectedPath = ''; return; }
+    const tree = sketchNodeTree(block);
+    let next = path;
+    while (next && !sketchFindNode(tree, next)) next = next.split('/').slice(0, -1).join('/');
+    selected = id; selectedPath = next; expanded.add(id);
+  }
+  function moveSelection(delta: -1 | 1) {
+    if (!sketch || !selected) return;
+    if (!selectedPath) {
+      const index = sketch.blocks.findIndex(block => block.id === selected);
+      const target = index + delta;
+      if (index === -1 || target < 0 || target >= sketch.blocks.length) return;
+      sketch.blocks.splice(target, 0, sketch.blocks.splice(index, 1)[0]);
+      scheduleStructural(); draw(); return;
+    }
+    const block = selectedBlock();
+    if (!block || !sketchCanMove(block, selectedPath)) return;
+    const parts = selectedPath.split('/'); const key = parts.pop()!; const parentPath = parts.join('/');
+    const tree = sketchNodeTree(block);
+    const siblings = (parentPath ? sketchFindNode(tree, parentPath)?.children ?? [] : tree).filter(node => sketchCanMove(block, node.path)).map(node => node.key);
+    const index = siblings.indexOf(key), target = index + delta;
+    if (index === -1 || target < 0 || target >= siblings.length) return;
+    const order = [...siblings]; order.splice(target, 0, order.splice(index, 1)[0]);
+    if (!sketchApplyMove(block, parentPath, order)) return;
+    if (/^\d+$/.test(key)) selectedPath = [...parts, String(target)].join('/');
+    scheduleStructural(); draw();
+  }
+  function removeSelection() {
+    if (!selected) return;
+    if (!selectedPath) { deleteBlock(selected); return; }
+    const block = selectedBlock();
+    if (!block || !sketchRemoveNode(block, selectedPath)) return;
+    focusNode(selected, selectedPath.split('/').slice(0, -1).join('/'));
+    scheduleStructural(); draw();
+  }
   const schedule = () => { editSeq++; applyLive(); if (timer) clearTimeout(timer); timer = setTimeout(() => void save(), 1200); };
   const scheduleStructural = () => { structural = true; schedule(); };
 
@@ -425,7 +472,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const index = sketch.blocks.findIndex(block => block.id === id);
     if (index === -1) return;
     sketch.blocks.splice(index, 1);
-    if (selected === id) { selected = ''; picker = null; }
+    if (selected === id) { selected = ''; selectedPath = ''; picker = null; }
     scheduleStructural(); draw();
   }
 
@@ -511,6 +558,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (opts.locked) wrap.querySelectorAll('input,select,button:not(.bct-close)').forEach(node => ((node as HTMLInputElement).disabled = true));
     rootNode = wrap;
     host.replaceChildren(wrap);
+    syncSelection();
   }
 
   const setByPath = (block: any, path: string, value: string) => {
@@ -523,24 +571,15 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     node[key] = value.slice(0, MAXLEN[String(leaf)] ?? (path.startsWith('paragraphs') ? 600 : 200));
   };
 
-  // Alt+↑ / Alt+↓ move the selected block; Supr/Backspace delete it (Figma-style), unless typing.
+  // ⌥↑ / ⌥↓ move the selection (block or node); Supr/Backspace removes it (Figma-style), unless typing.
   document.addEventListener('keydown', event => {
     if (!sketch || !selected || !opts || opts.locked || !host?.isConnected) return;
-    if ((event.key === 'Delete' || event.key === 'Backspace') && !event.altKey && !event.metaKey && !event.ctrlKey) {
-      const active = document.activeElement as HTMLElement | null;
-      if (active && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return;
-      event.preventDefault();
-      deleteBlock(selected);
-      return;
-    }
+    const active = document.activeElement as HTMLElement | null;
+    if (active && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return;
+    if ((event.key === 'Delete' || event.key === 'Backspace') && !event.altKey && !event.metaKey && !event.ctrlKey) { event.preventDefault(); removeSelection(); return; }
     if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
-    const index = sketch.blocks.findIndex(block => block.id === selected);
-    if (index === -1) return;
-    const target = index + (event.key === 'ArrowUp' ? -1 : 1);
-    if (target < 0 || target >= sketch.blocks.length) return;
     event.preventDefault();
-    sketch.blocks.splice(target, 0, sketch.blocks.splice(index, 1)[0]);
-    scheduleStructural(); draw();
+    moveSelection(event.key === 'ArrowUp' ? -1 : 1);
   });
 
   return {
@@ -549,49 +588,50 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (!sketch || !/^(photo|items\.\d+\.photo|photos\.\d+)$/.test(slot)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
-      selected = id; picker = { kind: 'photo', blockId: id, slot };
+      if (selected !== id) selectedPath = ''; selected = id; picker = { kind: 'photo', blockId: id, slot };
       draw();
     },
-    /** Two buttons swapped by dragging on the canvas; the DOM already shows the new order. */
-    remoteSwap(id: string) {
+    remoteSelect(id: string, path = '') {
       if (!sketch) return;
+      const before = `${selected}|${selectedPath}`;
+      focusNode(id, path);
+      if (`${selected}|${selectedPath}` !== before) picker = null;
+      draw();
+      if (!/^[a-z0-9-]{1,40}$/.test(selected)) return;
+      host?.querySelector(`[data-boceto-block="${selected}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    },
+    /** A node dragged among its siblings on the canvas; `order` is the siblings' keys as the canvas now shows them. */
+    remoteNodeMove(id: string, path: string, order: string[]) {
+      if (!sketch || opts?.locked || !path || order.length > 12) return;
       const block = allBlocks().find(item => item.id === id);
-      if (!block || !['hero', 'split'].includes(block.type)) return;
-      if (block.swap) delete block.swap; else block.swap = true;
-      selected = id; schedule(); draw();
+      if (!block || !sketchCanMove(block, path)) return;
+      const parts = path.split('/'); const key = parts.pop()!;
+      const result = sketchApplyMove(block, parts.join('/'), order);
+      if (!result) return;
+      focusNode(id, /^\d+$/.test(key) ? [...parts, String(order.indexOf(key))].join('/') : path);
+      if (result === 'reload') scheduleStructural(); else schedule();
+      draw();
     },
-    remoteSelect(id: string) {
-      if (!sketch) return;
-      if (selected !== id) picker = null;
-      selected = id; draw();
-      if (!/^[a-z0-9-]{1,40}$/.test(id)) return;
-      host?.querySelector(`[data-boceto-block="${id}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    remoteKey(key: 'up' | 'down' | 'delete') {
+      if (!sketch || !selected || opts?.locked) return;
+      if (key === 'delete') removeSelection(); else moveSelection(key === 'up' ? -1 : 1);
     },
+    /** After the preview reloads: push the live look and the selection again. */
+    resync() { applyLive(); syncSelection(); },
     remoteReorder(id: string, index: number) {
       if (!sketch) return;
       const from = sketch.blocks.findIndex(block => block.id === id);
       if (from === -1) return;
       const [block] = sketch.blocks.splice(from, 1);
       sketch.blocks.splice(Math.max(0, Math.min(index, sketch.blocks.length)), 0, block);
-      selected = id; schedule(); draw();
+      if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
     },
     remoteText(id: string, field: string, value: string) {
       if (!sketch || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
       setByPath(block, field, value);
-      selected = id; schedule(); draw();
-    },
-    /** A copy-element drag inside a block: keep the visible order, append the hidden elements. */
-    remoteElReorder(id: string, order: string[]) {
-      if (!sketch) return;
-      const block = allBlocks().find(item => item.id === id);
-      const allowed = block ? EL_ORDER[block.type] : undefined;
-      if (!block || !allowed) return;
-      const kept = [...new Set(order.filter(key => allowed.includes(key)))];
-      const full = [...kept, ...allowed.filter(key => !kept.includes(key))];
-      if (full.every((key, index) => key === allowed[index])) delete block.order; else block.order = full;
-      selected = id; schedule(); draw();
+      if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
     },
     /** A sticker drag: percentages inside its positioning box, clamped like the API repair. */
     remoteElMove(id: string, elKey: string, x: number, y: number) {
@@ -599,7 +639,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const block = allBlocks().find(item => item.id === id);
       if (!block || !['hero', 'split', 'banner'].includes(block.type)) return;
       block.stickerPos = { x: Math.min(100, Math.max(0, Math.round(x * 10) / 10)), y: Math.min(100, Math.max(0, Math.round(y * 10) / 10)) };
-      selected = id; schedule(); draw();
+      if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
     },
     mount(target: HTMLElement, options: Mount) {
       host = target; opts = options; note = '';
