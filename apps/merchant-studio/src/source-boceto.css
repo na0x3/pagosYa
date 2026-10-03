@@ -124,7 +124,9 @@
 .bct-tabs__tab { border: 0; background: transparent; color: #bdbdbd; border-radius: 4px; padding: 4px 10px; font: inherit; font-weight: 600; cursor: pointer; }
 .bct-tabs__tab.is-on { background: #4d4d4d; color: #fff; }
 .bct-panel.is-yapi { bottom: auto; padding: 0; overflow: hidden; width: var(--bct-right, 360px); }
-.studio-workspace.is-boceto.is-boceto-yapi .agent-panel { display: grid; position: fixed; top: 47px; right: 0; bottom: 0; width: var(--bct-right, 360px); z-index: 40; border-left: 1px solid #3c3c3c; }
+/* Pinned between the Studio header and the bottom of the screen: the workspace's `height: 100%` (and the phone min-height)
+ * would push the composer, with its photo and send buttons, below the window. */
+.studio-workspace.is-boceto.is-boceto-yapi .agent-panel { display: grid; position: fixed; top: 47px; right: 0; bottom: 0; height: auto; min-height: 0; max-height: none; width: var(--bct-right, 360px); z-index: 40; border-left: 1px solid #3c3c3c; }
 
 /* Generar sitio is final, so it asks once. */
 .boceto-confirm { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(0,0,0,.45); }
