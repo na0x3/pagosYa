@@ -1,7 +1,8 @@
 /* Boceto mode of the Studio preview (sketch block editor). Injected into the sandboxed preview, never into a
  * published site. Idle until the Studio sends { type: 'pagosya:boceto-mode', on: true }. While on:
  *   - hovering a [data-skb] section outlines it and shows a drag handle;
- *   - clicking a section posts pagosya:boceto-select;
+ *   - clicking drills down block → group → element (Figma) and posts pagosya:boceto-select { id, path };
+ *     Esc selects the parent, Enter the first child;
  *   - dragging the handle (or grabbing anywhere) reorders sections live and posts pagosya:boceto-reorder { id, index };
  *   - dragging a [data-skb-el] copy element reorders it inside its block and posts pagosya:boceto-el-reorder { id, order };
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
@@ -9,6 +10,7 @@
 (function () {
   var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, editing = null, elDragging = null;
   var photoChip = null, photoTarget = null;
+  var selection = { id: '', path: '', label: '', movable: false, movableChildren: [] }, boxes = [], hoverBox = null;
 
   /** "Cambiar foto": a chip over the hovered photo; clicking it asks the Studio to open its photo picker. */
   function placePhotoChip(img) {
@@ -65,10 +67,76 @@
   function sections() { return Array.prototype.slice.call(document.querySelectorAll('[data-skb]')); }
   function sectionOf(node) { return node && node.closest ? node.closest('[data-skb]') : null; }
 
+  function selectable(node) { return !!(node && node.nodeType === 1 && (node.hasAttribute('data-skb-group') || node.hasAttribute('data-skb-node') || node.hasAttribute('data-skb-el'))); }
+  function segmentOf(node) { return node.getAttribute('data-skb-group') || node.getAttribute('data-skb-node') || node.getAttribute('data-skb-el'); }
+  /** The nearest selectable ancestor, or the section itself. */
+  function containerOf(node) { var p = node.parentElement; while (p && !selectable(p) && !p.hasAttribute('data-skb')) p = p.parentElement; return p; }
+  function pathOf(node) { var parts = []; for (var n = node; n && !n.hasAttribute('data-skb'); n = n.parentElement) if (selectable(n)) parts.unshift(segmentOf(n)); return parts.join('/'); }
+  function childrenOf(node) { return Array.prototype.slice.call(node.querySelectorAll('[data-skb-group],[data-skb-node],[data-skb-el]')).filter(function (child) { return containerOf(child) === node; }); }
+  function nodeAt(section, path) {
+    var node = section;
+    if (!path || !node) return node;
+    var parts = path.split('/');
+    for (var i = 0; i < parts.length && node; i++) node = childrenOf(node).filter(function (child) { return segmentOf(child) === parts[i]; })[0] || null;
+    return node;
+  }
+  function sectionById(id) { return /^[a-z0-9-]{1,40}$/.test(id) ? document.querySelector('[data-skb="' + id + '"]') : null; }
+  /** Figma drill-down: the next deeper node toward the target, or the child of the deepest common ancestor. */
+  function nextSelection(target) {
+    var section = sectionOf(target);
+    if (!section) return null;
+    var id = section.getAttribute('data-skb');
+    var chain = [];
+    for (var n = target; n && n !== section; n = n.parentElement) if (selectable(n)) chain.unshift(n);
+    var paths = [''].concat(chain.map(pathOf));
+    if (selection.id !== id) return { id: id, path: '' };
+    var k = 0;
+    for (var i = 1; i < paths.length; i++) if (selection.path === paths[i] || selection.path.indexOf(paths[i] + '/') === 0) k = i;
+    return { id: id, path: paths[Math.min(k + 1, paths.length - 1)] };
+  }
+  function select(id, path) {
+    selection = { id: id, path: path, label: '', movable: false, movableChildren: [] };
+    drawOverlay();
+    parent.postMessage({ type: 'pagosya:boceto-select', id: id, path: path }, '*');
+  }
+  function clearBoxes() { boxes.splice(0).forEach(function (box) { box.remove(); }); }
+  function makeBox(node, kind, label) {
+    var rect = node.getBoundingClientRect();
+    var box = document.createElement('div');
+    box.setAttribute('data-boceto-box', kind);
+    box.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;box-sizing:border-box;left:' + rect.left + 'px;top:' + rect.top + 'px;width:' + rect.width + 'px;height:' + rect.height + 'px;border:' +
+      (kind === 'selected' ? '2px solid #1f6feb' : kind === 'hover' ? '1px solid #1f6feb' : '1px dashed rgba(31,111,235,.75)');
+    if (label) {
+      var tag = document.createElement('span');
+      tag.textContent = label;
+      tag.style.cssText = 'position:absolute;left:-2px;top:-21px;font:600 11px/1 system-ui;padding:4px 7px;border-radius:4px;background:#1f6feb;color:#fff;white-space:nowrap';
+      box.append(tag);
+    }
+    document.body.append(box);
+    return box;
+  }
+  function drawOverlay() {
+    clearBoxes();
+    if (!on || !selection.id || dragging || elDragging) return;
+    var section = sectionById(selection.id);
+    var node = section && nodeAt(section, selection.path);
+    if (!node) return;
+    boxes.push(makeBox(node, 'selected', selection.label));
+    childrenOf(node).forEach(function (child) { boxes.push(makeBox(child, 'child')); });
+  }
+  function placeHoverBox(target) {
+    if (hoverBox) { hoverBox.remove(); hoverBox = null; }
+    if (!on || !target || dragging || elDragging || editing) return;
+    var next = nextSelection(target);
+    var node = next && nodeAt(sectionById(next.id), next.path);
+    if (!node || (next.id === selection.id && next.path === selection.path)) return;
+    hoverBox = makeBox(node, 'hover');
+  }
+
   function ensure() {
     if (ready) return; ready = true;
     var style = document.createElement('style');
-    style.textContent = '[data-boceto-hover]{outline:2px solid #1f6feb!important;outline-offset:-2px!important}' +
+    style.textContent = '' +
       '[data-boceto-dragging]{opacity:.35!important}' +
       '[data-boceto-editing]{outline:2px dashed #1f6feb!important;outline-offset:-2px!important;cursor:text!important}';
     document.head.append(style);
@@ -264,6 +332,7 @@
   document.addEventListener('pointerover', function (event) {
     if (!on || dragging || elDragging || editing) return;
     setHovered(sectionOf(event.target));
+    placeHoverBox(event.target);
     if (event.target === photoChip) return;
     var photo = event.target instanceof Element ? event.target.closest('img[data-skb-photo]') : null;
     if (photo || (photoChip && photoChip.style.display !== 'none' && !(photoTarget && photoTarget.contains(event.target)))) placePhotoChip(photo);
@@ -295,14 +364,16 @@
     document.addEventListener('pointermove', arm, true);
     document.addEventListener('pointerup', cleanup, true);
   }, true);
-  document.addEventListener('scroll', function () { placeHandle(); if (photoTarget) placePhotoChip(photoTarget); }, true);
+  document.addEventListener('scroll', function () { placeHandle(); if (photoTarget) placePhotoChip(photoTarget); drawOverlay(); }, true);
+  window.addEventListener('resize', drawOverlay);
   document.addEventListener('click', function (event) {
     if (!on || dragging) return;
     if (event.target === handle || editing) return;
     var section = sectionOf(event.target);
     if (!section) return;
     event.preventDefault(); event.stopImmediatePropagation();
-    parent.postMessage({ type: 'pagosya:boceto-select', id: section.getAttribute('data-skb') }, '*');
+    var next = nextSelection(event.target);
+    if (next) select(next.id, next.path);
   }, true);
   document.addEventListener('dblclick', function (event) {
     if (!on) return;
@@ -316,6 +387,19 @@
     if (event.key === 'Enter') { event.preventDefault(); stopEditing(true); }
     if (event.key === 'Escape') { event.preventDefault(); stopEditing(false); }
   }, true);
+
+  document.addEventListener('keydown', function (event) {
+    if (!on || editing || !selection.id) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (!selection.path) select('', '');
+      else select(selection.id, selection.path.split('/').slice(0, -1).join('/'));
+    } else if (event.key === 'Enter') {
+      var section = sectionById(selection.id), node = section && nodeAt(section, selection.path);
+      var kids = node ? childrenOf(node) : [];
+      if (kids.length) { event.preventDefault(); select(selection.id, pathOf(kids[0])); }
+    }
+  }, true);
   document.addEventListener('focusout', function () { if (editing) stopEditing(true); }, true);
 
   window.addEventListener('message', function (event) {
@@ -328,6 +412,11 @@
       var style = event.data.style || {};
       if (site) for (var styleKey in style) {
         if (/^(radius|buttons|cards|header|footer)$/.test(styleKey) && /^[a-z]{3,10}$/.test(String(style[styleKey]))) site.setAttribute('data-skb-' + styleKey, style[styleKey]);
+      }
+      var sel = event.data.selection;
+      if (sel && typeof sel === 'object' && typeof sel.id === 'string' && typeof sel.path === 'string' && sel.path.length <= 120) {
+        selection = { id: sel.id, path: sel.path, label: typeof sel.label === 'string' ? sel.label.slice(0, 60) : '', movable: sel.movable === true,
+          movableChildren: Array.isArray(sel.movableChildren) ? sel.movableChildren.filter(function (key) { return typeof key === 'string' && key.length <= 20; }) : [] };
       }
       var blocks = event.data.blocks || {};
       for (var id in blocks) {
@@ -357,7 +446,20 @@
         if (typeof spec.cardRatio === 'string' && /^[0-9] \/ [0-9]$/.test(spec.cardRatio)) section.style.setProperty('--skb-card-ratio', spec.cardRatio);
         if (spec.cardDesc === 'on' || spec.cardDesc === 'off') section.setAttribute('data-skb-card-desc', spec.cardDesc);
         if (spec.cardAdd === 'on' || spec.cardAdd === 'off') section.setAttribute('data-skb-card-add', spec.cardAdd);
+        if (spec.layout && typeof spec.layout === 'object') {
+          var setOrClear = function (node, name, value, pattern) { if (typeof value === 'string' && pattern.test(value)) node.setAttribute(name, value); else node.removeAttribute(name); };
+          var layoutSpec = spec.layout, owner = section;
+          Array.prototype.slice.call(section.querySelectorAll('[data-skb-group]')).forEach(function (groupNode) {
+            if (sectionOf(groupNode) !== owner) return;
+            var entry = layoutSpec[groupNode.getAttribute('data-skb-group')] || {};
+            setOrClear(groupNode, 'data-skb-gap', entry.gap, /^(s|m|l)$/);
+            setOrClear(groupNode, 'data-skb-dir', entry.dir, /^(row|column)$/);
+            setOrClear(groupNode, 'data-skb-galign', entry.align, /^(start|center|end)$/);
+            setOrClear(groupNode, 'data-skb-valign', entry.valign, /^(start|center|end)$/);
+          });
+        }
       }
+      drawOverlay();
       return;
     }
     if (event.data.type !== 'pagosya:boceto-mode') return;
@@ -383,7 +485,8 @@
       }
     }
     if (on) ensure();
-    if (!on) { setHovered(null); placePhotoChip(null); if (editing) stopEditing(false); }
+    drawOverlay();
+    if (!on) { setHovered(null); placePhotoChip(null); clearBoxes(); placeHoverBox(null); if (editing) stopEditing(false); }
     placeHandle();
   });
   try { parent.postMessage({ type: 'pagosya:boceto-ready' }, '*'); } catch (error) { /* no parent */ }

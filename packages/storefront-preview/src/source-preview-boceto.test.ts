@@ -8,8 +8,8 @@ import { sourcePreviewDocument } from './source-preview';
 const { JSDOM } = createRequire(join(__dirname, '../../../apps/checkout/package.json'))('jsdom');
 
 const page = `<!doctype html><html><body><main id="contenido">
-  <section data-skb="h" id="skb-h"><div class="copy"><h1 data-skb-el="headline" data-skb-field="headline">Algo dulce</h1><p data-skb-el="sub" data-skb-field="sub">sub</p><div data-skb-el="actions"><a href="#">cta</a></div></div><div class="media"><p data-skb-el="sticker" data-skb-field="sticker">Fresco</p></div></section>
-  <section data-skb="c" id="skb-c"><h2 data-skb-field="title">Productos</h2></section>
+  <section data-skb="h" id="skb-h"><div class="copy" data-skb-group="copy"><h1 data-skb-el="headline" data-skb-field="headline">Algo dulce</h1><p data-skb-el="sub" data-skb-field="sub">sub</p><div data-skb-el="actions" data-skb-group="actions"><a data-skb-node="cta" href="#">cta</a><a data-skb-node="cta2" href="#">cta2</a></div></div><div class="media" data-skb-group="media"><img data-skb-node="photo" data-skb-photo="photo" src="x.png"><p data-skb-el="sticker" data-skb-field="sticker">Fresco</p></div></section>
+  <section data-skb="c" id="skb-c"><div data-skb-group="head"><h2 data-skb-node="title" data-skb-field="title">Productos</h2></div></section>
 </main></body></html>`;
 const snapshot = { schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [{ path: 'index.html', content: page }] } as never;
 
@@ -26,14 +26,60 @@ function load() {
 }
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-it('stays inert until activated, then clicking a section posts boceto-select', async () => {
+const clickOn = (w: any, selector: string) => w.document.querySelector(selector).dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+const selects = (posted: any[]) => posted.filter(message => message.type === 'pagosya:boceto-select').map(message => [message.id, message.path]);
+
+it('stays inert until activated, then clicks drill down block → group → element', async () => {
   const { w, posted, send } = load();
-  const click = () => w.document.querySelector('[data-skb="h"] h1').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
-  click(); await tick();
+  clickOn(w, '[data-skb-node="cta"]'); await tick();
   expect(posted).toHaveLength(0);
   send({ type: 'pagosya:boceto-mode', on: true }); await tick();
-  click(); await tick();
-  expect(posted).toEqual([{ type: 'pagosya:boceto-select', id: 'h' }]);
+  for (let i = 0; i < 4; i++) { clickOn(w, '[data-skb-node="cta"]'); await tick(); }
+  expect(selects(posted)).toEqual([['h', ''], ['h', 'copy'], ['h', 'copy/actions'], ['h', 'copy/actions/cta']]);
+});
+
+it('a click elsewhere in the same block selects the child of the common ancestor', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/actions/cta', label: 'Botón principal', movable: true, movableChildren: [] } }); await tick();
+  clickOn(w, '[data-skb-el="sub"]'); await tick();
+  clickOn(w, '[data-skb="c"] h2'); await tick();
+  expect(selects(posted)).toEqual([['h', 'copy/sub'], ['c', '']]);
+});
+
+it('clicking block padding selects the block; Esc goes up, Enter goes into the first child', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  clickOn(w, '[data-skb="h"]'); await tick();
+  const key = (k: string) => w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+  key('Enter'); await tick();
+  key('Escape'); await tick();
+  key('Escape'); await tick();
+  expect(selects(posted)).toEqual([['h', ''], ['h', 'copy'], ['h', ''], ['', '']]);
+});
+
+it('draws the selected box with its tag and dotted boxes for its children; nothing for a stale path', async () => {
+  const { w, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy', label: 'Columna de texto', movable: true, movableChildren: ['headline', 'sub', 'actions'] } }); await tick();
+  const selected = w.document.querySelectorAll('[data-boceto-box="selected"]');
+  expect(selected).toHaveLength(1);
+  expect(selected[0].textContent).toBe('Columna de texto');
+  expect(w.document.querySelectorAll('[data-boceto-box="child"]')).toHaveLength(3);
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/gone', label: 'x', movable: false, movableChildren: [] } }); await tick();
+  expect(w.document.querySelectorAll('[data-boceto-box]')).toHaveLength(0);
+});
+
+it('live layout sets and clears group data attributes', async () => {
+  const { w, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { layout: { actions: { dir: 'column', gap: 'l', align: 'center' }, copy: { valign: 'end', gap: 'zz' } } } } }); await tick();
+  const actions = w.document.querySelector('[data-skb-group="actions"]');
+  expect([actions.getAttribute('data-skb-dir'), actions.getAttribute('data-skb-gap'), actions.getAttribute('data-skb-galign')]).toEqual(['column', 'l', 'center']);
+  const copy = w.document.querySelector('[data-skb-group="copy"]');
+  expect([copy.getAttribute('data-skb-valign'), copy.hasAttribute('data-skb-gap')]).toEqual(['end', false]);
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { layout: {} } } }); await tick();
+  expect(actions.hasAttribute('data-skb-dir')).toBe(false);
 });
 
 it('dragging a copy element reorders it inside its block and posts the visible order', async () => {
