@@ -600,6 +600,27 @@
     event.preventDefault(); event.stopImmediatePropagation();
     startEditing(element);
   }, true);
+  /** Right-click: the Studio draws its own menu. The target is a picked node under the pointer (so a multi-selection
+   * stays), else the drill-down target, else nothing (page background). */
+  document.addEventListener('contextmenu', function (event) {
+    if (!on) return;
+    event.preventDefault(); event.stopPropagation();
+    if (editing) return;
+    var section = sectionOf(event.target), pick = { id: '', path: '' };
+    if (section) {
+      var picked = [selection].concat(selection.others || []).filter(function (item) {
+        if (!item.id) return false;
+        var itemSection = sectionById(item.id), node = itemSection && nodeAt(itemSection, item.path);
+        return node && node !== itemSection && node.contains(event.target);
+      })[0];
+      pick = picked ? { id: picked.id, path: picked.path } : (nextSelection(event.target) || pick);
+    }
+    var r = section ? section.getBoundingClientRect() : null;
+    parent.postMessage({ type: 'pagosya:boceto-context', id: pick.id, path: pick.path,
+      x: event.clientX + (window.scrollX || 0), y: event.clientY + (window.scrollY || 0),
+      fx: r && r.width ? clampPct(((event.clientX - r.left) / r.width) * 100, 0) : null,
+      fy: r && r.height ? clampPct(((event.clientY - r.top) / r.height) * 100, 0) : null }, '*');
+  }, true);
   document.addEventListener('keydown', function (event) {
     if (!editing) return;
     // The key only finishes the edit: stop it here so the selection handler below does not also move the selection.

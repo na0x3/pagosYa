@@ -475,3 +475,16 @@ it('Shift+click adds the clicked part; every pick from the Studio gets a selecte
   w.document.querySelector('[data-skb-el="sub"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true })); await tick();
   expect(posted.at(-1)).toEqual({ type: 'pagosya:boceto-select', id: 'h', path: 'copy/sub', add: true });
 });
+
+it('right-click never shows the browser menu: it posts where it happened and what is under it', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  const event = new w.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 100, clientY: 150 });
+  w.document.querySelector('[data-skb-el="sub"]').dispatchEvent(event); await tick();
+  expect(event.defaultPrevented).toBe(true);
+  expect(posted.at(-1)).toEqual({ type: 'pagosya:boceto-context', id: 'h', path: '', x: 100, y: 150, fx: 10, fy: 25 });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: '', others: [{ id: 'h', path: 'copy/headline' }] } }); await tick();
+  w.document.querySelector('[data-skb-el="headline"]').dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 })); await tick();
+  expect(posted.at(-1)).toMatchObject({ type: 'pagosya:boceto-context', id: 'h', path: 'copy/headline' });
+});

@@ -760,3 +760,46 @@ it('multi: picks whose part is gone drop out on the next draw', async () => {
   panel.remoteText('intro', 'sub', '');
   expect(lastSelection().others ?? []).toEqual([]);
 });
+
+const menuLabels = () => [...document.querySelectorAll('.bct-menu:not(.bct-menu--sub) > .bct-menu__item')].map(item => [item.firstChild!.textContent, item.classList.contains('is-disabled')]);
+const menuItem = (label: string) => [...document.querySelectorAll('.bct-menu__item')].find(item => item.firstChild!.textContent === label) as HTMLElement;
+
+it('menu: right-click selects the part and lists what applies to it', async () => {
+  const panel = await mount();
+  panel.remoteContext({ id: 'intro', path: 'copy/sub', x: 100, y: 100, fx: 20, fy: 30 });
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy/sub' });
+  expect(menuLabels()).toEqual([
+    ['Copiar', true], ['Pegar aquí', true], ['Duplicar', true], ['Eliminar', false],
+    ['Subir', false], ['Bajar', false], ['Seleccionar bloque', false],
+    ['Volver a su lugar', true], ['Giro', true], ['Insertar', false],
+    ['Deshacer', true], ['Rehacer', true],
+  ]);
+  menuItem('Seleccionar bloque').click();
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: '' });
+});
+
+it('menu: right-click inside a multi-selection keeps it; Insertar drops the element where the menu opened', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'intro', path: 'copy/sub' }, { id: 'intro', path: 'copy/headline' }], false);
+  panel.remoteContext({ id: 'intro', path: 'copy/sub', x: 100, y: 100, fx: 12.34, fy: 56 });
+  expect(lastSelection().others).toHaveLength(1);
+  (menuItem('Insertar').querySelector('.bct-menu__item') as HTMLElement).click(); // Emoji
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].extras[0]).toMatchObject({ kind: 'emoji', x: 12.3, y: 56 });
+});
+
+it('menu: Giro acts on free parts; Capas rows open the menu too; locked keeps only Seleccionar bloque', async () => {
+  const panel = await mount();
+  panel.remoteFree('intro', 'copy/sub', 10, 10);
+  panel.remoteContext({ id: 'intro', path: 'copy/sub', x: 5, y: 5 });
+  (menuItem('Giro').querySelectorAll('.bct-menu__item')[2] as HTMLElement).click(); // 8°
+  expect(lastLook().blocks.intro.free['copy/sub']).toEqual({ x: 10, y: 10, r: 8 });
+  (host.querySelector('[data-boceto-block="cat"]') as HTMLElement).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+  expect(lastSelection()).toMatchObject({ id: 'cat', path: '' });
+  expect(menuLabels().find(([label]) => label === 'Eliminar')).toEqual(['Eliminar', false]);
+  const locked = createBocetoPanel(new MerchantStudioApi());
+  locked.mount(host, { storeId: 's1', version: version(), locked: true, saved: vi.fn(), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  locked.remoteContext({ id: 'intro', path: 'copy/sub', x: 5, y: 5 });
+  expect(menuLabels().filter(([, disabled]) => !disabled).map(([label]) => label)).toEqual(['Seleccionar bloque']);
+});

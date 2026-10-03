@@ -3,6 +3,7 @@ import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
 import { normalizePicks, togglePick, type BocetoPick } from './boceto-selection';
+import { openBocetoMenu, type MenuItem } from './boceto-menu';
 import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_FREE_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
@@ -284,6 +285,65 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (!block || !sketchRemoveNode(block, selectedPath)) return;
     focusNode(selected, selectedPath.split('/').slice(0, -1).join('/'));
     scheduleStructural(); draw();
+  }
+  /** Free spots and inserted elements among the picks, with the object that holds each spot. */
+  const spotsOf = (list: BocetoPick[]) => list.flatMap(pick => {
+    const block = blockOf(pick.id);
+    const extra = pick.path.startsWith('extras/');
+    const spot = extra ? (block?.extras || []).find((item: any) => `extras/${item.id}` === pick.path) : block?.free?.[pick.path];
+    return spot ? [{ pick, block, spot, extra }] : [];
+  });
+  function turnPicks(r: number) {
+    const spots = spotsOf(picks());
+    if (!spots.length || opts?.locked) return;
+    for (const { spot } of spots) { if (r) spot.r = r; else delete spot.r; }
+    schedule(); draw();
+  }
+  function unfreePicks() {
+    const spots = spotsOf(picks()).filter(entry => !entry.extra);
+    if (!spots.length || opts?.locked) return;
+    for (const { block, pick } of spots) sketchUnfree(block, pick.path);
+    schedule(); draw();
+  }
+  const canRemovePick = (pick: BocetoPick) => { const block = blockOf(pick.id); return Boolean(block) && (pick.path ? sketchCanRemove(block, pick.path) : block.type !== 'account'); };
+  function canMovePicks(): boolean {
+    const list = picks();
+    if (list.length !== 1 || !sketch) return false;
+    const [pick] = list, block = blockOf(pick.id);
+    return pick.path ? Boolean(block) && sketchCanMove(block, pick.path) : sketch.blocks.some(item => item.id === pick.id);
+  }
+  type MenuAt = { block?: string; fx?: number; fy?: number };
+  function menuItems(at: MenuAt): MenuItem[] {
+    const list = picks(), locked = Boolean(opts?.locked);
+    const single = list.length === 1 ? list[0] : null;
+    const spots = spotsOf(list);
+    const target = blockOf(at.block || list.at(-1)?.id || '');
+    const canInsert = !locked && Boolean(target) && target.type !== 'account' && (target.extras?.length ?? 0) < SKETCH_EXTRA_MAX;
+    const turns: Array<[string, string]> = [['0', '0°'], ['-8', '−8°'], ['8', '8°'], ['15', '15°']];
+    return [
+      { label: 'Copiar', shortcut: '⌘C', disabled: true },
+      { label: 'Pegar aquí', shortcut: '⌘V', disabled: true },
+      { label: 'Duplicar', shortcut: '⌘D', disabled: true },
+      { label: 'Eliminar', shortcut: '⌫', disabled: locked || !list.some(canRemovePick), run: () => removeSelection() },
+      'separator',
+      { label: 'Subir', shortcut: '⌥↑', disabled: locked || !canMovePicks(), run: () => moveSelection(-1) },
+      { label: 'Bajar', shortcut: '⌥↓', disabled: locked || !canMovePicks(), run: () => moveSelection(1) },
+      { label: 'Seleccionar bloque', disabled: !single?.path, run: () => { setPicks([{ id: single!.id, path: '' }]); draw(); } },
+      'separator',
+      { label: 'Volver a su lugar', disabled: locked || !spots.some(entry => !entry.extra), run: () => unfreePicks() },
+      { label: 'Giro', disabled: locked || !spots.length, items: turns.map(([value, label]) => ({ label, run: () => turnPicks(Number(value)) })) },
+      { label: 'Insertar', disabled: !canInsert, items: EXTRA_KINDS.map(({ kind, label }) => ({ label, disabled: kind === 'photo' && !photos.length, run: () => insertExtra(target, kind, at.fx, at.fy) })) },
+      'separator',
+      { label: 'Deshacer', shortcut: '⌘Z', disabled: locked || !undoSteps.length, run: () => stepBack() },
+      { label: 'Rehacer', shortcut: '⇧⌘Z', disabled: locked || !redoSteps.length, run: () => stepBack(true) },
+    ];
+  }
+  /** Figma: a right-click outside the selection selects what was clicked first; on the page background, nothing. */
+  function openMenuOn(pick: BocetoPick | null, x: number, y: number, at: MenuAt) {
+    if (!pick) setPicks([]);
+    else if (!isPicked(pick.id, pick.path)) setPicks([pick]);
+    draw();
+    openBocetoMenu(host?.ownerDocument ?? document, x, y, menuItems(at));
   }
   // Ctrl/⌘+Z: every edit keeps the boceto as it was before it (up to 50 steps). A colour dragged in its picker is one step.
   let undoSteps: string[] = [], redoSteps: string[] = [], baseline = '', stepKey = '', lastStepKey = '';
@@ -582,14 +642,15 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     });
     return el('div', { className: 'bct-list' }, [el('p', { className: 'bct-list__title', text: 'Insertar' }), el('div', { className: 'bct-chips' }, chips)]);
   }
-  function insertExtra(block: any, kind: string) {
+  function insertExtra(block: any, kind: string, x = 45, y = 40) {
     const extras: any[] = Array.isArray(block.extras) ? block.extras : (block.extras = []);
     if (extras.length >= SKETCH_EXTRA_MAX) return;
     let id = '';
     while (!id || extras.some(extra => extra.id === id)) id = `e${Math.random().toString(36).slice(2, 8).padEnd(4, '0')}`;
     const value: Record<string, string> = { emoji: '✨', text: 'Escribe aquí', button: 'Pedir ahora', photo: photos[0] ?? '', icon: 'sparkles' };
     const width: Record<string, number> = { emoji: 8, photo: 22, icon: 6 };
-    extras.push({ id, kind, value: value[kind], x: 45, y: 40, ...(width[kind] ? { w: width[kind] } : {}), ...(kind === 'button' ? { href: 'checkout.html' } : {}) });
+    const spot = sketchFreePos({ x, y }) ?? { x: 45, y: 40 };
+    extras.push({ id, kind, value: value[kind], x: spot.x, y: spot.y, ...(width[kind] ? { w: width[kind] } : {}), ...(kind === 'button' ? { href: 'checkout.html' } : {}) });
     forgottenBlock = null; selected = block.id; selectedPath = `extras/${id}`; expanded.add(block.id); picker = null;
     scheduleStructural(); draw();
   }
@@ -768,6 +829,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
         if (event.shiftKey) { setPicks(togglePick(picks(), { id: block.id, path: node.path })); draw(); return; }
         forgottenBlock = null; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw();
       });
+      item.addEventListener('contextmenu', event => { event.preventDefault(); event.stopPropagation(); openMenuOn({ id: block.id, path: node.path }, event.clientX, event.clientY, { block: block.id }); });
       list.append(item);
       if (node.children.length) list.append(nodeList(block, node.children, depth + 1));
     }
@@ -820,6 +882,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       item.append(head);
       if (expanded.has(block.id)) item.append(nodeList(block, sketchNodeTree(block), 1));
       item.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-block__tools, .bct-tree, .bct-block__toggle')) return; pickBlock(block.id, (event as MouseEvent).shiftKey); });
+      item.addEventListener('contextmenu', event => { event.preventDefault(); openMenuOn({ id: block.id, path: '' }, (event as MouseEvent).clientX, (event as MouseEvent).clientY, { block: block.id }); });
       list.append(item);
     });
     layers.append(list);
@@ -831,6 +894,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       entry.append(el('div', { className: 'bct-block__head' }, [treeToggle(sketch.account), swatch, el('span', { className: 'bct-block__name', text: 'Cuenta' }), el('span', { className: 'bct-block__peek', text: 'Ingreso y registro' })]));
       if (expanded.has('account')) entry.append(nodeList(sketch.account, sketchNodeTree(sketch.account), 1));
       entry.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-tree, .bct-block__toggle')) return; pickBlock('account', (event as MouseEvent).shiftKey); });
+      entry.addEventListener('contextmenu', event => { event.preventDefault(); openMenuOn({ id: 'account', path: '' }, (event as MouseEvent).clientX, (event as MouseEvent).clientY, { block: 'account' }); });
       layers.append(el('p', { className: 'bct-layers__group', text: 'Otras páginas' }), entry);
     }
 
@@ -950,6 +1014,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       draw();
       if (!/^[a-z0-9-]{1,40}$/.test(selected)) return;
       host?.querySelector(`[data-boceto-block="${selected}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    },
+    /** A right-click on the board (Studio-window coordinates); `fx`/`fy` are the spot inside that block's section, in %. */
+    remoteContext(at: { id: string; path: string; x: number; y: number; fx?: number; fy?: number }) {
+      if (!sketch) return;
+      const pick = at.id && blockOf(at.id) ? (pickExists({ id: at.id, path: at.path }) ? { id: at.id, path: at.path } : { id: at.id, path: '' }) : null;
+      openMenuOn(pick, at.x, at.y, { block: pick?.id, fx: at.fx, fy: at.fy });
     },
     /** A selection box on the canvas: its picks replace the selection, or join it with Shift. */
     remoteSelectMany(items: BocetoPick[], add: boolean) {

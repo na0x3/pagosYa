@@ -6,6 +6,7 @@ import { codeFileEditable, codeFileForPage, renderCodeBrowser } from './source-c
 import { composeActionMode } from './source-studio-actions';
 import { createDirectEditor } from './source-direct-editor';
 import { bocetoRevealY, createBocetoPanel } from './source-boceto';
+import { closeBocetoMenu } from './boceto-menu';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
@@ -194,6 +195,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-wheel') {
+      closeBocetoMenu();
       const { dx, dy, ctrl, x, y } = event.data as { dx: number; dy: number; ctrl: boolean; x: number; y: number };
       if (ctrl) {
         // The cursor arrives in iframe-page coordinates; convert to board space so the point
@@ -209,6 +211,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
       const PICK_PATH = /^([a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4})?$/;
       if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string' && event.data.id.length <= 40) bocetoPanel.remoteSelect(event.data.id, typeof event.data.path === 'string' && PICK_PATH.test(event.data.path) ? event.data.path : '', event.data.add === true);
+      if (event.data.type === 'pagosya:boceto-context' && typeof event.data.id === 'string' && event.data.id.length <= 40 && typeof event.data.path === 'string' && PICK_PATH.test(event.data.path) && Number.isFinite(event.data.x) && Number.isFinite(event.data.y)) {
+        const rect = canvasBoard()?.getBoundingClientRect();
+        // The frame shows the whole page unscrolled: board px = translate + page px × zoom.
+        const pct = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+        if (rect) bocetoPanel.remoteContext({ id: event.data.id, path: event.data.path, x: rect.left + canvasX + event.data.x * canvasZoom, y: rect.top + canvasY + event.data.y * canvasZoom, fx: pct(event.data.fx), fy: pct(event.data.fy) });
+      }
       if (event.data.type === 'pagosya:boceto-select-many' && Array.isArray(event.data.items) && event.data.items.length <= 40) bocetoPanel.remoteSelectMany(event.data.items.filter((item: any) => item && typeof item.id === 'string' && /^[a-z0-9-]{1,40}$/.test(item.id) && typeof item.path === 'string' && PICK_PATH.test(item.path)).map((item: any) => ({ id: item.id, path: item.path })), event.data.add === true);
       if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);
       if (event.data.type === 'pagosya:boceto-text' && typeof event.data.id === 'string' && typeof event.data.field === 'string' && typeof event.data.value === 'string') bocetoPanel.remoteText(event.data.id, event.data.field, event.data.value.slice(0, 1000));
