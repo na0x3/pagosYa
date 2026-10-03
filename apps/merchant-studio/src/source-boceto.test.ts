@@ -835,3 +835,29 @@ it('group: several blocks move up/down as a group and delete together, one step 
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['fin']);
 });
+
+it('group style: several blocks share Fondo, Tamaño and Alineación; a change applies to each', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'intro', path: '' }, { id: 'cat', path: '' }], false);
+  expect(host.querySelector('.bct-swatch.is-on')).toBeNull(); // paper and pop: no shared fill
+  (host.querySelectorAll('.bct-swatch')[2] as HTMLElement).click(); // accent
+  ([...host.querySelectorAll('.bct-segment__option')].find(button => button.textContent === 'XL') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-segment__option')].find(button => button.textContent === 'Centro') as HTMLElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  const [intro, cat] = putSketch.mock.calls.at(-1)![1].sketch.blocks;
+  expect([intro.bg, cat.bg, intro.size, cat.size, intro.align, cat.align]).toEqual(['accent', 'accent', 'xl', 'xl', 'center', 'center']);
+});
+
+it('group style: free parts share Giro and Volver a su lugar; mixed picks only offer Eliminar', async () => {
+  const panel = await mount();
+  panel.remoteFree('intro', 'copy/sub', 10, 10);
+  panel.remoteFree('intro', 'copy/headline', 20, 20);
+  panel.remoteSelectMany([{ id: 'intro', path: 'copy/sub' }, { id: 'intro', path: 'copy/headline' }], false);
+  ([...host.querySelectorAll('.bct-segment__option')].find(button => button.textContent === '15°') as HTMLElement).click();
+  expect(lastLook().blocks.intro.free).toEqual({ 'copy/sub': { x: 10, y: 10, r: 15 }, 'copy/headline': { x: 20, y: 20, r: 15 } });
+  (host.querySelector('[data-boceto-unfree]') as HTMLElement).click();
+  expect(lastLook().blocks.intro.free).toEqual({});
+  panel.remoteSelectMany([{ id: 'intro', path: 'copy/sub' }, { id: 'cat', path: '' }], false);
+  expect(host.querySelector('.bct-swatch')).toBeNull();
+  expect(host.querySelector('[data-boceto-group-remove]')).not.toBeNull();
+});

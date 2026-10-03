@@ -595,9 +595,34 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     return section(node?.label ?? key, children);
   }
 
-  /** Inspector for several picks: what they can share. */
+  /** Inspector for several picks, Figma-style: only what they can share. */
   function groupProps(list: BocetoPick[]) {
-    return section(`${list.length} elementos`, [el('p', { className: 'bct-hint', text: 'Arrástralos juntos en el lienzo; Supr los elimina.' })]);
+    const children: HTMLElement[] = [];
+    const shared = (values: string[]) => (values.every(value => value === values[0]) ? values[0] : '');
+    const blocks = list.every(pick => !pick.path) ? list.map(pick => blockOf(pick.id)).filter(Boolean) : [];
+    const spots = spotsOf(list);
+    if (blocks.length && blocks.length === list.length) {
+      const each = (apply: (block: any) => void) => { blocks.forEach(apply); schedule(); draw(); };
+      children.push(row('Fondo', bgSwatches(shared(blocks.map(block => block.bg)), next => each(block => { block.bg = next; }))));
+      if (blocks.every(block => block.type !== 'account')) children.push(row('Tamaño', segment(shared(blocks.map(block => block.size)), SIZES, ['S', 'M', 'L', 'XL'], next => each(block => { block.size = next; }))));
+      children.push(row('Alineación', segment(shared(blocks.map(block => (block.align === 'center' || block.align === 'end' ? block.align : 'start'))), ['start', 'center', 'end'], ['Izq.', 'Centro', 'Der.'], next => each(block => { if (next === 'start') delete block.align; else block.align = next; }))));
+    } else if (spots.length === list.length) {
+      children.push(row('Giro', segment(shared(spots.map(entry => String(entry.spot.r ?? 0))), ['0', '-8', '8', '15'], ['0°', '−8°', '8°', '15°'], next => turnPicks(Number(next)))));
+      if (spots.some(entry => !entry.extra)) {
+        const back = el('button', { type: 'button', className: 'bct-chip', text: 'Volver a su lugar' });
+        back.dataset.bocetoUnfree = '';
+        back.addEventListener('click', () => unfreePicks());
+        children.push(row('Sueltos', back));
+      }
+    } else {
+      children.push(el('p', { className: 'bct-hint', text: 'Son partes distintas: puedes moverlas juntas en el lienzo o eliminarlas.' }));
+    }
+    const remove = el('button', { type: 'button', className: 'bct-remove', text: 'Eliminar', disabled: !list.some(canRemovePick) });
+    remove.dataset.bocetoGroupRemove = '';
+    remove.addEventListener('click', () => removeSelection());
+    children.push(remove);
+    children.push(el('p', { className: 'bct-hint', text: 'Shift + clic suma o quita una parte. Esc deselecciona.' }));
+    return section(`${list.length} elementos`, children);
   }
 
   /** A photo slot as a thumbnail button that opens the picker. */
