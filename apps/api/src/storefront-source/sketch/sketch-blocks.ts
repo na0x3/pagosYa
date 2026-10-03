@@ -1,10 +1,19 @@
-import { bestInkFor, resolveBg, SKETCH_EL_ORDER } from './sketch-schema';
+import { SKETCH_COPY_ORDER } from '@pagosya/shared-types';
+import { bestInkFor, resolveBg } from './sketch-schema';
 import type { SketchBlock, SketchContext, StoreSketch } from './sketch-schema';
 
 /** JSX generators for sketch blocks. Every merchant-controlled string is embedded as a
  * JSON.stringify'd expression — `{"…"}` — so no text can escape JSX or the template literal. */
 const expr = (value: string) => `{${JSON.stringify(value)}}`;
 const editable = (field: string) => `data-skb-field=${expr(field)}`;
+/** A selectable leaf for the Boceto canvas (Figma-style drill-down); keys match sketchNodeTree. */
+const node = (key: string) => `data-skb-node=${expr(key)}`;
+/** A group wrapper: its key plus any saved layout as data attributes the base CSS reads. */
+const group = (block: SketchBlock, key: string) => {
+  const layout = block.layout?.[key] ?? {};
+  return `data-skb-group=${expr(key)}` + (layout.gap ? ` data-skb-gap=${expr(layout.gap)}` : '') + (layout.dir ? ` data-skb-dir=${expr(layout.dir)}` : '')
+    + (layout.align ? ` data-skb-galign=${expr(layout.align)}` : '') + (layout.valign ? ` data-skb-valign=${expr(layout.valign)}` : '');
+};
 
 /** Readable text colour for a given block background (WCAG contrast, shared with the palette repair). */
 const inkFor = (bg: string, sketch: StoreSketch) => bestInkFor(bg, sketch.palette.ink);
@@ -21,26 +30,26 @@ const open = (block: SketchBlock, sketch: StoreSketch, label?: string, extra = '
 };
 
 /** `slot` names the sketch field the photo comes from, so the Boceto canvas can swap it in place. */
-const img = (path: string, alt: string, className: string, slot?: string) => `<img className=${expr(className)} src=${expr(path)} alt=${expr(alt)}${slot ? ` data-skb-photo=${expr(slot)}` : ''} />`;
+const img = (path: string, alt: string, className: string, slot?: string, nodeKey?: string) => `<img className=${expr(className)} src=${expr(path)} alt=${expr(alt)}${slot ? ` data-skb-photo=${expr(slot)}` : ''}${nodeKey ? ` ${node(nodeKey)}` : ''} />`;
 /** Primary + ghost button row; `swap` puts the ghost button first (dragged on the canvas). */
-const actionsRow = (href: string, cta: string, cta2: string, swap?: boolean) => {
-  const primary = `<a className="skb-btn" href=${expr(href)} ${editable('cta')}>${expr(cta)}</a>`;
-  const ghost = cta2 ? `<a className="skb-btn skb-btn--ghost" href=${expr(href)} ${editable('cta2')}>${expr(cta2)}</a>` : '';
-  return `<div className="skb-actions" data-skb-el="actions">${swap ? ghost + primary : primary + ghost}</div>`;
+const actionsRow = (block: SketchBlock, href: string, cta: string, cta2: string, swap?: boolean) => {
+  const primary = `<a className="skb-btn" href=${expr(href)} ${node('cta')} ${editable('cta')}>${expr(cta)}</a>`;
+  const ghost = cta2 ? `<a className="skb-btn skb-btn--ghost" href=${expr(href)} ${node('cta2')} ${editable('cta2')}>${expr(cta2)}</a>` : '';
+  return `<div className="skb-actions" data-skb-el="actions" ${group(block, 'actions')}>${swap ? ghost + primary : primary + ghost}</div>`;
 };
 
 /** The ✦ overline above a section title — the single detail that most makes a page read "dressed". */
-const kicker = (text: string) => text ? `<p className="skb-kicker" ${editable('kicker')}>${expr(text)}</p>` : '';
+const kicker = (text: string) => text ? `<p className="skb-kicker" ${node('kicker')} ${editable('kicker')}>${expr(text)}</p>` : '';
 /** A small pill sitting on a photo (caption or tag), magazine-style. */
-const photoTag = (text: string, field: string) => text ? `<p className="skb-photo-tag" ${editable(field)}>${expr(text)}</p>` : '';
+const photoTag = (text: string, field: string) => text ? `<p className="skb-photo-tag" ${node(field)} ${editable(field)}>${expr(text)}</p>` : '';
 /** Section head: kicker + title left, an optional right-aligned note at the baseline. */
-const head = (block: { kicker?: string; title: string }, note: string | undefined, heading: string) =>
-  `<div className="skb-head">
+const head = (block: SketchBlock & { kicker?: string; title: string }, note: string | undefined, heading: string) =>
+  `<div className="skb-head" ${group(block, 'head')}>
       <div>
         ${kicker(block.kicker ?? '')}
-        <${heading} className="skb-title" ${editable('title')}>${expr(block.title)}</${heading}>
+        <${heading} className="skb-title" ${node('title')} ${editable('title')}>${expr(block.title)}</${heading}>
       </div>
-      ${note ? `<p className="skb-head__note" ${editable('note')}>${expr(note)}</p>` : ''}
+      ${note ? `<p className="skb-head__note" ${node('note')} ${editable('note')}>${expr(note)}</p>` : ''}
     </div>`;
 
 /** A rotated circular sticker; a saved drag position overrides the default corner. */
@@ -61,36 +70,36 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
       badge: b.badge ? `<p className="skb-badge" data-skb-el="badge" ${editable('badge')}>${expr(b.badge)}</p>` : '',
       headline: `<${heading} className="skb-display" data-skb-el="headline" ${editable('headline')}>${expr(b.headline)}</${heading}>`,
       sub: b.sub ? `<p className="skb-lead" data-skb-el="sub" ${editable('sub')}>${expr(b.sub)}</p>` : '',
-      actions: actionsRow(anchor, b.cta, b.cta2, b.swap),
+      actions: actionsRow(b, anchor, b.cta, b.cta2, b.swap),
       trust: b.trust ? `<p className="skb-trust" data-skb-el="trust" ${editable('trust')}>${expr(b.trust)}</p>` : '',
       note: b.note ? `<p className="skb-note" data-skb-el="note" ${editable('note')}>${expr(b.note)}</p>` : '',
     };
     return open(b, s) + `
-    <div className="skb-hero__copy">
-      ${ordered(parts, b.order, SKETCH_EL_ORDER.hero!)}
+    <div className="skb-hero__copy" ${group(b, 'copy')}>
+      ${ordered(parts, b.order, SKETCH_COPY_ORDER.hero)}
     </div>
-    ${b.photo ? `<div className=${expr(`skb-hero__media skb-hero__media--${b.variant}`)}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-hero__img', 'photo')}${photoTag(b.caption, 'caption')}${sticker(b.sticker, b.stickerPos)}</div>` : sticker(b.sticker, b.stickerPos)}
+    ${b.photo ? `<div className=${expr(`skb-hero__media skb-hero__media--${b.variant}`)} ${group(b, 'media')}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-hero__img', 'photo', 'photo')}${photoTag(b.caption, 'caption')}${sticker(b.sticker, b.stickerPos)}</div>` : sticker(b.sticker, b.stickerPos)}
   </section>`;
   },
   announce: (b, s) => open(b, s, 'Avisos') + `
-    <div className="skb-announce__row"><span ${editable('left')}>${expr(b.left)}</span><span ${editable('right')}>${expr(b.right)}</span></div>
+    <div className="skb-announce__row" ${group(b, 'row')}><span ${node('left')} ${editable('left')}>${expr(b.left)}</span><span ${node('right')} ${editable('right')}>${expr(b.right)}</span></div>
   </section>`,
   split: (b, s, ctx, options) => {
     const heading = options.h1 ? 'h1' : 'h2';
     const parts: Record<string, string> = {
       headline: `<${heading} className="skb-display" data-skb-el="headline" ${editable('headline')}>${expr(b.headline)}</${heading}>`,
       body: b.body ? `<p className="skb-lead" data-skb-el="body" ${editable('body')}>${expr(b.body)}</p>` : '',
-      pills: b.pills.length ? `<div className="skb-pills" data-skb-el="pills">${b.pills.map((pill, i) => `<span className="skb-pill" ${editable(`pills.${i}`)}>${expr(pill)}</span>`).join('')}</div>` : '',
-      stats: b.stats.length ? `<div className="skb-stats" data-skb-el="stats">${b.stats.map((stat, i) => `<div className="skb-stat"><span className="skb-stat__value" ${editable(`stats.${i}.value`)}>${expr(stat.value)}</span><span className="skb-stat__label" ${editable(`stats.${i}.label`)}>${expr(stat.label)}</span></div>`).join('')}</div>` : '',
-      boxes: b.boxes?.length ? `<div className="skb-boxes" data-skb-el="boxes">${b.boxes.map((box, i) => `<div className="skb-box">${box.icon ? `<img className="skb-box__icon" src=${expr(`assets/icons/${box.icon}.svg`)} alt="" aria-hidden="true" />` : ''}<div><p className="skb-box__title" ${editable(`boxes.${i}.title`)}>${expr(box.title)}</p>${box.text ? `<p className="skb-box__text" ${editable(`boxes.${i}.text`)}>${expr(box.text)}</p>` : ''}</div></div>`).join('')}</div>` : '',
-      actions: actionsRow(b.href, b.cta, b.cta2, b.swap),
+      pills: b.pills.length ? `<div className="skb-pills" data-skb-el="pills" ${group(b, 'pills')}>${b.pills.map((pill, i) => `<span className="skb-pill" ${node(String(i))} ${editable(`pills.${i}`)}>${expr(pill)}</span>`).join('')}</div>` : '',
+      stats: b.stats.length ? `<div className="skb-stats" data-skb-el="stats" ${group(b, 'stats')}>${b.stats.map((stat, i) => `<div className="skb-stat" ${node(String(i))}><span className="skb-stat__value" ${editable(`stats.${i}.value`)}>${expr(stat.value)}</span><span className="skb-stat__label" ${editable(`stats.${i}.label`)}>${expr(stat.label)}</span></div>`).join('')}</div>` : '',
+      boxes: b.boxes?.length ? `<div className="skb-boxes" data-skb-el="boxes" ${group(b, 'boxes')}>${b.boxes.map((box, i) => `<div className="skb-box" ${node(String(i))}>${box.icon ? `<img className="skb-box__icon" src=${expr(`assets/icons/${box.icon}.svg`)} alt="" aria-hidden="true" />` : ''}<div><p className="skb-box__title" ${editable(`boxes.${i}.title`)}>${expr(box.title)}</p>${box.text ? `<p className="skb-box__text" ${editable(`boxes.${i}.text`)}>${expr(box.text)}</p>` : ''}</div></div>`).join('')}</div>` : '',
+      actions: actionsRow(b, b.href, b.cta, b.cta2, b.swap),
     };
     return open(b, s) + `
-    <div className="skb-split__copy">
+    <div className="skb-split__copy" ${group(b, 'copy')}>
       ${kicker(b.kicker)}
-      ${ordered(parts, b.order, SKETCH_EL_ORDER.split!)}
+      ${ordered(parts, b.order, SKETCH_COPY_ORDER.split)}
     </div>
-    ${b.photo ? `<div className="skb-split__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-split__img', 'photo')}${photoTag(b.tag, 'tag')}${sticker(b.sticker, b.stickerPos)}</div>` : sticker(b.sticker, b.stickerPos)}
+    ${b.photo ? `<div className="skb-split__media" ${group(b, 'media')}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-split__img', 'photo', 'photo')}${photoTag(b.tag, 'tag')}${sticker(b.sticker, b.stickerPos)}</div>` : sticker(b.sticker, b.stickerPos)}
   </section>`;
   },
   marquee: (b, s) => {
@@ -105,8 +114,8 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
   },
   steps: (b, s, _ctx, options) => open(b, s) + `
     ${head(b, b.note, options.h1 ? 'h1' : 'h2')}
-    <div className="skb-steps__grid">
-      ${b.items.map((item, i) => `<article className="skb-step"><div className="skb-step__top"><span className="skb-step__icon-wrap"><img className="skb-step__icon" src=${expr(`assets/icons/${item.icon}.svg`)} alt="" aria-hidden="true" /></span><span className="skb-step__number">${expr(String(i + 1).padStart(2, '0'))}</span></div><h3 className="skb-step__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-step__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></article>`).join('\n      ')}
+    <div className="skb-steps__grid" ${group(b, 'items')}>
+      ${b.items.map((item, i) => `<article className="skb-step" ${node(String(i))}><div className="skb-step__top"><span className="skb-step__icon-wrap"><img className="skb-step__icon" src=${expr(`assets/icons/${item.icon}.svg`)} alt="" aria-hidden="true" /></span><span className="skb-step__number">${expr(String(i + 1).padStart(2, '0'))}</span></div><h3 className="skb-step__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-step__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></article>`).join('\n      ')}
     </div>
   </section>`,
   catalog: (b, s, _ctx, options) => {
@@ -115,12 +124,12 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
     const cardVars = { ...badgeVars, '--skb-card-ratio': { '4-3': '4 / 3', '1-1': '1 / 1', '3-4': '3 / 4' }[b.cardRatio] ?? '4 / 3' };
     const cardFlags = `data-skb-card-desc=${expr(b.cardDesc === false ? 'off' : 'on')} data-skb-card-add=${expr(b.cardAdd === false ? 'off' : 'on')}`;
     return open(b, s, undefined, cardFlags, cardVars) + `
-    <div className="skb-head" id="skb-catalogo">
+    <div className="skb-head" id="skb-catalogo" ${group(b, 'head')}>
       <div>
-        ${b.kicker ? `<p className="skb-kicker" ${editable('kicker')}>${expr(b.kicker)}</p>` : ''}
-        <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
+        ${kicker(b.kicker)}
+        <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${node('title')} ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
       </div>
-      ${b.seeAll ? `<a className="skb-see" href="#skb-catalogo" ${editable('seeAll')}>${expr(b.seeAll)}</a>` : ''}
+      ${b.seeAll ? `<a className="skb-see" href="#skb-catalogo" ${node('seeAll')} ${editable('seeAll')}>${expr(b.seeAll)}</a>` : ''}
     </div>
     <template data-pagosya-product-template>
       <article className="skb-card">
@@ -132,78 +141,97 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
         </div>
       </article>
     </template>
-    <div className="skb-list" data-pagosya-catalog />
+    <div className="skb-list" data-pagosya-catalog ${group(b, 'items')} />
     ${b.stripLeft || b.stripRight ? `<div className="skb-strip"><span ${editable('stripLeft')}>${expr(b.stripLeft)}</span><span ${editable('stripRight')}>${expr(b.stripRight)}</span></div>` : ''}
   </section>`;
   },
   collections: (b, s, ctx, options) => open(b, s) + `
     ${head(b, b.note, options.h1 ? 'h1' : 'h2')}
-    <div className="skb-collections__grid">
-      ${b.items.map((item, i) => `<a className="skb-collection" href=${expr(s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido')}>${item.photo ? img(item.photo, `Foto de ${ctx.storeName}`, 'skb-collection__img', `items.${i}.photo`) : ''}<div className="skb-collection__body"><h3 className="skb-collection__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-collection__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></div><span className="skb-collection__arrow" aria-hidden="true">↗</span></a>`).join('\n      ')}
+    <div className="skb-collections__grid" ${group(b, 'items')}>
+      ${b.items.map((item, i) => `<a className="skb-collection" ${node(String(i))} href=${expr(s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido')}>${item.photo ? img(item.photo, `Foto de ${ctx.storeName}`, 'skb-collection__img', `items.${i}.photo`) : ''}<div className="skb-collection__body"><h3 className="skb-collection__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-collection__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></div><span className="skb-collection__arrow" aria-hidden="true">↗</span></a>`).join('\n      ')}
     </div>
   </section>`,
-  story: (b, s, ctx, options) => open(b, s) + `
-    <div className="skb-story__copy">
+  story: (b, s, ctx, options) => {
+    const heading = options.h1 ? 'h1' : 'h2';
+    const parts: Record<string, string> = {
+      title: `<${heading} className="skb-title" data-skb-el="title" ${editable('title')}>${expr(b.title)}</${heading}>`,
+      paragraphs: b.paragraphs.length ? `<div className="skb-story__paragraphs" data-skb-el="paragraphs" ${group(b, 'paragraphs')}>${b.paragraphs.map((p, i) => `<p className="skb-lead" ${node(String(i))} ${editable(`paragraphs.${i}`)}>${expr(p)}</p>`).join('')}</div>` : '',
+    };
+    return open(b, s) + `
+    <div className="skb-story__copy" ${group(b, 'copy')}>
       ${kicker(b.kicker)}
-      <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
-      ${b.paragraphs.map((p, i) => `<p className="skb-lead" ${editable(`paragraphs.${i}`)}>${expr(p)}</p>`).join('\n      ')}
+      ${ordered(parts, b.order, SKETCH_COPY_ORDER.story)}
     </div>
-    ${b.photo ? `<div className="skb-story__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-story__img', 'photo')}</div>` : ''}
-  </section>`,
+    ${b.photo ? `<div className="skb-story__media" ${group(b, 'media')}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-story__img', 'photo', 'photo')}</div>` : ''}
+  </section>`;
+  },
   reviews: (b, s, ctx, options) => open(b, s) + `
-    <div className="skb-head">
+    <div className="skb-head" ${group(b, 'head')}>
       <div>
         ${kicker(b.kicker)}
-        <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
+        <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${node('title')} ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
       </div>
-      ${b.ratingValue ? `<div className="skb-rating"><p className="skb-rating__value" ${editable('ratingValue')}>${expr(b.ratingValue)}</p>${b.ratingSource ? `<p className="skb-rating__source" ${editable('ratingSource')}>${expr(b.ratingSource)}</p>` : ''}</div>` : ''}
+      ${b.ratingValue ? `<div className="skb-rating" ${node('rating')}><p className="skb-rating__value" ${editable('ratingValue')}>${expr(b.ratingValue)}</p>${b.ratingSource ? `<p className="skb-rating__source" ${editable('ratingSource')}>${expr(b.ratingSource)}</p>` : ''}</div>` : ''}
     </div>
-    <div className="skb-reviews__grid">
-      ${b.quotes.map((q, i) => `<figure className="skb-review"><p className="skb-review__stars" aria-hidden="true">★★★★★</p><blockquote ${editable(`quotes.${i}.text`)}>${expr(q.text)}</blockquote><figcaption><span ${editable(`quotes.${i}.name`)}>${expr(q.name)}</span>${q.place ? `<span className="skb-review__place" ${editable(`quotes.${i}.place`)}>${expr(q.place)}</span>` : ''}</figcaption></figure>`).join('\n      ')}
+    <div className="skb-reviews__grid" ${group(b, 'items')}>
+      ${b.quotes.map((q, i) => `<figure className="skb-review" ${node(String(i))}><p className="skb-review__stars" aria-hidden="true">★★★★★</p><blockquote ${editable(`quotes.${i}.text`)}>${expr(q.text)}</blockquote><figcaption><span ${editable(`quotes.${i}.name`)}>${expr(q.name)}</span>${q.place ? `<span className="skb-review__place" ${editable(`quotes.${i}.place`)}>${expr(q.place)}</span>` : ''}</figcaption></figure>`).join('\n      ')}
     </div>
     ${b.photos.length ? `<div className="skb-reviews__photos">${b.photos.map((p, i) => img(p, `Foto ${i + 1} de clientes`, 'skb-reviews__photo', `photos.${i}`)).join('')}<p className="skb-reviews__handle" ${editable('handle')}>${expr(b.handle || ctx.storeName)}</p></div>` : ''}
   </section>`,
   faq: (b, s, _ctx, options) => open(b, s) + `
-    ${kicker(b.kicker)}
-    <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
-    ${b.items.map((item, i) => `<details className="skb-faq__item"><summary ${editable(`items.${i}.q`)}>${expr(item.q)}</summary><p ${editable(`items.${i}.a`)}>${expr(item.a)}</p></details>`).join('\n    ')}
+    ${head(b, undefined, options.h1 ? 'h1' : 'h2')}
+    <div className="skb-faq__list" ${group(b, 'items')}>
+      ${b.items.map((item, i) => `<details className="skb-faq__item" ${node(String(i))}><summary ${editable(`items.${i}.q`)}>${expr(item.q)}</summary><p ${editable(`items.${i}.a`)}>${expr(item.a)}</p></details>`).join('\n      ')}
+    </div>
   </section>`,
-  banner: (b, s, _ctx, options) => open(b, s) + `
-    ${kicker(b.kicker)}
-    <${options.h1 ? 'h1' : 'h2'} className="skb-display skb-banner__headline" ${editable('headline')}>${expr(b.headline)}</${options.h1 ? 'h1' : 'h2'}>
-    <a className="skb-btn" href=${expr(b.href)} ${editable('cta')}>${expr(b.cta)}</a>
+  banner: (b, s, _ctx, options) => {
+    const heading = options.h1 ? 'h1' : 'h2';
+    const parts: Record<string, string> = {
+      headline: `<${heading} className="skb-display skb-banner__headline" data-skb-el="headline" ${editable('headline')}>${expr(b.headline)}</${heading}>`,
+      cta: `<a className="skb-btn" href=${expr(b.href)} data-skb-el="cta" ${editable('cta')}>${expr(b.cta)}</a>`,
+    };
+    return open(b, s) + `
+    <div className="skb-banner__copy" ${group(b, 'copy')}>
+      ${kicker(b.kicker)}
+      ${ordered(parts, b.order, SKETCH_COPY_ORDER.banner)}
+    </div>
     ${sticker(b.sticker, b.stickerPos)}
-  </section>`,
+  </section>`;
+  },
   gallery: (b, s, ctx, options) => open(b, s) + `
-    ${kicker(b.kicker)}
-    <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
-    <div className="skb-gallery__grid">
-      ${b.photos.map((p, i) => img(p, `Foto ${i + 1} de ${ctx.storeName}`, 'skb-gallery__img', `photos.${i}`)).join('\n      ')}
+    ${head(b, undefined, options.h1 ? 'h1' : 'h2')}
+    <div className="skb-gallery__grid" ${group(b, 'items')}>
+      ${b.photos.map((p, i) => img(p, `Foto ${i + 1} de ${ctx.storeName}`, 'skb-gallery__img', `photos.${i}`, String(i))).join('\n      ')}
     </div>
   </section>`,
   newsletter: (b, s, ctx, options) => {
-    const copy = `${kicker(b.kicker)}
-    <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
-    ${b.note ? `<p className="skb-lead" ${editable('note')}>${expr(b.note)}</p>` : ''}
-    <div className="skb-subscribe-wrap">
+    const heading = options.h1 ? 'h1' : 'h2';
+    const parts: Record<string, string> = {
+      title: `<${heading} className="skb-title" data-skb-el="title" ${editable('title')}>${expr(b.title)}</${heading}>`,
+      note: b.note ? `<p className="skb-lead" data-skb-el="note" ${editable('note')}>${expr(b.note)}</p>` : '',
+      form: `<div className="skb-subscribe-wrap" data-skb-el="form">
       <button type="button" className="skb-btn skb-subscribe" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
         <span className="skb-subscribe__field">Tu correo electrónico</span>
         <span className="skb-subscribe__submit">${expr(b.cta || 'Suscribirme')}</span>
       </button>
       <p className="skb-subscribe__legal">Solo novedades y ofertas. Te das de baja cuando quieras.</p>
       ${s.blocks.some(block => block.type === 'catalog') ? '<a className="skb-subscribe__account" data-pagosya-account="" href="acceso-ingresar.html">¿Ya tienes cuenta? Ingresa</a>' : ''}
-    </div>
-    <p role="status" className="skb-subscribe__status" />`;
+    </div>`,
+    };
+    const copy = `${kicker(b.kicker)}
+    ${ordered(parts, b.order, SKETCH_COPY_ORDER.newsletter)}`;
+    const status = '<p role="status" className="skb-subscribe__status" />';
     const formAttrs = `data-pagosya-subscribe-block data-skb-form=${expr(b.form || 'pill')}`;
     return b.variant === 'split' && b.photo
       ? open(b, s, undefined, formAttrs) + `
     <div className="skb-newsletter__grid">
-      <div className="skb-newsletter__copy">${copy}</div>
-      <div className="skb-newsletter__media">${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-newsletter__img', 'photo')}</div>
+      <div className="skb-newsletter__copy" ${group(b, 'copy')}>${copy}${status}</div>
+      <div className="skb-newsletter__media" ${group(b, 'media')}>${img(b.photo, `Foto de ${ctx.storeName}`, 'skb-newsletter__img', 'photo', 'photo')}</div>
     </div>
   </section>`
       : open(b, s, undefined, formAttrs) + `
-    ${copy}
+    <div className="skb-newsletter__stack" ${group(b, 'copy')}>${copy}</div>
+    ${status}
   </section>`;
   },
   footer: (b, s, ctx) => open(b, s, 'Pie de página') + `
@@ -239,11 +267,11 @@ export function renderAccount(sketch: StoreSketch, ctx: SketchContext, view: 'lo
   return `<section data-skb="account" id="skb-account" className="skb skb-acct skb--l" data-skb-acct=${expr(a.layout)} style={{ ${Object.entries(vars).map(([key, value]) => `[${JSON.stringify(key)} as string]: ${JSON.stringify(value)}`).join(', ')} }}>
       <div className="skb-acct__intro">
         ${a.photo ? img(a.photo, `Foto de ${ctx.storeName}`, 'skb-acct__img', 'photo') : ''}
-        <div className="skb-acct__copy">
+        <div className="skb-acct__copy" data-skb-group="intro">
           ${kicker(a.kicker)}
-          <h2 className="skb-title" ${editable('title')}>${expr(a.title)}</h2>
-          <p className="skb-lead" ${editable('lead')}>${expr(a.lead)}</p>
-          ${a.perks.length ? `<ul className="skb-acct__perks">${a.perks.map((perk, i) => `<li><span className="skb-acct__perk-icon"><img src=${expr(`assets/icons/${perk.icon}.svg`)} alt="" aria-hidden="true" /></span><span ${editable(`perks.${i}.text`)}>${expr(perk.text)}</span></li>`).join('')}</ul>` : ''}
+          <h2 className="skb-title" ${node('title')} ${editable('title')}>${expr(a.title)}</h2>
+          <p className="skb-lead" ${node('lead')} ${editable('lead')}>${expr(a.lead)}</p>
+          ${a.perks.length ? `<ul className="skb-acct__perks" data-skb-group="perks">${a.perks.map((perk, i) => `<li ${node(String(i))}><span className="skb-acct__perk-icon"><img src=${expr(`assets/icons/${perk.icon}.svg`)} alt="" aria-hidden="true" /></span><span ${editable(`perks.${i}.text`)}>${expr(perk.text)}</span></li>`).join('')}</ul>` : ''}
         </div>
       </div>
       <div className="skb-acct__form">
@@ -449,12 +477,12 @@ export const SKETCH_BASE_CSS = `
 .skb[data-skb-align="center"] .skb-head { flex-direction: column; align-items: center; }
 .skb[data-skb-align="center"] .skb-head__note { text-align: center; }
 .skb[data-skb-align="center"] :is(.skb-lead, .skb-banner__headline, .skb-boxes, .skb-subscribe-wrap) { margin-inline: auto; }
-.skb[data-skb-align="center"] :is(.skb-hero__copy, .skb-split__copy, .skb-newsletter__copy, .skb-story__copy) { justify-items: center; }
+.skb[data-skb-align="center"] :is(.skb-hero__copy, .skb-split__copy, .skb-newsletter__copy, .skb-story__copy, .skb-banner__copy, .skb-newsletter__stack) { justify-items: center; }
 .skb[data-skb-align="end"] { text-align: right; }
 .skb[data-skb-align="end"] :is(.skb-actions, .skb-pills, .skb-stats) { justify-content: flex-end; }
 .skb[data-skb-align="end"] .skb-head { flex-direction: row-reverse; }
 .skb[data-skb-align="end"] :is(.skb-lead, .skb-boxes, .skb-subscribe-wrap) { margin-left: auto; }
-.skb[data-skb-align="end"] :is(.skb-hero__copy, .skb-split__copy, .skb-newsletter__copy, .skb-story__copy) { justify-items: end; }
+.skb[data-skb-align="end"] :is(.skb-hero__copy, .skb-split__copy, .skb-newsletter__copy, .skb-story__copy, .skb-banner__copy, .skb-newsletter__stack) { justify-items: end; }
 @media (min-width: 900px) {
   .skb[data-skb-flip] :is(.skb-hero__media, .skb-split__media, .skb-story__media, .skb-newsletter__media) { order: -1; }
   .skb-hero[data-skb-flip] { grid-template-columns: 1fr 1.1fr; }
@@ -479,5 +507,22 @@ export const SKETCH_BASE_CSS = `
 .skb-sticker { position: absolute; top: 1rem; right: 1rem; width: 6.2rem; height: 6.2rem; border-radius: 50%; background: var(--skb-ink); color: var(--skb-bg); display: grid; place-items: center; text-align: center; font-size: 0.72rem; font-weight: 700; padding: 0.6rem; rotate: 8deg; z-index: 1; }
 .skb-hero__media .skb-sticker { top: -1.2rem; right: -0.6rem; }
 .skb img { max-width: 100%; }
+.skb-banner__copy { display: grid; gap: 1.6rem; justify-items: center; }
+.skb-newsletter__stack { display: grid; gap: 1rem; justify-items: center; width: 100%; }
+[data-skb-group][data-skb-gap="s"] { gap: 0.5rem; }
+[data-skb-group][data-skb-gap="m"] { gap: 1.1rem; }
+[data-skb-group][data-skb-gap="l"] { gap: 2rem; }
+:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"] { flex-direction: column; align-items: flex-start; }
+.skb-boxes[data-skb-dir="column"] { grid-template-columns: 1fr; }
+:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="center"] { justify-content: center; }
+:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-galign="end"] { justify-content: flex-end; }
+:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="center"] { align-items: center; }
+:is(.skb-actions, .skb-pills, .skb-stats, .skb-announce__row)[data-skb-dir="column"][data-skb-galign="end"] { align-items: flex-end; }
+.skb-boxes[data-skb-galign="center"] { margin-inline: auto; }
+.skb-boxes[data-skb-galign="end"] { margin-left: auto; }
+[data-skb-group][data-skb-valign="start"] { align-self: start; align-content: start; }
+[data-skb-group][data-skb-valign="center"] { align-self: center; align-content: center; }
+[data-skb-group][data-skb-valign="end"] { align-self: end; align-content: end; }
+@media (max-width: 899px) { [data-skb-group][data-skb-valign] { align-self: auto; } }
 @media (prefers-reduced-motion: reduce) { .skb-marquee__track { animation: none; } }
 `;

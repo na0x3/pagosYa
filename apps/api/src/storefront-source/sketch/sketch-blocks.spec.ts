@@ -199,3 +199,39 @@ it('steps render numbered cards with icon images and editable fields', () => {
   expect(out).toContain('01');
   expect(blockCss('steps').length).toBeGreaterThan(0);
 });
+
+import { sketchNodeTree } from '@pagosya/shared-types';
+
+describe('structured selection markers', () => {
+  const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
+  const sketchWith = (blocks: object[]) => repairSketch({ blocks }, ctx).sketch;
+  const segments = (markup: string) => new Set([...markup.matchAll(/data-skb-(?:group|node|el)=\{"([^"]+)"\}|data-skb-(?:group|node|el)="([^"]+)"/g)].map(m => m[1] ?? m[2]));
+  const all = (nodes: ReturnType<typeof sketchNodeTree>): string[] => nodes.flatMap(node => [node.key, ...all(node.children)]);
+  it('every node of the shared tree is stamped in the rendered block', () => {
+    const sketch = sketchWith([
+      { id: 'h', type: 'hero', headline: 'H', sub: 's', cta: 'a', cta2: 'b', trust: 't', caption: 'c', sticker: 'x', photo: 'assets/a.jpg' },
+      { id: 'sp', type: 'split', kicker: 'k', headline: 'H', body: 'b', cta: 'a', pills: ['1', '2'], stats: [{ value: '1', label: 'l' }], boxes: [{ title: 't', text: '' }], tag: 'tg', photo: 'assets/a.jpg' },
+      { id: 'st', type: 'story', kicker: 'k', title: 'T', paragraphs: ['a', 'b'], photo: 'assets/a.jpg' },
+      { id: 'n', type: 'newsletter', variant: 'split', kicker: 'k', title: 'T', note: 'n', photo: 'assets/a.jpg' },
+      { id: 'b', type: 'banner', kicker: 'k', headline: 'H', cta: 'c', sticker: 's' },
+      { id: 'se', type: 'steps', kicker: 'k', title: 'T', note: 'n', items: [{ icon: 'gift', title: 'a', text: '' }] },
+      { id: 'r', type: 'reviews', title: 'T', ratingValue: '4.9', quotes: [{ text: 'a', name: 'b' }] },
+      { id: 'f', type: 'faq', title: 'T', items: [{ q: 'q', a: 'a' }] },
+      { id: 'g', type: 'gallery', title: 'T', photos: ['assets/a.jpg'] },
+      { id: 'a', type: 'announce', left: 'l', right: 'r' },
+    ]);
+    for (const block of sketch.blocks) {
+      const found = segments(renderBlock(block, sketch, ctx));
+      for (const key of all(sketchNodeTree(block))) expect([block.type, key, found.has(key)]).toEqual([block.type, key, true]);
+    }
+  });
+  it('emits saved group layout as data attributes and story copy in saved order', () => {
+    const sketch = sketchWith([{ id: 'st', type: 'story', title: 'T', paragraphs: ['a'], order: ['paragraphs', 'title'], layout: { copy: { gap: 'l', valign: 'end' }, paragraphs: { gap: 's' } } }]);
+    const html = renderBlock(sketch.blocks[0], sketch, ctx);
+    expect(html).toMatch(/data-skb-group=\{"copy"\} data-skb-gap=\{"l"\} data-skb-valign=\{"end"\}/);
+    expect(html.indexOf('data-skb-el="paragraphs"')).toBeLessThan(html.indexOf('data-skb-el="title"'));
+  });
+  it('base css styles every layout attribute and keeps rows wrapping on phones', () => {
+    for (const rule of ['[data-skb-gap="s"]', '[data-skb-dir="column"]', '[data-skb-galign="center"]', '[data-skb-valign="end"]']) expect(SKETCH_BASE_CSS).toContain(rule);
+  });
+});
