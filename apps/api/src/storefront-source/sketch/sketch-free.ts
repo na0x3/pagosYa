@@ -119,7 +119,7 @@ export function withFreeLayer(block: SketchBlock, markup: string, ctx: SketchCon
 /** Desktop keeps the exact spots; below 900px freed parts sit back in their column and inserted elements line up at
  * the end of their section, so nothing covers anything. An unset `--skb-fw` leaves the width automatic. */
 export const FREE_CSS = `
-.skb-extras { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.8rem; padding-top: 1.2rem; }
+.skb-extras { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.8rem; padding-top: 1.2rem; white-space: normal; }
 .skb-split > .skb-extras { padding: 0 1.2rem 1.5rem; }
 .skb-x--emoji { font-size: 2.6rem; line-height: 1; }
 .skb-x--icon { width: 2.6rem; height: auto; display: block; }

@@ -1,4 +1,4 @@
-import { repairSketchFree, repairSketchLayout, sketchFreePos, SKETCH_COPY_ORDER, SKETCH_EXTRA_KINDS, SKETCH_EXTRA_MAX, type SketchExtra, type SketchExtraKind, type SketchFreePos, type SketchGroupLayout } from '@pagosya/shared-types';
+import { repairSketchFree, repairSketchLayout, sketchFreePos, sketchGroups, sketchRemapFree, SKETCH_COPY_ORDER, SKETCH_EXTRA_KINDS, SKETCH_EXTRA_MAX, type SketchExtra, type SketchExtraKind, type SketchFreePos, type SketchGroupLayout } from '@pagosya/shared-types';
 import { SOURCE_FONT_IDS } from '../source-font-catalog';
 
 /** The editable sketch a merchant shapes before any site is built (sketch-first YAPI, sub-project 1).
@@ -106,8 +106,51 @@ const text = (value: unknown, limit: number, fallback = '') => {
   const raw = typeof value === 'string' ? value : value == null ? fallback : String(value);
   return raw.slice(0, limit);
 };
-const list = <T>(value: unknown, limit: number, map: (item: unknown) => T | null): T[] =>
-  (Array.isArray(value) ? value : []).map(map).filter((item): item is T => item !== null).slice(0, limit);
+/** Which input index each kept item came from, so free spots (keyed by index) follow their item when repair drops some. */
+const listSources = new WeakMap<unknown[], number[]>();
+const list = <T>(value: unknown, limit: number, map: (item: unknown) => T | null): T[] => {
+  const mapped = (Array.isArray(value) ? value : []).map((item, index) => ({ item: map(item), index })).filter((entry): entry is { item: T; index: number } => entry.item !== null).slice(0, limit);
+  const kept = mapped.map(entry => entry.item);
+  listSources.set(kept, mapped.map(entry => entry.index));
+  return kept;
+};
+
+/** The array fields free spots name by index (`items/2`, `copy/pills/0`), with the node path of their group. */
+const listGroups = (type: string) => sketchGroups(type).flatMap(group => (group.reorder.kind === 'array' ? [{ field: group.reorder.field, path: group.parent ? `${group.parent}/${group.key}` : group.key }] : []));
+
+/** Free spots of list items that repair dropped go with them; the rest move to their item's new index. */
+function followRepairedLists(kept: Record<string, unknown>, raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return raw;
+  let free = raw as Record<string, unknown>;
+  for (const { field, path } of listGroups(String(kept.type))) {
+    const from = Array.isArray(kept[field]) ? listSources.get(kept[field] as unknown[]) : undefined;
+    if (from) free = sketchRemapFree(free, path, index => { const to = from.indexOf(index); return to === -1 ? null : to; });
+  }
+  return free;
+}
+
+/** Where each item of a list went in a chat edit: the same item, else the same title (an edited item), else — when the
+ * list kept its length — the same place. An item with no match is gone, so its spot goes too instead of landing on
+ * the item that slid into its place. */
+function matchItems(before: unknown[], after: unknown[]): (index: number) => number | null {
+  const to = new Map<number, number>(), taken = new Set<number>();
+  const title = (item: unknown) => {
+    if (typeof item === 'string') return item.trim();
+    const entry = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
+    const value = entry.title ?? entry.q ?? entry.text ?? entry.value;
+    return typeof value === 'string' ? value.trim() : '';
+  };
+  const pass = (key: (item: unknown) => string) => before.forEach((item, i) => {
+    const wanted = key(item);
+    if (to.has(i) || !wanted) return;
+    const j = after.findIndex((other, n) => !taken.has(n) && key(other) === wanted);
+    if (j !== -1) { to.set(i, j); taken.add(j); }
+  });
+  pass(item => JSON.stringify(item));
+  pass(title);
+  if (before.length === after.length) before.forEach((_, i) => { if (!to.has(i) && !taken.has(i)) { to.set(i, i); taken.add(i); } });
+  return index => to.get(index) ?? null;
+}
 
 /** Generation-time photo placement, magazine-style: unplaced photos fill the page's real photo slots
  * first — hero, split, story and newsletter panels, collection cards, then a customer strip under the
@@ -325,7 +368,7 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
       // Free layer: inserted elements, then freed parts named against the repaired block (never nested).
       const inserted = extras(block.extras);
       if (inserted.length) kept.extras = inserted; else delete kept.extras;
-      const free = repairSketchFree(kept, block.free);
+      const free = repairSketchFree(kept, followRepairedLists(kept as Record<string, unknown>, block.free));
       if (free) kept.free = free; else delete kept.free;
     }
   }
@@ -383,7 +426,16 @@ export function carryEditorFields(current: StoreSketch, edited: StoreSketch): St
     // Order, group layout and free spots name the parts of one block type; a block the model turned into another type
     // starts fresh there (inserted elements belong to the block, so they stay).
     const keys = before.type === block.type ? SKETCH_EDITOR_ONLY : SKETCH_EDITOR_ONLY.filter(key => key !== 'order' && key !== 'layout' && key !== 'free');
-    const carried = Object.fromEntries(keys.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
+    const carried: Record<string, unknown> = Object.fromEntries(keys.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
+    // Spots on list items follow their item when the edit removed, added or reordered items.
+    if (carried.free) {
+      let free = carried.free as Record<string, SketchFreePos>;
+      for (const { field, path } of listGroups(block.type)) {
+        const was = before[field], now = (block as Record<string, unknown>)[field];
+        if (Array.isArray(was) && Array.isArray(now)) free = sketchRemapFree(free, path, matchItems(was, now));
+      }
+      if (Object.keys(free).length) carried.free = free; else delete carried.free;
+    }
     return { ...block, ...carried } as typeof block;
   });
 }

@@ -219,16 +219,21 @@ export function sketchListPath(type: string, field: string): string | undefined 
   return group ? (group.parent ? `${group.parent}/${group.key}` : group.key) : undefined;
 }
 
-/** Array items are keyed by index: when items move or go, their free spots follow (or go with them). */
-function remapFree(block: any, parentPath: string, map: (index: number) => number | null) {
+/** Array items are keyed by index: when items move or go, their free spots follow (or go with them). `map` takes an
+ * item's old index to its new one, or null when the item is gone. Spots outside the list are kept as they are. */
+export function sketchRemapFree<T>(free: Record<string, T>, parentPath: string, map: (index: number) => number | null): Record<string, T> {
   const prefix = `${parentPath}/`;
-  const next: Record<string, SketchFreePos> = {};
-  for (const [path, pos] of Object.entries(freeMap(block))) {
+  const next: Record<string, T> = {};
+  for (const [path, pos] of Object.entries(free)) {
     const [head, ...rest] = path.startsWith(prefix) ? path.slice(prefix.length).split('/') : [''];
     if (!/^\d+$/.test(head)) { next[path] = pos; continue; }
     const to = map(Number(head));
     if (to !== null) next[[parentPath, String(to), ...rest].join('/')] = pos;
   }
+  return next;
+}
+function remapFree(block: any, parentPath: string, map: (index: number) => number | null) {
+  const next = sketchRemapFree(freeMap(block), parentPath, map);
   if (Object.keys(next).length) block.free = next; else delete block.free;
 }
 

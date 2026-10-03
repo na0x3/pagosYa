@@ -341,8 +341,10 @@ const CSS: Record<SketchBlock['type'], string> = {
 .skb-badge { display: inline-block; background: var(--skb-pop); color: var(--skb-pop-ink); font-weight: 700; border-radius: 999px; padding: 0.35em 1em; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 1rem; }
 .skb-note { font-size: 0.85rem; opacity: 0.75; margin: 0.9rem 0 0; }
 .skb-trust { font-size: 0.88rem; opacity: 0.85; margin: 0.6rem 0 0; letter-spacing: 0.02em; }`,
+  // The marquee and the footer clip only sideways (the scrolling track, the giant name), so inserted elements show whole.
   marquee: `
 .skb-marquee { overflow: hidden; padding-block: 1.1em; white-space: nowrap; }
+@supports (overflow: clip) { .skb-marquee { display: flow-root; overflow: visible; overflow-x: clip; } }
 .skb-marquee__track { display: inline-flex; animation: skb-scroll var(--skb-marquee-dur, 24s) linear infinite; font-family: var(--skb-display-font); font-size: clamp(1.4rem, 3.2vw, 2.6rem); text-transform: uppercase; letter-spacing: 0.04em; }
 .skb-marquee__track span { flex: none; }
 @keyframes skb-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }`,
@@ -437,6 +439,7 @@ const CSS: Record<SketchBlock['type'], string> = {
 [data-skb-form="card"] .skb-subscribe { background: color-mix(in srgb, var(--skb-page-ink) 6%, var(--skb-paper)); }`,
   footer: `
 .skb-footer { padding-bottom: 0; overflow: hidden; }
+@supports (overflow: clip) { .skb-footer { display: flow-root; overflow: visible; overflow-x: clip; } .skb-wordmark { clip-path: inset(-1em -100vw 0.12em -100vw); } }
 .skb-footer__grid { display: grid; gap: 1.5rem; align-items: start; }
 @media (min-width: 900px) { .skb-footer__grid { grid-template-columns: 1.4fr 1fr 1fr; } }
 .skb-footer__name { margin: 0; font-family: var(--skb-display-font); font-size: 1.5rem; font-weight: 700; }

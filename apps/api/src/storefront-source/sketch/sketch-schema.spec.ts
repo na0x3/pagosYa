@@ -358,3 +358,33 @@ describe('free layer repair', () => {
     expect(block.free).toEqual({ 'copy/headline': { x: 2, y: 2 } });
   });
 });
+
+describe('review: free spots on list items follow their item', () => {
+  const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
+  const steps = (items: object[], free: object) => ({ id: 'st', type: 'steps', title: 'T', items, free });
+  const step = (title: string, text = '') => ({ icon: 'gift', title, text });
+  it('repair that drops a broken item moves the later spots with their items and drops the broken one', () => {
+    const block = repairSketch({ blocks: [steps([step(''), step('Dos'), step('Tres')], { 'items/0': { x: 1, y: 1 }, 'items/2': { x: 3, y: 3 } })] }, ctx).sketch.blocks[0] as any;
+    expect(block.items.map((item: any) => item.title)).toEqual(['Dos', 'Tres']);
+    expect(block.free).toEqual({ 'items/1': { x: 3, y: 3 } });
+  });
+  it('repair moves spots inside a copy-column list too (split pills)', () => {
+    const block = repairSketch({ blocks: [{ id: 'sp', type: 'split', headline: 'H', pills: [null, 'Dos', 'Tres'], free: { 'copy/pills/2': { x: 3, y: 3 } } }] }, ctx).sketch.blocks[0] as any;
+    expect(block.free).toEqual({ 'copy/pills/1': { x: 3, y: 3 } });
+  });
+  const carry = (before: object[], after: object[], free: object) => {
+    const current = repairSketch({ blocks: [steps(before, free)] }, ctx).sketch;
+    const edited = repairSketch({ blocks: [steps(after, {})] }, ctx).sketch;
+    return (carryEditorFields(current, edited)[0] as any).free;
+  };
+  it('a chat edit that removes an item keeps the others’ spots on them and drops the removed one’s', () => {
+    expect(carry([step('Uno'), step('Dos'), step('Tres')], [step('Dos'), step('Tres')], { 'items/0': { x: 1, y: 1 }, 'items/2': { x: 3, y: 3 } })).toEqual({ 'items/1': { x: 3, y: 3 } });
+  });
+  it('an item the edit reworded keeps its spot by its title; reorders follow the items', () => {
+    expect(carry([step('Uno'), step('Dos'), step('Tres')], [step('Tres', 'nuevo'), step('Dos')], { 'items/2': { x: 3, y: 3 }, 'head/title': { x: 9, y: 9 } })).toEqual({ 'items/0': { x: 3, y: 3 }, 'head/title': { x: 9, y: 9 } });
+  });
+  it('a same-length edit that rewrites every item keeps the spots in place; a spot with no item left goes', () => {
+    expect(carry([step('Uno'), step('Dos')], [step('A'), step('B')], { 'items/1': { x: 2, y: 2 } })).toEqual({ 'items/1': { x: 2, y: 2 } });
+    expect(carry([step('Uno'), step('Dos')], [step('A')], { 'items/1': { x: 2, y: 2 } })).toBeUndefined();
+  });
+});
