@@ -4,7 +4,8 @@
  *   - clicking drills down block → group → element (Figma) and posts pagosya:boceto-select { id, path };
  *     Esc selects the parent, Enter the first child;
  *   - dragging the handle (or grabbing anywhere) reorders sections live and posts pagosya:boceto-reorder { id, index };
- *   - dragging a [data-skb-el] copy element reorders it inside its block and posts pagosya:boceto-el-reorder { id, order };
+ *   - dragging the selected node (or a movable child of it) reorders it among its siblings and posts
+ *     pagosya:boceto-node-move { id, path, order }; ⌥↑/⌥↓/Supr are forwarded as pagosya:boceto-key;
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
  *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
 (function () {
@@ -33,35 +34,6 @@
     photoChip.style.display = 'block';
     photoChip.style.top = Math.max(8, rect.top + 10) + 'px';
     photoChip.style.left = Math.max(8, rect.right - photoChip.offsetWidth - 10) + 'px';
-  }
-
-  /** Drag one button of a two-button row past the other to swap them. */
-  function startButtonDrag(button) {
-    var row = button.parentElement, section = sectionOf(button);
-    var other = Array.prototype.slice.call(row.children).filter(function (node) { return node !== button && node.classList.contains('skb-btn'); })[0];
-    if (!section || !other) return false;
-    elDragging = button;
-    button.setAttribute('data-boceto-dragging', '');
-    var crossed = false;
-    var move = function (ev) {
-      var box = other.getBoundingClientRect(), mid = box.left + box.width / 2;
-      var buttonFirst = button.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING;
-      crossed = buttonFirst ? ev.clientX > mid : ev.clientX < mid;
-      other.style.outline = crossed ? '2px dashed #1f6feb' : '';
-    };
-    var finish = function () {
-      document.removeEventListener('pointermove', move, true);
-      document.removeEventListener('pointerup', finish, true);
-      button.removeAttribute('data-boceto-dragging');
-      other.style.outline = '';
-      elDragging = null;
-      if (!crossed) return;
-      if (button.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) other.after(button); else other.before(button);
-      parent.postMessage({ type: 'pagosya:boceto-swap', id: section.getAttribute('data-skb') }, '*');
-    };
-    document.addEventListener('pointermove', move, true);
-    document.addEventListener('pointerup', finish, true);
-    return true;
   }
 
   function sections() { return Array.prototype.slice.call(document.querySelectorAll('[data-skb]')); }
@@ -256,50 +228,56 @@
     document.addEventListener('pointerup', finish, true);
   }
 
-  /** Reorder a copy element (headline, buttons, pills…) among its visible siblings. The resulting
-   * on-page order is posted whole; the Studio merges it with the block's hidden elements. */
-  function startElementDrag(element) {
-    var section = sectionOf(element);
-    var column = element.parentElement;
-    if (!section || !column) return;
-    elDragging = element;
-    element.setAttribute('data-boceto-dragging', '');
-    var siblings = function () {
-      return Array.prototype.slice.call(column.children).filter(function (node) {
-        return node !== element && node.hasAttribute && node.hasAttribute('data-skb-el');
-      });
-    };
+  /** The node a drag should move: the selection itself when movable, or a movable child of it under the pointer. */
+  function dragCandidate(target) {
+    var section = sectionOf(target);
+    if (!section || selection.id !== section.getAttribute('data-skb')) return null;
+    var node = nodeAt(section, selection.path);
+    if (!node) return null;
+    if (selection.path && selection.movable && node.contains(target)) return node;
+    return childrenOf(node).filter(function (child) { return child.contains(target) && selection.movableChildren.indexOf(segmentOf(child)) !== -1; })[0] || null;
+  }
+  /** Reorder a node among its siblings (Figma auto layout): rows move along x, columns along y. */
+  function startNodeDrag(node) {
+    var section = sectionOf(node), container = containerOf(node);
+    if (!section || !container) return;
+    var fromPath = pathOf(node);
+    elDragging = node;
+    node.setAttribute('data-boceto-dragging', '');
+    clearBoxes();
+    var style = window.getComputedStyle(container);
+    var horizontal = container === section ? window.innerWidth >= 900 : (String(style.display).indexOf('flex') !== -1 && String(style.flexDirection).indexOf('column') === -1);
+    var siblings = function () { return childrenOf(container).filter(function (child) { return child !== node && segmentOf(child) !== 'sticker'; }); };
     var target = null;
     var move = function (ev) {
       target = null;
       var list = siblings();
       for (var i = 0; i < list.length; i++) {
         var rect = list[i].getBoundingClientRect();
-        if (ev.clientY < rect.top + rect.height / 2) { target = { node: list[i], before: true }; break; }
+        var before = horizontal ? ev.clientX < rect.left + rect.width / 2 : ev.clientY < rect.top + rect.height / 2;
+        if (before) { target = { node: list[i], before: true }; break; }
         target = { node: list[i], before: false };
       }
       if (!target) { indicator.style.display = 'none'; return; }
       var box = target.node.getBoundingClientRect();
       indicator.style.display = 'block';
-      indicator.style.left = box.left + 'px';
       indicator.style.right = 'auto';
-      indicator.style.width = box.width + 'px';
-      indicator.style.top = (target.before ? box.top : box.bottom) - 2 + 'px';
+      if (horizontal) { indicator.style.top = box.top + 'px'; indicator.style.height = box.height + 'px'; indicator.style.width = '4px'; indicator.style.left = (target.before ? box.left : box.right) - 2 + 'px'; }
+      else { indicator.style.left = box.left + 'px'; indicator.style.width = box.width + 'px'; indicator.style.height = '4px'; indicator.style.top = (target.before ? box.top : box.bottom) - 2 + 'px'; }
     };
     var finish = function () {
       document.removeEventListener('pointermove', move, true);
       document.removeEventListener('pointerup', finish, true);
       indicator.style.display = 'none';
-      indicator.style.left = '12px'; indicator.style.right = '12px'; indicator.style.width = 'auto';
-      element.removeAttribute('data-boceto-dragging');
+      indicator.style.left = '12px'; indicator.style.right = '12px'; indicator.style.width = 'auto'; indicator.style.height = '4px';
+      node.removeAttribute('data-boceto-dragging');
       elDragging = null;
       if (target) {
-        if (target.before) target.node.before(element); else target.node.after(element);
-        var order = Array.prototype.slice.call(column.children)
-          .map(function (node) { return node.getAttribute && node.getAttribute('data-skb-el'); })
-          .filter(Boolean);
-        parent.postMessage({ type: 'pagosya:boceto-el-reorder', id: section.getAttribute('data-skb'), order: order }, '*');
+        if (target.before) target.node.before(node); else target.node.after(node);
+        var order = childrenOf(container).map(segmentOf).filter(function (key) { return key !== 'sticker'; });
+        parent.postMessage({ type: 'pagosya:boceto-node-move', id: section.getAttribute('data-skb'), path: fromPath, order: order }, '*');
       }
+      drawOverlay();
     };
     document.addEventListener('pointermove', move, true);
     document.addEventListener('pointerup', finish, true);
@@ -344,16 +322,19 @@
     if (event.target === handle) return;
     var section = sectionOf(event.target);
     if (!section) return;
-    var element = event.target instanceof Element ? event.target.closest('[data-skb-el]') : null;
-    var rowButton = event.target instanceof Element ? event.target.closest('.skb-actions > .skb-btn') : null;
     var startX = event.clientX, startY = event.clientY;
     var arm = function (ev) {
       if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 6) return;
       cleanup();
       placePhotoChip(null);
-      if (rowButton && startButtonDrag(rowButton)) return;
-      if (element && element.getAttribute('data-skb-el') === 'sticker') { startStickerDrag(element, ev); return; }
-      if (element) { startElementDrag(element); return; }
+      var sticker = event.target instanceof Element ? event.target.closest('[data-skb-el="sticker"]') : null;
+      if (sticker && sectionOf(sticker) === section) { startStickerDrag(sticker, ev); return; }
+      var drag = dragCandidate(event.target);
+      if (drag) {
+        if (pathOf(drag) !== selection.path) select(section.getAttribute('data-skb'), pathOf(drag));
+        startNodeDrag(drag);
+        return;
+      }
       hovered = section;
       startDrag(ev);
     };
@@ -390,6 +371,8 @@
 
   document.addEventListener('keydown', function (event) {
     if (!on || editing || !selection.id) return;
+    if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: event.key === 'ArrowUp' ? 'up' : 'down' }, '*'); return; }
+    if ((event.key === 'Delete' || event.key === 'Backspace') && !event.metaKey && !event.ctrlKey) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: 'delete' }, '*'); return; }
     if (event.key === 'Escape') {
       event.preventDefault();
       if (!selection.path) select('', '');
