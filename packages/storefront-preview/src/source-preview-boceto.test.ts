@@ -414,3 +414,64 @@ it('Ctrl/⌘+Z on the board asks the Studio to go back a step, even with nothing
   press({ key: 'z', ctrlKey: true }); await tick();
   expect(posted.filter(message => message.type === 'pagosya:boceto-key')).toHaveLength(3);
 });
+
+const pointerAt = (w: any, type: string, target: any, x: number, y: number, init: object = {}) =>
+  target.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, ...init }));
+const layoutStory = (w: any) => {
+  const section = w.document.createElement('section');
+  section.setAttribute('data-skb', 's');
+  section.innerHTML = '<div data-skb-group="copy"><h2 data-skb-node="title">T</h2><div data-skb-group="paragraphs"><p data-skb-node="0">a</p><p data-skb-node="1">b</p><p data-skb-node="2">c</p></div></div>';
+  w.document.querySelector('main').append(section);
+  section.getBoundingClientRect = () => rect(0, 700, 1000, 500);
+  section.querySelector('[data-skb-group="copy"]').getBoundingClientRect = () => rect(100, 750, 500, 400);
+  section.querySelector('[data-skb-node="title"]').getBoundingClientRect = () => rect(100, 750, 400, 60);
+  section.querySelector('[data-skb-group="paragraphs"]').getBoundingClientRect = () => rect(100, 830, 400, 260);
+  ['0', '1', '2'].forEach((key, i) => { section.querySelector(`[data-skb-node="${key}"]`).getBoundingClientRect = () => rect(100, 830 + i * 100, 400, 60); });
+  w.document.querySelector('[data-skb="h"]').getBoundingClientRect = () => rect(0, 0, 1000, 600);
+  w.document.querySelector('[data-skb="c"]').getBoundingClientRect = () => rect(0, 600, 1000, 100);
+  return section;
+};
+
+it('box: dragging from empty space selects the parts fully inside, never the section drag', async () => {
+  const { w, posted, send } = load();
+  const story = layoutStory(w);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  pointerAt(w, 'pointerdown', story, 50, 820);
+  pointerAt(w, 'pointermove', w.document, 60, 830);
+  pointerAt(w, 'pointermove', w.document, 520, 1000);
+  pointerAt(w, 'pointerup', w.document, 520, 1000); await tick();
+  expect(posted.filter(m => m.type === 'pagosya:boceto-reorder')).toEqual([]);
+  // the box covers paragraphs 0 and 1 (not 2); the paragraphs group is not fully inside
+  expect(posted.find(m => m.type === 'pagosya:boceto-select-many')).toEqual({ type: 'pagosya:boceto-select-many', items: [{ id: 's', path: 'copy/paragraphs/0' }, { id: 's', path: 'copy/paragraphs/1' }], add: false });
+});
+
+it('box: a box around every paragraph picks the paragraphs, not their group; Shift adds', async () => {
+  const { w, posted, send } = load();
+  const story = layoutStory(w);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  pointerAt(w, 'pointerdown', story, 50, 820);
+  pointerAt(w, 'pointermove', w.document, 60, 830);
+  pointerAt(w, 'pointermove', w.document, 520, 1100);
+  pointerAt(w, 'pointerup', w.document, 520, 1100, { shiftKey: true }); await tick();
+  expect(posted.find(m => m.type === 'pagosya:boceto-select-many')).toEqual({ type: 'pagosya:boceto-select-many', items: ['0', '1', '2'].map(key => ({ id: 's', path: `copy/paragraphs/${key}` })), add: true });
+});
+
+it('box: a box across two sections picks both blocks', async () => {
+  const { w, posted, send } = load();
+  layoutStory(w);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  pointerAt(w, 'pointerdown', w.document.querySelector('[data-skb="c"]'), 900, 650);
+  pointerAt(w, 'pointermove', w.document, 905, 660);
+  pointerAt(w, 'pointermove', w.document, 950, 760);
+  pointerAt(w, 'pointerup', w.document, 950, 760); await tick();
+  expect(posted.find(m => m.type === 'pagosya:boceto-select-many').items).toEqual([{ id: 'c', path: '' }, { id: 's', path: '' }]);
+});
+
+it('Shift+click adds the clicked part; every pick from the Studio gets a selected box', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/headline', label: '', others: [{ id: 'h', path: 'copy/sub' }, { id: 'bad id', path: 'x' }] } }); await tick();
+  expect(w.document.querySelectorAll('[data-boceto-box="selected"]')).toHaveLength(2);
+  w.document.querySelector('[data-skb-el="sub"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true })); await tick();
+  expect(posted.at(-1)).toEqual({ type: 'pagosya:boceto-select', id: 'h', path: 'copy/sub', add: true });
+});

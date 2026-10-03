@@ -207,7 +207,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && typeof event.data?.type === 'string' && event.data.type.startsWith('pagosya:boceto-')) {
-      if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string' && event.data.id.length <= 40) bocetoPanel.remoteSelect(event.data.id, typeof event.data.path === 'string' && /^([a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4})?$/.test(event.data.path) ? event.data.path : '');
+      const PICK_PATH = /^([a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4})?$/;
+      if (event.data.type === 'pagosya:boceto-select' && typeof event.data.id === 'string' && event.data.id.length <= 40) bocetoPanel.remoteSelect(event.data.id, typeof event.data.path === 'string' && PICK_PATH.test(event.data.path) ? event.data.path : '', event.data.add === true);
+      if (event.data.type === 'pagosya:boceto-select-many' && Array.isArray(event.data.items) && event.data.items.length <= 40) bocetoPanel.remoteSelectMany(event.data.items.filter((item: any) => item && typeof item.id === 'string' && /^[a-z0-9-]{1,40}$/.test(item.id) && typeof item.path === 'string' && PICK_PATH.test(item.path)).map((item: any) => ({ id: item.id, path: item.path })), event.data.add === true);
       if (event.data.type === 'pagosya:boceto-reorder' && typeof event.data.id === 'string' && Number.isInteger(event.data.index)) bocetoPanel.remoteReorder(event.data.id, event.data.index);
       if (event.data.type === 'pagosya:boceto-text' && typeof event.data.id === 'string' && typeof event.data.field === 'string' && typeof event.data.value === 'string') bocetoPanel.remoteText(event.data.id, event.data.field, event.data.value.slice(0, 1000));
       if (event.data.type === 'pagosya:boceto-el-move' && typeof event.data.id === 'string' && typeof event.data.el === 'string' && typeof event.data.x === 'number' && typeof event.data.y === 'number') bocetoPanel.remoteElMove(event.data.id, event.data.el, event.data.x, event.data.y);

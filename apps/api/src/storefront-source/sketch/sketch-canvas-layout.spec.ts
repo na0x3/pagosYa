@@ -97,3 +97,28 @@ it('inserted elements show whole in the marquee and the footer; the giant name k
   expect(result.name).toEqual({ aboveEnd: true, belowEnd: false });
   expect(result.scrollWidth).toBe(1280);
 });
+
+it('a box drawn over two story paragraphs picks exactly those two', async () => {
+  const result = await openPage([
+    { id: 's', type: 'story', title: 'El proceso', paragraphs: ['Preparación lenta de la masa.', 'Horneado al momento.', 'Empaque a mano.'], bg: 'paper', size: 'm' },
+  ], async page => {
+    await page.addScriptTag({ content: bocetoScript });
+    await page.evaluate(() => {
+      (window as any).posted = [];
+      window.addEventListener('message', event => { if (event.data?.type === 'pagosya:boceto-select-many') (window as any).posted.push(event.data); });
+      window.postMessage({ type: 'pagosya:boceto-mode', on: true }, '*');
+    });
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-boceto-on'));
+    const box = await page.evaluate(() => {
+      const r = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+      const section = r('[data-skb="s"]'), first = r('[data-skb="s"] [data-skb-group="paragraphs"] > :nth-child(1)'), second = r('[data-skb="s"] [data-skb-group="paragraphs"] > :nth-child(2)');
+      return { x0: section.left + 6, y0: first.top - 4, x1: Math.max(first.right, second.right) + 6, y1: second.bottom + 4 };
+    });
+    await page.mouse.move(box.x0, box.y0); await page.mouse.down();
+    for (let step = 1; step <= 8; step++) await page.mouse.move(box.x0 + ((box.x1 - box.x0) * step) / 8, box.y0 + ((box.y1 - box.y0) * step) / 8);
+    await page.mouse.up();
+    await page.waitForFunction(() => (window as any).posted.length > 0, undefined, { timeout: 3000 }).catch(() => undefined);
+    return page.evaluate(() => (window as any).posted);
+  });
+  expect(result).toEqual([{ type: 'pagosya:boceto-select-many', items: [{ id: 's', path: 'copy/paragraphs/0' }, { id: 's', path: 'copy/paragraphs/1' }], add: false }]);
+});

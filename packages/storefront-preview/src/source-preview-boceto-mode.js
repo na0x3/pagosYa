@@ -8,13 +8,14 @@
  *     whole; ⌥↑/⌥↓/Supr are forwarded as pagosya:boceto-key;
  *   - a part the Studio lists as freeable, dragged 24px past its box, comes out and floats (desktop widths only); a free part
  *     moves freely and its corner square sets its width; both post pagosya:boceto-free { id, path, x, y, w? } in percentages;
- *   - dragging the handle (or grabbing anything else in a section) reorders sections live and posts pagosya:boceto-reorder { id, index };
+ *   - dragging the handle reorders sections live and posts pagosya:boceto-reorder { id, index }; dragging from empty space
+ *     draws a selection box and posts pagosya:boceto-select-many { items, add }; Shift+click posts pagosya:boceto-select with add;
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
  *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
 (function () {
   var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, editing = null, elDragging = null;
   var photoChip = null, photoTarget = null;
-  var selection = { id: '', path: '', label: '' }, boxes = [], hoverBox = null;
+  var selection = { id: '', path: '', label: '', others: [] }, boxes = [], hoverBox = null;
   /** Per block, the paths whose position saves (from the Studio): the only parts that drag and the only drop spots. */
   var movableByBlock = {};
   function movableIn(section, node) { var list = movableByBlock[section.getAttribute('data-skb')] || []; return list.indexOf(pathOf(node)) !== -1; }
@@ -84,7 +85,7 @@
     return { id: id, path: paths[Math.min(k + 1, paths.length - 1)] };
   }
   function select(id, path) {
-    selection = { id: id, path: path, label: '' };
+    selection = { id: id, path: path, label: '', others: [] };
     drawOverlay();
     parent.postMessage({ type: 'pagosya:boceto-select', id: id, path: path }, '*');
   }
@@ -113,6 +114,10 @@
     boxes.push(makeBox(node, 'selected', selection.label));
     if (isFree(node) && canFree(section, node)) boxes.push(makeResizeHandle(node));
     childrenOf(node).forEach(function (child) { boxes.push(makeBox(child, 'child')); });
+    (selection.others || []).forEach(function (pick) {
+      var otherSection = sectionById(pick.id), other = otherSection && nodeAt(otherSection, pick.path);
+      if (other) boxes.push(makeBox(other, 'selected'));
+    });
   }
   function placeHoverBox(target) {
     if (hoverBox) { hoverBox.remove(); hoverBox = null; }
@@ -215,6 +220,61 @@
       if (clientY < rect.top + rect.height / 2) return { section: list[i], before: true };
     }
     return list.length ? { section: list[list.length - 1], before: false } : null;
+  }
+
+  function touches(r, box) { return r.width > 0 && r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; }
+  function within(r, box) { return r.width > 0 && r.left >= box.left && r.right <= box.right && r.top >= box.top && r.bottom <= box.bottom; }
+  /** What a selection box picks: blocks when it touches several sections; inside one, the largest parts fully inside,
+   * opening a lone group into its parts (two paragraphs, not "Párrafos"); the whole section when it covers it. */
+  function boxPicks(box) {
+    var hit = sections().filter(function (section) { return touches(section.getBoundingClientRect(), box); });
+    if (hit.length > 1) return hit.slice(0, 40).map(function (section) { return { id: section.getAttribute('data-skb'), path: '' }; });
+    if (!hit.length) return [];
+    var section = hit[0], id = section.getAttribute('data-skb');
+    if (within(section.getBoundingClientRect(), box)) return [{ id: id, path: '' }];
+    var inside = Array.prototype.slice.call(section.querySelectorAll('[data-skb-group],[data-skb-node],[data-skb-el]')).filter(function (node) { return sectionOf(node) === section && within(node.getBoundingClientRect(), box); });
+    var picked = inside.filter(function (node) { var up = containerOf(node); return !(up && up !== section && inside.indexOf(up) !== -1); });
+    while (picked.length === 1 && childrenOf(picked[0]).some(function (child) { return inside.indexOf(child) !== -1; })) {
+      var group = picked[0];
+      picked = childrenOf(group).filter(function (child) { return inside.indexOf(child) !== -1; });
+    }
+    return picked.slice(0, 40).map(function (node) { return { id: id, path: pathOf(node) }; });
+  }
+  /** Figma marquee: a press on empty space draws a box; the release picks what it covers (Shift adds). */
+  function startBox(down, now) {
+    var marquee = document.createElement('div');
+    marquee.setAttribute('data-boceto-marquee', '');
+    marquee.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:none;box-sizing:border-box;border:1px solid #1f6feb;background:rgba(31,111,235,.08)';
+    document.body.append(marquee);
+    elDragging = marquee;
+    clearBoxes(); placeHoverBox(null);
+    var x0 = down.clientX + (window.scrollX || 0), y0 = down.clientY + (window.scrollY || 0), x1 = x0, y1 = y0;
+    var clientBox = function () {
+      var sx = window.scrollX || 0, sy = window.scrollY || 0;
+      return { left: Math.min(x0, x1) - sx, top: Math.min(y0, y1) - sy, right: Math.max(x0, x1) - sx, bottom: Math.max(y0, y1) - sy };
+    };
+    var move = function (ev) {
+      if (ev.clientY < 70) window.scrollBy(0, -22); else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 22);
+      x1 = ev.clientX + (window.scrollX || 0); y1 = ev.clientY + (window.scrollY || 0);
+      var r = clientBox();
+      marquee.style.left = r.left + 'px'; marquee.style.top = r.top + 'px'; marquee.style.width = (r.right - r.left) + 'px'; marquee.style.height = (r.bottom - r.top) + 'px';
+    };
+    var stop = function () {
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', finish, true);
+      document.removeEventListener('pointercancel', stop, true);
+      marquee.remove(); elDragging = null; drawOverlay();
+    };
+    var finish = function (ev) {
+      x1 = ev.clientX + (window.scrollX || 0); y1 = ev.clientY + (window.scrollY || 0);
+      var r = clientBox();
+      stop();
+      parent.postMessage({ type: 'pagosya:boceto-select-many', items: boxPicks(r), add: ev.shiftKey === true }, '*');
+    };
+    document.addEventListener('pointermove', move, true);
+    document.addEventListener('pointerup', finish, true);
+    document.addEventListener('pointercancel', stop, true);
+    if (now) move(now);
   }
 
   /** Free drag for a sticker: it follows the cursor inside its positioning parent and the final
@@ -489,23 +549,25 @@
   document.addEventListener('pointerdown', function (event) {
     if (!on || dragging || elDragging || editing || event.button !== 0) return;
     if (event.target === handle) return;
+    if (event.target === photoChip || (event.target instanceof Element && event.target.closest('[data-boceto-resize]'))) return;
     var section = sectionOf(event.target);
-    if (!section) return;
     var startX = event.clientX, startY = event.clientY;
     var arm = function (ev) {
       if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 6) return;
       cleanup();
       placePhotoChip(null);
-      var sticker = event.target instanceof Element ? event.target.closest('[data-skb-el="sticker"]') : null;
-      if (sticker && sectionOf(sticker) === section) { startStickerDrag(sticker, ev); return; }
-      var drag = dragCandidate(event.target);
-      if (drag) {
-        if (selection.id !== section.getAttribute('data-skb') || pathOf(drag) !== selection.path) select(section.getAttribute('data-skb'), pathOf(drag));
-        startNodeDrag(drag, event, ev);
-        return;
+      if (section) {
+        var sticker = event.target instanceof Element ? event.target.closest('[data-skb-el="sticker"]') : null;
+        if (sticker && sectionOf(sticker) === section) { startStickerDrag(sticker, ev); return; }
+        var drag = dragCandidate(event.target);
+        if (drag) {
+          if (selection.id !== section.getAttribute('data-skb') || pathOf(drag) !== selection.path) select(section.getAttribute('data-skb'), pathOf(drag));
+          startNodeDrag(drag, event, ev);
+          return;
+        }
       }
-      hovered = section;
-      startDrag(ev);
+      // Sections move from their "⠿ Mover" handle; empty space draws a selection box.
+      startBox(event, ev);
     };
     var cleanup = function () {
       document.removeEventListener('pointermove', arm, true);
@@ -527,7 +589,9 @@
     if (!section) return;
     event.preventDefault(); event.stopImmediatePropagation();
     var next = nextSelection(event.target);
-    if (next) select(next.id, next.path);
+    if (!next) return;
+    if (event.shiftKey) parent.postMessage({ type: 'pagosya:boceto-select', id: next.id, path: next.path, add: true }, '*');
+    else select(next.id, next.path);
   }, true);
   document.addEventListener('dblclick', function (event) {
     if (!on) return;
@@ -553,7 +617,7 @@
     if ((event.key === 'Delete' || event.key === 'Backspace') && !event.metaKey && !event.ctrlKey) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: 'delete' }, '*'); return; }
     if (event.key === 'Escape') {
       event.preventDefault();
-      if (!selection.path) select('', '');
+      if (!selection.path || (selection.others && selection.others.length)) select('', '');
       else select(selection.id, selection.path.split('/').slice(0, -1).join('/'));
     } else if (event.key === 'Enter') {
       var section = sectionById(selection.id), node = section && nodeAt(section, selection.path);
@@ -576,7 +640,8 @@
       }
       var sel = event.data.selection;
       if (sel && typeof sel === 'object' && typeof sel.id === 'string' && typeof sel.path === 'string' && sel.path.length <= 120) {
-        selection = { id: sel.id, path: sel.path, label: typeof sel.label === 'string' ? sel.label.slice(0, 60) : '' };
+        var picks = Array.isArray(sel.others) ? sel.others : [];
+        selection = { id: sel.id, path: sel.path, label: typeof sel.label === 'string' ? sel.label.slice(0, 60) : '', others: picks.filter(function (pick) { return pick && /^[a-z0-9-]{1,40}$/.test(pick.id) && typeof pick.path === 'string' && (pick.path === '' || PATH.test(pick.path)); }).slice(0, 40).map(function (pick) { return { id: pick.id, path: pick.path }; }) };
         // Chosen from the Studio's layer tree: report where the part sits so the board can scroll to it.
         var revealSection = sel.reveal === true && on ? sectionById(selection.id) : null;
         var revealNode = revealSection && nodeAt(revealSection, selection.path);
