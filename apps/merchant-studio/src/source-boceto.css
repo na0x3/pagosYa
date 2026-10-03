@@ -131,3 +131,7 @@
 .boceto-confirm__card { width: min(420px, calc(100vw - 32px)); background: #fff; color: #111; border-radius: 12px; padding: 20px; box-shadow: 0 24px 80px rgba(0,0,0,.35); font: 14px/1.5 Inter, system-ui, sans-serif; }
 .boceto-confirm__card h2 { margin: 0 0 8px; font-size: 17px; }
 .boceto-confirm__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.bct-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.bct-emojis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin: 4px 0 8px; }
+.bct-emoji { border: 1px solid transparent; background: transparent; border-radius: 6px; font-size: 17px; line-height: 1; padding: 5px 0; cursor: pointer; }
+.bct-emoji:hover, .bct-emoji.is-on { border-color: #1f6feb; background: #2c2c2c; }

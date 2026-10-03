@@ -574,3 +574,60 @@ it('free layer: removing an item from the inspector list keeps a freed item on t
   (host.querySelector('.bct-list__kill') as HTMLElement).click();
   expect(lastLook().blocks.st.free).toEqual({ 'items/1': { x: 5, y: 5 } });
 });
+
+const openBlock = (id: string) => {
+  const head = host.querySelector(`[data-boceto-block="${id}"] .bct-block__head`) as HTMLElement;
+  head.click();
+  if (!host.querySelector('[data-boceto-insert]')) head.click();
+};
+
+it('insert: each kind lands centred, selected, and saves; the preview reloads to show it', async () => {
+  const reload = vi.fn();
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload), reload });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  for (const kind of ['emoji', 'text', 'button', 'photo', 'icon']) {
+    openBlock('intro');
+    (host.querySelector(`[data-boceto-insert="${kind}"]`) as HTMLElement).click();
+    expect(lastSelection().path).toMatch(/^extras\/e[a-z0-9]{3,10}$/);
+  }
+  await vi.advanceTimersByTimeAsync(1300);
+  const extras = putSketch.mock.calls.at(-1)![1].sketch.blocks[0].extras;
+  expect(extras.map((extra: any) => [extra.kind, extra.x, extra.y])).toEqual(['emoji', 'text', 'button', 'photo', 'icon'].map(kind => [kind, 45, 40]));
+  expect(extras.find((extra: any) => extra.kind === 'photo').value).toBe('assets/a.jpg');
+  expect(extras.find((extra: any) => extra.kind === 'button').href).toBe('checkout.html');
+  await vi.waitFor(() => expect(reload).toHaveBeenCalled());
+  expect([...host.querySelectorAll('.bct-node')].map(node => node.textContent)).toEqual(expect.arrayContaining(['Elementos sueltos', 'Emoji', 'Texto', 'Botón', 'Foto', 'Ícono']));
+});
+
+it('insert: the emoji grid, "Lleva a" WhatsApp and Eliminar edit the selected element', async () => {
+  await mount();
+  openBlock('intro');
+  (host.querySelector('[data-boceto-insert="emoji"]') as HTMLElement).click();
+  expect(host.querySelectorAll('[data-boceto-emoji]')).toHaveLength(40);
+  (host.querySelector('[data-boceto-emoji="🍪"]') as HTMLElement).click();
+  openBlock('intro');
+  (host.querySelector('[data-boceto-insert="button"]') as HTMLElement).click();
+  ([...host.querySelectorAll('.bct-segment__option')].find(button => button.textContent === 'WhatsApp') as HTMLElement).click();
+  const phone = host.querySelector('[data-boceto-whatsapp]') as HTMLInputElement;
+  phone.value = '+591 7000-0000'; phone.dispatchEvent(new Event('change'));
+  await vi.advanceTimersByTimeAsync(1300);
+  let extras = putSketch.mock.calls.at(-1)![1].sketch.blocks[0].extras;
+  expect(extras.map((extra: any) => (extra.kind === 'emoji' ? extra.value : extra.href))).toEqual(['🍪', 'https://wa.me/59170000000']);
+  (host.querySelector('[data-boceto-remove-node]') as HTMLElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  extras = putSketch.mock.calls.at(-1)![1].sketch.blocks[0].extras;
+  expect(extras.map((extra: any) => extra.kind)).toEqual(['emoji']);
+});
+
+it('insert: a text element keeps up to 120 characters from a canvas edit; chips stop at 12', async () => {
+  const panel = await mount();
+  openBlock('intro');
+  (host.querySelector('[data-boceto-insert="text"]') as HTMLElement).click();
+  panel.remoteText('intro', 'extras.0.value', 'x'.repeat(150));
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].extras[0].value).toHaveLength(120);
+  for (let i = 0; i < 11; i++) { openBlock('intro'); (host.querySelector('[data-boceto-insert="emoji"]') as HTMLElement).click(); }
+  openBlock('intro');
+  expect((host.querySelector('[data-boceto-insert="emoji"]') as HTMLButtonElement).disabled).toBe(true);
+});

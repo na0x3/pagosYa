@@ -2,7 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
-import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchSetFree, sketchUnfree, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
+import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -67,6 +67,11 @@ const DEFAULT_BLOCK: Record<string, object> = {
   newsletter: { type: 'newsletter', variant: 'center', title: 'Novedades', note: '', cta: 'Suscribirme', bg: 'deep', size: 'm' },
 };
 const MAXLEN: Record<string, number> = { headline: 120, title: 120, badge: 60, cta: 60, cta2: 60, trust: 120, note: 160, sticker: 40, caption: 80, tag: 60, place: 40, left: 200, right: 200, text: 200, kicker: 80, sub: 200, tagline: 200, body: 600, href: 200, q: 200, a: 600, name: 60, seeAll: 60, stripLeft: 200, stripRight: 200, ratingValue: 10, ratingSource: 60, handle: 40, value: 20, label: 40 };
+/** The emoji grid of an inserted emoji. */
+const EMOJIS = ['✨', '🔥', '⭐', '💛', '❤️', '🎉', '🎁', '🍪', '🍰', '🧁', '🍩', '☕', '🍓', '🍋', '🌸', '🌿', '🌈', '☀️', '🌙', '⚡', '💥', '💫', '🛍️', '🏷️', '💌', '📦', '🚚', '👋', '👉', '👀', '😍', '😋', '🥳', '🤩', '👌', '💯', '✅', '🆕', '📍', '🕒'];
+const EXTRA_KINDS: Array<{ kind: string; label: string }> = [{ kind: 'emoji', label: 'Emoji' }, { kind: 'text', label: 'Texto' }, { kind: 'button', label: 'Botón' }, { kind: 'photo', label: 'Foto' }, { kind: 'icon', label: 'Ícono' }];
+/** Where an inserted button leads (WhatsApp takes a number). */
+const LINKS = [{ key: 'catalog', label: 'Catálogo', href: 'index.html#skb-catalogo' }, { key: 'order', label: 'Pedido', href: 'checkout.html' }, { key: 'home', label: 'Inicio', href: 'index.html' }];
 
 const luminance = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
@@ -151,6 +156,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   // save reloads the preview. Photo swaps apply live as inline data, only for the slots that changed.
   let structural = false;
   const changedPhotos = new Map<string, Set<string>>();
+  /** The inserted button waiting for its WhatsApp number. */
+  let waPending: string | null = null;
   let picker: { kind: 'photo'; blockId: string; slot: string } | { kind: 'icon'; blockId: string; path: string; query: string; results: Array<{ name: string; svg: string }> | null } | null = null;
 
   // Photos uploaded during this session show from local data until the next preview reload brings their files.
@@ -371,6 +378,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (block.type === 'steps') (block.items || []).forEach((item: any, index: number) => children.push(row(`Ícono ${index + 1}`, iconButton(block, `items.${index}.icon`, item.icon))));
     if (block.type === 'split') (block.boxes || []).forEach((box: any, index: number) => children.push(row(`Ícono caja ${index + 1}`, iconButton(block, `boxes.${index}.icon`, box.icon))));
     for (const spec of LISTS[block.type] || []) children.push(listEditor(block, spec));
+    if (block.type !== 'account') children.push(insertRow(block));
     if (block.type !== 'account') {
       const remove = el('button', { type: 'button', className: 'bct-remove', text: 'Eliminar bloque' });
       remove.dataset.bocetoRemoveSelected = '';
@@ -385,6 +393,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   function nodeProps(block: any, path: string) {
     const node = sketchFindNode(sketchNodeTree(block), path);
     const key = path.split('/').pop()!;
+    if (path.startsWith('extras/')) return extraProps(block, path, node?.label ?? 'Elemento');
+    if (path === 'extras') return section('Elementos sueltos', [insertRow(block), el('p', { className: 'bct-hint', text: 'Lo que insertaste sobre este bloque. Elige uno para cambiarlo.' })]);
     const kind = /^\d+$/.test(key) ? undefined : sketchGroup(block.type, key)?.kind;
     const children: HTMLElement[] = [];
     const current = (field: string): string => block.layout?.[key]?.[field] ?? '';
@@ -437,6 +447,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       children.push(remove);
     }
     if (sketchCanMove(block, path)) children.push(el('p', { className: 'bct-hint', text: 'Arrástralo en el lienzo o usa ⌥↑ / ⌥↓ para moverlo.' }));
+    if (block.type !== 'account') children.push(insertRow(block));
     return section(node?.label ?? key, children);
   }
 
@@ -488,6 +499,78 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     add.addEventListener('click', () => { items.push(spec.make()); scheduleStructural(); draw(); });
     wrap.append(add);
     return wrap;
+  }
+  /** "+ Insertar": an emoji, a text, a button, a photo or an icon dropped on the block, centred and selected. */
+  function insertRow(block: any) {
+    const count = Array.isArray(block.extras) ? block.extras.length : 0;
+    const chips = EXTRA_KINDS.map(({ kind, label }) => {
+      const chip = el('button', { type: 'button', className: 'bct-chip', text: `+ ${label}`, disabled: count >= SKETCH_EXTRA_MAX || (kind === 'photo' && !photos.length) });
+      chip.dataset.bocetoInsert = kind;
+      chip.addEventListener('click', () => insertExtra(block, kind));
+      return chip;
+    });
+    return el('div', { className: 'bct-list' }, [el('p', { className: 'bct-list__title', text: 'Insertar' }), el('div', { className: 'bct-chips' }, chips)]);
+  }
+  function insertExtra(block: any, kind: string) {
+    const extras: any[] = Array.isArray(block.extras) ? block.extras : (block.extras = []);
+    if (extras.length >= SKETCH_EXTRA_MAX) return;
+    let id = '';
+    while (!id || extras.some(extra => extra.id === id)) id = `e${Math.random().toString(36).slice(2, 8).padEnd(4, '0')}`;
+    const value: Record<string, string> = { emoji: '✨', text: 'Escribe aquí', button: 'Pedir ahora', photo: photos[0] ?? '', icon: 'sparkles' };
+    const width: Record<string, number> = { emoji: 8, photo: 22, icon: 6 };
+    extras.push({ id, kind, value: value[kind], x: 45, y: 40, ...(width[kind] ? { w: width[kind] } : {}), ...(kind === 'button' ? { href: 'checkout.html' } : {}) });
+    forgottenBlock = null; selected = block.id; selectedPath = `extras/${id}`; expanded.add(block.id); picker = null;
+    scheduleStructural(); draw();
+  }
+  /** Inspector for an inserted element: what it shows, where a button leads, its turn, and Eliminar. */
+  function extraProps(block: any, path: string, label: string) {
+    const index = (block.extras || []).findIndex((extra: any) => `extras/${extra.id}` === path);
+    const extra = block.extras?.[index];
+    const children: HTMLElement[] = [];
+    if (!extra) return section(label, children);
+    if (extra.kind === 'emoji') {
+      const grid = el('div', { className: 'bct-emojis' });
+      for (const emoji of EMOJIS) {
+        const button = el('button', { type: 'button', className: `bct-emoji${extra.value === emoji ? ' is-on' : ''}`, text: emoji });
+        button.dataset.bocetoEmoji = emoji;
+        button.addEventListener('click', () => { extra.value = emoji; scheduleStructural(); draw(); });
+        grid.append(button);
+      }
+      children.push(grid);
+    } else if (extra.kind === 'text') {
+      children.push(el('p', { className: 'bct-hint', text: 'Toca dos veces este texto en el lienzo para editarlo.' }));
+    } else if (extra.kind === 'button') {
+      children.push(el('p', { className: 'bct-hint', text: 'Toca dos veces el botón en el lienzo para cambiar su texto.' }));
+      const whatsapp = /^https:\/\/wa\.me\//.test(extra.href || '') || waPending === extra.id;
+      const current = whatsapp ? 'whatsapp' : LINKS.find(link => link.href === extra.href)?.key ?? 'order';
+      children.push(row('Lleva a', segment(current, [...LINKS.map(link => link.key), 'whatsapp'], [...LINKS.map(link => link.label), 'WhatsApp'], next => {
+        const link = LINKS.find(item => item.key === next);
+        if (link) { extra.href = link.href; waPending = null; scheduleStructural(); } else waPending = extra.id;
+        draw();
+      })));
+      if (whatsapp) {
+        const phone = el('input', { type: 'tel', className: 'bct-select', placeholder: 'Con código de país, ej. 59170000000', value: /^https:\/\/wa\.me\//.test(extra.href || '') ? String(extra.href).slice('https://wa.me/'.length) : '' });
+        phone.dataset.bocetoWhatsapp = '';
+        phone.addEventListener('change', () => {
+          const digits = phone.value.replace(/\D/g, '');
+          if (digits.length < 6 || digits.length > 15) { note = 'Escribe el número de WhatsApp con código de país.'; draw(); return; }
+          extra.href = `https://wa.me/${digits}`; waPending = null; note = '';
+          scheduleStructural(); draw();
+        });
+        children.push(row('Número', phone));
+      }
+    } else if (extra.kind === 'photo') {
+      children.push(row('Foto', photoButton(block, `extras.${index}.value`)));
+    } else {
+      children.push(row('Ícono', iconButton(block, `extras.${index}.value`, extra.value)));
+    }
+    children.push(turnRow(extra));
+    const remove = el('button', { type: 'button', className: 'bct-remove', text: 'Eliminar' });
+    remove.dataset.bocetoRemoveNode = '';
+    remove.addEventListener('click', () => removeSelection());
+    children.push(remove);
+    children.push(el('p', { className: 'bct-hint', text: 'Arrástralo a donde quieras; la esquina azul cambia su tamaño. En el celular se pone en fila al final del bloque.' }));
+    return section(label, children);
   }
   async function searchIcons(query: string) {
     if (!opts || picker?.kind !== 'icon') return;
@@ -740,7 +823,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const leaf = parts[parts.length - 1];
     const key = /^\d+$/.test(leaf) ? Number(leaf) : leaf;
     if (node == null || typeof node !== 'object') return;
-    node[key] = value.slice(0, MAXLEN[String(leaf)] ?? (path.startsWith('paragraphs') ? 600 : 200));
+    const extraLimit: Record<string, number> = { text: 120, button: 40 };
+    const limit = path.startsWith('extras.') ? extraLimit[String(getPath(block, path.replace(/\.value$/, '.kind')))] ?? 200 : MAXLEN[String(leaf)] ?? (path.startsWith('paragraphs') ? 600 : 200);
+    node[key] = value.slice(0, limit);
   };
 
   // ⌥↑ / ⌥↓ move the selection (block or node); Supr/Backspace removes it (Figma-style), unless typing.
@@ -763,7 +848,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     flush: async () => { await flushSave(); return Boolean(sketch) && !pending && JSON.stringify(sketch) === lastSaved; },
     /** "Cambiar foto" on the canvas: select that block and open the photo picker on that slot. */
     remotePhoto(id: string, slot: string) {
-      if (!sketch || !/^(photo|items\.\d+\.photo|photos\.\d+)$/.test(slot)) return;
+      if (!sketch || !/^(photo|items\.\d+\.photo|photos\.\d+|extras\.\d+\.value)$/.test(slot)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
       if (selected !== id) selectedPath = ''; selected = id; picker = { kind: 'photo', blockId: id, slot };
