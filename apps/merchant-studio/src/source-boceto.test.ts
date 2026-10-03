@@ -631,3 +631,20 @@ it('insert: a text element keeps up to 120 characters from a canvas edit; chips 
   openBlock('intro');
   expect((host.querySelector('[data-boceto-insert="emoji"]') as HTMLButtonElement).disabled).toBe(true);
 });
+
+it('review: a canvas reorder beside a freed card keeps the moved card selected at its new index', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ id: 'st', type: 'steps', title: 'T', note: '', kicker: '', items: [{ icon: 'a', title: 'Uno', text: '' }, { icon: 'b', title: 'Dos', text: '' }, { icon: 'c', title: 'Tres', text: '' }], free: { 'items/1': { x: 5, y: 5 } }, bg: 'paper', size: 'm' }, sketch().blocks[2]] }, photos: [], fonts: ['anton'] } as any);
+  const panel = await mount();
+  panel.remoteNodeMove('st', 'items/2', ['2', '0']);
+  expect(lastSelection()).toMatchObject({ id: 'st', path: 'items/0' });
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].items.map((item: any) => item.title)).toEqual(['Tres', 'Dos', 'Uno']);
+});
+
+it('review: turning a gallery photo off keeps a freed photo on the same photo', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ id: 'ga', type: 'gallery', kicker: '', title: 'G', photos: ['assets/a.jpg', 'assets/b.jpg', 'assets/c.jpg'], free: { 'items/2': { x: 5, y: 5 } }, bg: 'paper', size: 'm' }, sketch().blocks[2]] }, photos: ['assets/a.jpg', 'assets/b.jpg', 'assets/c.jpg'], fonts: ['anton'] } as any);
+  await mount();
+  (host.querySelector('[data-boceto-block="ga"] .bct-block__head') as HTMLElement).click();
+  (host.querySelector('.bct-thumb.is-on') as HTMLElement).click();
+  expect(lastLook().blocks.ga.free).toEqual({ 'items/1': { x: 5, y: 5 } });
+});

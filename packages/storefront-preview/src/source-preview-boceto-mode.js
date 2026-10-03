@@ -350,15 +350,19 @@
   function startFreeDrag(node, down, detach, now) {
     var section = sectionOf(node);
     var holder = node.offsetParent || section;
-    var box = holder.getBoundingClientRect(), rect = node.getBoundingClientRect();
+    var rect = node.getBoundingClientRect();
     var pct = function (value, size) { return size ? (value / size) * 100 : 0; };
+    // Out of the flow, the part no longer holds its section up: measure the box after it closes the gap, so the spot
+    // (a percentage of that box) puts the part where it was, under the pointer.
+    if (detach) node.setAttribute('data-skb-free', 'on');
+    var box = holder.getBoundingClientRect();
     var fromX = detach ? pct(rect.left - box.left, box.width) : (freeVar(node, '--skb-fx') || 0);
     var fromY = detach ? pct(rect.top - box.top, box.height) : (freeVar(node, '--skb-fy') || 0);
     var width = detach ? clampPct(pct(rect.width, box.width), 5) : freeVar(node, '--skb-fw');
     var at = { x: fromX, y: fromY };
     elDragging = node;
     clearBoxes();
-    if (detach) { node.setAttribute('data-skb-free', 'on'); node.style.setProperty('--skb-fw', String(width)); }
+    if (detach) node.style.setProperty('--skb-fw', String(width));
     var move = function (ev) {
       at.x = clampPct(fromX + pct(ev.clientX - down.clientX, box.width), 0);
       at.y = clampPct(fromY + pct(ev.clientY - down.clientY, box.height), 0);

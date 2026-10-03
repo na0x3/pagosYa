@@ -255,18 +255,32 @@ export function sketchApplyMove(block: any, parentPath: string, nextOrder: strin
   switch (rule.kind) {
     case 'order': {
       const allowed = SKETCH_COPY_ORDER[block.type] ?? [];
-      const kept = [...new Set(nextOrder.filter(key => allowed.includes(key)))];
+      // The canvas lists only the parts that move; a freed part keeps its place after the sibling it followed.
+      const free = freeMap(block);
+      const current: string[] = Array.isArray(block.order) ? block.order : [...allowed];
+      const merged = nextOrder.filter(key => !free[`${parentPath}/${key}`]);
+      current.forEach((key, index) => {
+        if (!free[`${parentPath}/${key}`] || merged.includes(key)) return;
+        const before = current.slice(0, index).reverse().find(other => merged.includes(other));
+        merged.splice(before ? merged.indexOf(before) + 1 : 0, 0, key);
+      });
+      const kept = [...new Set(merged.filter(key => allowed.includes(key)))];
       const full = [...kept, ...allowed.filter(key => !kept.includes(key))];
       if (full.every((key, index) => key === allowed[index])) delete block.order; else block.order = full;
       return 'live';
     }
     case 'array': {
       const list = Array.isArray(block[rule.field]) ? block[rule.field] : [];
-      const picks = nextOrder.map(Number);
-      const permutation = picks.length === list.length && picks.every(n => Number.isInteger(n) && n >= 0 && n < list.length) && new Set(picks).size === picks.length;
+      // Freed items stay in their slots (the canvas lists only the items that move); the rest fill the others in order.
+      const free = freeMap(block);
+      const fixed = (n: number) => Boolean(free[`${parentPath}/${n}`]);
+      const loose = list.map((_: unknown, n: number) => n).filter((n: number) => !fixed(n));
+      const picks = nextOrder.map(Number).filter(n => !fixed(n));
+      const permutation = picks.length === loose.length && picks.every(n => loose.includes(n)) && new Set(picks).size === picks.length;
       if (!permutation) return null;
-      block[rule.field] = picks.map(n => list[n]);
-      remapFree(block, parentPath, from => picks.indexOf(from));
+      const full = list.map((_: unknown, n: number) => (fixed(n) ? n : picks.shift()!));
+      block[rule.field] = full.map((n: number) => list[n]);
+      remapFree(block, parentPath, from => full.indexOf(from));
       return 'reload';
     }
     case 'flip': if (nextOrder[0] === 'media') block.flip = true; else delete block.flip; return 'live';

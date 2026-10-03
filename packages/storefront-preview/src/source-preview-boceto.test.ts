@@ -367,3 +367,17 @@ it('free layer: on a board narrower than 900px nothing comes out of its box', as
   }
   expect(posted.some(m => m.type === 'pagosya:boceto-free')).toBe(false);
 });
+
+it('review: a part that held up its section lands under the pointer after the section closes the gap', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  const headline = w.document.querySelector('[data-skb-el="headline"]');
+  w.document.querySelector('[data-skb="h"]').getBoundingClientRect = () => (headline.hasAttribute('data-skb-free') ? rect(0, 0, 1000, 400) : rect(0, 0, 1000, 600));
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { freeable: ['copy/headline'] } } }); await tick();
+  pointer(w, 'pointerdown', headline, 30, 40);
+  pointer(w, 'pointermove', w.document, 30, 50); await tick();
+  pointer(w, 'pointermove', w.document, 600, 100);
+  pointer(w, 'pointerup', w.document, 600, 100); await tick();
+  expect(posted.find(m => m.type === 'pagosya:boceto-free')).toEqual({ type: 'pagosya:boceto-free', id: 'h', path: 'copy/headline', x: 59, y: 22.5, w: 20 });
+});

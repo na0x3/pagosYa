@@ -2,7 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
-import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
+import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -232,6 +232,14 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     selected = id; selectedPath = next;
     if (expand) expanded.add(id);
   }
+  /** A list item about to move: after the move, its new index (freed items keep their slots, so the canvas's sibling
+   * position is not the list index). */
+  function movedItem(block: any, parentPath: string, key: string): (() => string) | null {
+    const rule = sketchReorder(block, parentPath);
+    if (rule.kind !== 'array' || !/^\d+$/.test(key)) return null;
+    const item = block[rule.field]?.[Number(key)];
+    return () => String(Math.max(0, block[rule.field].indexOf(item)));
+  }
   function moveSelection(delta: -1 | 1) {
     if (!sketch || !selected) return;
     if (!selectedPath) {
@@ -249,8 +257,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const index = siblings.indexOf(key), target = index + delta;
     if (index === -1 || target < 0 || target >= siblings.length) return;
     const order = [...siblings]; order.splice(target, 0, order.splice(index, 1)[0]);
+    const follow = movedItem(block, parentPath, key);
     if (!sketchApplyMove(block, parentPath, order)) return;
-    if (/^\d+$/.test(key)) selectedPath = [...parts, String(target)].join('/');
+    if (follow) selectedPath = [...parts, follow()].join('/');
     scheduleStructural(); draw();
   }
   function removeSelection() {
@@ -471,7 +480,14 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const src = photoSrc(path);
       if (src) button.append(el('img', { src, alt: '' }));
       button.disabled = !on && (block.photos || []).length >= limit;
-      button.addEventListener('click', () => { block.photos = on ? block.photos.filter((p: string) => p !== path) : [...(block.photos || []), path]; scheduleStructural(); draw(); });
+      button.addEventListener('click', () => {
+        // Off goes through the shared removal, so a freed gallery photo keeps its spot on the same photo.
+        const listPath = sketchListPath(block.type, 'photos');
+        const index = (block.photos || []).indexOf(path);
+        if (!on) block.photos = [...(block.photos || []), path];
+        else if (!listPath || !sketchRemoveNode(block, `${listPath}/${index}`)) block.photos = block.photos.filter((p: string) => p !== path);
+        scheduleStructural(); draw();
+      });
       wrap.append(button);
     }
     return wrap;
@@ -870,9 +886,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const block = allBlocks().find(item => item.id === id);
       if (!block || !sketchCanMove(block, path)) return;
       const parts = path.split('/'); const key = parts.pop()!;
+      const follow = movedItem(block, parts.join('/'), key);
       const result = sketchApplyMove(block, parts.join('/'), order);
       if (!result) return;
-      focusNode(id, /^\d+$/.test(key) ? [...parts, String(order.indexOf(key))].join('/') : path);
+      focusNode(id, follow ? [...parts, follow()].join('/') : path);
       if (result === 'reload') scheduleStructural(); else schedule();
       draw();
     },

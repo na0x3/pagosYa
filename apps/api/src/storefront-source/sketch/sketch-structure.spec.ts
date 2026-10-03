@@ -130,15 +130,21 @@ describe('free layer', () => {
     expect(block.free).toBeUndefined();
   });
   it('free spots follow their item when a list is reordered or shortened', () => {
-    const moved = { ...steps(), free: { 'items/0': { x: 1, y: 1 } } };
-    expect(sketchApplyMove(moved, 'items', ['2', '0', '1'])).toBe('reload');
-    expect(moved.free).toEqual({ 'items/1': { x: 1, y: 1 } });
     const cut = { ...steps(), free: { 'items/2': { x: 2, y: 2 }, 'items/0': { x: 3, y: 3 } } };
     expect(sketchRemoveNode(cut, 'items/0')).toBe(true);
     expect(cut.free).toEqual({ 'items/1': { x: 2, y: 2 } });
     const single = { ...hero(), free: { 'copy/sub': { x: 1, y: 1 } } };
     expect(sketchRemoveNode(single, 'copy/sub')).toBe(true);
     expect(single.free).toBeUndefined();
+  });
+  it('review: a reorder from the canvas (movable siblings only) keeps a freed part in its place', () => {
+    const list = { ...steps(), free: { 'items/1': { x: 1, y: 1 } } };
+    expect(sketchApplyMove(list, 'items', ['2', '0'])).toBe('reload');
+    expect(list.items.map((item: any) => item.title)).toEqual(['3', '2', '1']);
+    expect(list.free).toEqual({ 'items/1': { x: 1, y: 1 } });
+    const copy = { ...hero(), free: { 'copy/headline': { x: 1, y: 1 } } };
+    expect(sketchApplyMove(copy, 'copy', ['trust', 'sub', 'actions'])).toBe('live');
+    expect(copy.order).toEqual(['headline', 'trust', 'sub', 'actions', 'badge', 'note']);
   });
   it('an inserted element is removed by id', () => {
     const block = { ...hero(), extras: [{ id: 'eab1', kind: 'emoji', value: '✨', x: 1, y: 1 }] };
