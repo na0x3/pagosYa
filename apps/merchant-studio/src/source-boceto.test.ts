@@ -728,3 +728,35 @@ it('undo: a colour dragged in its picker goes back in one step; nothing while YA
   locked.remoteKey('undo');
   expect(applied.length).toBe(before);
 });
+
+it('multi: Shift+click on the canvas adds and removes picks; the canvas gets them all; a plain pick replaces them', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/sub');
+  panel.remoteSelect('intro', 'copy/headline', true);
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy/headline', others: [{ id: 'intro', path: 'copy/sub' }] });
+  expect(host.querySelector('.bct-section__title')?.textContent).toBe('2 elementos');
+  panel.remoteSelect('intro', 'copy/sub', true);
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy/headline' });
+  expect(lastSelection().others).toBeUndefined();
+  panel.remoteSelect('intro', 'copy/sub', true);
+  panel.remoteSelect('cat', '');
+  expect(lastSelection()).toEqual({ id: 'cat', path: '', label: 'Catálogo' });
+});
+
+it('multi: a box pick selects many; with add it extends; Esc clears; Capas marks and Shift+clicks them', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'intro', path: '' }, { id: 'cat', path: '' }, { id: 'nope', path: '' }], false);
+  expect(lastSelection()).toMatchObject({ id: 'cat', path: '', others: [{ id: 'intro', path: '' }] });
+  expect(host.querySelectorAll('.bct-block.is-selected')).toHaveLength(2);
+  (host.querySelector('[data-boceto-block="fin"]') as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+  expect(lastSelection().others).toHaveLength(2);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(lastSelection()).toMatchObject({ id: '', path: '' });
+});
+
+it('multi: picks whose part is gone drop out on the next draw', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'intro', path: 'copy/sub' }, { id: 'intro', path: 'copy/headline' }], false);
+  panel.remoteText('intro', 'sub', '');
+  expect(lastSelection().others ?? []).toEqual([]);
+});

@@ -2,6 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
+import { normalizePicks, togglePick, type BocetoPick } from './boceto-selection';
 import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_FREE_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
@@ -11,7 +12,7 @@ import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchF
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; account?: any; blocks: any[] };
 type BlockApply = { movable?: string[]; freeable?: string[]; free?: Record<string, { x: number; y: number; w?: number; r?: number }>; layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
-type SelectionPayload = { id: string; path: string; label: string; reveal?: true };
+type SelectionPayload = { id: string; path: string; label: string; reveal?: true; others?: BocetoPick[] };
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
 /** `resized` runs after a side panel is tucked away or brought back, so the board can refit the page. */
@@ -124,6 +125,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let selected = '', selectedPath = '', timer: ReturnType<typeof setTimeout> | null = null, pending = false, note = '';
   let editSeq = 0, lastSaved = '', statusNode: HTMLElement | null = null, rootNode: HTMLElement | null = null, mountToken = 0;
   let mountedStore = '', mountedRevision = -1;
+  /** The rest of a multi-selection (the primary, `selected`/`selectedPath`, is the last pick). Kept only while the
+   * primary is the one `setPicks` chose: any code that points the selection elsewhere drops them on the next draw. */
+  let others: BocetoPick[] = [], groupKey = '';
   /** The lock the panel was last drawn with: a lock change (YAPI starts or stops working) must redraw. */
   let drawnLocked = false;
   const expanded = new Set<string>();
@@ -176,6 +180,17 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   };
   /** Page blocks plus the account page, which edits like a block (id 'account') but lives on its own pages. */
   const allBlocks = (): any[] => (sketch ? [...sketch.blocks, ...(sketch.account ? [sketch.account] : [])] : []);
+  const blockOf = (id: string): any => allBlocks().find(block => block.id === id);
+  const picks = (): BocetoPick[] => [...others, ...(selected ? [{ id: selected, path: selectedPath }] : [])];
+  function setPicks(list: BocetoPick[]) {
+    const all = normalizePicks(list);
+    const primary = all.pop();
+    selected = primary?.id ?? ''; selectedPath = primary?.path ?? ''; others = all;
+    groupKey = `${selected}|${selectedPath}`; picker = null; forgottenBlock = null;
+    if (selected) expanded.add(selected);
+  }
+  const isPicked = (id: string, path: string) => picks().some(pick => pick.id === id && pick.path === path);
+  const pickExists = (pick: BocetoPick) => { const block = blockOf(pick.id); return Boolean(block) && (!pick.path || Boolean(sketchFindNode(sketchNodeTree(block), pick.path))); };
   const getPath = (block: any, path: string) => path.split('.').reduce((node: any, part) => (node == null ? undefined : node[/^\d+$/.test(part) ? Number(part) : part]), block);
   /** Push the current look into the live preview — no reload, no save needed. */
   const applyLive = () => {
@@ -208,7 +223,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const block = selectedBlock();
     if (!block) return { id: '', path: '', label: '' };
     const node = selectedPath ? sketchFindNode(sketchNodeTree(block), selectedPath) : undefined;
-    return { id: block.id, path: node ? selectedPath : '', label: node?.label ?? (TYPE_LABEL[block.type] || block.type) };
+    return { id: block.id, path: node ? selectedPath : '', label: node?.label ?? (TYPE_LABEL[block.type] || block.type), ...(others.length ? { others } : {}) };
   }
   const syncSelection = () => {
     const selection: SelectionPayload = { ...selectionPayload(), ...(revealNext ? { reveal: true as const } : {}) };
@@ -495,6 +510,11 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     return section(node?.label ?? key, children);
   }
 
+  /** Inspector for several picks: what they can share. */
+  function groupProps(list: BocetoPick[]) {
+    return section(`${list.length} elementos`, [el('p', { className: 'bct-hint', text: 'Arrástralos juntos en el lienzo; Supr los elimina.' })]);
+  }
+
   /** A photo slot as a thumbnail button that opens the picker. */
   function photoButton(block: any, slot: string) {
     const current = String(getPath(block, slot) || '');
@@ -740,10 +760,14 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   function nodeList(block: any, nodes: SketchNode[], depth: number): HTMLElement {
     const list = el('div', { className: 'bct-tree' });
     for (const node of nodes) {
-      const item = el('button', { type: 'button', className: `bct-node${selected === block.id && selectedPath === node.path ? ' is-selected' : ''}`, text: block.free?.[node.path] ? `↗ ${node.label}` : node.label });
+      const item = el('button', { type: 'button', className: `bct-node${isPicked(block.id, node.path) ? ' is-selected' : ''}`, text: block.free?.[node.path] ? `↗ ${node.label}` : node.label });
       item.style.paddingLeft = `${10 + depth * 14}px`;
       item.dataset.bocetoNode = node.path;
-      item.addEventListener('click', event => { event.stopPropagation(); forgottenBlock = null; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw(); });
+      item.addEventListener('click', event => {
+        event.stopPropagation();
+        if (event.shiftKey) { setPicks(togglePick(picks(), { id: block.id, path: node.path })); draw(); return; }
+        forgottenBlock = null; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw();
+      });
       list.append(item);
       if (node.children.length) list.append(nodeList(block, node.children, depth + 1));
     }
@@ -757,7 +781,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     return toggle;
   }
   /** Select a whole block from Capas (a second click on the same block clears it). */
-  const pickBlock = (id: string) => { forgottenBlock = null; const same = selected === id && !selectedPath; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw(); };
+  const pickBlock = (id: string, add = false) => {
+    if (add) { setPicks(togglePick(picks(), { id, path: '' })); draw(); return; }
+    forgottenBlock = null; const same = selected === id && !selectedPath && !others.length; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw();
+  };
 
   function draw() {
     if (!host || !opts) return;
@@ -765,13 +792,15 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     // The sketch may have been replaced (conflict reload, server repair) or a part removed: keep the selection on the
     // nearest part that still exists rather than a stale path.
     if (selected) focusNode(selected, selectedPath, false);
+    if (others.length && `${selected}|${selectedPath}` !== groupKey) others = [];
+    others = others.filter(pickExists);
     // Figma-equal structure: layers on the left, a selection-driven inspector on the right.
     const layers = el('aside', { className: 'bct-layers' });
     layers.append(el('header', { className: 'bct-layers__head' }, [el('h2', { text: 'Capas' }), el('span', { className: 'bct-layers__count', text: `${sketch.blocks.length} bloques` }), dockButton('layers', false)]));
     const list = el('div', { className: 'bct-blocks' });
     sketch.blocks.forEach((block, index) => {
       const bg = resolveBg(sketch!.palette, block.bg);
-      const item = el('div', { className: `bct-block${selected === block.id && !selectedPath ? ' is-selected' : ''}` });
+      const item = el('div', { className: `bct-block${isPicked(block.id, '') ? ' is-selected' : ''}` });
       item.dataset.bocetoBlock = block.id;
       const head = el('div', { className: 'bct-block__head' });
       head.append(treeToggle(block));
@@ -790,18 +819,18 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       head.append(tools);
       item.append(head);
       if (expanded.has(block.id)) item.append(nodeList(block, sketchNodeTree(block), 1));
-      item.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-block__tools, .bct-tree, .bct-block__toggle')) return; pickBlock(block.id); });
+      item.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-block__tools, .bct-tree, .bct-block__toggle')) return; pickBlock(block.id, (event as MouseEvent).shiftKey); });
       list.append(item);
     });
     layers.append(list);
     if (sketch.account) {
-      const entry = el('div', { className: `bct-block bct-block--page${selected === 'account' && !selectedPath ? ' is-selected' : ''}` });
+      const entry = el('div', { className: `bct-block bct-block--page${isPicked('account', '') ? ' is-selected' : ''}` });
       entry.dataset.bocetoBlock = 'account';
       const swatch = el('span', { className: 'bct-block__swatch' });
       swatch.style.background = resolveBg(sketch.palette, sketch.account.bg);
       entry.append(el('div', { className: 'bct-block__head' }, [treeToggle(sketch.account), swatch, el('span', { className: 'bct-block__name', text: 'Cuenta' }), el('span', { className: 'bct-block__peek', text: 'Ingreso y registro' })]));
       if (expanded.has('account')) entry.append(nodeList(sketch.account, sketchNodeTree(sketch.account), 1));
-      entry.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-tree, .bct-block__toggle')) return; pickBlock('account'); });
+      entry.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-tree, .bct-block__toggle')) return; pickBlock('account', (event as MouseEvent).shiftKey); });
       layers.append(el('p', { className: 'bct-layers__group', text: 'Otras páginas' }), entry);
     }
 
@@ -838,6 +867,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       root.classList.add('is-yapi');
     } else if (openPicker) {
       root.append(el('div', { className: 'bct-props' }, [openPicker]));
+    } else if (current && others.length) {
+      root.append(el('div', { className: 'bct-props' }, [groupProps(picks())]));
     } else if (current) {
       // Selection-driven, like Figma: the inspector shows what is selected on the canvas, one level up at a time.
       const upPath = selectedPath.split('/').slice(0, -1).join('/');
@@ -886,6 +917,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (active && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return;
     const key = event.key.toLowerCase();
     if ((event.metaKey || event.ctrlKey) && !event.altKey && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); stepBack(key === 'y' || event.shiftKey); return; }
+    if (event.key === 'Escape' && others.length) { event.preventDefault(); setPicks([]); draw(); return; }
     if (!selected) return;
     if ((event.key === 'Delete' || event.key === 'Backspace') && !event.altKey && !event.metaKey && !event.ctrlKey) { event.preventDefault(); removeSelection(); return; }
     if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
@@ -908,8 +940,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (selected !== id) selectedPath = ''; selected = id; picker = { kind: 'photo', blockId: id, slot };
       draw();
     },
-    remoteSelect(id: string, path = '') {
+    remoteSelect(id: string, path = '', add = false) {
       if (!sketch) return;
+      if (add && id) { if (pickExists({ id, path })) setPicks(togglePick(picks(), { id, path })); draw(); return; }
       forgottenBlock = null;
       const before = `${selected}|${selectedPath}`;
       focusNode(id, path);
@@ -917,6 +950,13 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       draw();
       if (!/^[a-z0-9-]{1,40}$/.test(selected)) return;
       host?.querySelector(`[data-boceto-block="${selected}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    },
+    /** A selection box on the canvas: its picks replace the selection, or join it with Shift. */
+    remoteSelectMany(items: BocetoPick[], add: boolean) {
+      if (!sketch) return;
+      const valid = items.slice(0, 40).filter(pickExists);
+      setPicks(add ? [...picks(), ...valid] : valid);
+      draw();
     },
     /** A node dragged among its siblings on the canvas; `order` is the siblings' keys as the canvas now shows them. */
     remoteNodeMove(id: string, path: string, order: string[]) {
