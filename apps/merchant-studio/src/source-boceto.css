@@ -125,3 +125,9 @@
 .bct-tabs__tab.is-on { background: #4d4d4d; color: #fff; }
 .bct-panel.is-yapi { bottom: auto; padding: 0; overflow: hidden; width: var(--bct-right, 360px); }
 .studio-workspace.is-boceto.is-boceto-yapi .agent-panel { display: grid; position: fixed; top: 47px; right: 0; bottom: 0; width: var(--bct-right, 360px); z-index: 40; border-left: 1px solid #3c3c3c; }
+
+/* Generar sitio is final, so it asks once. */
+.boceto-confirm { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(0,0,0,.45); }
+.boceto-confirm__card { width: min(420px, calc(100vw - 32px)); background: #fff; color: #111; border-radius: 12px; padding: 20px; box-shadow: 0 24px 80px rgba(0,0,0,.35); font: 14px/1.5 Inter, system-ui, sans-serif; }
+.boceto-confirm__card h2 { margin: 0 0 8px; font-size: 17px; }
+.boceto-confirm__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
