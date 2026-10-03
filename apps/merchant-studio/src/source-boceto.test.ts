@@ -318,3 +318,22 @@ it('the back button climbs one level at a time', async () => {
   (host.querySelector('.bct-back') as HTMLElement).click();
   expect(lastSelection()).toMatchObject({ path: '' });
 });
+
+it('Capas is a tree: the arrow expands a block, a node row selects that path and highlights it', async () => {
+  await mount();
+  expect(host.querySelector('[data-boceto-block="intro"] .bct-tree')).toBeNull();
+  (host.querySelector('[data-boceto-toggle="intro"]') as HTMLElement).click();
+  const rows = [...host.querySelectorAll('[data-boceto-block="intro"] [data-boceto-node]')].map(node => node.getAttribute('data-boceto-node'));
+  expect(rows).toEqual(['copy', 'copy/headline', 'copy/sub', 'copy/actions', 'copy/actions/cta']);
+  (host.querySelector('[data-boceto-node="copy/actions"]') as HTMLElement).click();
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy/actions' });
+  expect(host.querySelector('[data-boceto-node="copy/actions"]')?.classList.contains('is-selected')).toBe(true);
+  (host.querySelector('[data-boceto-toggle="intro"]') as HTMLElement).click();
+  expect(host.querySelector('[data-boceto-block="intro"] .bct-tree')).toBeNull();
+});
+
+it('selecting on the canvas expands that block in Capas', async () => {
+  const panel = await mount();
+  panel.remoteSelect('cat', 'head');
+  expect(host.querySelector('[data-boceto-block="cat"] [data-boceto-node="head"]')?.classList.contains('is-selected')).toBe(true);
+});

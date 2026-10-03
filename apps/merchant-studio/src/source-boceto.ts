@@ -2,7 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
-import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketchGroup, sketchNodeTree, sketchRemoveNode, SKETCH_TWO_COLUMN } from '@pagosya/shared-types';
+import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketchGroup, sketchNodeTree, sketchRemoveNode, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -520,6 +520,29 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     scheduleStructural(); draw();
   }
 
+  /** The block's parts as an indented, clickable list (Figma layers). */
+  function nodeList(block: any, nodes: SketchNode[], depth: number): HTMLElement {
+    const list = el('div', { className: 'bct-tree' });
+    for (const node of nodes) {
+      const item = el('button', { type: 'button', className: `bct-node${selected === block.id && selectedPath === node.path ? ' is-selected' : ''}`, text: node.label });
+      item.style.paddingLeft = `${10 + depth * 14}px`;
+      item.dataset.bocetoNode = node.path;
+      item.addEventListener('click', event => { event.stopPropagation(); selected = block.id; selectedPath = node.path; picker = null; draw(); });
+      list.append(item);
+      if (node.children.length) list.append(nodeList(block, node.children, depth + 1));
+    }
+    return list;
+  }
+  function treeToggle(block: any) {
+    const toggle = el('button', { type: 'button', className: 'bct-block__toggle', text: expanded.has(block.id) ? '▾' : '▸', title: 'Ver partes' });
+    toggle.dataset.bocetoToggle = block.id;
+    toggle.disabled = !sketchNodeTree(block).length;
+    toggle.addEventListener('click', event => { event.stopPropagation(); if (expanded.has(block.id)) expanded.delete(block.id); else expanded.add(block.id); draw(); });
+    return toggle;
+  }
+  /** Select a whole block from Capas (a second click on the same block clears it). */
+  const pickBlock = (id: string) => { const same = selected === id && !selectedPath; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw(); };
+
   function draw() {
     if (!host || !opts) return;
     if (!sketch) { host.replaceChildren(); return; }
@@ -529,9 +552,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const list = el('div', { className: 'bct-blocks' });
     sketch.blocks.forEach((block, index) => {
       const bg = resolveBg(sketch!.palette, block.bg);
-      const item = el('div', { className: `bct-block${selected === block.id ? ' is-selected' : ''}` });
+      const item = el('div', { className: `bct-block${selected === block.id && !selectedPath ? ' is-selected' : ''}` });
       item.dataset.bocetoBlock = block.id;
       const head = el('div', { className: 'bct-block__head' });
+      head.append(treeToggle(block));
       const swatch = el('span', { className: 'bct-block__swatch' });
       swatch.style.background = bg;
       head.append(swatch);
@@ -546,17 +570,19 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       tools.append(up, down, dup, kill);
       head.append(tools);
       item.append(head);
-      item.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-block__tools')) return; selected = selected === block.id ? '' : block.id; picker = null; draw(); });
+      if (expanded.has(block.id)) item.append(nodeList(block, sketchNodeTree(block), 1));
+      item.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-block__tools, .bct-tree, .bct-block__toggle')) return; pickBlock(block.id); });
       list.append(item);
     });
     layers.append(list);
     if (sketch.account) {
-      const entry = el('div', { className: `bct-block bct-block--page${selected === 'account' ? ' is-selected' : ''}` });
+      const entry = el('div', { className: `bct-block bct-block--page${selected === 'account' && !selectedPath ? ' is-selected' : ''}` });
       entry.dataset.bocetoBlock = 'account';
       const swatch = el('span', { className: 'bct-block__swatch' });
       swatch.style.background = resolveBg(sketch.palette, sketch.account.bg);
-      entry.append(el('div', { className: 'bct-block__head' }, [swatch, el('span', { className: 'bct-block__name', text: 'Cuenta' }), el('span', { className: 'bct-block__peek', text: 'Ingreso y registro' })]));
-      entry.addEventListener('click', () => { selected = selected === 'account' ? '' : 'account'; picker = null; draw(); });
+      entry.append(el('div', { className: 'bct-block__head' }, [treeToggle(sketch.account), swatch, el('span', { className: 'bct-block__name', text: 'Cuenta' }), el('span', { className: 'bct-block__peek', text: 'Ingreso y registro' })]));
+      if (expanded.has('account')) entry.append(nodeList(sketch.account, sketchNodeTree(sketch.account), 1));
+      entry.addEventListener('click', event => { if ((event.target as HTMLElement).closest('.bct-tree, .bct-block__toggle')) return; pickBlock('account'); });
       layers.append(el('p', { className: 'bct-layers__group', text: 'Otras páginas' }), entry);
     }
 

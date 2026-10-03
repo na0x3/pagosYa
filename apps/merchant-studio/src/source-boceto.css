@@ -100,3 +100,9 @@
 .bct-layers__group { margin: 4px 14px 2px; color: #8a8a8a; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .bct-block--page { margin: 0 10px; }
 .bct-upload { width: 100%; margin: 6px 0 2px; }
+.bct-block__toggle { width: 18px; flex: none; border: 0; background: transparent; color: inherit; opacity: .7; cursor: pointer; font-size: 11px; padding: 0; }
+.bct-block__toggle:disabled { visibility: hidden; }
+.bct-tree { display: grid; margin: 4px 0 2px; }
+.bct-node { display: block; width: 100%; text-align: left; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 12px; padding-block: 5px; cursor: pointer; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bct-node:hover { background: rgba(31, 111, 235, .08); opacity: 1; }
+.bct-node.is-selected { background: rgba(31, 111, 235, .16); color: #1f6feb; opacity: 1; font-weight: 600; }
