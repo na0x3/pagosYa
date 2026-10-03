@@ -41,8 +41,9 @@ that apply and the rest greyed out; every group action is one Ctrl+Z step.
   box after 6px of travel (the same threshold as today). The box is a fixed, light-blue rectangle drawn by the canvas.
 - On release:
   - **Box inside one section:** pick the *maximal* selectable nodes fully inside the box (a node is skipped when its
-    container is fully inside too, so a whole column picks the column). Covering the whole section picks the block.
-    Nothing fully inside → nothing selected.
+    container is fully inside too). When that leaves a single group (a box around two paragraphs also covers their
+    paragraphs group), pick its parts inside the box instead, so "two paragraphs" selects the two paragraphs. Covering
+    the whole section picks the block. Nothing fully inside → nothing selected.
   - **Box touching two or more sections:** pick every section it touches (whole blocks).
   - Shift held at release adds to the current selection instead of replacing it.
 - The canvas posts `pagosya:boceto-select-many { items: Array<{ id, path }>, add: boolean }` (paths validated with the
@@ -97,15 +98,16 @@ that apply and the rest greyed out; every group action is one Ctrl+Z step.
     and list field;
   - `{ kind: 'extra', extra }` — an inserted element;
   - fixed parts convert at copy time to `{ kind: 'extra', extra }`: text parts (headline, title, sub, body, badge, note,
-    trust, kicker, caption, tag, left/right, lead, seeAll, rating) → a `text` extra with their words (≤ 120);
-    `cta`/`cta2` → a `button` extra with the label and the block's `href` (or `checkout.html`); the main photo or a
-    gallery/collection photo → a `photo` extra. A part with nothing copyable (a column, the form) is skipped.
+    trust, kicker, caption, tag, sticker, left/right, lead, seeAll, rating) → a `text` extra with their words (≤ 120);
+    `cta`/`cta2` → a `button` extra with the label and the block's `href` (or `checkout.html`); the main photo
+    (`media/photo`) → a `photo` extra. Gallery photos are list items (they paste into another gallery). A part with
+    nothing copyable (a column, the form) is skipped.
 - **Paste** (⌘V or "Pegar aquí") into the *target block*: the right-clicked block, else the primary selection's block,
   else after the last block. In order:
   - blocks → inserted after the target block with fresh ids (`<id>-copia`, as the ⧉ button does), never after the
     footer; the account page never receives blocks;
-  - items → appended after the selected item (or at the end) of the target block's same list when the block type
-    matches and the list has room (the list limits of repair); otherwise skipped;
+  - items → appended at the end of the target block's same list when the block type matches and the list has room
+    (the list limits of repair; appending never shifts another item's free spot); otherwise skipped;
   - extras → added to the target block with fresh ids at their copied spot offset by +3/+3 (or at the "Pegar aquí"
     point, keeping the group's relative offsets), stopping at `SKETCH_EXTRA_MAX`.
   - The pasted things become the selection. Skipped items are reported in the status ("2 no caben aquí").
