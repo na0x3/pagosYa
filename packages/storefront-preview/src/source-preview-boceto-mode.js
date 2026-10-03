@@ -6,6 +6,8 @@
  *   - grabbing a movable part (text, button, card, cajita… — the Studio lists them per block in `movable`) drags it
  *     among its siblings and posts pagosya:boceto-node-move { id, path, order }; a selected movable part drags as a
  *     whole; ⌥↑/⌥↓/Supr are forwarded as pagosya:boceto-key;
+ *   - a part the Studio lists as freeable, dragged 24px past its box, comes out and floats (desktop widths only); a free part
+ *     moves freely and its corner square sets its width; both post pagosya:boceto-free { id, path, x, y, w? } in percentages;
  *   - dragging the handle (or grabbing anything else in a section) reorders sections live and posts pagosya:boceto-reorder { id, index };
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
  *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
@@ -16,6 +18,17 @@
   /** Per block, the paths whose position saves (from the Studio): the only parts that drag and the only drop spots. */
   var movableByBlock = {};
   function movableIn(section, node) { var list = movableByBlock[section.getAttribute('data-skb')] || []; return list.indexOf(pathOf(node)) !== -1; }
+  /** Per block, the parts that may float (freed ones and inserted elements included); none while YAPI works. */
+  var freeableByBlock = {};
+  var PATH = /^[a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4}$/;
+  var FREE_VARS = ['--skb-fx', '--skb-fy', '--skb-fw', '--skb-fr'];
+  function freeableIn(section, node) { var list = freeableByBlock[section.getAttribute('data-skb')] || []; return list.indexOf(pathOf(node)) !== -1; }
+  /** Free spots only exist from 900px up: on a phone-width board everything sits in its column. */
+  function canFree(section, node) { return window.innerWidth >= 900 && freeableIn(section, node); }
+  function isFree(node) { return node.hasAttribute('data-skb-free'); }
+  function freeVar(node, name) { var value = parseFloat(node.style.getPropertyValue(name)); return isFinite(value) ? value : null; }
+  function clampPct(value, low) { return Math.round(Math.min(100, Math.max(low, value)) * 10) / 10; }
+  function grabbable(section, node) { return movableIn(section, node) || canFree(section, node); }
 
   /** "Cambiar foto": a chip over the hovered photo; clicking it asks the Studio to open its photo picker. */
   function placePhotoChip(img) {
@@ -98,6 +111,7 @@
     var node = section && nodeAt(section, selection.path);
     if (!node) return;
     boxes.push(makeBox(node, 'selected', selection.label));
+    if (isFree(node) && canFree(section, node)) boxes.push(makeResizeHandle(node));
     childrenOf(node).forEach(function (child) { boxes.push(makeBox(child, 'child')); });
   }
   function placeHoverBox(target) {
@@ -242,15 +256,17 @@
     var section = sectionOf(target);
     if (!section) return null;
     var picked = selection.id === section.getAttribute('data-skb') && selection.path ? nodeAt(section, selection.path) : null;
-    if (picked && picked.contains(target) && movableIn(section, picked)) return picked;
-    for (var n = target; n && n !== section; n = n.parentElement) if (selectable(n) && movableIn(section, n)) return n;
+    if (picked && picked.contains(target) && grabbable(section, picked)) return picked;
+    for (var n = target; n && n !== section; n = n.parentElement) if (selectable(n) && grabbable(section, n)) return n;
     return null;
   }
   /** Reorder a node among its siblings (Figma auto layout): rows move along x, columns along y. Only siblings whose
    * position saves are drop spots, so a fixed part like the antetítulo never offers one. */
-  function startNodeDrag(node) {
+  function startNodeDrag(node, down, now) {
     var section = sectionOf(node), container = containerOf(node);
     if (!section || !container) return;
+    if (isFree(node)) { if (canFree(section, node)) startFreeDrag(node, down, false, now); return; }
+    var reorder = movableIn(section, node), freeable = canFree(section, node);
     var fromPath = pathOf(node);
     elDragging = node;
     node.setAttribute('data-boceto-dragging', '');
@@ -264,6 +280,15 @@
     var grid = container !== section && display.indexOf('grid') !== -1 && siblings().some(function (child) { return Math.abs(child.getBoundingClientRect().left - startLeft) > 1; });
     var target = null, alongX = horizontal;
     var move = function (ev) {
+      if (freeable) {
+        var bounds = container.getBoundingClientRect();
+        if (ev.clientX < bounds.left - 24 || ev.clientX > bounds.right + 24 || ev.clientY < bounds.top - 24 || ev.clientY > bounds.bottom + 24) {
+          stop(); node.removeAttribute('data-boceto-dragging'); target = null;
+          startFreeDrag(node, down, true, ev);
+          return;
+        }
+      }
+      if (!reorder) return;
       target = null;
       var list = siblings();
       if (grid) {
@@ -292,12 +317,15 @@
       if (alongX) { indicator.style.top = box.top + 'px'; indicator.style.height = box.height + 'px'; indicator.style.width = '4px'; indicator.style.left = (target.before ? box.left : box.right) - 2 + 'px'; }
       else { indicator.style.left = box.left + 'px'; indicator.style.width = box.width + 'px'; indicator.style.height = '4px'; indicator.style.top = (target.before ? box.top : box.bottom) - 2 + 'px'; }
     };
-    var finish = function () {
+    var stop = function () {
       document.removeEventListener('pointermove', move, true);
       document.removeEventListener('pointerup', finish, true);
       document.removeEventListener('pointercancel', finish, true);
       indicator.style.display = 'none';
       indicator.style.left = '12px'; indicator.style.right = '12px'; indicator.style.width = 'auto'; indicator.style.height = '4px';
+    };
+    var finish = function () {
+      stop();
       node.removeAttribute('data-boceto-dragging');
       elDragging = null;
       if (target) {
@@ -314,6 +342,108 @@
     document.addEventListener('pointerup', finish, true);
     // A cancelled pointer (the browser took over the gesture) must not leave the canvas stuck mid-drag.
     document.addEventListener('pointercancel', finish, true);
+  }
+
+  /** A free part (or one just pulled out of its box) follows the pointer inside its positioning box — its section, or
+   * the photo column it sits in — and the drop is posted as percentages of that box. Moves are measured from the press,
+   * so a turned part does not drift. */
+  function startFreeDrag(node, down, detach, now) {
+    var section = sectionOf(node);
+    var holder = node.offsetParent || section;
+    var box = holder.getBoundingClientRect(), rect = node.getBoundingClientRect();
+    var pct = function (value, size) { return size ? (value / size) * 100 : 0; };
+    var fromX = detach ? pct(rect.left - box.left, box.width) : (freeVar(node, '--skb-fx') || 0);
+    var fromY = detach ? pct(rect.top - box.top, box.height) : (freeVar(node, '--skb-fy') || 0);
+    var width = detach ? clampPct(pct(rect.width, box.width), 5) : freeVar(node, '--skb-fw');
+    var at = { x: fromX, y: fromY };
+    elDragging = node;
+    clearBoxes();
+    if (detach) { node.setAttribute('data-skb-free', 'on'); node.style.setProperty('--skb-fw', String(width)); }
+    var move = function (ev) {
+      at.x = clampPct(fromX + pct(ev.clientX - down.clientX, box.width), 0);
+      at.y = clampPct(fromY + pct(ev.clientY - down.clientY, box.height), 0);
+      node.style.setProperty('--skb-fx', String(at.x));
+      node.style.setProperty('--skb-fy', String(at.y));
+    };
+    var stop = function () {
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', finish, true);
+      document.removeEventListener('pointercancel', cancel, true);
+      elDragging = null;
+    };
+    var finish = function () {
+      stop();
+      var message = { type: 'pagosya:boceto-free', id: section.getAttribute('data-skb'), path: pathOf(node), x: clampPct(at.x, 0), y: clampPct(at.y, 0) };
+      if (width !== null) message.w = width;
+      parent.postMessage(message, '*');
+      drawOverlay();
+    };
+    // The browser took the gesture: a part pulled out just now goes back in; a free part keeps its saved spot.
+    var cancel = function () {
+      stop();
+      if (detach) { node.removeAttribute('data-skb-free'); FREE_VARS.forEach(function (name) { node.style.removeProperty(name); }); }
+      else { node.style.setProperty('--skb-fx', String(fromX)); node.style.setProperty('--skb-fy', String(fromY)); }
+      drawOverlay();
+    };
+    document.addEventListener('pointermove', move, true);
+    document.addEventListener('pointerup', finish, true);
+    document.addEventListener('pointercancel', cancel, true);
+    if (now) move(now);
+  }
+
+  /** The corner square on a selected free part: dragging it sets the part's width (percent of its box). */
+  function makeResizeHandle(node) {
+    var rect = node.getBoundingClientRect();
+    var grip = document.createElement('div');
+    grip.setAttribute('data-boceto-resize', '');
+    grip.style.cssText = 'position:fixed;z-index:2147483647;width:10px;height:10px;box-sizing:border-box;background:#fff;border:2px solid #1f6feb;border-radius:2px;cursor:nwse-resize;touch-action:none;left:' + (rect.right - 5) + 'px;top:' + (rect.bottom - 5) + 'px';
+    grip.addEventListener('pointerdown', function (event) {
+      if (event.button !== 0) return;
+      event.preventDefault(); event.stopPropagation();
+      var section = sectionOf(node), holder = node.offsetParent || section;
+      var box = holder.getBoundingClientRect();
+      var from = freeVar(node, '--skb-fw');
+      if (from === null) from = box.width ? (node.getBoundingClientRect().width / box.width) * 100 : 0;
+      var width = clampPct(from, 5);
+      elDragging = node;
+      clearBoxes();
+      var move = function (ev) { width = clampPct(from + (box.width ? ((ev.clientX - event.clientX) / box.width) * 100 : 0), 5); node.style.setProperty('--skb-fw', String(width)); };
+      var finish = function () {
+        document.removeEventListener('pointermove', move, true);
+        document.removeEventListener('pointerup', finish, true);
+        document.removeEventListener('pointercancel', finish, true);
+        elDragging = null;
+        parent.postMessage({ type: 'pagosya:boceto-free', id: section.getAttribute('data-skb'), path: pathOf(node), x: freeVar(node, '--skb-fx') || 0, y: freeVar(node, '--skb-fy') || 0, w: width }, '*');
+        drawOverlay();
+      };
+      document.addEventListener('pointermove', move, true);
+      document.addEventListener('pointerup', finish, true);
+      document.addEventListener('pointercancel', finish, true);
+    });
+    document.body.append(grip);
+    return grip;
+  }
+
+  /** Live free spots from the Studio: set each listed path, and put back any part no longer listed. */
+  function applyFree(section, map) {
+    var kept = [];
+    for (var path in map) {
+      var pos = map[path];
+      if (!PATH.test(path) || !pos || typeof pos.x !== 'number' || typeof pos.y !== 'number' || !isFinite(pos.x) || !isFinite(pos.y)) continue;
+      var node = nodeAt(section, path);
+      if (!node || node === section) continue;
+      kept.push(node);
+      node.setAttribute('data-skb-free', 'on');
+      node.style.setProperty('--skb-fx', String(clampPct(pos.x, 0)));
+      node.style.setProperty('--skb-fy', String(clampPct(pos.y, 0)));
+      if (typeof pos.w === 'number' && isFinite(pos.w)) node.style.setProperty('--skb-fw', String(clampPct(pos.w, 5))); else node.style.removeProperty('--skb-fw');
+      if (typeof pos.r === 'number' && isFinite(pos.r) && pos.r) node.style.setProperty('--skb-fr', String(Math.round(Math.min(180, Math.max(-180, pos.r))))); else node.style.removeProperty('--skb-fr');
+    }
+    Array.prototype.slice.call(section.querySelectorAll('[data-skb-free]')).forEach(function (node) {
+      if (sectionOf(node) !== section || kept.indexOf(node) !== -1) return;
+      node.removeAttribute('data-skb-free');
+      FREE_VARS.forEach(function (name) { node.style.removeProperty(name); });
+    });
   }
 
   function startEditing(element) {
@@ -365,7 +495,7 @@
       var drag = dragCandidate(event.target);
       if (drag) {
         if (selection.id !== section.getAttribute('data-skb') || pathOf(drag) !== selection.path) select(section.getAttribute('data-skb'), pathOf(drag));
-        startNodeDrag(drag);
+        startNodeDrag(drag, event, ev);
         return;
       }
       hovered = section;
@@ -451,7 +581,9 @@
         var section = document.querySelector('[data-skb="' + id + '"]');
         if (!section) continue;
         var spec = blocks[id] || {};
-        if (Array.isArray(spec.movable)) movableByBlock[id] = spec.movable.filter(function (path) { return typeof path === 'string' && /^[a-zA-Z0-9]{1,20}(\/[a-zA-Z0-9]{1,20}){0,4}$/.test(path); }).slice(0, 120);
+        if (Array.isArray(spec.movable)) movableByBlock[id] = spec.movable.filter(function (path) { return typeof path === 'string' && PATH.test(path); }).slice(0, 120);
+        if (Array.isArray(spec.freeable)) freeableByBlock[id] = spec.freeable.filter(function (path) { return typeof path === 'string' && PATH.test(path); }).slice(0, 160);
+        if (spec.free && typeof spec.free === 'object') applyFree(section, spec.free);
         if (typeof spec.bg === 'string' && /^#[0-9a-f]{6}$/i.test(spec.bg)) section.style.setProperty('--skb-bg', spec.bg);
         if (typeof spec.ink === 'string' && /^#[0-9a-f]{6}$/i.test(spec.ink)) section.style.setProperty('--skb-ink', spec.ink);
         if (spec.align === 'center' || spec.align === 'end') section.setAttribute('data-skb-align', spec.align);
@@ -462,7 +594,7 @@
         // Photos arrive as inline data: the preview inlines assets when it builds the page, so a raw path would not load.
         var photos = spec.photos || {};
         for (var slot in photos) {
-          if (!/^(photo|items\.\d+\.photo|photos\.\d+)$/.test(slot) || typeof photos[slot] !== 'string' || !/^data:image\/(png|jpe?g|webp|avif|gif);base64,/.test(photos[slot])) continue;
+          if (!/^(photo|items\.\d+\.photo|photos\.\d+|extras\.\d+\.value)$/.test(slot) || typeof photos[slot] !== 'string' || !/^data:image\/(png|jpe?g|webp|avif|gif);base64,/.test(photos[slot])) continue;
           var target = section.querySelector('img[data-skb-photo="' + slot + '"]');
           if (target) target.setAttribute('src', photos[slot]);
         }

@@ -288,3 +288,82 @@ it('direct manipulation: a cancelled pointer ends the drag instead of leaving th
   pointer(w, 'pointerup', w.document, 10, 60); await tick();
   expect(posted.filter(message => message.type === 'pagosya:boceto-node-move').map(message => message.path)).toContain('copy/sub');
 });
+
+const rect = (left: number, top: number, width: number, height: number) => ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} });
+const layoutBoard = (w: any) => {
+  w.document.querySelector('[data-skb="h"]').getBoundingClientRect = () => rect(0, 0, 1000, 600);
+  w.document.querySelector('[data-skb-group="copy"]').getBoundingClientRect = () => rect(0, 0, 400, 300);
+  w.document.querySelector('[data-skb-el="headline"]').getBoundingClientRect = () => rect(20, 30, 200, 50);
+  w.document.querySelector('[data-skb-el="sub"]').getBoundingClientRect = () => rect(20, 100, 100, 20);
+};
+
+it('free layer: a part dragged 24px past its box comes out and lands where it is dropped', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { movable: ['copy/headline', 'copy/sub', 'copy/actions'], freeable: ['copy/headline', 'copy/sub'] } } }); await tick();
+  const headline = w.document.querySelector('[data-skb-el="headline"]');
+  pointer(w, 'pointerdown', headline, 30, 40);
+  pointer(w, 'pointermove', w.document, 30, 50); await tick();
+  pointer(w, 'pointermove', w.document, 600, 100);
+  pointer(w, 'pointerup', w.document, 600, 100); await tick();
+  expect(posted.find(m => m.type === 'pagosya:boceto-free')).toEqual({ type: 'pagosya:boceto-free', id: 'h', path: 'copy/headline', x: 59, y: 15, w: 20 });
+  expect(headline.getAttribute('data-skb-free')).toBe('on');
+  expect(posted.some(m => m.type === 'pagosya:boceto-node-move')).toBe(false);
+});
+
+it('free layer: within 24px of its box a part still reorders instead', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { movable: ['copy/headline', 'copy/sub', 'copy/actions'], freeable: ['copy/headline'] } } }); await tick();
+  pointer(w, 'pointerdown', w.document.querySelector('[data-skb-el="headline"]'), 30, 40);
+  pointer(w, 'pointermove', w.document, 30, 50); await tick();
+  pointer(w, 'pointermove', w.document, 410, 120);
+  pointer(w, 'pointerup', w.document, 410, 120); await tick();
+  expect(posted.some(m => m.type === 'pagosya:boceto-free')).toBe(false);
+});
+
+it('free layer: a free part moves freely; live apply sets and clears its spot', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { freeable: ['copy/sub'], free: { 'copy/sub': { x: 10, y: 20 } } } } }); await tick();
+  const sub = w.document.querySelector('[data-skb-el="sub"]');
+  expect([sub.getAttribute('data-skb-free'), sub.style.getPropertyValue('--skb-fx'), sub.style.getPropertyValue('--skb-fy')]).toEqual(['on', '10', '20']);
+  pointer(w, 'pointerdown', sub, 50, 50);
+  pointer(w, 'pointermove', w.document, 50, 60); await tick();
+  pointer(w, 'pointermove', w.document, 150, 110);
+  pointer(w, 'pointerup', w.document, 150, 110); await tick();
+  expect(posted.find(m => m.type === 'pagosya:boceto-free')).toEqual({ type: 'pagosya:boceto-free', id: 'h', path: 'copy/sub', x: 20, y: 30 });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { free: {} } } }); await tick();
+  expect([sub.hasAttribute('data-skb-free'), sub.style.getPropertyValue('--skb-fx')]).toEqual([false, '']);
+});
+
+it('free layer: the corner square of a selected free part sets its width', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { freeable: ['copy/sub'], free: { 'copy/sub': { x: 10, y: 20 } } } }, selection: { id: 'h', path: 'copy/sub', label: 'Bajada' } }); await tick();
+  const grip = w.document.querySelector('[data-boceto-resize]');
+  expect(grip).not.toBeNull();
+  pointer(w, 'pointerdown', grip, 120, 120);
+  pointer(w, 'pointermove', w.document, 220, 120);
+  pointer(w, 'pointerup', w.document, 220, 120); await tick();
+  expect(posted.find(m => m.type === 'pagosya:boceto-free')).toEqual({ type: 'pagosya:boceto-free', id: 'h', path: 'copy/sub', x: 10, y: 20, w: 20 });
+});
+
+it('free layer: on a board narrower than 900px nothing comes out of its box', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  Object.defineProperty(w, 'innerWidth', { value: 600, configurable: true });
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', blocks: { h: { freeable: ['copy/headline', 'copy/sub'], free: { 'copy/sub': { x: 10, y: 20 } } } } }); await tick();
+  for (const selector of ['[data-skb-el="headline"]', '[data-skb-el="sub"]']) {
+    pointer(w, 'pointerdown', w.document.querySelector(selector), 30, 40);
+    pointer(w, 'pointermove', w.document, 30, 50); await tick();
+    pointer(w, 'pointermove', w.document, 600, 100);
+    pointer(w, 'pointerup', w.document, 600, 100); await tick();
+  }
+  expect(posted.some(m => m.type === 'pagosya:boceto-free')).toBe(false);
+});
