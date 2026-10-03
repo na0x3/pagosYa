@@ -525,3 +525,52 @@ it('review: when the Studio drops the chip, the same block brings it back only o
   panel.remoteSelect('intro', 'copy');
   expect(selected.mock.calls.map(call => call[0])).toEqual([{ id: 'intro', label: 'Portada' }, { id: 'intro', label: 'Portada' }]);
 });
+
+it('free layer: a part pulled out on the canvas is saved with its spot, stops reordering and shows ↗ in Capas', async () => {
+  const panel = await mount();
+  panel.remoteFree('intro', 'copy/headline', 30, 40, 25);
+  const look = lastLook().blocks.intro;
+  expect(look.free).toEqual({ 'copy/headline': { x: 30, y: 40, w: 25 } });
+  expect(look.freeable).toContain('copy/headline');
+  expect(look.movable).not.toContain('copy/headline');
+  expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy/headline' });
+  expect([...host.querySelectorAll('.bct-node')].map(node => node.textContent)).toContain('↗ Título');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].free).toEqual({ 'copy/headline': { x: 30, y: 40, w: 25 } });
+});
+
+it('free layer: the canvas cannot free a whole column or the photo, and nothing while YAPI works', async () => {
+  const panel = await mount();
+  panel.remoteFree('intro', 'copy', 1, 1);
+  panel.remoteFree('intro', 'media/photo', 1, 1);
+  expect(lastLook()?.blocks?.intro?.free ?? {}).toEqual({});
+  const locked = createBocetoPanel(new MerchantStudioApi());
+  locked.mount(host, { storeId: 's1', version: version(), locked: true, saved: vi.fn(), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  locked.resync();
+  expect(lastLook().blocks.intro.freeable).toEqual([]);
+  locked.remoteFree('intro', 'copy/headline', 1, 1);
+  expect(lastLook().blocks.intro.free).toEqual({});
+});
+
+it('free layer: Giro turns a free part live and "Volver a su lugar" puts it back', async () => {
+  const panel = await mount();
+  panel.remoteFree('intro', 'copy/sub', 10, 10);
+  const turn = [...host.querySelectorAll('.bct-segment__option')].find(button => button.textContent === '8°') as HTMLElement;
+  turn.click();
+  expect(lastLook().blocks.intro.free['copy/sub']).toEqual({ x: 10, y: 10, r: 8 });
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].free).toEqual({ 'copy/sub': { x: 10, y: 10, r: 8 } });
+  (host.querySelector('[data-boceto-unfree]') as HTMLElement).click();
+  expect(lastLook().blocks.intro.free).toEqual({});
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].free).toBeUndefined();
+});
+
+it('free layer: removing an item from the inspector list keeps a freed item on the same item', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: { ...sketch(), blocks: [{ id: 'st', type: 'steps', title: 'T', note: '', kicker: '', items: [{ icon: 'a', title: 'Uno', text: '' }, { icon: 'b', title: 'Dos', text: '' }, { icon: 'c', title: 'Tres', text: '' }], free: { 'items/2': { x: 5, y: 5 } }, bg: 'paper', size: 'm' }, sketch().blocks[2]] }, photos: [], fonts: ['anton'] } as any);
+  await mount();
+  (host.querySelector('[data-boceto-block="st"] .bct-block__head') as HTMLElement).click();
+  (host.querySelector('.bct-list__kill') as HTMLElement).click();
+  expect(lastLook().blocks.st.free).toEqual({ 'items/1': { x: 5, y: 5 } });
+});

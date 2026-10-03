@@ -2,7 +2,7 @@ import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
-import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketchGroup, sketchNodeTree, sketchRemoveNode, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
+import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchSetFree, sketchUnfree, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
@@ -10,7 +10,7 @@ import { sketchApplyMove, sketchCanMove, sketchCanRemove, sketchFindNode, sketch
 
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; account?: any; blocks: any[] };
-type BlockApply = { movable?: string[]; layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
+type BlockApply = { movable?: string[]; freeable?: string[]; free?: Record<string, { x: number; y: number; w?: number; r?: number }>; layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
 type SelectionPayload = { id: string; path: string; label: string; reveal?: true };
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
@@ -89,6 +89,11 @@ const movablePaths = (block: any): string[] => {
   const walk = (nodes: SketchNode[]): string[] => nodes.flatMap(node => [...(sketchCanMove(block, node.path) ? [node.path] : []), ...walk(node.children)]);
   return walk(sketchNodeTree(block));
 };
+/** Every spot to show live: freed parts plus inserted elements (`extras/<id>`), so the canvas can put back the rest. */
+const freeSpots = (block: any): Record<string, { x: number; y: number; w?: number; r?: number }> => ({
+  ...(block.free || {}),
+  ...Object.fromEntries((block.extras || []).map((extra: any) => [`extras/${extra.id}`, { x: extra.x, y: extra.y, ...(extra.w !== undefined ? { w: extra.w } : {}), ...(extra.r ? { r: extra.r } : {}) }])),
+});
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> & { text?: string } = {}, children: HTMLElement[] = []) => {
   const node = document.createElement(tag);
@@ -186,7 +191,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const bg = resolveBg(sketch.palette, block.bg);
       const slots = changedPhotos.get(block.id);
       const photoMap = slots ? Object.fromEntries([...slots].map(slot => [slot, photoSrc(String(getPath(block, slot) || ''))]).filter(([, src]) => src.startsWith('data:image/'))) : undefined;
-      blocks[block.id] = { movable: opts.locked ? [] : movablePaths(block), bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
+      blocks[block.id] = { movable: opts.locked ? [] : movablePaths(block), freeable: opts.locked ? [] : [...sketchFreeablePaths(block), ...(block.extras || []).map((extra: any) => `extras/${extra.id}`)], free: freeSpots(block), bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
     }
     changedPhotos.clear();
     opts.apply({ vars, style: { ...DEFAULT_STYLE, ...(sketch.style || {}) }, blocks });
@@ -290,6 +295,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   /** A Figma-style labeled row: name on the left, control on the right. */
   const row = (label: string, control: HTMLElement) => el('div', { className: 'bct-row' }, [el('span', { className: 'bct-row__label', text: label }), control]);
   const section = (title: string, children: HTMLElement[]) => el('div', { className: 'bct-section' }, [el('h3', { className: 'bct-section__title', text: title }), ...children]);
+  /** "Giro" for a free part or an inserted element: a few fixed angles; 0° clears it. */
+  const turnRow = (pos: { r?: number }) => row('Giro', segment(String(pos.r ?? 0), ['0', '-8', '8', '15'], ['0°', '−8°', '8°', '15°'], next => { const r = Number(next); if (r) pos.r = r; else delete pos.r; schedule(); draw(); }));
 
   function select(value: string, values: readonly string[], names: string[] | undefined, onChange: (next: string) => void) {
     const control = el('select', { className: 'bct-select' });
@@ -414,6 +421,15 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     } else if (!kind) {
       children.push(el('p', { className: 'bct-hint', text: 'Toca dos veces este texto en el lienzo para editarlo.' }));
     }
+    const spot = block.free?.[path];
+    if (spot) {
+      children.push(turnRow(spot));
+      const back = el('button', { type: 'button', className: 'bct-chip', text: 'Volver a su lugar' });
+      back.dataset.bocetoUnfree = '';
+      back.addEventListener('click', () => { sketchUnfree(block, path); schedule(); draw(); });
+      children.push(row('Suelto', back));
+      children.push(el('p', { className: 'bct-hint', text: 'Arrástralo a donde quieras; la esquina azul cambia su tamaño. En el celular vuelve a su lugar en la columna.' }));
+    } else if (sketchCanFree(block, path)) children.push(el('p', { className: 'bct-hint', text: 'Arrástralo fuera de su caja para soltarlo donde quieras.' }));
     if (sketchCanRemove(block, path)) {
       const remove = el('button', { type: 'button', className: 'bct-remove', text: `Quitar ${String(node?.label ?? '').toLowerCase()}` });
       remove.dataset.bocetoRemoveNode = '';
@@ -460,7 +476,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const wrap = el('div', { className: 'bct-list' }, [el('p', { className: 'bct-list__title', text: `${spec.label[0].toUpperCase()}${spec.label.slice(1)}s · ${items.length}/${spec.max}` })]);
     items.forEach((item, index) => {
       const kill = el('button', { type: 'button', className: 'bct-list__kill', text: '✕', title: `Quitar ${spec.label}` });
-      kill.addEventListener('click', () => { items.splice(index, 1); scheduleStructural(); draw(); });
+      kill.addEventListener('click', () => {
+        // Through the shared removal, so a freed item further down keeps its spot on the same item.
+        const listPath = sketchListPath(block.type, spec.key);
+        if (!listPath || !sketchRemoveNode(block, `${listPath}/${index}`)) items.splice(index, 1);
+        scheduleStructural(); draw();
+      });
       wrap.append(el('div', { className: 'bct-list__row' }, [el('span', { className: 'bct-list__peek', text: String(spec.peek(item) || '').slice(0, 42) }), kill]));
     });
     const add = el('button', { type: 'button', className: 'bct-chip', text: `+ Añadir ${spec.label}`, disabled: items.length >= spec.max });
@@ -585,7 +606,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   function nodeList(block: any, nodes: SketchNode[], depth: number): HTMLElement {
     const list = el('div', { className: 'bct-tree' });
     for (const node of nodes) {
-      const item = el('button', { type: 'button', className: `bct-node${selected === block.id && selectedPath === node.path ? ' is-selected' : ''}`, text: node.label });
+      const item = el('button', { type: 'button', className: `bct-node${selected === block.id && selectedPath === node.path ? ' is-selected' : ''}`, text: block.free?.[node.path] ? `↗ ${node.label}` : node.label });
       item.style.paddingLeft = `${10 + depth * 14}px`;
       item.dataset.bocetoNode = node.path;
       item.addEventListener('click', event => { event.stopPropagation(); forgottenBlock = null; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw(); });
@@ -798,6 +819,24 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (!block || !['hero', 'split', 'banner'].includes(block.type)) return;
       block.stickerPos = { x: Math.min(100, Math.max(0, Math.round(x * 10) / 10)), y: Math.min(100, Math.max(0, Math.round(y * 10) / 10)) };
       if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
+    },
+    /** A part pulled out of its box (or a free part or inserted element moved or resized) on the canvas. */
+    remoteFree(id: string, path: string, x: number, y: number, w?: number) {
+      if (!sketch || opts?.locked) return;
+      const block = allBlocks().find(item => item.id === id);
+      const pos = sketchFreePos({ x, y, ...(w !== undefined ? { w } : {}) });
+      if (!block || !pos) return;
+      if (path.startsWith('extras/')) {
+        const extra = (block.extras || []).find((item: any) => `extras/${item.id}` === path);
+        if (!extra) return;
+        Object.assign(extra, { x: pos.x, y: pos.y }, pos.w !== undefined ? { w: pos.w } : {});
+      } else {
+        const before = block.free?.[path];
+        const next = { ...pos, ...(pos.w === undefined && before?.w !== undefined ? { w: before.w } : {}), ...(before?.r ? { r: before.r } : {}) };
+        if (!sketchSetFree(block, path, next)) return;
+      }
+      forgottenBlock = null; focusNode(id, path); picker = null;
+      schedule(); draw();
     },
     mount(target: HTMLElement, options: Mount) {
       host = target; opts = options; note = '';
