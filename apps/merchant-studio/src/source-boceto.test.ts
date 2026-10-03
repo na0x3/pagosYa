@@ -861,3 +861,22 @@ it('group style: free parts share Giro and Volver a su lugar; mixed picks only o
   expect(host.querySelector('.bct-swatch')).toBeNull();
   expect(host.querySelector('[data-boceto-group-remove]')).not.toBeNull();
 });
+
+it('group move: free-many places every pick, saves once, keeps the selection and undoes in one step', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'intro', path: 'copy/sub' }, { id: 'intro', path: 'copy/headline' }], false);
+  panel.remoteFreeMany([{ id: 'intro', path: 'copy/sub', x: 10, y: 10 }, { id: 'intro', path: 'copy/headline', x: 30, y: 40, w: 25 }]);
+  expect(lastSelection().others).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch).toHaveBeenCalledTimes(1);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].free).toEqual({ 'copy/sub': { x: 10, y: 10 }, 'copy/headline': { x: 30, y: 40, w: 25 } });
+  panel.remoteKey('undo');
+  expect(lastLook().blocks.intro.free).toEqual({});
+});
+
+it('group move: selected blocks dragged by the handle move together', async () => {
+  const panel = await mount();
+  panel.remoteReorderMany(['intro', 'cat'], 1);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['fin', 'intro', 'cat']);
+});

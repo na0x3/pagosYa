@@ -337,6 +337,22 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const [pick] = list, block = blockOf(pick.id);
     return pick.path ? Boolean(block) && sketchCanMove(block, pick.path) : sketch.blocks.some(item => item.id === pick.id);
   }
+  const FULL_NOTE = `Este bloque ya tiene ${SKETCH_FREE_MAX} partes sueltas. Devuelve una a su lugar para soltar otra.`;
+  /** One free spot from the canvas, with the API repair's rules. 'full' when the block already has 30 spots. */
+  function placeFree(block: any, path: string, x: number, y: number, w?: number): 'ok' | 'full' | 'no' {
+    const pos = sketchFreePos({ x, y, ...(w !== undefined ? { w } : {}) });
+    if (!block || !pos) return 'no';
+    if (path.startsWith('extras/')) {
+      const extra = (block.extras || []).find((item: any) => `extras/${item.id}` === path);
+      if (!extra) return 'no';
+      Object.assign(extra, { x: pos.x, y: pos.y }, pos.w !== undefined ? { w: pos.w } : {});
+      return 'ok';
+    }
+    const before = block.free?.[path];
+    const next = { ...pos, ...(pos.w === undefined && before?.w !== undefined ? { w: before.w } : {}), ...(before?.r ? { r: before.r } : {}) };
+    if (sketchSetFree(block, path, next)) return 'ok';
+    return !before && Object.keys(block.free || {}).length >= SKETCH_FREE_MAX ? 'full' : 'no';
+  }
   type MenuAt = { block?: string; fx?: number; fy?: number };
   function menuItems(at: MenuAt): MenuItem[] {
     const list = picks(), locked = Boolean(opts?.locked);
@@ -1129,22 +1145,30 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       // The canvas already moved the part: a drop that cannot be kept puts it back where the saved boceto has it.
       const refuse = (why = '') => { if (why) { note = why; draw(); } applyLive(); };
       if (opts?.locked) return refuse();
-      const block = allBlocks().find(item => item.id === id);
-      const pos = sketchFreePos({ x, y, ...(w !== undefined ? { w } : {}) });
-      if (!block || !pos) return refuse();
-      if (path.startsWith('extras/')) {
-        const extra = (block.extras || []).find((item: any) => `extras/${item.id}` === path);
-        if (!extra) return refuse();
-        Object.assign(extra, { x: pos.x, y: pos.y }, pos.w !== undefined ? { w: pos.w } : {});
-      } else {
-        const before = block.free?.[path];
-        const next = { ...pos, ...(pos.w === undefined && before?.w !== undefined ? { w: before.w } : {}), ...(before?.r ? { r: before.r } : {}) };
-        if (!sketchSetFree(block, path, next)) {
-          const full = !before && Object.keys(block.free || {}).length >= SKETCH_FREE_MAX;
-          return refuse(full ? `Este bloque ya tiene ${SKETCH_FREE_MAX} partes sueltas. Devuelve una a su lugar para soltar otra.` : '');
-        }
-      }
+      const result = placeFree(blockOf(id), path, x, y, w);
+      if (result !== 'ok') return refuse(result === 'full' ? FULL_NOTE : '');
       forgottenBlock = null; focusNode(id, path); picker = null;
+      schedule(); draw();
+    },
+    /** Several picks dropped together: one save, one undo step; the selection stays. */
+    remoteFreeMany(moves: Array<{ id: string; path: string; x: number; y: number; w?: number }>) {
+      if (!sketch) return;
+      if (opts?.locked) { applyLive(); return; }
+      const results = moves.slice(0, 40).map(move => placeFree(blockOf(move.id), move.path, move.x, move.y, move.w));
+      if (results.includes('full')) note = FULL_NOTE;
+      if (results.some(result => result !== 'ok')) applyLive();
+      if (results.includes('ok')) schedule();
+      draw();
+    },
+    remoteReorderMany(ids: string[], index: number) {
+      if (!sketch || opts?.locked) return;
+      const set = new Set(ids);
+      const moving = sketch.blocks.filter(block => set.has(block.id));
+      if (moving.length < 2 || moving.length !== set.size) return;
+      const rest = sketch.blocks.filter(block => !set.has(block.id));
+      rest.splice(Math.max(0, Math.min(index, rest.length)), 0, ...moving);
+      sketch.blocks = rest;
+      // The canvas already moved them: no reload.
       schedule(); draw();
     },
     mount(target: HTMLElement, options: Mount) {

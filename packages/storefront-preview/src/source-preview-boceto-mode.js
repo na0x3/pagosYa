@@ -13,7 +13,7 @@
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
  *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
 (function () {
-  var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, editing = null, elDragging = null;
+  var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, draggingGroup = null, editing = null, elDragging = null;
   var photoChip = null, photoTarget = null;
   var selection = { id: '', path: '', label: '', others: [] }, boxes = [], hoverBox = null;
   /** Per block, the paths whose position saves (from the Studio): the only parts that drag and the only drop spots. */
@@ -173,6 +173,9 @@
     event.preventDefault();
     var section = hovered;
     dragging = section;
+    // Several selected blocks: dragging one's handle moves the whole run, in page order.
+    var picked = [selection].concat(selection.others || []).filter(function (pick) { return pick.id && !pick.path; }).map(function (pick) { return sectionById(pick.id); }).filter(Boolean);
+    draggingGroup = picked.length > 1 && picked.indexOf(section) !== -1 ? sections().filter(function (s) { return picked.indexOf(s) !== -1; }) : null;
     section.setAttribute('data-boceto-dragging', '');
     handle.style.display = 'none';
     // A ghost of the section follows the cursor, Figma-style.
@@ -202,11 +205,19 @@
       var target = dropTarget(ev.clientY);
       if (target && target.section !== section) {
         // Move live so the merchant sees the result instantly; the Studio saves and reloads the real revision.
-        if (target.before) target.section.before(section); else target.section.after(section);
-        var index = sections().indexOf(section);
-        parent.postMessage({ type: 'pagosya:boceto-reorder', id: section.getAttribute('data-skb'), index: index }, '*');
+        if (draggingGroup) {
+          var run = draggingGroup;
+          if (target.before) run.forEach(function (s) { target.section.before(s); });
+          else run.slice().reverse().forEach(function (s) { target.section.after(s); });
+          var all = sections(), rest = all.filter(function (s) { return run.indexOf(s) === -1; });
+          parent.postMessage({ type: 'pagosya:boceto-reorder-many', ids: run.map(function (s) { return s.getAttribute('data-skb'); }), index: rest.indexOf(all[all.indexOf(run[0]) - 1]) + 1 }, '*');
+        } else {
+          if (target.before) target.section.before(section); else target.section.after(section);
+          parent.postMessage({ type: 'pagosya:boceto-reorder', id: section.getAttribute('data-skb'), index: sections().indexOf(section) }, '*');
+        }
         if (section.scrollIntoView) section.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
+      draggingGroup = null;
       placeHandle();
     };
     document.addEventListener('pointermove', move, true);
@@ -214,7 +225,7 @@
   }
 
   function dropTarget(clientY) {
-    var list = sections().filter(function (section) { return section !== dragging; });
+    var list = sections().filter(function (section) { return section !== dragging && !(draggingGroup && draggingGroup.indexOf(section) !== -1); });
     for (var i = 0; i < list.length; i++) {
       var rect = list[i].getBoundingClientRect();
       if (clientY < rect.top + rect.height / 2) return { section: list[i], before: true };
@@ -455,6 +466,80 @@
     if (now) move(now);
   }
 
+  /** The picked parts (not whole blocks), when a press lands on one of them and there are several picks. */
+  function groupAt(target) {
+    if (!selection.others || !selection.others.length) return null;
+    var nodes = [selection].concat(selection.others).map(function (pick) {
+      var pickSection = sectionById(pick.id);
+      return pickSection && pick.path ? nodeAt(pickSection, pick.path) : null;
+    }).filter(Boolean);
+    return nodes.length > 1 && nodes.some(function (node) { return node.contains(target); }) ? nodes : null;
+  }
+  /** Several picks follow the pointer together: parts still in their column come out first (all of them, then the boxes
+   * are measured, as a single detach does); each spot is a percentage of its own box. One message on drop. */
+  function startGroupDrag(nodes, down, now) {
+    var parts = nodes.filter(function (node) { return canFree(sectionOf(node), node); });
+    if (!parts.length) return;
+    var rects = parts.map(function (node) { return node.getBoundingClientRect(); });
+    var detached = parts.map(function (node) { return !isFree(node); });
+    parts.forEach(function (node, i) { if (detached[i]) node.setAttribute('data-skb-free', 'on'); });
+    var pct = function (value, size) { return size ? (value / size) * 100 : 0; };
+    var items = parts.map(function (node, i) {
+      var box = (node.offsetParent || sectionOf(node)).getBoundingClientRect();
+      var item = { node: node, box: box, detached: detached[i],
+        fromX: detached[i] ? pct(rects[i].left - box.left, box.width) : (freeVar(node, '--skb-fx') || 0),
+        fromY: detached[i] ? pct(rects[i].top - box.top, box.height) : (freeVar(node, '--skb-fy') || 0),
+        width: detached[i] ? clampPct(pct(rects[i].width, box.width), 5) : freeVar(node, '--skb-fw') };
+      if (detached[i]) node.style.setProperty('--skb-fw', String(item.width));
+      item.x = item.fromX; item.y = item.fromY;
+      return item;
+    });
+    elDragging = parts[0];
+    clearBoxes();
+    var move = function (ev) {
+      // One piece: the group stops at the first edge any part reaches, so the parts keep their distances (a part whose
+      // place is already outside its shrunken box cannot hold one and is clamped on its own).
+      var dx = ev.clientX - down.clientX, dy = ev.clientY - down.clientY;
+      items.forEach(function (item) {
+        if (item.fromX >= 0 && item.fromX <= 100) dx = Math.min((100 - item.fromX) * item.box.width / 100, Math.max(-item.fromX * item.box.width / 100, dx));
+        if (item.fromY >= 0 && item.fromY <= 100) dy = Math.min((100 - item.fromY) * item.box.height / 100, Math.max(-item.fromY * item.box.height / 100, dy));
+      });
+      items.forEach(function (item) {
+        item.x = clampPct(item.fromX + pct(dx, item.box.width), 0);
+        item.y = clampPct(item.fromY + pct(dy, item.box.height), 0);
+        item.node.style.setProperty('--skb-fx', String(item.x));
+        item.node.style.setProperty('--skb-fy', String(item.y));
+      });
+    };
+    var stop = function () {
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', finish, true);
+      document.removeEventListener('pointercancel', cancel, true);
+      elDragging = null;
+    };
+    var finish = function () {
+      stop();
+      parent.postMessage({ type: 'pagosya:boceto-free-many', moves: items.map(function (item) {
+        var spot = { id: sectionOf(item.node).getAttribute('data-skb'), path: pathOf(item.node), x: item.x, y: item.y };
+        if (item.width !== null) spot.w = item.width;
+        return spot;
+      }) }, '*');
+      drawOverlay();
+    };
+    var cancel = function () {
+      stop();
+      items.forEach(function (item) {
+        if (item.detached) { item.node.removeAttribute('data-skb-free'); FREE_VARS.forEach(function (name) { item.node.style.removeProperty(name); }); }
+        else { item.node.style.setProperty('--skb-fx', String(item.fromX)); item.node.style.setProperty('--skb-fy', String(item.fromY)); }
+      });
+      drawOverlay();
+    };
+    document.addEventListener('pointermove', move, true);
+    document.addEventListener('pointerup', finish, true);
+    document.addEventListener('pointercancel', cancel, true);
+    if (now) move(now);
+  }
+
   /** The corner square on a selected free part: dragging it sets the part's width (percent of its box). */
   function makeResizeHandle(node) {
     var rect = node.getBoundingClientRect();
@@ -557,6 +642,8 @@
       cleanup();
       placePhotoChip(null);
       if (section) {
+        var group = groupAt(event.target);
+        if (group) { startGroupDrag(group, event, ev); return; }
         var sticker = event.target instanceof Element ? event.target.closest('[data-skb-el="sticker"]') : null;
         if (sticker && sectionOf(sticker) === section) { startStickerDrag(sticker, ev); return; }
         var drag = dragCandidate(event.target);

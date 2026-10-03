@@ -122,3 +122,32 @@ it('a box drawn over two story paragraphs picks exactly those two', async () => 
   });
   expect(result).toEqual([{ type: 'pagosya:boceto-select-many', items: [{ id: 's', path: 'copy/paragraphs/0' }, { id: 's', path: 'copy/paragraphs/1' }], add: false }]);
 });
+
+it('two parts dragged together keep their distance after both come out', async () => {
+  const result = await openPage([
+    { id: 'h', type: 'hero', headline: 'Hola', sub: 'Repostería de verdad', trust: '★ 4.8 · 2.400 pedidos', note: 'Pide antes del domingo.', cta: 'Ver productos', cta2: 'Armar caja', bg: 'paper', size: 'l' },
+  ], async page => {
+    await page.addScriptTag({ content: bocetoScript });
+    await page.evaluate(() => {
+      (window as any).posted = [];
+      window.addEventListener('message', event => { if (event.data?.type === 'pagosya:boceto-free-many') (window as any).posted.push(event.data); });
+      window.postMessage({ type: 'pagosya:boceto-mode', on: true }, '*');
+      window.postMessage({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/sub', label: '', others: [{ id: 'h', path: 'copy/trust' }] }, blocks: { h: { movable: [], freeable: ['copy/sub', 'copy/trust'], free: {} } } }, '*');
+    });
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-boceto-on'));
+    const measure = () => page.evaluate(() => ['[data-skb-el="sub"]', '[data-skb-el="trust"]'].map(selector => { const r = document.querySelector(`[data-skb="h"] ${selector}`)!.getBoundingClientRect(); return { left: r.left, top: r.top }; }));
+    const before = await measure();
+    const press = { x: before[0].left + 30, y: before[0].top + 10 };
+    await page.mouse.move(press.x, press.y); await page.mouse.down();
+    for (let step = 1; step <= 10; step++) await page.mouse.move(press.x + 30 * step, press.y + 4 * step);
+    await page.mouse.up();
+    await page.waitForFunction(() => (window as any).posted.length > 0, undefined, { timeout: 3000 }).catch(() => undefined);
+    return { before, after: await measure(), posted: await page.evaluate(() => (window as any).posted) };
+  });
+  expect(result.posted).toHaveLength(1);
+  expect(result.posted[0].moves.map((move: any) => move.path)).toEqual(['copy/sub', 'copy/trust']);
+  for (const i of [0, 1]) {
+    expect(Math.abs(result.after[i].left - result.before[i].left - 300)).toBeLessThan(3);
+    expect(Math.abs(result.after[i].top - result.before[i].top - 40)).toBeLessThan(3);
+  }
+});

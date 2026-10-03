@@ -488,3 +488,33 @@ it('right-click never shows the browser menu: it posts where it happened and wha
   w.document.querySelector('[data-skb-el="headline"]').dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 })); await tick();
   expect(posted.at(-1)).toMatchObject({ type: 'pagosya:boceto-context', id: 'h', path: 'copy/headline' });
 });
+
+it('group drag: grabbing one of several picks moves them all by the same distance and posts one free-many', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/headline', label: '', others: [{ id: 'h', path: 'copy/sub' }] }, blocks: { h: { movable: ['copy/headline', 'copy/sub'], freeable: ['copy/headline', 'copy/sub'], free: {} } } }); await tick();
+  const headline = w.document.querySelector('[data-skb-el="headline"]');
+  pointer(w, 'pointerdown', headline, 30, 40);
+  pointer(w, 'pointermove', w.document, 40, 40); await tick();
+  pointer(w, 'pointermove', w.document, 130, 100);
+  pointer(w, 'pointerup', w.document, 130, 100); await tick();
+  const message = posted.find(m => m.type === 'pagosya:boceto-free-many');
+  // section 1000×600: +100px = +10%, +60px = +10%; headline from (20,30) → 2%,5%; sub from (20,100) → 2%,16.7%
+  expect(message.moves).toEqual([{ id: 'h', path: 'copy/headline', x: 12, y: 15, w: 20 }, { id: 'h', path: 'copy/sub', x: 12, y: 26.7, w: 10 }]);
+  expect(posted.some(m => m.type === 'pagosya:boceto-free' || m.type === 'pagosya:boceto-node-move')).toBe(false);
+});
+
+it('group drag: the parts move as one piece and stop together at the first edge, keeping their distances', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/headline', label: '', others: [{ id: 'h', path: 'copy/sub' }] }, blocks: { h: { movable: [], freeable: ['copy/headline', 'copy/sub'], free: {} } } }); await tick();
+  pointer(w, 'pointerdown', w.document.querySelector('[data-skb-el="headline"]'), 30, 40);
+  pointer(w, 'pointermove', w.document, 30, 30); await tick();
+  pointer(w, 'pointermove', w.document, 30, -60);
+  pointer(w, 'pointerup', w.document, 30, -60); await tick();
+  // headline sits 30px from the top: the whole group may rise 30px, so sub goes from 100px to 70px (11.7%), not to 0
+  const moves = posted.find(m => m.type === 'pagosya:boceto-free-many').moves;
+  expect(moves.map((move: any) => [move.path, move.y])).toEqual([['copy/headline', 0], ['copy/sub', 11.7]]);
+});
