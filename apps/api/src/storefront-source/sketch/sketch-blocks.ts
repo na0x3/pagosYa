@@ -1,5 +1,6 @@
 import { SKETCH_COPY_ORDER } from '@pagosya/shared-types';
 import { bestInkFor, resolveBg } from './sketch-schema';
+import { FREE_CSS, withFreeLayer } from './sketch-free';
 import type { SketchBlock, SketchContext, StoreSketch } from './sketch-schema';
 
 /** JSX generators for sketch blocks. Every merchant-controlled string is embedded as a
@@ -252,7 +253,7 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
 };
 
 export function renderBlock(block: SketchBlock, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions = {}): string {
-  return (generators[block.type] as Render)(block as SketchBlock & { type: never }, sketch, ctx, options);
+  return withFreeLayer(block, (generators[block.type] as Render)(block as SketchBlock & { type: never }, sketch, ctx, options), ctx);
 }
 
 /** The designed login / sign-up page. Everything around the form is the sketch's; the form is the kit AccountGatePage,
@@ -531,4 +532,5 @@ export const SKETCH_BASE_CSS = `
 [data-skb-group][data-skb-valign="end"] { align-self: end; align-content: end; }
 @media (max-width: 899px) { [data-skb-group][data-skb-valign] { align-self: auto; } }
 @media (prefers-reduced-motion: reduce) { .skb-marquee__track { animation: none; } }
+${FREE_CSS}
 `;
