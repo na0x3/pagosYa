@@ -913,3 +913,39 @@ it('clipboard: "Pegar aquí" pastes where the menu opened; what does not fit is 
   other.remoteSelect('intro', ''); other.remoteKey('paste');
   expect(host.querySelector('.bct-status')?.textContent).toContain('1 no cabe aquí');
 });
+
+it('review: anything the board reports closes the open menu, and so does YAPI starting to work', async () => {
+  const options = { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: (payload: any) => applied.push(payload) };
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, options);
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  panel.remoteContext({ id: 'intro', path: 'copy/sub', x: 5, y: 5 });
+  expect(document.querySelector('.bct-menu')).not.toBeNull();
+  panel.remoteSelect('cat', '');
+  expect(document.querySelector('.bct-menu')).toBeNull();
+  panel.remoteContext({ id: 'intro', path: 'copy/sub', x: 5, y: 5 });
+  panel.mount(host, { ...options, locked: true });
+  expect(document.querySelector('.bct-menu')).toBeNull();
+});
+
+it('review: what could not be deleted stays in the status after the save lands, until the next edit', async () => {
+  getSketch.mockResolvedValueOnce({ revision: 3, sketch: stepsSketch(), photos: [], fonts: ['anton'] } as any);
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'st', path: 'items/0' }, { id: 'st', path: 'head/title' }], false);
+  panel.remoteKey('delete');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(host.querySelector('.bct-status')?.textContent).toContain('1 parte no se puede eliminar');
+  panel.remoteText('st', 'title', 'Otro');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(host.querySelector('.bct-status')?.textContent).toBe('Se guarda solo');
+});
+
+it('review: a plain click on one member of a group selects just that member', async () => {
+  const panel = await mount();
+  panel.remoteSelectMany([{ id: 'intro', path: 'copy/sub' }, { id: 'intro', path: 'copy/headline' }], false);
+  panel.remoteSelect('intro', 'copy/headline');
+  expect(lastSelection().others).toBeUndefined();
+  panel.remoteSelectMany([{ id: 'intro', path: '' }, { id: 'cat', path: '' }], false);
+  (host.querySelector('[data-boceto-block="cat"]') as HTMLElement).click();
+  expect(lastSelection()).toEqual({ id: 'cat', path: '', label: 'Catálogo' });
+});

@@ -105,7 +105,7 @@ it('a box drawn over two story paragraphs picks exactly those two', async () => 
     await page.addScriptTag({ content: bocetoScript });
     await page.evaluate(() => {
       (window as any).posted = [];
-      window.addEventListener('message', event => { if (event.data?.type === 'pagosya:boceto-select-many') (window as any).posted.push(event.data); });
+      window.addEventListener('message', event => { if (event.data?.type === 'pagosya:boceto-select-many' || event.data?.type === 'pagosya:boceto-select') (window as any).posted.push(event.data); });
       window.postMessage({ type: 'pagosya:boceto-mode', on: true }, '*');
     });
     await page.waitForFunction(() => document.documentElement.hasAttribute('data-boceto-on'));
@@ -118,6 +118,8 @@ it('a box drawn over two story paragraphs picks exactly those two', async () => 
     for (let step = 1; step <= 8; step++) await page.mouse.move(box.x0 + ((box.x1 - box.x0) * step) / 8, box.y0 + ((box.y1 - box.y0) * step) / 8);
     await page.mouse.up();
     await page.waitForFunction(() => (window as any).posted.length > 0, undefined, { timeout: 3000 }).catch(() => undefined);
+    // Chromium follows the release with a click on the box's common ancestor; it must not turn into a selection.
+    await page.waitForTimeout(150);
     return page.evaluate(() => (window as any).posted);
   });
   expect(result).toEqual([{ type: 'pagosya:boceto-select-many', items: [{ id: 's', path: 'copy/paragraphs/0' }, { id: 's', path: 'copy/paragraphs/1' }], add: false }]);

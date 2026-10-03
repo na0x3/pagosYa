@@ -58,3 +58,12 @@ it('duplicate copies each pick into its own block, in place', () => {
   expect(sketch.blocks.map(block => block.id)).toEqual(['h', 'st', 'st2', 'st2-copia', 'fin']);
   expect(result.picks).toHaveLength(3);
 });
+
+it('review: duplicating a long-named block again and again keeps every id unique and short', () => {
+  const sketch = { blocks: [{ id: 'a'.repeat(30), type: 'faq', title: 'Q', items: [] }, { id: 'fin', type: 'footer' }] as any[] };
+  let pick = { id: sketch.blocks[0].id, path: '' };
+  for (let i = 0; i < 8; i++) pick = duplicatePicks(sketch, [pick]).picks[0];
+  const ids = sketch.blocks.map(block => block.id);
+  expect(new Set(ids).size).toBe(ids.length);
+  expect(ids.every(id => /^[a-z0-9-]{1,32}$/.test(id))).toBe(true);
+});

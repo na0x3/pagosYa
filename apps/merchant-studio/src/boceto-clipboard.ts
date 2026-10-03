@@ -56,9 +56,12 @@ export function copyPicks(blocks: any[], picks: BocetoPick[]): ClipItem[] {
   return out;
 }
 
+/** `<stem>-copia`, `<stem>-copia-2`…: the stem drops earlier copy endings and stays short, so ids stay unique and
+ * within 32 characters however many times a copy is copied. */
 function freshBlockId(blocks: any[], base: string) {
-  let id = `${base}-copia`.slice(0, 32), n = 2;
-  while (blocks.some(block => block.id === id)) id = `${base}-copia-${n++}`.slice(0, 32);
+  const stem = base.replace(/(-copia(-\d+)?)+$/, '').slice(0, 20) || 'bloque';
+  let id = `${stem}-copia`, n = 2;
+  while (blocks.some(block => block.id === id)) id = `${stem}-copia-${n++}`;
   return id;
 }
 function freshExtraId(block: any) {

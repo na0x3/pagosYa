@@ -3,7 +3,7 @@ import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
 import { normalizePicks, togglePick, type BocetoPick } from './boceto-selection';
-import { openBocetoMenu, type MenuItem } from './boceto-menu';
+import { closeBocetoMenu, openBocetoMenu, type MenuItem } from './boceto-menu';
 import { copyPicks, duplicatePicks, pasteClip, type ClipItem } from './boceto-clipboard';
 import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_FREE_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
@@ -132,6 +132,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let others: BocetoPick[] = [], groupKey = '';
   /** The Boceto's own clipboard for this session (⌘C / Copiar). */
   let clip: ClipItem[] = [];
+  /** What a group action could not do: still shown once its save lands, cleared by the save after it. */
+  let stickyNote = '';
   /** The lock the panel was last drawn with: a lock change (YAPI starts or stops working) must redraw. */
   let drawnLocked = false;
   const expanded = new Set<string>();
@@ -310,7 +312,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     for (const pick of parts) { const block = blockOf(pick.id); if (!block || !sketchRemoveNode(block, pick.path)) kept++; }
     if (gone.size) sketch.blocks = sketch.blocks.filter(block => !gone.has(block.id));
     setPicks([]);
-    note = kept ? `${kept} ${kept === 1 ? 'parte no se puede eliminar' : 'partes no se pueden eliminar'}.` : '';
+    note = stickyNote = kept ? `${kept} ${kept === 1 ? 'parte no se puede eliminar' : 'partes no se pueden eliminar'}.` : '';
     scheduleStructural(); draw();
   }
   /** Free spots and inserted elements among the picks, with the object that holds each spot. */
@@ -348,7 +350,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   }
   function landPasted(result: { picks: BocetoPick[]; skipped: number }) {
     if (result.picks.length) setPicks(result.picks);
-    note = result.skipped ? `${result.skipped} no ${result.skipped === 1 ? 'cabe' : 'caben'} aquí.` : '';
+    note = stickyNote = result.skipped ? `${result.skipped} no ${result.skipped === 1 ? 'cabe' : 'caben'} aquí.` : '';
     if (result.picks.length) scheduleStructural();
     draw();
   }
@@ -459,7 +461,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const caughtUp = editSeq === seqAtSave;
       if (caughtUp) {
         // The saved boceto comes back repaired: that is the state the next step goes back to.
-        sketch = result.sketch as Sketch; lastSaved = JSON.stringify(sketch); baseline = lastSaved; note = ''; pending = false; draw();
+        sketch = result.sketch as Sketch; lastSaved = JSON.stringify(sketch); baseline = lastSaved; note = stickyNote; stickyNote = ''; pending = false; draw();
       } else {
         lastSaved = payload; pending = false; status('Guardando…');
         if (reloadAfter) structural = true;
@@ -920,7 +922,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       item.addEventListener('click', event => {
         event.stopPropagation();
         if (event.shiftKey) { setPicks(togglePick(picks(), { id: block.id, path: node.path })); draw(); return; }
-        forgottenBlock = null; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw();
+        forgottenBlock = null; others = []; selected = block.id; selectedPath = node.path; picker = null; revealNext = true; draw();
       });
       item.addEventListener('contextmenu', event => { event.preventDefault(); event.stopPropagation(); openMenuOn({ id: block.id, path: node.path }, event.clientX, event.clientY, { block: block.id }); });
       list.append(item);
@@ -938,7 +940,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   /** Select a whole block from Capas (a second click on the same block clears it). */
   const pickBlock = (id: string, add = false) => {
     if (add) { setPicks(togglePick(picks(), { id, path: '' })); draw(); return; }
-    forgottenBlock = null; const same = selected === id && !selectedPath && !others.length; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw();
+    forgottenBlock = null; const same = selected === id && !selectedPath && !others.length; others = []; selected = same ? '' : id; selectedPath = ''; if (!same) expanded.add(id); picker = null; draw();
   };
 
   function draw() {
@@ -1096,6 +1098,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     flush: async () => { await flushSave(); return Boolean(sketch) && !pending && JSON.stringify(sketch) === lastSaved; },
     /** "Cambiar foto" on the canvas: select that block and open the photo picker on that slot. */
     remotePhoto(id: string, slot: string) {
+      closeBocetoMenu();
       if (!sketch || !/^(photo|items\.\d+\.photo|photos\.\d+|extras\.\d+\.value)$/.test(slot)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
@@ -1104,8 +1107,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     remoteSelect(id: string, path = '', add = false) {
       if (!sketch) return;
+      closeBocetoMenu();
       if (add && id) { if (pickExists({ id, path })) setPicks(togglePick(picks(), { id, path })); draw(); return; }
-      forgottenBlock = null;
+      forgottenBlock = null; others = [];
       const before = `${selected}|${selectedPath}`;
       focusNode(id, path);
       if (`${selected}|${selectedPath}` !== before) picker = null;
@@ -1121,6 +1125,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** A selection box on the canvas: its picks replace the selection, or join it with Shift. */
     remoteSelectMany(items: BocetoPick[], add: boolean) {
+      closeBocetoMenu();
       if (!sketch) return;
       const valid = items.slice(0, 40).filter(pickExists);
       setPicks(add ? [...picks(), ...valid] : valid);
@@ -1128,6 +1133,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** A node dragged among its siblings on the canvas; `order` is the siblings' keys as the canvas now shows them. */
     remoteNodeMove(id: string, path: string, order: string[]) {
+      closeBocetoMenu();
       if (!sketch || opts?.locked || !path || order.length > 12) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block || !sketchCanMove(block, path)) return;
@@ -1140,6 +1146,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       draw();
     },
     remoteKey(key: 'up' | 'down' | 'delete' | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate') {
+      closeBocetoMenu();
       if (key === 'copy') { copySelection(); return; }
       if (key === 'undo' || key === 'redo') { stepBack(key === 'redo'); return; }
       if (key === 'paste') { pasteClipboard(); return; }
@@ -1150,6 +1157,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     /** After the preview reloads: push the live look and the selection again. */
     resync() { applyLive(); syncSelection(); },
     remoteReorder(id: string, index: number) {
+      closeBocetoMenu();
       if (!sketch || opts?.locked) return;
       const from = sketch.blocks.findIndex(block => block.id === id);
       if (from === -1) return;
@@ -1158,6 +1166,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
     },
     remoteText(id: string, field: string, value: string) {
+      closeBocetoMenu();
       if (!sketch || opts?.locked || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
@@ -1168,6 +1177,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** A sticker drag: percentages inside its positioning box, clamped like the API repair. */
     remoteElMove(id: string, elKey: string, x: number, y: number) {
+      closeBocetoMenu();
       if (!sketch || opts?.locked || elKey !== 'sticker' || !Number.isFinite(x) || !Number.isFinite(y)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block || !['hero', 'split', 'banner'].includes(block.type)) return;
@@ -1176,6 +1186,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** A part pulled out of its box (or a free part or inserted element moved or resized) on the canvas. */
     remoteFree(id: string, path: string, x: number, y: number, w?: number) {
+      closeBocetoMenu();
       if (!sketch) return;
       // The canvas already moved the part: a drop that cannot be kept puts it back where the saved boceto has it.
       const refuse = (why = '') => { if (why) { note = why; draw(); } applyLive(); };
@@ -1187,6 +1198,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** Several picks dropped together: one save, one undo step; the selection stays. */
     remoteFreeMany(moves: Array<{ id: string; path: string; x: number; y: number; w?: number }>) {
+      closeBocetoMenu();
       if (!sketch) return;
       if (opts?.locked) { applyLive(); return; }
       const results = moves.slice(0, 40).map(move => placeFree(blockOf(move.id), move.path, move.x, move.y, move.w));
@@ -1196,6 +1208,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       draw();
     },
     remoteReorderMany(ids: string[], index: number) {
+      closeBocetoMenu();
       if (!sketch || opts?.locked) return;
       const set = new Set(ids);
       const moving = sketch.blocks.filter(block => set.has(block.id));
@@ -1213,7 +1226,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (sketch && rootNode && mountedStore === options.storeId && (mountedRevision === options.version.revision || pending || timer)) {
         host.replaceChildren(rootNode);
         // YAPI started or stopped working: redraw so controls lock or unlock, and the canvas drags follow.
-        if (drawnLocked !== options.locked) { draw(); applyLive(); }
+        if (drawnLocked !== options.locked) { closeBocetoMenu(); draw(); applyLive(); }
         return;
       }
       const token = ++mountToken;

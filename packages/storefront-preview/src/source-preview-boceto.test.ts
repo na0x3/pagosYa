@@ -529,3 +529,34 @@ it('⌘C, ⌘V and ⌘D on the board go to the Studio, never while typing in pla
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true, cancelable: true })); await tick();
   expect(posted.filter(m => m.type === 'pagosya:boceto-key')).toHaveLength(3);
 });
+
+it('review: the click that ends a selection box or a group drag does not replace the selection', async () => {
+  const { w, posted, send } = load();
+  const story = layoutStory(w);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  pointerAt(w, 'pointerdown', story, 50, 820);
+  pointerAt(w, 'pointermove', w.document, 60, 830);
+  pointerAt(w, 'pointermove', w.document, 520, 1000);
+  pointerAt(w, 'pointerup', w.document, 520, 1000);
+  pointerAt(w, 'click', story, 520, 1000); await tick();
+  expect(posted.filter(m => m.type === 'pagosya:boceto-select')).toEqual([]);
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: 'copy/headline', label: '', others: [{ id: 'h', path: 'copy/sub' }] }, blocks: { h: { movable: [], freeable: ['copy/headline', 'copy/sub'], free: {} } } }); await tick();
+  const headline = w.document.querySelector('[data-skb-el="headline"]');
+  pointerAt(w, 'pointerdown', headline, 30, 40);
+  pointerAt(w, 'pointermove', w.document, 60, 60);
+  pointerAt(w, 'pointerup', w.document, 60, 60);
+  pointerAt(w, 'click', headline, 60, 60); await tick();
+  expect(posted.filter(m => m.type === 'pagosya:boceto-select')).toEqual([]);
+  // the next real click selects as usual
+  pointerAt(w, 'click', headline, 60, 60); await tick();
+  expect(posted.filter(m => m.type === 'pagosya:boceto-select')).toHaveLength(1);
+});
+
+it('review: right-clicking inside a selected block keeps a multi-block selection', async () => {
+  const { w, posted, send } = load();
+  layoutBoard(w);
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-apply', selection: { id: 'h', path: '', label: '', others: [{ id: 'c', path: '' }] } }); await tick();
+  w.document.querySelector('[data-skb-el="headline"]').dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 })); await tick();
+  expect(posted.at(-1)).toMatchObject({ type: 'pagosya:boceto-context', id: 'h', path: '' });
+});

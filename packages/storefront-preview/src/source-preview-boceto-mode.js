@@ -13,6 +13,7 @@
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
  *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
 (function () {
+  var swallowClick = false;
   var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, draggingGroup = null, editing = null, elDragging = null;
   var photoChip = null, photoTarget = null;
   var selection = { id: '', path: '', label: '', others: [] }, boxes = [], hoverBox = null;
@@ -280,6 +281,8 @@
       x1 = ev.clientX + (window.scrollX || 0); y1 = ev.clientY + (window.scrollY || 0);
       var r = clientBox();
       stop();
+      // The browser follows the release with a click on the box's common ancestor: it must not replace these picks.
+      swallowClick = true;
       parent.postMessage({ type: 'pagosya:boceto-select-many', items: boxPicks(r), add: ev.shiftKey === true }, '*');
     };
     document.addEventListener('pointermove', move, true);
@@ -519,6 +522,7 @@
     };
     var finish = function () {
       stop();
+      swallowClick = true;
       parent.postMessage({ type: 'pagosya:boceto-free-many', moves: items.map(function (item) {
         var spot = { id: sectionOf(item.node).getAttribute('data-skb'), path: pathOf(item.node), x: item.x, y: item.y };
         if (item.width !== null) spot.w = item.width;
@@ -632,6 +636,7 @@
   // Grab anywhere: a real drag starts only after 6px of travel, so clicks and double-clicks survive.
   // A press on a copy element ([data-skb-el]) drags that element; anywhere else drags the section.
   document.addEventListener('pointerdown', function (event) {
+    swallowClick = false;
     if (!on || dragging || elDragging || editing || event.button !== 0) return;
     if (event.target === handle) return;
     if (event.target === photoChip || (event.target instanceof Element && event.target.closest('[data-boceto-resize]'))) return;
@@ -670,7 +675,9 @@
   document.addEventListener('scroll', function () { placeHandle(); if (photoTarget) placePhotoChip(photoTarget); drawOverlay(); }, true);
   window.addEventListener('resize', drawOverlay);
   document.addEventListener('click', function (event) {
-    if (!on || dragging) return;
+    if (!on) return;
+    if (swallowClick) { swallowClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
+    if (dragging) return;
     if (event.target === handle || editing) return;
     var section = sectionOf(event.target);
     if (!section) return;
@@ -698,7 +705,7 @@
       var picked = [selection].concat(selection.others || []).filter(function (item) {
         if (!item.id) return false;
         var itemSection = sectionById(item.id), node = itemSection && nodeAt(itemSection, item.path);
-        return node && node !== itemSection && node.contains(event.target);
+        return node && node.contains(event.target);
       })[0];
       pick = picked ? { id: picked.id, path: picked.path } : (nextSelection(event.target) || pick);
     }
