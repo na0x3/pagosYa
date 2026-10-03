@@ -518,3 +518,14 @@ it('group drag: the parts move as one piece and stop together at the first edge,
   const moves = posted.find(m => m.type === 'pagosya:boceto-free-many').moves;
   expect(moves.map((move: any) => [move.path, move.y])).toEqual([['copy/headline', 0], ['copy/sub', 11.7]]);
 });
+
+it('⌘C, ⌘V and ⌘D on the board go to the Studio, never while typing in place', async () => {
+  const { w, posted, send } = load();
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  for (const key of ['c', 'v', 'd']) w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true }));
+  await tick();
+  expect(posted.filter(m => m.type === 'pagosya:boceto-key').map(m => m.key)).toEqual(['copy', 'paste', 'duplicate']);
+  w.document.querySelector('[data-skb-field="headline"]').dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true })); await tick();
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true, cancelable: true })); await tick();
+  expect(posted.filter(m => m.type === 'pagosya:boceto-key')).toHaveLength(3);
+});

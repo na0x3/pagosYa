@@ -720,6 +720,7 @@
     // Ctrl/⌘+Z goes back a step (with Shift, or Ctrl+Y, forward again); the Studio keeps the steps.
     var key = String(event.key || '').toLowerCase();
     if ((event.metaKey || event.ctrlKey) && !event.altKey && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: key === 'y' || event.shiftKey ? 'redo' : 'undo' }, '*'); return; }
+    if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && (key === 'c' || key === 'v' || key === 'd')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: key === 'c' ? 'copy' : key === 'v' ? 'paste' : 'duplicate' }, '*'); return; }
     if (!selection.id) return;
     if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: event.key === 'ArrowUp' ? 'up' : 'down' }, '*'); return; }
     if ((event.key === 'Delete' || event.key === 'Backspace') && !event.metaKey && !event.ctrlKey) { event.preventDefault(); parent.postMessage({ type: 'pagosya:boceto-key', key: 'delete' }, '*'); return; }

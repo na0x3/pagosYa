@@ -769,7 +769,7 @@ it('menu: right-click selects the part and lists what applies to it', async () =
   panel.remoteContext({ id: 'intro', path: 'copy/sub', x: 100, y: 100, fx: 20, fy: 30 });
   expect(lastSelection()).toMatchObject({ id: 'intro', path: 'copy/sub' });
   expect(menuLabels()).toEqual([
-    ['Copiar', true], ['Pegar aquí', true], ['Duplicar', true], ['Eliminar', false],
+    ['Copiar', false], ['Pegar aquí', true], ['Duplicar', false], ['Eliminar', false],
     ['Subir', false], ['Bajar', false], ['Seleccionar bloque', false],
     ['Volver a su lugar', true], ['Giro', true], ['Insertar', false],
     ['Deshacer', true], ['Rehacer', true],
@@ -801,7 +801,7 @@ it('menu: Giro acts on free parts; Capas rows open the menu too; locked keeps on
   locked.mount(host, { storeId: 's1', version: version(), locked: true, saved: vi.fn(), apply: payload => applied.push(payload) });
   await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
   locked.remoteContext({ id: 'intro', path: 'copy/sub', x: 5, y: 5 });
-  expect(menuLabels().filter(([, disabled]) => !disabled).map(([label]) => label)).toEqual(['Seleccionar bloque']);
+  expect(menuLabels().filter(([, disabled]) => !disabled).map(([label]) => label)).toEqual(['Copiar', 'Seleccionar bloque']);
 });
 
 const stepsSketch = () => ({ ...sketch(), blocks: [{ id: 'st', type: 'steps', title: 'T', note: '', kicker: '', items: [{ icon: 'a', title: 'Uno', text: '' }, { icon: 'b', title: 'Dos', text: '' }, { icon: 'c', title: 'Tres', text: '' }, { icon: 'd', title: 'Cuatro', text: '' }], free: { 'items/3': { x: 5, y: 5 } }, bg: 'paper', size: 'm' }, ...sketch().blocks] });
@@ -879,4 +879,37 @@ it('group move: selected blocks dragged by the handle move together', async () =
   panel.remoteReorderMany(['intro', 'cat'], 1);
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['fin', 'intro', 'cat']);
+});
+
+it('clipboard: ⌘C then ⌘V pastes the copy into the selected block and selects it; ⌘D duplicates; one step each', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/headline');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true, cancelable: true }));
+  panel.remoteSelect('cat', '');
+  panel.remoteKey('paste');
+  expect(lastSelection().path).toMatch(/^extras\/ec\d{3}$/);
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[1].extras).toEqual([{ id: 'ec001', kind: 'text', value: 'Algo dulce', x: 48, y: 43 }]);
+  panel.remoteSelect('intro', '');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true, cancelable: true }));
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['intro', 'intro-copia', 'cat', 'fin']);
+  panel.remoteKey('undo');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks.map((block: any) => block.id)).toEqual(['intro', 'cat', 'fin']);
+});
+
+it('clipboard: "Pegar aquí" pastes where the menu opened; what does not fit is reported', async () => {
+  const panel = await mount();
+  panel.remoteSelect('intro', 'copy/sub');
+  panel.remoteKey('copy');
+  panel.remoteContext({ id: 'cat', path: '', x: 10, y: 10, fx: 70, fy: 20 });
+  menuItem('Pegar aquí').click();
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[1].extras[0]).toMatchObject({ kind: 'text', value: 'sub', x: 70, y: 20 });
+  getSketch.mockResolvedValueOnce({ revision: 9, sketch: { ...sketch(), blocks: [{ id: 'st', type: 'steps', title: 'T', items: [{ icon: 'a', title: 'Uno', text: '' }] }, ...sketch().blocks] }, photos: [], fonts: ['anton'] } as any);
+  const other = await mount();
+  other.remoteSelect('st', 'items/0'); other.remoteKey('copy');
+  other.remoteSelect('intro', ''); other.remoteKey('paste');
+  expect(host.querySelector('.bct-status')?.textContent).toContain('1 no cabe aquí');
 });

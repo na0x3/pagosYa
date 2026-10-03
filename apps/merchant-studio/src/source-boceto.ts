@@ -4,6 +4,7 @@ import './source-boceto.css';
 import { prepareSourceImage } from './source-images';
 import { normalizePicks, togglePick, type BocetoPick } from './boceto-selection';
 import { openBocetoMenu, type MenuItem } from './boceto-menu';
+import { copyPicks, duplicatePicks, pasteClip, type ClipItem } from './boceto-clipboard';
 import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchFindNode, sketchFreeablePaths, sketchFreePos, sketchGroup, sketchListPath, sketchNodeTree, sketchRemoveNode, sketchReorder, sketchSetFree, sketchUnfree, SKETCH_EXTRA_MAX, SKETCH_FREE_MAX, SKETCH_TWO_COLUMN, type SketchNode } from '@pagosya/shared-types';
 
 /** Boceto: a Figma-style inspector for sketch-born stores. Text is edited directly on the canvas
@@ -129,6 +130,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   /** The rest of a multi-selection (the primary, `selected`/`selectedPath`, is the last pick). Kept only while the
    * primary is the one `setPicks` chose: any code that points the selection elsewhere drops them on the next draw. */
   let others: BocetoPick[] = [], groupKey = '';
+  /** The Boceto's own clipboard for this session (⌘C / Copiar). */
+  let clip: ClipItem[] = [];
   /** The lock the panel was last drawn with: a lock change (YAPI starts or stops working) must redraw. */
   let drawnLocked = false;
   const expanded = new Set<string>();
@@ -337,6 +340,26 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const [pick] = list, block = blockOf(pick.id);
     return pick.path ? Boolean(block) && sketchCanMove(block, pick.path) : sketch.blocks.some(item => item.id === pick.id);
   }
+  function copySelection() {
+    const items = copyPicks(allBlocks(), picks());
+    if (!items.length) return;
+    clip = items;
+    status(items.length === 1 ? 'Copiado' : `${items.length} copiados`);
+  }
+  function landPasted(result: { picks: BocetoPick[]; skipped: number }) {
+    if (result.picks.length) setPicks(result.picks);
+    note = result.skipped ? `${result.skipped} no ${result.skipped === 1 ? 'cabe' : 'caben'} aquí.` : '';
+    if (result.picks.length) scheduleStructural();
+    draw();
+  }
+  function pasteClipboard(at: { blockId?: string; x?: number; y?: number } = {}) {
+    if (!sketch || opts?.locked || !clip.length) return;
+    landPasted(pasteClip(sketch, clip, { blockId: at.blockId ?? selected, ...(at.x !== undefined && at.y !== undefined ? { at: { x: at.x, y: at.y } } : {}) }));
+  }
+  function duplicateSelection() {
+    if (!sketch || opts?.locked || !picks().length) return;
+    landPasted(duplicatePicks(sketch, picks()));
+  }
   const FULL_NOTE = `Este bloque ya tiene ${SKETCH_FREE_MAX} partes sueltas. Devuelve una a su lugar para soltar otra.`;
   /** One free spot from the canvas, with the API repair's rules. 'full' when the block already has 30 spots. */
   function placeFree(block: any, path: string, x: number, y: number, w?: number): 'ok' | 'full' | 'no' {
@@ -362,9 +385,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const canInsert = !locked && Boolean(target) && target.type !== 'account' && (target.extras?.length ?? 0) < SKETCH_EXTRA_MAX;
     const turns: Array<[string, string]> = [['0', '0°'], ['-8', '−8°'], ['8', '8°'], ['15', '15°']];
     return [
-      { label: 'Copiar', shortcut: '⌘C', disabled: true },
-      { label: 'Pegar aquí', shortcut: '⌘V', disabled: true },
-      { label: 'Duplicar', shortcut: '⌘D', disabled: true },
+      { label: 'Copiar', shortcut: '⌘C', disabled: !copyPicks(allBlocks(), list).length, run: () => copySelection() },
+      { label: 'Pegar aquí', shortcut: '⌘V', disabled: locked || !clip.length, run: () => pasteClipboard({ blockId: target?.id, x: at.fx, y: at.fy }) },
+      { label: 'Duplicar', shortcut: '⌘D', disabled: locked || !copyPicks(allBlocks(), list).length, run: () => duplicateSelection() },
       { label: 'Eliminar', shortcut: '⌫', disabled: locked || !list.some(canRemovePick), run: () => removeSelection() },
       'separator',
       { label: 'Subir', shortcut: '⌥↑', disabled: locked || !canMovePicks(), run: () => moveSelection(-1) },
@@ -633,6 +656,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     } else {
       children.push(el('p', { className: 'bct-hint', text: 'Son partes distintas: puedes moverlas juntas en el lienzo o eliminarlas.' }));
     }
+    const dup = el('button', { type: 'button', className: 'bct-chip', text: 'Duplicar', disabled: !copyPicks(allBlocks(), list).length });
+    dup.dataset.bocetoGroupDuplicate = '';
+    dup.addEventListener('click', () => duplicateSelection());
+    children.push(row('Copias', dup));
     const remove = el('button', { type: 'button', className: 'bct-remove', text: 'Eliminar', disabled: !list.some(canRemovePick) });
     remove.dataset.bocetoGroupRemove = '';
     remove.addEventListener('click', () => removeSelection());
@@ -1042,11 +1069,16 @@ export function createBocetoPanel(api: MerchantStudioApi) {
 
   // ⌥↑ / ⌥↓ move the selection (block or node); Supr/Backspace removes it (Figma-style), unless typing.
   document.addEventListener('keydown', event => {
-    if (!sketch || !opts || opts.locked || !host?.isConnected) return;
+    if (!sketch || !opts || !host?.isConnected) return;
     const active = document.activeElement as HTMLElement | null;
     if (active && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return;
-    const key = event.key.toLowerCase();
-    if ((event.metaKey || event.ctrlKey) && !event.altKey && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); stepBack(key === 'y' || event.shiftKey); return; }
+    const key = event.key.toLowerCase(), command = (event.metaKey || event.ctrlKey) && !event.altKey;
+    // Text the merchant highlighted in the panel copies as text, as usual.
+    if (command && !event.shiftKey && key === 'c' && !document.getSelection()?.toString() && picks().length) { event.preventDefault(); copySelection(); return; }
+    if (opts.locked) return;
+    if (command && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); stepBack(key === 'y' || event.shiftKey); return; }
+    if (command && !event.shiftKey && key === 'v' && clip.length) { event.preventDefault(); pasteClipboard(); return; }
+    if (command && !event.shiftKey && key === 'd' && picks().length) { event.preventDefault(); duplicateSelection(); return; }
     if (event.key === 'Escape' && others.length) { event.preventDefault(); setPicks([]); draw(); return; }
     if (!selected) return;
     if ((event.key === 'Delete' || event.key === 'Backspace') && !event.altKey && !event.metaKey && !event.ctrlKey) { event.preventDefault(); removeSelection(); return; }
@@ -1107,8 +1139,11 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (result === 'reload') scheduleStructural(); else schedule();
       draw();
     },
-    remoteKey(key: 'up' | 'down' | 'delete' | 'undo' | 'redo') {
+    remoteKey(key: 'up' | 'down' | 'delete' | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate') {
+      if (key === 'copy') { copySelection(); return; }
       if (key === 'undo' || key === 'redo') { stepBack(key === 'redo'); return; }
+      if (key === 'paste') { pasteClipboard(); return; }
+      if (key === 'duplicate') { duplicateSelection(); return; }
       if (!sketch || !selected || opts?.locked) return;
       if (key === 'delete') removeSelection(); else moveSelection(key === 'up' ? -1 : 1);
     },
