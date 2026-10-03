@@ -1,3 +1,4 @@
+import { repairSketchLayout, SKETCH_COPY_ORDER, type SketchGroupLayout } from '@pagosya/shared-types';
 import { SOURCE_FONT_IDS } from '../source-font-catalog';
 
 /** The editable sketch a merchant shapes before any site is built (sketch-first YAPI, sub-project 1).
@@ -10,8 +11,9 @@ export type SketchBg = keyof SketchPalette | 'tint-accent' | 'tint-deep' | 'tint
 export type SketchAlign = 'start' | 'center' | 'end';
 export type NewsletterForm = 'pill' | 'stacked' | 'underline' | 'card';
 export const NEWSLETTER_FORMS: readonly NewsletterForm[] = ['pill', 'stacked', 'underline', 'card'];
-/** Editor-wide layout controls every block may carry: copy alignment, mirrored photo side, swapped buttons. */
-export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean };
+/** Editor-wide layout controls every block may carry: copy alignment, mirrored photo side, swapped buttons,
+ * copy-column element order and per-group layout (spec 2026-10-03-boceto-structure-and-icons-design). */
+export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean; order?: string[]; layout?: Record<string, SketchGroupLayout> };
 export type StickerPos = { x: number; y: number };
 export type SketchBlock = (
   | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; cta2: string; trust: string; badge: string; note: string; sticker: string; caption: string; photo?: string; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
@@ -50,10 +52,7 @@ export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'steps', 'marque
 
 /** The draggable copy-column elements of a block, in default order. The Boceto editor reorders
  * within this allowlist; the renderer emits children in `block.order` when present. */
-export const SKETCH_EL_ORDER: Partial<Record<SketchBlock['type'], readonly string[]>> = {
-  hero: ['badge', 'headline', 'sub', 'actions', 'trust', 'note'],
-  split: ['headline', 'body', 'pills', 'stats', 'boxes', 'actions'],
-};
+export const SKETCH_EL_ORDER: Partial<Record<SketchBlock['type'], readonly string[]>> = SKETCH_COPY_ORDER;
 export const MARQUEE_GLYPHS = ['·', '✦', '•', '◆', '★'] as const;
 
 const DEFAULT_PALETTE: SketchPalette = { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' };
@@ -282,6 +281,14 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
       if (blockAlign && blockAlign !== 'start') kept.align = blockAlign; else delete kept.align;
       if (block.flip === true && ['hero', 'split', 'story', 'newsletter'].includes(kept.type)) kept.flip = true;
       if (block.swap === true && ['hero', 'split'].includes(kept.type)) kept.swap = true;
+      // Copy order for the blocks added by structured selection (hero and split repair theirs above) and group layout.
+      const copyOrder = SKETCH_COPY_ORDER[kept.type];
+      if (copyOrder && kept.type !== 'hero' && kept.type !== 'split') {
+        const repairedOrder = order(block.order, copyOrder);
+        if (repairedOrder) kept.order = repairedOrder; else delete kept.order;
+      }
+      const layout = repairSketchLayout(kept.type, block.layout);
+      if (layout) kept.layout = layout; else delete kept.layout;
     }
   }
 
@@ -327,4 +334,15 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
   };
 
   return { sketch: { palette, fonts, scale, style, account, blocks: ordered }, notes };
+}
+
+/** Editor-only block fields are absent from the model schema, so a chat edit reply resets them; carry them over by id. */
+export const SKETCH_EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos', 'layout'] as const;
+export function carryEditorFields(current: StoreSketch, edited: StoreSketch): StoreSketch['blocks'] {
+  return edited.blocks.map(block => {
+    const before = current.blocks.find(item => item.id === block.id) as Record<string, unknown> | undefined;
+    if (!before) return block;
+    const carried = Object.fromEntries(SKETCH_EDITOR_ONLY.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
+    return { ...block, ...carried } as typeof block;
+  });
 }

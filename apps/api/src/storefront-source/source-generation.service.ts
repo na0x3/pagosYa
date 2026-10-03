@@ -39,7 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { assembleSketch, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -808,13 +808,7 @@ export class SourceGenerationService {
         // Page style and per-block layout (alignment, flip, swap, element order, sticker spot) are editor-only and
         // absent from the model schema, so the edit reply would reset them; carry them over by block id.
         edited.sketch.style = currentSketch.style;
-        const EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos'] as const;
-        edited.sketch.blocks = edited.sketch.blocks.map(block => {
-          const before = currentSketch.blocks.find(item => item.id === block.id) as Record<string, unknown> | undefined;
-          if (!before) return block;
-          const carried = Object.fromEntries(EDITOR_ONLY.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
-          return { ...block, ...carried } as typeof block;
-        });
+        edited.sketch.blocks = carryEditorFields(currentSketch, edited.sketch);
         generated = { label: 'Boceto actualizado', files: assembleSketch(edited.sketch, sketchCtx) };
         sketchFile = { path: 'sketch.json', content: JSON.stringify(edited.sketch, null, 2) + '\n' };
         lenient = true;

@@ -266,3 +266,30 @@ describe('fuller, varied sketches', () => {
     expect(byId(sketch, 's').boxes).toEqual([{ title: 'Regalos', text: 'Desde 25', icon: 'gift' }, { title: 'Eventos', text: '' }]);
   });
 });
+
+import { carryEditorFields } from './sketch-schema';
+
+describe('structured selection fields', () => {
+  const blockOf = (raw: object) => repairSketch({ blocks: [raw] }, ctx).sketch.blocks[0] as any;
+  it('keeps a valid copy order for story, newsletter and banner, omitting the default', () => {
+    expect(blockOf({ id: 's', type: 'story', title: 'T', paragraphs: ['a'], order: ['paragraphs', 'title'] }).order).toEqual(['paragraphs', 'title']);
+    expect(blockOf({ id: 's', type: 'story', title: 'T', paragraphs: ['a'], order: ['title', 'paragraphs'] }).order).toBeUndefined();
+    expect(blockOf({ id: 'n', type: 'newsletter', title: 'T', order: ['form', 'bogus'] }).order).toEqual(['form', 'title', 'note']);
+    expect(blockOf({ id: 'b', type: 'banner', headline: 'H', order: ['cta'] }).order).toEqual(['cta', 'headline']);
+  });
+  it('repairs layout against the block structure and drops it from blocks without groups', () => {
+    expect(blockOf({ id: 'h', type: 'hero', headline: 'H', layout: { copy: { gap: 'l' }, actions: { dir: 'column' }, nope: { gap: 's' } } }).layout).toEqual({ copy: { gap: 'l' }, actions: { dir: 'column' } });
+    expect(blockOf({ id: 'h', type: 'hero', headline: 'H', layout: { media: { gap: 's' } } }).layout).toBeUndefined();
+    expect(blockOf({ id: 'm', type: 'marquee', text: 'x', layout: { copy: { gap: 's' } } }).layout).toBeUndefined();
+  });
+  it('repair is idempotent with order and layout', () => {
+    const once = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'H', order: ['actions'], layout: { copy: { valign: 'end' } } }] }, ctx).sketch;
+    expect(repairSketch(once, ctx).sketch).toEqual(once);
+  });
+  it('chat edits keep editor-only fields, layout included, by block id', () => {
+    const current = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'H', align: 'center', layout: { copy: { gap: 'l' } } }] }, ctx).sketch;
+    const edited = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Nuevo' }] }, ctx).sketch;
+    const blocks = carryEditorFields(current, edited) as any[];
+    expect(blocks[0]).toMatchObject({ headline: 'Nuevo', align: 'center', layout: { copy: { gap: 'l' } } });
+  });
+});
