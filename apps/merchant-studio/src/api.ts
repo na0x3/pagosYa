@@ -448,6 +448,10 @@ export class MerchantStudioApi {
   putSketch(storeId: string, body: { revision: number; sketch: unknown }): Promise<{ revision: number; sketch: unknown }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch`, { method: "PUT", body: JSON.stringify(body) });
   }
+  /** "Generar sitio": the boceto becomes the site, for good. */
+  buildSketch(storeId: string, body: { revision: number }): Promise<{ revision: number }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch/build`, { method: "POST", body: JSON.stringify(body) });
+  }
   async exportSource(storeId: string, revision: number): Promise<Blob> {
     const response = await fetch(`${API_BASE_URL}/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}/export`, { headers: { Authorization: `Bearer ${this.token}` } });
     if (!response.ok) throw new ApiError("No se pudo descargar esta revisión.", response.status);

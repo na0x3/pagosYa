@@ -15,7 +15,11 @@ type SelectionPayload = { id: string; path: string; label: string; reveal?: true
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
 /** `resized` runs after a side panel is tucked away or brought back, so the board can refit the page. */
-type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void; resized?: () => void };
+type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void; resized?: () => void;
+  /** Boceto phase: the right panel gains a YAPI tab; called with whether the Studio's docked chat should show. */
+  yapi?: (visible: boolean) => void;
+  /** Boceto phase: the selected block, reported when it changes, as the chat's context (the account page is never one). */
+  selected?: (block: { id: string; label: string } | null) => void };
 
 const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: string[]; names: string[] }> = [
   { key: 'radius', label: 'Esquinas', values: ['round', 'soft', 'square'], names: ['Redondas', 'Suaves', 'Rectas'] },
@@ -115,12 +119,15 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let revealNext = false;
   /** Side panels sit flush against the walls; each one tucks away behind an arrow and comes back from a tab. */
   const tucked = { layers: false, inspector: false };
+  let rightTab: 'design' | 'yapi' = 'design', reportedBlock: string | null = null, reportedYapi = false;
+  /** The YAPI tab is on (only offered when the Studio docks a chat, `opts.yapi`). */
+  const yapiTab = () => Boolean(opts?.yapi) && rightTab === 'yapi';
   const PANEL_WIDTH = { layers: 240, inspector: 300 };
   /** The workspace reads these to leave room for the docked panels, so the board fills exactly the space between them. */
   const dock = () => {
     const root = (host?.ownerDocument ?? document).documentElement;
     root.style.setProperty('--bct-left', `${tucked.layers ? 0 : PANEL_WIDTH.layers}px`);
-    root.style.setProperty('--bct-right', `${tucked.inspector ? 0 : PANEL_WIDTH.inspector}px`);
+    root.style.setProperty('--bct-right', `${tucked.inspector ? 0 : yapiTab() ? 360 : PANEL_WIDTH.inspector}px`);
   };
   function tuck(side: keyof typeof tucked, value: boolean) { tucked[side] = value; draw(); opts?.resized?.(); }
   const dockButton = (side: keyof typeof tucked, open: boolean) => {
@@ -190,6 +197,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   const syncSelection = () => {
     const selection: SelectionPayload = { ...selectionPayload(), ...(revealNext ? { reveal: true as const } : {}) };
     revealNext = false;
+    const block = selectedBlock();
+    const blockId = block && block.id !== 'account' ? String(block.id) : null;
+    if (blockId !== reportedBlock) {
+      reportedBlock = blockId;
+      opts?.selected?.(blockId ? { id: blockId, label: TYPE_LABEL[block.type] || block.type } : null);
+    }
     try { opts?.apply?.({ selection }); } catch { /* frame gone */ }
   };
   /** Point the selection at a path inside a block, falling back to the nearest node that still exists. */
@@ -647,11 +660,23 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const close = el('button', { type: 'button', className: 'bct-close', text: '✕', title: 'Cerrar' });
     close.addEventListener('click', () => opts?.close?.());
     statusNode = el('span', { className: 'bct-status', text: pending ? 'Guardando…' : note || 'Se guarda solo' });
-    root.append(el('header', { className: 'bct-head' }, [el('h2', { text: 'Diseño' }), statusNode, dockButton('inspector', false), close]));
+    // Boceto phase: Diseño | YAPI. With YAPI on, only this header stays; the Studio docks its chat below it.
+    const heading = opts.yapi
+      ? el('div', { className: 'bct-tabs' }, (['design', 'yapi'] as const).map(tab => {
+          const button = el('button', { type: 'button', className: `bct-tabs__tab${rightTab === tab ? ' is-on' : ''}`, text: tab === 'design' ? 'Diseño' : 'YAPI' });
+          button.dataset.bocetoTab = tab;
+          button.setAttribute('aria-pressed', String(rightTab === tab));
+          button.addEventListener('click', () => { if (rightTab === tab) return; rightTab = tab; draw(); opts?.resized?.(); });
+          return button;
+        }))
+      : el('h2', { text: 'Diseño' });
+    root.append(el('header', { className: 'bct-head' }, [heading, statusNode, dockButton('inspector', false), ...(opts.close ? [close] : [])]));
 
     const current = selectedBlock();
     const openPicker = current && picker && picker.blockId === current.id ? pickerPanel(current) : null;
-    if (openPicker) {
+    if (yapiTab()) {
+      root.classList.add('is-yapi');
+    } else if (openPicker) {
       root.append(el('div', { className: 'bct-props' }, [openPicker]));
     } else if (current) {
       // Selection-driven, like Figma: the inspector shows what is selected on the canvas, one level up at a time.
@@ -673,8 +698,10 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     }
 
     const wrap = el('div', { className: 'bct-shell' }, [tucked.layers ? dockButton('layers', true) : layers, tucked.inspector ? dockButton('inspector', true) : root]);
-    if (opts.locked) wrap.querySelectorAll('input,select,button:not(.bct-close):not([data-boceto-dock])').forEach(node => ((node as HTMLInputElement).disabled = true));
+    if (opts.locked) wrap.querySelectorAll('input,select,button:not(.bct-close):not([data-boceto-dock]):not([data-boceto-tab])').forEach(node => ((node as HTMLInputElement).disabled = true));
     dock();
+    const yapiVisible = yapiTab() && !tucked.inspector;
+    if (yapiVisible !== reportedYapi) { reportedYapi = yapiVisible; opts.yapi?.(yapiVisible); }
     rootNode = wrap;
     host.replaceChildren(wrap);
     syncSelection();
@@ -702,6 +729,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   });
 
   return {
+    /** Finish any queued or running save (before "Generar sitio" builds from the saved boceto). */
+    flush: () => flushSave(),
     /** "Cambiar foto" on the canvas: select that block and open the photo picker on that slot. */
     remotePhoto(id: string, slot: string) {
       if (!sketch || !/^(photo|items\.\d+\.photo|photos\.\d+)$/.test(slot)) return;

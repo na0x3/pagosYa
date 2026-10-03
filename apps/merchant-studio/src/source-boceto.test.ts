@@ -449,3 +449,43 @@ it('reveal pans the board only when the part is off screen, centring it', () => 
   expect(bocetoRevealY(40, 0.5, 800, 3000, 100)).toBe(400 - 3050 * 0.5);
   expect(bocetoRevealY(40, 0.5, 800, Number.NaN, 100)).toBe(40);
 });
+
+const mountWith = async (extra: Record<string, unknown>) => {
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload), ...extra } as any);
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  return panel;
+};
+
+it('phase: the right panel offers Diseño | YAPI; YAPI docks the chat and tucking hides it', async () => {
+  const yapi = vi.fn();
+  await mountWith({ yapi });
+  expect(host.querySelector('.bct-close')).toBeNull();
+  (host.querySelector('[data-boceto-tab="yapi"]') as HTMLElement).click();
+  expect(yapi).toHaveBeenLastCalledWith(true);
+  expect(host.querySelector('.bct-panel.is-yapi .bct-props')).toBeNull();
+  (host.querySelector('[data-boceto-dock="inspector"]') as HTMLElement).click();
+  expect(yapi).toHaveBeenLastCalledWith(false);
+  (host.querySelector('.bct-tab--right') as HTMLElement).click();
+  expect(yapi).toHaveBeenLastCalledWith(true);
+  (host.querySelector('[data-boceto-tab="design"]') as HTMLElement).click();
+  expect(yapi).toHaveBeenLastCalledWith(false);
+  expect(host.querySelector('.bct-panel .bct-section')).not.toBeNull();
+});
+
+it('phase: the selected block is reported once per change, as chat context', async () => {
+  const selected = vi.fn();
+  const panel = await mountWith({ selected });
+  panel.remoteSelect('intro', 'copy/sub');
+  panel.remoteSelect('intro', 'copy');
+  panel.remoteSelect('cat', '');
+  panel.remoteSelect('nope', '');
+  expect(selected.mock.calls.map(call => call[0])).toEqual([{ id: 'intro', label: 'Portada' }, { id: 'cat', label: 'Catálogo' }, null]);
+});
+
+it('phase: flush() saves a pending edit right away', async () => {
+  const panel = await mountWith({});
+  (panel as any).remoteText('intro', 'headline', 'Último cambio');
+  await (panel as any).flush();
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].headline).toBe('Último cambio');
+});

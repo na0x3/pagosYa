@@ -118,3 +118,10 @@
 .bct-node { display: block; width: 100%; text-align: left; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 12px; padding-block: 5px; cursor: pointer; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bct-node:hover { background: rgba(31, 111, 235, .08); opacity: 1; }
 .bct-node.is-selected { background: rgba(31, 111, 235, .16); color: #1f6feb; opacity: 1; font-weight: 600; }
+
+/* Diseño | YAPI: the right panel's two faces. With YAPI on, only the header stays; the Studio docks its chat below. */
+.bct-tabs { display: flex; gap: 2px; background: #383838; border-radius: 6px; padding: 2px; }
+.bct-tabs__tab { border: 0; background: transparent; color: #bdbdbd; border-radius: 4px; padding: 4px 10px; font: inherit; font-weight: 600; cursor: pointer; }
+.bct-tabs__tab.is-on { background: #4d4d4d; color: #fff; }
+.bct-panel.is-yapi { bottom: auto; padding: 0; overflow: hidden; width: var(--bct-right, 360px); }
+.studio-workspace.is-boceto.is-boceto-yapi .agent-panel { display: grid; position: fixed; top: 47px; right: 0; bottom: 0; width: var(--bct-right, 360px); z-index: 40; border-left: 1px solid #3c3c3c; }
