@@ -489,3 +489,28 @@ it('phase: flush() saves a pending edit right away', async () => {
   await (panel as any).flush();
   expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].headline).toBe('Último cambio');
 });
+
+it('review: flush() reports a save that did not land, so Generar sitio can stop', async () => {
+  const panel = await mountWith({});
+  putSketch.mockRejectedValueOnce(new Error('network'));
+  (panel as any).remoteText('intro', 'headline', 'Sin guardar');
+  expect(await panel.flush()).toBe(false);
+  expect(await panel.flush()).toBe(true);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.blocks[0].headline).toBe('Sin guardar');
+});
+
+it('review: while YAPI works the Boceto locks, says so, and ignores canvas edits', async () => {
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  const options = { storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: (payload: any) => applied.push(payload) };
+  panel.mount(host, options);
+  await vi.waitFor(() => { if (!host.querySelector('[data-boceto-block]')) throw new Error('not ready'); });
+  panel.mount(host, { ...options, locked: true });
+  expect((host.querySelector('[data-boceto-move-up]') as HTMLButtonElement).disabled).toBe(true);
+  expect(host.querySelector('.bct-status')?.textContent).toBe('YAPI está cambiando tu boceto…');
+  expect(lastLook().blocks.intro.movable).toEqual([]);
+  panel.remoteText('intro', 'headline', 'Durante el trabajo');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch).not.toHaveBeenCalled();
+  panel.mount(host, options);
+  expect((host.querySelector('[data-boceto-move-up]') as HTMLButtonElement).disabled).toBe(false);
+});

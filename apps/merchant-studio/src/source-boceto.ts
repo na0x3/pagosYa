@@ -114,6 +114,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let selected = '', selectedPath = '', timer: ReturnType<typeof setTimeout> | null = null, pending = false, note = '';
   let editSeq = 0, lastSaved = '', statusNode: HTMLElement | null = null, rootNode: HTMLElement | null = null, mountToken = 0;
   let mountedStore = '', mountedRevision = -1;
+  /** The lock the panel was last drawn with: a lock change (YAPI starts or stops working) must redraw. */
+  let drawnLocked = false;
   const expanded = new Set<string>();
   /** Set when the selection came from Capas: the canvas scrolls the part into view once. */
   let revealNext = false;
@@ -659,7 +661,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const root = el('aside', { className: 'bct-panel' });
     const close = el('button', { type: 'button', className: 'bct-close', text: '✕', title: 'Cerrar' });
     close.addEventListener('click', () => opts?.close?.());
-    statusNode = el('span', { className: 'bct-status', text: pending ? 'Guardando…' : note || 'Se guarda solo' });
+    statusNode = el('span', { className: 'bct-status', text: opts.locked ? 'YAPI está cambiando tu boceto…' : pending ? 'Guardando…' : note || 'Se guarda solo' });
     // Boceto phase: Diseño | YAPI. With YAPI on, only this header stays; the Studio docks its chat below it.
     const heading = opts.yapi
       ? el('div', { className: 'bct-tabs' }, (['design', 'yapi'] as const).map(tab => {
@@ -702,7 +704,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     dock();
     const yapiVisible = yapiTab() && !tucked.inspector;
     if (yapiVisible !== reportedYapi) { reportedYapi = yapiVisible; opts.yapi?.(yapiVisible); }
-    rootNode = wrap;
+    rootNode = wrap; drawnLocked = opts.locked;
     host.replaceChildren(wrap);
     syncSelection();
   }
@@ -730,7 +732,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
 
   return {
     /** Finish any queued or running save (before "Generar sitio" builds from the saved boceto). */
-    flush: () => flushSave(),
+    /** Resolves true only when the boceto on screen is the saved one: a failed save must stop "Generar sitio". */
+    flush: async () => { await flushSave(); return Boolean(sketch) && !pending && JSON.stringify(sketch) === lastSaved; },
     /** "Cambiar foto" on the canvas: select that block and open the photo picker on that slot. */
     remotePhoto(id: string, slot: string) {
       if (!sketch || !/^(photo|items\.\d+\.photo|photos\.\d+)$/.test(slot)) return;
@@ -767,7 +770,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     /** After the preview reloads: push the live look and the selection again. */
     resync() { applyLive(); syncSelection(); },
     remoteReorder(id: string, index: number) {
-      if (!sketch) return;
+      if (!sketch || opts?.locked) return;
       const from = sketch.blocks.findIndex(block => block.id === id);
       if (from === -1) return;
       const [block] = sketch.blocks.splice(from, 1);
@@ -775,7 +778,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (selected !== id) selectedPath = ''; selected = id; schedule(); draw();
     },
     remoteText(id: string, field: string, value: string) {
-      if (!sketch || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
+      if (!sketch || opts?.locked || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
       setByPath(block, field, value);
@@ -783,7 +786,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     /** A sticker drag: percentages inside its positioning box, clamped like the API repair. */
     remoteElMove(id: string, elKey: string, x: number, y: number) {
-      if (!sketch || elKey !== 'sticker' || !Number.isFinite(x) || !Number.isFinite(y)) return;
+      if (!sketch || opts?.locked || elKey !== 'sticker' || !Number.isFinite(x) || !Number.isFinite(y)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block || !['hero', 'split', 'banner'].includes(block.type)) return;
       block.stickerPos = { x: Math.min(100, Math.max(0, Math.round(x * 10) / 10)), y: Math.min(100, Math.max(0, Math.round(y * 10) / 10)) };
@@ -793,7 +796,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       host = target; opts = options; note = '';
       const born = options.version.snapshot.files.some(file => file.path === 'sketch.json');
       if (!born) { sketch = null; mountedStore = ''; host.replaceChildren(); return; }
-      if (sketch && rootNode && mountedStore === options.storeId && (mountedRevision === options.version.revision || pending || timer)) { host.replaceChildren(rootNode); return; }
+      if (sketch && rootNode && mountedStore === options.storeId && (mountedRevision === options.version.revision || pending || timer)) {
+        host.replaceChildren(rootNode);
+        // YAPI started or stopped working: redraw so controls lock or unlock, and the canvas drags follow.
+        if (drawnLocked !== options.locked) { draw(); applyLive(); }
+        return;
+      }
       const token = ++mountToken;
       void api.getSketch(options.storeId).then(result => {
         if (token !== mountToken) return;

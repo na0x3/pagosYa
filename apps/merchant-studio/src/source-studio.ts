@@ -804,11 +804,13 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('[data-boceto-confirm="go"]')?.addEventListener('click', () => {
       bocetoConfirm = false;
       void action(async () => {
-        await bocetoPanel.flush();
+        // The site is built from the saved boceto: a change that did not save would silently go missing.
+        if (!(await bocetoPanel.flush())) { toast = 'No se pudo guardar tu último cambio. Inténtalo de nuevo.'; return; }
         try { await api.buildSketch(storeId, { revision: state.revision }); }
         catch (failure) {
+          // A toast, not the chat's error line: the chat is hidden on the Diseño tab.
           if (failure instanceof ApiError && failure.status === 409) { await load(); toast = 'El boceto cambió. Revisa la versión más reciente y vuelve a generar.'; return; }
-          throw new Error('No se pudo generar. Inténtalo de nuevo.');
+          toast = 'No se pudo generar. Inténtalo de nuevo.'; return;
         }
         page = 'index.html'; mode = 'preview';
         await load();

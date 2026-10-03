@@ -341,3 +341,28 @@ it('Generar sitio on a stale revision keeps the merchant in the boceto with a cl
   await vi.waitFor(() => expect(app.textContent).toContain('El boceto cambió. Revisa la versión más reciente y vuelve a generar.'));
   expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
 });
+
+it('review: Generar sitio stops when the last Boceto change could not be saved', async () => {
+  bocetoStore();
+  vi.spyOn(MerchantStudioApi.prototype, 'putSketch').mockRejectedValue(new Error('network'));
+  const build = vi.spyOn(MerchantStudioApi.prototype, 'buildSketch').mockResolvedValue({ revision: 3 });
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
+  ([...app.querySelectorAll('.bct-segment__option')].find(node => node.textContent === 'Rectas') as HTMLElement).click();
+  (app.querySelector('#source-boceto-generate') as HTMLElement).click();
+  (app.querySelector('[data-boceto-confirm="go"]') as HTMLElement).click();
+  await vi.waitFor(() => expect(app.querySelector('.toast')?.textContent).toContain('No se pudo guardar tu último cambio'));
+  expect(build).not.toHaveBeenCalled();
+  expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
+});
+
+it('review: a failed Generar sitio says so where the merchant is looking', async () => {
+  bocetoStore();
+  vi.spyOn(MerchantStudioApi.prototype, 'buildSketch').mockRejectedValue(new Error('network'));
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('#source-boceto-generate')).not.toBeNull());
+  (app.querySelector('#source-boceto-generate') as HTMLElement).click();
+  (app.querySelector('[data-boceto-confirm="go"]') as HTMLElement).click();
+  await vi.waitFor(() => expect(app.querySelector('.toast')?.textContent).toContain('No se pudo generar. Inténtalo de nuevo.'));
+  expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
+});
