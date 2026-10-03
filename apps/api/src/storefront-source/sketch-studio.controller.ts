@@ -18,6 +18,10 @@ class AddSketchPhotoDto {
   @IsString() @MaxLength(200) url!: string;
 }
 
+class BuildSketchDto {
+  @IsInt() @Min(1) revision!: number;
+}
+
 @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller('v1/stores/:storeId/source-project')
 export class SketchStudioController {
@@ -47,5 +51,13 @@ export class SketchStudioController {
   @CompileBudget()
   update(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: UpdateSketchDto) {
     return this.sketches.update(merchant.id, storeId, body);
+  }
+
+  /** "Generar sitio": the boceto becomes the site (final; see SketchStudioService.build). */
+  @Post('sketch/build')
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @CompileBudget()
+  build(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: BuildSketchDto) {
+    return this.sketches.build(merchant.id, storeId, body);
   }
 }

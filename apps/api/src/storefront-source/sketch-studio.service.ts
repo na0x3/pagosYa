@@ -93,4 +93,23 @@ export class SketchStudioService {
     const saved = await this.projects.save(merchantId, storeId, { revision: input.revision, label: 'Boceto editado', brief: snapshot.brief, files });
     return { revision: saved.revision, sketch };
   }
+
+  /** "Generar sitio": the boceto becomes the site, for good. Same deterministic assembly as a Boceto save, saved
+   * without sketch.json, so every later save edits the site directly and the Studio leaves the boceto phase. */
+  async build(merchantId: string, storeId: string, input: { revision: number }): Promise<{ revision: number }> {
+    const { revision, snapshot } = await this.load(merchantId, storeId);
+    if (!snapshot || revision !== input.revision) throw new ConflictException('El boceto cambió. Recarga.');
+    const stored = snapshot.files.find(file => file.path === SKETCH_FILE)?.content;
+    if (!stored) throw new BadRequestException('Esta tienda ya es un sitio.');
+    const ctx = await this.context(merchantId, storeId, snapshot);
+    let parsed: unknown;
+    try { parsed = JSON.parse(stored); } catch { parsed = undefined; }
+    const { sketch } = repairSketch(parsed, ctx);
+    const files = await withSourceIcons([
+      ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE),
+      ...assembleSketch(sketch, ctx),
+    ]);
+    const saved = await this.projects.save(merchantId, storeId, { revision, label: 'Sitio generado desde el boceto', brief: snapshot.brief, files });
+    return { revision: saved.revision };
+  }
 }

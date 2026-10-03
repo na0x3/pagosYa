@@ -128,3 +128,23 @@ describe('addPhoto (Boceto "Subir foto")', () => {
     await expect(service.addPhoto('m', 's', { revision: 2, url: '/v1/uploads/abc-1.jpg' })).rejects.toThrow('cambió');
   });
 });
+
+describe('build ("Generar sitio")', () => {
+  it('saves the assembled site without sketch.json, keeping assets and runtime', async () => {
+    const { service, projects } = setup();
+    expect(await service.build('m', 's', { revision: 3 })).toEqual({ revision: 4 });
+    const input = projects.save.mock.calls[0][2];
+    expect(input.label).toBe('Sitio generado desde el boceto');
+    expect(input.files.some((f: any) => f.path === 'sketch.json')).toBe(false);
+    expect(input.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('data-skb-group');
+    expect(input.files.some((f: any) => f.path === 'assets/a.jpg')).toBe(true);
+    expect(input.files.some((f: any) => f.path === 'commerce.js')).toBe(true);
+  });
+  it('refuses a stale revision and a store that is already a site', async () => {
+    const { service, projects } = setup();
+    await expect(service.build('m', 's', { revision: 2 })).rejects.toThrow('El boceto cambió');
+    const plain = setup(false);
+    await expect(plain.service.build('m', 's', { revision: 3 })).rejects.toThrow('ya es un sitio');
+    expect(projects.save).not.toHaveBeenCalled();
+  });
+});
