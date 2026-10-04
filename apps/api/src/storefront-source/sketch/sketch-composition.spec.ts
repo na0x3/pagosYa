@@ -56,6 +56,15 @@ it('keeps a valid inserted element and drops a kind it does not know', () => {
   expect(extras[0]).toMatchObject({ kind: 'emoji', value: '🥐', r: 12 });
 });
 
+// Review Focus 2 again, for the other path: an inserted element's w: 0 must also mean automatic width.
+// The free map and the extras list take different routes into repair, so one being right proves nothing about the other.
+it('treats an inserted element w: 0 as automatic width too', () => {
+  const { sketch } = applySketchComposition(base(), { blocks: [entry({ extras: [
+    { id: 'e1a', kind: 'emoji', value: '🥐', href: '', x: 80, y: 10, w: 0, r: 0 },
+  ] })] }, ctx);
+  expect(sketch.blocks.find(b => b.id === 'h1')!.extras![0]).not.toHaveProperty('w');
+});
+
 it('folds the layout array back into the record repair expects, dropping unknown groups', () => {
   const { sketch } = applySketchComposition(base(), { blocks: [entry({ id: 's1', layout: [
     { group: 'copy', gap: 'l', dir: '', align: '', valign: 'center' },

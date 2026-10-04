@@ -73,8 +73,10 @@ export function applySketchComposition(sketch: StoreSketch, raw: unknown, ctx: S
     const next = { ...block } as SketchBlock & Record<string, unknown>;
 
     const inserted = repairSketchExtras(asArray(entry.extras).map(item => {
-      const extra = asRecord(item);
-      return { ...extra, ...position({ x: Number(extra.x), y: Number(extra.y), w: Number(extra.w), r: Number(extra.r) }) };
+      // The raw x/y/w/r are dropped rather than spread, because spreading them back over `position` would
+      // reinstate the `w: 0` it deliberately removed — and repair clamps a zero width up to 5%.
+      const { x, y, w, r, ...rest } = asRecord(item);
+      return { ...rest, ...position({ x: Number(x), y: Number(y), w: Number(w), r: Number(r) }) };
     }), ctx);
     if (inserted.length) next.extras = inserted; else delete next.extras;
 
