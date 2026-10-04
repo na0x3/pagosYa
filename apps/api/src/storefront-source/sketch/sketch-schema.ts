@@ -214,18 +214,25 @@ export function ensureAllPhotosUsed(sketch: StoreSketch, ctx: SketchContext): St
   if (!missing.length) return sketch.account.photo ? sketch : { ...sketch, account: { ...sketch.account, photo: heroPhoto ?? ctx.photos[0] } };
   const blocks = sketch.blocks.map(block => ({ ...block })) as SketchBlock[];
   const account = sketch.account.photo ? sketch.account : { ...sketch.account, photo: missing.length > 3 ? missing.pop() : heroPhoto ?? ctx.photos[0] };
+  // A drawn structure is authoritative: its `media` flags are the page's photo plan, so a leftover photo only
+  // goes where the draw said a photo belongs, never into a reviews strip or an unplanned gallery, and a photo with
+  // no planned home is simply unused. Without a structure (chat edits, old sketches) the magazine placement below
+  // is unchanged. The ids are read off the slots, not off the blocks, because that is what the draw promised.
+  const planned = Array.isArray(sketch.structure?.slots) ? new Map(sketch.structure.slots.map(slot => [slot.id, slot.media === true])) : undefined;
+  const mediaOk = (block: SketchBlock) => !planned || planned.get(block.id) === true;
   for (const block of blocks) {
     if (!missing.length) break;
+    if (!mediaOk(block)) continue;
     if ((block.type === 'hero' || block.type === 'split' || block.type === 'story') && !block.photo) block.photo = missing.shift();
     else if (block.type === 'newsletter' && !block.photo) { block.photo = missing.shift(); block.variant = 'split'; }
     else if (block.type === 'collections') block.items = block.items.map(item => (item.photo || !missing.length ? item : { ...item, photo: missing.shift() }));
   }
-  const reviews = blocks.find(block => block.type === 'reviews') as Extract<SketchBlock, { type: 'reviews' }> | undefined;
+  const reviews = planned ? undefined : blocks.find(block => block.type === 'reviews') as Extract<SketchBlock, { type: 'reviews' }> | undefined;
   if (reviews && missing.length && reviews.photos.length < 3) reviews.photos = [...reviews.photos, ...missing.splice(0, 3 - reviews.photos.length)];
   if (missing.length) {
     const gallery = blocks.find(block => block.type === 'gallery') as Extract<SketchBlock, { type: 'gallery' }> | undefined;
-    if (gallery) gallery.photos = [...gallery.photos, ...missing].slice(0, LIMITS.galleryPhotos);
-    else {
+    if (gallery) { if (mediaOk(gallery)) gallery.photos = [...gallery.photos, ...missing].slice(0, LIMITS.galleryPhotos); }
+    else if (!planned) {
       const footerIndex = blocks.findIndex(block => block.type === 'footer');
       const ids = new Set(blocks.map(block => block.id));
       let next = 1; while (ids.has(`b${next}`)) next++;

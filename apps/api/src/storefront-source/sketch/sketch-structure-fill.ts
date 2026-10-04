@@ -47,17 +47,26 @@ function hasContent(block: SketchBlock): boolean {
 }
 
 const WIDTHS: SketchWidth[] = ['bleed', 'wide', 'narrow', 'offset-left', 'offset-right'];
-/** The grammar's floor on page length (see `violations`). */
-const MIN_BANDS = 6;
+
+/** A slot that carries no media must show none, wherever the block keeps its photos: the single `photo` of
+ * hero/split/story/newsletter, a gallery's strip, a reviews band's customer strip and each collection card.
+ * Stripping only the scalar left three of the four bypassing the drawn budget. A slot that does carry media
+ * cannot conjure a photo, so it is left alone. */
+function withoutMedia(block: SketchBlock, slot: PageSlot): SketchBlock {
+  if (slot.media) return block;
+  const out = { ...block } as SketchBlock & { photo?: string; photos?: string[]; items?: Array<Record<string, unknown>> };
+  delete out.photo;
+  if (out.type === 'gallery' || out.type === 'reviews') out.photos = [];
+  if (out.type === 'collections') out.items = out.items.map(({ photo: _photo, ...rest }) => rest) as typeof out.items;
+  return out;
+}
 
 /** The slot owns the shape and the model owns the content. Without this the drawn size rhythm and width walk
  * would be advice the model is free to ignore, which is the failure the drawn skeleton exists to remove.
- * Width follows repairSketch's convention: `bleed` is stored as the absence of the field. A slot that carries
- * no media has its single photo stripped; one that does carry media cannot conjure a photo, so it is left alone. */
+ * Width follows repairSketch's convention: `bleed` is stored as the absence of the field. */
 function shapeToSlot(block: SketchBlock, slot: PageSlot): SketchBlock {
-  const shaped = { ...block, size: slot.size } as SketchBlock & { photo?: string };
+  const shaped = { ...withoutMedia(block, slot), size: slot.size } as SketchBlock;
   if (slot.width !== 'bleed') shaped.width = slot.width; else delete shaped.width;
-  if (!slot.media) delete shaped.photo;
   return shaped;
 }
 
@@ -101,7 +110,8 @@ export function fillStructure(blocks: SketchBlock[], structure: PageStructure, c
     const block = bySlot.get(slot.id);
     // A block of the wrong type for its slot cannot be rendered as the slot's type, so it gives way.
     if (block && block.type !== slot.type) notes.push(`el bloque ${slot.id} tenía el tipo ${String(block.type).slice(0, 20)} y la banda pide ${slot.type}; se reemplazó`);
-    entries.push({ slot, block: block && block.type === slot.type ? block : null });
+    // Stripped here, before the emptiness check: a gallery with no media to show is a heading over nothing.
+    entries.push({ slot, block: block && block.type === slot.type ? withoutMedia(block, slot) : null });
   }
 
   // A band the model did fill but whose content repair discarded is a different case from a slot it never
@@ -114,12 +124,11 @@ export function fillStructure(blocks: SketchBlock[], structure: PageStructure, c
     return false;
   });
 
-  // A stand-in for a slot nobody filled has no content either, and starter items would be filler. That one the
-  // floor does protect: the veto cap exists to stop a model talking its way back to the short habitual page.
-  let remaining = answered.length;
+  // A stand-in for a slot nobody filled has no content either, and starter items would be filler. It follows the
+  // same rule as a band that came back empty, floor or not: a heading over nothing beats no band only in someone's
+  // band count, so an honest five-band page is the outcome rather than a padded six.
   const kept = answered.filter(entry => {
-    if (entry.block || !CAN_BE_EMPTY.includes(entry.slot.type) || remaining <= MIN_BANDS) return true;
-    remaining--;
+    if (entry.block || !CAN_BE_EMPTY.includes(entry.slot.type)) return true;
     notes.push(`la banda ${entry.slot.id} (${entry.slot.type}) no se llenó y no tiene contenido; se quitó`);
     return false;
   });

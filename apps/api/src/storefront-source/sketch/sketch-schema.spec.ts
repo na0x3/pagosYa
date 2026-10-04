@@ -463,7 +463,37 @@ describe('style the model may choose', () => {
 describe('repairSketch with a drawn structure', () => {
   const structCtx = { storeName: 'salv', purpose: 'shop' as const, photos: ['a.jpg'] };
   const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const aStructure = () => drawPageStructure({ products: 40, photos: 6, categories: 5, briefWords: 60 }, seeded(11));
+  const aStructure = () => drawPageStructure({ products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 }, seeded(11));
+
+  // Photo placement runs after repair, so it must not undo the draw: the page keeps its drawn length and a photo
+  // only lands in a slot the draw marked as media. Leftover photos going unused is the honest outcome.
+  it('a generated page honours the drawn media plan: no unplanned gallery, no photo in a no-media slot', () => {
+    const photos = ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg', 'e.jpg', 'f.jpg'];
+    const ctx6 = { storeName: 'salv', purpose: 'shop' as const, photos };
+    const body = (type: string, id: string) => ({ id, type, headline: 'x', title: 'x', text: 'x', quotes: [{ text: 'bien', name: 'Ana' }], items: [{ title: 'A', text: 'a', q: 'q', a: 'a', icon: 'star' }], paragraphs: ['p'], left: 'hola', photos: [] });
+    let checkedMedia = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const structure = drawPageStructure({ products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 }, seeded(seed));
+      const { sketch } = repairSketch({ blocks: structure.slots.map(slot => body(slot.type, slot.id)) }, ctx6, { structure });
+      const placed = ensureAllPhotosUsed(sketch, ctx6);
+      const slotOf = new Map(structure.slots.map(slot => [slot.id, slot]));
+      expect([seed, placed.blocks.length <= structure.slots.length]).toEqual([seed, true]);
+      for (const block of placed.blocks) {
+        const slot = slotOf.get(block.id);
+        expect([seed, block.id, slot !== undefined]).toEqual([seed, block.id, true]);
+        const shown = [('photo' in block && block.photo) || '', ...('photos' in block ? block.photos : []), ...(block.type === 'collections' ? block.items.map(item => item.photo || '') : [])].filter(Boolean);
+        if (!slot!.media) expect([seed, block.id, shown]).toEqual([seed, block.id, []]);
+        else checkedMedia += shown.length;
+      }
+    }
+    expect(checkedMedia).toBeGreaterThan(0);
+  });
+
+  it('still places leftover photos magazine-style when no structure is given', () => {
+    const many = { storeName: 'salv', purpose: 'shop' as const, photos: ['a.jpg', 'b.jpg', 'c.jpg'] };
+    const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, many);
+    expect(ensureAllPhotosUsed(sketch, many).blocks.some(block => block.type === 'gallery')).toBe(true);
+  });
 
   it('holds a new sketch to the structure it was drawn', () => {
     const structure = aStructure();

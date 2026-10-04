@@ -5,7 +5,7 @@ import type { SketchBlock } from './sketch-schema';
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['a.jpg'] };
 // mulberry32, not a bare LCG: an LCG's first output is linear in the seed, so every seed drew the same page length.
 const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-const full = { products: 40, photos: 6, categories: 5, briefWords: 60 };
+const full = { products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 };
 const structure = () => drawPageStructure(full, seeded(7));
 /** A response block: it names the slot it fills. */
 const CONTENT: Partial<Record<SketchBlock['type'], object>> = {
@@ -48,7 +48,9 @@ describe('fillStructure', () => {
   });
 
   it('stops the model vetoing its way back to a short habitual page', () => {
-    const s = structure();
+    // Bands with no list to be empty, so the cap is what is under test (an unanswered list band is dropped regardless).
+    const types: SketchBlock['type'][] = ['hero', 'banner', 'split', 'marquee', 'newsletter', 'catalog', 'footer'];
+    const s = { params: {} as never, slots: types.map((type, i) => ({ id: `s${i + 1}`, type, size: 'm' as const, width: (i % 2 ? 'wide' : 'bleed') as 'wide' | 'bleed', media: false })) };
     const { blocks, notes } = fillStructure([], s, ctx);
     expect(blocks.length).toBeGreaterThanOrEqual(s.slots.length - Math.floor(s.slots.length / 3));
     expect(notes.join(' ')).toMatch(/demasiad/i);
@@ -115,6 +117,36 @@ describe('fillStructure', () => {
     expect('photo' in blocks[0]).toBe(false);
   });
 
+  describe('a slot with no media carries no photo anywhere in its block', () => {
+    const slot = (id: string, type: SketchBlock['type'], media: boolean, width: PageStructure['slots'][number]['width']) => ({ id, type, size: 'm' as const, width, media });
+    const run = (type: SketchBlock['type'], block: object, media: boolean) => {
+      const s = { params: {} as never, slots: [slot('s1', 'hero', true, 'bleed'), slot('s2', type, media, 'wide'), slot('s3', 'catalog', false, 'bleed'), slot('s4', 'footer', false, 'wide')] };
+      return fillStructure([{ ...filled('s1', 'hero'), photo: 'a.jpg' } as SketchBlock, { id: 's2', type, ...block } as SketchBlock, filled('s3', 'catalog'), filled('s4', 'footer')], s, ctx).blocks;
+    };
+    it('gallery photos', () => {
+      // Without media a gallery has nothing left to show, so it is dropped rather than kept as a heading.
+      expect(run('gallery', { photos: ['a.jpg', 'b.jpg'] }, false).map(b => b.id)).not.toContain('s2');
+      expect((run('gallery', { photos: ['a.jpg', 'b.jpg'] }, true).find(b => b.id === 's2') as any).photos).toEqual(['a.jpg', 'b.jpg']);
+    });
+    it('reviews photos, keeping the quotes', () => {
+      const block = run('reviews', { quotes: [{ text: 't', name: 'n', place: '' }], photos: ['a.jpg'] }, false).find(b => b.id === 's2') as any;
+      expect(block.photos).toEqual([]);
+      expect(block.quotes).toHaveLength(1);
+    });
+    it('collections card photos, keeping the cards', () => {
+      const block = run('collections', { items: [{ title: 't', text: '', photo: 'a.jpg' }] }, false).find(b => b.id === 's2') as any;
+      expect(block.items).toHaveLength(1);
+      expect('photo' in block.items[0]).toBe(false);
+      expect((run('collections', { items: [{ title: 't', text: '', photo: 'a.jpg' }] }, true).find(b => b.id === 's2') as any).items[0].photo).toBe('a.jpg');
+    });
+    it('the single photo of split, story and newsletter', () => {
+      for (const type of ['split', 'story', 'newsletter'] as const) {
+        const block = run(type, { ...CONTENT[type], photo: 'a.jpg' }, false).find(b => b.id === 's2') as any;
+        expect([type, 'photo' in block]).toEqual([type, false]);
+      }
+    });
+  });
+
   it('leaves no two adjacent kept bands of one width on pages that had vetoes and drops', () => {
     let reshaped = 0;
     for (let seed = 1; seed <= 120; seed++) {
@@ -150,12 +182,31 @@ describe('fillStructure', () => {
       expect(notes.join(' ')).toMatch(/sin contenido/);
     });
 
-    it('still refuses a veto at the floor: unanswered slots are filled in rather than the page going under six', () => {
-      const s = build(['hero', 'split', 'steps', 'faq', 'story', 'gallery', 'catalog', 'footer']);
-      const keep = ['hero', 'split', 'catalog', 'footer'];
+    // The floor protects a veto no longer: an UNANSWERED list band is the same empty shell as an answered-empty
+    // one. The veto allowance (a third of the page) still caps how many bands the model may decline outright.
+    it('drops an unanswered list band at the floor too, so the page is five bands rather than a padded six', () => {
+      const s = build(['hero', 'split', 'steps', 'catalog', 'newsletter', 'footer']);
+      const keep = ['hero', 'split', 'catalog', 'newsletter', 'footer'];
+      const { blocks, notes } = fillStructure(s.slots.filter(sl => keep.includes(sl.type)).map(sl => filled(sl.id, sl.type)), s, ctx);
+      expect(blocks.map(block => block.type)).not.toContain('steps');
+      expect(blocks).toHaveLength(5);
+      expect(notes.join(' ')).toMatch(/sin contenido|no se llenó/);
+    });
+
+    it('drops the unanswered list bands that exceed the veto allowance instead of padding them with shells', () => {
+      const s = build(['hero', 'steps', 'faq', 'reviews', 'catalog', 'newsletter', 'footer']);
+      const keep = ['hero', 'catalog', 'newsletter', 'footer'];
+      const { blocks, notes } = fillStructure(s.slots.filter(sl => keep.includes(sl.type)).map(sl => filled(sl.id, sl.type)), s, ctx);
+      expect(blocks.map(block => block.type)).toEqual(['hero', 'catalog', 'newsletter', 'footer']);
+      expect(notes.join(' ')).toMatch(/no se llenó y no tiene contenido/);
+    });
+
+    it('still fills in a vetoed band that has no list to be empty, rather than deleting it', () => {
+      const s = build(['hero', 'split', 'story', 'banner', 'catalog', 'footer']);
+      const keep = ['hero', 'story', 'banner', 'catalog', 'footer'];
       const { blocks } = fillStructure(s.slots.filter(sl => keep.includes(sl.type)).map(sl => filled(sl.id, sl.type)), s, ctx);
-      expect(blocks).toHaveLength(6);
-      expect(blocks.map(block => block.type)).toEqual(expect.arrayContaining(['story', 'gallery']));
+      expect(blocks.map(block => block.type)).toContain('story');
+      expect(blocks).toHaveLength(5);
     });
   });
 
