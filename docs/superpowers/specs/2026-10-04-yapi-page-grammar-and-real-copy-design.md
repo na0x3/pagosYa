@@ -197,6 +197,40 @@ construction, so a favourite variant costs richness, not identity. `source-proje
 returns *"fingerprints other stores used recently"*; extend it to carry recent variant choices and add one
 advisory line naming them as over-used.
 
+## Mechanism 4 — a wider component vocabulary, which the merchant also owns
+
+A store's character between generations lives in its page-wide components, and today that is five knobs with
+three values each: `radius`, `buttons`, `cards`, `header`, `footer` (`SKETCH_STYLE_OPTIONS`,
+`sketch-schema.ts:46`). The merchant already edits exactly these in the Boceto's look panel, which is driven
+by a declarative array (`STYLE_CONTROLS`, `apps/merchant-studio/src/source-boceto.ts:29`).
+
+`buttons` grows from three shapes to six (adding `ghost`, `underline`, `hard-shadow`), and six keys are added:
+
+| key | values | what it shapes |
+|---|---|---|
+| `buttonIcon` | none, arrow, bag, plus | whether the primary call to action carries an icon |
+| `icons` | bare, circle, square, tinted | how an icon is framed wherever one appears |
+| `dividers` | none, hairline, rule, notch | what sits between two bands |
+| `badges` | pill, square, tag | catalogue badges |
+| `fields` | underline, box, pill | newsletter and contact inputs |
+| `links` | plain, underline, arrow | inline text links |
+
+Three properties make this worth doing at this size. Each is **cheap to render** — CSS on the page root,
+read through `data-skb-*` attributes, no new markup tree. Each is **visible at a glance**, so it changes how
+a store reads rather than only its details. And each is **something a merchant has an opinion about**, so the
+same vocabulary serves YAPI's draw and the look panel without a second system.
+
+Icons come from Lucide at `assets/icons/NAME.svg` — any of the 2000+ names, with `SOURCE_ICON_NAMES`
+(`source-asset-library.ts:14`) as the curated 24. No CDN, no imports.
+
+A key must be added in four places or it is half-built: the `SketchStyle` type, `SKETCH_STYLE_OPTIONS`,
+`DEFAULT_SKETCH_STYLE`, and `STYLE_CONTROLS` in the Studio (which keeps its own `DEFAULT_STYLE` copy). The
+draw and the JSON schema should both be built by walking `SKETCH_STYLE_OPTIONS` rather than listing keys, so
+a twelfth key needs no further edit.
+
+**Back-compat:** a sketch saved with five style keys gets the defaults for the other six, and the look panel
+must show those defaults rather than blank controls.
+
 ## Testing
 
 **The draw (`sketch-structure-draw.spec.ts`)**
@@ -243,11 +277,13 @@ advisory line naming them as over-used.
 2. **Filling, veto and enforcement in `repairSketch`** behind `enforceStructure`. Stores stop sharing a spine.
 3. **The schema and prompt**: slot ids in, free-form blocks out; `STRUCTURES` deleted from the direction.
 4. **The product digest and the copy instructions**, with the specificity measurement.
-5. **Variants**, type by type.
-6. **Variant anti-convergence**, last.
+5. **The component vocabulary**: the seven keys, their CSS, the merchant's look panel, and the draw.
+6. **Variants**, type by type.
+7. **Variant anti-convergence**, last.
 
-Stages 1–4 are one plan: structure and copy are the two halves of the same complaint, and a short honest page
-needs both. Stages 5–6 are a second plan — variants are mostly rendering work.
+Stages 1–5 are one plan: structure, copy and components are the three halves of the same complaint, and a
+short honest page needs all of them. Stages 6–7 are a second plan — per-block variants are mostly rendering
+work and the spine is where the sameness actually lives.
 
 ## Risks
 
