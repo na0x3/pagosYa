@@ -5,11 +5,40 @@ import type { SketchBlock } from './sketch-schema';
  * which can only be filled with copy about nothing. A store with little to say gets a short page. */
 export type StoreSubstance = { products: number; photos: number; categories: number; briefWords: number };
 
-export function countSubstance(input: { products?: Array<{ name?: string; category?: string }>; photos?: unknown[]; brief?: unknown }): StoreSubstance {
-  const products = input.products ?? [];
-  const categories = new Set(products.map(item => item?.category).filter((value): value is string => typeof value === 'string' && value.trim() !== ''));
-  const briefWords = JSON.stringify(input.brief ?? '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(Boolean).length;
-  return { products: products.length, photos: (input.photos ?? []).length, categories: categories.size, briefWords };
+function countBriefWords(obj: unknown): number {
+  let count = 0;
+  const visited = new WeakSet<object>();
+  const visit = (value: unknown): void => {
+    if (typeof value === 'string') {
+      count += value.replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(Boolean).length;
+    } else if (typeof value === 'object' && value !== null) {
+      if (visited.has(value)) return;
+      visited.add(value);
+      if (Array.isArray(value)) {
+        for (const v of value) visit(v);
+      } else {
+        for (const v of Object.values(value)) visit(v);
+      }
+    }
+  };
+  visit(obj);
+  return count;
+}
+
+export function countSubstance(input: unknown): StoreSubstance {
+  if (typeof input !== 'object' || input === null) return { products: 0, photos: 0, categories: 0, briefWords: 0 };
+  const obj = input as Record<string, unknown>;
+  const rawProducts = obj.products;
+  const products = Array.isArray(rawProducts) ? rawProducts : [];
+  const categories = new Set(
+    products
+      .map(item => (typeof item === 'object' && item !== null ? (item as Record<string, unknown>)?.category : undefined))
+      .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+  );
+  const rawPhotos = obj.photos;
+  const photos = Array.isArray(rawPhotos) ? rawPhotos : [];
+  const briefWords = countBriefWords(obj.brief);
+  return { products: products.length, photos: photos.length, categories: categories.size, briefWords };
 }
 
 export function substanceCaps(s: StoreSubstance): { maxLength: number; forbid: SketchBlock['type'][]; maxMedia: number } {
@@ -22,5 +51,5 @@ export function substanceCaps(s: StoreSubstance): { maxLength: number; forbid: S
   if (!s.products) maxLength = Math.min(maxLength, 8);
   if (s.briefWords < 12) maxLength = Math.min(maxLength, 9);
   if (s.photos < 2) maxLength = Math.min(maxLength, 11);
-  return { maxLength: Math.max(6, maxLength), forbid, maxMedia: Math.min(5, s.photos) };
+  return { maxLength: Math.max(6, maxLength), forbid, maxMedia: Math.min(5, s.photos) }; // Floor of 6 keeps page inside grammar contract enforced by Task 3's violations() predicate.
 }
