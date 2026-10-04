@@ -1,5 +1,6 @@
 import { renderBlock, blockCss, SKETCH_BASE_CSS } from './sketch-blocks';
 import { repairSketch } from './sketch-schema';
+import { assembleSketch } from './sketch-assembler';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const hostile = '</section><script>alert(1)</script>`${x}`';
@@ -288,5 +289,49 @@ describe('band width rendering', () => {
     expect(SKETCH_BASE_CSS).not.toMatch(/\.skb\[data-skb-width="[a-z-]+"\]\s*\{/);
     // Offsets must collapse to centred on phones, so a narrow screen never gets a column beside dead space.
     expect(SKETCH_BASE_CSS).toContain('@media (max-width: 899px)');
+  });
+});
+
+describe('component choices render (task 12)', () => {
+  const page = (style: object, blocks: object[] = [{ id: 'h', type: 'hero', headline: 'Hola', cta: 'Comprar', badge: 'Nuevo' }, { id: 'n', type: 'newsletter', title: 'Novedades', cta: 'Quiero' }]) => {
+    const sketch = repairSketch({ style, blocks }, ctx).sketch;
+    const files = assembleSketch(sketch, ctx);
+    return { all: files.map(f => f.content).join('\n'), shell: files.find(f => f.path === 'components/Shell.tsx')!.content, home: files.find(f => f.path === 'components/home.tsx')!.content, css: files.find(f => f.path === 'styles/globals.css')!.content };
+  };
+
+  it('stamps every style choice onto the page root, generated from the style object', () => {
+    const { shell } = page({ buttons: 'hard-shadow', icons: 'circle', dividers: 'rule', badges: 'tag', fields: 'pill', links: 'arrow', buttonIcon: 'bag' });
+    for (const [key, value] of [['buttons', 'hard-shadow'], ['icons', 'circle'], ['dividers', 'rule'], ['badges', 'tag'], ['fields', 'pill'], ['links', 'arrow']]) expect(shell).toContain(`data-skb-${key}={"${value}"}`);
+  });
+
+  it('carries CSS for every non-default value of every new choice', () => {
+    const css = SKETCH_BASE_CSS;
+    for (const value of ['ghost', 'underline', 'hard-shadow']) expect(css).toContain(`[data-skb-buttons="${value}"]`);
+    for (const value of ['circle', 'square', 'tinted']) expect(css).toContain(`[data-skb-icons="${value}"]`);
+    for (const value of ['hairline', 'rule', 'notch']) expect(css).toContain(`[data-skb-dividers="${value}"]`);
+    for (const value of ['box', 'pill']) expect(css).toContain(`[data-skb-fields="${value}"]`);
+    for (const value of ['square', 'tag']) expect(css).toContain(`[data-skb-badges="${value}"]`);
+    for (const value of ['underline', 'arrow']) expect(css).toContain(`[data-skb-links="${value}"]`);
+  });
+
+  it('puts an icon on the primary button only when one was chosen, mapped to a real icon', () => {
+    for (const [choice, icon] of [['arrow', 'arrow-right'], ['bag', 'shopping-bag'], ['plus', 'plus']]) expect(page({ buttonIcon: choice }).home).toContain(`assets/icons/${icon}.svg`);
+    for (const icon of ['arrow-right', 'shopping-bag', 'plus']) expect(page({ buttonIcon: 'none' }).home).not.toContain(`assets/icons/${icon}.svg`);
+  });
+
+  it('renders the default style exactly as before: no icon markup and no rule for a default value', () => {
+    const { home, css } = page({});
+    expect(home).not.toContain('skb-btn__icon');
+    expect(home).not.toContain('skb-btn--icon');
+    for (const rule of ['[data-skb-icons="bare"]', '[data-skb-dividers="none"]', '[data-skb-fields="underline"]', '[data-skb-links="plain"]', '[data-skb-badges="pill"]', '[data-skb-buttonIcon="none"]']) expect(css).not.toContain(rule);
+  });
+
+  it('gives the elements the new rules reach the classes they select', () => {
+    const { all } = page({}, [{ id: 'h', type: 'hero', headline: 'Hola', cta: 'Comprar', badge: 'Nuevo' }, { id: 'p', type: 'split', title: 'Hecho a mano', body: 'Cada día.', photo: 'assets/a.jpg', boxes: [{ title: 'Fresco', icon: 'check' }] }, { id: 'c', type: 'catalog', title: 'Productos', seeAll: 'Ver todo', badges: ['Nuevo'] }, { id: 'n', type: 'newsletter', title: 'Novedades', cta: 'Quiero' }, { id: 's', type: 'steps', title: 'Pasos', items: [{ title: 'Uno', text: 'a', icon: 'check' }, { title: 'Dos', text: 'b', icon: 'check' }] }]);
+    for (const cls of ['skb-icon', 'skb-badge', 'skb-field', 'skb-link']) expect(all).toMatch(new RegExp(`className="[^"]*\\b${cls}\\b`));
+  });
+
+  it('never throws on a style value it does not know', () => {
+    expect(() => page({ buttons: 'zzz', icons: 7, dividers: null, buttonIcon: 'rocket', links: {} })).not.toThrow();
   });
 });

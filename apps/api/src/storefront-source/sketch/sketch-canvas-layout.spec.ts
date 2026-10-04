@@ -255,3 +255,44 @@ it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('renders drawn structure %i with every 
     }
   });
 });
+
+// The one test that proves the new component CSS does something in a real browser: every loud choice at once, on a page
+// that carries each element the rules select, at desktop and phone width.
+it('renders the loudest component combination without overflow or a collapsed button', async () => {
+  const sketch = repairSketch({
+    style: { buttons: 'hard-shadow', icons: 'circle', dividers: 'notch', badges: 'tag', fields: 'pill', links: 'arrow', buttonIcon: 'bag' },
+    blocks: [
+      { id: 'h', type: 'hero', headline: 'Pan de verdad', sub: 'Todos los días', cta: 'Comprar', cta2: 'Ver más', badge: 'Nuevo', photo: 'assets/a.jpg' },
+      { id: 'p', type: 'split', title: 'Hecho a mano', body: 'Cada día.', photo: 'assets/a.jpg', boxes: [{ title: 'Fresco', text: 'Todos los días', icon: 'check' }] },
+      { id: 's', type: 'steps', title: 'Cómo pedir', items: [{ title: 'Pedí', text: 'Elegí', icon: 'check' }, { title: 'Pagá', text: 'Con QR', icon: 'check' }] },
+      { id: 'n', type: 'newsletter', title: 'Novedades', cta: 'Quiero enterarme' },
+      { id: 'f', type: 'footer', tagline: 'Hecho con calma.' },
+    ],
+  }, ctx).sketch;
+  await openSketch(sketch, async page => {
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const result = await page.evaluate(() => {
+        const heights = Array.from(document.querySelectorAll('.skb-btn')).map(button => button.getBoundingClientRect().height);
+        const icon = document.querySelector('.skb-btn__icon');
+        const seam = document.querySelector('.skb + .skb');
+        return {
+          overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+          collapsed: heights.filter(height => height < 20).length,
+          buttons: heights.length,
+          iconWidth: icon ? icon.getBoundingClientRect().width : 0,
+          shadow: getComputedStyle(document.querySelector('.skb-btn:not(.skb-subscribe)')!).boxShadow,
+          notch: seam ? getComputedStyle(seam, '::before').content : '',
+          circle: getComputedStyle(document.querySelector('.skb-box__icon')!).borderRadius,
+        };
+      });
+      expect({ width, overflow: result.overflow, collapsed: result.collapsed }).toEqual({ width, overflow: false, collapsed: 0 });
+      // Proof the rules matched something: the icon span has size, the shadow and notch exist, the plain icon is framed round.
+      expect(result.buttons).toBeGreaterThan(1);
+      expect(result.iconWidth).toBeGreaterThan(8);
+      expect(result.shadow).not.toBe('none');
+      expect(result.notch).toBe('""');
+      expect(result.circle).toBe('50%');
+    }
+  });
+});

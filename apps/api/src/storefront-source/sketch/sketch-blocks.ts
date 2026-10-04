@@ -33,9 +33,19 @@ const open = (block: SketchBlock, sketch: StoreSketch, label?: string, extra = '
 
 /** `slot` names the sketch field the photo comes from, so the Boceto canvas can swap it in place. */
 const img = (path: string, alt: string, className: string, slot?: string, nodeKey?: string) => `<img className=${expr(className)} src=${expr(path)} alt=${expr(alt)}${slot ? ` data-skb-photo=${expr(slot)}` : ''}${nodeKey ? ` ${node(nodeKey)}` : ''} />`;
+/** The icon a button carries, by the merchant's buttonIcon choice, as real Lucide names. 'none' (and any value this map does
+ * not know) yields nothing, so the page keeps its original arrow. */
+const BUTTON_ICONS: Record<string, string> = { arrow: 'arrow-right', bag: 'shopping-bag', plus: 'plus' };
+/** The primary call-to-action. With an icon chosen the glyph is a CSS-masked span so it takes the button's text colour;
+ * the path is written in full so the asset bundler finds and ships the icon. */
+const primaryButton = (sketch: StoreSketch, href: string, attrs: string, label: string) => {
+  const icon = Object.prototype.hasOwnProperty.call(BUTTON_ICONS, sketch.style.buttonIcon) ? BUTTON_ICONS[sketch.style.buttonIcon] : '';
+  if (!icon) return `<a className="skb-btn" href=${expr(href)} ${attrs}>${expr(label)}</a>`;
+  return `<a className="skb-btn skb-btn--icon" href=${expr(href)} ${attrs} style={{ ["--skb-btn-icon" as string]: ${JSON.stringify(`url("assets/icons/${icon}.svg")`)} }}>${expr(label)}<span className="skb-btn__icon" aria-hidden="true" /></a>`;
+};
 /** Primary + ghost button row; `swap` puts the ghost button first (dragged on the canvas). */
-const actionsRow = (block: SketchBlock, href: string, cta: string, cta2: string, swap?: boolean) => {
-  const primary = `<a className="skb-btn" href=${expr(href)} ${node('cta')} ${editable('cta')}>${expr(cta)}</a>`;
+const actionsRow = (sketch: StoreSketch, block: SketchBlock, href: string, cta: string, cta2: string, swap?: boolean) => {
+  const primary = primaryButton(sketch, href, `${node('cta')} ${editable('cta')}`, cta);
   const ghost = cta2 ? `<a className="skb-btn skb-btn--ghost" href=${expr(href)} ${node('cta2')} ${editable('cta2')}>${expr(cta2)}</a>` : '';
   return `<div className="skb-actions" data-skb-el="actions" ${group(block, 'actions')}>${swap ? ghost + primary : primary + ghost}</div>`;
 };
@@ -72,7 +82,7 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
       badge: b.badge ? `<p className="skb-badge" data-skb-el="badge" ${editable('badge')}>${expr(b.badge)}</p>` : '',
       headline: `<${heading} className="skb-display" data-skb-el="headline" ${editable('headline')}>${expr(b.headline)}</${heading}>`,
       sub: b.sub ? `<p className="skb-lead" data-skb-el="sub" ${editable('sub')}>${expr(b.sub)}</p>` : '',
-      actions: actionsRow(b, anchor, b.cta, b.cta2, b.swap),
+      actions: actionsRow(s, b, anchor, b.cta, b.cta2, b.swap),
       trust: b.trust ? `<p className="skb-trust" data-skb-el="trust" ${editable('trust')}>${expr(b.trust)}</p>` : '',
       note: b.note ? `<p className="skb-note" data-skb-el="note" ${editable('note')}>${expr(b.note)}</p>` : '',
     };
@@ -93,8 +103,8 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
       body: b.body ? `<p className="skb-lead" data-skb-el="body" ${editable('body')}>${expr(b.body)}</p>` : '',
       pills: b.pills.length ? `<div className="skb-pills" data-skb-el="pills" ${group(b, 'pills')}>${b.pills.map((pill, i) => `<span className="skb-pill" ${node(String(i))} ${editable(`pills.${i}`)}>${expr(pill)}</span>`).join('')}</div>` : '',
       stats: b.stats.length ? `<div className="skb-stats" data-skb-el="stats" ${group(b, 'stats')}>${b.stats.map((stat, i) => `<div className="skb-stat" ${node(String(i))}><span className="skb-stat__value" ${editable(`stats.${i}.value`)}>${expr(stat.value)}</span><span className="skb-stat__label" ${editable(`stats.${i}.label`)}>${expr(stat.label)}</span></div>`).join('')}</div>` : '',
-      boxes: b.boxes?.length ? `<div className="skb-boxes" data-skb-el="boxes" ${group(b, 'boxes')}>${b.boxes.map((box, i) => `<div className="skb-box" ${node(String(i))}>${box.icon ? `<img className="skb-box__icon" src=${expr(`assets/icons/${box.icon}.svg`)} alt="" aria-hidden="true" />` : ''}<div><p className="skb-box__title" ${editable(`boxes.${i}.title`)}>${expr(box.title)}</p>${box.text ? `<p className="skb-box__text" ${editable(`boxes.${i}.text`)}>${expr(box.text)}</p>` : ''}</div></div>`).join('')}</div>` : '',
-      actions: actionsRow(b, b.href, b.cta, b.cta2, b.swap),
+      boxes: b.boxes?.length ? `<div className="skb-boxes" data-skb-el="boxes" ${group(b, 'boxes')}>${b.boxes.map((box, i) => `<div className="skb-box" ${node(String(i))}>${box.icon ? `<img className="skb-box__icon skb-icon" src=${expr(`assets/icons/${box.icon}.svg`)} alt="" aria-hidden="true" />` : ''}<div><p className="skb-box__title" ${editable(`boxes.${i}.title`)}>${expr(box.title)}</p>${box.text ? `<p className="skb-box__text" ${editable(`boxes.${i}.text`)}>${expr(box.text)}</p>` : ''}</div></div>`).join('')}</div>` : '',
+      actions: actionsRow(s, b, b.href, b.cta, b.cta2, b.swap),
     };
     return open(b, s) + `
     <div className="skb-split__copy" ${group(b, 'copy')}>
@@ -117,7 +127,7 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
   steps: (b, s, _ctx, options) => open(b, s) + `
     ${head(b, b.note, options.h1 ? 'h1' : 'h2')}
     <div className="skb-steps__grid" ${group(b, 'items')}>
-      ${b.items.map((item, i) => `<article className="skb-step" ${node(String(i))}><div className="skb-step__top"><span className="skb-step__icon-wrap"><img className="skb-step__icon" src=${expr(`assets/icons/${item.icon}.svg`)} alt="" aria-hidden="true" /></span><span className="skb-step__number">${expr(String(i + 1).padStart(2, '0'))}</span></div><h3 className="skb-step__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-step__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></article>`).join('\n      ')}
+      ${b.items.map((item, i) => `<article className="skb-step" ${node(String(i))}><div className="skb-step__top"><span className="skb-step__icon-wrap skb-icon skb-icon--wrap"><img className="skb-step__icon" src=${expr(`assets/icons/${item.icon}.svg`)} alt="" aria-hidden="true" /></span><span className="skb-step__number">${expr(String(i + 1).padStart(2, '0'))}</span></div><h3 className="skb-step__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-step__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></article>`).join('\n      ')}
     </div>
   </section>`,
   catalog: (b, s, _ctx, options) => {
@@ -131,7 +141,7 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
         ${kicker(b.kicker)}
         <${options.h1 ? 'h1' : 'h2'} className="skb-title" ${node('title')} ${editable('title')}>${expr(b.title)}</${options.h1 ? 'h1' : 'h2'}>
       </div>
-      ${b.seeAll ? `<a className="skb-see" href="#skb-catalogo" ${node('seeAll')} ${editable('seeAll')}>${expr(b.seeAll)}</a>` : ''}
+      ${b.seeAll ? `<a className="skb-see skb-link" href="#skb-catalogo" ${node('seeAll')} ${editable('seeAll')}>${expr(b.seeAll)}</a>` : ''}
     </div>
     <template data-pagosya-product-template>
       <article className="skb-card">
@@ -190,7 +200,7 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
     const heading = options.h1 ? 'h1' : 'h2';
     const parts: Record<string, string> = {
       headline: `<${heading} className="skb-display skb-banner__headline" data-skb-el="headline" ${editable('headline')}>${expr(b.headline)}</${heading}>`,
-      cta: `<a className="skb-btn" href=${expr(b.href)} data-skb-el="cta" ${editable('cta')}>${expr(b.cta)}</a>`,
+      cta: primaryButton(s, b.href, `data-skb-el="cta" ${editable('cta')}`, b.cta),
     };
     return open(b, s) + `
     <div className="skb-banner__copy" ${group(b, 'copy')}>
@@ -213,11 +223,11 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
       note: b.note ? `<p className="skb-lead" data-skb-el="note" ${editable('note')}>${expr(b.note)}</p>` : '',
       form: `<div className="skb-subscribe-wrap" data-skb-el="form">
       <button type="button" className="skb-btn skb-subscribe" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-        <span className="skb-subscribe__field">Tu correo electrónico</span>
+        <span className="skb-subscribe__field skb-field">Tu correo electrónico</span>
         <span className="skb-subscribe__submit">${expr(b.cta || 'Suscribirme')}</span>
       </button>
       <p className="skb-subscribe__legal">Solo novedades y ofertas. Te das de baja cuando quieras.</p>
-      ${s.blocks.some(block => block.type === 'catalog') ? '<a className="skb-subscribe__account" data-pagosya-account="" href="acceso-ingresar.html">¿Ya tienes cuenta? Ingresa</a>' : ''}
+      ${s.blocks.some(block => block.type === 'catalog') ? '<a className="skb-subscribe__account skb-link" data-pagosya-account="" href="acceso-ingresar.html">¿Ya tienes cuenta? Ingresa</a>' : ''}
     </div>`,
     };
     const copy = `${kicker(b.kicker)}
@@ -264,8 +274,8 @@ export function renderAccount(sketch: StoreSketch, ctx: SketchContext, view: 'lo
   const bg = resolveBg(sketch.palette, a.bg);
   const vars = { '--skb-bg': bg, '--skb-ink': inkFor(bg, sketch) };
   const other = view === 'login'
-    ? '<p className="skb-acct__switch">¿No tienes cuenta? <a data-pagosya-account="register" href="acceso-registro.html">Crea una</a></p>'
-    : '<p className="skb-acct__switch">¿Ya tienes cuenta? <a data-pagosya-account="login" href="acceso-ingresar.html">Ingresa</a></p>';
+    ? '<p className="skb-acct__switch">¿No tienes cuenta? <a className="skb-link" data-pagosya-account="register" href="acceso-registro.html">Crea una</a></p>'
+    : '<p className="skb-acct__switch">¿Ya tienes cuenta? <a className="skb-link" data-pagosya-account="login" href="acceso-ingresar.html">Ingresa</a></p>';
   return `<section data-skb="account" id="skb-account" className="skb skb-acct skb--l" data-skb-acct=${expr(a.layout)} style={{ ${Object.entries(vars).map(([key, value]) => `[${JSON.stringify(key)} as string]: ${JSON.stringify(value)}`).join(', ')} }}>
       <div className="skb-acct__intro">
         ${a.photo ? img(a.photo, `Foto de ${ctx.storeName}`, 'skb-acct__img', 'photo') : ''}
@@ -273,7 +283,7 @@ export function renderAccount(sketch: StoreSketch, ctx: SketchContext, view: 'lo
           ${kicker(a.kicker)}
           <h2 className="skb-title" ${node('title')} ${editable('title')}>${expr(a.title)}</h2>
           <p className="skb-lead" ${node('lead')} ${editable('lead')}>${expr(a.lead)}</p>
-          ${a.perks.length ? `<ul className="skb-acct__perks" data-skb-group="perks">${a.perks.map((perk, i) => `<li ${node(String(i))}><span className="skb-acct__perk-icon"><img src=${expr(`assets/icons/${perk.icon}.svg`)} alt="" aria-hidden="true" /></span><span ${editable(`perks.${i}.text`)}>${expr(perk.text)}</span></li>`).join('')}</ul>` : ''}
+          ${a.perks.length ? `<ul className="skb-acct__perks" data-skb-group="perks">${a.perks.map((perk, i) => `<li ${node(String(i))}><span className="skb-acct__perk-icon skb-icon skb-icon--wrap"><img src=${expr(`assets/icons/${perk.icon}.svg`)} alt="" aria-hidden="true" /></span><span ${editable(`perks.${i}.text`)}>${expr(perk.text)}</span></li>`).join('')}</ul>` : ''}
         </div>
       </div>
       <div className="skb-acct__form">
@@ -549,5 +559,39 @@ export const SKETCH_BASE_CSS = `
 [data-skb-group][data-skb-valign="end"] { align-self: end; align-content: end; }
 @media (max-width: 899px) { [data-skb-group][data-skb-valign] { align-self: auto; } }
 @media (prefers-reduced-motion: reduce) { .skb-marquee__track { animation: none; } }
+/* Component choices. Every rule here is keyed to a NON-default value, so a sketch saved before these keys existed (which
+   gets none/bare/plain/pill/underline) renders exactly as it always did. */
+.skb-btn--icon::after { content: none; }
+.skb-btn__icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.12em; margin-left: 0.5em; background: currentColor; -webkit-mask: var(--skb-btn-icon) center / contain no-repeat; mask: var(--skb-btn-icon) center / contain no-repeat; }
+[data-skb-buttons="ghost"] .skb-btn:not(.skb-btn--ghost):not(.skb-subscribe) { background: transparent; color: inherit; border: 1.5px solid currentColor; }
+[data-skb-buttons="underline"] .skb-btn:not(.skb-btn--ghost):not(.skb-subscribe) { background: transparent; color: inherit; border: 0; border-bottom: 2px solid currentColor; border-radius: 0; padding: 0.4em 0.1em; }
+[data-skb-buttons="hard-shadow"] .skb-btn:not(.skb-btn--ghost) { border: 2px solid var(--skb-ink); box-shadow: 4px 4px 0 var(--skb-ink); }
+[data-skb-buttons="hard-shadow"] .skb-btn:not(.skb-btn--ghost):active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--skb-ink); }
+/* A plain icon is an image, so the frame grows outward (content-box) instead of squeezing the glyph. Icons that already sit in
+   a filled wrapper change the wrapper instead. */
+[data-skb-icons] .skb-icon:not(.skb-icon--wrap) { box-sizing: content-box; }
+[data-skb-icons="circle"] .skb-icon:not(.skb-icon--wrap) { padding: 0.4rem; border-radius: 50%; background: color-mix(in srgb, currentColor 12%, transparent); }
+[data-skb-icons="square"] .skb-icon:not(.skb-icon--wrap) { padding: 0.4rem; border-radius: var(--skb-r-sm); border: 1.5px solid currentColor; }
+[data-skb-icons="tinted"] .skb-icon:not(.skb-icon--wrap) { padding: 0.4rem; border-radius: var(--skb-r-sm); background: color-mix(in srgb, var(--skb-accent) 22%, transparent); }
+[data-skb-icons="circle"] .skb-icon--wrap { border-radius: 50%; }
+[data-skb-icons="square"] .skb-icon--wrap { border-radius: var(--skb-r-sm); }
+[data-skb-icons="tinted"] .skb-icon--wrap { border-radius: var(--skb-r-sm); background: color-mix(in srgb, var(--skb-accent) 22%, transparent); }
+[data-skb-icons="tinted"] .skb-icon--wrap img { filter: none; }
+/* What sits between two bands. The notch is a diamond straddling the seam, painted in the lower band's colour. */
+[data-skb-dividers="hairline"] .skb + .skb { border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+[data-skb-dividers="rule"] .skb + .skb { border-top: 3px solid var(--skb-page-ink); }
+[data-skb-dividers="notch"] .skb + .skb::before { content: ""; position: absolute; top: 0; left: 50%; width: 1.6rem; height: 1.6rem; translate: -50% -50%; rotate: 45deg; background: var(--skb-bg); pointer-events: none; }
+/* Badges: the hero badge, photo tags and the catalogue card badge (a pseudo-element, so it needs its own selector: a pseudo-element inside :is() would invalidate the whole rule). */
+[data-skb-badges="square"] :is(.skb-badge, .skb-photo-tag), [data-skb-badges="square"] .skb-card::before { border-radius: 0; }
+[data-skb-badges="tag"] :is(.skb-badge, .skb-photo-tag), [data-skb-badges="tag"] .skb-card::before { border-radius: 0 999px 999px 0; padding-left: 1.1em; }
+/* Fields. The newsletter box is the only field the sketch draws; the form layouts in the block CSS come later and keep precedence. */
+[data-skb-fields="box"] .skb-subscribe { border-radius: var(--skb-r-sm); outline: 1.5px solid color-mix(in srgb, currentColor 35%, transparent); }
+[data-skb-fields="pill"] .skb-subscribe { border-radius: 999px; outline: 1.5px solid color-mix(in srgb, currentColor 35%, transparent); }
+[data-skb-fields="box"] .skb-field { border-radius: var(--skb-r-sm); }
+[data-skb-fields="pill"] .skb-field { border-radius: 999px; }
+/* Inline links. */
+[data-skb-links="underline"] .skb-link { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.25em; }
+[data-skb-links="arrow"] .skb-link { text-decoration: none; }
+[data-skb-links="arrow"] .skb-link::after { content: " \\2192"; }
 ${FREE_CSS}
 `;
