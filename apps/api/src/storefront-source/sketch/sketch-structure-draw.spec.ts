@@ -105,3 +105,28 @@ it('reports a malformed structure instead of throwing', () => {
   expect(violations({ slots: [null, 3, {}] } as any, full)).not.toEqual([]);
   expect(violations({ slots: [] } as any, full)).not.toEqual([]);
 });
+
+// This is the test that would have caught the original defect: it fails if the generator has a favourite.
+it('draws fifty structures and nearly all of them differ', () => {
+  const spines = new Set<string>();
+  for (let seed = 1; seed <= 50; seed++) spines.add(drawPageStructure(full, seeded(seed)).slots.map(slot => slot.type).join('>'));
+  expect(spines.size).toBeGreaterThanOrEqual(45);
+});
+
+// The exact spine the model produced for every store before this work, verbatim from the 2026-10-04 15:29 store.
+const MODAL_SPINE = 'announce>hero>catalog>collections>split>steps>story>reviews>marquee>faq>banner>newsletter>footer';
+
+it('does not keep landing on the spine the model used to produce', () => {
+  let hits = 0;
+  for (let seed = 1; seed <= 200; seed++) if (drawPageStructure(full, seeded(seed)).slots.map(s => s.type).join('>') === MODAL_SPINE) hits++;
+  expect(hits).toBeLessThanOrEqual(1);
+});
+
+it('varies the shape of the page, not only its block list', () => {
+  const shapes = new Set<string>();
+  for (let seed = 1; seed <= 50; seed++) {
+    const { slots } = drawPageStructure(full, seeded(seed));
+    shapes.add(slots.map(slot => `${slot.size}/${slot.width}`).join(' '));
+  }
+  expect(shapes.size).toBeGreaterThanOrEqual(45);
+});
