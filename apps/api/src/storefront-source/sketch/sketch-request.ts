@@ -6,6 +6,7 @@ import { repairSketch, SKETCH_BLOCK_TYPES, SKETCH_WIDTHS } from './sketch-schema
 import { PRESET_IDS, PRODUCT_CARD_PRESETS } from '../source-product-card-presets';
 import { ASSURANCE_ICONS } from '../product-theme';
 import type { PageStructure } from './sketch-structure-draw';
+import type { CatalogueDigest } from './sketch-catalogue-digest';
 import type { SketchContext, SketchStyle, StoreSketch } from './sketch-schema';
 
 /** The provider-facing side of sketch generation: a strict schema, a compact prompt, and a total
@@ -67,13 +68,51 @@ export const SKETCH_JSON_SCHEMA = {
   required: ['palette', 'fonts', 'scale', 'style', 'product', 'account', 'blocks'],
 } as { type: 'object'; additionalProperties: false; properties: Record<string, any>; required: string[] };
 
-export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'service'; instruction: string; brief: unknown; photos: Array<{ path: string; description?: string }>; catalogNames: string[]; direction?: SketchDirection; structure: PageStructure }): string {
+/** One product as a line the model can quote: only what the digest actually carries. Prices arrive already
+ * formatted ("45.00 BOB"), so they are printed as they are. */
+function productLine(item: CatalogueDigest['items'][number]): string {
+  const parts = [
+    item.name,
+    item.price ? (item.discountPercent ? `${item.price} (-${item.discountPercent}%)` : item.price) : undefined,
+    item.soldOut ? 'agotado' : undefined,
+    item.category,
+    item.description,
+    item.options?.length ? `opciones: ${item.options.join(' / ')}` : undefined,
+    item.facts?.length ? `datos: ${item.facts.join('; ')}` : undefined,
+    item.tags?.length ? `etiquetas: ${item.tags.join(', ')}` : undefined,
+  ];
+  return `- ${parts.filter(Boolean).join(' · ')}`;
+}
+
+/** The catalogue used to be declared one block's business ("el bloque catalog los muestra solo"), so every other
+ * band was written from the brief alone and came out as virtue copy about nothing. Here it is the subject of the
+ * whole page; and a store with no products is told to say little truthfully rather than fill bands with mood. */
+function catalogueLines(catalogue: CatalogueDigest, mode: 'page' | 'edit'): string[] {
+  const { totals, items } = catalogue;
+  if (!totals.count) {
+    return [mode === 'page'
+      ? 'Todavía no hay productos cargados. Escribí una página CORTA y honesta: la tienda está por abrir. NO inventes una selección, un catálogo curado, productos ni reseñas de clientes que no existen. Decir poco con verdad es mejor que llenar bandas con humo.'
+      : 'Todavía no hay productos cargados: no inventes productos, una selección ni reseñas.'];
+  }
+  const range = totals.priceLow && totals.priceHigh ? `, de ${totals.priceLow} a ${totals.priceHigh}` : '';
+  const categories = totals.categories.length ? `; categorías: ${totals.categories.join(', ')}` : '';
+  const head = `LO QUE ESTA TIENDA VENDE (${totals.count} productos${range}${categories}${items.length < totals.count ? `; acá van ${items.length} de muestra` : ''}):`;
+  if (mode === 'edit') return [head, ...items.map(productLine), 'Si el texto menciona productos, que sean estos; nada de relleno que valdría para cualquier tienda.'];
+  return [
+    head,
+    ...items.map(productLine),
+    'ESTO ES EL TEMA DE TODA LA PÁGINA, no sólo del bloque catalog. Cada banda con texto tiene que decir algo que sólo esta tienda podría decir: nombrá un producto, una categoría, un precio, un material, una opción. El story cuenta cómo se hacen o se eligen ESTAS cosas; el faq responde sobre ESTOS productos (talles, envíos, materiales); el banner da una razón real para comprar hoy.',
+    'PROHIBIDO el relleno de virtud, que sería verdad en cualquier tienda: nada de "calidad que se nota", "hecho con amor", "una selección pensada", "objetos que conversan entre sí". Si no sabés algo concreto sobre un producto, escribí menos, no escribas humo.',
+  ];
+}
+
+export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'service'; instruction: string; brief: unknown; photos: Array<{ path: string; description?: string }>; catalogue: CatalogueDigest; direction?: SketchDirection; structure: PageStructure }): string {
   const direction = input.direction ?? drawSketchDirection();
   return [
     `Tienda: ${input.storeName} (${input.purpose === 'shop' ? 'vende productos' : 'ofrece servicios'}).`,
     `Pedido del comercio: ${input.instruction}`,
     `Brief: ${JSON.stringify(input.brief)}`,
-    input.catalogNames.length ? `Productos reales del catálogo (el bloque catalog los muestra solo): ${input.catalogNames.join(' · ')}` : 'Catálogo aún vacío.',
+    ...catalogueLines(input.catalogue, 'page'),
     input.photos.length
       ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras). REPÁRTELAS como una revista, nunca un muro de fotos: una en el hero, una por cada split, story y newsletter, una por categoría de collections y hasta 3 de clientes en reviews; gallery solo como tira corta de máximo 5: ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
@@ -97,14 +136,14 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
 }
 
 /** The edit prompt for chat-on-sketch: the whole current sketch travels; the model returns the whole edited sketch. */
-export function sketchEditPrompt(input: { sketch: StoreSketch; instruction: string; targetBlockId?: string; photos: Array<{ path: string; description?: string }>; catalogNames: string[] }): string {
+export function sketchEditPrompt(input: { sketch: StoreSketch; instruction: string; targetBlockId?: string; photos: Array<{ path: string; description?: string }>; catalogue: CatalogueDigest }): string {
   return [
     'Edita este boceto de tienda y devuelve el boceto COMPLETO actualizado como JSON estricto según el esquema.',
     `Boceto actual: ${JSON.stringify(input.sketch)}`,
     `Pedido del comercio: ${input.instruction}`,
     input.targetBlockId ? `Edita únicamente el bloque ${input.targetBlockId}; conserva los demás sin cambios.` : 'Cambia solo lo que el pedido requiere; conserva el resto sin cambios.',
     input.photos.length ? `Fotos disponibles (solo estas rutas): ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}` : 'No añadas fotos nuevas.',
-    input.catalogNames.length ? `Productos reales: ${input.catalogNames.join(' · ')}` : '',
+    ...catalogueLines(input.catalogue, 'edit'),
     'Textos honestos en español; colores hex con buen contraste.',
   ].filter(Boolean).join('\n');
 }

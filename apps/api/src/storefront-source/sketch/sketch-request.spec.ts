@@ -1,4 +1,5 @@
 import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
+import { catalogueDigest } from './sketch-catalogue-digest';
 import { drawSketchDirection } from './sketch-direction';
 import { drawPageStructure } from './sketch-structure-draw';
 import { countSubstance } from './sketch-substance';
@@ -20,7 +21,7 @@ it('the schema is a strict object with anyOf blocks', () => {
 });
 
 it('the prompt names the photos, catalog, instruction and real font ids', () => {
-  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'quiero un sitio dulce y cálido', brief: { businessType: 'Repostería' }, photos: [{ path: 'assets/a.jpg', description: 'galletas' }], catalogNames: ['Caja de rolls'], structure });
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'quiero un sitio dulce y cálido', brief: { businessType: 'Repostería' }, photos: [{ path: 'assets/a.jpg', description: 'galletas' }], catalogue: catalogueDigest([{ name: 'Caja de rolls' }]), structure });
   expect(prompt).toContain('assets/a.jpg');
   expect(prompt).toContain('galletas');
   expect(prompt).toContain('Caja de rolls');
@@ -33,11 +34,11 @@ it('every generation carries a creative direction, and different draws differ', 
   const b = drawSketchDirection(() => 0.99);
   expect(a.name).not.toBe(b.name);
   expect(a.lines.join('\n')).not.toBe(b.lines.join('\n'));
-  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], direction: a, structure });
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogue: catalogueDigest([]), direction: a, structure });
   expect(prompt).toContain('DIRECCIÓN CREATIVA');
   for (const line of a.lines) expect(prompt).toContain(line);
   // Sin dirección explícita, se sortea una: el prompt nunca sale sin dirección.
-  expect(sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], structure })).toContain('DIRECCIÓN CREATIVA');
+  expect(sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogue: catalogueDigest([]), structure })).toContain('DIRECCIÓN CREATIVA');
 });
 
 it('is total: null, garbage text and missing output all yield the usable default', () => {
@@ -79,11 +80,11 @@ it('photo allowlist drops reference, unused and unknown roles (F3)', () => {
 
 it('the edit prompt carries the current sketch, the instruction and an optional block target', () => {
   const { sketch } = sketchFromResponse(response(JSON.stringify({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] })), ctx);
-  const targeted = sketchEditPrompt({ sketch, instruction: 'haz el titular más juguetón', targetBlockId: 'h', photos: [{ path: 'assets/a.jpg' }], catalogNames: [] });
+  const targeted = sketchEditPrompt({ sketch, instruction: 'haz el titular más juguetón', targetBlockId: 'h', photos: [{ path: 'assets/a.jpg' }], catalogue: catalogueDigest([]) });
   expect(targeted).toContain('"Hola"');
   expect(targeted).toContain('haz el titular más juguetón');
   expect(targeted).toContain('Edita únicamente el bloque h');
-  const untargeted = sketchEditPrompt({ sketch, instruction: 'más color', photos: [], catalogNames: [] });
+  const untargeted = sketchEditPrompt({ sketch, instruction: 'más color', photos: [], catalogue: catalogueDigest([]) });
   expect(untargeted).not.toContain('Edita únicamente');
 });
 
@@ -105,7 +106,7 @@ describe('layout controls reach the model', () => {
     }
   });
   it('tells the model what the controls are for', () => {
-    const prompt = sketchPrompt({ storeName: 'Pan', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], structure });
+    const prompt = sketchPrompt({ storeName: 'Pan', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogue: catalogueDigest([]), structure });
     for (const control of ['align', 'flip', 'swap']) expect(prompt).toContain(control);
     // Width and size belong to the slots: asking the model to vary them is the free choice the skeleton replaces.
     expect(prompt).not.toMatch(/VARÍA el ancho|offset-left/);
@@ -114,7 +115,7 @@ describe('layout controls reach the model', () => {
 
 describe('the model is handed the page it must fill', () => {
   const aStructure = () => structure;
-  const promptInput = () => ({ storeName: 'Pan', purpose: 'shop' as const, instruction: 'x', brief: {}, photos: [], catalogNames: [] });
+  const promptInput = () => ({ storeName: 'Pan', purpose: 'shop' as const, instruction: 'x', brief: {}, photos: [], catalogue: catalogueDigest([]) });
   it('lists every slot by id and forbids inventing bands', () => {
     const structure = aStructure();
     const prompt = sketchPrompt({ ...promptInput(), structure });
@@ -140,5 +141,53 @@ describe('the model is handed the page it must fill', () => {
     const slotIds = structure.slots.map(slot => slot.id);
     for (const block of sketch.blocks) expect(slotIds).toContain(block.id);
     expect(sketch.blocks.at(-1)?.type).toBe('footer');
+  });
+});
+
+describe('the catalogue is the subject of the whole page', () => {
+  const categories = [{ id: 'c1', name: 'Panadería' }, { id: 'c2', name: 'Dulces' }];
+  const digest = catalogueDigest([
+    { name: 'Pan de masa madre', amount: 4500, description: 'Fermentado 24 h', categoryId: 'c1', variants: [{ options: [{ name: 'Tamaño', value: 'Chica' }, ] }, { options: [{ name: 'Tamaño', value: 'Grande' }] }], highlights: [{ label: 'Sin aditivos' }] },
+    { name: 'Torta de naranja', amount: 12000, description: 'Naranja y almendra', categoryId: 'c2', discountPercent: 10, stock: 0 },
+  ], categories);
+  const input = () => ({ storeName: 'Pan', purpose: 'shop' as const, instruction: 'x', brief: {}, photos: [], structure });
+
+  it('puts real products, formatted prices, categories and options in the prompt, without reformatting', () => {
+    const prompt = sketchPrompt({ ...input(), catalogue: digest });
+    for (const fact of ['Pan de masa madre', 'Fermentado 24 h', 'Panadería', 'Dulces', '45.00 BOB', '120.00 BOB', 'Tamaño: Chica, Grande', 'Sin aditivos', '2 productos']) expect(prompt).toContain(fact);
+    expect(prompt).not.toMatch(/4500|0\.45 BOB|4\.50 BOB/);
+    expect(prompt).toMatch(/10%/);
+    expect(prompt).toMatch(/agotado/i);
+  });
+  it('keeps the structure argument while swapping the catalogue', () => {
+    const prompt = sketchPrompt({ ...input(), catalogue: digest });
+    for (const slot of structure.slots) expect(prompt).toContain(slot.id);
+  });
+  it('no longer tells the model the catalogue belongs to one block', () => {
+    expect(sketchPrompt({ ...input(), catalogue: digest })).not.toContain('el bloque catalog los muestra solo');
+  });
+  it('asks every prose band for something only this store could say and names the filler verbatim', () => {
+    const prompt = sketchPrompt({ ...input(), catalogue: digest });
+    expect(prompt).toMatch(/sólo esta tienda|solo esta tienda/i);
+    for (const filler of ['calidad que se nota', 'hecho con amor', 'una selección pensada', 'objetos que conversan entre sí']) expect(prompt).toContain(`"${filler}"`);
+  });
+  it('tells an empty store to say less, not to invent a selection or reviews', () => {
+    const prompt = sketchPrompt({ ...input(), catalogue: catalogueDigest([]) });
+    expect(prompt).toMatch(/todavía no hay productos/i);
+    expect(prompt).toMatch(/no inventes/i);
+    expect(prompt).toMatch(/reseñas/i);
+    expect(prompt).toMatch(/corta/i);
+    expect(prompt).not.toContain('LO QUE ESTA TIENDA VENDE');
+  });
+  it('gives the chat edit the same facts, and an empty store nothing invented', () => {
+    const sketch = sketchFromResponse(response('{}'), ctx).sketch;
+    const edit = sketchEditPrompt({ sketch, instruction: 'x', photos: [], catalogue: digest });
+    expect(edit).toContain('Fermentado 24 h');
+    expect(edit).toContain('45.00 BOB');
+    expect(sketchEditPrompt({ sketch, instruction: 'x', photos: [], catalogue: catalogueDigest([]) })).toMatch(/no hay productos/i);
+  });
+  it('says how many products there are when the sample is shorter than the catalogue', () => {
+    const many = catalogueDigest(Array.from({ length: 30 }, (_, i) => ({ name: `P${i}`, amount: 100 })), [], 5);
+    expect(sketchPrompt({ ...input(), catalogue: many })).toContain('30 productos');
   });
 });

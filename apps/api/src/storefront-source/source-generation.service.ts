@@ -40,6 +40,7 @@ import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDe
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { applySketchComposition, compositionPrompt, SKETCH_COMPOSITION_SCHEMA } from './sketch';
+import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, drawPageStructure, assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
@@ -737,7 +738,7 @@ export class SourceGenerationService {
         const direction = drawSketchDirection();
         // The page's bands are drawn here, not chosen by the model: left to itself it converged on one skeleton every time.
         const structure = drawPageStructure(countSubstance({ products: data.items, photos: sketchPhotos, brief: dto.brief }));
-        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30), direction, structure });
+        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogue: catalogueDigest(data.items, data.categories), direction, structure });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
@@ -820,7 +821,7 @@ export class SourceGenerationService {
         let current: unknown;
         try { current = JSON.parse(previousFiles.find((file: SourceProjectFileDto) => file.path === 'sketch.json')!.content); } catch { current = undefined; }
         const currentSketch = repairSketch(current, sketchCtx).sketch;
-        const prompt = sketchEditPrompt({ sketch: currentSketch, instruction: dto.instruction, targetBlockId: dto.selection?.sectionId?.replace(/^skb-/, ''), photos: sketchCtx.photos.map(path => ({ path })), catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30) });
+        const prompt = sketchEditPrompt({ sketch: currentSketch, instruction: dto.instruction, targetBlockId: dto.selection?.sectionId?.replace(/^skb-/, ''), photos: sketchCtx.photos.map(path => ({ path })), catalogue: catalogueDigest(data.items, data.categories) });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
