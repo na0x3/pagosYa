@@ -25,8 +25,9 @@ const open = (block: SketchBlock, sketch: StoreSketch, label?: string, extra = '
   const styleVars: Record<string, string> = { '--skb-bg': bg, '--skb-ink': inkFor(bg, sketch), ...vars };
   const align = block.align === 'center' || block.align === 'end' ? ` data-skb-align=${expr(block.align)}` : '';
   const flip = block.flip ? ' data-skb-flip="on"' : '';
+  const width = block.width && block.width !== 'bleed' ? ` data-skb-width=${expr(block.width)}` : '';
   return `<section data-skb=${expr(block.id)} id=${expr(`skb-${block.id}`)} className=${expr(`skb skb-${block.type} skb--${block.size}`)}` +
-    (label ? ` aria-label=${expr(label)}` : '') + align + flip + (extra ? ` ${extra}` : '') +
+    (label ? ` aria-label=${expr(label)}` : '') + align + flip + width + (extra ? ` ${extra}` : '') +
     ` style={{ ${Object.entries(styleVars).map(([key, value]) => `[${JSON.stringify(key)} as string]: ${JSON.stringify(value)}`).join(', ')} }}>`;
 };
 
@@ -498,6 +499,19 @@ export const SKETCH_BASE_CSS = `
 .skb--m { padding-block: clamp(2.6rem, 5vw, 4.5rem); }
 .skb--l { padding-block: clamp(4rem, 8vw, 7rem); }
 .skb--xl { padding-block: clamp(5.5rem, 11vw, 10rem); }
+/* Band width. The rules contain the section's CONTENT, never .skb itself, so the background still paints the full
+   band, and position: relative keeps anchoring freed parts to the whole section — which is how a freed part escapes
+   a narrow column. .skb-extras is excluded because it needs inset: 0 to position inserted elements. */
+.skb[data-skb-width="wide"] > :not(.skb-extras) { max-width: 76rem; margin-inline: auto; }
+.skb[data-skb-width="narrow"] > :not(.skb-extras) { max-width: 44rem; margin-inline: auto; }
+.skb[data-skb-width="offset-left"] > :not(.skb-extras) { max-width: 60rem; margin-inline-end: auto; }
+.skb[data-skb-width="offset-right"] > :not(.skb-extras) { max-width: 60rem; margin-inline-start: auto; }
+/* On phones an offset would leave a cramped column beside dead space, so both offsets centre. The max-widths above
+   are no-ops at phone width, so wide and narrow need no override. */
+@media (max-width: 899px) {
+  .skb[data-skb-width="offset-left"] > :not(.skb-extras),
+  .skb[data-skb-width="offset-right"] > :not(.skb-extras) { margin-inline: auto; }
+}
 .skb-display { font-family: var(--skb-display-font); font-size: clamp(2.4rem, 7vw, 5.2rem); line-height: 1.02; margin: 0 0 0.4em; letter-spacing: -0.015em; }
 .skb-title { font-family: var(--skb-display-font); font-size: clamp(1.7rem, 4vw, 2.8rem); line-height: 1.08; margin: 0 0 0.6em; }
 .skb-kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.76rem; font-weight: 700; opacity: 0.9; margin: 0 0 0.9em; }

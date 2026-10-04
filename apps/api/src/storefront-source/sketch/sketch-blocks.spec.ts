@@ -268,3 +268,25 @@ describe('follow-ups', () => {
     expect(endRules.join('\n')).toContain('.skb-hero__copy');
   });
 });
+
+describe('band width rendering', () => {
+  const render = (width?: string) => {
+    const { sketch: s } = repairSketch({ blocks: [{ id: 'w1', type: 'story', title: 'Hola', paragraphs: ['Uno'], ...(width ? { width } : {}) }] }, ctx);
+    return renderBlock(s.blocks.find(b => b.id === 'w1')!, s, ctx);
+  };
+  it('emits the attribute for a contained band', () => {
+    expect(render('narrow')).toContain('data-skb-width={"narrow"}');
+  });
+  // Review Focus 1: bleed is absence, so an old sketch's markup cannot change.
+  it('emits nothing for bleed or for a sketch without the field', () => {
+    expect(render('bleed')).not.toContain('data-skb-width');
+    expect(render()).not.toContain('data-skb-width');
+  });
+  it('contains the content without narrowing the background, and never touches the extras layer', () => {
+    // The rules target the section's children, so --skb-bg still paints the full band.
+    expect(SKETCH_BASE_CSS).toContain('.skb[data-skb-width="narrow"] > :not(.skb-extras)');
+    expect(SKETCH_BASE_CSS).not.toMatch(/\.skb\[data-skb-width="[a-z-]+"\]\s*\{/);
+    // Offsets must collapse to centred on phones, so a narrow screen never gets a column beside dead space.
+    expect(SKETCH_BASE_CSS).toContain('@media (max-width: 899px)');
+  });
+});
