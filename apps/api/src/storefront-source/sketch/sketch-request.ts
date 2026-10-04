@@ -2,7 +2,7 @@ import { SOURCE_FONT_CATALOG, SOURCE_FONT_IDS } from '../source-font-catalog';
 import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { drawSketchDirection, type SketchDirection } from './sketch-direction';
-import { repairSketch, SKETCH_BLOCK_TYPES, SKETCH_WIDTHS } from './sketch-schema';
+import { repairSketch, SKETCH_BLOCK_TYPES, SKETCH_STYLE_OPTIONS, SKETCH_WIDTHS } from './sketch-schema';
 import { PRESET_IDS, PRODUCT_CARD_PRESETS } from '../source-product-card-presets';
 import { ASSURANCE_ICONS } from '../product-theme';
 import type { PageStructure } from './sketch-structure-draw';
@@ -34,13 +34,9 @@ export const SKETCH_JSON_SCHEMA = {
     scale: size,
     // The page's shape language. 'auto' defers to the direction drawn for this generation, so the model only
     // overrides the dimensions it has an opinion about (strict mode has no optional properties).
-    style: { type: 'object', additionalProperties: false, properties: {
-      radius: { type: 'string', enum: ['soft', 'round', 'square', 'auto'] },
-      buttons: { type: 'string', enum: ['pill', 'square', 'outline', 'auto'] },
-      cards: { type: 'string', enum: ['bleed', 'inset', 'outline', 'auto'] },
-      header: { type: 'string', enum: ['left', 'center', 'auto'] },
-      footer: { type: 'string', enum: ['columns', 'center', 'auto'] },
-    }, required: ['radius', 'buttons', 'cards', 'header', 'footer'] },
+    style: { type: 'object', additionalProperties: false,
+      properties: Object.fromEntries(Object.entries(SKETCH_STYLE_OPTIONS).map(([key, values]) => [key, { type: 'string', enum: [...values, 'auto'] }])),
+      required: Object.keys(SKETCH_STYLE_OPTIONS) },
     product: { type: 'object', additionalProperties: false, properties: {
       preset: { type: 'string', enum: [...PRESET_IDS] },
       layout: { type: 'string', enum: ['editorial', 'dense', 'image-led', 'story-led'] },
@@ -121,7 +117,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     ...input.structure.slots.map(slot => `- ${slot.id}: ${slot.type} · tamaño ${slot.size} · ancho ${slot.width}${slot.media ? ' · lleva foto' : ''}`),
     'COLOR DE VERDAD: mínimo 3 bloques con fondo accent, deep o pop, y usa los fondos tint-accent/tint-deep/tint-pop (pasteles derivados de tu paleta) para bandas suaves entre bandas saturadas. Nunca dos bloques seguidos con el mismo fondo.',
     `AJUSTES DE CADA BANDA: el tamaño, el ancho y si lleva foto ya vienen en la lista de arriba y no se negocian: copiá en size y width lo que figura ahí. Lo tuyo es align (start, center, end: mueve el texto), flip (espeja la foto en hero, split, story y newsletter) y swap (pone el botón fantasma primero en hero y split). Si no querés tocar algo: align "start", flip false, swap false.`,
-    `style es el LENGUAJE DE FORMAS de toda la página: radius (soft/round/square), buttons (pill/square/outline), cards (bleed/inset/outline), header (left/center), footer (columns/center). Elegilo para que acompañe al rubro y a la dirección creativa — una carnicería brutalista no lleva botones pill redondeados. Poné "auto" en las dimensiones que no te importen y el diseño las elige.`,
+    `style es el LENGUAJE DE FORMAS de toda la página: ${Object.entries(SKETCH_STYLE_OPTIONS).map(([key, values]) => `${key} (${values.join('/')})`).join(', ')}. Elegilo para que acompañe al rubro y a la dirección creativa — una carnicería brutalista no lleva botones pill redondeados. Poné "auto" en las dimensiones que no te importen y el diseño las elige.`,
     `DIRECCIÓN CREATIVA DE ESTA GENERACIÓN (${direction.name}) — interprétala con los colores, fuentes y bloques concretos de esta tienda:`,
     ...direction.lines.map(line => `- ${line}`),
     `Si hay hero: titular de 4-8 palabras con carácter, foto cuando haya, cta + cta2 (botón fantasma), trust con prueba social honesta (ej. "★ 4.8 · 2.400 pedidos · Envíos a todo el país") y caption corto bajo la foto (ej. "Caramelo salado · chispas · brownie").`,

@@ -1,4 +1,4 @@
-import { contrastRatio, DEFAULT_SKETCH_STYLE, ensureAllPhotosUsed, ensureBandRhythm, mixHex, repairSketch, resolveBg, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { contrastRatio, DEFAULT_SKETCH_STYLE, SKETCH_STYLE_OPTIONS, type StoreSketch, ensureAllPhotosUsed, ensureBandRhythm, mixHex, repairSketch, resolveBg, SKETCH_BLOCK_TYPES } from './sketch-schema';
 import { drawPageStructure } from './sketch-structure-draw';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
@@ -251,7 +251,7 @@ describe('fuller, varied sketches', () => {
 
   it('repairs page style role by role and defaults the rest', () => {
     const { sketch } = repairSketch({ style: { radius: 'square', buttons: 'neon', header: 'center' }, blocks: [] }, ctx);
-    expect(sketch.style).toEqual({ radius: 'square', buttons: 'pill', cards: 'bleed', header: 'center', footer: 'columns' });
+    expect(sketch.style).toEqual({ ...DEFAULT_SKETCH_STYLE, radius: 'square', buttons: 'pill', cards: 'bleed', header: 'center', footer: 'columns' });
   });
 
   it('spreads photos into real slots before any gallery, and never builds a wall', () => {
@@ -444,7 +444,7 @@ describe('band width', () => {
 });
 
 describe('style the model may choose', () => {
-  const drawn = { radius: 'square', buttons: 'outline', cards: 'inset', header: 'center', footer: 'center' } as const;
+  const drawn = { radius: 'square', buttons: 'outline', cards: 'inset', header: 'center', footer: 'center', buttonIcon: 'arrow', icons: 'circle', dividers: 'rule', badges: 'tag', fields: 'box', links: 'underline' } as const;
   it('takes a valid choice from the model', () => {
     const { sketch } = repairSketch({ style: { radius: 'soft', buttons: 'auto', cards: 'auto', header: 'auto', footer: 'auto' }, blocks: [] }, ctx, { style: drawn });
     expect(sketch.style.radius).toBe('soft');
@@ -500,5 +500,44 @@ describe('repairSketch with a drawn structure', () => {
     const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, structCtx, { structure: {} as never });
     expect(sketch.structure).toBeUndefined();
     expect(sketch.blocks.some(b => b.type === 'catalog')).toBe(true);
+  });
+});
+
+describe('style vocabulary', () => {
+  const sctx = { storeName: 's', purpose: 'shop' as const, photos: [] };
+
+  it('offers a wider button vocabulary', () => {
+    expect(SKETCH_STYLE_OPTIONS.buttons).toEqual(['pill', 'square', 'outline', 'ghost', 'underline', 'hard-shadow']);
+  });
+
+  it('offers the new component choices, each with a default', () => {
+    for (const key of ['buttonIcon', 'icons', 'dividers', 'badges', 'fields', 'links'] as const) {
+      expect(SKETCH_STYLE_OPTIONS[key].length).toBeGreaterThanOrEqual(3);
+      expect(SKETCH_STYLE_OPTIONS[key]).toContain(DEFAULT_SKETCH_STYLE[key]);
+    }
+  });
+
+  it('repairs an unknown or auto value for any key back to its default', () => {
+    const { sketch } = repairSketch({ style: { buttons: 'neon', icons: 'nope', dividers: 'zigzag', fields: 'auto', links: 42 }, blocks: [] }, sctx);
+    for (const key of ['buttons', 'icons', 'dividers', 'fields', 'links'] as const) expect(sketch.style[key]).toBe(DEFAULT_SKETCH_STYLE[key]);
+  });
+
+  it('keeps a valid value for a new key', () => {
+    const { sketch } = repairSketch({ style: { dividers: 'notch', buttons: 'hard-shadow' }, blocks: [] }, sctx);
+    expect(sketch.style.dividers).toBe('notch');
+    expect(sketch.style.buttons).toBe('hard-shadow');
+  });
+
+  // A sketch saved before these keys existed must stay itself and gain defaults for the rest.
+  it('fills the new keys with defaults for a sketch that predates them', () => {
+    const { sketch } = repairSketch({ style: { radius: 'soft', buttons: 'pill', cards: 'inset', header: 'center', footer: 'center' }, blocks: [] }, sctx);
+    expect(sketch.style).toEqual({ ...DEFAULT_SKETCH_STYLE, radius: 'soft', buttons: 'pill', cards: 'inset', header: 'center', footer: 'center' });
+  });
+
+  it('falls back to the default even when the caller passes an old five-key style as defaults', () => {
+    const old = { radius: 'soft', buttons: 'square', cards: 'inset', header: 'center', footer: 'center' } as unknown as StoreSketch['style'];
+    const { sketch } = repairSketch({ blocks: [] }, sctx, { style: old });
+    expect(sketch.style.buttons).toBe('square');
+    for (const key of ['buttonIcon', 'icons', 'dividers', 'badges', 'fields', 'links'] as const) expect(sketch.style[key]).toBe(DEFAULT_SKETCH_STYLE[key]);
   });
 });

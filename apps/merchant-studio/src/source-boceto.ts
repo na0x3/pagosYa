@@ -26,7 +26,7 @@ type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: 
   /** Boceto phase: the selected block, reported when it changes, as the chat's context (the account page is never one). */
   selected?: (block: { id: string; label: string } | null) => void };
 
-const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: string[]; names: string[] }> = [
+export const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: string[]; names: string[] }> = [
   { key: 'radius', label: 'Esquinas', values: ['round', 'soft', 'square'], names: ['Redondas', 'Suaves', 'Rectas'] },
   { key: 'buttons', label: 'Botones', values: ['pill', 'square', 'outline'], names: ['Píldora', 'Rectos', 'Contorno'] },
   { key: 'cards', label: 'Tarjetas', values: ['bleed', 'inset', 'outline'], names: ['Foto llena', 'Con margen', 'Contorno'] },

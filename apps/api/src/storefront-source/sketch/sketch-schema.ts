@@ -44,15 +44,45 @@ export type SketchBlock = (
 ) & SketchLayout;
 /** Whole-page styling drawn at random per generation (never by the model), so two stores differ in
  * shape — corners, buttons, cards, header and footer — not only in copy and color. */
-export type SketchStyle = { radius: 'soft' | 'round' | 'square'; buttons: 'pill' | 'square' | 'outline'; cards: 'bleed' | 'inset' | 'outline'; header: 'left' | 'center'; footer: 'columns' | 'center' };
+export type SketchStyle = {
+  radius: 'soft' | 'round' | 'square';
+  buttons: 'pill' | 'square' | 'outline' | 'ghost' | 'underline' | 'hard-shadow';
+  cards: 'bleed' | 'inset' | 'outline';
+  header: 'left' | 'center';
+  footer: 'columns' | 'center';
+  /** Whether the primary call to action carries an icon, and which. */
+  buttonIcon: 'none' | 'arrow' | 'bag' | 'plus';
+  /** How an icon is framed wherever one appears (steps, boxes, assurances). */
+  icons: 'bare' | 'circle' | 'square' | 'tinted';
+  /** What sits between two bands. */
+  dividers: 'none' | 'hairline' | 'rule' | 'notch';
+  /** Catalogue badges ("NUEVO", "FAVORITO"). */
+  badges: 'pill' | 'square' | 'tag';
+  /** Newsletter and contact inputs. */
+  fields: 'underline' | 'box' | 'pill';
+  /** Inline text links. */
+  links: 'plain' | 'underline' | 'arrow';
+};
+/** The single source of the vocabulary: the model's JSON schema, the repair, the random direction and the Boceto
+ * panel all walk this, so a key added here reaches all of them. The Studio keeps its own copy of the control list. */
 export const SKETCH_STYLE_OPTIONS: { [K in keyof SketchStyle]: readonly SketchStyle[K][] } = {
   radius: ['soft', 'round', 'square'],
-  buttons: ['pill', 'square', 'outline'],
+  buttons: ['pill', 'square', 'outline', 'ghost', 'underline', 'hard-shadow'],
   cards: ['bleed', 'inset', 'outline'],
   header: ['left', 'center'],
   footer: ['columns', 'center'],
+  buttonIcon: ['none', 'arrow', 'bag', 'plus'],
+  icons: ['bare', 'circle', 'square', 'tinted'],
+  dividers: ['none', 'hairline', 'rule', 'notch'],
+  badges: ['pill', 'square', 'tag'],
+  fields: ['underline', 'box', 'pill'],
+  links: ['plain', 'underline', 'arrow'],
 };
-export const DEFAULT_SKETCH_STYLE: SketchStyle = { radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns' };
+/** The plain choice for every key, so a sketch saved before a key existed renders as it always did. */
+export const DEFAULT_SKETCH_STYLE: SketchStyle = {
+  radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns',
+  buttonIcon: 'none', icons: 'bare', dividers: 'none', badges: 'pill', fields: 'underline', links: 'plain',
+};
 /** The product page's skin and composition (themed-card program): the model picks preset, layout and
  * photo side by what the store sells; the Boceto panel may override single dimensions. Missing on old
  * sketches → plain, today's page. layout is the kit's structural composition (story-led puts the text
@@ -298,7 +328,8 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
   const styleBase = defaults?.style ?? DEFAULT_SKETCH_STYLE;
   const style = Object.fromEntries((Object.keys(SKETCH_STYLE_OPTIONS) as (keyof SketchStyle)[]).map(key => {
     const value = rawStyle[key] as string;
-    return [key, (SKETCH_STYLE_OPTIONS[key] as readonly string[]).includes(value) ? value : styleBase[key]];
+    // `?? DEFAULT` because an edit passes the current sketch's style, which may predate the newest keys.
+    return [key, (SKETCH_STYLE_OPTIONS[key] as readonly string[]).includes(value) ? value : styleBase[key] ?? DEFAULT_SKETCH_STYLE[key]];
   })) as SketchStyle;
   // Product skin: unknown presets fall to plain (today's page); each dimension starts from the
   // preset and keeps a valid stored override, so a panel tweak survives re-repair.
