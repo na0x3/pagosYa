@@ -26,6 +26,8 @@ export const SOURCE_DNA_ENUMS = {
   productCard: {
     swatch: ['pill', 'circle', 'square', 'label', 'photo'], gallery: ['rail', 'strip', 'stack', 'mosaic'],
     blocks: ['plain', 'card', 'outline', 'tape', 'ticket'], divider: ['none', 'hairline', 'dashed', 'bold'], enter: ['none', 'fade-up', 'slide', 'pop'],
+    // Which side the gallery takes on desktop; 'left' is today's page. story-led ignores it (single column).
+    media: ['left', 'right'],
   },
 } as const;
 export const PRODUCT_CSS_MAX = 3000;

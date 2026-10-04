@@ -73,7 +73,7 @@ import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 export default function Product() {
   return <Shell>
     <ProductPageTemplate>
-      <article className="skb-pdp">
+      <article className="skb-pdp" data-layout="${sketch.product.layout}" data-media="${sketch.product.media}">
         <KitSlot kind="product" name="breadcrumb" className="skb-pdp__crumbs" />
         <div className="skb-pdp__grid">
           <KitSlot kind="product" name="gallery" className="skb-pdp__gallery" />
@@ -124,6 +124,15 @@ export default function Checkout() {
   --skb-tint-1: ${mixHex(sketch.palette.accent, sketch.palette.paper, 0.16)};
   --skb-tint-2: ${mixHex(sketch.palette.deep, sketch.palette.paper, 0.16)};
   --skb-tint-3: ${mixHex(sketch.palette.pop, sketch.palette.paper, 0.16)};
+  /* The platform kit (buy button, cart, checkout, ficha) reads --store-* tokens; without these every
+   * sketch-born store got the same near-black defaults no matter its palette or Botones choice. */
+  --store-background: ${sketch.palette.paper};
+  --store-foreground: ${sketch.palette.ink};
+  --store-accent: ${sketch.palette.accent};
+  --store-accent-foreground: ${bestInkFor(sketch.palette.accent, sketch.palette.ink)};
+  --store-radius: ${sketch.style.buttons === 'pill' ? '999px' : '6px'};
+  --store-heading-font: ${JSON.stringify(fontFamily(sketch.fonts.display))}, serif;
+  --store-body-font: ${JSON.stringify(fontFamily(sketch.fonts.text))}, sans-serif;
 }
 body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font-family: var(--skb-text-font); }
 .skb-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem clamp(1rem, 5vw, 4rem); background: var(--skb-paper); }
@@ -139,7 +148,17 @@ body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font
 .skb-pdp { display: grid; gap: 1.5rem; padding: clamp(1rem, 4vw, 2.5rem) clamp(1rem, 5vw, 4rem); }
 .skb-pdp__crumbs { font-size: 0.9rem; opacity: 0.75; }
 .skb-pdp__grid { display: grid; gap: 2rem; align-items: start; }
-@media (min-width: 900px) { .skb-pdp__grid { grid-template-columns: 1.1fr 1fr; } }
+@media (min-width: 900px) {
+  .skb-pdp__grid { grid-template-columns: 1.1fr 1fr; }
+  /* The sketch's product composition (sketch.product): photo side and page structure. */
+  .skb-pdp[data-media="right"] .skb-pdp__grid > .skb-pdp__gallery { order: 2; }
+  .skb-pdp[data-media="right"] .skb-pdp__grid > .skb-pdp__info { order: 1; }
+  .skb-pdp[data-layout="image-led"] .skb-pdp__grid { grid-template-columns: 1.55fr 1fr; }
+  .skb-pdp[data-layout="dense"] .skb-pdp__grid { grid-template-columns: 1fr 1fr; }
+  .skb-pdp[data-layout="story-led"] .skb-pdp__grid { grid-template-columns: minmax(0, 1fr); }
+  .skb-pdp[data-layout="story-led"] .skb-pdp__grid > .skb-pdp__gallery { order: 0; max-width: 860px; margin: 0 auto; width: 100%; }
+  .skb-pdp[data-layout="story-led"] .skb-pdp__grid > .skb-pdp__info { max-width: 680px; margin: 0 auto; width: 100%; }
+}
 .skb-pdp__gallery img { width: 100%; height: auto; border-radius: 1rem; display: block; }
 .skb-pdp__info { display: grid; gap: 0.9rem; }
 .skb-pdp__cat { text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.8rem; opacity: 0.7; }

@@ -114,3 +114,18 @@ it('offers Editar texto only when the clicked text matches exactly one text fiel
   select({ text: 'Otro' });
   await vi.waitFor(() => expect(app.querySelector('[data-selection-edit-text]')).toBeNull());
 });
+
+it('a re-render while typing to YAPI keeps the composer focused with its caret in place', async () => {
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(frame()).toBeTruthy());
+  const field = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  field.focus();
+  field.value = 'quiero un boceto'; field.dispatchEvent(new Event('input', { bubbles: true }));
+  field.setSelectionRange(6, 6);
+  // Any async full render (cost estimate flip, checks) rebuilds the composer.
+  app.querySelector<HTMLButtonElement>('#source-width')!.click();
+  const after = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  expect(document.activeElement).toBe(after);
+  expect(after.value).toBe('quiero un boceto');
+  expect(after.selectionStart).toBe(6);
+});

@@ -3,6 +3,8 @@ import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { drawSketchDirection, type SketchDirection } from './sketch-direction';
 import { repairSketch, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { PRESET_IDS, PRODUCT_CARD_PRESETS } from '../source-product-card-presets';
+import { ASSURANCE_ICONS } from '../product-theme';
 import type { SketchContext, StoreSketch } from './sketch-schema';
 
 /** The provider-facing side of sketch generation: a strict schema, a compact prompt, and a total
@@ -23,6 +25,12 @@ export const SKETCH_JSON_SCHEMA = {
     palette: { type: 'object', additionalProperties: false, properties: { paper: string, ink: string, accent: string, deep: string, pop: string }, required: ['paper', 'ink', 'accent', 'deep', 'pop'] },
     fonts: { type: 'object', additionalProperties: false, properties: { display: string, text: string }, required: ['display', 'text'] },
     scale: size,
+    product: { type: 'object', additionalProperties: false, properties: {
+      preset: { type: 'string', enum: [...PRESET_IDS] },
+      layout: { type: 'string', enum: ['editorial', 'dense', 'image-led', 'story-led'] },
+      media: { type: 'string', enum: ['left', 'right'] },
+      assurances: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: string, detail: string }, required: ['icon', 'title', 'detail'] } },
+    }, required: ['preset', 'layout', 'media', 'assurances'] },
     account: { type: 'object', additionalProperties: false, properties: { layout: { type: 'string', enum: ['split', 'center'] }, kicker: string, title: string, lead: string, perks: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { icon: string, text: string }, required: ['icon', 'text'] } }, photo: string, bg }, required: ['layout', 'kicker', 'title', 'lead', 'perks', 'photo', 'bg'] },
     blocks: { type: 'array', items: { anyOf: [
       block('announce', { left: string, right: string }),
@@ -41,7 +49,7 @@ export const SKETCH_JSON_SCHEMA = {
       block('footer', { tagline: string, wordmark: { type: 'string', enum: ['giant', 'plain'] } }),
     ] } },
   },
-  required: ['palette', 'fonts', 'scale', 'account', 'blocks'],
+  required: ['palette', 'fonts', 'scale', 'product', 'account', 'blocks'],
 } as { type: 'object'; additionalProperties: false; properties: Record<string, any>; required: string[] };
 
 export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'service'; instruction: string; brief: unknown; photos: Array<{ path: string; description?: string }>; catalogNames: string[]; direction?: SketchDirection }): string {
@@ -62,6 +70,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     `Detalles cuando la energía lo pida: catalog con seeAll (ej. "VER TODO →"), collections con 2-3 categorías con foto, un split con stats honestos (peso, horas, ingredientes) y pills con variantes u ofertas reales, reviews con ratingValue/ratingSource solo si son reales, newsletter variant split con foto cuando haya foto libre.`,
     `Fuentes disponibles (ids exactos): ${SOURCE_FONT_IDS.join(', ')}. Personalidades: ${SOURCE_FONT_CATALOG.slice(0, 12).map(font => `${font.id}=${font.personality.join('/')}`).join('; ')}.`,
     `account es la página de ingreso y registro de clientes (el formulario lo pone la plataforma): kicker y title con la voz de la marca (ej. "Bienvenido de vuelta al laboratorio"), lead de una línea, 3 perks con ícono Lucide y texto corto y honesto (seguir pedidos, guardar direcciones, ofertas primero), layout split o center, photo de las disponibles o "".`,
+    `product elige la ficha de producto (la dibuja la plataforma). preset es su piel: ${PRESET_IDS.map(id => `${id} (${PRODUCT_CARD_PRESETS[id].when})`).join('; ')}; elige el que mejor le quede a lo que vende ESTA tienda, plain solo si ninguno encaja. layout es su composición: editorial (equilibrada), dense (especificaciones al lado de la compra), image-led (galería dominante), story-led (texto e historia DEBAJO de la foto). media pone la foto a la izquierda o a la derecha en escritorio: varía entre tiendas, no uses siempre left. product.assurances: 0-3 garantías REALES y cortas de esta tienda para la ficha (title ≤40, detail ≤80, icon de la lista), p. ej. "Horneado del día · salimos del horno a las 7am". Solo hechos que el comercio pueda cumplir: nada de envíos gratis, plazos o certificaciones inventadas, y nunca menciones pagosYa ni "pago seguro" (la entrega y el pago los añade la plataforma sola). Déjalo [] si no hay nada honesto que decir.`,
     `Íconos: el bloque steps lleva un ícono Lucide por paso (cualquier nombre de lucide.dev, ej.: ${SOURCE_ICON_NAMES.slice(0, 24).join(', ')}).`,
     'Colores en hex #rrggbb con buen contraste. Textos en español, honestos, sin inventar precios ni promesas.',
   ].join('\n');

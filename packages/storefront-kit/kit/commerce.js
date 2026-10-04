@@ -16,6 +16,7 @@
     review: ['split', 'stacked', 'ticket', 'notebook'], card: ['still', 'second-photo', 'swatch-swap', 'zoom', 'quick-look', 'tilt'],
     swatch: ['pill', 'circle', 'square', 'label', 'photo'], gallery: ['rail', 'strip', 'stack', 'mosaic'],
     blocks: ['plain', 'card', 'outline', 'tape', 'ticket'], divider: ['none', 'hairline', 'dashed', 'bold'], enter: ['none', 'fade-up', 'slide', 'pop'],
+    media: ['left', 'right'],
   };
   // Motion personality (sub-project 6): data-dna-motion sets these as --motion-* tokens (MOTION_CSS). Same table as
   // SOURCE_MOTION_TOKENS in the API and MOTION_PERSONALITIES in ui.tsx (tests pin them). The tokens exist only for a
@@ -384,7 +385,13 @@
     }
   }
   if (preview || hosted) restoreCart(window.PAGOSYA_PREVIEW_CART);
-  else {
+  // The Studio opens checkout.html with an empty cart (Boceto's Pedido tab, the page picker); one
+  // simple product seeds the order so the merchant reviews a real checkout, never an empty state.
+  if (preview && !cart.size && document.querySelector('[data-pagosya-checkout-page]')) {
+    const simple = products().find(p => !p.variants?.length && !p.extras?.length && !boxGroup(p) && limit(p) > 0);
+    if (simple) restoreCart([{ id: simple.id, quantity: 1 }]);
+  }
+  if (!preview && !hosted) {
     try { restoreCart(JSON.parse((config.demo ? sessionStorage : localStorage).getItem(cartKey) || "[]")); } catch { /* Storage can be unavailable. */ }
     window.addEventListener("storage", event => {
       if (event.key !== cartKey || checkingOut) return;
@@ -471,6 +478,12 @@
     [data-pagosya-product][data-style] :is(button,a,[tabindex]):focus-visible{outline:2px solid var(--pd-accent);outline-offset:3px}
     [data-pagosya-product][data-style] .product-detail__close{position:sticky;top:12px;z-index:3;display:grid;place-items:center;width:44px;height:44px;margin:12px 12px -56px auto;padding:0;border:1px solid var(--pd-line);border-radius:50%;background:var(--pd-paper);color:inherit;font-size:26px;line-height:1}
     [data-pagosya-product][data-style] .product-detail__layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);align-items:start}
+    /* dna.media=right mirrors the ficha on desktop: copy first, gallery second. story-led is a single
+     * column and mobile stacks photo-first, so both keep their order. */
+    @media(min-width:900px){
+      :root[data-dna-media=right] [data-pagosya-product][data-style]:not([data-style=story-led]) .product-detail__layout:not([data-no-images])>.product-detail__gallery{order:2}
+      :root[data-dna-media=right] [data-pagosya-product][data-style]:not([data-style=story-led]) .product-detail__layout:not([data-no-images])>.product-detail__copy{order:1}
+    }
     [data-pagosya-product][data-style] .product-detail__layout[data-no-images]{grid-template-columns:minmax(0,1fr)}
     /* Gallery: the photo fills its column; dense pages overlay thumbnails and a plain counter, editorial pages use dots. */
     [data-pagosya-product][data-style] .product-detail__gallery{position:relative;min-width:0;margin:0;padding:0;border-radius:0;background:var(--pd-tint)}
@@ -652,6 +665,10 @@
     [data-pagosya-product][data-style] .product-detail__reviews-summary{display:flex;align-items:center;gap:10px;margin:0}
     [data-pagosya-product][data-style] .product-detail__review-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px}
     [data-pagosya-product][data-style] .product-detail__review-list article{padding:18px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-surface)}
+    @media(min-width:900px){ :root[data-dna-review=split] [data-pagosya-product][data-style] .product-detail__review-list{display:grid;grid-template-columns:1fr 1fr;gap:12px} }
+    :root[data-dna-review=ticket] [data-pagosya-product][data-style] .product-detail__review-list article{border-style:dashed;border-radius:2px}
+    :root[data-dna-review=notebook] [data-pagosya-product][data-style] .product-detail__review-list article{border-width:0 0 1px;border-radius:0;background:transparent;padding:14px 2px}
+    [data-pagosya-product][data-style] .product-detail__related-note{margin:-6px 0 14px;font-size:13px;opacity:.7}
     [data-pagosya-product][data-style] .product-detail__review-list p{margin:0;line-height:1.55;overflow-wrap:anywhere}
     [data-pagosya-product][data-style] .product-detail__review-list .product-detail__review-meta{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px}
     [data-pagosya-product][data-style] :is(.product-detail__sticky,.product-detail__sticky-space){display:none}
@@ -963,18 +980,24 @@
   // Exact published totals come from the server summary, never from the latest-reviews page.
   function decorateProductReviews() {
     const p = selectedProduct, line = detail.querySelector('[data-product-rating]'), section = detail.querySelector('[data-product-reviews]');
-    if (!p || !line || !commerceData) return;
-    const summary = commerceData.reviewSummary?.[p.id];
+    if (!p || !line) return;
+    /* Studio preview: the merchant sees how real reviews will look, labeled as an example; a store
+     * never ships these — outside the preview only verified shopper reviews render. */
+    const sample = preview && !commerceData?.reviewSummary?.[p.id];
+    if (!sample && !commerceData) return;
+    const summary = sample ? { average: 5, count: 2 } : commerceData.reviewSummary?.[p.id];
     if (!summary || !Number.isSafeInteger(summary.count) || summary.count < 1 || !(summary.average >= 1 && summary.average <= 5)) { line.hidden = true; if (section) section.hidden = true; return; }
-    const list = (Array.isArray(commerceData.reviews) ? commerceData.reviews : []).filter(review => review.productId === p.id && Number.isInteger(review.rating) && review.rating >= 1 && review.rating <= 5).slice(0, 6);
+    const list = sample
+      ? [{ rating: 5, displayName: 'Ejemplo', body: 'Así se verá una reseña verificada de tus clientes después de su compra.' }, { rating: 5, displayName: 'Ejemplo', body: 'Las reseñas reales llegan solas: pagosYa se las pide a quien ya recibió su pedido.' }]
+      : (Array.isArray(commerceData.reviews) ? commerceData.reviews : []).filter(review => review.productId === p.id && Number.isInteger(review.rating) && review.rating >= 1 && review.rating <= 5).slice(0, 6);
     const authoredReviews = [...document.querySelectorAll('[data-pagosya-reviews]')].some(slot => !detail.contains(slot));
-    const label = `${summary.average.toLocaleString('es-BO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5 · ${summary.count} ${summary.count === 1 ? 'reseña verificada' : 'reseñas verificadas'}`;
+    const label = `${summary.average.toLocaleString('es-BO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5 · ${summary.count} ${summary.count === 1 ? 'reseña verificada' : 'reseñas verificadas'}${sample ? ' · ejemplo' : ''}`;
     const showSection = !!section && list.length > 0 && !authoredReviews;
     line.innerHTML = showSection ? `<a href="#product-reviews">${starsMarkup(summary.average)}<span>${label}</span></a>` : `${starsMarkup(summary.average)}<span>${label}</span>`;
     line.hidden = false;
     if (!section) return;
     section.hidden = !showSection;
-    section.innerHTML = showSection ? `<h2 id="product-reviews-title">Reseñas verificadas</h2><p class="product-detail__reviews-summary">${starsMarkup(summary.average)}<span>${label}</span></p><div class="product-detail__review-list">${list.map(review => `<article><p class="product-detail__review-meta">${starsMarkup(review.rating)}<span class="product-detail__review-score">${review.rating} de 5</span> <strong>${escape(review.displayName)}</strong></p><p>${escape(review.body)}</p></article>`).join('')}</div>` : '';
+    section.innerHTML = showSection ? `<h2 id="product-reviews-title">Reseñas verificadas${sample ? ' · ejemplo' : ''}</h2><p class="product-detail__reviews-summary">${starsMarkup(summary.average)}<span>${label}</span></p><div class="product-detail__review-list">${list.map(review => `<article><p class="product-detail__review-meta">${starsMarkup(review.rating)}<span class="product-detail__review-score">${review.rating} de 5</span> <strong>${escape(review.displayName)}</strong></p><p>${escape(review.body)}</p></article>`).join('')}</div>` : '';
   }
   const simpleProduct = (item) => !item.variants?.length && !item.extras?.length;
   const productHref = (item) => pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id));
@@ -1010,9 +1033,13 @@
   }
   function relatedMarkup(p) {
     const ids = Array.isArray(p.recommendedProductIds) ? p.recommendedProductIds : [];
-    const items = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(item => item && item.id !== p.id && limit(item) !== 0).slice(0, 4);
+    let items = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(item => item && item.id !== p.id && limit(item) !== 0).slice(0, 4);
+    /* Studio preview: sample the catalog so the merchant sees the row; the published page only shows
+     * the recommendations they actually configured. */
+    const sample = preview && !items.length;
+    if (sample) items = products().filter(item => item.id !== p.id && limit(item) !== 0).slice(0, 4);
     if (!items.length) return '';
-    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">Combínalo con</h2><ul>${items.map(item => {
+    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">Combínalo con${sample ? ' · ejemplo' : ''}</h2>${sample ? '<p class="product-detail__related-note">Elige los productos sugeridos de cada producto en tu panel; mientras tanto esta fila es una muestra de tu catálogo.</p>' : ''}<ul>${items.map(item => {
       const image = galleryImages(item)[0];
       const amounts = item.variants?.length ? item.variants.map(v => price({ ...item, amount: v.amount })) : [price(item)];
       const low = Math.min(...amounts);
@@ -1071,6 +1098,19 @@
     digital: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
     payment: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
     chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+    /* Curated extras for merchant-authored assurance lines (config.productAssurances); Lucide outlines. */
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+    leaf: '<path d="M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20"/><path d="M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13"/>',
+    gift: '<path d="M12 7v14"/><path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5"/><rect x="3" y="7" width="18" height="4" rx="1"/>',
+    heart: '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/>',
+    award: '<path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/>',
+    flame: '<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/>',
+    sparkles: '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>',
+    package: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/>',
+    coffee: '<path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/>',
+    'map-pin': '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+    'thumbs-up': '<path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/>',
   };
   // Merchant-authored policies, rendered as escaped text in a runtime-owned dialog.
   const POLICY_TITLES = { returns: 'Cambios y devoluciones', delivery: 'Envíos y entregas', privacy: 'Privacidad', terms: 'Términos y condiciones' };
@@ -1243,6 +1283,12 @@
     ].filter(Boolean);
     if (store.checkoutMode === 'whatsapp') items.push({ icon: 'chat', title: 'Pedido por WhatsApp', detail: 'Confirmas los detalles con la tienda' });
     else if (store.checkoutMode !== 'external') items.push({ icon: 'payment', title: 'Pago seguro', detail: 'Procesado por pagosYa' });
+    // Merchant-authored lines (API-sanitized config.productAssurances) lead the row; the platform's
+    // delivery and payment lines above stay derived from store facts and always render after them.
+    const authored = Array.isArray(config.productAssurances) ? config.productAssurances.slice(0, 3) : [];
+    items.unshift(...authored
+      .filter((item) => item && typeof item.title === 'string' && item.title.trim())
+      .map((item) => ({ icon: assuranceIcons[item.icon] ? item.icon : 'sparkles', title: String(item.title).slice(0, 40), detail: String(item.detail || '').slice(0, 80) })));
     const hasDeliveryTab = !!(locations.length || store.shippingEnabled || store.shippingPickupEnabled);
     return items.length ? `<ul class="product-detail__assurances" aria-label="Entrega y pago">${items.map(item => {
       const body = `${icon(item.icon)}<div><strong>${escape(item.title)}</strong><span>${escape(item.detail)}</span></div>`;
@@ -2752,7 +2798,9 @@
         ['meta[property="og:description"]', 'content', description],
       ]) document.querySelector(selector)?.setAttribute(attribute, value);
     }
-    if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
+    // The Studio opens product.html without an id (Boceto's Producto tab, the page picker); a
+    // store with a catalog previews its first product. A shopper's broken link keeps the error.
+    if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id') ?? (preview ? products()[0]?.id : null));
     else if (selectedProduct && detail.open) {
       if (products().some(p => p.id === selectedProduct.id)) openProduct(selectedProduct.id, detailTrigger);
       else detail.close();

@@ -86,3 +86,25 @@ for (const width of [1440, 1024, 390]) test(`checkout stays inside its authored 
   await frame.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
   await expect(frame.getByRole('heading', { name: 'Pago de prueba', exact: true })).toBeVisible(); await expect(review).toHaveCSS('position', 'static');
 });
+
+test('the Studio preview seeds an empty checkout with the first simple product', async ({ page }) => {
+  await page.goto('/?demo=1');
+  await page.evaluate(async ({ commerce }) => {
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
+    const snapshot = { schemaVersion: 1, brief: { businessType: 'Panadería', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Editorial' }, files: [
+      { path: 'checkout.html', content: `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><main><div data-pagosya-checkout-page></div></main><p data-pagosya-status></p></body></html>` },
+      // The first product needs options, so the seed must skip it for the first simple one.
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'checkout-seed', data: { storeName: 'Panadería', locations: [], categories: [], items: [
+        { id: 'torta', name: 'Torta', amount: 30000, currency: 'BOB', stock: 5, imageUrls: [], variants: [{ id: 'chica', name: 'Chica', amount: 30000, stock: 5, options: [{ name: 'Tamaño', value: 'Chica' }] }] },
+        { id: 'pan', name: 'Pan', amount: 20000, currency: 'BOB', stock: 9, imageUrls: [] },
+      ] } }) + ';' },
+      { path: 'commerce.js', content: commerce },
+    ] };
+    document.body.innerHTML = ''; document.body.style.margin = '0';
+    const frame = document.createElement('iframe'); frame.title = 'Checkout'; frame.sandbox.add('allow-scripts'); frame.style.cssText = 'width:100%;height:100vh;border:0';
+    frame.srcdoc = sourcePreviewDocument(snapshot, 'checkout.html', {}); document.body.append(frame);
+  }, { commerce });
+  const frame = page.frameLocator('iframe');
+  await expect(frame.locator('[data-checkout-review]')).toContainText('Pan');
+  await expect(frame.locator('[data-checkout-review]')).not.toContainText('Tu pedido está vacío');
+});

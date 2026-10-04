@@ -23,7 +23,7 @@ import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
-import { avoidTakenFingerprint, sourceRuntimeDna } from './source-dna';
+import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, sourceProviderBody, isDeepSeek, isClaude } from './source-provider';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
@@ -39,7 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -84,7 +84,7 @@ import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source
 import { kitPath } from '@pagosya/storefront-kit';
 import { AgentWorkspace } from './agent/agent-workspace';
 import { AgentToolbox, type AgentStep } from './agent/agent-tools';
-import { applyProductThemeToDesign, instructionConcernsProductCard, productThemeRuntime } from './product-theme';
+import { applyProductThemeToDesign, instructionConcernsProductCard, productThemeRuntime, resolveProductTheme, sanitizeProductAssurances } from './product-theme';
 import { runAgent, AGENT_LIMITS, agentLimits } from './agent/agent-loop';
 import { agentPreviewSnapshot } from './agent/agent-capture';
 import { snapshotWithProductTheme } from './product-theme';
@@ -1063,15 +1063,35 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
     const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
     const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
-    const productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
+    let productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
     // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
     // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
-    const dna = { ...sourceRuntimeDna(acceptedDesign?.concepts[acceptedDesign.selected]?.dna, storeId, productPageStyle), ...(agentTheme ? productThemeRuntime(agentTheme) : {}) };
+    // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
+    let sketchTheme: Record<string, string> | null = null;
+    let sketchAssurances: ReturnType<typeof sanitizeProductAssurances>['items'] = [];
+    if (!agentTheme && sketchFile) {
+      try {
+        const parsedSketch = JSON.parse(sketchFile.content);
+        sketchTheme = { ...productThemeRuntime((await resolveProductTheme(sketchProductTheme(parsedSketch.product))).dna), ...sketchKitDna(parsedSketch) };
+        if (SOURCE_PRODUCT_PAGE_STYLES.includes(parsedSketch.product?.layout)) productPageStyle = parsedSketch.product.layout;
+        sketchAssurances = sanitizeProductAssurances(parsedSketch.product?.assurances).items;
+      } catch { /* a malformed sketch keeps the seeded DNA */ }
+    }
+    // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
+    // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
+    const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
+    const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press'];
+    const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
+      ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
+    const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}) };
     // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
     const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
     const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));
     const runtimeMotifs = sourceMotifConfig(designMotifs(acceptedDesign), acceptedMotifFiles);
-    const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), dna, ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
+    const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
+      // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
+      : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
+      : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;

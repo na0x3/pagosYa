@@ -10,8 +10,9 @@ import { verifyAgentDraft, type AgentFinding } from './agent-verify';
 import { checkProductThemeOnSnapshot, type ThemeCheckFailure } from '../product-theme-check';
 import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from './agent-capture';
 import { SOURCE_DNA_ENUMS } from '../source-dna';
+import { ASSURANCE_ICONS } from '../product-theme';
 import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
-import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput } from '../product-theme';
+import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
 export type AgentToolName = 'inspect_asset' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_appearance' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
@@ -49,6 +50,7 @@ export const AGENT_TOOLS = [
   tool('verify', 'Comprueba TypeScript, comercio, requisitos y fotos. En diseños completos añade revisión visual independiente: corrige solo los hallazgos composition; hay como máximo una corrección y segunda revisión.', {}),
   tool('set_product_card_theme', 'Elige la identidad de la ficha de producto (la dibuja la plataforma; no la estilices con tu CSS): un preset, ajustes opcionales y CSS con guardas sobre las partes [data-part=…]. Cada llamada reemplaza el tema completo. Usa null en lo que no cambies.', {
     preset: nullableEnum(PRESET_IDS), ...Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS.productCard).map(([key, values]) => [key, nullableEnum(values)])),
+    assurances: { type: ['array', 'null'], description: 'Hasta 3 garantías REALES del comercio para la ficha (lidera la fila; la plataforma añade entrega y pago sola). [] las quita; null no cambia nada. Nunca inventes envíos, plazos ni certificaciones, ni menciones pagosYa.', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: { type: 'string', maxLength: 40 }, detail: { type: 'string', maxLength: 80 } }, required: ['icon', 'title', 'detail'] } },
     css: { type: ['string', 'null'], description: `CSS con guardas: hasta 20 reglas y 3000 caracteres. Partes permitidas: ${COSMETIC_PARTS.join(', ')}. Usa [data-part="nombre"]. price, buy, quantity y opciones de pago están protegidos: nunca los selecciones.` },
   }),
   tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases) y la lista de secciones construidas.', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text } }),
@@ -68,7 +70,7 @@ export class AgentToolbox {
   steps: AgentStep[] = [];
   repairs: string[] = [];
   /** The product page theme the agent chose; merged into the accepted design when the run finishes. */
-  pendingTheme: { productCard: ProductCardParams; productCss: string } | null = null;
+  pendingTheme: ProductThemeResult['dna'] | null = null;
   private shots = 0;
   private compositionCalls = 0;
   private compositionCache = new Map<string, AgentCompositionReview>();
@@ -130,7 +132,7 @@ export class AgentToolbox {
   private async checkPendingTheme(): Promise<AgentFinding[]> {
     const theme = this.pendingTheme!;
     const drop = (messages: string[]): AgentFinding[] => {
-      this.pendingTheme = { productCard: theme.productCard, productCss: '' };
+      this.pendingTheme = { ...theme, productCss: '' };
       return [...messages.map(message => ({ source: 'theme' as const, message })), { source: 'theme' as const, message: 'Se quitó el CSS de la ficha de producto; los ajustes del preset se conservan. Llama de nuevo a set_product_card_theme con otro CSS si lo quieres.' }];
     };
     try {
@@ -313,7 +315,8 @@ export class AgentToolbox {
         const params = Object.fromEntries(Object.keys(SOURCE_DNA_ENUMS.productCard).filter(key => typeof args[key] === 'string').map(key => [key, args[key]]));
         if (Object.keys(params).length) chosen.params = params as ProductThemeInput['params'];
         if (typeof args.css === 'string' && args.css.trim()) chosen.css = args.css;
-        if (!chosen.preset && !chosen.params && !chosen.css) return { output: 'No cambió nada: indica un preset, algún ajuste o CSS.' };
+        if (Array.isArray(args.assurances)) chosen.assurances = args.assurances;
+        if (!chosen.preset && !chosen.params && !chosen.css && chosen.assurances === undefined) return { output: 'No cambió nada: indica un preset, algún ajuste, garantías o CSS.' };
         try {
           const result = await resolveProductTheme(chosen);
           this.pendingTheme = result.dna;
@@ -322,6 +325,7 @@ export class AgentToolbox {
           const card = Object.entries(result.dna.productCard).map(([key, value]) => `${key}=${value}`).join(', ');
           const rules = (result.dna.productCss.match(/\{/g) ?? []).length;
           const dropped = result.report.dropped.map(item => `- ${item.declaration ?? item.rule ?? ''} ${item.reason}`.trim());
+          dropped.push(...(result.report.assuranceNotes ?? []).map(note => `- ${note}`));
           return { output: [`Tema de la ficha guardado en el borrador${chosen.preset ? ` (preset ${chosen.preset})` : ''}: ${card}. CSS: ${rules} reglas.`, dropped.length ? `El saneador descartó:\n${dropped.join('\n')}\nCorrígelo y vuelve a llamar la herramienta (reemplaza el tema completo).` : 'Nada descartado.'].join('\n') };
         } catch (error) { return { output: `Herramienta o argumentos inválidos: ${(error as Error).message}` }; }
       }

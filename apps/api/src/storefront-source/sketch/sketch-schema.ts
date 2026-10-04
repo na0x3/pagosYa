@@ -1,5 +1,8 @@
 import { repairSketchFree, repairSketchLayout, sketchFreePos, sketchGroups, sketchRemapFree, SKETCH_COPY_ORDER, SKETCH_EXTRA_KINDS, SKETCH_EXTRA_MAX, type SketchExtra, type SketchExtraKind, type SketchFreePos, type SketchGroupLayout } from '@pagosya/shared-types';
 import { SOURCE_FONT_IDS } from '../source-font-catalog';
+import { PRESET_IDS, PRODUCT_CARD_PRESETS, PRODUCT_COMMERCE_RECIPES, type PresetId, type ProductCardParams } from '../source-product-card-presets';
+import { SOURCE_DNA_ENUMS, SOURCE_PRODUCT_PAGE_STYLES, type SourceProductPageStyle } from '../source-dna';
+import { sanitizeProductAssurances, type ProductAssurance } from '../product-theme';
 
 /** The editable sketch a merchant shapes before any site is built (sketch-first YAPI, sub-project 1).
  * `repairSketch` is total: any input yields a usable sketch plus notes — the sketch loop never surfaces errors. */
@@ -42,10 +45,15 @@ export const SKETCH_STYLE_OPTIONS: { [K in keyof SketchStyle]: readonly SketchSt
   footer: ['columns', 'center'],
 };
 export const DEFAULT_SKETCH_STYLE: SketchStyle = { radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns' };
+/** The product page's skin and composition (themed-card program): the model picks preset, layout and
+ * photo side by what the store sells; the Boceto panel may override single dimensions. Missing on old
+ * sketches → plain, today's page. layout is the kit's structural composition (story-led puts the text
+ * under the photo); media mirrors the desktop ficha. */
+export type SketchProduct = { preset: PresetId; layout: SourceProductPageStyle; assurances: ProductAssurance[] } & ProductCardParams;
 /** The shopper login and sign-up pages. The sketch designs everything around the form; the form itself is drawn by
  * the trusted platform frame over the kit's account gate, so no credential input ever lives in store code. */
 export type SketchAccount = { id: 'account'; type: 'account'; layout: 'split' | 'center'; kicker: string; title: string; lead: string; perks: Array<{ icon: string; text: string }>; photo?: string; bg: SketchBg };
-export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; style: SketchStyle; account: SketchAccount; blocks: SketchBlock[] };
+export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; style: SketchStyle; product: SketchProduct; account: SketchAccount; blocks: SketchBlock[] };
 export type SketchContext = { storeName: string; purpose: 'shop' | 'service'; photos: string[] };
 
 export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'steps', 'marquee', 'catalog', 'collections', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
@@ -239,6 +247,23 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     const value = rawStyle[key] as string;
     return [key, (SKETCH_STYLE_OPTIONS[key] as readonly string[]).includes(value) ? value : DEFAULT_SKETCH_STYLE[key]];
   })) as SketchStyle;
+  // Product skin: unknown presets fall to plain (today's page); each dimension starts from the
+  // preset and keeps a valid stored override, so a panel tweak survives re-repair.
+  const rawProduct = (typeof raw.product === 'object' && raw.product !== null ? raw.product : {}) as Record<string, unknown>;
+  const preset: PresetId = PRESET_IDS.includes(rawProduct.preset as PresetId) ? (rawProduct.preset as PresetId) : 'plain';
+  if (rawProduct.preset !== undefined && preset !== rawProduct.preset) notes.push(`estilo de ficha desconocido (${String(rawProduct.preset).slice(0, 40)}); se usó el sencillo`);
+  const product: SketchProduct = {
+    preset,
+    // The composition defaults to the preset's commerce recipe, so sectors differ structurally too.
+    layout: SOURCE_PRODUCT_PAGE_STYLES.includes(rawProduct.layout as SourceProductPageStyle) ? (rawProduct.layout as SourceProductPageStyle) : PRODUCT_COMMERCE_RECIPES[preset].surfaces.product,
+    // Merchant/YAPI assurance lines for the ficha: honest, capped, platform claims dropped.
+    assurances: (() => { const result = sanitizeProductAssurances(rawProduct.assurances); notes.push(...result.notes); return result.items; })(),
+    ...PRODUCT_CARD_PRESETS[preset].params,
+  };
+  for (const key of Object.keys(SOURCE_DNA_ENUMS.productCard) as (keyof ProductCardParams)[]) {
+    const value = rawProduct[key];
+    if ((SOURCE_DNA_ENUMS.productCard[key] as readonly string[]).includes(value as string)) (product as unknown as Record<string, string>)[key] = value as string;
+  }
   const size = (value: unknown): SketchSize => (SIZES.includes(value as SketchSize) ? (value as SketchSize) : 'm');
   const bg = (value: unknown, fallback: SketchBg): SketchBg => (BLOCK_BGS.includes(value as SketchBg) ? (value as SketchBg) : fallback);
   const photo = (value: unknown): string | undefined => {
@@ -414,7 +439,32 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
     bg: bg(rawAccount.bg, 'tint-accent'),
   };
 
-  return { sketch: { palette, fonts, scale, style, account, blocks: ordered }, notes };
+  return { sketch: { palette, fonts, scale, style, product, account, blocks: ordered }, notes };
+}
+
+/** The kit button form that matches the sketch's Botones choice, so the platform's purchase
+ * controls (buy button, cart, checkout) follow the Boceto instead of one fixed black pill. */
+export function sketchButtonForm(style: SketchStyle): 'pill' | 'block' | 'outline' {
+  return style.buttons === 'square' ? 'block' : style.buttons === 'outline' ? 'outline' : 'pill';
+}
+
+/** Everything the platform kit varies by DNA, derived from the sketch: catalog card behaviour (hover
+ * photo swap, quick look…), cart and review formats and the motion personality come from the chosen
+ * preset's commerce recipe; the button form follows the Botones control. Total for any input. */
+export function sketchKitDna(sketch: Partial<StoreSketch>): Record<string, string> {
+  const recipe = PRODUCT_COMMERCE_RECIPES[(sketch.product?.preset as PresetId) ?? 'plain'] ?? PRODUCT_COMMERCE_RECIPES.plain;
+  return {
+    button: sketchButtonForm({ ...DEFAULT_SKETCH_STYLE, ...(sketch.style ?? {}) }),
+    card: recipe.surfaces.card, cart: recipe.surfaces.cart, review: recipe.surfaces.review,
+    motion: recipe.motion.personality, hover: recipe.motion.hover, press: recipe.motion.press,
+  };
+}
+
+/** The input `resolveProductTheme` expects for this sketch's skin: its preset plus every dimension
+ * as an explicit override, so a panel-tweaked dimension survives the preset's own values. */
+export function sketchProductTheme(product: SketchProduct): { preset: PresetId; params: ProductCardParams } {
+  const { preset, layout: _layout, assurances: _assurances, ...params } = product;
+  return { preset, params };
 }
 
 /** Editor-only block fields are absent from the model schema, so a chat edit reply resets them; carry them over by id. */

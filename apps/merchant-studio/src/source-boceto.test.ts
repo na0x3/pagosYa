@@ -949,3 +949,39 @@ it('review: a plain click on one member of a group selects just that member', as
   (host.querySelector('[data-boceto-block="cat"]') as HTMLElement).click();
   expect(lastSelection()).toEqual({ id: 'cat', path: '', label: 'Catálogo' });
 });
+
+it('the Ficha section saves a preset with its dimensions, and a single dimension on its own', async () => {
+  await mount();
+  const estilo = [...host.querySelectorAll('.bct-row')].find(r => r.textContent?.includes('Estilo'))!;
+  const presetSelect = estilo.querySelector('select') as HTMLSelectElement;
+  presetSelect.value = 'boutique';
+  presetSelect.dispatchEvent(new Event('change'));
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.product).toEqual({ preset: 'boutique', layout: '', swatch: 'circle', gallery: 'strip', blocks: 'plain', divider: 'none', enter: 'fade-up', media: 'right' });
+  const galeria = [...host.querySelectorAll('.bct-row')].find(r => r.querySelector('.bct-row__label')?.textContent === 'Galería')!;
+  const mosaico = [...galeria.querySelectorAll('button')].find(b => b.textContent === 'Mosaico')!;
+  mosaico.click();
+  await vi.advanceTimersByTimeAsync(1300);
+  const saved = putSketch.mock.calls.at(-1)[1].sketch.product;
+  expect(saved.gallery).toBe('mosaic');
+  expect(saved.preset).toBe('boutique');
+  expect(saved.swatch).toBe('circle');
+});
+
+
+it('the Ficha assurance editor adds, edits and saves merchant lines', async () => {
+  await mount();
+  [...host.querySelectorAll('button')].find(b => b.textContent === '+ Garantía de la tienda')!.click();
+  await vi.advanceTimersByTimeAsync(1300);
+  let saved = putSketch.mock.calls.at(-1)[1].sketch.product.assurances;
+  expect(saved).toEqual([{ icon: 'sparkles', title: '', detail: '' }]);
+  const wrap = host.querySelector('.bct-assure')!;
+  const title = wrap.querySelectorAll('input')[0] as HTMLInputElement;
+  title.value = 'Horneado del día'; title.dispatchEvent(new Event('change'));
+  await vi.advanceTimersByTimeAsync(1300);
+  saved = putSketch.mock.calls.at(-1)[1].sketch.product.assurances;
+  expect(saved[0].title).toBe('Horneado del día');
+  (host.querySelector('.bct-assure__remove') as HTMLButtonElement).click();
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.product.assurances).toEqual([]);
+});

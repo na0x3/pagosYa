@@ -109,3 +109,28 @@ it('shops get designed login and sign-up pages that wrap the trusted gate and ne
   }
   expect(assembleSketch(sketch, { storeName: 'salv', purpose: 'service', photos: [] }).some(file => file.path.startsWith('components/auth/'))).toBe(false);
 });
+
+it('the product template carries the sketch composition and photo side (themed-card program)', () => {
+  const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: [] };
+  const craft = repairSketch({ product: { preset: 'craft' }, blocks: [] }, ctx).sketch;
+  const page = assembleSketch(craft, ctx).find(file => file.path === 'components/product.tsx')!.content;
+  expect(page).toContain('data-layout="story-led"');
+  expect(page).toContain('data-media="left"');
+  const mirrored = repairSketch({ product: { preset: 'boutique', media: 'right' }, blocks: [] }, ctx).sketch;
+  const mirroredPage = assembleSketch(mirrored, ctx).find(file => file.path === 'components/product.tsx')!.content;
+  expect(mirroredPage).toContain('data-media="right"');
+  const css = assembleSketch(mirrored, ctx).find(file => file.path === 'styles/globals.css')!.content;
+  expect(css).toContain('.skb-pdp[data-media="right"]');
+  expect(css).toContain('.skb-pdp[data-layout="story-led"]');
+});
+
+it('exports the kit store tokens so the platform purchase controls follow the palette and Botones', () => {
+  const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: [] };
+  const sketch = repairSketch({ palette: { accent: '#c85c3d' }, style: { buttons: 'pill' }, blocks: [] }, ctx).sketch;
+  const css = assembleSketch(sketch, ctx).find(file => file.path === 'styles/globals.css')!.content;
+  expect(css).toContain('--store-accent: #c85c3d');
+  expect(css).toContain('--store-radius: 999px');
+  expect(css).toMatch(/--store-accent-foreground: #[0-9a-f]{6}/);
+  const square = repairSketch({ style: { buttons: 'square' }, blocks: [] }, ctx).sketch;
+  expect(assembleSketch(square, ctx).find(file => file.path === 'styles/globals.css')!.content).toContain('--store-radius: 6px');
+});

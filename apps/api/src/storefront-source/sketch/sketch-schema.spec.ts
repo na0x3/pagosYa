@@ -32,6 +32,38 @@ describe('repairSketch', () => {
     expect(sketch.blocks.some(b => b.type === 'catalog')).toBe(true);
     expect(sketch.blocks.at(-1)?.type).toBe('footer');
   });
+  it('defaults the product skin to plain, keeps a valid preset with its dimensions, and keeps single overrides', () => {
+    expect(repairSketch(undefined, ctx).sketch.product).toEqual({ preset: 'plain', layout: 'editorial', assurances: [], swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none', media: 'left' });
+    const boutique = repairSketch({ product: { preset: 'boutique' } }, ctx).sketch.product;
+    expect(boutique).toEqual({ preset: 'boutique', layout: 'editorial', assurances: [], swatch: 'circle', gallery: 'strip', blocks: 'plain', divider: 'none', enter: 'fade-up', media: 'right' });
+    // The composition defaults to the preset's commerce recipe and keeps a valid stored value.
+    expect(repairSketch({ product: { preset: 'craft' } }, ctx).sketch.product.layout).toBe('story-led');
+    expect(repairSketch({ product: { preset: 'craft', layout: 'image-led', media: 'right' } }, ctx).sketch.product).toMatchObject({ layout: 'image-led', media: 'right' });
+    const tweaked = repairSketch({ product: { preset: 'boutique', gallery: 'mosaic' } }, ctx).sketch.product;
+    expect(tweaked.gallery).toBe('mosaic');
+    expect(tweaked.swatch).toBe('circle');
+    const { sketch, notes } = repairSketch({ product: { preset: 'neon', swatch: 'hexagon' } }, ctx);
+    expect(sketch.product.preset).toBe('plain');
+    expect(sketch.product.swatch).toBe('pill');
+    expect(notes.some(note => note.includes('estilo de ficha'))).toBe(true);
+  });
+  it('keeps honest assurance lines, drops platform claims and links, caps at 3', () => {
+    const { sketch, notes } = repairSketch({ product: { preset: 'craft', assurances: [
+      { icon: 'coffee', title: 'Horneado del día', detail: 'Salimos del horno a las 7am' },
+      { icon: 'volcano', title: 'x'.repeat(90), detail: 'y'.repeat(200) },
+      { icon: 'star', title: 'Pago seguro con pagosYa', detail: '' },
+      { icon: 'leaf', title: 'Visítanos en www.ejemplo.com', detail: '' },
+      { icon: 'gift', title: 'Empaque de regalo', detail: '' },
+      { icon: 'clock', title: 'Pedidos hasta las 18h', detail: '' },
+    ] } }, ctx);
+    const items = sketch.product.assurances;
+    expect(items.map(item => item.icon)).toEqual(['coffee', 'sparkles', 'gift']);
+    expect(items[1].title.length).toBe(40);
+    expect(items[1].detail.length).toBe(80);
+    expect(items.some(item => /pagosya|www\./i.test(item.title))).toBe(false);
+    expect(notes.some(note => note.includes('reservadas a la plataforma'))).toBe(true);
+    expect(repairSketch(undefined, ctx).sketch.product.assurances).toEqual([]);
+  });
   it('clamps text lengths and list sizes', () => {
     const { sketch } = repairSketch({ blocks: [
       { id: 'h', type: 'hero', headline: 'x'.repeat(500) },

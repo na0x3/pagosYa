@@ -13,13 +13,13 @@ const cushion = { id: 'cushion', name: 'Funda de cojín', description: 'Funda de
   variants: [{ id: 'small', name: '40 × 40 cm', amount: 11000, stock: 10, options: [{ name: 'Tamaño', value: '40 × 40 cm' }] }, { id: 'large', name: '50 × 50 cm', amount: 11700, stock: 10, options: [{ name: 'Tamaño', value: '50 × 50 cm' }] }] };
 const shirt = { id: 'shirt', name: 'Camisa de algodón de manga larga con bolsillo', amount: 14000, currency: 'BOB', stock: 5, imageUrls: [photo] };
 
-async function open(page: Page, id: string, config: Record<string, unknown>, options: { items?: unknown[]; css?: string; wrap?: 'only' | 'shared' | 'authored'; tokens?: boolean } = {}) {
+async function open(page: Page, id: string, config: Record<string, unknown>, options: { items?: unknown[]; css?: string; wrap?: 'only' | 'shared' | 'authored'; tokens?: boolean; preview?: boolean; missing?: boolean } = {}) {
   const data = { storeName: 'Prueba', shippingPickupEnabled: true, items: options.items || [lamp, cushion, shirt] };
   const mount = '<main data-pagosya-product-page></main>';
   const body = options.wrap === 'only' ? `<div class="product-main">${mount}</div>` : options.wrap === 'shared' ? `<div class="product-main"><p>Nota de la tienda</p>${mount}</div>` : options.wrap === 'authored' ? `<div class="product-main"><a class="back-link" href="index.html#catalogo">Volver al catálogo</a>${mount}</div>` : mount;
-  await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}${options.tokens === false ? '' : ':root{--store-background:#f5efe6;--store-foreground:#2b211d;--store-accent:#5a4032;--store-accent-foreground:#ffffff}'}body{margin:0;font-family:Arial,sans-serif}${options.css || ''}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header>${body}<div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', ...config, data })}</script><script>${kit('commerce.js')}</script></body></html>` }));
-  await page.goto(`https://kit.test/product.html?id=${id}`);
-  await expect(page.locator('#pagosya-product-title')).toBeVisible();
+  await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}${options.tokens === false ? '' : ':root{--store-background:#f5efe6;--store-foreground:#2b211d;--store-accent:#5a4032;--store-accent-foreground:#ffffff}'}body{margin:0;font-family:Arial,sans-serif}${options.css || ''}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header>${body}<div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', ...config, data })}${options.preview ? ';window.PAGOSYA_PREVIEW=true' : ''}</script><script>${kit('commerce.js')}</script></body></html>` }));
+  await page.goto(`https://kit.test/product.html${id ? `?id=${id}` : ''}`);
+  if (!options.missing) await expect(page.locator('#pagosya-product-title')).toBeVisible();
 }
 
 test('uses the stored style and infers one for stores without it', async ({ page }) => {
@@ -29,6 +29,53 @@ test('uses the stored style and infers one for stores without it', async ({ page
   await expect(page.locator('[data-pagosya-product]')).toHaveAttribute('data-style', 'dense');
   await open(page, 'cushion', {});
   await expect(page.locator('[data-pagosya-product]')).toHaveAttribute('data-style', 'editorial');
+});
+
+test('the Studio preview without an id shows the first product; outside the preview the page keeps its error', async ({ page }) => {
+  // The Boceto's Producto tab and the page picker open product.html with no ?id=; the merchant
+  // with a catalog should see a real ficha, not "Producto no disponible".
+  await open(page, '', { productPageStyle: 'editorial' }, { preview: true });
+  await expect(page.locator('#pagosya-product-title')).toHaveText(lamp.name);
+  await open(page, '', { productPageStyle: 'editorial' }, { missing: true });
+  await expect(page.locator('[data-pagosya-product-page]')).toContainText('Producto no disponible');
+});
+
+test('dna.media=right mirrors the desktop ficha; mobile keeps the photo first', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page, 'lamp', { productPageStyle: 'editorial', dna: { media: 'right' } });
+  let gallery = (await page.locator('.product-detail__gallery').boundingBox())!, copy = (await page.locator('.product-detail__copy').boundingBox())!;
+  expect(copy.x).toBeLessThan(gallery.x);
+  await open(page, 'lamp', { productPageStyle: 'editorial', dna: { media: 'left' } });
+  gallery = (await page.locator('.product-detail__gallery').boundingBox())!; copy = (await page.locator('.product-detail__copy').boundingBox())!;
+  expect(gallery.x).toBeLessThan(copy.x);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, 'lamp', { productPageStyle: 'editorial', dna: { media: 'right' } });
+  gallery = (await page.locator('.product-detail__gallery').boundingBox())!; copy = (await page.locator('.product-detail__copy').boundingBox())!;
+  expect(gallery.y).toBeLessThan(copy.y);
+});
+
+test('authored assurance lines lead the row; the platform payment line stays', async ({ page }) => {
+  await open(page, 'lamp', { productPageStyle: 'editorial', productAssurances: [
+    { icon: 'coffee', title: 'Horneado del día', detail: 'Salimos del horno a las 7am' },
+    { icon: 'nope', title: '<b>x</b> & y', detail: '' },
+  ] });
+  const titles = page.locator('.product-detail__assurances strong');
+  await expect(titles.first()).toHaveText('Horneado del día');
+  await expect(titles.nth(1)).toHaveText('<b>x</b> & y');
+  await expect(page.locator('.product-detail__assurances b')).toHaveCount(0);
+  await expect(titles.last()).toHaveText('Pago seguro');
+  await expect(page.locator('.product-detail__assurances')).toContainText('Procesado por pagosYa');
+});
+
+test('the Studio preview samples reviews and related products, labeled ejemplo; demo pages stay honest', async ({ page }) => {
+  await open(page, 'lamp', { productPageStyle: 'editorial' }, { preview: true });
+  await expect(page.locator('#product-reviews-title')).toHaveText('Reseñas verificadas · ejemplo');
+  await expect(page.locator('.product-detail__review-list article')).toHaveCount(2);
+  await expect(page.locator('#product-related-title')).toHaveText('Combínalo con · ejemplo');
+  await expect(page.locator('.product-detail__related li')).toHaveCount(2);
+  await open(page, 'lamp', { productPageStyle: 'editorial' });
+  await expect(page.locator('#product-reviews-title')).toHaveCount(0);
+  await expect(page.locator('.product-detail__related')).toHaveCount(0);
 });
 
 test('dense pages show short specifications as chips; editorial pages do not', async ({ page }) => {

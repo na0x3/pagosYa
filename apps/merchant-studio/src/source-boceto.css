@@ -30,6 +30,13 @@
 .bct-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
 .bct-row__label { color: #9a9a9a; flex: 0 0 72px; }
 .bct-select { flex: 1; min-width: 0; background: #383838; color: #e6e6e6; border: 1px solid #444; border-radius: 6px; padding: 5px 7px; font: inherit; }
+.bct-assure { display: grid; gap: 4px; margin: 6px 0 10px; }
+.bct-assure__head { display: flex; gap: 6px; align-items: center; }
+.bct-assure input { flex: 1; min-width: 0; box-sizing: border-box; width: 100%; background: #383838; color: #e6e6e6; border: 1px solid #444; border-radius: 6px; padding: 5px 7px; font: inherit; font-size: 12px; }
+.bct-assure__remove { flex: none; border: 0; background: #383838; color: #bdbdbd; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; }
+.bct-assure__remove:hover { color: #fff; background: #4d4d4d; }
+.bct-assure-add { border: 1px dashed #555; background: transparent; color: #bdbdbd; border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 12px; cursor: pointer; }
+.bct-assure-add:hover { color: #fff; border-color: #777; }
 .bct-segment { display: flex; flex-wrap: wrap; background: #383838; border-radius: 6px; padding: 2px; gap: 2px; flex: 1; min-width: 0; }
 .bct-segment__option { flex: 1 1 auto; min-width: 34px; border: 0; background: transparent; color: #bdbdbd; border-radius: 4px; padding: 4px 6px; font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
 .bct-segment__option.is-on { background: #4d4d4d; color: #fff; }

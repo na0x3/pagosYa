@@ -68,6 +68,29 @@ it('saves a hand edit as a new revision: repaired sketch, skb files, non-source 
   expect(input.files.find((f: any) => f.path === 'assets/a.jpg')).toBeDefined();
 });
 
+it('a hand edit writes the sketch product skin into config.js dna, preset CSS included', async () => {
+  const { service, projects, sketch } = setup();
+  const edited = { ...sketch, product: { preset: 'boutique', swatch: 'circle', gallery: 'mosaic', blocks: 'plain', divider: 'none', enter: 'fade-up' } };
+  await service.update('m', 's', { revision: 3, sketch: edited });
+  const input = projects.save.mock.calls[0][2];
+  const config = JSON.parse(input.files.find((f: any) => f.path === 'config.js').content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+  expect(config.dna).toMatchObject({ swatch: 'circle', gallery: 'mosaic', blocks: 'plain', divider: 'none', enter: 'fade-up', media: 'right' });
+  expect(config.dna.productCss).toContain('[data-part="title"]');
+  // The composition travels beside the dna: boutique's recipe is the editorial page.
+  expect(config.productPageStyle).toBe('editorial');
+});
+
+it('assurance lines travel to config.productAssurances and clear when emptied', async () => {
+  const { service, projects, sketch } = setup();
+  const withLines = { ...sketch, product: { ...(sketch as any).product, assurances: [{ icon: 'coffee', title: 'Horneado del día', detail: '7am' }] } };
+  await service.update('m', 's', { revision: 3, sketch: withLines });
+  const parse = (call: number) => JSON.parse(projects.save.mock.calls[call][2].files.find((f: any) => f.path === 'config.js').content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+  expect(parse(0).productAssurances).toEqual([{ icon: 'coffee', title: 'Horneado del día', detail: '7am' }]);
+  projects.version.mockResolvedValue({ revision: 3, snapshot: { ...projects.version.mock.results[0].value, files: projects.save.mock.calls[0][2].files, brief: { sitePurpose: 'shop' } } });
+  await service.update('m', 's', { revision: 3, sketch: { ...withLines, product: { ...(withLines as any).product, assurances: [] } } });
+  expect(parse(1).productAssurances).toBeUndefined();
+});
+
 it('repairs garbage instead of failing, and rejects a stale revision with 409', async () => {
   const { service, projects } = setup();
   const result = await service.update('m', 's', { revision: 3, sketch: 'garbage' });
@@ -147,4 +170,22 @@ describe('build ("Generar sitio")', () => {
     await expect(plain.service.build('m', 's', { revision: 3 })).rejects.toThrow('ya es un sitio');
     expect(projects.save).not.toHaveBeenCalled();
   });
+});
+
+it('a hand edit maps the Botones choice onto the kit button form in config.js dna', async () => {
+  const { service, projects, sketch } = setup();
+  const edited = { ...sketch, style: { ...(sketch as any).style, buttons: 'outline' } };
+  await service.update('m', 's', { revision: 3, sketch: edited });
+  const input = projects.save.mock.calls[0][2];
+  const config = JSON.parse(input.files.find((f: any) => f.path === 'config.js').content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+  expect(config.dna.button).toBe('outline');
+});
+
+it('a hand edit carries the preset commerce recipe into the kit dna (cards, cart, review, motion)', async () => {
+  const { service, projects, sketch } = setup();
+  const edited = { ...sketch, product: { ...(sketch as any).product, preset: 'boutique', swatch: 'circle', gallery: 'strip', blocks: 'plain', divider: 'none', enter: 'fade-up', media: 'right' } };
+  await service.update('m', 's', { revision: 3, sketch: edited });
+  const input = projects.save.mock.calls[0][2];
+  const config = JSON.parse(input.files.find((f: any) => f.path === 'config.js').content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+  expect(config.dna).toMatchObject({ card: 'second-photo', cart: 'drawer', review: 'stacked', motion: 'calm', hover: 'shine', press: 'none', button: 'pill' });
 });

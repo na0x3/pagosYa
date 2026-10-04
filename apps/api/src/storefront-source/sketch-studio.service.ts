@@ -6,7 +6,8 @@ import { SourceProjectsService } from './source-projects.service';
 import { nextSourceFile } from './source-next';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
 import { sourceAssetInventory, withSourceIcons } from './source-asset-library';
-import { assembleSketch, repairSketch, type SketchContext, type StoreSketch } from './sketch';
+import { assembleSketch, repairSketch, sketchProductTheme, sketchKitDna, type SketchContext, type StoreSketch } from './sketch';
+import { resolveProductTheme, snapshotWithProductTheme } from './product-theme';
 import type { SourceProjectSnapshot } from './source-project';
 
 const SKETCH_FILE = 'sketch.json';
@@ -90,7 +91,7 @@ export class SketchStudioService {
       ...assembled,
       { path: SKETCH_FILE, content: JSON.stringify(sketch, null, 2) + '\n' },
     ]);
-    const saved = await this.projects.save(merchantId, storeId, { revision: input.revision, label: 'Boceto editado', brief: snapshot.brief, files });
+    const saved = await this.projects.save(merchantId, storeId, { revision: input.revision, label: 'Boceto editado', brief: snapshot.brief, files: await this.withProductTheme(files, sketch) });
     return { revision: saved.revision, sketch };
   }
 
@@ -109,7 +110,21 @@ export class SketchStudioService {
       ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE),
       ...assembleSketch(sketch, ctx),
     ]);
-    const saved = await this.projects.save(merchantId, storeId, { revision, label: 'Sitio generado desde el boceto', brief: snapshot.brief, files });
+    const saved = await this.projects.save(merchantId, storeId, { revision, label: 'Sitio generado desde el boceto', brief: snapshot.brief, files: await this.withProductTheme(files, sketch) });
     return { revision: saved.revision };
+  }
+
+  /** The sketch's product skin reaches the runtime through config.js dna, like the agent's
+   * set_product_card_theme; its composition travels as config.productPageStyle. */
+  private async withProductTheme(files: Array<{ path: string; content: string }>, sketch: StoreSketch) {
+    const theme = await resolveProductTheme(sketchProductTheme(sketch.product));
+    return snapshotWithProductTheme({ files }, theme.dna).files.map(file => {
+      if (file.path !== 'config.js') return file;
+      try {
+        const config = JSON.parse(file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] ?? '{}');
+        const { productAssurances: _previous, ...rest } = config;
+        return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, productPageStyle: sketch.product.layout, dna: { ...(config.dna ?? {}), ...sketchKitDna(sketch) }, ...(sketch.product.assurances.length ? { productAssurances: sketch.product.assurances } : {}) })};` };
+      } catch { return file; }
+    });
   }
 }

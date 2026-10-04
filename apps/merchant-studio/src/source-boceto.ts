@@ -12,7 +12,9 @@ import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchF
  * Every change applies LIVE in the preview via `apply` and saves silently in the background. */
 
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
-type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; account?: any; blocks: any[] };
+type SketchAssurance = { icon: string; title: string; detail: string };
+type SketchProduct = { preset: string; layout: string; swatch: string; gallery: string; blocks: string; divider: string; enter: string; media: string; assurances?: SketchAssurance[] };
+type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; product?: SketchProduct; account?: any; blocks: any[] };
 type BlockApply = { movable?: string[]; freeable?: string[]; free?: Record<string, { x: number; y: number; w?: number; r?: number }>; layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
 type SelectionPayload = { id: string; path: string; label: string; reveal?: true; others?: BocetoPick[] };
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
@@ -32,6 +34,28 @@ const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: str
   { key: 'footer', label: 'Pie', values: ['columns', 'center'], names: ['Columnas', 'Centrado'] },
 ];
 const DEFAULT_STYLE: SketchStyle = { radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns' };
+/** The product-page skins; mirrors source-product-card-presets.ts (API), which is what validates a save. */
+const PRODUCT_PRESETS: Record<string, { label: string; params: Omit<SketchProduct, 'preset' | 'layout'> }> = {
+  plain: { label: 'Sencilla', params: { swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none', media: 'left' } },
+  atelier: { label: 'Atelier · moda', params: { swatch: 'label', gallery: 'strip', blocks: 'plain', divider: 'hairline', enter: 'fade-up', media: 'right' } },
+  workshop: { label: 'Taller · muebles', params: { swatch: 'square', gallery: 'stack', blocks: 'ticket', divider: 'dashed', enter: 'slide', media: 'left' } },
+  gallery: { label: 'Galería · arte', params: { swatch: 'circle', gallery: 'mosaic', blocks: 'outline', divider: 'none', enter: 'fade-up', media: 'left' } },
+  catalogue: { label: 'Catálogo · tecnología', params: { swatch: 'pill', gallery: 'rail', blocks: 'card', divider: 'hairline', enter: 'none', media: 'left' } },
+  boutique: { label: 'Boutique · cosmética', params: { swatch: 'circle', gallery: 'strip', blocks: 'plain', divider: 'none', enter: 'fade-up', media: 'right' } },
+  playful: { label: 'Juguetona · regalos', params: { swatch: 'photo', gallery: 'mosaic', blocks: 'tape', divider: 'dashed', enter: 'pop', media: 'right' } },
+  craft: { label: 'Artesanal · comida', params: { swatch: 'photo', gallery: 'rail', blocks: 'tape', divider: 'dashed', enter: 'fade-up', media: 'left' } },
+};
+const PRODUCT_CONTROLS: Array<{ key: 'layout' | 'swatch' | 'gallery' | 'blocks' | 'divider' | 'enter' | 'media'; label: string; values: string[]; names: string[] }> = [
+  { key: 'layout', label: 'Composición', values: ['editorial', 'dense', 'image-led', 'story-led'], names: ['Editorial', 'Detallada', 'Foto grande', 'Historia'] },
+  { key: 'media', label: 'Foto', values: ['left', 'right'], names: ['Izquierda', 'Derecha'] },
+  { key: 'swatch', label: 'Opciones', values: ['pill', 'circle', 'square', 'label', 'photo'], names: ['Píldora', 'Círculo', 'Cuadrado', 'Etiqueta', 'Foto'] },
+  { key: 'gallery', label: 'Galería', values: ['rail', 'strip', 'stack', 'mosaic'], names: ['Riel', 'Tira', 'Pila', 'Mosaico'] },
+  { key: 'blocks', label: 'Bloques', values: ['plain', 'card', 'outline', 'tape', 'ticket'], names: ['Sencillo', 'Tarjeta', 'Contorno', 'Cinta', 'Ticket'] },
+  { key: 'divider', label: 'Divisor', values: ['none', 'hairline', 'dashed', 'bold'], names: ['Sin', 'Fino', 'Guiones', 'Grueso'] },
+  { key: 'enter', label: 'Entrada', values: ['none', 'fade-up', 'slide', 'pop'], names: ['Sin', 'Sube', 'Desliza', 'Salta'] },
+];
+/** Mirrors ASSURANCE_ICONS (product-theme.ts, API), which is what validates a save. */
+const ASSURANCE_ICON_OPTIONS: Array<[string, string]> = [['sparkles', 'Brillos'], ['clock', 'Reloj'], ['star', 'Estrella'], ['leaf', 'Hoja'], ['gift', 'Regalo'], ['heart', 'Corazón'], ['award', 'Medalla'], ['flame', 'Llama'], ['package', 'Paquete'], ['coffee', 'Café'], ['map-pin', 'Lugar'], ['thumbs-up', 'Pulgar'], ['pickup', 'Casa'], ['delivery', 'Camión'], ['digital', 'Descarga'], ['chat', 'Chat']];
 const PHOTO_BLOCKS = ['hero', 'split', 'story', 'newsletter'];
 
 const PALETTE_ROLES = ['paper', 'ink', 'accent', 'deep', 'pop'] as const;
@@ -1044,7 +1068,42 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       page.append(row('Texto', select(sketch.fonts.text, fonts, undefined, next => { sketch!.fonts.text = next; schedule(); })));
       for (const role of PALETTE_ROLES) page.append(colorRow(ROLE_LABEL[role], sketch.palette[role], next => { sketch!.palette[role] = next; schedule(); draw(); }));
       page.append(el('p', { className: 'bct-hint', text: 'Selecciona un bloque en el lienzo o en Capas para ver sus propiedades.' }));
-      root.append(page);
+      // The product page's skin (themed-card program): preset plus single dimensions, saved in the sketch.
+      const ficha = section('Ficha de producto', []);
+      const product: SketchProduct = { preset: 'plain', layout: 'editorial', ...PRODUCT_PRESETS.plain.params, ...(sketch.product || {}) };
+      const presetIds = Object.keys(PRODUCT_PRESETS);
+      // A preset pick leaves layout empty on purpose: the server fills the preset's own composition.
+      // Ficha changes travel in config.js, which only a reloaded preview rereads: save structurally.
+      ficha.append(row('Estilo', select(product.preset, presetIds, presetIds.map(id => PRODUCT_PRESETS[id].label), next => { sketch!.product = { preset: next, layout: '', ...PRODUCT_PRESETS[next].params }; scheduleStructural(); draw(); })));
+      for (const control of PRODUCT_CONTROLS) {
+        const change = (next: string) => { sketch!.product = { ...product, [control.key]: next }; scheduleStructural(); draw(); };
+        ficha.append(row(control.label, control.values.length > 4 ? select(product[control.key], control.values, control.names, change) : segment(product[control.key], control.values, control.names, change)));
+      }
+      // Merchant-owned assurance lines; the platform's delivery and payment lines always render after them.
+      const assurances = product.assurances ?? [];
+      const saveAssurances = (next: SketchAssurance[]) => { sketch!.product = { ...product, assurances: next }; scheduleStructural(); draw(); };
+      assurances.forEach((item, index) => {
+        const wrap = el('div', { className: 'bct-assure' });
+        const iconSelect = select(item.icon, ASSURANCE_ICON_OPTIONS.map(([id]) => id), ASSURANCE_ICON_OPTIONS.map(([, label]) => label), next => saveAssurances(assurances.map((entry, i) => i === index ? { ...entry, icon: next } : entry)));
+        const remove = el('button', { type: 'button', className: 'bct-assure__remove', text: '✕' });
+        remove.setAttribute('aria-label', 'Quitar garantía');
+        remove.addEventListener('click', () => saveAssurances(assurances.filter((_, i) => i !== index)));
+        const title = el('input', { value: item.title, placeholder: 'Garantía (ej. Horneado del día)' }) as HTMLInputElement;
+        title.maxLength = 40;
+        title.addEventListener('change', () => saveAssurances(assurances.map((entry, i) => i === index ? { ...entry, title: title.value } : entry)));
+        const detail = el('input', { value: item.detail, placeholder: 'Detalle corto' }) as HTMLInputElement;
+        detail.maxLength = 80;
+        detail.addEventListener('change', () => saveAssurances(assurances.map((entry, i) => i === index ? { ...entry, detail: detail.value } : entry)));
+        wrap.append(el('div', { className: 'bct-assure__head' }, [iconSelect, remove]), title, detail);
+        ficha.append(wrap);
+      });
+      if (assurances.length < 3) {
+        const add = el('button', { type: 'button', className: 'bct-assure-add', text: '+ Garantía de la tienda' });
+        add.addEventListener('click', () => saveAssurances([...assurances, { icon: 'sparkles', title: '', detail: '' }]));
+        ficha.append(add);
+      }
+      ficha.append(el('p', { className: 'bct-hint', text: 'Se ve en la pestaña Producto; la dibuja pagosYa con tu catálogo real. Entrega y pago los añade pagosYa según tu tienda.' }));
+      root.append(page, ficha);
     }
 
     const wrap = el('div', { className: 'bct-shell' }, [tucked.layers ? dockButton('layers', true) : layers, tucked.inspector ? dockButton('inspector', true) : root]);

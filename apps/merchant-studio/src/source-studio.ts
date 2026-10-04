@@ -685,6 +685,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
   function render() {
     const pageMenuOpen = Boolean(app.querySelector<HTMLDetailsElement>('.source-page-menu')?.open);
+    // An async render while the merchant is typing to YAPI (cost estimate, checks) rebuilds the
+    // composer; its text survives via `instruction`, so only focus and caret need carrying over.
+    const typing = document.activeElement instanceof HTMLTextAreaElement && document.activeElement.id === 'agent-command'
+      ? { start: document.activeElement.selectionStart, end: document.activeElement.selectionEnd } : null;
     const oldStream = app.querySelector<HTMLElement>('[data-agent-stream]');
     const oldScroll = oldStream?.scrollTop || 0;
     const nearBottom = !oldStream || oldStream.scrollHeight - oldScroll - oldStream.clientHeight < 70;
@@ -803,6 +807,13 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (editor) { const file = version!.snapshot.files.find(f => f.path === filePath); editor.value = file?.encoding === 'base64' ? `Recurso multimedia: ${file.path}` : draft ?? file?.content ?? ''; mountCodeHighlight(editor, file?.encoding === 'base64' ? '' : filePath); }
     const frame = app.querySelector<HTMLIFrameElement>('iframe');
     if (frame && (version || showingDraft())) void renderPreview(frame);
+    if (typing) {
+      const field = app.querySelector<HTMLTextAreaElement>('#agent-command');
+      if (field && !field.disabled) {
+        field.focus({ preventScroll: true });
+        try { field.setSelectionRange(typing.start ?? field.value.length, typing.end ?? field.value.length); } catch { /* best effort */ }
+      }
+    }
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
