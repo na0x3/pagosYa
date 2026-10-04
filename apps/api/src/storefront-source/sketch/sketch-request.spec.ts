@@ -1,5 +1,7 @@
 import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
 import { drawSketchDirection } from './sketch-direction';
+import { drawPageStructure } from './sketch-structure-draw';
+import { countSubstance } from './sketch-substance';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const response = (text: string) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text }] }] });
@@ -105,5 +107,33 @@ describe('layout controls reach the model', () => {
     const prompt = sketchPrompt({ storeName: 'Pan', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [] });
     expect(prompt).toContain('narrow');
     expect(prompt).toContain('offset-left');
+  });
+});
+
+describe('the model is handed the page it must fill', () => {
+  const aStructure = () => drawPageStructure(countSubstance({ products: 6, photos: 4, brief: { businessType: 'Repostería' } }), () => 0.4);
+  const promptInput = () => ({ storeName: 'Pan', purpose: 'shop' as const, instruction: 'x', brief: {}, photos: [], catalogNames: [] });
+  it('lists every slot by id and forbids inventing bands', () => {
+    const structure = aStructure();
+    const prompt = sketchPrompt({ ...promptInput(), structure });
+    for (const slot of structure.slots) expect(prompt).toContain(slot.id);
+    expect(prompt).toMatch(/no inventes bandas/i);
+  });
+  it('keeps the colour rule, which is about background and not structure', () => {
+    expect(sketchPrompt({ ...promptInput(), structure: aStructure() })).toContain('COLOR DE VERDAD');
+  });
+  it('no longer carries a prose structure line', () => {
+    const prompt = sketchPrompt({ ...promptInput(), structure: aStructure() });
+    expect(prompt).not.toContain('Estructura revista');
+    expect(prompt).not.toContain('Estructura póster');
+    expect(drawSketchDirection(() => 0).lines.join('\n')).not.toContain('Estructura ');
+  });
+  it('forwards the structure so the response is bound to its slots', () => {
+    const structure = aStructure();
+    const { sketch } = sketchFromResponse(response(JSON.stringify({ blocks: [{ id: 'invented', type: 'banner', headline: 'x' }] })), ctx, { structure });
+    expect(sketch.blocks.some(b => b.id === 'invented')).toBe(false);
+    const slotIds = structure.slots.map(slot => slot.id);
+    for (const block of sketch.blocks) expect(slotIds).toContain(block.id);
+    expect(sketch.blocks.at(-1)?.type).toBe('footer');
   });
 });

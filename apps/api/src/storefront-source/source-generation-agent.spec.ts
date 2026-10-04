@@ -1,6 +1,7 @@
 import { sketchFreeablePaths } from '@pagosya/shared-types';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { repairSketch } from './sketch';
+import * as structureDraw from './sketch/sketch-structure-draw';
 import { SourceGenerationService } from './source-generation.service';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceProjectsService } from './source-projects.service';
@@ -326,15 +327,26 @@ describe('generate() with the agent engine', () => {
   });
 });
 
+jest.mock('./sketch/sketch-structure-draw', () => ({ ...jest.requireActual('./sketch/sketch-structure-draw'), drawPageStructure: jest.fn(jest.requireActual('./sketch/sketch-structure-draw').drawPageStructure) }));
+const drawPage = structureDraw.drawPageStructure as jest.Mock;
+const actualDraw = jest.requireActual('./sketch/sketch-structure-draw').drawPageStructure;
+
 describe('sketch-first new stores', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => { jest.restoreAllMocks(); drawPage.mockImplementation(actualDraw); });
+  // The model now fills drawn slots by id, so the fixture below answers a skeleton this test pins instead of one drawn at random.
+  const skeleton = { slots: [
+    { id: 's1', type: 'hero', size: 'l', width: 'bleed', media: false },
+    { id: 's2', type: 'catalog', size: 'm', width: 'bleed', media: false },
+    { id: 's3', type: 'footer', size: 'l', width: 'bleed', media: false },
+  ], params: { length: 3, opening: 'hero', catalogAt: 1, accentEvery: null, rhythm: 'calm', mediaBudget: 0 } };
+  beforeEach(() => { drawPage.mockImplementation(() => skeleton as any); });
   const sketchJson = JSON.stringify({
     palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' },
     fonts: { display: 'anton', text: 'manrope' }, scale: 'm',
     blocks: [
-      { id: 'h', type: 'hero', variant: 'photo-right', headline: 'Algo dulce', sub: '', cta: 'Ver', bg: 'paper', size: 'l' },
-      { id: 'c', type: 'catalog', kicker: '', title: 'Productos', bg: 'pop', size: 'm' },
-      { id: 'z', type: 'footer', tagline: '', wordmark: 'giant', bg: 'deep', size: 'l' },
+      { id: 's1', type: 'hero', variant: 'photo-right', headline: 'Algo dulce', sub: '', cta: 'Ver', bg: 'paper', size: 'l' },
+      { id: 's2', type: 'catalog', kicker: '', title: 'Productos', bg: 'pop', size: 'm' },
+      { id: 's3', type: 'footer', tagline: '', wordmark: 'giant', bg: 'deep', size: 'l' },
     ],
   });
   const sketchResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 300 }, output: [{ content: [{ type: 'output_text', text: sketchJson }] }] }));
@@ -343,7 +355,7 @@ describe('sketch-first new stores', () => {
   // The paths belong to the renderer, not to this test, so ask for a real one instead of hardcoding a guess.
   const heroPath = () => {
     const { sketch } = repairSketch(JSON.parse(sketchJson), { storeName: 'pausa', purpose: 'shop', photos: [] });
-    return sketchFreeablePaths(sketch.blocks.find(block => block.id === 'h')!)[0];
+    return sketchFreeablePaths(sketch.blocks.find(block => block.id === 's1')!)[0];
   };
 
   it('composes a fresh sketch with a second call and saves the result', async () => {
@@ -352,14 +364,14 @@ describe('sketch-first new stores', () => {
     const path = heroPath();
     const fetchMock = jest.spyOn(globalThis, 'fetch')
       .mockImplementationOnce(async () => sketchResponse())
-      .mockImplementationOnce(async () => compositionResponse({ blocks: [{ id: 'h', free: [{ path, x: 55, y: 30, w: 46, r: -3 }], extras: [], order: [], layout: [] }] }));
+      .mockImplementationOnce(async () => compositionResponse({ blocks: [{ id: 's1', free: [{ path, x: 55, y: 30, w: 46, r: -3 }], extras: [], order: [], layout: [] }] }));
     await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
     expect(fetchMock).toHaveBeenCalledTimes(2);
     // The second call must carry the composition schema, not the sketch schema.
     expect(JSON.parse((fetchMock.mock.calls[1] as any)[1].body).text.format.name).toBe('sketch_composition');
     const saved = projects.save.mock.calls[0][2];
     const sketch = JSON.parse(saved.files.find((f: any) => f.path === 'sketch.json').content);
-    expect(sketch.blocks.find((b: any) => b.id === 'h').free).toEqual({ [path]: { x: 55, y: 30, w: 46, r: -3 } });
+    expect(sketch.blocks.find((b: any) => b.id === 's1').free).toEqual({ [path]: { x: 55, y: 30, w: 46, r: -3 } });
     // The composed spot reaches the rendered page, not only sketch.json.
     expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('data-skb-free="on"');
   });

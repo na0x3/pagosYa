@@ -40,7 +40,7 @@ import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDe
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { applySketchComposition, compositionPrompt, SKETCH_COMPOSITION_SCHEMA } from './sketch';
-import { assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { countSubstance, drawPageStructure, assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -735,7 +735,9 @@ export class SourceGenerationService {
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
         const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: sketchPhotos.map(photo => photo.path) };
         const direction = drawSketchDirection();
-        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30), direction });
+        // The page's bands are drawn here, not chosen by the model: left to itself it converged on one skeleton every time.
+        const structure = drawPageStructure(countSubstance({ products: data.items, photos: sketchPhotos, brief: dto.brief }));
+        const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogNames: data.items.map((item: { name: string }) => item.name).slice(0, 30), direction, structure });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
@@ -755,7 +757,7 @@ export class SourceGenerationService {
         attempt.usage = sourceUsage(model, body?.usage);
         attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
         if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
-        const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx, { style: direction.style });
+        const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx, { style: direction.style, structure });
         // Fresh generations get the band-rhythm pass (no two adjacent same-bg sections). Boceto hand
         // edits and chat edits never pass through it, so deliberate layouts survive.
         const placed = ensureBandRhythm(ensureAllPhotosUsed(drawn, sketchCtx));

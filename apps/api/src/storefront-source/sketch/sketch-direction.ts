@@ -1,7 +1,7 @@
 /** A creative direction drawn fresh for every generation, so two stores never leave with the same
  * page. The draw is pure given its `random`, which keeps tests deterministic; production uses
  * Math.random, so every click of "crear mi sitio" lands on a different corner of the space
- * (12 paletas × 6 tipografías × 6 estructuras × 3 energías × 4 escalas ≈ 5.000 direcciones). */
+ * (12 paletas × 6 tipografías × 3 energías × 4 escalas ≈ 5.000 direcciones). */
 
 import { NEWSLETTER_FORMS, SKETCH_STYLE_OPTIONS, type NewsletterForm, type SketchStyle } from './sketch-schema';
 
@@ -33,15 +33,6 @@ const TYPE_MOODS: readonly Mood[] = [
   { name: 'excéntrica', line: 'Tipografía excéntrica: el display más raro del catálogo que le quede al rubro; texto muy sobrio para compensar.' },
 ];
 
-const STRUCTURES: readonly Mood[] = [
-  { name: 'revista', line: 'Estructura revista: announce → hero photo-right → marquee → catalog → split intenso → story → reviews → banner → newsletter → footer.' },
-  { name: 'póster', line: 'Estructura póster: SIN announce; hero stacked en XL como un cartel gigante → banner temprano → catalog → marquee → faq → newsletter → footer.' },
-  { name: 'mercado', line: 'Estructura mercado: announce → hero compacto (size s o m) → catalog casi arriba → collections → steps → reviews → footer. La vitrina es la protagonista.' },
-  { name: 'editorial pausado', line: 'Estructura editorial pausada: hero full-bleed → story larga (2-3 párrafos) → gallery → catalog → faq → newsletter split → footer. SIN marquesinas.' },
-  { name: 'showroom', line: 'Estructura showroom: SIN hero; abre con un split potente (accent o deep) → collections → catalog → marquee → reviews → banner → footer.' },
-  { name: 'feria', line: 'Estructura feria: marquee arriba → hero → marquee → catalog → marquee → banner → footer. Las marquesinas son cintas de color saturado entre todo.' },
-];
-
 const ENERGIES: readonly Mood[] = [
   { name: 'maximalista', line: 'Energía maximalista: stickers en hero/split/banner, badges cortos en el catálogo ("NUEVO", "FAVORITO"), stripLeft/stripRight con microcopy, wordmark gigante en el footer, 10-13 bloques.' },
   { name: 'equilibrada', line: 'Energía equilibrada: un solo sticker, badges discretos, 9-11 bloques, wordmark gigante.' },
@@ -54,18 +45,16 @@ export function drawSketchDirection(random: () => number = Math.random): SketchD
   const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
   const palette = pick(PALETTE_MOODS);
   const type = pick(TYPE_MOODS);
-  const structure = pick(STRUCTURES);
   const energy = pick(ENERGIES);
   const scale = pick(SCALES);
   const style = Object.fromEntries((Object.keys(SKETCH_STYLE_OPTIONS) as (keyof SketchStyle)[]).map(key => [key, pick(SKETCH_STYLE_OPTIONS[key])])) as SketchStyle;
   return {
     style,
     newsletterForm: pick(NEWSLETTER_FORMS),
-    name: `${structure.name} · ${palette.name} · ${type.name} · ${energy.name}`,
+    name: `${palette.name} · ${type.name} · ${energy.name}`,
     lines: [
       palette.line,
       type.line,
-      structure.line,
       energy.line,
       `Escala general: ${scale}.`,
       'PROHIBIDO el boceto genérico: nada de crema + naranja + verde botella por costumbre, ni el mismo orden de siempre. Esta tienda debe verse distinta de cualquier otra. Si el pedido del comercio choca con esta dirección, manda el pedido.',
