@@ -121,3 +121,36 @@ export function drawPageStructure(substance: StoreSubstance, random: () => numbe
   });
   return { slots, params };
 }
+
+/** The grammar, as a predicate. Rules, not a list of approved pages — this is what makes the space
+ * combinatorial. Exported so the draw's tests and the distribution test agree on what "legal" means.
+ * It is total: a malformed structure is reported as a violation rather than thrown, because the caller
+ * is a validator and a validator that crashes on bad input hides the very thing it exists to find. */
+export function violations(structure: PageStructure, substance: StoreSubstance): string[] {
+  const rawSlots: unknown = structure?.slots;
+  if (!Array.isArray(rawSlots)) return ['structure has no slots'];
+  const slots = rawSlots.filter((slot): slot is PageSlot => typeof slot === 'object' && slot !== null);
+  const problems: string[] = [];
+  if (slots.length !== rawSlots.length) problems.push('a slot is not an object');
+  const caps = substanceCaps(substance);
+  const types = slots.map(slot => slot.type);
+
+  if (slots.length < 6 || slots.length > caps.maxLength) problems.push(`length ${slots.length} outside 6..${caps.maxLength}`);
+  if (types[types.length - 1] !== 'footer') problems.push('last slot is not a footer');
+  if (types.filter(type => type === 'footer').length !== 1) problems.push('not exactly one footer');
+  if (substance?.products > 0 && types.filter(type => type === 'catalog').length !== 1) problems.push('not exactly one catalog');
+  for (const banned of caps.forbid) if (types.includes(banned)) problems.push(`forbidden type present: ${banned}`);
+  for (const type of ONCE_ONLY) if (types.filter(candidate => candidate === type).length > 1) problems.push(`repeated once-only type: ${type}`);
+  if (types.includes('announce') && types.indexOf('announce') !== 0) problems.push('announce is not the first slot');
+  if (new Set(slots.map(slot => slot.id)).size !== slots.length) problems.push('duplicate slot ids');
+  if (slots.filter(slot => slot.media).length > caps.maxMedia) problems.push('media slots exceed the photo count');
+
+  for (let i = 1; i < slots.length; i++) {
+    if (ACCENT.includes(types[i]) && ACCENT.includes(types[i - 1])) problems.push(`accent bands adjacent at ${i}`);
+    if (slots[i].width === slots[i - 1].width) problems.push(`repeated width at ${i}`);
+  }
+  for (let i = 2; i < slots.length; i++) {
+    if (slots[i].media && slots[i - 1].media && slots[i - 2].media) problems.push(`three media slots in a row at ${i}`);
+  }
+  return problems;
+}

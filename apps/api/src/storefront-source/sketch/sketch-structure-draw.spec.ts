@@ -1,4 +1,4 @@
-import { drawPageStructure } from './sketch-structure-draw';
+import { drawPageStructure, violations } from './sketch-structure-draw';
 import { substanceCaps } from './sketch-substance';
 
 /** A seeded generator, so a draw is reproducible and a failure is debuggable. */
@@ -82,4 +82,26 @@ it('enforces the grammar over many draws: no three consecutive media, no adjacen
       expect(slots[0].type).toBe('announce');
     }
   }
+});
+
+const STORES = [
+  { name: 'full', s: { products: 40, photos: 6, categories: 5, briefWords: 60 } },
+  { name: 'empty', s: { products: 0, photos: 0, categories: 0, briefWords: 4 } },
+  { name: 'one-photo', s: { products: 12, photos: 1, categories: 1, briefWords: 30 } },
+  { name: 'service', s: { products: 0, photos: 3, categories: 0, briefWords: 40 } },
+];
+
+it.each(STORES)('draws a legal page every time for a $name store', ({ s }) => {
+  const broken: string[] = [];
+  for (let seed = 1; seed <= 200; seed++) {
+    const structure = drawPageStructure(s, seeded(seed));
+    for (const problem of violations(structure, s)) broken.push(`seed ${seed}: ${problem}`);
+  }
+  expect(broken).toEqual([]);
+});
+
+it('reports a malformed structure instead of throwing', () => {
+  expect(violations({ slots: undefined } as any, full)).not.toEqual([]);
+  expect(violations({ slots: [null, 3, {}] } as any, full)).not.toEqual([]);
+  expect(violations({ slots: [] } as any, full)).not.toEqual([]);
 });
