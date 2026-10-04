@@ -27,11 +27,14 @@ async function setup(engine = 'agent', extra: Record<string, unknown> = {}) {
   const projects: any = { current: jest.fn().mockResolvedValue({ revision: 1, slug: 'pausa' }), version: jest.fn().mockResolvedValue({ revision: 1, snapshot }), save: jest.fn().mockImplementation(async (_m: string, _s: string, value: any) => ({ revision: 2, snapshot: sourceProjectSnapshot(value) })), recentDesignFingerprints: jest.fn().mockResolvedValue([]), prepare: (value: any) => new SourceProjectsService({} as any).prepare(value) };
   const config: any = { get: jest.fn((key: string) => ({ ...configValues(engine), ...extra } as Record<string, unknown>)[key]) };
   const uploads: any = { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') };
-  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config), projects, prisma, brief: base.brief };
+  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config), projects, prisma, stores, brief: base.brief };
 }
 let callId = 0;
 const plan = ['plan_task', { requirements: [{ id: 'r1', description: 'La página solicitada tiene contenido visible', page: 'index.html', check: 'element', selector: 'h1', expected: '1' }] }] as [string, object];
 const turn = (calls: Array<[string, object]>) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 3000, output_tokens: 200 }, output: (calls.some(([name]) => ['edit_file','set_product_card_theme'].includes(name)) ? [plan, ...calls] : calls).map(([name, args]) => ({ type: 'function_call', call_id: `c${callId++}`, name, arguments: JSON.stringify(name === 'finish' ? { ...args, status: 'completed', remaining: [] } : args) })) }));
+// A category exists only in `data.categories`, never on an item, so its name reaching a prompt proves the second
+// argument of catalogueDigest was passed: an optional parameter the compiler cannot make anyone supply.
+const cheeseStore = { storeName: 'Pausa', checkoutMode: 'PAYMENT', locations: [], categories: [{ id: 'cat-q', name: 'Quesería Artesanal' }], items: [{ id: 'p1', name: 'Queso de cabra', amount: 4500, currency: 'BOB', categoryId: 'cat-q', imageUrls: [], variants: [] }] };
 const input = (brief: any) => ({ revision: 1, brief: { ...brief, sitePurpose: 'shop' }, instruction: 'Cambia el título principal a "Tu calma"', model: 'gpt-5.6-terra', maxCredits: 50 } as any);
 
 describe('generate() with the agent engine', () => {
@@ -415,6 +418,17 @@ describe('sketch-first new stores', () => {
 
   // The skeleton is only a guarantee if both ends receive it: dropping the argument at either call site would leave
   // every pinned-skeleton fixture passing while the model chose bands freely again.
+  it('hands the catalogue digest, categories included, to the sketch prompt along with the skeleton', async () => {
+    const { service, projects, stores, brief } = await setup();
+    stores.getStorePublic.mockResolvedValue(cheeseStore);
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const prompt = JSON.parse((fetchMock.mock.calls[0] as any)[1].body).input[0].content[0].text;
+    expect(prompt).toContain('Quesería Artesanal');
+    expect(prompt).toContain('Queso de cabra');
+    for (const slot of skeleton.slots) expect(prompt).toContain(`- ${slot.id}: ${slot.type}`);
+  });
   it('hands the drawn skeleton to the prompt and binds the response to it', async () => {
     const { service, projects, brief } = await setup();
     newStore(projects);
@@ -551,6 +565,15 @@ describe('chat-on-sketch edits', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const saved = JSON.parse(context.projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json').content);
     expect(saved.blocks.find((b: any) => b.id === 'h').free).toEqual({ [path]: { x: 55, y: 30, w: 46 } });
+  });
+  it('hands the catalogue digest, categories included, to the chat-edit prompt', async () => {
+    const { service, stores, brief } = await sketchBorn();
+    stores.getStorePublic.mockResolvedValue(cheeseStore);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => editedResponse());
+    await service.generate('m', 's', { ...input(brief), instruction: 'haz el titular más juguetón' }, new SourceRequestBudget(50));
+    const prompt = JSON.parse((fetchMock.mock.calls[0] as any)[1].body).input[0].content[0].text;
+    expect(prompt).toContain('Quesería Artesanal');
+    expect(prompt).toContain('Queso de cabra');
   });
   it('a garbage reply keeps the previous revision and reports a retryable failure', async () => {
     const { service, projects, brief } = await sketchBorn();
