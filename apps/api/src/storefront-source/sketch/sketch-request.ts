@@ -67,7 +67,7 @@ export const SKETCH_JSON_SCHEMA = {
   required: ['palette', 'fonts', 'scale', 'style', 'product', 'account', 'blocks'],
 } as { type: 'object'; additionalProperties: false; properties: Record<string, any>; required: string[] };
 
-export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'service'; instruction: string; brief: unknown; photos: Array<{ path: string; description?: string }>; catalogNames: string[]; direction?: SketchDirection; structure?: PageStructure }): string {
+export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'service'; instruction: string; brief: unknown; photos: Array<{ path: string; description?: string }>; catalogNames: string[]; direction?: SketchDirection; structure: PageStructure }): string {
   const direction = input.direction ?? drawSketchDirection();
   return [
     `Tienda: ${input.storeName} (${input.purpose === 'shop' ? 'vende productos' : 'ofrece servicios'}).`,
@@ -77,13 +77,11 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     input.photos.length
       ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras). REPÁRTELAS como una revista, nunca un muro de fotos: una en el hero, una por cada split, story y newsletter, una por categoría de collections y hasta 3 de clientes en reviews; gallery solo como tira corta de máximo 5: ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
-    ...(input.structure ? [
-      // The skeleton is data, not advice: every earlier attempt to steer the page's shape through prose converged on one answer.
-      'LA PÁGINA YA TIENE SU FORMA. Estas son sus bandas, en orden. Llená cada una con contenido real usando su id. NO inventes bandas: cualquier bloque con un id que no esté en esta lista se descarta. Si una banda no tenés con qué llenarla honestamente, omitila y la página se cierra sola.',
-      ...input.structure.slots.map(slot => `- ${slot.id}: ${slot.type} · tamaño ${slot.size} · ancho ${slot.width}${slot.media ? ' · lleva foto' : ''}`),
-    ] : [`Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final.`]),
+    // The skeleton is data, not advice: every earlier attempt to steer the page's shape through prose converged on one answer.
+    'LA PÁGINA YA TIENE SU FORMA. Estas son sus bandas, en orden. Llená cada una con contenido real usando su id. NO inventes bandas: cualquier bloque con un id que no esté en esta lista se descarta. Si una banda no tenés con qué llenarla honestamente, omitila y la página se cierra sola.',
+    ...input.structure.slots.map(slot => `- ${slot.id}: ${slot.type} · tamaño ${slot.size} · ancho ${slot.width}${slot.media ? ' · lleva foto' : ''}`),
     'COLOR DE VERDAD: mínimo 3 bloques con fondo accent, deep o pop, y usa los fondos tint-accent/tint-deep/tint-pop (pasteles derivados de tu paleta) para bandas suaves entre bandas saturadas. Nunca dos bloques seguidos con el mismo fondo.',
-    `FORMA DE CADA BANDA (esto es lo que hace que dos tiendas no se parezcan): width elige el ancho del contenido — bleed (de borde a borde, como siempre), wide (contenido centrado y ancho), narrow (columna editorial angosta, ideal para story y faq), offset-left / offset-right (contenido a un lado y aire al otro). VARÍA el ancho entre bandas vecinas: un muro de bleed es exactamente el boceto genérico que no queremos. align mueve el texto (start, center, end). flip espeja la foto en hero, split, story y newsletter. swap pone el botón fantasma primero en hero y split. Si no querés tocar algo: width "bleed", align "start", flip false, swap false.`,
+    `AJUSTES DE CADA BANDA: el tamaño, el ancho y si lleva foto ya vienen en la lista de arriba y no se negocian: copiá en size y width lo que figura ahí. Lo tuyo es align (start, center, end: mueve el texto), flip (espeja la foto en hero, split, story y newsletter) y swap (pone el botón fantasma primero en hero y split). Si no querés tocar algo: align "start", flip false, swap false.`,
     `style es el LENGUAJE DE FORMAS de toda la página: radius (soft/round/square), buttons (pill/square/outline), cards (bleed/inset/outline), header (left/center), footer (columns/center). Elegilo para que acompañe al rubro y a la dirección creativa — una carnicería brutalista no lleva botones pill redondeados. Poné "auto" en las dimensiones que no te importen y el diseño las elige.`,
     `DIRECCIÓN CREATIVA DE ESTA GENERACIÓN (${direction.name}) — interprétala con los colores, fuentes y bloques concretos de esta tienda:`,
     ...direction.lines.map(line => `- ${line}`),

@@ -1,7 +1,7 @@
 /** A creative direction drawn fresh for every generation, so two stores never leave with the same
  * page. The draw is pure given its `random`, which keeps tests deterministic; production uses
  * Math.random, so every click of "crear mi sitio" lands on a different corner of the space
- * (12 paletas × 6 tipografías × 3 energías × 4 escalas ≈ 5.000 direcciones). */
+ * (12 paletas × 6 tipografías × 3 energías × 4 escalas ≈ 864 direcciones). */
 
 import { NEWSLETTER_FORMS, SKETCH_STYLE_OPTIONS, type NewsletterForm, type SketchStyle } from './sketch-schema';
 
@@ -34,9 +34,9 @@ const TYPE_MOODS: readonly Mood[] = [
 ];
 
 const ENERGIES: readonly Mood[] = [
-  { name: 'maximalista', line: 'Energía maximalista: stickers en hero/split/banner, badges cortos en el catálogo ("NUEVO", "FAVORITO"), stripLeft/stripRight con microcopy, wordmark gigante en el footer, 10-13 bloques.' },
-  { name: 'equilibrada', line: 'Energía equilibrada: un solo sticker, badges discretos, 9-11 bloques, wordmark gigante.' },
-  { name: 'minimal', line: 'Energía minimal: sin stickers, sin badges, 7-9 bloques con tamaños l/xl y mucho aire, wordmark plain.' },
+  { name: 'maximalista', line: 'Energía maximalista: stickers en hero/split/banner, badges cortos en el catálogo ("NUEVO", "FAVORITO"), stripLeft/stripRight con microcopy, wordmark gigante en el footer.' },
+  { name: 'equilibrada', line: 'Energía equilibrada: un solo sticker, badges discretos, wordmark gigante.' },
+  { name: 'minimal', line: 'Energía minimal: sin stickers, sin badges, mucho aire en el texto, wordmark plain.' },
 ];
 
 const SCALES = ['s', 'm', 'l', 'xl'] as const;

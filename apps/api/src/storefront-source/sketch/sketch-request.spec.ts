@@ -4,6 +4,7 @@ import { drawPageStructure } from './sketch-structure-draw';
 import { countSubstance } from './sketch-substance';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
+const structure = drawPageStructure(countSubstance({ products: 6, photos: 4, brief: { businessType: 'Repostería' } }), () => 0.4);
 const response = (text: string) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text }] }] });
 
 it('the schema is a strict object with anyOf blocks', () => {
@@ -19,7 +20,7 @@ it('the schema is a strict object with anyOf blocks', () => {
 });
 
 it('the prompt names the photos, catalog, instruction and real font ids', () => {
-  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'quiero un sitio dulce y cálido', brief: { businessType: 'Repostería' }, photos: [{ path: 'assets/a.jpg', description: 'galletas' }], catalogNames: ['Caja de rolls'] });
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'quiero un sitio dulce y cálido', brief: { businessType: 'Repostería' }, photos: [{ path: 'assets/a.jpg', description: 'galletas' }], catalogNames: ['Caja de rolls'], structure });
   expect(prompt).toContain('assets/a.jpg');
   expect(prompt).toContain('galletas');
   expect(prompt).toContain('Caja de rolls');
@@ -32,11 +33,11 @@ it('every generation carries a creative direction, and different draws differ', 
   const b = drawSketchDirection(() => 0.99);
   expect(a.name).not.toBe(b.name);
   expect(a.lines.join('\n')).not.toBe(b.lines.join('\n'));
-  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], direction: a });
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], direction: a, structure });
   expect(prompt).toContain('DIRECCIÓN CREATIVA');
   for (const line of a.lines) expect(prompt).toContain(line);
   // Sin dirección explícita, se sortea una: el prompt nunca sale sin dirección.
-  expect(sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [] })).toContain('DIRECCIÓN CREATIVA');
+  expect(sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], structure })).toContain('DIRECCIÓN CREATIVA');
 });
 
 it('is total: null, garbage text and missing output all yield the usable default', () => {
@@ -104,14 +105,15 @@ describe('layout controls reach the model', () => {
     }
   });
   it('tells the model what the controls are for', () => {
-    const prompt = sketchPrompt({ storeName: 'Pan', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [] });
-    expect(prompt).toContain('narrow');
-    expect(prompt).toContain('offset-left');
+    const prompt = sketchPrompt({ storeName: 'Pan', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [], structure });
+    for (const control of ['align', 'flip', 'swap']) expect(prompt).toContain(control);
+    // Width and size belong to the slots: asking the model to vary them is the free choice the skeleton replaces.
+    expect(prompt).not.toMatch(/VARÍA el ancho|offset-left/);
   });
 });
 
 describe('the model is handed the page it must fill', () => {
-  const aStructure = () => drawPageStructure(countSubstance({ products: 6, photos: 4, brief: { businessType: 'Repostería' } }), () => 0.4);
+  const aStructure = () => structure;
   const promptInput = () => ({ storeName: 'Pan', purpose: 'shop' as const, instruction: 'x', brief: {}, photos: [], catalogNames: [] });
   it('lists every slot by id and forbids inventing bands', () => {
     const structure = aStructure();
@@ -127,6 +129,9 @@ describe('the model is handed the page it must fill', () => {
     expect(prompt).not.toContain('Estructura revista');
     expect(prompt).not.toContain('Estructura póster');
     expect(drawSketchDirection(() => 0).lines.join('\n')).not.toContain('Estructura ');
+  });
+  it('gives no second opinion on length or size: the slots own both', () => {
+    for (const draw of [0, 0.5, 0.99]) expect(drawSketchDirection(() => draw).lines.join('\n')).not.toMatch(/\d+-\d+ bloques|tamaños/);
   });
   it('forwards the structure so the response is bound to its slots', () => {
     const structure = aStructure();

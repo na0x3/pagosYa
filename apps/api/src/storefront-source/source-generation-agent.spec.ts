@@ -413,6 +413,25 @@ describe('sketch-first new stores', () => {
     expect(prompt).toContain('(hero)');
   });
 
+  // The skeleton is only a guarantee if both ends receive it: dropping the argument at either call site would leave
+  // every pinned-skeleton fixture passing while the model chose bands freely again.
+  it('hands the drawn skeleton to the prompt and binds the response to it', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const prompt = JSON.parse((fetchMock.mock.calls[0] as any)[1].body).input[0].content[0].text;
+    for (const slot of skeleton.slots) expect(prompt).toContain(`- ${slot.id}: ${slot.type}`);
+    // A block the model invents is discarded only when the structure reaches repair.
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ blocks: [{ id: 'invented', type: 'banner', headline: 'x', bg: 'pop', size: 'm' }, ...JSON.parse(sketchJson).blocks] }) }] }] })));
+    projects.save.mockClear();
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const saved = JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json').content);
+    const ids = saved.blocks.map((b: any) => b.id);
+    expect(ids).not.toContain('invented');
+    for (const id of ids) expect(skeleton.slots.map(slot => slot.id)).toContain(id);
+  });
+
   it('builds a brand-new store from one sketch call, saving the assembled files and sketch.json', async () => {
     const { service, projects, brief } = await setup();
     newStore(projects);
