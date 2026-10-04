@@ -104,14 +104,23 @@ export function fillStructure(blocks: SketchBlock[], structure: PageStructure, c
     entries.push({ slot, block: block && block.type === slot.type ? block : null });
   }
 
-  // An empty band, whether a stand-in or the model's own block with every item repaired away, has no content, and
-  // starter items would be filler, so it renders as a titled band with nothing in it: worse than no band. Drop it, unless that takes the page under the
-  // grammar's floor of six, where the shell stays because a short page is the habit the veto cap exists to stop.
-  let remaining = entries.length;
-  const kept = entries.filter(entry => {
-    if ((entry.block && hasContent(entry.block)) || !CAN_BE_EMPTY.includes(entry.slot.type) || remaining <= MIN_BANDS) return true;
-    remaining--;
+  // A band the model did fill but whose content repair discarded is a different case from a slot it never
+  // answered. It tried, the content was unusable, and keeping a heading over nothing just to hit a band count is
+  // the filler this design exists to remove, so it drops whatever the page length. An honest short page beats a
+  // broken long one. (The grammar's floor is asserted on the drawn structure, not on what survives repair.)
+  const answered = entries.filter(entry => {
+    if (!entry.block || !CAN_BE_EMPTY.includes(entry.slot.type) || hasContent(entry.block)) return true;
     notes.push(`la banda ${entry.slot.id} (${entry.slot.type}) quedó sin contenido; se quitó`);
+    return false;
+  });
+
+  // A stand-in for a slot nobody filled has no content either, and starter items would be filler. That one the
+  // floor does protect: the veto cap exists to stop a model talking its way back to the short habitual page.
+  let remaining = answered.length;
+  const kept = answered.filter(entry => {
+    if (entry.block || !CAN_BE_EMPTY.includes(entry.slot.type) || remaining <= MIN_BANDS) return true;
+    remaining--;
+    notes.push(`la banda ${entry.slot.id} (${entry.slot.type}) no se llenó y no tiene contenido; se quitó`);
     return false;
   });
 

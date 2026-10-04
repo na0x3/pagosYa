@@ -243,8 +243,7 @@ it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('renders drawn structure %i with every 
 
 // The model sends every list as malformed items (bare strings, paths that are not photos): the repair discards them,
 // so each list band arrives present but empty. The page must lose those bands rather than ship a heading over nothing.
-// A page already at the grammar's floor of six keeps its empty shells by design (the fill's unit test covers that), so it is left out here.
-it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(seed => drawPageStructure(fullStore, seeded(seed)).slots.length > 6))('renders drawn structure %i with every list malformed and no band left empty', async seed => {
+it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('renders drawn structure %i with every list malformed and no band left empty', async seed => {
   const structure = drawPageStructure(fullStore, seeded(seed));
   const malformed = { ...modelCopy, items: ['uno', 'dos'], quotes: ['uno'], photos: ['no-es-una-foto'], paragraphs: [], left: '', right: '' };
   const response = { blocks: structure.slots.map(slot => ({ id: slot.id, type: slot.type, ...malformed })) };

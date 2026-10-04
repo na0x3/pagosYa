@@ -150,7 +150,7 @@ describe('fillStructure', () => {
       expect(notes.join(' ')).toMatch(/sin contenido/);
     });
 
-    it('keeps the shell when dropping would take the page under six bands', () => {
+    it('still refuses a veto at the floor: unanswered slots are filled in rather than the page going under six', () => {
       const s = build(['hero', 'split', 'steps', 'faq', 'story', 'gallery', 'catalog', 'footer']);
       const keep = ['hero', 'split', 'catalog', 'footer'];
       const { blocks } = fillStructure(s.slots.filter(sl => keep.includes(sl.type)).map(sl => filled(sl.id, sl.type)), s, ctx);
@@ -180,12 +180,12 @@ describe('fillStructure', () => {
       });
     }
 
-    it('keeps an emptied band when dropping it would take the page under six', () => {
+    it('drops an emptied band even when that takes the page under six, because it was answered and came back unusable', () => {
       const s = build(['hero', 'split', 'faq', 'catalog', 'newsletter', 'footer']);
       const response = s.slots.map(sl => (sl.type === 'faq' ? ({ id: sl.id, type: 'faq', items: [] } as unknown as SketchBlock) : filled(sl.id, sl.type)));
       const { blocks } = fillStructure(response, s, ctx);
-      expect(blocks.map(block => block.type)).toContain('faq');
-      expect(blocks).toHaveLength(6);
+      expect(blocks.map(block => block.type)).not.toContain('faq');
+      expect(blocks).toHaveLength(5);
     });
 
     it('keeps a band that still has content', () => {
