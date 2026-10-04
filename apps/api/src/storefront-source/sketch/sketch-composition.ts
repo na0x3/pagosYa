@@ -39,6 +39,43 @@ const position = (raw: { x: number; y: number; w: number; r: number }) => ({ x: 
 const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const asRecord = (value: unknown): Record<string, unknown> => (typeof value === 'object' && value !== null ? value as Record<string, unknown> : {});
 
+/* Dosage. Handed freedom, the model takes all of it: one real generation freed 42 parts across 10 of 13 blocks.
+ * Two things break. A freed part is absolute, so a container that loses every child it had collapses — the band
+ * shrinks to its padding and the parts pile on top of each other (measured: an announce bar 19px tall with its
+ * text outside it, a steps band with 9 overlapping pairs). And even where nothing collapses, a page on which
+ * everything floats reads as broken rather than composed. So freedom is rationed: rare, and never total.
+ * This lives here and not in `repairSketchFree` because the Boceto's hand editor must keep letting a merchant
+ * free whatever they like, one deliberate drag at a time. */
+const FREE_MAX_PER_BLOCK = 2;
+const FREE_MAX_BLOCKS = 3;
+/** Inserted elements are the same appetite by another name: the same generation added 18 of them, and a stray
+ * pill or emoji landing on a paragraph reads exactly as broken as a freed part does. Rationed on its own budget,
+ * because a sticker is cheap where pulling a headline out of its column is not. */
+const EXTRAS_MAX_PER_BLOCK = 2;
+const EXTRAS_MAX_BLOCKS = 3;
+
+/** Keeps the model's first choices — the ones it reached for first are the ones it meant — and refuses any spot
+ * that would empty the container it came out of. */
+function rationFree(block: SketchBlock, requested: Record<string, unknown>[]): Record<string, unknown>[] {
+  const parentOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
+  const siblings = new Map<string, number>();
+  for (const path of sketchFreeablePaths(block)) siblings.set(parentOf(path), (siblings.get(parentOf(path)) ?? 0) + 1);
+  const taken = new Map<string, number>();
+  const kept: Record<string, unknown>[] = [];
+  for (const item of requested) {
+    if (kept.length >= FREE_MAX_PER_BLOCK) break;
+    const parent = parentOf(String(item.path));
+    // A container with a single freeable child normally holds parts that cannot be freed at all (a caption beside
+    // its photo), so that one may leave; from two upwards, one always stays behind to hold the box open.
+    const room = Math.max(1, (siblings.get(parent) ?? 1) - 1);
+    const used = taken.get(parent) ?? 0;
+    if (used >= room) continue;
+    taken.set(parent, used + 1);
+    kept.push(item);
+  }
+  return kept;
+}
+
 export function compositionPrompt(input: { sketch: StoreSketch; energy: string }): string {
   const lines = input.sketch.blocks.map(block => {
     const paths = sketchFreeablePaths(block);
@@ -55,6 +92,10 @@ export function compositionPrompt(input: { sketch: StoreSketch; energy: string }
     'x e y son porcentajes de la banda (0 = izquierda/arriba, 100 = derecha/abajo). w es el ancho en porcentaje; poné 0 para que sea automático. r son grados de giro; 0 es sin girar.',
     'Ideas de composición, como vocabulario y NO como menú — podés hacer cualquier otra cosa: un titular que monta sobre su foto (x alto, y medio, r pequeño), un badge montado en la esquina de la foto, un emoji grande asomando fuera de una tarjeta, una cifra enorme girada en el margen, dos pastillas desarmadas a distinto alto.',
     'Componé con intención: lo que no aporta, dejalo en su lugar. Un bloque que no querés tocar simplemente no aparece en tu respuesta. En energía minimal casi no toques nada; en maximalista animate.',
+    'DOSIS: soltá como mucho 2 partes por bloque, y solamente en 3 bloques de toda la página. Todo lo demás se queda en su caja. Lo que pidas de más se descarta, así que elegí los dos mejores momentos de cada bloque.',
+    'Lo mismo con los elementos que insertás: como mucho 2 por bloque y solo en 3 bloques. Un adorno de más tapa un texto y arruina el bloque entero.',
+    'NUNCA sueltes todas las partes de un grupo: si las soltás todas, la banda se queda sin nada que la sostenga, se encoge hasta su padding y los textos terminan uno encima del otro.',
+    'Una parte suelta va SIEMPRE donde no hay texto: sobre la foto del bloque, o en el margen que deja una banda angosta. Si la dejás sobre su propia columna, cae encima de sus hermanas y no se lee nada.',
     'No tapes un texto con otro texto: si dos cosas caen en el mismo punto, movelas.',
   ].join('\n');
 }
@@ -66,13 +107,24 @@ export function applySketchComposition(sketch: StoreSketch, raw: unknown, ctx: S
   const entries = asArray(asRecord(raw).blocks).map(asRecord).filter(entry => typeof entry.id === 'string');
   const byId = new Map(entries.map(entry => [entry.id as string, entry]));
   let touched = 0;
+  // Which blocks get to hold freed parts at all, in the order the model raised them.
+  const freeBudget = new Set<string>();
+  for (const entry of entries) {
+    if (freeBudget.size >= FREE_MAX_BLOCKS) break;
+    if (asArray(entry.free).length) freeBudget.add(entry.id as string);
+  }
+  const extrasBudget = new Set<string>();
+  for (const entry of entries) {
+    if (extrasBudget.size >= EXTRAS_MAX_BLOCKS) break;
+    if (asArray(entry.extras).length) extrasBudget.add(entry.id as string);
+  }
   const blocks = sketch.blocks.map(block => {
     const entry = byId.get(block.id);
     if (!entry) return block;
     byId.delete(block.id);
     const next = { ...block } as SketchBlock & Record<string, unknown>;
 
-    const inserted = repairSketchExtras(asArray(entry.extras).map(item => {
+    const inserted = repairSketchExtras((extrasBudget.has(block.id) ? asArray(entry.extras).slice(0, EXTRAS_MAX_PER_BLOCK) : []).map(item => {
       // The raw x/y/w/r are dropped rather than spread, because spreading them back over `position` would
       // reinstate the `w: 0` it deliberately removed — and repair clamps a zero width up to 5%.
       const { x, y, w, r, ...rest } = asRecord(item);
@@ -90,8 +142,8 @@ export function applySketchComposition(sketch: StoreSketch, raw: unknown, ctx: S
 
     // Freed parts are named against the block as it now stands, so a spot on an element the composition just
     // reordered or inserted still resolves.
-    const free = repairSketchFree(next, Object.fromEntries(asArray(entry.free).map(asRecord)
-      .filter(item => typeof item.path === 'string')
+    const requested = freeBudget.has(block.id) ? asArray(entry.free).map(asRecord).filter(item => typeof item.path === 'string') : [];
+    const free = repairSketchFree(next, Object.fromEntries(rationFree(next, requested)
       .map(item => [item.path as string, position({ x: Number(item.x), y: Number(item.y), w: Number(item.w), r: Number(item.r) })])));
     if (free) next.free = free; else delete next.free;
 

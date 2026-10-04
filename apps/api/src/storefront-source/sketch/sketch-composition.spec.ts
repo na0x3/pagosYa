@@ -91,3 +91,42 @@ it('prompt carries the real freeable paths and the energy line', () => {
   // A path the tree does not contain must never be advertised.
   expect(prompt).not.toContain('copy/invented');
 });
+
+/* Dosage (2026-10-04). A real generation freed 42 parts across 10 of 13 blocks: containers lost every in-flow
+ * child, so sections collapsed to their padding and the absolute parts piled on each other. Measured on the
+ * owner's store: aviso sectionH=19px with 3 freed parts spilling out, pasos 9 overlapping pairs. */
+const wide = () => repairSketch({ blocks: [
+  { id: 'h1', type: 'hero', headline: 'Pan de verdad', sub: 'Todos los días', photo: 'assets/a.jpg', cta: 'Comprar', cta2: 'Ver', badge: 'Nuevo', trust: 'Envío gratis' },
+  { id: 'a1', type: 'announce', left: 'Izquierda', right: 'Derecha' },
+  { id: 'a2', type: 'announce', left: 'Izquierda', right: 'Derecha' },
+  { id: 'a3', type: 'announce', left: 'Izquierda', right: 'Derecha' },
+  { id: 'a4', type: 'announce', left: 'Izquierda', right: 'Derecha' },
+] }, ctx).sketch;
+const spot = (path: string) => ({ path, x: 20, y: 30, w: 0, r: 0 });
+const freeOf = (sketch: ReturnType<typeof wide>, id: string) => sketch.blocks.find(b => b.id === id)!.free;
+
+it('keeps a block to two freed parts, in the order the model asked for them', () => {
+  const { sketch } = applySketchComposition(wide(), { blocks: [entry({ id: 'h1', free: [
+    spot('copy/headline'), spot('copy/sub'), spot('copy/trust'), spot('copy/badge'),
+  ] })] }, ctx);
+  expect(Object.keys(freeOf(sketch, 'h1')!)).toEqual(['copy/headline', 'copy/sub']);
+});
+
+it('frees parts in at most three blocks, so a page keeps bands that behave', () => {
+  const { sketch } = applySketchComposition(wide(), { blocks: ['a1', 'a2', 'a3', 'a4'].map(id => entry({ id, free: [spot('row/left')] })) }, ctx);
+  expect(['a1', 'a2', 'a3', 'a4'].filter(id => freeOf(sketch, id)).length).toBe(3);
+});
+
+// The collapse itself: `row` holds exactly two freeable parts, so freeing both leaves nothing in the flow and the
+// band shrinks to its padding — which is how the owner's announce bar ended up 19px tall with its text outside it.
+it('never frees every part of a container, so the band keeps its height', () => {
+  const { sketch } = applySketchComposition(wide(), { blocks: [entry({ id: 'a1', free: [spot('row/left'), spot('row/right')] })] }, ctx);
+  expect(Object.keys(freeOf(sketch, 'a1')!)).toEqual(['row/left']);
+});
+
+it('asks the model for restraint rather than relying only on the clamp', () => {
+  const prompt = compositionPrompt({ sketch: wide(), energy: 'Energía calma.' });
+  expect(prompt).toMatch(/2 partes|dos partes/);
+  expect(prompt).toMatch(/3 bloques|tres bloques/);
+});
+
