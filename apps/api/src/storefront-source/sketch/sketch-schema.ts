@@ -419,11 +419,12 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     }
   }
 
+  const structure = Array.isArray(defaults?.structure?.slots) ? defaults?.structure : undefined;
   // The drawn skeleton (spec 2026-10-04-page-grammar-and-real-copy). Enforced only when the caller passes a
   // structure, never because a sketch happens to carry one: a chat edit passes none, so a merchant's bands
   // are never taken from under them.
-  if (defaults?.structure) {
-    const applied = fillStructure(blocks, defaults.structure, ctx);
+  if (structure) {
+    const applied = fillStructure(blocks, structure, ctx);
     blocks.length = 0;
     blocks.push(...applied.blocks);
     notes.push(...applied.notes);
@@ -437,7 +438,7 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
   // Structure: a shop always sells and every page ends in a footer, exactly one, last.
   if (!blocks.length) blocks.push({ id: '', type: 'hero', variant: 'photo-right', headline: ctx.storeName, sub: '', cta: 'Ver productos', cta2: '', trust: '', badge: '', note: '', sticker: '', caption: '', bg: 'paper', size: 'm' });
   // A drawn structure without a catalog is a store with nothing to sell; adding one back would undo the draw.
-  if (ctx.purpose === 'shop' && !defaults?.structure && !blocks.some(b => b.type === 'catalog')) {
+  if (ctx.purpose === 'shop' && !structure && !blocks.some(b => b.type === 'catalog')) {
     blocks.splice(1, 0, { id: '', type: 'catalog', kicker: '', title: 'Nuestros productos', seeAll: '', badges: [], stripLeft: '', stripRight: '', cardRatio: '4-3', cardDesc: true, cardAdd: true, bg: 'paper', size: 'm' });
     notes.push('faltaba el catálogo; se añadió');
   }
@@ -471,7 +472,7 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     bg: bg(rawAccount.bg, 'tint-accent'),
   };
 
-  return { sketch: { palette, fonts, scale, style, product, account, ...(defaults?.structure ? { structure: defaults.structure } : {}), blocks: ordered }, notes };
+  return { sketch: { palette, fonts, scale, style, product, account, ...(structure ? { structure } : {}), blocks: ordered }, notes };
 }
 
 /** The kit button form that matches the sketch's Botones choice, so the platform's purchase

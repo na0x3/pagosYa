@@ -495,4 +495,10 @@ describe('repairSketch with a drawn structure', () => {
     const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, structCtx);
     expect('structure' in sketch).toBe(false);
   });
+
+  it('ignores a truthy structure that has no slots array', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, structCtx, { structure: {} as never });
+    expect(sketch.structure).toBeUndefined();
+    expect(sketch.blocks.some(b => b.type === 'catalog')).toBe(true);
+  });
 });

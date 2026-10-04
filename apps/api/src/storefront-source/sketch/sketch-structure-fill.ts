@@ -25,6 +25,22 @@ function defaultBlock(slot: PageSlot, ctx: SketchContext): SketchBlock {
   }
 }
 
+/** Types whose whole content is a list; an empty one is a heading over nothing. */
+const LIST_BEARING: SketchBlock['type'][] = ['steps', 'faq', 'collections', 'gallery', 'reviews', 'story'];
+/** The grammar's floor on page length (see `violations`). */
+const MIN_BANDS = 6;
+
+/** The slot owns the shape and the model owns the content. Without this the drawn size rhythm and width walk
+ * would be advice the model is free to ignore, which is the failure the drawn skeleton exists to remove.
+ * Width follows repairSketch's convention: `bleed` is stored as the absence of the field. A slot that carries
+ * no media has its single photo stripped; one that does carry media cannot conjure a photo, so it is left alone. */
+function shapeToSlot(block: SketchBlock, slot: PageSlot): SketchBlock {
+  const shaped = { ...block, size: slot.size } as SketchBlock & { photo?: string };
+  if (slot.width !== 'bleed') shaped.width = slot.width; else delete shaped.width;
+  if (!slot.media) delete shaped.photo;
+  return shaped;
+}
+
 /** The slots the page cannot lose, whatever the model says. */
 const UNVETOABLE: SketchBlock['type'][] = ['catalog', 'footer'];
 
@@ -58,15 +74,28 @@ export function fillStructure(blocks: SketchBlock[], structure: PageStructure, c
   if (vetoed.length > allowance) notes.push(`se dejaron demasiadas bandas vacías (${vetoed.length}); ${vetoed.length - allowance} se completaron con contenido base`);
   if (honoured.size) notes.push(`${honoured.size} banda(s) quedaron sin contenido y se quitaron`);
 
-  const out: SketchBlock[] = [];
+  // Each surviving slot either keeps the model's block or needs a bare stand-in.
+  const entries: Array<{ slot: PageSlot; block: SketchBlock | null }> = [];
   for (const slot of slots) {
     if (honoured.has(slot.id)) continue;
     const block = bySlot.get(slot.id);
-    // The slot owns the shape and the model owns the content. A block of the wrong type for its slot cannot
-    // be rendered as the slot's type, so it gives way to a bare block of the right one.
+    // A block of the wrong type for its slot cannot be rendered as the slot's type, so it gives way.
     if (block && block.type !== slot.type) notes.push(`el bloque ${slot.id} tenía el tipo ${String(block.type).slice(0, 20)} y la banda pide ${slot.type}; se reemplazó`);
-    out.push(block && block.type === slot.type ? block : defaultBlock(slot, ctx));
+    entries.push({ slot, block: block && block.type === slot.type ? block : null });
   }
+
+  // A stand-in for a list-bearing type has no list, and starter items would be filler, so it renders as a
+  // titled band with nothing in it: worse than no band. Drop it, unless that takes the page under the
+  // grammar's floor of six, where the shell stays because a short page is the habit the veto cap exists to stop.
+  let remaining = entries.length;
+  const kept = entries.filter(entry => {
+    if (entry.block || !LIST_BEARING.includes(entry.slot.type) || remaining <= MIN_BANDS) return true;
+    remaining--;
+    notes.push(`la banda ${entry.slot.id} (${entry.slot.type}) no tenía contenido; se quitó`);
+    return false;
+  });
+
+  const out: SketchBlock[] = kept.map(({ slot, block }) => shapeToSlot(block ?? defaultBlock(slot, ctx), slot));
 
   // A veto can leave two accent strips touching, which the grammar forbids by construction.
   for (let i = 1; i < out.length; i++) {
