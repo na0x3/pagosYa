@@ -39,6 +39,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
+import { applySketchComposition, compositionPrompt, SKETCH_COMPOSITION_SCHEMA } from './sketch';
 import { assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
@@ -553,7 +554,7 @@ export class SourceGenerationService {
     const started = Date.now();
     const runTimeout = agentEngine ? agentLimits(chatgptPlan).wallMs + 30_000 : 240_000;
     const signal = AbortSignal.any([leaseController.signal, AbortSignal.timeout(runTimeout), ...[execution?.signal, sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
-    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
+    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
     let sketchFile: SourceProjectFileDto | null = null;
     let generated!: { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
     let agentOutcome: { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>>; requirements: AgentToolbox['requirements']; evidence: AgentToolbox['evidence'] } | undefined;
@@ -766,8 +767,43 @@ export class SourceGenerationService {
         if (!parsed) autoRepairs.push('Boceto: la respuesta del modelo no sirvió; se usó el boceto base.');
         autoRepairs.push(...notes.slice(0, 10).map(note => `Boceto: ${note}`));
         await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
-        generated = { label: `Boceto de ${sketchCtx.storeName}`.slice(0, 120), files: assembleSketch(sketch, sketchCtx) };
-        sketchFile = { path: 'sketch.json', content: JSON.stringify(sketch, null, 2) + '\n' };
+        // Stage 2 (spec 2026-10-04): the page gets composed. Total by construction — any failure keeps the drawn
+        // sketch, so the merchant loses composition, never the store.
+        let composed = sketch;
+        const composeAttempt: (typeof attempts)[number] = { model, phase: 'composition', durationMs: 0, status: 'FAILED', usage: null };
+        attempts.push(composeAttempt);
+        const composePrompt = compositionPrompt({ sketch, energy: direction.lines.join(' ') });
+        let composeBody: any = null;
+        let composeStatus = 0;
+        const composeStarted = Date.now();
+        try {
+          const allocation = budget.reserve(model, Math.ceil(composePrompt.length / 3) + 2000, 8_000, 500);
+          try {
+            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Componé el boceto: soltá partes, insertá elementos y reordená. Usá solo las rutas listadas. JSON estricto según el esquema.', input: [{ role: 'user', content: [{ type: 'input_text', text: composePrompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'sketch_composition', strict: true, schema: SKETCH_COMPOSITION_SCHEMA } } })) });
+            composeStatus = response.status;
+            composeBody = await response.json().catch(() => null);
+          } finally { allocation.settle(composeBody?.usage); }
+        } catch (error) { composeAttempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
+        signal.throwIfAborted();
+        composeAttempt.durationMs = Date.now() - composeStarted;
+        composeAttempt.usage = sourceUsage(model, composeBody?.usage);
+        composeAttempt.responseStatus = typeof composeBody?.status === 'string' ? composeBody.status : composeStatus ? `http_${composeStatus}` : undefined;
+        if (typeof composeBody?.incomplete_details?.reason === 'string') composeAttempt.incompleteReason = composeBody.incomplete_details.reason;
+        let composeParsed: unknown;
+        try { composeParsed = sourceResponseJson(composeBody); } catch { composeParsed = undefined; }
+        if (typeof composeParsed === 'object' && composeParsed !== null) {
+          const applied = applySketchComposition(sketch, composeParsed, sketchCtx);
+          composed = applied.sketch;
+          composeAttempt.status = 'COMPLETED';
+          autoRepairs.push(...applied.notes.slice(0, 5).map(note => `Composición: ${note}`));
+        } else {
+          if (!composeAttempt.failureReason) composeAttempt.failureReason = (composeBody?.error?.message || 'respuesta inválida; se usó el boceto sin componer').slice(0, 300);
+          autoRepairs.push('Composición: el modelo no compuso la página; se usó el boceto tal como salió.');
+        }
+        await this.metering?.record(storeId, 'source-generation', model, composeBody, composeAttempt.durationMs, composeAttempt.status);
+        generated = { label: `Boceto de ${sketchCtx.storeName}`.slice(0, 120), files: assembleSketch(composed, sketchCtx) };
+        sketchFile = { path: 'sketch.json', content: JSON.stringify(composed, null, 2) + '\n' };
         lenient = true;
         try { await acceptCandidate(); } finally { lenient = false; }
       } else if (sketchEdit) {

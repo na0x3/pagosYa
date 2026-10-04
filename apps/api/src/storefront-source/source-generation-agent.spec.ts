@@ -1,4 +1,6 @@
+import { sketchFreeablePaths } from '@pagosya/shared-types';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { repairSketch } from './sketch';
 import { SourceGenerationService } from './source-generation.service';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceProjectsService } from './source-projects.service';
@@ -337,13 +339,63 @@ describe('sketch-first new stores', () => {
   });
   const sketchResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 300 }, output: [{ content: [{ type: 'output_text', text: sketchJson }] }] }));
   const newStore = (projects: any) => { projects.current.mockResolvedValue({ revision: 0, slug: 'pausa' }); };
+  const compositionResponse = (payload: unknown) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 500, output_tokens: 120 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(payload) }] }] }));
+  // The paths belong to the renderer, not to this test, so ask for a real one instead of hardcoding a guess.
+  const heroPath = () => {
+    const { sketch } = repairSketch(JSON.parse(sketchJson), { storeName: 'pausa', purpose: 'shop', photos: [] });
+    return sketchFreeablePaths(sketch.blocks.find(block => block.id === 'h')!)[0];
+  };
+
+  it('composes a fresh sketch with a second call and saves the result', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const path = heroPath();
+    const fetchMock = jest.spyOn(globalThis, 'fetch')
+      .mockImplementationOnce(async () => sketchResponse())
+      .mockImplementationOnce(async () => compositionResponse({ blocks: [{ id: 'h', free: [{ path, x: 55, y: 30, w: 46, r: -3 }], extras: [], order: [], layout: [] }] }));
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // The second call must carry the composition schema, not the sketch schema.
+    expect(JSON.parse((fetchMock.mock.calls[1] as any)[1].body).text.format.name).toBe('sketch_composition');
+    const saved = projects.save.mock.calls[0][2];
+    const sketch = JSON.parse(saved.files.find((f: any) => f.path === 'sketch.json').content);
+    expect(sketch.blocks.find((b: any) => b.id === 'h').free).toEqual({ [path]: { x: 55, y: 30, w: 46, r: -3 } });
+    // The composed spot reaches the rendered page, not only sketch.json.
+    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('data-skb-free="on"');
+  });
+
+  // The spec's central promise: a composition failure costs a plainer page, never an error.
+  it('ships the drawn sketch unchanged when the composition call fails', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    jest.spyOn(globalThis, 'fetch')
+      .mockImplementationOnce(async () => sketchResponse())
+      .mockImplementationOnce(async () => { throw new Error('network down'); });
+    const result = await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const saved = projects.save.mock.calls[0][2];
+    const sketch = JSON.parse(saved.files.find((f: any) => f.path === 'sketch.json').content);
+    expect(sketch.blocks.every((b: any) => !b.free && !b.extras)).toBe(true);
+    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('skb-hero');
+    expect(result.generation.autoRepairs.some((note: string) => note.startsWith('Composición'))).toBe(true);
+  });
+
+  it('asks only for the blocks the sketch actually has, with their real paths', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    const prompt = JSON.parse((fetchMock.mock.calls[1] as any)[1].body).input[0].content[0].text;
+    expect(prompt).toContain(heroPath());
+    expect(prompt).toContain('(hero)');
+  });
 
   it('builds a brand-new store from one sketch call, saving the assembled files and sketch.json', async () => {
     const { service, projects, brief } = await setup();
     newStore(projects);
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
     await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // One call draws the sketch, a second composes it (spec 2026-10-04).
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     const saved = projects.save.mock.calls[0][2];
     expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('skb-hero');
     expect(saved.files.find((f: any) => f.path === 'sketch.json')).toBeDefined();
@@ -442,6 +494,20 @@ describe('chat-on-sketch edits', () => {
     const saved = projects.save.mock.calls[0][2];
     expect(saved.files.find((f: any) => f.path === 'sketch.json').content).toContain('Titular juguetón');
     expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain(JSON.stringify('Titular juguetón'));
+  });
+  // Review Focus 5: the merchant's first chat message must not flatten the page YAPI composed, and an edit
+  // must not pay for a composition call of its own.
+  it('a chat edit makes no composition call and keeps the spots it inherited', async () => {
+    const path = sketchFreeablePaths(repairSketch(JSON.parse(JSON.stringify(bornSketch)), { storeName: 'pausa', purpose: 'shop', photos: [] }).sketch.blocks.find(b => b.id === 'h')!)[0];
+    const composed = { ...bornSketch, blocks: bornSketch.blocks.map(b => (b.id === 'h' ? { ...b, free: { [path]: { x: 55, y: 30, w: 46 } } } : b)) };
+    const context = await setup('agent');
+    const snapshot = (await context.projects.version()).snapshot;
+    context.projects.version.mockResolvedValue({ revision: 1, snapshot: { ...snapshot, files: [...snapshot.files, { path: 'sketch.json', content: JSON.stringify(composed) }] } });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => editedResponse());
+    await context.service.generate('m', 's', { ...input(context.brief), instruction: 'haz el titular más juguetón' }, new SourceRequestBudget(50));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const saved = JSON.parse(context.projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json').content);
+    expect(saved.blocks.find((b: any) => b.id === 'h').free).toEqual({ [path]: { x: 55, y: 30, w: 46 } });
   });
   it('a garbage reply keeps the previous revision and reports a retryable failure', async () => {
     const { service, projects, brief } = await sketchBorn();
