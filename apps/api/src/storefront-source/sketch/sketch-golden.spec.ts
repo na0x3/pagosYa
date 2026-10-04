@@ -1,5 +1,6 @@
 import { assembleSketch } from './sketch-assembler';
 import { repairSketch } from './sketch-schema';
+import { applySketchComposition } from './sketch-composition';
 import { compileNextPreview } from '../source-next';
 import { agentPreviewSnapshot, captureAgentDraft } from '../agent/agent-capture';
 import { nextStoreFiles } from '../fixtures/next-store';
@@ -72,4 +73,20 @@ it('screenshots index.html at desktop and mobile without page errors', async () 
     expect(shot.errors).toEqual([]);
     expect(shot.image.length).toBeGreaterThan(0);
   }
+});
+
+it('a composed sketch assembles with its free stamps and its band widths', () => {
+  const { sketch } = repairSketch({ blocks: [
+    { id: 'h1', type: 'hero', headline: 'Pan de verdad', photo: 'assets/a.jpg', width: 'offset-left' },
+    { id: 's1', type: 'story', title: 'Historia', paragraphs: ['Uno'], width: 'narrow' },
+  ] }, ctx);
+  const composed = applySketchComposition(sketch, { blocks: [
+    { id: 'h1', free: [{ path: 'copy/headline', x: 52, y: 24, w: 48, r: -4 }], extras: [{ id: 'e1a', kind: 'emoji', value: '🥐', href: '', x: 86, y: 8, w: 9, r: 0 }], order: [], layout: [] },
+  ] }, ctx).sketch;
+  const page = assembleSketch(composed, ctx).find(f => f.path === 'components/home.tsx')!.content;
+  expect(page).toContain('data-skb-width={"offset-left"}');
+  expect(page).toContain('data-skb-width={"narrow"}');
+  expect(page).toContain('data-skb-free="on"');
+  expect(page).toContain('"--skb-fr"');
+  expect(page).toContain('🥐');
 });

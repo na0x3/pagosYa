@@ -4,6 +4,8 @@ import { resolve } from 'path';
 import type { Page } from 'playwright';
 import { assembleSketch } from './sketch-assembler';
 import { repairSketch } from './sketch-schema';
+import type { StoreSketch } from './sketch-schema';
+import { applySketchComposition } from './sketch-composition';
 import { agentPreviewSnapshot } from '../agent/agent-capture';
 import { nextStoreFiles } from '../fixtures/next-store';
 import { withSourceIcons } from '../source-asset-library';
@@ -18,7 +20,12 @@ const tinyJpeg = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDB
 const bocetoScript = readFileSync(resolve(__dirname, '../../../../../packages/storefront-preview/src/source-preview-boceto-mode.js'), 'utf8');
 
 async function openPage<T>(blocks: object[], visit: (page: Page) => Promise<T>): Promise<T> {
-  const files = await withSourceIcons(assembleSketch(repairSketch({ blocks }, ctx).sketch, ctx));
+  return openSketch(repairSketch({ blocks }, ctx).sketch, visit);
+}
+
+/** Same as openPage but for a sketch that has already been built — a composed one, say. */
+async function openSketch<T>(sketch: StoreSketch, visit: (page: Page) => Promise<T>): Promise<T> {
+  const files = await withSourceIcons(assembleSketch(sketch, ctx));
   const base = [...nextStoreFiles().filter(file => ['config.js', 'commerce.js'].includes(file.path)), { path: 'assets/a.jpg', content: tinyJpeg, encoding: 'base64' as const }];
   const snapshot = await agentPreviewSnapshot({ brief: { businessType: 'Repostería', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Cálida' }, files: base }, files);
   return withVisualSandbox(snapshot, '', undefined, false, async context => {
@@ -152,4 +159,38 @@ it('two parts dragged together keep their distance after both come out', async (
     expect(Math.abs(result.after[i].left - result.before[i].left - 300)).toBeLessThan(3);
     expect(Math.abs(result.after[i].top - result.before[i].top - 40)).toBeLessThan(3);
   }
+});
+
+it('a freed part escapes a narrow column on desktop and rejoins it on a phone', async () => {
+  const { sketch } = repairSketch({ blocks: [{ id: 's1', type: 'story', title: 'Historia', paragraphs: ['Uno'], width: 'narrow' }] }, ctx);
+  const composed = applySketchComposition(sketch, { blocks: [
+    { id: 's1', free: [{ path: 'copy/title', x: 82, y: 10, w: 0, r: 0 }], extras: [], order: [], layout: [] },
+  ] }, ctx).sketch;
+  await openSketch(composed, async page => {
+    const desktop = await page.evaluate(() => {
+      const section = document.querySelector('[data-skb="s1"]')!.getBoundingClientRect();
+      const title = document.querySelector('[data-skb="s1"] [data-skb-free]')!.getBoundingClientRect();
+      const column = document.querySelector('[data-skb="s1"] > :not(.skb-extras)')!.getBoundingClientRect();
+      return { past: title.left > column.right, inside: title.left >= section.left && title.right <= section.right + 1 };
+    });
+    // The freed part leaves the narrow column but never leaves the band: that is the editorial overlap.
+    expect(desktop.past).toBe(true);
+    expect(desktop.inside).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    const phone = await page.evaluate(() => getComputedStyle(document.querySelector('[data-skb="s1"] [data-skb-free]')!).position);
+    expect(phone).toBe('static');
+  });
+});
+
+it('an offset band centres on a phone', async () => {
+  await openPage([{ id: 's2', type: 'story', title: 'Historia', paragraphs: ['Uno'], width: 'offset-right' }], async page => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    const gaps = await page.evaluate(() => {
+      const section = document.querySelector('[data-skb="s2"]')!.getBoundingClientRect();
+      const column = document.querySelector('[data-skb="s2"] > :not(.skb-extras)')!.getBoundingClientRect();
+      return { left: column.left - section.left, right: section.right - column.right };
+    });
+    expect(Math.abs(gaps.left - gaps.right)).toBeLessThan(2);
+  });
 });
