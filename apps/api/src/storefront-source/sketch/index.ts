@@ -1,5 +1,6 @@
-export { repairSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, resolveBg, mixHex, sketchProductTheme, sketchButtonForm, sketchKitDna, SKETCH_BLOCK_TYPES, SKETCH_EL_ORDER, MARQUEE_GLYPHS, SKETCH_STYLE_OPTIONS, DEFAULT_SKETCH_STYLE } from './sketch-schema';
-export type { StoreSketch, SketchStyle, SketchBlock, SketchContext, SketchPalette, SketchBg, SketchSize, SketchProduct } from './sketch-schema';
+export { repairSketch, repairSketchExtras, repairSketchOrder, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, resolveBg, mixHex, sketchProductTheme, sketchButtonForm, sketchKitDna, SKETCH_BLOCK_TYPES, SKETCH_EL_ORDER, SKETCH_WIDTHS, MARQUEE_GLYPHS, SKETCH_STYLE_OPTIONS, DEFAULT_SKETCH_STYLE } from './sketch-schema';
+export type { StoreSketch, SketchStyle, SketchBlock, SketchContext, SketchPalette, SketchBg, SketchSize, SketchWidth, SketchProduct } from './sketch-schema';
+export { SKETCH_COMPOSITION_SCHEMA, compositionPrompt, applySketchComposition } from './sketch-composition';
 export { assembleSketch } from './sketch-assembler';
 export { renderBlock, blockCss, SKETCH_BASE_CSS } from './sketch-blocks';
 export { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
