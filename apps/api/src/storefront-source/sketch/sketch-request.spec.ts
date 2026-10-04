@@ -83,3 +83,27 @@ it('the edit prompt carries the current sketch, the instruction and an optional 
   const untargeted = sketchEditPrompt({ sketch, instruction: 'más color', photos: [], catalogNames: [] });
   expect(untargeted).not.toContain('Edita únicamente');
 });
+
+describe('layout controls reach the model', () => {
+  const blockSchemas = () => (SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf as any[];
+  it('offers width, flip, align and swap on every block type, all required for strict mode', () => {
+    for (const schema of blockSchemas()) {
+      for (const field of ['width', 'flip', 'align', 'swap']) {
+        expect(schema.properties).toHaveProperty(field);
+        expect(schema.required).toContain(field);
+      }
+      expect(schema.properties.width.enum).toEqual(['bleed', 'wide', 'narrow', 'offset-left', 'offset-right']);
+      expect(schema.additionalProperties).toBe(false);
+    }
+  });
+  it('keeps the composition layer out, so a chat edit can never invent a node path', () => {
+    for (const schema of blockSchemas()) {
+      for (const field of ['free', 'extras', 'order', 'layout']) expect(schema.properties).not.toHaveProperty(field);
+    }
+  });
+  it('tells the model what the controls are for', () => {
+    const prompt = sketchPrompt({ storeName: 'Pan', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogNames: [] });
+    expect(prompt).toContain('narrow');
+    expect(prompt).toContain('offset-left');
+  });
+});

@@ -2,7 +2,7 @@ import { SOURCE_FONT_CATALOG, SOURCE_FONT_IDS } from '../source-font-catalog';
 import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { drawSketchDirection, type SketchDirection } from './sketch-direction';
-import { repairSketch, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { repairSketch, SKETCH_BLOCK_TYPES, SKETCH_WIDTHS } from './sketch-schema';
 import { PRESET_IDS, PRODUCT_CARD_PRESETS } from '../source-product-card-presets';
 import { ASSURANCE_ICONS } from '../product-theme';
 import type { SketchContext, StoreSketch } from './sketch-schema';
@@ -13,10 +13,15 @@ import type { SketchContext, StoreSketch } from './sketch-schema';
 const string = { type: 'string' } as const;
 const bg = { type: 'string', enum: ['paper', 'ink', 'accent', 'deep', 'pop', 'tint-accent', 'tint-deep', 'tint-pop'] } as const;
 const size = { type: 'string', enum: ['s', 'm', 'l', 'xl'] } as const;
+const width = { type: 'string', enum: [...SKETCH_WIDTHS] } as const;
+const alignment = { type: 'string', enum: ['start', 'center', 'end'] } as const;
+const bool = { type: 'boolean' } as const;
 const block = (type: string, props: Record<string, unknown>) => ({
   type: 'object', additionalProperties: false,
-  properties: { id: string, type: { type: 'string', enum: [type] }, bg, size, ...props },
-  required: ['id', 'type', 'bg', 'size', ...Object.keys(props)],
+  // Layout controls every block accepts. Strict mode requires every property in `required`, so the inert values
+  // ('bleed', 'start', false) are how the model says "leave this alone" — repair drops them.
+  properties: { id: string, type: { type: 'string', enum: [type] }, bg, size, width, align: alignment, flip: bool, swap: bool, ...props },
+  required: ['id', 'type', 'bg', 'size', 'width', 'align', 'flip', 'swap', ...Object.keys(props)],
 });
 
 export const SKETCH_JSON_SCHEMA = {
@@ -63,6 +68,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
       ? `Fotos disponibles (usa EXACTAMENTE estas rutas, nunca inventes otras). REPÁRTELAS como una revista, nunca un muro de fotos: una en el hero, una por cada split, story y newsletter, una por categoría de collections y hasta 3 de clientes en reviews; gallery solo como tira corta de máximo 5: ${input.photos.map(photo => photo.description ? `${photo.path} (${photo.description})` : photo.path).join(' · ')}`
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
     `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. COLOR DE VERDAD: mínimo 3 bloques con fondo accent, deep o pop, y usa los fondos tint-accent/tint-deep/tint-pop (pasteles derivados de tu paleta) para bandas suaves entre bandas saturadas. Nunca dos bloques seguidos con el mismo fondo.`,
+    `FORMA DE CADA BANDA (esto es lo que hace que dos tiendas no se parezcan): width elige el ancho del contenido — bleed (de borde a borde, como siempre), wide (contenido centrado y ancho), narrow (columna editorial angosta, ideal para story y faq), offset-left / offset-right (contenido a un lado y aire al otro). VARÍA el ancho entre bandas vecinas: un muro de bleed es exactamente el boceto genérico que no queremos. align mueve el texto (start, center, end). flip espeja la foto en hero, split, story y newsletter. swap pone el botón fantasma primero en hero y split. Si no querés tocar algo: width "bleed", align "start", flip false, swap false.`,
     `DIRECCIÓN CREATIVA DE ESTA GENERACIÓN (${direction.name}) — interprétala con los colores, fuentes y bloques concretos de esta tienda:`,
     ...direction.lines.map(line => `- ${line}`),
     `Si hay hero: titular de 4-8 palabras con carácter, foto cuando haya, cta + cta2 (botón fantasma), trust con prueba social honesta (ej. "★ 4.8 · 2.400 pedidos · Envíos a todo el país") y caption corto bajo la foto (ej. "Caramelo salado · chispas · brownie").`,
