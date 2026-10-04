@@ -220,6 +220,48 @@ export function ensureBandRhythm(sketch: StoreSketch): StoreSketch {
   return { ...sketch, blocks };
 }
 
+/** A copy column's element order: known keys only, no repeats, and `undefined` when the result is just the default
+ * order (so a block that was never reordered stores nothing). Shared with the composition pass. */
+export function repairSketchOrder(value: unknown, allowed: readonly string[] | undefined): string[] | undefined {
+  if (!allowed || !Array.isArray(value)) return undefined;
+  const kept = [...new Set(value.filter((item): item is string => typeof item === 'string' && allowed.includes(item)))];
+  const full = [...kept, ...allowed.filter(key => !kept.includes(key))];
+  return full.every((key, index) => key === allowed[index]) ? undefined : full;
+}
+
+/** Inserted elements (free layer): known kinds with a valid value and position, unique ids, at most 12.
+ * Shared with the composition pass, which is why `ctx` is a parameter rather than a closed-over argument. */
+export function repairSketchExtras(value: unknown, ctx: SketchContext): SketchExtra[] {
+  const wanted: Array<{ id: unknown; extra: Omit<SketchExtra, 'id'> }> = [];
+  for (const item of Array.isArray(value) ? value : []) {
+    if (wanted.length >= SKETCH_EXTRA_MAX) break;
+    const raw = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
+    const pos = sketchFreePos(raw);
+    const kind = raw.kind as SketchExtraKind;
+    if (!pos || !SKETCH_EXTRA_KINDS.includes(kind)) continue;
+    const given = typeof raw.value === 'string' ? raw.value.trim() : '';
+    const content = kind === 'emoji' ? (given.length <= 16 && /\p{Extended_Pictographic}/u.test(given) ? given : '')
+      : kind === 'text' ? given.slice(0, 120)
+      : kind === 'button' ? given.slice(0, 40)
+      : kind === 'photo' ? (ctx.photos.includes(given) ? given : '')
+      : /^[a-z0-9-]{2,40}$/.test(given) ? given : '';
+    if (!content) continue;
+    const href = kind === 'button' ? (typeof raw.href === 'string' && (BLOCK_HREF.test(raw.href) || /^https:\/\/wa\.me\/\d{6,15}$/.test(raw.href)) ? raw.href : 'checkout.html') : undefined;
+    wanted.push({ id: raw.id, extra: { kind, value: content, ...pos, ...(href ? { href } : {}) } });
+  }
+  // Valid ids are kept (first come first served); the rest get fresh ones that never collide with a kept id.
+  const valid = (id: unknown): id is string => typeof id === 'string' && /^e[a-z0-9]{3,10}$/.test(id);
+  const reserved = new Set(wanted.map(entry => entry.id).filter(valid));
+  const used = new Set<string>();
+  let fresh = 1;
+  return wanted.map(({ id, extra }) => {
+    let kept = valid(id) && !used.has(id) ? id : '';
+    while (!kept) { const candidate = `ex${String(fresh++).padStart(2, '0')}`; if (!reserved.has(candidate) && !used.has(candidate)) kept = candidate; }
+    used.add(kept);
+    return { id: kept, ...extra };
+  });
+}
+
 export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { style?: SketchStyle }): { sketch: StoreSketch; notes: string[] } {
   const notes: string[] = [];
   const raw = (typeof input === 'object' && input !== null ? input : (input !== undefined && notes.push('input no era un objeto; se usó el boceto base'), {})) as Record<string, unknown>;
@@ -283,12 +325,7 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
   };
   // Editor-only fields: element order (allowlisted, deduped, omitted when it equals the default),
   // sticker position (percentages clamped inside the section) and copy alignment.
-  const order = (value: unknown, allowed: readonly string[] | undefined): string[] | undefined => {
-    if (!allowed || !Array.isArray(value)) return undefined;
-    const kept = [...new Set(value.filter((item): item is string => typeof item === 'string' && allowed.includes(item)))];
-    const full = [...kept, ...allowed.filter(key => !kept.includes(key))];
-    return full.every((key, index) => key === allowed[index]) ? undefined : full;
-  };
+  const order = repairSketchOrder;
   const stickerPos = (value: unknown): StickerPos | undefined => {
     if (typeof value !== 'object' || value === null) return undefined;
     const { x, y } = value as Record<string, unknown>;
@@ -296,37 +333,7 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     return { x: Math.min(100, Math.max(0, Math.round(x * 10) / 10)), y: Math.min(100, Math.max(0, Math.round(y * 10) / 10)) };
   };
   const align = (value: unknown): SketchAlign | undefined => (value === 'center' || value === 'start' || value === 'end' ? value : undefined);
-  // Inserted elements (free layer): known kinds with a valid value and position, unique ids, at most 12.
-  const extras = (value: unknown): SketchExtra[] => {
-    const wanted: Array<{ id: unknown; extra: Omit<SketchExtra, 'id'> }> = [];
-    for (const item of Array.isArray(value) ? value : []) {
-      if (wanted.length >= SKETCH_EXTRA_MAX) break;
-      const raw = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
-      const pos = sketchFreePos(raw);
-      const kind = raw.kind as SketchExtraKind;
-      if (!pos || !SKETCH_EXTRA_KINDS.includes(kind)) continue;
-      const given = typeof raw.value === 'string' ? raw.value.trim() : '';
-      const content = kind === 'emoji' ? (given.length <= 16 && /\p{Extended_Pictographic}/u.test(given) ? given : '')
-        : kind === 'text' ? given.slice(0, 120)
-        : kind === 'button' ? given.slice(0, 40)
-        : kind === 'photo' ? (ctx.photos.includes(given) ? given : '')
-        : /^[a-z0-9-]{2,40}$/.test(given) ? given : '';
-      if (!content) continue;
-      const href = kind === 'button' ? (typeof raw.href === 'string' && (BLOCK_HREF.test(raw.href) || /^https:\/\/wa\.me\/\d{6,15}$/.test(raw.href)) ? raw.href : 'checkout.html') : undefined;
-      wanted.push({ id: raw.id, extra: { kind, value: content, ...pos, ...(href ? { href } : {}) } });
-    }
-    // Valid ids are kept (first come first served); the rest get fresh ones that never collide with a kept id.
-    const valid = (id: unknown): id is string => typeof id === 'string' && /^e[a-z0-9]{3,10}$/.test(id);
-    const reserved = new Set(wanted.map(entry => entry.id).filter(valid));
-    const used = new Set<string>();
-    let fresh = 1;
-    return wanted.map(({ id, extra }) => {
-      let kept = valid(id) && !used.has(id) ? id : '';
-      while (!kept) { const candidate = `ex${String(fresh++).padStart(2, '0')}`; if (!reserved.has(candidate) && !used.has(candidate)) kept = candidate; }
-      used.add(kept);
-      return { id: kept, ...extra };
-    });
-  };
+  const extras = (value: unknown): SketchExtra[] => repairSketchExtras(value, ctx);
 
   // Blocks: keep known types, repair each field, drop the rest. Ids that are valid and unique are
   // preserved so Studio selections and chat chips survive reorders; the rest get fresh ones.
