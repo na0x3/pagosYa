@@ -13,6 +13,7 @@ import { SourceProjectsService } from '../src/storefront-source/source-projects.
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { AgentRequirement } from '../src/storefront-source/agent/agent-task';
 import { captureAgentDraft } from '../src/storefront-source/agent/agent-capture';
+import { catalogueDigest, specificityReport, type StoreSketch } from '../src/storefront-source/sketch';
 
 /** The product card theme in a candidate's config.js (null when it has no DNA). */
 function productThemeOf(candidate: any): { productCard: Record<string, string>; productCss: string } | null {
@@ -21,6 +22,19 @@ function productThemeOf(candidate: any): { productCard: Record<string, string>; 
     const dna = JSON.parse(content?.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] ?? '{}').dna;
     if (!dna) return null;
     return { productCard: Object.fromEntries(['swatch', 'gallery', 'blocks', 'divider', 'enter'].map(key => [key, String(dna[key] ?? '')])), productCss: typeof dna.productCss === 'string' ? dna.productCss : '' };
+  } catch { return null; }
+}
+
+/** How grounded a generated sketch's copy is in the store's real catalogue. REPORTING ONLY: it reads the candidate's
+ * sketch.json and config.js and prints a ratio and the filler phrases found; it never rewrites a sketch. A high ratio
+ * means "not obviously generic", not "specific" (see SpecificityReport). Null when the candidate has no sketch. */
+function specificityOf(candidate: any): { blocks: number; bands: number; groundedBands: number; hits: number; filler: string[] } | null {
+  try {
+    const file = (path: string): string | undefined => candidate?.files?.find((entry: { path: string }) => entry.path === path)?.content;
+    const sketch = JSON.parse(file('sketch.json') ?? 'null') as StoreSketch | null;
+    if (!sketch) return null;
+    const data = JSON.parse(file('config.js')?.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] ?? '{}').data ?? {};
+    return specificityReport(sketch, catalogueDigest(data.items, data.categories));
   } catch { return null; }
 }
 
@@ -76,6 +90,9 @@ async function main() {
         const out = arg('theme-out');
         if (out) writeFileSync(out.replace(/(\.json)?$/i, `-${run}.json`), JSON.stringify(theme, null, 2));
       }
+      // Whether the copy work landed: grounded bands over prose bands, plus any filler phrases. Reporting only.
+      const specificity = specificityOf(result.candidate);
+      if (specificity) console.log(`  especificidad: ${specificity.groundedBands}/${specificity.bands} bandas con producto real (${specificity.blocks} bloques, ${specificity.hits} menciones) · relleno: ${specificity.filler.length ? specificity.filler.join(' | ') : 'ninguno'}`);
       if (shot && result.candidate) writeFileSync(shot.replace(/(\.jpe?g)?$/i, `-${run}.jpg`), Buffer.from((await captureAgentDraft(result.candidate, 1280)).image.split(',')[1], 'base64'));
       console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {

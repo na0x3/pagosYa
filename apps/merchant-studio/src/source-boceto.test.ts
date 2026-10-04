@@ -992,8 +992,12 @@ it('the Ficha assurance editor adds, edits and saves merchant lines', async () =
 it('keeps the look panel in step with the API style vocabulary', () => {
   expect(STYLE_CONTROLS.map(control => control.key).sort()).toEqual(Object.keys(SKETCH_STYLE_OPTIONS).sort());
   for (const control of STYLE_CONTROLS) {
-    // A set, not an order: the panel lists radius round to square, the generator lists it in prompt order.
-    expect([...control.values].sort(), control.key).toEqual([...SKETCH_STYLE_OPTIONS[control.key as keyof typeof SKETCH_STYLE_OPTIONS]].sort());
+    // Order, not a set: `names` line up with `values` by position, so a reorder on one side alone would show
+    // "Fantasma" while saving `outline`. Radius is the one declared exception: the panel puts its default
+    // first (round, soft, square) where the generator lists it in prompt order, so only radius is a set.
+    const api = [...SKETCH_STYLE_OPTIONS[control.key as keyof typeof SKETCH_STYLE_OPTIONS]];
+    if (control.key === 'radius') expect([...control.values].sort(), control.key).toEqual([...api].sort());
+    else expect(control.values, control.key).toEqual(api);
     expect(control.names, control.key).toHaveLength(control.values.length);
     expect(control.names.every(name => name.trim().length > 0), control.key).toBe(true);
   }

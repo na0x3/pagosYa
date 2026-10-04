@@ -9,3 +9,7 @@ export type { SketchDirection } from './sketch-direction';
 export * from './sketch-substance';
 export * from './sketch-structure-draw';
 export * from './sketch-structure-fill';
+export { catalogueDigest } from './sketch-catalogue-digest';
+export type { CatalogueDigest, DigestItem } from './sketch-catalogue-digest';
+export { specificityReport } from './sketch-specificity';
+export type { SpecificityReport } from './sketch-specificity';
