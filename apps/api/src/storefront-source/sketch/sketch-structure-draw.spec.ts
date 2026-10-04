@@ -56,3 +56,30 @@ it('never gives more media slots than the store has photos', () => {
     expect(drawPageStructure(thin, seeded(seed)).slots.filter(s => s.media).length).toBeLessThanOrEqual(2);
   }
 });
+
+it('enforces the grammar over many draws: no three consecutive media, no adjacent accents, announce at slot 0', () => {
+  const full = { products: 40, photos: 6, categories: 5, briefWords: 60 };
+  const accentTypes = new Set(['announce', 'marquee', 'banner']);
+
+  for (let seed = 1; seed <= 100; seed++) {
+    const { slots } = drawPageStructure(full, seeded(seed));
+
+    // No three consecutive slots carry media.
+    for (let i = 0; i < slots.length - 2; i++) {
+      expect(slots[i].media && slots[i + 1].media && slots[i + 2].media).toBe(false);
+    }
+
+    // No two adjacent slots are both accents.
+    for (let i = 0; i < slots.length - 1; i++) {
+      const isAccent = accentTypes.has(slots[i].type);
+      const nextIsAccent = accentTypes.has(slots[i + 1].type);
+      expect(isAccent && nextIsAccent).toBe(false);
+    }
+
+    // Announce, when present, is at slot 0.
+    const announceSlots = slots.filter(s => s.type === 'announce');
+    if (announceSlots.length > 0) {
+      expect(slots[0].type).toBe('announce');
+    }
+  }
+});

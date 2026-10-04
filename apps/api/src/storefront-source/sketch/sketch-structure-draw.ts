@@ -58,37 +58,66 @@ export function drawPageStructure(substance: StoreSubstance, random: () => numbe
   const take = (type: SketchBlock['type']) => used.set(type, (used.get(type) ?? 0) + 1);
   const spent = (type: SketchBlock['type']) => ONCE_ONLY.includes(type) && (used.get(type) ?? 0) >= 1;
 
+  // Announce is either the opening or slot 0, or not in the page.
   const body: SketchBlock['type'][] = [];
-  if (allowed(opening)) { body.push(opening); take(opening); }
-  const bodyTarget = length - 1; // the footer takes the last slot
+  let openingAdded = false;
+
+  if (opening === 'announce') {
+    body.push('announce');
+    take('announce');
+    openingAdded = true;
+  } else if (allowed('announce') && random() < 0.5) {
+    // Announce at slot 0, before opening.
+    body.push('announce');
+    take('announce');
+    // If opening is an accent, pick a non-accent editorial type instead.
+    const actualOpening = ACCENT.includes(opening) ? pick([...EDITORIAL].filter(allowed)) : opening;
+    body.push(actualOpening);
+    take(actualOpening);
+    openingAdded = true;
+  }
+
+  // Add opening if not yet added.
+  if (!openingAdded) {
+    body.push(opening);
+    take(opening);
+  }
+
+  // Build body to fill remaining slots, accounting for catalog insertion.
+  const bodyTarget = allowed('catalog') ? length - 2 : length - 1;
   while (body.length < bodyTarget) {
     const accentDue = params.accentEvery !== null && body.length > 0 && body.length % params.accentEvery === 0;
-    const wantAccent = accentDue && !ACCENT.includes(body[body.length - 1]);
-    const choices = (wantAccent ? ACCENT : pool).filter(type => allowed(type) && !spent(type) && !(ACCENT.includes(type) && ACCENT.includes(body[body.length - 1])));
+    const lastType = body[body.length - 1];
+    const wantAccent = accentDue && !ACCENT.includes(lastType);
+    // Announce is reserved for opening or slot 0; exclude it from accent choices during body building.
+    const accentChoices = (used.get('announce') ?? 0) > 0 ? ACCENT : ACCENT.filter(type => type !== 'announce');
+    const choices = (wantAccent ? accentChoices : pool).filter(type => allowed(type) && !spent(type) && !(ACCENT.includes(type) && ACCENT.includes(lastType)));
     if (!choices.length) break;
     const type = pick(choices);
-    body.push(type); take(type);
+    body.push(type);
+    take(type);
   }
 
   // Exactly one catalog, placed at catalogAt, when the store has something to sell.
   if (allowed('catalog')) {
-    const existing = body.indexOf('catalog');
-    if (existing !== -1) body.splice(existing, 1);
     body.splice(Math.max(0, Math.min(body.length, Math.round(params.catalogAt * body.length))), 0, 'catalog');
   }
-  // `announce` is a strip above the page or it is nothing.
-  const announceAt = body.indexOf('announce');
-  if (announceAt > 0) { body.splice(announceAt, 1); body.unshift('announce'); }
 
   const types = [...body.slice(0, Math.max(0, length - 1)), 'footer' as const];
   let lastWidth: SketchWidth | null = null;
   let media = 0;
+  let prevMedia = false;
+  let prev2Media = false;
+
   const slots = types.map((type, index) => {
     const width = pick(WIDTHS.filter(candidate => candidate !== lastWidth));
     lastWidth = width;
-    const canCarry = MEDIA_CAPABLE.includes(type) && media < params.mediaBudget;
+    const canCarry = MEDIA_CAPABLE.includes(type) && media < params.mediaBudget && !(prevMedia && prev2Media);
     if (canCarry) media++;
-    return { id: `s${index + 1}`, type, size: type === 'footer' ? 'm' : sizeFor(params.rhythm, index, types.length), width, media: canCarry } as PageSlot;
+    const slot = { id: `s${index + 1}`, type, size: type === 'footer' ? 'm' : sizeFor(params.rhythm, index, types.length), width, media: canCarry } as PageSlot;
+    prev2Media = prevMedia;
+    prevMedia = canCarry;
+    return slot;
   });
   return { slots, params };
 }
