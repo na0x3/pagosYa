@@ -754,11 +754,12 @@ export class SourceGenerationService {
         attempt.usage = sourceUsage(model, body?.usage);
         attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
         if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
-        const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx);
+        const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx, { style: direction.style });
         // Fresh generations get the band-rhythm pass (no two adjacent same-bg sections). Boceto hand
         // edits and chat edits never pass through it, so deliberate layouts survive.
         const placed = ensureBandRhythm(ensureAllPhotosUsed(drawn, sketchCtx));
-        const sketch = { ...placed, style: direction.style, blocks: placed.blocks.map(block => (block.type === 'newsletter' ? { ...block, form: direction.newsletterForm } : block)) };
+        // `style` now comes from repair: the model's choice, or the drawn direction wherever it said "auto".
+        const sketch = { ...placed, blocks: placed.blocks.map(block => (block.type === 'newsletter' ? { ...block, form: direction.newsletterForm } : block)) };
         // A fallen-back attempt is FAILED: absorbed from billing, visible in the receipt, metered like every provider call.
         attempt.status = parsed ? 'COMPLETED' : 'FAILED';
         if (!parsed && !attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida; se usó el boceto base').slice(0, 300);
@@ -797,7 +798,7 @@ export class SourceGenerationService {
         attempt.usage = sourceUsage(model, body?.usage);
         attempt.responseStatus = typeof body?.status === 'string' ? body.status : httpStatus ? `http_${httpStatus}` : undefined;
         if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
-        const edited = sketchFromResponse(body, sketchCtx);
+        const edited = sketchFromResponse(body, sketchCtx, { style: currentSketch.style });
         attempt.status = edited.parsed ? 'COMPLETED' : 'FAILED';
         await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
         if (!edited.parsed) {
@@ -805,9 +806,9 @@ export class SourceGenerationService {
           throw new BadGatewayException('YAPI no pudo aplicar el cambio al boceto. Tu revisión anterior sigue guardada.');
         }
         autoRepairs.push(...edited.notes.slice(0, 10).map(note => `Boceto: ${note}`));
-        // Page style and per-block layout (alignment, flip, swap, element order, sticker spot) are editor-only and
-        // absent from the model schema, so the edit reply would reset them; carry them over by block id.
-        edited.sketch.style = currentSketch.style;
+        // Per-block layout (order, group layout, free spots, inserted elements) is absent from the model schema, so the
+        // edit reply would reset it; carry it over by block id. `style` is handled by repair's defaults above, so an
+        // edit may now change it deliberately while "auto" keeps the current design.
         edited.sketch.blocks = carryEditorFields(currentSketch, edited.sketch);
         generated = { label: 'Boceto actualizado', files: assembleSketch(edited.sketch, sketchCtx) };
         sketchFile = { path: 'sketch.json', content: JSON.stringify(edited.sketch, null, 2) + '\n' };

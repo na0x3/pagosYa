@@ -5,7 +5,7 @@ import { drawSketchDirection, type SketchDirection } from './sketch-direction';
 import { repairSketch, SKETCH_BLOCK_TYPES, SKETCH_WIDTHS } from './sketch-schema';
 import { PRESET_IDS, PRODUCT_CARD_PRESETS } from '../source-product-card-presets';
 import { ASSURANCE_ICONS } from '../product-theme';
-import type { SketchContext, StoreSketch } from './sketch-schema';
+import type { SketchContext, SketchStyle, StoreSketch } from './sketch-schema';
 
 /** The provider-facing side of sketch generation: a strict schema, a compact prompt, and a total
  * conversion — any response, including none at all, becomes a usable sketch via repairSketch. */
@@ -30,6 +30,15 @@ export const SKETCH_JSON_SCHEMA = {
     palette: { type: 'object', additionalProperties: false, properties: { paper: string, ink: string, accent: string, deep: string, pop: string }, required: ['paper', 'ink', 'accent', 'deep', 'pop'] },
     fonts: { type: 'object', additionalProperties: false, properties: { display: string, text: string }, required: ['display', 'text'] },
     scale: size,
+    // The page's shape language. 'auto' defers to the direction drawn for this generation, so the model only
+    // overrides the dimensions it has an opinion about (strict mode has no optional properties).
+    style: { type: 'object', additionalProperties: false, properties: {
+      radius: { type: 'string', enum: ['soft', 'round', 'square', 'auto'] },
+      buttons: { type: 'string', enum: ['pill', 'square', 'outline', 'auto'] },
+      cards: { type: 'string', enum: ['bleed', 'inset', 'outline', 'auto'] },
+      header: { type: 'string', enum: ['left', 'center', 'auto'] },
+      footer: { type: 'string', enum: ['columns', 'center', 'auto'] },
+    }, required: ['radius', 'buttons', 'cards', 'header', 'footer'] },
     product: { type: 'object', additionalProperties: false, properties: {
       preset: { type: 'string', enum: [...PRESET_IDS] },
       layout: { type: 'string', enum: ['editorial', 'dense', 'image-led', 'story-led'] },
@@ -54,7 +63,7 @@ export const SKETCH_JSON_SCHEMA = {
       block('footer', { tagline: string, wordmark: { type: 'string', enum: ['giant', 'plain'] } }),
     ] } },
   },
-  required: ['palette', 'fonts', 'scale', 'product', 'account', 'blocks'],
+  required: ['palette', 'fonts', 'scale', 'style', 'product', 'account', 'blocks'],
 } as { type: 'object'; additionalProperties: false; properties: Record<string, any>; required: string[] };
 
 export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'service'; instruction: string; brief: unknown; photos: Array<{ path: string; description?: string }>; catalogNames: string[]; direction?: SketchDirection }): string {
@@ -69,6 +78,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
       : 'No hay fotos subidas: deja photo como "" y photos como [].',
     `Tipos de bloque: ${SKETCH_BLOCK_TYPES.join(', ')}. Un catálogo y un footer al final. COLOR DE VERDAD: mínimo 3 bloques con fondo accent, deep o pop, y usa los fondos tint-accent/tint-deep/tint-pop (pasteles derivados de tu paleta) para bandas suaves entre bandas saturadas. Nunca dos bloques seguidos con el mismo fondo.`,
     `FORMA DE CADA BANDA (esto es lo que hace que dos tiendas no se parezcan): width elige el ancho del contenido — bleed (de borde a borde, como siempre), wide (contenido centrado y ancho), narrow (columna editorial angosta, ideal para story y faq), offset-left / offset-right (contenido a un lado y aire al otro). VARÍA el ancho entre bandas vecinas: un muro de bleed es exactamente el boceto genérico que no queremos. align mueve el texto (start, center, end). flip espeja la foto en hero, split, story y newsletter. swap pone el botón fantasma primero en hero y split. Si no querés tocar algo: width "bleed", align "start", flip false, swap false.`,
+    `style es el LENGUAJE DE FORMAS de toda la página: radius (soft/round/square), buttons (pill/square/outline), cards (bleed/inset/outline), header (left/center), footer (columns/center). Elegilo para que acompañe al rubro y a la dirección creativa — una carnicería brutalista no lleva botones pill redondeados. Poné "auto" en las dimensiones que no te importen y el diseño las elige.`,
     `DIRECCIÓN CREATIVA DE ESTA GENERACIÓN (${direction.name}) — interprétala con los colores, fuentes y bloques concretos de esta tienda:`,
     ...direction.lines.map(line => `- ${line}`),
     `Si hay hero: titular de 4-8 palabras con carácter, foto cuando haya, cta + cta2 (botón fantasma), trust con prueba social honesta (ej. "★ 4.8 · 2.400 pedidos · Envíos a todo el país") y caption corto bajo la foto (ej. "Caramelo salado · chispas · brownie").`,
@@ -95,11 +105,11 @@ export function sketchEditPrompt(input: { sketch: StoreSketch; instruction: stri
   ].filter(Boolean).join('\n');
 }
 
-export function sketchFromResponse(body: unknown, ctx: SketchContext): { sketch: StoreSketch; notes: string[]; parsed: boolean } {
+export function sketchFromResponse(body: unknown, ctx: SketchContext, defaults?: { style?: SketchStyle }): { sketch: StoreSketch; notes: string[]; parsed: boolean } {
   let value: unknown;
   try { value = sourceResponseJson(body); } catch { value = undefined; }
   const parsed = typeof value === 'object' && value !== null;
-  return { ...repairSketch(parsed ? value : undefined, ctx), parsed };
+  return { ...repairSketch(parsed ? value : undefined, ctx, defaults), parsed };
 }
 
 /** The photos a sketch may show: bundled images whose confirmed role allows display.

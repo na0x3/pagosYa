@@ -1,4 +1,4 @@
-import { contrastRatio, ensureAllPhotosUsed, ensureBandRhythm, mixHex, repairSketch, resolveBg, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { contrastRatio, DEFAULT_SKETCH_STYLE, ensureAllPhotosUsed, ensureBandRhythm, mixHex, repairSketch, resolveBg, SKETCH_BLOCK_TYPES } from './sketch-schema';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 
@@ -439,5 +439,22 @@ describe('band width', () => {
     const before = repairSketch({ blocks: [{ id: 'a', type: 'hero', headline: 'Hola' }] }, ctx).sketch;
     expect(before.blocks.every(block => !('width' in block))).toBe(true);
     expect(repairSketch(JSON.parse(JSON.stringify(before)), ctx).sketch).toEqual(before);
+  });
+});
+
+describe('style the model may choose', () => {
+  const drawn = { radius: 'square', buttons: 'outline', cards: 'inset', header: 'center', footer: 'center' } as const;
+  it('takes a valid choice from the model', () => {
+    const { sketch } = repairSketch({ style: { radius: 'soft', buttons: 'auto', cards: 'auto', header: 'auto', footer: 'auto' }, blocks: [] }, ctx, { style: drawn });
+    expect(sketch.style.radius).toBe('soft');
+  });
+  // Review Focus 5: 'auto' must mean "keep what we had", never "reset to the global default".
+  it('falls back to the given defaults for auto, invalid and missing values', () => {
+    const { sketch } = repairSketch({ style: { radius: 'auto', buttons: 'banana' }, blocks: [] }, ctx, { style: drawn });
+    expect(sketch.style).toEqual(drawn);
+  });
+  it('still falls back to the base style when no defaults are given', () => {
+    const { sketch } = repairSketch({ style: { radius: 'auto' }, blocks: [] }, ctx);
+    expect(sketch.style).toEqual(DEFAULT_SKETCH_STYLE);
   });
 });

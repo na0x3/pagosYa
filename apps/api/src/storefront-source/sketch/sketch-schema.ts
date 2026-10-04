@@ -220,7 +220,7 @@ export function ensureBandRhythm(sketch: StoreSketch): StoreSketch {
   return { ...sketch, blocks };
 }
 
-export function repairSketch(input: unknown, ctx: SketchContext): { sketch: StoreSketch; notes: string[] } {
+export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { style?: SketchStyle }): { sketch: StoreSketch; notes: string[] } {
   const notes: string[] = [];
   const raw = (typeof input === 'object' && input !== null ? input : (input !== undefined && notes.push('input no era un objeto; se usó el boceto base'), {})) as Record<string, unknown>;
 
@@ -249,9 +249,12 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
 
   const scale: SketchSize = SIZES.includes(raw.scale as SketchSize) ? (raw.scale as SketchSize) : 'm';
   const rawStyle = (typeof raw.style === 'object' && raw.style !== null ? raw.style : {}) as Record<string, unknown>;
+  // Each dimension the model left on 'auto' (or got wrong) comes from the caller's defaults: the drawn direction on a
+  // fresh generation, the current sketch on an edit. 'auto' needs no special case — it is not a member of the options.
+  const styleBase = defaults?.style ?? DEFAULT_SKETCH_STYLE;
   const style = Object.fromEntries((Object.keys(SKETCH_STYLE_OPTIONS) as (keyof SketchStyle)[]).map(key => {
     const value = rawStyle[key] as string;
-    return [key, (SKETCH_STYLE_OPTIONS[key] as readonly string[]).includes(value) ? value : DEFAULT_SKETCH_STYLE[key]];
+    return [key, (SKETCH_STYLE_OPTIONS[key] as readonly string[]).includes(value) ? value : styleBase[key]];
   })) as SketchStyle;
   // Product skin: unknown presets fall to plain (today's page); each dimension starts from the
   // preset and keeps a valid stored override, so a panel tweak survives re-repair.
