@@ -132,13 +132,14 @@ export function violations(structure: PageStructure, substance: StoreSubstance):
   const slots = rawSlots.filter((slot): slot is PageSlot => typeof slot === 'object' && slot !== null);
   const problems: string[] = [];
   if (slots.length !== rawSlots.length) problems.push('a slot is not an object');
+  if (typeof substance !== 'object' || substance === null) return ['structure has no substance to be judged against'];
   const caps = substanceCaps(substance);
   const types = slots.map(slot => slot.type);
 
   if (slots.length < 6 || slots.length > caps.maxLength) problems.push(`length ${slots.length} outside 6..${caps.maxLength}`);
   if (types[types.length - 1] !== 'footer') problems.push('last slot is not a footer');
   if (types.filter(type => type === 'footer').length !== 1) problems.push('not exactly one footer');
-  if (substance?.products > 0 && types.filter(type => type === 'catalog').length !== 1) problems.push('not exactly one catalog');
+  if (substance.products > 0 && types.filter(type => type === 'catalog').length !== 1) problems.push('not exactly one catalog');
   for (const banned of caps.forbid) if (types.includes(banned)) problems.push(`forbidden type present: ${banned}`);
   for (const type of ONCE_ONLY) if (types.filter(candidate => candidate === type).length > 1) problems.push(`repeated once-only type: ${type}`);
   if (types.includes('announce') && types.indexOf('announce') !== 0) problems.push('announce is not the first slot');

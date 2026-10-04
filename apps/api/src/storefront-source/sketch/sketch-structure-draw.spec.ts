@@ -1,8 +1,9 @@
 import { drawPageStructure, violations } from './sketch-structure-draw';
 import { substanceCaps } from './sketch-substance';
 
-/** A seeded generator, so a draw is reproducible and a failure is debuggable. */
-const seeded = (seed: number) => () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+/** A seeded generator, so a draw is reproducible and a failure is debuggable. Mulberry32, not an LCG: the
+ * LCG's first output barely moves across small seeds, which pinned every draw to a single page length. */
+const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const full = { products: 40, photos: 6, categories: 5, briefWords: 60 };
 
 it('is deterministic for a seed, and different across seeds', () => {
@@ -104,13 +105,57 @@ it('reports a malformed structure instead of throwing', () => {
   expect(violations({ slots: undefined } as any, full)).not.toEqual([]);
   expect(violations({ slots: [null, 3, {}] } as any, full)).not.toEqual([]);
   expect(violations({ slots: [] } as any, full)).not.toEqual([]);
+  expect(violations({ slots: [] } as any, undefined as any)).not.toEqual([]);
+});
+
+// Negative fixtures: a rule that is mistyped would let every draw pass vacuously, so each one is shown to bite.
+type Slot = { id: string; type: any; size: any; width: any; media: boolean };
+const legal = (): Slot[] => [
+  { id: 's1', type: 'announce', size: 'm', width: 'bleed', media: false },
+  { id: 's2', type: 'hero', size: 'l', width: 'wide', media: false },
+  { id: 's3', type: 'catalog', size: 'm', width: 'narrow', media: false },
+  { id: 's4', type: 'story', size: 'm', width: 'bleed', media: false },
+  { id: 's5', type: 'newsletter', size: 'm', width: 'wide', media: false },
+  { id: 's6', type: 'footer', size: 'm', width: 'narrow', media: false },
+];
+const check = (slots: Slot[], substance = full) => violations({ slots, params: {} } as any, substance);
+
+it('accepts a hand-built legal structure', () => {
+  expect(check(legal())).toEqual([]);
+});
+
+// A tuple's optional fourth member would be taken by jest for a done callback, so the substance is a field.
+const thin = { products: 40, photos: 1, categories: 5, briefWords: 60 };
+it.each<[string, (s: Slot[]) => Slot[], string, { products: number; photos: number; categories: number; briefWords: number }]>([
+  ['repeated width on neighbours', s => { s[2].width = 'wide'; return s; }, 'repeated width at 2', full],
+  ['adjacent accent bands', s => { s[1].type = 'marquee'; return s; }, 'accent bands adjacent at 1', full],
+  ['three consecutive media slots', s => { s[1].media = s[3].media = s[2].media = true; return s; }, 'three media slots in a row at 3', full],
+  ['announce not at slot 0', s => { s[0].type = 'hero'; s[1].type = 'announce'; return s; }, 'announce is not the first slot', full],
+  ['a repeated once-only type', s => { s[3].type = 'hero'; return s; }, 'repeated once-only type: hero', full],
+  ['two catalogs', s => { s[3].type = 'catalog'; return s; }, 'not exactly one catalog', full],
+  ['no footer last', s => { s[5].type = 'story'; return s; }, 'last slot is not a footer', full],
+  ['duplicate ids', s => { s[3].id = 's2'; return s; }, 'duplicate slot ids', full],
+  ['media above maxMedia', s => { s[1].media = s[3].media = true; return s; }, 'media slots exceed the photo count', thin],
+  ['length below the floor', s => s.slice(1), 'length 5 outside 6..14', full],
+  ['a forbidden type', s => { s[3].type = 'gallery'; return s; }, 'forbidden type present: gallery', thin],
+])('flags %s', (_name, mutate, message, substance) => {
+  expect(check(mutate(legal()), substance)).toContain(message);
 });
 
 // This is the test that would have caught the original defect: it fails if the generator has a favourite.
 it('draws fifty structures and nearly all of them differ', () => {
   const spines = new Set<string>();
-  for (let seed = 1; seed <= 50; seed++) spines.add(drawPageStructure(full, seeded(seed)).slots.map(slot => slot.type).join('>'));
+  const lengths = new Set<number>();
+  const rhythms = new Set<string>();
+  for (let seed = 1; seed <= 50; seed++) {
+    const { slots, params } = drawPageStructure(full, seeded(seed));
+    spines.add(slots.map(slot => slot.type).join('>'));
+    lengths.add(slots.length);
+    rhythms.add(params.rhythm);
+  }
   expect(spines.size).toBeGreaterThanOrEqual(45);
+  expect(lengths.size).toBeGreaterThan(1);
+  expect(rhythms.size).toBeGreaterThan(1);
 });
 
 // The exact spine the model produced for every store before this work, verbatim from the 2026-10-04 15:29 store.
@@ -118,7 +163,14 @@ const MODAL_SPINE = 'announce>hero>catalog>collections>split>steps>story>reviews
 
 it('does not keep landing on the spine the model used to produce', () => {
   let hits = 0;
-  for (let seed = 1; seed <= 200; seed++) if (drawPageStructure(full, seeded(seed)).slots.map(s => s.type).join('>') === MODAL_SPINE) hits++;
+  const lengths = new Set<number>();
+  for (let seed = 1; seed <= 200; seed++) {
+    const { slots } = drawPageStructure(full, seeded(seed));
+    lengths.add(slots.length);
+    if (slots.map(s => s.type).join('>') === MODAL_SPINE) hits++;
+  }
+  // Without this the assertion below is vacuous: a 13-band spine cannot occur if every page is 8 long.
+  expect(lengths.size).toBeGreaterThan(1);
   expect(hits).toBeLessThanOrEqual(1);
 });
 
