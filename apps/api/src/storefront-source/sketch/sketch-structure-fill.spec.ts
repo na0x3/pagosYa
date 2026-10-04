@@ -104,22 +104,31 @@ describe('fillStructure', () => {
   });
 
   it('strips the photo from a block whose slot carries no media', () => {
-    const s = structure();
-    const slot = s.slots.find(candidate => !candidate.media && ['hero', 'split', 'story', 'newsletter'].includes(candidate.type));
-    if (!slot) return;
-    const response = answering(s).map(block => (block.id === slot.id ? ({ ...block, photo: 'a.jpg' } as SketchBlock) : block));
-    const { blocks } = fillStructure(response, s, ctx);
-    expect('photo' in blocks.find(block => block.id === slot.id)!).toBe(false);
+    const slot = (id: string, type: SketchBlock['type'], media: boolean) => ({ id, type, size: 'm' as const, width: 'bleed' as const, media });
+    const s = { params: {} as never, slots: [slot('s1', 'hero', false), slot('s2', 'catalog', false), slot('s3', 'footer', false)] };
+    const { blocks } = fillStructure([{ ...filled('s1', 'hero'), photo: 'a.jpg' } as SketchBlock, filled('s2', 'catalog'), filled('s3', 'footer')], s, ctx);
+    expect('photo' in blocks[0]).toBe(false);
   });
 
-  // The grammar forbids adjacent equal widths; this is the rule that was unenforced while blocks passed through untouched.
-  it('leaves no two adjacent bands of one width on the filled page', () => {
-    for (let seed = 1; seed <= 100; seed++) {
+  it('leaves no two adjacent kept bands of one width on pages that had vetoes and drops', () => {
+    let reshaped = 0;
+    for (let seed = 1; seed <= 120; seed++) {
       const s = drawPageStructure(full, seeded(seed));
-      const response = s.slots.map(slot => ({ ...filled(slot.id, slot.type), width: 'wide' } as SketchBlock));
+      // Leave a varying subset unfilled, so some slots are honoured vetoes and some become dropped stand-ins.
+      const response = s.slots.filter((_, i) => (i * 7 + seed) % 3 !== 0).map(slot => ({ ...filled(slot.id, slot.type), width: 'wide' } as SketchBlock));
       const { blocks } = fillStructure(response, s, ctx);
+      if (blocks.length < s.slots.length) reshaped++;
       for (let i = 1; i < blocks.length; i++) expect(blocks[i].width ?? 'bleed').not.toBe(blocks[i - 1].width ?? 'bleed');
     }
+    expect(reshaped).toBeGreaterThan(0);
+  });
+
+  it('re-picks a width instead of dropping a band when a veto makes neighbours collide', () => {
+    const slot = (id: string, type: SketchBlock['type'], width: PageStructure['slots'][number]['width']) => ({ id, type, size: 'm' as const, width, media: false });
+    const s = { params: {} as never, slots: [slot('s1', 'hero', 'wide'), slot('s2', 'story', 'narrow'), slot('s3', 'split', 'wide'), slot('s4', 'catalog', 'bleed'), slot('s5', 'footer', 'narrow')] };
+    const { blocks } = fillStructure([filled('s1', 'hero'), filled('s3', 'split'), filled('s4', 'catalog'), filled('s5', 'footer')], s, ctx);
+    expect(blocks.map(block => block.id)).toEqual(['s1', 's3', 's4', 's5']);
+    expect(blocks[1].width ?? 'bleed').not.toBe(blocks[0].width ?? 'bleed');
   });
 
   describe('empty list-bearing bands', () => {

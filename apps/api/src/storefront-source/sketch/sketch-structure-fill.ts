@@ -1,5 +1,5 @@
 import { ACCENT, type PageSlot, type PageStructure } from './sketch-structure-draw';
-import type { SketchBlock, SketchContext } from './sketch-schema';
+import type { SketchBlock, SketchContext, SketchWidth } from './sketch-schema';
 
 /** A plain block of the slot's own type, for a slot the model declined to fill but that the page cannot do
  * without. It must be the slot's type: a stand-in of some other type would, say, put a second hero on a page
@@ -27,6 +27,7 @@ function defaultBlock(slot: PageSlot, ctx: SketchContext): SketchBlock {
 
 /** Types whose whole content is a list; an empty one is a heading over nothing. */
 const LIST_BEARING: SketchBlock['type'][] = ['steps', 'faq', 'collections', 'gallery', 'reviews', 'story'];
+const WIDTHS: SketchWidth[] = ['bleed', 'wide', 'narrow', 'offset-left', 'offset-right'];
 /** The grammar's floor on page length (see `violations`). */
 const MIN_BANDS = 6;
 
@@ -103,6 +104,21 @@ export function fillStructure(blocks: SketchBlock[], structure: PageStructure, c
     out.splice(i, 1);
     notes.push('dos bandas de acento quedaron pegadas al vaciarse una banda; se quitó una');
     i--;
+  }
+
+  // Closing the page up can also bring two same-width bands together, which the grammar forbids. Re-pick the
+  // width rather than drop a band: losing content to fix a rhythm would be the wrong trade. The pick avoids
+  // the next band's width too, so one repair does not create the next collision.
+  const widthOf = (block: SketchBlock): SketchWidth => block.width ?? 'bleed';
+  for (let i = 1; i < out.length; i++) {
+    if (widthOf(out[i]) !== widthOf(out[i - 1])) continue;
+    const next = i + 1 < out.length ? widthOf(out[i + 1]) : null;
+    const choices = WIDTHS.filter(width => width !== widthOf(out[i - 1]));
+    const pick = choices.find(width => width !== next) ?? choices[0];
+    const repaired = { ...out[i] };
+    if (pick !== 'bleed') repaired.width = pick; else delete repaired.width;
+    out[i] = repaired;
+    notes.push(`dos bandas seguidas tenían el mismo ancho tras quitar una banda; se cambió el ancho de ${repaired.id}`);
   }
   return { blocks: out, notes };
 }
