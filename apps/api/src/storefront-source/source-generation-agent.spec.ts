@@ -379,6 +379,18 @@ describe('sketch-first new stores', () => {
     expect(result.generation.autoRepairs.some((note: string) => note.startsWith('Composición'))).toBe(true);
   });
 
+  // A sketch the model never produced is not worth composing, and on a provider outage a second call would make
+  // the merchant wait through another timeout (up to 180 s on the ChatGPT plan) for nothing.
+  it('does not compose when the sketch call itself produced nothing usable', async () => {
+    const { service, projects, brief } = await setup();
+    newStore(projects);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'nope' }] }] })));
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The fallback sketch still ships, as it did before.
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json')).toBeDefined();
+  });
+
   it('asks only for the blocks the sketch actually has, with their real paths', async () => {
     const { service, projects, brief } = await setup();
     newStore(projects);
