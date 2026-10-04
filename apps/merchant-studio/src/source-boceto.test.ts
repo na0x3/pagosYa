@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { bocetoRevealY, createBocetoPanel } from './source-boceto';
+import { bocetoRevealY, createBocetoPanel, DEFAULT_STYLE, STYLE_CONTROLS } from './source-boceto';
+import { DEFAULT_SKETCH_STYLE, SKETCH_STYLE_OPTIONS } from '../../api/src/storefront-source/sketch/sketch-schema';
 import { ApiError, MerchantStudioApi } from './api';
 
 const sketch = () => ({
@@ -984,4 +985,38 @@ it('the Ficha assurance editor adds, edits and saves merchant lines', async () =
   (host.querySelector('.bct-assure__remove') as HTMLButtonElement).click();
   await vi.advanceTimersByTimeAsync(1300);
   expect(putSketch.mock.calls.at(-1)[1].sketch.product.assurances).toEqual([]);
+});
+
+// The panel and the generator each keep their own list of style choices; nothing else ties them together,
+// so a key added on one side would silently be unreachable (or unrenderable) on the other.
+it('keeps the look panel in step with the API style vocabulary', () => {
+  expect(STYLE_CONTROLS.map(control => control.key).sort()).toEqual(Object.keys(SKETCH_STYLE_OPTIONS).sort());
+  for (const control of STYLE_CONTROLS) {
+    // A set, not an order: the panel lists radius round to square, the generator lists it in prompt order.
+    expect([...control.values].sort(), control.key).toEqual([...SKETCH_STYLE_OPTIONS[control.key as keyof typeof SKETCH_STYLE_OPTIONS]].sort());
+    expect(control.names, control.key).toHaveLength(control.values.length);
+    expect(control.names.every(name => name.trim().length > 0), control.key).toBe(true);
+  }
+  expect(DEFAULT_STYLE).toEqual(DEFAULT_SKETCH_STYLE);
+});
+
+it('offers six button shapes and the new component controls', () => {
+  expect(STYLE_CONTROLS.find(control => control.key === 'buttons')!.values).toHaveLength(6);
+  expect(STYLE_CONTROLS).toHaveLength(11);
+});
+
+it('saves a chosen icon framing back to the sketch', async () => {
+  await mount();
+  ([...host.querySelectorAll('.bct-segment__option')].find(b => b.textContent === 'En círculo') as HTMLElement).click();
+  expect(lastLook().style.icons).toBe('circle');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)[1].sketch.style.icons).toBe('circle');
+});
+
+it('shows the defaults for style keys an older sketch does not carry', async () => {
+  getSketch.mockResolvedValue({ revision: 3, sketch: { ...sketch(), style: { radius: 'soft', buttons: 'pill', cards: 'inset', header: 'left', footer: 'center' } }, photos: [], fonts: ['anton'] } as any);
+  await mount();
+  // the saved five keep their values; the six it never had show the plain choice, highlighted, not a blank row
+  const on = (name: string) => [...host.querySelectorAll('.bct-segment__option.is-on')].some(b => b.textContent === name);
+  for (const name of ['Suaves', 'Con margen', 'Sueltos', 'Sin ícono', 'Simples', 'Ninguno', 'Subrayado']) expect(on(name), name).toBe(true);
 });

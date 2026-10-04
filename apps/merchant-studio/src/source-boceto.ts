@@ -11,7 +11,7 @@ import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchF
  * (double-click); this panel holds only properties — page styles, block looks, order and media.
  * Every change applies LIVE in the preview via `apply` and saves silently in the background. */
 
-type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string };
+type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string; buttonIcon: string; icons: string; dividers: string; badges: string; fields: string; links: string };
 type SketchAssurance = { icon: string; title: string; detail: string };
 type SketchProduct = { preset: string; layout: string; swatch: string; gallery: string; blocks: string; divider: string; enter: string; media: string; assurances?: SketchAssurance[] };
 type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; product?: SketchProduct; account?: any; blocks: any[] };
@@ -26,14 +26,23 @@ type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: 
   /** Boceto phase: the selected block, reported when it changes, as the chat's context (the account page is never one). */
   selected?: (block: { id: string; label: string } | null) => void };
 
+/** Mirrors SKETCH_STYLE_OPTIONS in the API's sketch-schema.ts, which is what validates a save; a test keeps the two
+ * in step. Grouped by what the merchant is shaping (actions, then surfaces, then page frame), not by schema order. */
 export const STYLE_CONTROLS: Array<{ key: keyof SketchStyle; label: string; values: string[]; names: string[] }> = [
   { key: 'radius', label: 'Esquinas', values: ['round', 'soft', 'square'], names: ['Redondas', 'Suaves', 'Rectas'] },
-  { key: 'buttons', label: 'Botones', values: ['pill', 'square', 'outline'], names: ['Píldora', 'Rectos', 'Contorno'] },
+  { key: 'buttons', label: 'Botones', values: ['pill', 'square', 'outline', 'ghost', 'underline', 'hard-shadow'], names: ['Píldora', 'Rectos', 'Contorno', 'Fantasma', 'Subrayado', 'Sombra dura'] },
+  { key: 'buttonIcon', label: 'Ícono del botón', values: ['none', 'arrow', 'bag', 'plus'], names: ['Sin ícono', 'Flecha', 'Bolsa', 'Más'] },
+  { key: 'icons', label: 'Íconos', values: ['bare', 'circle', 'square', 'tinted'], names: ['Sueltos', 'En círculo', 'En cuadrado', 'Con color'] },
   { key: 'cards', label: 'Tarjetas', values: ['bleed', 'inset', 'outline'], names: ['Foto llena', 'Con margen', 'Contorno'] },
+  { key: 'badges', label: 'Etiquetas', values: ['pill', 'square', 'tag'], names: ['Píldora', 'Rectas', 'Colgante'] },
+  { key: 'dividers', label: 'Separadores', values: ['none', 'hairline', 'rule', 'notch'], names: ['Ninguno', 'Línea fina', 'Línea gruesa', 'Muesca'] },
+  { key: 'fields', label: 'Campos', values: ['underline', 'box', 'pill'], names: ['Subrayado', 'Caja', 'Píldora'] },
+  { key: 'links', label: 'Enlaces', values: ['plain', 'underline', 'arrow'], names: ['Simples', 'Subrayados', 'Con flecha'] },
   { key: 'header', label: 'Cabecera', values: ['left', 'center'], names: ['Logo izq.', 'Logo centro'] },
   { key: 'footer', label: 'Pie', values: ['columns', 'center'], names: ['Columnas', 'Centrado'] },
 ];
-const DEFAULT_STYLE: SketchStyle = { radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns' };
+/** Same plain choices as the API's DEFAULT_SKETCH_STYLE, so a sketch saved before a key existed shows a selected segment. */
+export const DEFAULT_STYLE: SketchStyle = { radius: 'round', buttons: 'pill', cards: 'bleed', header: 'left', footer: 'columns', buttonIcon: 'none', icons: 'bare', dividers: 'none', badges: 'pill', fields: 'underline', links: 'plain' };
 /** The product-page skins; mirrors source-product-card-presets.ts (API), which is what validates a save. */
 const PRODUCT_PRESETS: Record<string, { label: string; params: Omit<SketchProduct, 'preset' | 'layout'> }> = {
   plain: { label: 'Sencilla', params: { swatch: 'pill', gallery: 'rail', blocks: 'plain', divider: 'none', enter: 'none', media: 'left' } },
