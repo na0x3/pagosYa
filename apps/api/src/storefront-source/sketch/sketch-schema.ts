@@ -14,9 +14,15 @@ export type SketchBg = keyof SketchPalette | 'tint-accent' | 'tint-deep' | 'tint
 export type SketchAlign = 'start' | 'center' | 'end';
 export type NewsletterForm = 'pill' | 'stacked' | 'underline' | 'card';
 export const NEWSLETTER_FORMS: readonly NewsletterForm[] = ['pill', 'stacked', 'underline', 'card'];
+/** A band's horizontal shape. `bleed` is the historical behaviour (edge to edge) and stays the default, so
+ * sketches that predate this field render unchanged; the others contain the section's content without ever
+ * narrowing its background. */
+export type SketchWidth = 'bleed' | 'wide' | 'narrow' | 'offset-left' | 'offset-right';
+export const SKETCH_WIDTHS: readonly SketchWidth[] = ['bleed', 'wide', 'narrow', 'offset-left', 'offset-right'];
 /** Editor-wide layout controls every block may carry: copy alignment, mirrored photo side, swapped buttons,
- * copy-column element order and per-group layout (spec 2026-10-03-boceto-structure-and-icons-design). */
-export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
+ * band width, copy-column element order and per-group layout (spec 2026-10-03-boceto-structure-and-icons-design;
+ * width added by spec 2026-10-04-yapi-composition-and-width-design). */
+export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean; width?: SketchWidth; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
 export type StickerPos = { x: number; y: number };
 export type SketchBlock = (
   | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; cta2: string; trust: string; badge: string; note: string; sticker: string; caption: string; photo?: string; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
@@ -382,6 +388,9 @@ export function repairSketch(input: unknown, ctx: SketchContext): { sketch: Stor
       if (blockAlign && blockAlign !== 'start') kept.align = blockAlign; else delete kept.align;
       if (block.flip === true && ['hero', 'split', 'story', 'newsletter'].includes(kept.type)) kept.flip = true;
       if (block.swap === true && ['hero', 'split'].includes(kept.type)) kept.swap = true;
+      // Band width: `bleed` is the default, so it is stored as absence and old sketches stay byte-identical.
+      const blockWidth = block.width as SketchWidth;
+      if (SKETCH_WIDTHS.includes(blockWidth) && blockWidth !== 'bleed') kept.width = blockWidth; else delete kept.width;
       // Copy order for the blocks added by structured selection (hero and split repair theirs above) and group layout.
       const copyOrder = SKETCH_COPY_ORDER[kept.type];
       if (copyOrder && kept.type !== 'hero' && kept.type !== 'split') {

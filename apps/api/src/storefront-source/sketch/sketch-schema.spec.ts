@@ -420,3 +420,24 @@ describe('review: free spots on list items follow their item', () => {
     expect(carry([step('Uno'), step('Dos')], [step('A')], { 'items/1': { x: 2, y: 2 } })).toBeUndefined();
   });
 });
+
+describe('band width', () => {
+  it('keeps a valid width and drops bleed, the default', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'a', type: 'story', title: 'Hola', width: 'narrow' },
+      { id: 'b', type: 'story', title: 'Chau', width: 'bleed' },
+    ] }, ctx);
+    expect(sketch.blocks.find(b => b.id === 'a')).toMatchObject({ width: 'narrow' });
+    expect(sketch.blocks.find(b => b.id === 'b')).not.toHaveProperty('width');
+  });
+  it('drops an invented width instead of failing', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 'a', type: 'story', title: 'Hola', width: 'ultra-wide' }] }, ctx);
+    expect(sketch.blocks.find(b => b.id === 'a')).not.toHaveProperty('width');
+  });
+  // Review Focus 1: every live store re-renders through repair, so a sketch that predates width must come out untouched.
+  it('leaves a sketch that predates width exactly as it was', () => {
+    const before = repairSketch({ blocks: [{ id: 'a', type: 'hero', headline: 'Hola' }] }, ctx).sketch;
+    expect(before.blocks.every(block => !('width' in block))).toBe(true);
+    expect(repairSketch(JSON.parse(JSON.stringify(before)), ctx).sketch).toEqual(before);
+  });
+});
