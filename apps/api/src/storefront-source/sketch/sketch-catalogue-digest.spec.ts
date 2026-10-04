@@ -55,3 +55,14 @@ it('survives junk without throwing', () => {
   }
   expect(catalogueDigest(undefined as any).totals.count).toBe(0);
 });
+
+// The digest is documented as total and sits on the generation path with merchant-controlled input.
+it('survives a catalogue too large to spread into Math.min and a long single category without quadratic copying', () => {
+  const rows = Array.from({ length: 150_000 }, (_, i) => ({ name: `P${i}`, amount: 100 + (i % 500), currency: 'BOB', categoryId: 'c1' }));
+  const started = Date.now();
+  const digest = catalogueDigest(rows, [{ id: 'c1', name: 'Todo' }]);
+  expect(digest.totals.count).toBe(150_000);
+  expect(digest.totals.priceLow).toBe('1.00 BOB');
+  expect(digest.totals.priceHigh).toBe('5.99 BOB');
+  expect(Date.now() - started).toBeLessThan(5000);
+});

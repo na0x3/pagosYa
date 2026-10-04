@@ -737,7 +737,10 @@ export class SourceGenerationService {
         const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: sketchPhotos.map(photo => photo.path) };
         const direction = drawSketchDirection();
         // The page's bands are drawn here, not chosen by the model: left to itself it converged on one skeleton every time.
-        const structure = drawPageStructure(countSubstance({ products: data.items, photos: sketchPhotos, brief: dto.brief }));
+        // Published reviews are the only licence for a testimonials band; a failed count is "none", never a throw.
+        let publishedReviews = 0;
+        try { publishedReviews = (await this.prisma.storeReview.count({ where: { storeId, status: 'PUBLISHED' } })) || 0; } catch { /* unknown counts as none */ }
+        const structure = drawPageStructure(countSubstance({ products: data.items, categories: data.categories, photos: sketchPhotos, brief: dto.brief, reviews: publishedReviews }));
         const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogue: catalogueDigest(data.items, data.categories), direction, structure });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);

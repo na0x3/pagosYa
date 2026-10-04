@@ -208,7 +208,7 @@ const modelCopy = {
   quotes: [{ text: 'El mejor pan del barrio.', name: 'Ana', place: 'La Paz' }, { text: 'Siempre fresco.', name: 'Luis', place: 'El Alto' }],
   stats: [{ value: '10', label: 'años' }], boxes: [{ title: 'Fresco', text: 'Todos los días' }], pills: ['Artesanal'],
 };
-const fullStore = { products: 40, photos: 6, categories: 5, briefWords: 60 };
+const fullStore = { products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 };
 
 it('the ten seeds draw pages of different lengths, so the browser cases are not ten copies of one page', () => {
   const lengths = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(seed => drawPageStructure(fullStore, seeded(seed)).slots.length));

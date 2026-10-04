@@ -70,7 +70,12 @@ export function catalogueDigest(rawItems: unknown, rawCategories: unknown = [], 
 
   const categoryOf = (row: Record<string, unknown>) => (typeof row.categoryId === 'string' ? names.get(row.categoryId) : undefined);
   const byCategory = new Map<string, Record<string, unknown>[]>();
-  for (const row of rows) byCategory.set(categoryOf(row) ?? '', [...(byCategory.get(categoryOf(row) ?? '') ?? []), row]);
+  // Push, never re-spread: the rows are merchant-controlled and a copy per row is quadratic at 10k products.
+  for (const row of rows) {
+    const key = categoryOf(row) ?? '';
+    const bucket = byCategory.get(key);
+    if (bucket) bucket.push(row); else byCategory.set(key, [row]);
+  }
   const ranked = [...byCategory].sort((a, b) => b[1].length - a[1].length);
 
   // Prices only compare within one currency; the commonest one stands for the catalogue.
@@ -100,7 +105,7 @@ export function catalogueDigest(rawItems: unknown, rawCategories: unknown = [], 
     }),
     totals: {
       count: rows.length,
-      ...(main && amounts.length ? { priceLow: money(Math.min(...amounts), main), priceHigh: money(Math.max(...amounts), main) } : {}),
+      ...(main && amounts.length ? { priceLow: money(amounts.reduce((low, amount) => Math.min(low, amount), Infinity), main), priceHigh: money(amounts.reduce((high, amount) => Math.max(high, amount), -Infinity), main) } : {}),
       categories: ranked.map(([name]) => name).filter(Boolean).slice(0, 12),
     },
   };

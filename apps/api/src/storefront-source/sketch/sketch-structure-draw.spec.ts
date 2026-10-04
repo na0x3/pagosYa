@@ -4,7 +4,7 @@ import { substanceCaps } from './sketch-substance';
 /** A seeded generator, so a draw is reproducible and a failure is debuggable. Mulberry32, not an LCG: the
  * LCG's first output barely moves across small seeds, which pinned every draw to a single page length. */
 const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-const full = { products: 40, photos: 6, categories: 5, briefWords: 60 };
+const full = { products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 };
 
 it('is deterministic for a seed, and different across seeds', () => {
   const a = drawPageStructure(full, seeded(1));
@@ -35,7 +35,7 @@ it('always ends on a footer and never opens on one', () => {
 
 // Review Focus 2: nothing to sell, nothing to show.
 it('draws a short page with no commerce bands for an empty store', () => {
-  const empty = { products: 0, photos: 0, categories: 0, briefWords: 4 };
+  const empty = { products: 0, photos: 0, categories: 0, briefWords: 4, reviews: 0 };
   for (let seed = 1; seed <= 15; seed++) {
     const { slots } = drawPageStructure(empty, seeded(seed));
     expect(slots.length).toBeLessThanOrEqual(substanceCaps(empty).maxLength);
@@ -52,14 +52,14 @@ it('carries exactly one catalog when the store has products', () => {
 });
 
 it('never gives more media slots than the store has photos', () => {
-  const thin = { products: 10, photos: 2, categories: 2, briefWords: 40 };
+  const thin = { products: 10, photos: 2, categories: 2, briefWords: 40, reviews: 4 };
   for (let seed = 1; seed <= 25; seed++) {
     expect(drawPageStructure(thin, seeded(seed)).slots.filter(s => s.media).length).toBeLessThanOrEqual(2);
   }
 });
 
 it('enforces the grammar over many draws: no three consecutive media, no adjacent accents, announce at slot 0', () => {
-  const full = { products: 40, photos: 6, categories: 5, briefWords: 60 };
+  const full = { products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 };
   const accentTypes = new Set(['announce', 'marquee', 'banner']);
 
   for (let seed = 1; seed <= 100; seed++) {
@@ -86,10 +86,10 @@ it('enforces the grammar over many draws: no three consecutive media, no adjacen
 });
 
 const STORES = [
-  { name: 'full', s: { products: 40, photos: 6, categories: 5, briefWords: 60 } },
-  { name: 'empty', s: { products: 0, photos: 0, categories: 0, briefWords: 4 } },
-  { name: 'one-photo', s: { products: 12, photos: 1, categories: 1, briefWords: 30 } },
-  { name: 'service', s: { products: 0, photos: 3, categories: 0, briefWords: 40 } },
+  { name: 'full', s: { products: 40, photos: 6, categories: 5, briefWords: 60, reviews: 4 } },
+  { name: 'empty', s: { products: 0, photos: 0, categories: 0, briefWords: 4, reviews: 0 } },
+  { name: 'one-photo', s: { products: 12, photos: 1, categories: 1, briefWords: 30, reviews: 4 } },
+  { name: 'service', s: { products: 0, photos: 3, categories: 0, briefWords: 40, reviews: 4 } },
 ];
 
 it.each(STORES)('draws a legal page every time for a $name store', ({ s }) => {
@@ -125,8 +125,8 @@ it('accepts a hand-built legal structure', () => {
 });
 
 // A tuple's optional fourth member would be taken by jest for a done callback, so the substance is a field.
-const thin = { products: 40, photos: 1, categories: 5, briefWords: 60 };
-it.each<[string, (s: Slot[]) => Slot[], string, { products: number; photos: number; categories: number; briefWords: number }]>([
+const thin = { products: 40, photos: 1, categories: 5, briefWords: 60, reviews: 4 };
+it.each<[string, (s: Slot[]) => Slot[], string, { products: number; photos: number; categories: number; briefWords: number; reviews: number }]>([
   ['repeated width on neighbours', s => { s[2].width = 'wide'; return s; }, 'repeated width at 2', full],
   ['adjacent accent bands', s => { s[1].type = 'marquee'; return s; }, 'accent bands adjacent at 1', full],
   ['three consecutive media slots', s => { s[1].media = s[3].media = s[2].media = true; return s; }, 'three media slots in a row at 3', full],
