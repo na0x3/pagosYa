@@ -8,7 +8,12 @@ const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Ma
 const full = { products: 40, photos: 6, categories: 5, briefWords: 60 };
 const structure = () => drawPageStructure(full, seeded(7));
 /** A response block: it names the slot it fills. */
-const filled = (id: string, type: SketchBlock['type']) => ({ id, type } as SketchBlock);
+const CONTENT: Partial<Record<SketchBlock['type'], object>> = {
+  steps: { items: [{ icon: 'x', title: 't', text: '' }] }, faq: { items: [{ q: 'q', a: 'a' }] }, collections: { items: [{ title: 't', text: '' }] },
+  gallery: { photos: ['a.jpg'] }, reviews: { quotes: [{ text: 't', name: 'n', place: '' }] }, story: { paragraphs: ['p'] }, announce: { left: 'hola', right: '' },
+};
+/** A block of the slot's type carrying content, as repairSketch would leave a well-formed one. */
+const filled = (id: string, type: SketchBlock['type']) => ({ id, type, ...CONTENT[type] } as SketchBlock);
 const answering = (s: PageStructure) => s.slots.map(slot => filled(slot.id, slot.type));
 
 describe('fillStructure', () => {
@@ -142,7 +147,7 @@ describe('fillStructure', () => {
       const { blocks, notes } = fillStructure(s.slots.filter(sl => keep.includes(sl.type)).map(sl => filled(sl.id, sl.type)), s, ctx);
       const types = blocks.map(block => block.type);
       for (const empty of ['reviews', 'gallery', 'faq', 'steps']) expect(types).not.toContain(empty);
-      expect(notes.join(' ')).toMatch(/no tenía contenido/);
+      expect(notes.join(' ')).toMatch(/sin contenido/);
     });
 
     it('keeps the shell when dropping would take the page under six bands', () => {
@@ -151,6 +156,42 @@ describe('fillStructure', () => {
       const { blocks } = fillStructure(s.slots.filter(sl => keep.includes(sl.type)).map(sl => filled(sl.id, sl.type)), s, ctx);
       expect(blocks).toHaveLength(6);
       expect(blocks.map(block => block.type)).toEqual(expect.arrayContaining(['story', 'gallery']));
+    });
+  });
+
+  describe('a block whose items repair discarded', () => {
+    const slot = (id: string, type: SketchBlock['type'], width: PageStructure['slots'][number]['width']) => ({ id, type, size: 'm' as const, width, media: false });
+    const W = ['bleed', 'wide'] as const;
+    const build = (types: SketchBlock['type'][]) => ({ params: {} as never, slots: types.map((type, i) => slot(`s${i + 1}`, type, W[i % 2])) });
+    // What repairSketch leaves behind when every item was malformed: the band is present and its list is empty.
+    const emptied: Array<[SketchBlock['type'], object]> = [
+      ['faq', { items: [] }], ['reviews', { quotes: [] }], ['gallery', { photos: [] }], ['steps', { items: [] }],
+      ['collections', { items: [] }], ['story', { paragraphs: [] }], ['announce', { left: '', right: '' }],
+    ];
+
+    for (const [type, empty] of emptied) {
+      it(`drops an emptied ${type} band instead of showing a heading over nothing`, () => {
+        const s = build(type === 'announce' ? ['announce', 'hero', 'split', 'banner', 'catalog', 'newsletter', 'footer'] : ['hero', 'split', type, 'banner', 'catalog', 'newsletter', 'footer']);
+        const response = s.slots.map(sl => (sl.type === type ? ({ id: sl.id, type, ...empty } as SketchBlock) : filled(sl.id, sl.type)));
+        const { blocks, notes } = fillStructure(response, s, ctx);
+        expect(blocks.map(block => block.type)).not.toContain(type);
+        expect(blocks).toHaveLength(6);
+        expect(notes.join(' ')).toMatch(/sin contenido/);
+      });
+    }
+
+    it('keeps an emptied band when dropping it would take the page under six', () => {
+      const s = build(['hero', 'split', 'faq', 'catalog', 'newsletter', 'footer']);
+      const response = s.slots.map(sl => (sl.type === 'faq' ? ({ id: sl.id, type: 'faq', items: [] } as unknown as SketchBlock) : filled(sl.id, sl.type)));
+      const { blocks } = fillStructure(response, s, ctx);
+      expect(blocks.map(block => block.type)).toContain('faq');
+      expect(blocks).toHaveLength(6);
+    });
+
+    it('keeps a band that still has content', () => {
+      const s = build(['hero', 'split', 'faq', 'banner', 'catalog', 'newsletter', 'footer']);
+      const { blocks } = fillStructure(answering(s), s, ctx);
+      expect(blocks.map(block => block.type)).toContain('faq');
     });
   });
 });

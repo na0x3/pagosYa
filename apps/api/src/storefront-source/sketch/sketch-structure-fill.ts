@@ -25,8 +25,27 @@ function defaultBlock(slot: PageSlot, ctx: SketchContext): SketchBlock {
   }
 }
 
-/** Types whose whole content is a list; an empty one is a heading over nothing. */
-const LIST_BEARING: SketchBlock['type'][] = ['steps', 'faq', 'collections', 'gallery', 'reviews', 'story'];
+/** Where each band that can end up empty carries what it shows. A list-bearing band is a heading over nothing
+ * without its list, and an announce with neither side is a strip with no text. */
+const CONTENT: Partial<Record<SketchBlock['type'], readonly string[]>> = {
+  steps: ['items'], faq: ['items'], collections: ['items'], gallery: ['photos'], reviews: ['quotes'], story: ['paragraphs'],
+  announce: ['left', 'right'],
+};
+const CAN_BE_EMPTY = Object.keys(CONTENT) as SketchBlock['type'][];
+
+/** Whether the block, as it will render, shows anything. This reads the block itself rather than asking whether
+ * the model sent one: repairSketch has already discarded malformed items by the time fill runs, so a band whose
+ * items were all strings comes back present but empty. A missing field counts as empty for the same reason. */
+function hasContent(block: SketchBlock): boolean {
+  const fields = CONTENT[block.type];
+  if (!fields) return true;
+  const record = block as unknown as Record<string, unknown>;
+  return fields.some(field => {
+    const value = record[field];
+    return Array.isArray(value) ? value.length > 0 : typeof value === 'string' && value.trim() !== '';
+  });
+}
+
 const WIDTHS: SketchWidth[] = ['bleed', 'wide', 'narrow', 'offset-left', 'offset-right'];
 /** The grammar's floor on page length (see `violations`). */
 const MIN_BANDS = 6;
@@ -85,14 +104,14 @@ export function fillStructure(blocks: SketchBlock[], structure: PageStructure, c
     entries.push({ slot, block: block && block.type === slot.type ? block : null });
   }
 
-  // A stand-in for a list-bearing type has no list, and starter items would be filler, so it renders as a
-  // titled band with nothing in it: worse than no band. Drop it, unless that takes the page under the
+  // An empty band, whether a stand-in or the model's own block with every item repaired away, has no content, and
+  // starter items would be filler, so it renders as a titled band with nothing in it: worse than no band. Drop it, unless that takes the page under the
   // grammar's floor of six, where the shell stays because a short page is the habit the veto cap exists to stop.
   let remaining = entries.length;
   const kept = entries.filter(entry => {
-    if (entry.block || !LIST_BEARING.includes(entry.slot.type) || remaining <= MIN_BANDS) return true;
+    if ((entry.block && hasContent(entry.block)) || !CAN_BE_EMPTY.includes(entry.slot.type) || remaining <= MIN_BANDS) return true;
     remaining--;
-    notes.push(`la banda ${entry.slot.id} (${entry.slot.type}) no tenía contenido; se quitó`);
+    notes.push(`la banda ${entry.slot.id} (${entry.slot.type}) quedó sin contenido; se quitó`);
     return false;
   });
 
