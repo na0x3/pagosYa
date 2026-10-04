@@ -6,3 +6,6 @@ export { renderBlock, blockCss, SKETCH_BASE_CSS } from './sketch-blocks';
 export { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
 export { drawSketchDirection } from './sketch-direction';
 export type { SketchDirection } from './sketch-direction';
+export * from './sketch-substance';
+export * from './sketch-structure-draw';
+export * from './sketch-structure-fill';

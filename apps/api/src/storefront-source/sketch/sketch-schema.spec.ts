@@ -1,4 +1,5 @@
 import { contrastRatio, DEFAULT_SKETCH_STYLE, ensureAllPhotosUsed, ensureBandRhythm, mixHex, repairSketch, resolveBg, SKETCH_BLOCK_TYPES } from './sketch-schema';
+import { drawPageStructure } from './sketch-structure-draw';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 
@@ -456,5 +457,42 @@ describe('style the model may choose', () => {
   it('still falls back to the base style when no defaults are given', () => {
     const { sketch } = repairSketch({ style: { radius: 'auto' }, blocks: [] }, ctx);
     expect(sketch.style).toEqual(DEFAULT_SKETCH_STYLE);
+  });
+});
+
+describe('repairSketch with a drawn structure', () => {
+  const structCtx = { storeName: 'salv', purpose: 'shop' as const, photos: ['a.jpg'] };
+  const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const aStructure = () => drawPageStructure({ products: 40, photos: 6, categories: 5, briefWords: 60 }, seeded(11));
+
+  it('holds a new sketch to the structure it was drawn', () => {
+    const structure = aStructure();
+    const { sketch } = repairSketch({ blocks: [{ id: 'invented', type: 'marquee', text: 'x' }] }, structCtx, { structure });
+    expect(sketch.blocks.map(b => b.id)).not.toContain('invented');
+    expect(sketch.blocks.map(b => b.type)).toContain('catalog');
+    expect(sketch.blocks.at(-1)?.type).toBe('footer');
+    expect(sketch.structure).toEqual(structure);
+  });
+
+  // A chat edit passes no structure, and its blocks must survive whole.
+  it('leaves an edited sketch alone when no structure is passed', () => {
+    const { sketch } = repairSketch({ blocks: [
+      { id: 'h', type: 'hero', headline: 'Hola' },
+      { id: 'm', type: 'marquee', text: 'x' },
+    ] }, structCtx);
+    expect(sketch.blocks.map(b => b.id)).toEqual(expect.arrayContaining(['h', 'm']));
+    expect(sketch.structure).toBeUndefined();
+  });
+
+  // The field's presence on a saved sketch must not trigger enforcement; only the caller's argument does.
+  it('does not enforce a structure merely because the sketch carries one', () => {
+    const { sketch } = repairSketch({ structure: aStructure(), blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }, { id: 'm', type: 'marquee', text: 'x' }] }, structCtx);
+    expect(sketch.blocks.map(b => b.id)).toEqual(expect.arrayContaining(['h', 'm']));
+    expect(sketch.structure).toBeUndefined();
+  });
+
+  it('repairs a pre-structure sketch with no structure key at all', () => {
+    const { sketch } = repairSketch({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, structCtx);
+    expect('structure' in sketch).toBe(false);
   });
 });

@@ -3,6 +3,8 @@ import { SOURCE_FONT_IDS } from '../source-font-catalog';
 import { PRESET_IDS, PRODUCT_CARD_PRESETS, PRODUCT_COMMERCE_RECIPES, type PresetId, type ProductCardParams } from '../source-product-card-presets';
 import { SOURCE_DNA_ENUMS, SOURCE_PRODUCT_PAGE_STYLES, type SourceProductPageStyle } from '../source-dna';
 import { sanitizeProductAssurances, type ProductAssurance } from '../product-theme';
+import { fillStructure } from './sketch-structure-fill';
+import type { PageStructure } from './sketch-structure-draw';
 
 /** The editable sketch a merchant shapes before any site is built (sketch-first YAPI, sub-project 1).
  * `repairSketch` is total: any input yields a usable sketch plus notes — the sketch loop never surfaces errors. */
@@ -59,7 +61,7 @@ export type SketchProduct = { preset: PresetId; layout: SourceProductPageStyle; 
 /** The shopper login and sign-up pages. The sketch designs everything around the form; the form itself is drawn by
  * the trusted platform frame over the kit's account gate, so no credential input ever lives in store code. */
 export type SketchAccount = { id: 'account'; type: 'account'; layout: 'split' | 'center'; kicker: string; title: string; lead: string; perks: Array<{ icon: string; text: string }>; photo?: string; bg: SketchBg };
-export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; style: SketchStyle; product: SketchProduct; account: SketchAccount; blocks: SketchBlock[] };
+export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; style: SketchStyle; product: SketchProduct; account: SketchAccount; structure?: PageStructure; blocks: SketchBlock[] };
 export type SketchContext = { storeName: string; purpose: 'shop' | 'service'; photos: string[] };
 
 export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'steps', 'marquee', 'catalog', 'collections', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
@@ -262,7 +264,7 @@ export function repairSketchExtras(value: unknown, ctx: SketchContext): SketchEx
   });
 }
 
-export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { style?: SketchStyle }): { sketch: StoreSketch; notes: string[] } {
+export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { style?: SketchStyle; structure?: PageStructure }): { sketch: StoreSketch; notes: string[] } {
   const notes: string[] = [];
   const raw = (typeof input === 'object' && input !== null ? input : (input !== undefined && notes.push('input no era un objeto; se usó el boceto base'), {})) as Record<string, unknown>;
 
@@ -417,6 +419,16 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     }
   }
 
+  // The drawn skeleton (spec 2026-10-04-page-grammar-and-real-copy). Enforced only when the caller passes a
+  // structure, never because a sketch happens to carry one: a chat edit passes none, so a merchant's bands
+  // are never taken from under them.
+  if (defaults?.structure) {
+    const applied = fillStructure(blocks, defaults.structure, ctx);
+    blocks.length = 0;
+    blocks.push(...applied.blocks);
+    notes.push(...applied.notes);
+    for (const block of blocks) if (block.id) keptIds.add(block.id);
+  }
   // Size: a page has at most 20 blocks; beyond that the generated file outgrows the source contract.
   if (blocks.length > 20) { blocks.length = 20; notes.push('demasiados bloques; se conservaron los primeros 20'); }
   // One catalog only: the commerce runtime reads a single product template and mount.
@@ -424,7 +436,8 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
   if (extraCatalogs.length) { notes.push('catálogo repetido; se conservó el primero'); for (const extra of extraCatalogs) blocks.splice(blocks.indexOf(extra), 1); }
   // Structure: a shop always sells and every page ends in a footer, exactly one, last.
   if (!blocks.length) blocks.push({ id: '', type: 'hero', variant: 'photo-right', headline: ctx.storeName, sub: '', cta: 'Ver productos', cta2: '', trust: '', badge: '', note: '', sticker: '', caption: '', bg: 'paper', size: 'm' });
-  if (ctx.purpose === 'shop' && !blocks.some(b => b.type === 'catalog')) {
+  // A drawn structure without a catalog is a store with nothing to sell; adding one back would undo the draw.
+  if (ctx.purpose === 'shop' && !defaults?.structure && !blocks.some(b => b.type === 'catalog')) {
     blocks.splice(1, 0, { id: '', type: 'catalog', kicker: '', title: 'Nuestros productos', seeAll: '', badges: [], stripLeft: '', stripRight: '', cardRatio: '4-3', cardDesc: true, cardAdd: true, bg: 'paper', size: 'm' });
     notes.push('faltaba el catálogo; se añadió');
   }
@@ -458,7 +471,7 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     bg: bg(rawAccount.bg, 'tint-accent'),
   };
 
-  return { sketch: { palette, fonts, scale, style, product, account, blocks: ordered }, notes };
+  return { sketch: { palette, fonts, scale, style, product, account, ...(defaults?.structure ? { structure: defaults.structure } : {}), blocks: ordered }, notes };
 }
 
 /** The kit button form that matches the sketch's Botones choice, so the platform's purchase
