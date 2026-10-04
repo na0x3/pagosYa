@@ -32,10 +32,29 @@ describe('specificityReport', () => {
     expect(report).toMatchObject({ blocks: 4, bands: 3, groundedBands: 1 });
   });
 
-  it('names the filler it found, and a filler-only page is not grounded', () => {
+  it('a filler-only page is not grounded', () => {
     const report = specificityReport(sketchOf([{ id: 'a', type: 'story', title: 'Nuestra historia', paragraphs: ['Una selección pensada con calidad que se nota.'] }]), digest);
     expect(report.groundedBands).toBe(0);
-    expect(report.filler).toEqual(expect.arrayContaining(['calidad que se nota', 'una selección pensada']));
+  });
+
+  it.each(['calidad que se nota', 'hecho con amor', 'una selección pensada', 'objetos que conversan', 'pensada como una revista', 'para mirar de cerca', 'lo mejor para vos'])('names the filler phrase "%s"', phrase => {
+    const report = specificityReport(sketchOf([{ id: 'a', type: 'story', title: 'Nuestra historia', paragraphs: [`Texto que dice ${phrase.toUpperCase()} y nada más.`] }]), digest);
+    expect(report.filler).toEqual([phrase]);
+  });
+
+  it('does not ground a band on a generic word from a product name or category', () => {
+    const generic = catalogueDigest([{ name: 'Pan de masa madre', amount: 100, categoryId: 'c' }, { name: 'Vela Premium Nueva', amount: 100, categoryId: 'd' }], [{ id: 'c', name: 'Casa' }, { id: 'd', name: 'Ropa' }]);
+    const report = specificityReport(sketchOf([{ id: 'a', type: 'story', title: 'x', paragraphs: ['Pensado con corazón de madre en nuestra casa de siempre, premium y nueva para ropa diaria'] }]), generic);
+    expect(report.groundedBands).toBe(0);
+    const whole = specificityReport(sketchOf([{ id: 'a', type: 'story', title: 'x', paragraphs: ['Probá el pan de masa madre de hoy'] }]), generic);
+    expect(whole.groundedBands).toBe(1);
+  });
+
+  it('reads the copy of a text extra but not other extras', () => {
+    const text = specificityReport(sketchOf([{ id: 'a', type: 'hero', headline: 'Hola', extras: [{ id: 'e', kind: 'text', value: 'Focaccia romero recién hecha' }] }]), digest);
+    expect(text.groundedBands).toBe(1);
+    const button = specificityReport(sketchOf([{ id: 'a', type: 'hero', headline: 'Bienvenidos a la casa de siempre', extras: [{ id: 'e', kind: 'button', value: 'Focaccia romero' }] }]), digest);
+    expect(button.groundedBands).toBe(0);
   });
 
   it('matches options, materials and tags, folding accents and plurals', () => {
@@ -48,14 +67,15 @@ describe('specificityReport', () => {
     expect(report.groundedBands).toBe(4);
   });
 
-  it('does not count ids, hrefs, button labels or short terms as prose or as a match', () => {
+  it('does not count ids, hrefs, photos, button labels or short terms as prose or as a match', () => {
     const short = catalogueDigest([{ name: 'Sal', amount: 100, categoryId: 'c' }], [{ id: 'c', name: 'Pan' }]);
+    expect(specificityReport(sketchOf([{ id: 'x', type: 'hero', headline: 'Bienvenidos a nuestra casa de siempre', sub: 'Sal y pan' }]), short).groundedBands).toBe(0);
+    // Terms here are long enough to match, so this fails if id, href, photo or cta ever join the allowlist.
     const report = specificityReport(sketchOf([
-      { id: 'focaccia romero entera', type: 'hero', headline: 'Bienvenidos a nuestra casa de siempre', cta: 'Focaccia romero', href: 'focaccia.html' },
-    ]), short);
+      { id: 'focaccia romero entera', type: 'hero', headline: 'Bienvenidos a nuestra casa de siempre', cta: 'Focaccia romero', href: 'focaccia-romero.html', photo: 'focaccia romero.jpg', bg: 'panaderia' },
+    ]), digest);
     expect(report.groundedBands).toBe(0);
-    const withBig = specificityReport(sketchOf([{ id: 'x', type: 'hero', headline: 'Bienvenidos a nuestra casa de siempre', cta: 'Focaccia romero', photo: 'focaccia romero.jpg' }]), digest);
-    expect(withBig.groundedBands).toBe(0);
+    expect(report.bands).toBe(1);
   });
 
   it('reads nested prose such as items and quotes', () => {

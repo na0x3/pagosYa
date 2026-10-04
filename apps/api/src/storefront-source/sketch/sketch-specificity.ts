@@ -22,9 +22,24 @@ function collect(value: unknown, key: string | undefined, out: string[], depth: 
   if (typeof value === 'string') { if (key && PROSE_KEYS.has(key)) out.push(value); return; }
   if (Array.isArray(value)) { for (const entry of value.slice(0, 64)) collect(entry, key, out, depth + 1); return; }
   if (typeof value === 'object' && value !== null) {
+    // An inserted free-layer extra keeps its copy under `value`, but only kind 'text' is prose; the other kinds hold
+    // an emoji, an icon name, a photo path or a button label. `value` is therefore not on the allowlist.
+    const extra = value as { kind?: unknown; value?: unknown };
+    if (extra.kind === 'text' && typeof extra.value === 'string') out.push(extra.value);
     for (const [k, v] of Object.entries(value)) collect(v, PROSE_KEYS.has(k) ? k : undefined, out, depth + 1);
   }
 }
+
+/** Words that sit in product names AND in mood copy ("Casa Premium", "Nueva colección"). Applied only to the
+ * single words pulled out of a name: the whole name is specific by construction, one of its adjectives is not.
+ * Folded (no accents) because it is compared against folded text. */
+const GENERIC_WORDS = new Set([
+  'premium', 'nuevo', 'nueva', 'nuevos', 'nuevas', 'calidad', 'casa', 'hogar', 'especial', 'especiales', 'natural', 'naturales', 'clasico', 'clasica', 'original', 'originales',
+  'artesanal', 'artesanales', 'artesano', 'artesana', 'madre', 'padre', 'mejor', 'mejores', 'bueno', 'buena', 'grande', 'grandes', 'pequeno', 'pequena', 'basico', 'basica',
+  'unico', 'unica', 'unica', 'suave', 'fresco', 'fresca', 'frescos', 'frescas', 'tradicional', 'deluxe', 'edicion', 'coleccion', 'seleccion', 'estilo', 'diseno', 'moderno', 'moderna',
+  'elegante', 'simple', 'perfecto', 'perfecta', 'ideal', 'unico', 'amor', 'vida', 'mundo', 'regalo', 'regalos', 'pack', 'combo', 'surtido', 'surtidos', 'producto', 'productos',
+  'color', 'colores', 'hecho', 'hecha', 'hechos', 'tienda', 'ropa', 'cosas', 'objeto', 'objetos', 'sabor', 'sabores', 'delicioso', 'deliciosa', 'cuerpo', 'diario', 'diaria',
+]);
 
 /** Three letters match half the alphabet ("sal" inside "salud"), and a bare number is a price, not a noun. */
 const usable = (term: string) => term.trim().length >= 4 && /[a-zñ]/.test(term);
@@ -39,19 +54,25 @@ function terms(catalogue: CatalogueDigest): string[] {
   for (const item of Array.isArray(catalogue?.items) ? catalogue.items : []) {
     add(item?.name);
     // A page says "la focaccia", not "Focaccia romero 500g"; long words of a name stand for it.
-    if (typeof item?.name === 'string') for (const word of fold(item.name).split(' ')) if (word.length >= 5 && /[a-zñ]/.test(word)) add(word);
-    add(item?.category);
+    if (typeof item?.name === 'string') for (const word of fold(item.name).split(' ')) if (word.length >= 5 && /[a-zñ]/.test(word) && !GENERIC_WORDS.has(word)) add(word);
+    // A category is whole by construction, but a generic one ("Casa", "Ropa") is as vague as the word in mood copy.
+    if (typeof item?.category === 'string' && !GENERIC_WORDS.has(fold(item.category).trim())) add(item.category);
     for (const tag of Array.isArray(item?.tags) ? item.tags : []) add(tag);
     for (const option of Array.isArray(item?.options) ? item.options : []) if (typeof option === 'string') for (const value of afterColon(option).split(',')) add(value);
     for (const fact of Array.isArray(item?.facts) ? item.facts : []) if (typeof fact === 'string') add(afterColon(fact));
   }
-  for (const category of Array.isArray(catalogue?.totals?.categories) ? catalogue.totals.categories : []) add(category);
+  for (const category of Array.isArray(catalogue?.totals?.categories) ? catalogue.totals.categories : []) if (typeof category === 'string' && !GENERIC_WORDS.has(fold(category).trim())) add(category);
   return [...out];
 }
 
 // Word-boundary, tolerating a plural: "camisetas" is the product "camiseta".
 const mentions = (text: string, term: string) => text.includes(term) || text.includes(`${term.trimEnd()}s `) || text.includes(`${term.trimEnd()}es `);
 
+/** READ THE SCORE WITH THIS LIMIT: a high groundedBands/bands ratio means "not obviously generic", not "specific".
+ * One shared word is enough to ground a band, and a stopword list can only name the generic words it has thought
+ * of. It cannot tell a sentence that is true of this catalogue from a mood sentence that happens to contain a
+ * product word. Its reliable direction is the negative: filler and zero grounded bands are real findings. A band is
+ * deliberately not required to match two terms, which would under-report a genuinely specific short band. */
 export type SpecificityReport = {
   /** Every block on the page, prose or not. */
   blocks: number;
