@@ -296,3 +296,53 @@ it('renders the loudest component combination without overflow or a collapsed bu
     }
   });
 });
+
+// The unit tests only prove a rule's text is in the stylesheet, which cannot see a rule lose the cascade. These read the
+// computed result, because two rules were written correctly and still lost to older, more specific ones.
+const variantPage = (style: object) => repairSketch({
+  style,
+  blocks: [
+    { id: 'h', type: 'hero', headline: 'Pan de verdad', sub: 'Todos los días', cta: 'Comprar', photo: 'assets/a.jpg' },
+    { id: 's', type: 'steps', title: 'Cómo pedir', items: [1, 2, 3].map(n => ({ title: `Paso ${n}`, text: 'Elegí', icon: 'check' })) },
+    { id: 'p', type: 'split', title: 'Hecho a mano', body: 'Cada día.', photo: 'assets/a.jpg', boxes: [{ title: 'Fresco', text: 'Todos los días', icon: 'check' }] },
+  ],
+}, ctx).sketch;
+
+it('a chosen button icon replaces the default arrow instead of sitting beside it', async () => {
+  await openSketch(variantPage({ buttonIcon: 'arrow' }), async page => {
+    const after = await page.evaluate(() => getComputedStyle(document.querySelector('.skb-btn--icon')!, '::after').content);
+    expect(after).toBe('none');
+  });
+});
+
+it('hairline and rule dividers draw a line, and a square icon takes the radius token', async () => {
+  for (const dividers of ['hairline', 'rule']) {
+    await openSketch(variantPage({ dividers, icons: 'square' }), async page => {
+      const seen = await page.evaluate(() => {
+        const probe = document.createElement('div');
+        probe.style.borderRadius = 'var(--skb-r-sm)';
+        document.querySelector('.skb-site')!.append(probe);
+        return {
+          line: parseFloat(getComputedStyle(document.querySelectorAll('.skb + .skb')[0]).borderTopWidth),
+          radius: getComputedStyle(document.querySelector('.skb-box__icon')!).borderRadius,
+          token: getComputedStyle(probe).borderRadius,
+        };
+      });
+      expect({ dividers, drawn: seen.line > 0 }).toEqual({ dividers, drawn: true });
+      expect(seen.radius).toBe(seen.token);
+    });
+  }
+});
+
+it('tinted step icons use one colour on every step and keep a glyph that shows against it', async () => {
+  await openSketch(variantPage({ icons: 'tinted' }), async page => {
+    const seen = await page.evaluate(() => Array.from(document.querySelectorAll('.skb-step__icon-wrap')).map(wrap => ({
+      background: getComputedStyle(wrap).backgroundColor, filter: getComputedStyle(wrap.querySelector('img')!).filter,
+    })));
+    expect(seen.length).toBe(3);
+    // Untinted, steps 2 and 3 cycle to the deep and ink colours; tinted, the tint must beat that cycle.
+    expect(new Set(seen.map(item => item.background)).size).toBe(1);
+    // The glyph is inverted to white for the filled wrapper; stripping that on a dark wrapper hides the icon.
+    for (const item of seen) expect(item.filter).toContain('invert');
+  });
+});

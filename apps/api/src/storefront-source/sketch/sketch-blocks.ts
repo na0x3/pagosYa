@@ -561,12 +561,14 @@ export const SKETCH_BASE_CSS = `
 @media (prefers-reduced-motion: reduce) { .skb-marquee__track { animation: none; } }
 /* Component choices. Every rule here is keyed to a NON-default value, so a sketch saved before these keys existed (which
    gets none/bare/plain/pill/underline) renders exactly as it always did. */
-.skb-btn--icon::after { content: none; }
+/* Same :not() chain as the default arrow rule, because both arguments count toward specificity and a shorter selector
+   would lose and leave the arrow beside the icon. */
+.skb-btn.skb-btn--icon:not(.skb-btn--ghost):not(.skb-subscribe)::after { content: none; }
 .skb-btn__icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.12em; margin-left: 0.5em; background: currentColor; -webkit-mask: var(--skb-btn-icon) center / contain no-repeat; mask: var(--skb-btn-icon) center / contain no-repeat; }
 [data-skb-buttons="ghost"] .skb-btn:not(.skb-btn--ghost):not(.skb-subscribe) { background: transparent; color: inherit; border: 1.5px solid currentColor; }
 [data-skb-buttons="underline"] .skb-btn:not(.skb-btn--ghost):not(.skb-subscribe) { background: transparent; color: inherit; border: 0; border-bottom: 2px solid currentColor; border-radius: 0; padding: 0.4em 0.1em; }
-[data-skb-buttons="hard-shadow"] .skb-btn:not(.skb-btn--ghost) { border: 2px solid var(--skb-ink); box-shadow: 4px 4px 0 var(--skb-ink); }
-[data-skb-buttons="hard-shadow"] .skb-btn:not(.skb-btn--ghost):active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--skb-ink); }
+[data-skb-buttons="hard-shadow"] .skb-btn:not(.skb-btn--ghost):not(.skb-subscribe) { border: 2px solid var(--skb-ink); box-shadow: 4px 4px 0 var(--skb-ink); }
+[data-skb-buttons="hard-shadow"] .skb-btn:not(.skb-btn--ghost):not(.skb-subscribe):active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--skb-ink); }
 /* A plain icon is an image, so the frame grows outward (content-box) instead of squeezing the glyph. Icons that already sit in
    a filled wrapper change the wrapper instead. */
 [data-skb-icons] .skb-icon:not(.skb-icon--wrap) { box-sizing: content-box; }
@@ -576,7 +578,9 @@ export const SKETCH_BASE_CSS = `
 [data-skb-icons="circle"] .skb-icon--wrap { border-radius: 50%; }
 [data-skb-icons="square"] .skb-icon--wrap { border-radius: var(--skb-r-sm); }
 [data-skb-icons="tinted"] .skb-icon--wrap { border-radius: var(--skb-r-sm); background: color-mix(in srgb, var(--skb-accent) 22%, transparent); }
-[data-skb-icons="tinted"] .skb-icon--wrap img { filter: none; }
+/* Step wrappers cycle accent, deep and ink through a (0,3,0) selector, so the tint needs more weight than that. Tinted steps
+   all take the accent: the glyph stays inverted, so it shows on the filled wrapper. */
+[data-skb-icons="tinted"] .skb-steps__grid > :nth-child(n) .skb-step__icon-wrap { border-radius: var(--skb-r-sm); background: var(--skb-accent); }
 /* What sits between two bands. The notch is a diamond straddling the seam, painted in the lower band's colour. */
 [data-skb-dividers="hairline"] .skb + .skb { border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
 [data-skb-dividers="rule"] .skb + .skb { border-top: 3px solid var(--skb-page-ink); }
