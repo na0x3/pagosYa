@@ -6,6 +6,7 @@ import { assembleSketch } from './sketch-assembler';
 import { repairSketch } from './sketch-schema';
 import type { StoreSketch } from './sketch-schema';
 import { applySketchComposition } from './sketch-composition';
+import { drawPageStructure } from './sketch-structure-draw';
 import { agentPreviewSnapshot } from '../agent/agent-capture';
 import { nextStoreFiles } from '../fixtures/next-store';
 import { withSourceIcons } from '../source-asset-library';
@@ -192,5 +193,50 @@ it('an offset band centres on a phone', async () => {
       return { left: column.left - section.left, right: section.right - column.right };
     });
     expect(Math.abs(gaps.left - gaps.right)).toBeLessThan(2);
+  });
+});
+
+// mulberry32, not a bare LCG: an LCG's first draw is linear in the seed, so every seed drew the same page length.
+const seeded = (a: number) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+// One superset of every field a block type reads, in the shapes the schema takes (q/a pairs, quote objects, photo paths):
+// a model that fills its slots honestly fills these. Strings like items: ['uno'] are dropped by the repair and would make
+// every list band look empty for a reason that has nothing to do with the page.
+const modelCopy = {
+  headline: 'Pan de verdad', title: 'Pan de verdad', kicker: 'Hecho a mano', sub: 'Cada mañana', body: 'Horneamos cada día con harina local.', cta: 'Ver productos', note: 'Pedidos hasta las 6',
+  left: 'Envío gratis', right: 'Desde Bs 50', text: 'Pan de verdad', glyph: '*', tagline: 'Pan de verdad', paragraphs: ['Empezó en una cocina pequeña.', 'Hoy seguimos igual.'], photo: 'assets/a.jpg', photos: ['assets/a.jpg'],
+  items: [{ q: '¿Hacen envíos?', a: 'Sí, en toda la ciudad.', title: 'Pedí', text: 'Elegí lo que querés', icon: 'check' }, { q: '¿Cómo pago?', a: 'Con QR.', title: 'Pagá', text: 'Con QR o tarjeta', icon: 'check' }],
+  quotes: [{ text: 'El mejor pan del barrio.', name: 'Ana', place: 'La Paz' }, { text: 'Siempre fresco.', name: 'Luis', place: 'El Alto' }],
+  stats: [{ value: '10', label: 'años' }], boxes: [{ title: 'Fresco', text: 'Todos los días' }], pills: ['Artesanal'],
+};
+const fullStore = { products: 40, photos: 6, categories: 5, briefWords: 60 };
+
+it('the ten seeds draw pages of different lengths, so the browser cases are not ten copies of one page', () => {
+  const lengths = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(seed => drawPageStructure(fullStore, seeded(seed)).slots.length));
+  expect(lengths.size).toBeGreaterThan(2);
+});
+
+/** A band can have height and still be broken: a heading and its padding render over an empty body ("Preguntas" with no
+ * questions). "Visually empty" here: the section has a heading, and outside that heading (and the extras layer) holds no
+ * visible element that is media, interactive, a list item, a quote, a paragraph or a table cell with real size. */
+const bandProblems = () => Array.from(document.querySelectorAll('section[data-skb]')).flatMap(section => {
+  const id = section.getAttribute('data-skb');
+  const inflow = Array.from(section.children).filter(child => !child.classList.contains('skb-extras') && getComputedStyle(child).position !== 'absolute');
+  const tallest = inflow.reduce((max, child) => Math.max(max, child.getBoundingClientRect().height), 0);
+  const heading = section.querySelector('h1, h2, h3, h4');
+  const content = Array.from(section.querySelectorAll('img, svg, video, button, a, li, details, input, blockquote, figure, p, dd, td'))
+    .filter(el => !el.closest('h1, h2, h3, h4') && !el.closest('.skb-extras'))
+    .filter(el => { const r = el.getBoundingClientRect(); const style = getComputedStyle(el); return r.width >= 8 && r.height >= 8 && style.visibility !== 'hidden' && style.display !== 'none'; });
+  return [...(tallest === 0 ? [`${id}: collapsed`] : []), ...(heading && content.length === 0 ? [`${id}: only a heading`] : [])];
+});
+
+it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('renders drawn structure %i with every band standing and none empty', async seed => {
+  const structure = drawPageStructure(fullStore, seeded(seed));
+  const response = { blocks: structure.slots.map(slot => ({ id: slot.id, type: slot.type, ...modelCopy })) };
+  const { sketch } = repairSketch(response, ctx, { structure });
+  await openSketch(sketch, async page => {
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect({ width, problems: await page.evaluate(bandProblems) }).toEqual({ width, problems: [] });
+    }
   });
 });
