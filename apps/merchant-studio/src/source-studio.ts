@@ -74,7 +74,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let aiUsage: Array<{ stage: string; model: string; status: string; usage: { providerMicroUsd?: number | null } | null }> = [];
   let testsExpanded = false, publicationOpen = false, creditsOpen = false;
   let productPhoto = false;
-  let chatExpanded = false;
+  let chatExpanded = true;
   let visualEditing = false, visualEditPending = false;
   let productForm: ReturnType<typeof createProductForm> | null = null;
   let buildProgress: BuildProgress | null = null;
@@ -188,7 +188,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
-    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); bocetoPanel.resync(); return; }
+    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); if (bocetoOpen) bocetoPanel.resync(); return; }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-size' && Number.isFinite(event.data.height)) {
       const next = Math.min(20000, Math.max(360, Number(event.data.height)));
       if (Math.abs(next - canvasHeight) > 24) { canvasHeight = next; applyCanvas(); }
@@ -254,7 +254,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -279,8 +279,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let toastTimer: number | undefined;
   let mode = 'preview', mobile = false, page = 'index.html', filePath = 'index.html', draft: string | null = null;
   let bocetoOpen = false;
-  // The boceto phase is the store's, not a toggle: a current revision with sketch.json is still a boceto.
-  let bocetoYapi = false, bocetoConfirm = false, bocetoFitted = false;
+  // A structured draft opens in YAPI + preview. The canvas is an optional editing mode.
+  let bocetoConfirm = false, bocetoFitted = false;
   const bocetoPhase = () => Boolean(version?.snapshot.files.some(file => file.path === 'sketch.json'));
   let canvasZoom = 0.82, canvasX = 60, canvasY = 40, canvasHeight = 2400;
   const dirty = () => draft !== null && draft !== version?.snapshot.files.find(f => f.path === filePath)?.content;
@@ -489,6 +489,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       let stopProgress = () => {};
       let submittedUrls = retryAssetUrls || [];
       try {
+        if (bocetoOpen && !(await bocetoPanel.flush())) throw new Error('No se pudo guardar tu último cambio del boceto. Inténtalo de nuevo antes de pedirle cambios a YAPI.');
         const pending = submittedAssets.filter(asset => !asset.url); let nextUpload = 0;
         const uploads = await Promise.allSettled(Array.from({ length: Math.min(3, pending.length) }, async () => {
           while (nextUpload < pending.length) { const asset = pending[nextUpload++]; asset.url = (await api.upload(asset.file)).url; }
@@ -693,7 +694,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const oldScroll = oldStream?.scrollTop || 0;
     const nearBottom = !oldStream || oldStream.scrollHeight - oldScroll - oldStream.clientHeight < 70;
     const locked = busy || visualEditPending || dirty() || Boolean(productForm);
-    if (bocetoPhase() && !productPhoto) { bocetoOpen = true; mode = 'preview'; } else { bocetoOpen = false; bocetoYapi = false; bocetoConfirm = false; }
+    if (!bocetoPhase() || productPhoto) { bocetoOpen = false; bocetoConfirm = false; }
     const inBoceto = Boolean(bocetoOpen && version && mode === 'preview');
     if (!sessionStorage.getItem(SESSION_STORAGE_KEY)) {
       if (embedded) { notifyParent({ type: 'pagosya:session-expired' }); app.innerHTML = '<p>Tu sesión terminó. Vuelve a entrar desde el panel.</p>'; return; }
@@ -716,7 +717,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         <div class="save-state">${icon('check')} ${dirty() ? 'Cambios sin guardar' : version ? version.revision === state.publication?.revision && state.publication.active ? 'Diseño publicado' : 'Diseño guardado' : 'Conectado'}</div>
         <div class="top-actions"><button class="button button--ghost" id="source-logout" ${disabled(locked)}>Salir</button><button class="button button--publish" id="${embedded ? 'source-top-export' : 'source-export'}" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button></div>
       </header>
-      <div class="studio-workspace${inBoceto ? ' is-boceto' : ''}${inBoceto && bocetoYapi ? ' is-boceto-yapi' : ''}">
+      <div class="studio-workspace${inBoceto ? ' is-boceto is-boceto-left-yapi' : ''}">
         <aside class="agent-panel ${chatExpanded || building() || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
           <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || building() || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
           <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div>
@@ -738,12 +739,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ] })}</div>
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
-          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button></div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div>`}</header>
+          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><button class="button" id="source-boceto-close" aria-pressed="true" title="Desactivar edición manual" ${disabled(locked)}>Editar en Boceto</button><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft() || bocetoPhase())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button>${bocetoPhase() ? `<button id="source-boceto-tab" aria-pressed="false" title="Activar edición manual" ${disabled(locked || showingDraft() || historical())}>Editar en Boceto</button>` : ''}</div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${bocetoPhase() ? `<button class="button button--publish" id="source-boceto-generate" ${disabled(locked || historical() || showingDraft())}>Generar sitio</button>` : `${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}`}</div>`}</header>
           <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.</span><button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
           ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
-      </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}${inBoceto && bocetoConfirm ? `<div class="boceto-confirm" role="dialog" aria-modal="true" aria-labelledby="boceto-confirm-title"><div class="boceto-confirm__card"><h2 id="boceto-confirm-title">Generar sitio</h2><p>Tu boceto se convertirá en sitio web. Después ya no podrás editarlo por bloques; podrás pedirle cambios a YAPI y ver el código.</p><div class="boceto-confirm__actions"><button type="button" class="button" data-boceto-confirm="cancel">Cancelar</button><button type="button" class="button button--publish" data-boceto-confirm="go">Generar sitio</button></div></div></div>` : ''}
+      </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}${bocetoPhase() && bocetoConfirm ? `<div class="boceto-confirm" role="dialog" aria-modal="true" aria-labelledby="boceto-confirm-title"><div class="boceto-confirm__card"><h2 id="boceto-confirm-title">Generar sitio</h2><p>Tu boceto se convertirá en sitio web. Después ya no podrás editarlo por bloques; podrás pedirle cambios a YAPI y ver el código.</p><div class="boceto-confirm__actions"><button type="button" class="button" data-boceto-confirm="cancel">Cancelar</button><button type="button" class="button button--publish" data-boceto-confirm="go">Generar sitio</button></div></div></div>` : ''}
     </div>`;
     const pageMenu = app.querySelector<HTMLDetailsElement>('.source-page-menu');
     if (pageMenu) pageMenu.open = pageMenuOpen;
@@ -781,15 +782,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           if (frame) void renderPreview(frame);
         }).catch(() => { /* the next save or closing Boceto resyncs */ });
       },
-      // Boceto phase: YAPI docks in the right panel and takes the selected block as its context.
-      yapi: visible => { bocetoYapi = visible; app.querySelector('.studio-workspace')?.classList.toggle('is-boceto-yapi', visible); if (visible) app.querySelector<HTMLTextAreaElement>('#agent-command')?.focus({ preventScroll: true }); },
+      // The chat stays on the left; section layers and properties share the right inspector.
+      chatOnLeft: true,
       selected: block => {
         if (!bocetoOpen) return;
         if (block) selection.set({ sectionId: `skb-${block.id}`, label: block.label }); else selection.clear();
         renderSelection();
       },
       resized: () => fitCanvas(),
-      apply: payload => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:boceto-apply', ...payload }, '*'); } catch { /* frame gone */ } },
+      apply: payload => { try { if (bocetoOpen) app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:boceto-apply', ...payload }, '*'); } catch { /* frame gone */ } },
     });
     const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
     if (directHost && version) directEditor.mount(directHost, {
@@ -817,6 +818,19 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
+    app.querySelector('#source-boceto-tab')?.addEventListener('click', () => {
+      if (busy || dirty() || historical() || showingDraft() || !bocetoPhase()) return;
+      bocetoOpen = true; bocetoFitted = false; mode = 'preview'; page = 'index.html';
+      visualEditing = false; previewNavigation = {}; clearSelection(); render();
+    });
+    app.querySelector('#source-boceto-close')?.addEventListener('click', () => {
+      if (busy) return;
+      void action(async () => {
+        if (!(await bocetoPanel.flush())) { toast = 'No se pudo guardar tu último cambio. Inténtalo de nuevo.'; return; }
+        bocetoOpen = false; chatExpanded = true;
+        clearSelection(); await load();
+      });
+    });
     // Boceto's own page tabs: look at the sketch's other pages; editing happens on Inicio.
     app.querySelectorAll<HTMLButtonElement>('[data-boceto-page]').forEach(button => button.addEventListener('click', () => {
       if (page === button.dataset.bocetoPage) return;
@@ -830,7 +844,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       bocetoConfirm = false;
       void action(async () => {
         // The site is built from the saved boceto: a change that did not save would silently go missing.
-        if (!(await bocetoPanel.flush())) { toast = 'No se pudo guardar tu último cambio. Inténtalo de nuevo.'; return; }
+        if (bocetoOpen && !(await bocetoPanel.flush())) { toast = 'No se pudo guardar tu último cambio. Inténtalo de nuevo.'; return; }
         try { await api.buildSketch(storeId, { revision: state.revision }); }
         catch (failure) {
           // A toast, not the chat's error line: the chat is hidden on the Diseño tab.
@@ -865,6 +879,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
         return;
       }
       if (target.closest('[data-selection-edit-text]') && editableField && !busy && !dirty()) {
+        if (bocetoPhase()) { app.querySelector<HTMLButtonElement>('#source-boceto-tab')?.click(); return; }
         const wanted = editableField.value;
         selectMode = false; clearSelection(); visualEditing = true; mode = 'preview'; render(); directEditor.select(wanted, 'text');
       }
@@ -1018,7 +1033,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     on('source-export', () => void action(async () => { const blob = await api.exportSource(storeId, version!.revision); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `storefront-r${version!.revision}.zip`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }));
     on('source-cancel-job', () => { if (buildSession.phase !== 'running') return; void api.cancelSourceChatJob(storeId, buildSession.jobId).catch(error => { toast = error instanceof Error ? error.message : 'No se pudo cancelar el pedido.'; render(); }); });
     on('source-toggle-saved', () => { showSavedRevision = !showSavedRevision; page = 'index.html'; previewNavigation = {}; clearSelection(); render(); if (showSavedRevision) void runChecks(); });
-    on('source-preview-tab', () => { mode = 'preview'; render(); }); on('source-code-tab', () => { if (!dirty() && version) filePath = codeFileForPage(version.snapshot.files, page); mode = 'code'; render(); }); on('source-width', () => { mobile = !mobile; render(); });
+    on('source-preview-tab', () => { mode = 'preview'; render(); }); on('source-code-tab', () => { if (bocetoPhase()) return; if (!dirty() && version) filePath = codeFileForPage(version.snapshot.files, page); mode = 'code'; render(); }); on('source-width', () => { mobile = !mobile; render(); });
     app.querySelectorAll<HTMLButtonElement>('[data-code-file]').forEach(button => button.addEventListener('click', () => { if (busy || dirty()) return; filePath = button.dataset.codeFile!; draft = null; render(); }));
     app.querySelector('#source-file')?.addEventListener('change', event => { filePath = (event.target as HTMLSelectElement).value; draft = null; render(); });
     app.querySelector('#source-code')?.addEventListener('input', event => {

@@ -10,6 +10,7 @@ export class GenerateSourceProjectDto extends SourceProjectRevisionDto {
   @IsOptional() @IsInt() @Min(1) baseRevision?: number;
 
   /** @deprecated Accepted only for older clients; never used for generation. */
+  @IsOptional() @IsString() @Matches(/^[a-zA-Z0-9_-]{1,160}$/) designSeed?: string;
   @IsOptional() @IsString() @MaxLength(80) themeId?: string;
   @IsOptional() @IsModelIn(SOURCE_MOTION_MODES) motion?: SourceMotionMode;
   @IsOptional() @IsModelIn(SOURCE_SCROLL_FEELS) scrollFeel?: SourceScrollFeel;

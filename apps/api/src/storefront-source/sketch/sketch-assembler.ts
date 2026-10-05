@@ -1,3 +1,7 @@
+import { sketchComponent } from '@pagosya/shared-types';
+import { sketchUiImports } from './sketch-registry';
+import { dnaRuntimeConfig } from '../source-dna';
+import { designTokenCss } from '../design-engine/design-css';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { renderBlock, renderAccount, blockCss, ACCOUNT_CSS, SKETCH_BASE_CSS } from './sketch-blocks';
@@ -21,6 +25,8 @@ const NAV_LABEL: Partial<Record<string, string>> = { catalog: 'Productos', colle
 export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourceProjectFileDto[] {
   // Re-repair on entry: assembly stays total even if a caller skips repair, and repair is idempotent.
   const sketch = repairSketch(input, ctx).sketch;
+  const usesUi = sketch.blocks.some(b => sketchComponent(b.type, b.composition)?.renderer !== 'legacy' && !!b.composition);
+  const uiTokens = { paper: sketch.palette.paper, ink: sketch.palette.ink, accent: sketch.palette.accent, onAccent: bestInkFor(sketch.palette.accent, sketch.palette.paper), displayFont: `var(--skb-display-font)`, bodyFont: `var(--skb-text-font)`, radius: sketch.style.radius === 'square' ? 0 : 8, space: sketch.dna?.layout.density === 'airy' ? 1.2 : sketch.dna?.layout.density === 'dense' ? .85 : 1 };
   const body = sketch.blocks.filter(block => block.type !== 'footer');
   const footer = sketch.blocks.filter(block => block.type === 'footer');
   // Exactly one h1 per page: the first block that carries a primary heading renders it as the h1.
@@ -33,19 +39,23 @@ export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourcePr
     seen.add(block.type);
     return [`<a href=${expr(`index.html#skb-${block.id}`)}>${expr(label)}</a>`];
   }).join('');
-  const siteAttrs = (Object.keys(sketch.style) as (keyof typeof sketch.style)[]).map(key => `data-skb-${key}=${expr(sketch.style[key])}`).join(' ');
+  const logo = sketch.design?.assetAssignments.find(a => a.role === 'logo');
+  const siteAttrs = (Object.keys(sketch.style) as (keyof typeof sketch.style)[]).map(key => `data-skb-${key}=${expr(sketch.style[key])}`).join(' ') + (sketch.design ? ` data-yapi-design="1" data-yapi-nav=${expr(sketch.design.globalSections.navigation)} data-yapi-motion=${expr(sketch.design.artDirection.motionLevel)}` : '');
   const shell = `import type { ReactNode } from 'react';
+${usesUi ? "import { StoreStyles } from '@pagosya/ui';" : ''}
 
 export function Header() {
   return <header className="skb-header">
-    <a className="skb-logo" href="index.html">${expr(ctx.storeName)}</a>
-    ${navLinks ? `<nav className="skb-nav" aria-label="Principal">${navLinks}</nav>` : ''}
+    <a className="skb-logo" href="index.html">${logo ? `<img src=${expr(logo.assetId)} alt=${expr(ctx.storeName)} />` : expr(ctx.storeName)}</a>
+    ${navLinks ? `<nav className="skb-nav" aria-label="Principal">${navLinks}</nav>${sketch.design ? `<details className="skb-menu"><summary>Menú</summary><nav aria-label="Menú móvil">${navLinks}</nav></details>` : ''}` : ''}
     ${ctx.purpose === 'shop' ? '<div className="skb-header__actions"><a className="skb-account" data-pagosya-account="" href="acceso-ingresar.html">Mi cuenta</a><button type="button" className="skb-cart" data-cart-open>Mi pedido <span className="skb-cart__count" data-cart-count>0</span></button></div>' : ''}
   </header>;
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="skb-site" ${siteAttrs}>
+  return <div className="skb-site${usesUi ? ' ui-root' : ''}" ${siteAttrs}${sketch.dna ? Object.entries(dnaRuntimeConfig(sketch.dna)).filter(([key]) => key !== 'version' && key !== 'productCss').map(([key, value]) => ` data-dna-${key}=${expr(String(value))}`).join('') : ''}>
+    ${usesUi ? `<StoreStyles tokens={${JSON.stringify(uiTokens)}} />` : ''}
+    ${sketch.design ? '<a className="skb-skip" href="#contenido">Saltar al contenido</a>' : ''}
     <Header />
     {children}
     <div data-pagosya-cart hidden />
@@ -56,6 +66,7 @@ export default function Shell({ children }: { children: ReactNode }) {
 `;
 
   const home = `import Shell from './Shell';
+${usesUi ? `import { ${sketchUiImports} } from '@pagosya/ui';` : ''}
 
 export default function Home() {
   return <Shell>
@@ -166,6 +177,7 @@ body { margin: 0; background: var(--skb-paper); color: var(--skb-page-ink); font
 .skb-pdp__price { font-size: 1.4rem; font-weight: 700; }
 .skb-pdp__desc { line-height: 1.6; max-width: 62ch; }
 ${SKETCH_BASE_CSS}${[...new Set(sketch.blocks.map(block => block.type))].map(blockCss).join('\n')}${ctx.purpose === 'shop' ? ACCOUNT_CSS : ''}
+${designTokenCss(sketch)}
 `;
 
   const accountPage = (view: 'login' | 'register', component: string) => `// @pagosya-page
@@ -180,6 +192,7 @@ export default function ${component}() {
 `;
 
   return [
+    ...(sketch.design ? [{ path: 'website-design.json', content: JSON.stringify(sketch.design, null, 2) + '\n' }] : []),
     { path: 'components/Shell.tsx', content: shell },
     { path: 'components/home.tsx', content: home },
     { path: 'components/product.tsx', content: product },

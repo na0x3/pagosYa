@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Header, Post, Put, Param, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { IsDefined, IsInt, IsString, MaxLength, Min } from 'class-validator';
+import { IsDefined, IsInt, IsString, IsOptional, Matches, MaxLength, Min } from 'class-validator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
@@ -16,6 +16,12 @@ class UpdateSketchDto {
 class AddSketchPhotoDto {
   @IsInt() @Min(1) revision!: number;
   @IsString() @MaxLength(200) url!: string;
+}
+
+class RegenerateSketchDto {
+  @IsInt() @Min(1) revision!: number;
+  @IsOptional() @IsString() @Matches(/^[a-zA-Z0-9_-]{1,160}$/) designSeed?: string;
+  @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9-]{0,47}$/) sectionId?: string;
 }
 
 class BuildSketchDto {
@@ -51,6 +57,13 @@ export class SketchStudioController {
   @CompileBudget()
   update(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: UpdateSketchDto) {
     return this.sketches.update(merchant.id, storeId, body);
+  }
+
+  @Post('sketch/regenerate')
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @CompileBudget()
+  regenerate(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: RegenerateSketchDto) {
+    return this.sketches.regenerate(merchant.id, storeId, body);
   }
 
   /** "Generar sitio": the boceto becomes the site (final; see SketchStudioService.build). */

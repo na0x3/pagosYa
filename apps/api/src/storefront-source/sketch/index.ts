@@ -13,3 +13,5 @@ export { catalogueDigest } from './sketch-catalogue-digest';
 export type { CatalogueDigest, DigestItem } from './sketch-catalogue-digest';
 export { specificityReport } from './sketch-specificity';
 export type { SpecificityReport } from './sketch-specificity';
+export { repairPhotoPairing } from './sketch-photo-pairing';
+export type { PhotoFact } from './sketch-photo-pairing';

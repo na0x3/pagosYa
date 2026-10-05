@@ -37,7 +37,7 @@ const g = (key: string, parent: string, kind: SketchGroupKind, reorder: SketchRe
 const headAndItems = (field: string | null): SketchGroup[] => [g('head', '', 'head', none), g('items', '', 'items', field ? array(field) : none)];
 
 const GROUPS: Record<string, SketchGroup[]> = {
-  hero: [g('copy', '', 'column', order), g('media', '', 'media', none), g('actions', 'copy', 'row', { kind: 'swap' })],
+  hero: [g('copy', '', 'column', order), g('media', '', 'media', none), g('actions', 'copy', 'row', { kind: 'swap' }), g('photos', 'media', 'items', array('photos'))],
   split: [g('copy', '', 'column', order), g('media', '', 'media', none), g('actions', 'copy', 'row', { kind: 'swap' }), g('pills', 'copy', 'row', array('pills')), g('stats', 'copy', 'row', array('stats')), g('boxes', 'copy', 'row', array('boxes'))],
   story: [g('copy', '', 'column', order), g('media', '', 'media', none), g('paragraphs', 'copy', 'items', array('paragraphs'))],
   newsletter: [g('copy', '', 'column', order), g('media', '', 'media', none)],
@@ -119,7 +119,7 @@ function partsTree(block: any): SketchNode[] {
       key === 'actions' ? leaves(sub, block.swap ? ['cta2', 'cta'] : ['cta', 'cta2'])
         : ['pills', 'stats', 'boxes', 'paragraphs'].includes(key) ? indices(sub, key) : []))];
   });
-  const media = (extras: string[]) => make('', 'media', path => [make(path, 'photo'), ...leaves(path, [...extras, 'sticker'])]);
+  const media = (extras: string[]) => make('', 'media', path => [...(block.photo ? [make(path, 'photo')] : []), ...(type === 'hero' && block.photos?.length ? [make(path, 'photos', sub => indices(sub, 'photos'))] : []), ...leaves(path, [...extras, 'sticker'])]);
   const head = (extras: string[]) => make('', 'head', path => [...leaves(path, ['kicker']), make(path, 'title'), ...leaves(path, extras)]);
   switch (type) {
     case 'hero': case 'split':

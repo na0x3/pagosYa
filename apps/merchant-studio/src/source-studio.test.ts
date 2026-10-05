@@ -283,28 +283,72 @@ it('renders no attachment block for a message without files', async () => {
 const sketchVersion: SourceVersion = { ...version, snapshot: { ...version.snapshot, files: [...version.snapshot.files, { path: 'sketch.json', content: '{}' }] } };
 const sketchBody = { revision: 2, sketch: { palette: { paper: '#ffffff', ink: '#111111', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' }, fonts: { display: 'anton', text: 'manrope' }, scale: 'm', blocks: [{ id: 'intro', type: 'hero', variant: 'photo-right', headline: 'Hola', sub: '', cta: 'Ver', bg: 'paper', size: 'l' }] }, photos: [], fonts: ['anton'] };
 const bocetoStore = () => {
-  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 2, versions: [sketchVersion], nextBefore: null });
-  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(sketchVersion);
-  vi.spyOn(MerchantStudioApi.prototype, 'getSketch').mockResolvedValue(sketchBody as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockImplementation(async () => ({ revision: 2, versions: [structuredClone(sketchVersion)], nextBefore: null }));
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockImplementation(async () => structuredClone(sketchVersion));
+  vi.spyOn(MerchantStudioApi.prototype, 'getSketch').mockImplementation(async () => structuredClone(sketchBody) as any);
   vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
 };
 
-it('boceto phase: only the Boceto, no code or preview modes and no way out but Generar sitio', async () => {
+const openBoceto = async () => {
+  await vi.waitFor(() => expect(app.querySelector('#source-boceto-tab')).not.toBeNull());
+  app.querySelector<HTMLButtonElement>('#source-boceto-tab')!.click();
+  await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
+};
+
+it('opens structured drafts in YAPI + preview and makes the canvas optional', async () => {
   bocetoStore();
   await mountSourceStudio(app);
-  await vi.waitFor(() => expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull());
-  for (const id of ['#source-preview-tab', '#source-code-tab', '#source-select-mode', '#source-boceto-tab']) expect(app.querySelector(id)).toBeNull();
+  await vi.waitFor(() => expect(app.querySelector('#source-boceto-tab')).not.toBeNull());
+  expect(app.querySelector('.studio-workspace.is-boceto')).toBeNull();
+  expect(app.querySelector('.agent-panel.is-chat-expanded')).not.toBeNull();
+  expect(app.querySelector('#source-preview-tab')).not.toBeNull();
+  expect(app.querySelector<HTMLButtonElement>('#source-code-tab')!.disabled).toBe(true);
+  expect(app.querySelector('#source-publish')).toBeNull();
   expect(app.querySelector('#source-boceto-generate')).not.toBeNull();
-  await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
-  expect(app.querySelector('.bct-close')).toBeNull();
+  await openBoceto();
+  expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
+  expect(app.querySelector('#source-boceto-close')?.textContent).toBe('Editar en Boceto');
+  app.querySelector<HTMLButtonElement>('#source-boceto-close')!.click();
+  await vi.waitFor(() => expect(app.querySelector('.studio-workspace.is-boceto')).toBeNull());
+  expect(app.querySelector('#source-boceto-tab')).not.toBeNull();
+  expect(app.querySelector('.agent-panel.is-chat-expanded')).not.toBeNull();
 });
 
-it('boceto phase: the YAPI tab docks the chat with the selected block as its chip', async () => {
+it('saves pending canvas changes before returning to YAPI and preview', async () => {
+  bocetoStore();
+  const save = vi.spyOn(MerchantStudioApi.prototype, 'putSketch').mockImplementation(async (_store, body) => ({ revision: 3, sketch: body.sketch } as any));
+  const latest = { ...sketchVersion, revision: 3 };
+  await mountSourceStudio(app); await openBoceto();
+  ([...app.querySelectorAll('.bct-segment__option')].find(node => node.textContent === 'Rectas') as HTMLElement).click();
+  vi.mocked(MerchantStudioApi.prototype.sourceState).mockResolvedValue({ revision: 3, versions: [latest], nextBefore: null });
+  vi.mocked(MerchantStudioApi.prototype.sourceVersion).mockResolvedValue(latest);
+  app.querySelector<HTMLButtonElement>('#source-boceto-close')!.click();
+  await vi.waitFor(() => expect(app.querySelector('.studio-workspace.is-boceto')).toBeNull());
+  expect(save).toHaveBeenCalledWith('s1', expect.objectContaining({ revision: 2 }));
+  await openBoceto();
+  expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
+});
+
+it('keeps the canvas open when saving before returning to YAPI fails', async () => {
+  bocetoStore();
+  vi.spyOn(MerchantStudioApi.prototype, 'putSketch').mockRejectedValue(new Error('network'));
+  await mountSourceStudio(app); await openBoceto();
+  ([...app.querySelectorAll('.bct-segment__option')].find(node => node.textContent === 'Rectas') as HTMLElement).click();
+  app.querySelector<HTMLButtonElement>('#source-boceto-close')!.click();
+  await vi.waitFor(() => expect(app.querySelector('.toast')?.textContent).toContain('No se pudo guardar tu último cambio'));
+  expect(app.querySelector('.studio-workspace.is-boceto')).not.toBeNull();
+});
+
+it('keeps YAPI on the left while the optional editor selects a block for chat', async () => {
   bocetoStore();
   await mountSourceStudio(app);
+  await openBoceto();
   await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
-  (app.querySelector('[data-boceto-tab="yapi"]') as HTMLElement).click();
-  expect(app.querySelector('.studio-workspace.is-boceto-yapi')).not.toBeNull();
+  expect(app.querySelector('.studio-workspace.is-boceto-left-yapi')).not.toBeNull();
+  expect(app.querySelector('.studio-workspace.is-boceto-yapi')).toBeNull();
+  expect(app.querySelector('[data-boceto-tab="yapi"]')).toBeNull();
+  expect(app.querySelector('.bct-panel .bct-layers')).not.toBeNull();
+  expect(app.querySelector('#agent-command')).not.toBeNull();
   (app.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
   await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')?.textContent).toContain('Portada'));
 });
@@ -327,14 +371,15 @@ it('Generar sitio asks first, then builds and leaves the boceto for good', async
   await vi.waitFor(() => expect(build).toHaveBeenCalledWith('s1', { revision: 2 }));
   await vi.waitFor(() => expect(app.querySelector('.studio-workspace.is-boceto')).toBeNull());
   expect(app.querySelector('#source-code-tab')).not.toBeNull();
-  expect(app.querySelector('#source-boceto-tab')).toBeNull();
-  expect(app.textContent).toContain('Sitio generado desde tu boceto');
+  await vi.waitFor(() => expect(app.querySelector('#source-boceto-tab')).toBeNull());
+  await vi.waitFor(() => expect(app.textContent).toContain('Sitio generado desde tu boceto'));
 });
 
 it('Generar sitio on a stale revision keeps the merchant in the boceto with a clear note', async () => {
   bocetoStore();
   vi.spyOn(MerchantStudioApi.prototype, 'buildSketch').mockRejectedValue(new ApiError('El boceto cambió. Recarga.', 409));
   await mountSourceStudio(app);
+  await openBoceto();
   await vi.waitFor(() => expect(app.querySelector('#source-boceto-generate')).not.toBeNull());
   (app.querySelector('#source-boceto-generate') as HTMLElement).click();
   (app.querySelector('[data-boceto-confirm="go"]') as HTMLElement).click();
@@ -347,6 +392,7 @@ it('review: Generar sitio stops when the last Boceto change could not be saved',
   vi.spyOn(MerchantStudioApi.prototype, 'putSketch').mockRejectedValue(new Error('network'));
   const build = vi.spyOn(MerchantStudioApi.prototype, 'buildSketch').mockResolvedValue({ revision: 3 });
   await mountSourceStudio(app);
+  await openBoceto();
   await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
   ([...app.querySelectorAll('.bct-segment__option')].find(node => node.textContent === 'Rectas') as HTMLElement).click();
   (app.querySelector('#source-boceto-generate') as HTMLElement).click();
@@ -360,6 +406,7 @@ it('review: a failed Generar sitio says so where the merchant is looking', async
   bocetoStore();
   vi.spyOn(MerchantStudioApi.prototype, 'buildSketch').mockRejectedValue(new Error('network'));
   await mountSourceStudio(app);
+  await openBoceto();
   await vi.waitFor(() => expect(app.querySelector('#source-boceto-generate')).not.toBeNull());
   (app.querySelector('#source-boceto-generate') as HTMLElement).click();
   (app.querySelector('[data-boceto-confirm="go"]') as HTMLElement).click();
@@ -370,8 +417,8 @@ it('review: a failed Generar sitio says so where the merchant is looking', async
 it('review: after the Studio clears the chip (Esc), picking the block again brings it back', async () => {
   bocetoStore();
   await mountSourceStudio(app);
+  await openBoceto();
   await vi.waitFor(() => expect(app.querySelector('[data-boceto-block="intro"]')).not.toBeNull());
-  (app.querySelector('[data-boceto-tab="yapi"]') as HTMLElement).click();
   (app.querySelector('[data-boceto-block="intro"] .bct-block__head') as HTMLElement).click();
   await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')?.textContent).toContain('Portada'));
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

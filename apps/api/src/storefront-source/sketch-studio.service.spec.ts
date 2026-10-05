@@ -189,3 +189,42 @@ it('a hand edit carries the preset commerce recipe into the kit dna (cards, cart
   const config = JSON.parse(input.files.find((f: any) => f.path === 'config.js').content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
   expect(config.dna).toMatchObject({ card: 'second-photo', cart: 'drawer', review: 'stacked', motion: 'calm', hover: 'shine', press: 'none', button: 'pill' });
 });
+
+describe('structured design drafts', () => {
+  async function designSetup() {
+    const result = setup();
+    const { DESIGN_FIXTURES, generateDesignFixture } = await import('./design-engine/design-fixtures');
+    const fixture = DESIGN_FIXTURES[0], sketch = generateDesignFixture(fixture.input);
+    const snapshot = (await result.projects.version()).snapshot;
+    const media = fixture.input.assets.map(asset => ({ path: asset.path, content: 'abcd', encoding: 'base64' }));
+    const designCtx = { ...ctx, photos: media.map(asset => asset.path) };
+    result.projects.version.mockResolvedValue({ revision: 3, snapshot: { ...snapshot, files: [...snapshot.files.filter((f: any) => !f.path.startsWith('components/') && !f.path.startsWith('styles/') && f.path !== 'sketch.json'), ...assembleSketch(sketch, designCtx), { path: 'sketch.json', content: JSON.stringify(sketch) }, ...media] } });
+    return { ...result, sketch };
+  }
+  it('regenerates one section as a new draft without changing merchant content or sibling blocks', async () => {
+    const { service, projects, sketch } = await designSetup();
+    const hero = sketch.blocks.find(block => block.type === 'hero')!;
+    const result = await service.regenerate('m', 's', { revision: 3, sectionId: hero.id, designSeed: 'repeatable-edit' });
+    expect(result.revision).toBe(4);
+    expect(result.sketch.design?.designSeed).toBe('repeatable-edit');
+    expect(result.sketch.blocks.filter(block => block.id !== hero.id)).toEqual(sketch.blocks.filter(block => block.id !== hero.id));
+    const changed = result.sketch.blocks.find(block => block.id === hero.id)!;
+    expect(changed).toMatchObject({ headline: (hero as any).headline });
+    expect((changed as any).photo).toBe((hero as any).photo);
+    expect(changed.composition).not.toBe(hero.composition);
+    expect(projects.save.mock.calls[0][2].files.filter((file: any) => file.path === 'website-design.json')).toHaveLength(1);
+  });
+  it('rejects unknown sections and stale drafts before saving', async () => {
+    const { service, projects } = await designSetup();
+    await expect(service.regenerate('m', 's', { revision: 2 })).rejects.toThrow('cambió');
+    await expect(service.regenerate('m', 's', { revision: 3, sectionId: 'unknown' })).rejects.toThrow('no existe');
+    expect(projects.save).not.toHaveBeenCalled();
+  });
+  it('retains one production design artifact after leaving the boceto phase', async () => {
+    const { service, projects } = await designSetup();
+    await service.build('m', 's', { revision: 3 });
+    const files = projects.save.mock.calls[0][2].files;
+    expect(files.filter((file: any) => file.path === 'website-design.json')).toHaveLength(1);
+    expect(files.some((file: any) => file.path === 'sketch.json')).toBe(false);
+  });
+});

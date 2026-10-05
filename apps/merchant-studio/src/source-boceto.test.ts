@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { bocetoRevealY, createBocetoPanel, DEFAULT_STYLE, STYLE_CONTROLS } from './source-boceto';
 import { DEFAULT_SKETCH_STYLE, SKETCH_STYLE_OPTIONS } from '../../api/src/storefront-source/sketch/sketch-schema';
 import { ApiError, MerchantStudioApi } from './api';
+import { sketchComponents } from '@pagosya/shared-types';
 
 const sketch = () => ({
   palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' },
@@ -1023,4 +1024,76 @@ it('shows the defaults for style keys an older sketch does not carry', async () 
   // the saved five keep their values; the six it never had show the plain choice, highlighted, not a blank row
   const on = (name: string) => [...host.querySelectorAll('.bct-segment__option.is-on')].some(b => b.textContent === name);
   for (const name of ['Suaves', 'Con margen', 'Sueltos', 'Sin ícono', 'Simples', 'Ninguno', 'Subrayado']) expect(on(name), name).toBe(true);
+});
+
+it('saves and reloads a section regeneration using its current revision', async () => {
+  const generated = { ...sketch(), blocks: sketch().blocks.map(block => ({ ...block, composition: block.type === 'hero' ? 'editorial' : 'grid' })) };
+  const regenerate = vi.spyOn(MerchantStudioApi.prototype, 'regenerateSketch').mockResolvedValue({ revision: 4, sketch: generated } as any);
+  const panel = await mount();
+  panel.remoteSelect('intro');
+  const button = [...host.querySelectorAll('button')].find(button => button.textContent === 'Regenerar sección')!;
+  button.click();
+  await vi.waitFor(() => expect(regenerate).toHaveBeenCalledWith('s1', { revision: 3, sectionId: 'intro' }));
+  await vi.waitFor(() => expect([...host.querySelectorAll('select')].some(select => select.value === 'editorial')).toBe(true));
+  expect(await panel.flush()).toBe(true);
+});
+it('prioritizes real merchant products through the catalog inspector', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceCatalog').mockResolvedValue({ items: [{ id: 'p1', name: 'Café de la casa' }, { id: 'p2', name: 'Selección del día' }] });
+  const panel = await mount(); panel.remoteSelect('cat');
+  await vi.waitFor(() => expect(host.textContent).toContain('Café de la casa'));
+  [...host.querySelectorAll('button')].find(button => button.textContent === 'Café de la casa')!.click();
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)?.[1].sketch.blocks.find((block: any) => block.type === 'catalog').productRefs).toEqual(['p1']);
+});
+it('derives composition choices from the shared registry and saves a new Hero composition', async () => {
+  const panel = await mount(); panel.remoteSelect('intro');
+  const entries = sketchComponents('hero');
+  const select = [...host.querySelectorAll('select')].find(select => [...select.options].some(option => option.value === 'floating-media'))!;
+  expect([...select.options].map(option => [option.value, option.textContent])).toEqual(entries.map(entry => [entry.variant, entry.label]));
+  expect(select.value).toBe('split');
+  select.value = 'floating-media'; select.dispatchEvent(new Event('change'));
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)?.[1].sketch.blocks.find((block: any) => block.id === 'intro').composition).toBe('floating-media');
+});
+
+it('restores a displaced section to its composition while preserving copy, images and products, and supports undo', async () => {
+  const data: any = sketch();
+  Object.assign(data.blocks[0], { photo: 'assets/a.jpg', free: { 'copy/title': { x: 75, y: 90, w: 600 }, 'copy/sub': { x: 80, y: 95 } }, stickerPos: { x: 80, y: 20 } });
+  data.blocks[1].productRefs = ['p1'];
+  const originalFree = structuredClone(data.blocks[0].free);
+  getSketch.mockResolvedValue({ revision: 3, sketch: data, photos: ['assets/a.jpg'], fonts: ['anton', 'manrope'] });
+  const panel = await mount(); panel.remoteSelect('intro');
+  host.querySelector<HTMLButtonElement>('[data-boceto-restore-layout]')!.click();
+  await vi.advanceTimersByTimeAsync(1300);
+  const saved = putSketch.mock.calls.at(-1)![1].sketch;
+  expect(saved.blocks[0]).toMatchObject({ headline: 'Algo dulce', sub: 'sub', photo: 'assets/a.jpg' });
+  expect(saved.blocks[0].free).toBeUndefined(); expect(saved.blocks[0].stickerPos).toBeUndefined();
+  expect(saved.blocks[1].productRefs).toEqual(['p1']);
+  panel.remoteKey('undo');
+  await vi.advanceTimersByTimeAsync(1300);
+  expect(putSketch.mock.calls.at(-1)![1].sketch.blocks[0].free).toEqual(originalFree);
+});
+
+it('changing a section composition returns displaced content to the new layout', async () => {
+  const data: any = sketch(); data.blocks[0].free = { 'copy/title': { x: 85, y: 90 } };
+  getSketch.mockResolvedValue({ revision: 3, sketch: data, photos: [], fonts: ['anton'] });
+  const panel = await mount(); panel.remoteSelect('intro');
+  const control = [...host.querySelectorAll('select')].find(select => [...select.options].some(option => option.value === 'poster'))!;
+  control.value = 'poster'; control.dispatchEvent(new Event('change'));
+  await vi.advanceTimersByTimeAsync(1300);
+  const block = putSketch.mock.calls.at(-1)![1].sketch.blocks[0];
+  expect(block).toMatchObject({ composition: 'poster', headline: 'Algo dulce' });
+  expect(block.free).toBeUndefined();
+});
+
+it('keeps layers inside the right inspector when Studio retains YAPI on the left', async () => {
+  const panel = createBocetoPanel(new MerchantStudioApi());
+  panel.mount(host, { chatOnLeft: true, storeId: 's1', version: version(), locked: false, saved: vi.fn().mockResolvedValue(undefined), apply: payload => applied.push(payload) });
+  await vi.waitFor(() => expect(host.querySelector('.bct-panel .bct-layers--inline')).not.toBeNull());
+  expect(host.querySelector('.bct-shell > .bct-layers')).toBeNull();
+  expect(host.querySelector('[data-boceto-tab="yapi"]')).toBeNull();
+  expect(host.querySelector('[data-boceto-add-button]')).not.toBeNull();
+  panel.remoteSelect('intro');
+  expect(host.querySelector('.bct-props')).not.toBeNull();
+  expect(host.querySelector('.bct-panel .bct-layers--inline')).not.toBeNull();
 });

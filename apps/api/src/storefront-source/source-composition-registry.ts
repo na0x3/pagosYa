@@ -1,3 +1,5 @@
+import { isSceneImage, isProductImage, sketchImageRole } from './sketch/sketch-assets';
+import { SKETCH_COMPONENT_REGISTRY as SOURCE_SKETCH_COMPOSITIONS, type SketchCompositionMetadata, type ArtDirection } from '@pagosya/shared-types';
 import { createHash } from 'node:crypto';
 import { SOURCE_DNA_ENUMS } from './source-dna';
 
@@ -248,4 +250,25 @@ import {${[...new Set(imports)].join(',')}} from '@pagosya/ui';
   </main><CommerceSlots/>
 </StoreTheme>
 Replace every variable with declared values from this brief and owned image paths. Rename/reorder section IDs to match the committed plan. The chosen concept overrides this example. Omit story or supporting media when facts/assets are absent; never invent a photograph to fill the recipe. Use the same merchantTokens and shared navigation on product/checkout pages. Story/feature sections link to the catalog or ProductDetail instead of repeating prices; amount is integer minor units, never a display string. ${composition.assetPlan} Mobile: ${composition.mobile} Use content-sized opening spacing without photos; avoid a short heading isolated in an empty viewport. Keep intentional display scale, visible purchase actions and clean 320px reflow. State the Hero variant explicitly; an unstated one is chosen for you. When a page carries more than one FeatureSplit, alternate the side the photograph sits on by adding or dropping reverse, so two consecutive ones never share a handedness. This scene is the page's one signature moment: author a merchant-specific visual detail around it rather than adding a second scroll effect.`;
+}
+
+/** The structured Boceto adapter for the same owned composition library. This is metadata,
+ * never a code recipe: sketch.json references family/variant and the assembler owns markup. */
+export { SKETCH_COMPONENT_REGISTRY as SOURCE_SKETCH_COMPOSITIONS, type SketchCompositionMetadata } from '@pagosya/shared-types';
+export type SketchCompositionFitInput = { style?: ArtDirection['style']; density?: ArtDirection['layoutDensity']; text: string; catalogItems: number; assets: ReadonlyArray<{ role?: string }>; newsletterEnabled?: boolean; hasReviewContent?: boolean };
+export function sketchCompositionFit(entry: SketchCompositionMetadata, input: SketchCompositionFitInput): { eligible: boolean; score: number; reasons: string[] } {
+  const images = input.assets.map(asset => ({ ...asset, role: sketchImageRole(asset) })).filter(asset => !['logo', 'reference', 'unused'].includes(asset.role || ''));
+  const reasons: string[] = [];
+  if (images.length < entry.needs.images) reasons.push(`Needs ${entry.needs.images} usable image(s)`);
+  if (entry.needs.sceneImage && !images.some(asset => isSceneImage(asset.role))) reasons.push('Needs a scene photograph suitable for a full-bleed crop');
+  if (entry.needs.productImage && !images.some(asset => isProductImage(asset.role))) reasons.push('Needs actual product or packaging photography');
+  if (entry.maxCatalogItems && input.catalogItems > entry.maxCatalogItems) reasons.push('Catalog too large for an unfiltered product feature');
+  if (entry.needs.newsletter && !input.newsletterEnabled) reasons.push('Signup disabled');
+  if (entry.needs.reviewContent && !input.hasReviewContent) reasons.push('No supplied quote content');
+  const text = normalized(input.text);
+  const score = Number(!!input.style && entry.goodFor.styles.includes(input.style)) * 5 + Number(!!input.density && entry.worksWith.includes(input.density)) * 2 + entry.goodFor.verticals.reduce((sum, term) => sum + Number(text.includes(term)) * 2, 0);
+  return { eligible: !reasons.length, score, reasons };
+}
+export function sourceSketchCompositionCandidates(input: SketchCompositionFitInput) {
+  return SOURCE_SKETCH_COMPOSITIONS.map(entry => ({ ...entry, fit: sketchCompositionFit(entry, input) }));
 }

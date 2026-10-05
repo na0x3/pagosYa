@@ -335,3 +335,22 @@ describe('component choices render (task 12)', () => {
     expect(() => page({ buttons: 'zzz', icons: 7, dividers: null, buttonIcon: 'rocket', links: {} })).not.toThrow();
   });
 });
+
+describe('collection cards lead where the item says', () => {
+  const linkCtx = { storeName: 'salv', purpose: 'shop' as const, photos: [] };
+  const built = repairSketch({ blocks: [
+    { id: 's1', type: 'collections', title: 'Obras', items: [
+      { title: 'Con destino', text: 'Lleva a la historia.', href: '#skb-s2' },
+      { title: 'Sin destino', text: 'Usa el destino por defecto.' },
+    ] },
+    { id: 's2', type: 'story', title: 'La historia' },
+  ] }, linkCtx).sketch;
+
+  it('renders the item href, and the default only for items without one', () => {
+    const block = built.blocks.find(b => b.type === 'collections')!;
+    const out = renderBlock(block, built, linkCtx);
+    expect(out).toContain('href={"#skb-s2"}');
+    // The second card has no href of its own and still reaches the catalog.
+    expect(out).toContain('href={"#skb-catalogo"}');
+  });
+});

@@ -1,8 +1,11 @@
+import { completeStructuredFixture } from '../fixtures/structured-response';
 import { SKETCH_JSON_SCHEMA, sketchPrompt, sketchEditPrompt, sketchFromResponse, sketchPhotoAllowlist } from './sketch-request';
 import { catalogueDigest } from './sketch-catalogue-digest';
+import { repairSketch } from './sketch-schema';
 import { drawSketchDirection } from './sketch-direction';
 import { drawPageStructure } from './sketch-structure-draw';
 import { countSubstance } from './sketch-substance';
+import { sectionCompositions } from '@pagosya/shared-types';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const structure = drawPageStructure(countSubstance({ products: 6, photos: 4, brief: { businessType: 'Repostería' } }), () => 0.4);
@@ -18,6 +21,9 @@ it('the schema is a strict object with anyOf blocks', () => {
   expect(heroSchema.properties.bg.enum).toContain('tint-accent');
   expect(heroSchema.properties.order).toBeUndefined();
   expect(heroSchema.properties.stickerPos).toBeUndefined();
+  for (const block of (SKETCH_JSON_SCHEMA.properties.blocks as any).items.anyOf) {
+    expect(block.properties.composition.enum).toEqual(['auto', ...sectionCompositions(block.properties.type.enum[0])]);
+  }
 });
 
 it('the prompt names the photos, catalog, instruction and real font ids', () => {
@@ -50,14 +56,15 @@ it('is total: null, garbage text and missing output all yield the usable default
 });
 
 it('a valid response round-trips through repair', () => {
-  const { sketch } = sketchFromResponse(response(JSON.stringify({ blocks: [{ id: 'h', type: 'hero', headline: 'Algo dulce', photo: 'assets/a.jpg' }] })), ctx);
+  const { sketch } = sketchFromResponse(response(JSON.stringify(completeStructuredFixture({ blocks: [{ id: 'h', type: 'hero', headline: 'Algo dulce', photo: 'assets/a.jpg' }] }, SKETCH_JSON_SCHEMA))), ctx);
   const hero = sketch.blocks.find(b => b.type === 'hero') as { headline: string; photo?: string };
   expect(hero.headline).toBe('Algo dulce');
   expect(hero.photo).toBe('assets/a.jpg');
 });
 
 it('exposes whether the model reply parsed, for honest attempt records (F4)', () => {
-  expect(sketchFromResponse(response('{"blocks": []}'), ctx).parsed).toBe(true);
+  expect(sketchFromResponse(response('{"blocks": []}'), ctx).parsed).toBe(false);
+  expect(sketchFromResponse(response(JSON.stringify(completeStructuredFixture({ blocks: [] }, SKETCH_JSON_SCHEMA))), ctx).parsed).toBe(true);
   expect(sketchFromResponse(response('not json'), ctx).parsed).toBe(false);
   expect(sketchFromResponse(null, ctx).parsed).toBe(false);
 });
@@ -79,7 +86,7 @@ it('photo allowlist drops reference, unused and unknown roles (F3)', () => {
 });
 
 it('the edit prompt carries the current sketch, the instruction and an optional block target', () => {
-  const { sketch } = sketchFromResponse(response(JSON.stringify({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] })), ctx);
+  const { sketch } = sketchFromResponse(response(JSON.stringify(completeStructuredFixture({ blocks: [{ id: 'h', type: 'hero', headline: 'Hola' }] }, SKETCH_JSON_SCHEMA))), ctx);
   const targeted = sketchEditPrompt({ sketch, instruction: 'haz el titular más juguetón', targetBlockId: 'h', photos: [{ path: 'assets/a.jpg' }], catalogue: catalogueDigest([]) });
   expect(targeted).toContain('"Hola"');
   expect(targeted).toContain('haz el titular más juguetón');
@@ -122,8 +129,11 @@ describe('the model is handed the page it must fill', () => {
     for (const slot of structure.slots) expect(prompt).toContain(slot.id);
     expect(prompt).toMatch(/no inventes bandas/i);
   });
-  it('keeps the colour rule, which is about background and not structure', () => {
-    expect(sketchPrompt({ ...promptInput(), structure: aStructure() })).toContain('COLOR DE VERDAD');
+  it('chooses purposeful composition rather than forcing saturated section backgrounds', () => {
+    const prompt = sketchPrompt({ ...promptInput(), structure: aStructure() });
+    expect(prompt).not.toContain('COLOR DE VERDAD');
+    expect(prompt).toContain('5–8 secciones fuertes');
+    expect(prompt).toContain('hero.magazine-cover');
   });
   it('no longer carries a prose structure line', () => {
     const prompt = sketchPrompt({ ...promptInput(), structure: aStructure() });
@@ -189,5 +199,28 @@ describe('the catalogue is the subject of the whole page', () => {
   it('says how many products there are when the sample is shorter than the catalogue', () => {
     const many = catalogueDigest(Array.from({ length: 30 }, (_, i) => ({ name: `P${i}`, amount: 100 })), [], 5);
     expect(sketchPrompt({ ...input(), catalogue: many })).toContain('30 productos');
+  });
+});
+
+describe('the page grammar the model is told about', () => {
+  const photos = [{ path: 'assets/a.jpg', description: 'Una foto.' }];
+  const catalogue = catalogueDigest([], []);
+
+  it('tells both prompts that new pages are impossible and how a card links', () => {
+    const generate = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos, catalogue, structure });
+    const edit = sketchEditPrompt({ sketch: repairSketch({ blocks: [] }, { storeName: 'salv', purpose: 'shop', photos: [] }).sketch, instruction: 'llevame a otra pagina', photos, catalogue });
+    for (const prompt of [generate, edit]) {
+      expect(prompt).toContain('NO podés crear páginas nuevas');
+      expect(prompt).toContain('collections[].href');
+    }
+  });
+
+  it('offers href on a collection item in the structured-output schema', () => {
+    const variants = (SKETCH_JSON_SCHEMA.properties.blocks.items as { anyOf: Array<Record<string, any>> }).anyOf;
+    const collections = variants.find(v => v.properties?.type?.enum?.[0] === 'collections')!;
+    const item = collections.properties.items.items;
+    expect(Object.keys(item.properties)).toContain('href');
+    // Strict structured output: every property must also be required, or the model may not emit it.
+    expect(item.required).toContain('href');
   });
 });

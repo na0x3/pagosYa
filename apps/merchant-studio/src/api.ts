@@ -448,6 +448,9 @@ export class MerchantStudioApi {
   putSketch(storeId: string, body: { revision: number; sketch: unknown }): Promise<{ revision: number; sketch: unknown }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch`, { method: "PUT", body: JSON.stringify(body) });
   }
+  regenerateSketch(storeId: string, body: { revision: number; designSeed?: string; sectionId?: string }): Promise<{ revision: number; sketch: unknown }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch/regenerate`, { method: "POST", body: JSON.stringify(body) });
+  }
   /** "Generar sitio": the boceto becomes the site, for good. */
   buildSketch(storeId: string, body: { revision: number }): Promise<{ revision: number }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/sketch/build`, { method: "POST", body: JSON.stringify(body) });

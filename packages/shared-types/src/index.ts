@@ -10,3 +10,5 @@ export * from "./storefront-pages";
 
 export * from './account-forms';
 export * from './sketch-structure';
+export * from './website-design';
+export { SKETCH_COMPONENT_REGISTRY, sketchComponents, sketchComponent, type SketchCompositionMetadata } from './sketch-registry';

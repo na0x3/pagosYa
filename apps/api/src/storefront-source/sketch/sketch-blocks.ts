@@ -1,6 +1,7 @@
-import { SKETCH_COPY_ORDER } from '@pagosya/shared-types';
+import { renderSketchComposition } from './sketch-registry';
+import { SKETCH_COPY_ORDER, sketchComponent } from '@pagosya/shared-types';
 import { bestInkFor, resolveBg } from './sketch-schema';
-import { FREE_CSS, withFreeLayer } from './sketch-free';
+import { FREE_CSS, withFreeLayer, stampFree } from './sketch-free';
 import type { SketchBlock, SketchContext, StoreSketch } from './sketch-schema';
 
 /** JSX generators for sketch blocks. Every merchant-controlled string is embedded as a
@@ -27,7 +28,7 @@ const open = (block: SketchBlock, sketch: StoreSketch, label?: string, extra = '
   const flip = block.flip ? ' data-skb-flip="on"' : '';
   const width = block.width && block.width !== 'bleed' ? ` data-skb-width=${expr(block.width)}` : '';
   return `<section data-skb=${expr(block.id)} id=${expr(`skb-${block.id}`)} className=${expr(`skb skb-${block.type} skb--${block.size}`)}` +
-    (label ? ` aria-label=${expr(label)}` : '') + align + flip + width + (extra ? ` ${extra}` : '') +
+    (label ? ` aria-label=${expr(label)}` : '') + align + flip + width + (block.composition ? ` data-skb-composition=${expr(block.composition)}` : '') + (extra ? ` ${extra}` : '') +
     ` style={{ ${Object.entries(styleVars).map(([key, value]) => `[${JSON.stringify(key)} as string]: ${JSON.stringify(value)}`).join(', ')} }}>`;
 };
 
@@ -153,14 +154,14 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
         </div>
       </article>
     </template>
-    <div className="skb-list" data-pagosya-catalog ${group(b, 'items')} />
+    <div className="skb-list" data-pagosya-catalog ${b.productRefs?.length ? `data-design-product-ids=${expr(b.productRefs.join(','))}` : ''} ${b.composition === 'rail' ? 'tabIndex={0} aria-label="Productos"' : ''} ${group(b, 'items')} />
     ${b.stripLeft || b.stripRight ? `<div className="skb-strip"><span ${editable('stripLeft')}>${expr(b.stripLeft)}</span><span ${editable('stripRight')}>${expr(b.stripRight)}</span></div>` : ''}
   </section>`;
   },
   collections: (b, s, ctx, options) => open(b, s) + `
     ${head(b, b.note, options.h1 ? 'h1' : 'h2')}
     <div className="skb-collections__grid" ${group(b, 'items')}>
-      ${b.items.map((item, i) => `<a className="skb-collection" ${node(String(i))} href=${expr(s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido')}>${item.photo ? img(item.photo, `Foto de ${ctx.storeName}`, 'skb-collection__img', `items.${i}.photo`) : ''}<div className="skb-collection__body"><h3 className="skb-collection__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-collection__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></div><span className="skb-collection__arrow" aria-hidden="true">↗</span></a>`).join('\n      ')}
+      ${b.items.map((item, i) => `<a className="skb-collection" ${node(String(i))} href=${expr(item.href ?? (s.blocks.some(block => block.type === 'catalog') ? '#skb-catalogo' : '#contenido'))}>${item.photo ? img(item.photo, `Foto de ${ctx.storeName}`, 'skb-collection__img', `items.${i}.photo`) : ''}<div className="skb-collection__body"><h3 className="skb-collection__title" ${editable(`items.${i}.title`)}>${expr(item.title)}</h3><p className="skb-collection__text" ${editable(`items.${i}.text`)}>${expr(item.text)}</p></div><span className="skb-collection__arrow" aria-hidden="true">↗</span></a>`).join('\n      ')}
     </div>
   </section>`,
   story: (b, s, ctx, options) => {
@@ -234,7 +235,7 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
     ${ordered(parts, b.order, SKETCH_COPY_ORDER.newsletter)}`;
     const status = '<p role="status" className="skb-subscribe__status" />';
     const formAttrs = `data-pagosya-subscribe-block data-skb-form=${expr(b.form || 'pill')}`;
-    return b.variant === 'split' && b.photo
+    return (b.composition ? b.composition === 'split' : b.variant === 'split') && b.photo
       ? open(b, s, undefined, formAttrs) + `
     <div className="skb-newsletter__grid">
       <div className="skb-newsletter__copy" ${group(b, 'copy')}>${copy}${status}</div>
@@ -264,7 +265,20 @@ const generators: { [T in SketchBlock['type']]: (block: Extract<SketchBlock, { t
 };
 
 export function renderBlock(block: SketchBlock, sketch: StoreSketch, ctx: SketchContext, options: RenderOptions = {}): string {
-  return withFreeLayer(block, (generators[block.type] as Render)(block as SketchBlock & { type: never }, sketch, ctx, options), ctx);
+  const entry = sketchComponent(block.type, block.composition);
+  const legacyBlock = block.type === 'hero' && entry?.legacyVariant ? { ...block, variant: entry.legacyVariant } : block;
+  let markup = renderSketchComposition(block, sketch, ctx, stampFree((generators[block.type] as Render)(legacyBlock as SketchBlock & { type: never }, sketch, ctx, options), block.free));
+  if (sketch.design) markup = markup.replace(/<img\b[^>]*data-skb-photo=\{([^}]+)\}[^>]*\/>/g, tag => {
+    const fieldMatch = tag.match(/data-skb-photo=\{("(?:[^"\\]|\\.)*")\}/);
+    let field = ''; try { field = JSON.parse(fieldMatch?.[1] || '""'); } catch { return tag; }
+    const assignment = sketch.design?.assetAssignments.find(a => a.sectionId === block.id && a.field === field);
+    const fit = block.imageFit ?? assignment?.cropStrategy ?? 'cover';
+    const focal = block.focalPoint ?? assignment?.focalPoint ?? { x: 50, y: 50 };
+    return tag.replace(/alt=\{("(?:[^"\\]|\\.)*")\}/, `alt=${expr(assignment?.alt || `Imagen de ${ctx.storeName}`)}`)
+       .replace(' />', ` loading=${expr(options.h1 ? 'eager' : 'lazy')} decoding="async" />`)
+      .replace(/style=\{\{| \/>/, match => match === ' />' ? ` style={{ objectFit: ${JSON.stringify(fit)}, objectPosition: ${JSON.stringify(`${focal.x}% ${focal.y}%`)} }} />` : `style={{ objectFit: ${JSON.stringify(fit)}, objectPosition: ${JSON.stringify(`${focal.x}% ${focal.y}%`)}, `);
+  });
+  return withFreeLayer(block, markup, ctx);
 }
 
 /** The designed login / sign-up page. Everything around the form is the sketch's; the form is the kit AccountGatePage,

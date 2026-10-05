@@ -1,7 +1,9 @@
+import { sectionCompositions, type WebsiteDesignSpec } from '@pagosya/shared-types';
+import { syncDesignSpec } from '../design-engine/design-document';
 import { repairSketchFree, repairSketchLayout, sketchFreePos, sketchGroups, sketchRemapFree, SKETCH_COPY_ORDER, SKETCH_EXTRA_KINDS, SKETCH_EXTRA_MAX, type SketchExtra, type SketchExtraKind, type SketchFreePos, type SketchGroupLayout } from '@pagosya/shared-types';
 import { SOURCE_FONT_IDS } from '../source-font-catalog';
 import { PRESET_IDS, PRODUCT_CARD_PRESETS, PRODUCT_COMMERCE_RECIPES, type PresetId, type ProductCardParams } from '../source-product-card-presets';
-import { SOURCE_DNA_ENUMS, SOURCE_PRODUCT_PAGE_STYLES, type SourceProductPageStyle } from '../source-dna';
+import { SOURCE_DNA_ENUMS, SOURCE_PRODUCT_PAGE_STYLES, normalizeDna, dnaRuntimeConfig, type SourceDesignDna, type SourceProductPageStyle } from '../source-dna';
 import { sanitizeProductAssurances, type ProductAssurance } from '../product-theme';
 import { fillStructure } from './sketch-structure-fill';
 import type { PageStructure } from './sketch-structure-draw';
@@ -24,10 +26,10 @@ export const SKETCH_WIDTHS: readonly SketchWidth[] = ['bleed', 'wide', 'narrow',
 /** Editor-wide layout controls every block may carry: copy alignment, mirrored photo side, swapped buttons,
  * band width, copy-column element order and per-group layout (spec 2026-10-03-boceto-structure-and-icons-design;
  * width added by spec 2026-10-04-yapi-composition-and-width-design). */
-export type SketchLayout = { align?: SketchAlign; flip?: boolean; swap?: boolean; width?: SketchWidth; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
+export type SketchLayout = { composition?: string; imageFit?: 'cover' | 'contain'; focalPoint?: { x: number; y: number }; productRefs?: string[]; align?: SketchAlign; flip?: boolean; swap?: boolean; width?: SketchWidth; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
 export type StickerPos = { x: number; y: number };
 export type SketchBlock = (
-  | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; cta2: string; trust: string; badge: string; note: string; sticker: string; caption: string; photo?: string; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
+  | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; cta2: string; trust: string; badge: string; note: string; sticker: string; caption: string; photo?: string; photos?: string[]; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'announce'; left: string; right: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'split'; kicker: string; headline: string; body: string; cta: string; cta2: string; href: string; pills: string[]; stats: Array<{ value: string; label: string }>; boxes: Array<{ title: string; text: string; icon?: string }>; sticker: string; tag: string; photo?: string; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'marquee'; text: string; glyph: string; bg: SketchBg; size: SketchSize }
@@ -35,7 +37,7 @@ export type SketchBlock = (
   | { id: string; type: 'steps'; kicker: string; title: string; note: string; items: Array<{ icon: string; title: string; text: string }>; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'story'; kicker: string; title: string; paragraphs: string[]; photo?: string; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'reviews'; kicker: string; title: string; ratingValue: string; ratingSource: string; handle: string; quotes: Array<{ text: string; name: string; place: string }>; photos: string[]; bg: SketchBg; size: SketchSize }
-  | { id: string; type: 'collections'; kicker: string; title: string; note: string; items: Array<{ title: string; text: string; photo?: string }>; bg: SketchBg; size: SketchSize }
+  | { id: string; type: 'collections'; kicker: string; title: string; note: string; items: Array<{ title: string; text: string; photo?: string; href?: string }>; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'faq'; kicker: string; title: string; items: Array<{ q: string; a: string }>; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'banner'; kicker: string; headline: string; cta: string; href: string; sticker: string; stickerPos?: StickerPos; bg: SketchBg; size: SketchSize }
   | { id: string; type: 'gallery'; kicker: string; title: string; photos: string[]; bg: SketchBg; size: SketchSize }
@@ -91,7 +93,7 @@ export type SketchProduct = { preset: PresetId; layout: SourceProductPageStyle; 
 /** The shopper login and sign-up pages. The sketch designs everything around the form; the form itself is drawn by
  * the trusted platform frame over the kit's account gate, so no credential input ever lives in store code. */
 export type SketchAccount = { id: 'account'; type: 'account'; layout: 'split' | 'center'; kicker: string; title: string; lead: string; perks: Array<{ icon: string; text: string }>; photo?: string; bg: SketchBg };
-export type StoreSketch = { palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; style: SketchStyle; product: SketchProduct; account: SketchAccount; structure?: PageStructure; blocks: SketchBlock[] };
+export type StoreSketch = { dna?: SourceDesignDna; design?: WebsiteDesignSpec; palette: SketchPalette; fonts: { display: string; text: string }; scale: SketchSize; style: SketchStyle; product: SketchProduct; account: SketchAccount; structure?: PageStructure; blocks: SketchBlock[] };
 export type SketchContext = { storeName: string; purpose: 'shop' | 'service'; photos: string[] };
 
 export const SKETCH_BLOCK_TYPES = ['announce', 'hero', 'split', 'steps', 'marquee', 'catalog', 'collections', 'story', 'reviews', 'faq', 'banner', 'gallery', 'newsletter', 'footer'] as const satisfies ReadonlyArray<SketchBlock['type']>;
@@ -394,7 +396,14 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
         const heroOrder = order(block.order, SKETCH_EL_ORDER.hero);
         const heroSticker = stickerPos(block.stickerPos);
         const heroAlign = align(block.align);
-        blocks.push({ ...base, type, variant: ['photo-right', 'full-bleed', 'stacked'].includes(block.variant as string) ? (block.variant as 'photo-right') : 'photo-right', headline: text(block.headline, LIMITS.headline, ctx.storeName), sub: text(block.sub, LIMITS.short), cta: text(block.cta, 60, 'Ver productos'), cta2: text(block.cta2, 60), trust: text(block.trust, 120), badge: text(block.badge, 60), note: text(block.note, 120), sticker: text(block.sticker, 40), caption: text(block.caption, 80), ...(heroPhoto ? { photo: heroPhoto } : {}), ...(heroOrder ? { order: heroOrder } : {}), ...(heroSticker ? { stickerPos: heroSticker } : {}), ...(heroAlign ? { align: heroAlign } : {}) });
+        const seenPhotos = new Set(heroPhoto ? [heroPhoto] : []);
+        const heroPhotos = Array.isArray(block.photos) ? list(block.photos, 4, value => {
+          const path = photo(value);
+          if (!path || seenPhotos.has(path)) return null;
+          seenPhotos.add(path);
+          return path;
+        }) : undefined;
+        blocks.push({ ...base, type, variant: ['photo-right', 'full-bleed', 'stacked'].includes(block.variant as string) ? (block.variant as 'photo-right') : 'photo-right', headline: text(block.headline, LIMITS.headline, ctx.storeName), sub: text(block.sub, LIMITS.short), cta: text(block.cta, 60, 'Ver productos'), cta2: text(block.cta2, 60), trust: text(block.trust, 120), badge: text(block.badge, 60), note: text(block.note, 120), sticker: text(block.sticker, 40), caption: text(block.caption, 80), ...(heroPhoto ? { photo: heroPhoto } : {}), ...(heroPhotos ? { photos: heroPhotos } : {}), ...(heroOrder ? { order: heroOrder } : {}), ...(heroSticker ? { stickerPos: heroSticker } : {}), ...(heroAlign ? { align: heroAlign } : {}) });
         break;
       }
       case 'announce': blocks.push({ ...base, type, left: text(block.left, LIMITS.short), right: text(block.right, LIMITS.short) }); break;
@@ -408,7 +417,7 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
       }
       case 'marquee': blocks.push({ ...base, type, text: text(block.text, LIMITS.short, ctx.storeName), glyph: MARQUEE_GLYPHS.includes(block.glyph as (typeof MARQUEE_GLYPHS)[number]) ? (block.glyph as string) : '·' }); break;
       case 'catalog': blocks.push({ ...base, type, kicker: kickerText(block.kicker), title: text(block.title, LIMITS.headline, 'Nuestros productos'), seeAll: text(block.seeAll, 60), badges: list(block.badges, 3, b => (b == null ? null : text(b, 24).replace(/["\\\n\r]/g, '').trim() || null)), stripLeft: text(block.stripLeft, LIMITS.short), stripRight: text(block.stripRight, LIMITS.short), cardRatio: ['4-3', '1-1', '3-4'].includes(block.cardRatio as string) ? (block.cardRatio as '4-3') : '4-3', cardDesc: block.cardDesc !== false, cardAdd: block.cardAdd !== false }); break;
-      case 'collections': blocks.push({ ...base, type, kicker: kickerText(block.kicker), title: text(block.title, LIMITS.headline, 'Colecciones'), note: text(block.note, 160), items: list(block.items, 4, i => { const entry = (typeof i === 'object' && i !== null ? i : {}) as Record<string, unknown>; const title = text(entry.title, 60); if (!title) return null; const itemPhoto = photo(entry.photo); return { title, text: text(entry.text, LIMITS.short), ...(itemPhoto ? { photo: itemPhoto } : {}) }; }) }); break;
+      case 'collections': blocks.push({ ...base, type, kicker: kickerText(block.kicker), title: text(block.title, LIMITS.headline, 'Colecciones'), note: text(block.note, 160), items: list(block.items, 4, i => { const entry = (typeof i === 'object' && i !== null ? i : {}) as Record<string, unknown>; const title = text(entry.title, 60); if (!title) return null; const itemPhoto = photo(entry.photo); const itemHref = typeof entry.href === 'string' && BLOCK_HREF.test(entry.href) ? entry.href : undefined; return { title, text: text(entry.text, LIMITS.short), ...(itemPhoto ? { photo: itemPhoto } : {}), ...(itemHref ? { href: itemHref } : {}) }; }) }); break;
       case 'steps': blocks.push({ ...base, type, kicker: kickerText(block.kicker), title: text(block.title, LIMITS.headline, 'Así de simple'), note: text(block.note, 160), items: list(block.items, 4, i => { const entry = (typeof i === 'object' && i !== null ? i : {}) as Record<string, unknown>; const title = text(entry.title, 60); if (!title) return null; return { icon: typeof entry.icon === 'string' && /^[a-z0-9-]{2,40}$/.test(entry.icon) ? entry.icon : 'sparkles', title, text: text(entry.text, LIMITS.short) }; }) }); break;
       case 'story': {
         const storyPhoto = photo(block.photo);
@@ -434,6 +443,11 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     // Shared layout controls: any kept block may carry alignment; photo blocks may mirror; button rows may swap.
     const kept = blocks.length > pushedBefore ? blocks[blocks.length - 1] : undefined;
     if (kept) {
+      if (typeof block.composition === 'string' && sectionCompositions(kept.type).includes(block.composition)) kept.composition = block.composition;
+      if (block.imageFit === 'cover' || block.imageFit === 'contain') kept.imageFit = block.imageFit;
+      const focal = block.focalPoint as { x?: unknown; y?: unknown } | undefined;
+      if (focal && typeof focal.x === 'number' && Number.isFinite(focal.x) && typeof focal.y === 'number' && Number.isFinite(focal.y)) kept.focalPoint = { x: Math.max(0, Math.min(100, focal.x)), y: Math.max(0, Math.min(100, focal.y)) };
+      if (Array.isArray(block.productRefs)) kept.productRefs = block.productRefs.filter((id): id is string => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id)).slice(0, 60);
       const blockAlign = align(block.align);
       if (blockAlign && blockAlign !== 'start') kept.align = blockAlign; else delete kept.align;
       if (block.flip === true && ['hero', 'split', 'story', 'newsletter'].includes(kept.type)) kept.flip = true;
@@ -491,6 +505,18 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     block.id = `b${next++}`;
     keptIds.add(block.id);
   }
+  // A collection card may lead somewhere of its own (spec: "llevame a otra parte del sitio"). Ids are final only
+  // here, so the anchor check waits for them: an anchor naming no band on this page would land the shopper
+  // nowhere, which is worse than the default destination, so it is dropped and the card falls back.
+  const anchors = new Set(['#contenido', '#skb-catalogo', ...ordered.map(block => `#skb-${block.id}`)]);
+  for (const block of ordered) {
+    if (block.type !== 'collections') continue;
+    for (const item of block.items) {
+      if (!item.href || !item.href.startsWith('#') || anchors.has(item.href)) continue;
+      notes.push(`«${item.title}» apuntaba a ${item.href}, que no existe en la página; se quitó el enlace`);
+      delete item.href;
+    }
+  }
 
   const rawAccount = (typeof raw.account === 'object' && raw.account !== null ? raw.account : {}) as Record<string, unknown>;
   const accountPhoto = photo(rawAccount.photo);
@@ -510,7 +536,18 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     bg: bg(rawAccount.bg, 'tint-accent'),
   };
 
-  return { sketch: { palette, fonts, scale, style, product, account, ...(structure ? { structure } : {}), blocks: ordered }, notes };
+  const dna = raw.dna ? normalizeDna(raw.dna, String((raw.design as any)?.designSeed ?? ctx.storeName)).dna : undefined;
+  if (dna) {
+    dna.type.display = fonts.display as typeof dna.type.display;
+    dna.type.text = fonts.text as typeof dna.type.text;
+    // Advanced DNA forms retain their identity until the merchant changes the existing Botones control.
+    if (SKETCH_STYLE_OPTIONS.buttons.includes(rawStyle.buttons as SketchStyle['buttons']) && style.buttons !== sketchButtonStyle(dna.buttons.form))
+      dna.buttons.form = style.buttons === 'square' ? 'block' : style.buttons === 'hard-shadow' ? 'brutal' : style.buttons;
+  }
+  const sketch: StoreSketch = { ...(dna ? { dna } : {}), palette, fonts, scale, style, product, account, ...(structure ? { structure } : {}), blocks: ordered };
+  const design = syncDesignSpec(raw.design, sketch, ctx);
+  if (design) sketch.design = design;
+  return { sketch, notes };
 }
 
 /** The kit button form that matches the sketch's Botones choice, so the platform's purchase
@@ -519,15 +556,21 @@ export function sketchButtonForm(style: SketchStyle): 'pill' | 'block' | 'outlin
   return style.buttons === 'square' ? 'block' : style.buttons === 'outline' ? 'outline' : 'pill';
 }
 
+/** Existing editor aliases for canonical DNA forms; unsupported forms keep their DNA value. */
+export function sketchButtonStyle(form: SourceDesignDna['buttons']['form']): SketchStyle['buttons'] {
+  return form === 'block' ? 'square' : form === 'brutal' ? 'hard-shadow' : ['pill', 'outline', 'ghost', 'underline'].includes(form) ? form as SketchStyle['buttons'] : 'outline';
+}
+
 /** Everything the platform kit varies by DNA, derived from the sketch: catalog card behaviour (hover
  * photo swap, quick look…), cart and review formats and the motion personality come from the chosen
  * preset's commerce recipe; the button form follows the Botones control. Total for any input. */
 export function sketchKitDna(sketch: Partial<StoreSketch>): Record<string, string> {
   const recipe = PRODUCT_COMMERCE_RECIPES[(sketch.product?.preset as PresetId) ?? 'plain'] ?? PRODUCT_COMMERCE_RECIPES.plain;
   return {
-    button: sketchButtonForm({ ...DEFAULT_SKETCH_STYLE, ...(sketch.style ?? {}) }),
-    card: recipe.surfaces.card, cart: recipe.surfaces.cart, review: recipe.surfaces.review,
-    motion: recipe.motion.personality, hover: recipe.motion.hover, press: recipe.motion.press,
+    ...(sketch.dna ? Object.fromEntries(Object.entries(dnaRuntimeConfig(sketch.dna)).filter(([key]) => key !== 'version')) as Record<string, string> : {}),
+    button: sketch.dna?.buttons.form ?? sketchButtonForm({ ...DEFAULT_SKETCH_STYLE, ...(sketch.style ?? {}) }),
+    card: sketch.dna?.surfaces.card ?? recipe.surfaces.card, cart: recipe.surfaces.cart, review: recipe.surfaces.review,
+    motion: sketch.dna?.motion.personality ?? recipe.motion.personality, hover: sketch.dna?.buttons.hover ?? recipe.motion.hover, press: sketch.dna?.buttons.press ?? recipe.motion.press,
   };
 }
 
@@ -539,14 +582,14 @@ export function sketchProductTheme(product: SketchProduct): { preset: PresetId; 
 }
 
 /** Editor-only block fields are absent from the model schema, so a chat edit reply resets them; carry them over by id. */
-export const SKETCH_EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos', 'layout', 'free', 'extras'] as const;
+export const SKETCH_EDITOR_ONLY = ['align', 'flip', 'swap', 'order', 'stickerPos', 'layout', 'free', 'extras', 'composition', 'imageFit', 'focalPoint', 'productRefs'] as const;
 export function carryEditorFields(current: StoreSketch, edited: StoreSketch): StoreSketch['blocks'] {
   return edited.blocks.map(block => {
     const before = current.blocks.find(item => item.id === block.id) as Record<string, unknown> | undefined;
     if (!before) return block;
     // Order, group layout and free spots name the parts of one block type; a block the model turned into another type
     // starts fresh there (inserted elements belong to the block, so they stay).
-    const keys = before.type === block.type ? SKETCH_EDITOR_ONLY : SKETCH_EDITOR_ONLY.filter(key => key !== 'order' && key !== 'layout' && key !== 'free');
+    const keys = before.type === block.type ? SKETCH_EDITOR_ONLY : SKETCH_EDITOR_ONLY.filter(key => !['order', 'layout', 'free', 'composition', 'productRefs'].includes(key));
     const carried: Record<string, unknown> = Object.fromEntries(keys.filter(key => before[key] !== undefined && (block as Record<string, unknown>)[key] === undefined).map(key => [key, before[key]]));
     // Spots on list items follow their item when the edit removed, added or reordered items.
     if (carried.free) {

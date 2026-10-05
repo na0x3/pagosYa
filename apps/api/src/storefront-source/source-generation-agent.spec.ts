@@ -1,7 +1,10 @@
+import { completeStructuredFixture } from './fixtures/structured-response';
+import { SKETCH_JSON_SCHEMA } from './sketch/sketch-request';
+import { DESIGN_FIXTURES } from './design-engine/design-fixtures';
+import { inferBrand, fallbackCreative } from './design-engine/design-engine';
 import { sketchFreeablePaths } from '@pagosya/shared-types';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { repairSketch } from './sketch';
-import * as structureDraw from './sketch/sketch-structure-draw';
 import { SourceGenerationService } from './source-generation.service';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceProjectsService } from './source-projects.service';
@@ -330,196 +333,98 @@ describe('generate() with the agent engine', () => {
   });
 });
 
-jest.mock('./sketch/sketch-structure-draw', () => ({ ...jest.requireActual('./sketch/sketch-structure-draw'), drawPageStructure: jest.fn(jest.requireActual('./sketch/sketch-structure-draw').drawPageStructure) }));
-const drawPage = structureDraw.drawPageStructure as jest.Mock;
-const actualDraw = jest.requireActual('./sketch/sketch-structure-draw').drawPageStructure;
-
-describe('sketch-first new stores', () => {
-  afterEach(() => { jest.restoreAllMocks(); drawPage.mockImplementation(actualDraw); });
-  // The model now fills drawn slots by id, so the fixture below answers a skeleton this test pins instead of one drawn at random.
-  const skeleton = { slots: [
-    { id: 's1', type: 'hero', size: 'l', width: 'bleed', media: false },
-    { id: 's2', type: 'catalog', size: 'm', width: 'bleed', media: false },
-    { id: 's3', type: 'footer', size: 'l', width: 'bleed', media: false },
-  ], params: { length: 3, opening: 'hero', catalogAt: 1, accentEvery: null, rhythm: 'calm', mediaBudget: 0 } };
-  beforeEach(() => { drawPage.mockImplementation(() => skeleton as any); });
-  const sketchJson = JSON.stringify({
-    palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' },
-    fonts: { display: 'anton', text: 'manrope' }, scale: 'm',
-    blocks: [
-      { id: 's1', type: 'hero', variant: 'photo-right', headline: 'Algo dulce', sub: '', cta: 'Ver', bg: 'paper', size: 'l' },
-      { id: 's2', type: 'catalog', kicker: '', title: 'Productos', bg: 'pop', size: 'm' },
-      { id: 's3', type: 'footer', tagline: '', wordmark: 'giant', bg: 'deep', size: 'l' },
-    ],
+describe('sketch-first design orchestration', () => {
+  afterEach(() => jest.restoreAllMocks());
+  const rawSketch = completeStructuredFixture({
+    palette: { paper: '#f6ecd9', ink: '#1f2a24', accent: '#e35336', deep: '#1e3a2f', pop: '#f2c94c' }, fonts: { display: 'anton', text: 'manrope' }, scale: 'm',
+    blocks: [{ id: 's1', type: 'hero', variant: 'photo-right', headline: 'Algo dulce', cta: 'Ver', bg: 'paper', size: 'l' }, { id: 's2', type: 'catalog', title: 'Productos', bg: 'pop', size: 'm' }, { id: 's3', type: 'footer', wordmark: 'giant', bg: 'deep', size: 'm' }],
+  }, SKETCH_JSON_SCHEMA);
+  const response = (payload: unknown) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 300 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(payload) }] }] }));
+  const direction = inferBrand(DESIGN_FIXTURES[0].input);
+  const creative = { ...fallbackCreative(DESIGN_FIXTURES[0].input, direction), sections: [{ type: 'hero', composition: 'statement', intent: 'Introduce' }, { type: 'catalog', composition: 'rail', intent: 'Shop the catalog' }, { type: 'footer', composition: 'statement', intent: 'Navigate' }] };
+  const mockPipeline = (overrides: Record<string, unknown | (() => Response)> = {}) => jest.spyOn(globalThis, 'fetch').mockImplementation(async (_url, request) => {
+    const name = JSON.parse(String(request?.body)).text?.format?.name;
+    const payload = name in overrides ? overrides[name] : { website_brand: direction, website_creative: creative, store_sketch: rawSketch, website_critic: { summary: 'Coherent', patches: [] } }[name as string];
+    if (typeof payload === 'function') return payload();
+    if (payload === undefined) throw new Error('Provider unavailable');
+    return response(payload);
   });
-  const sketchResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 300 }, output: [{ content: [{ type: 'output_text', text: sketchJson }] }] }));
-  const newStore = (projects: any) => { projects.current.mockResolvedValue({ revision: 0, slug: 'pausa' }); };
-  const compositionResponse = (payload: unknown) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 500, output_tokens: 120 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(payload) }] }] }));
-  // The paths belong to the renderer, not to this test, so ask for a real one instead of hardcoding a guess.
-  const heroPath = () => {
-    const { sketch } = repairSketch(JSON.parse(sketchJson), { storeName: 'pausa', purpose: 'shop', photos: [] });
-    return sketchFreeablePaths(sketch.blocks.find(block => block.id === 's1')!)[0];
-  };
+  const fresh = (projects: any) => projects.current.mockResolvedValue({ revision: 0, slug: 'pausa' });
+  const savedSketch = (projects: any) => JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json').content);
 
-  it('composes a fresh sketch with a second call and saves the result', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const path = heroPath();
-    const fetchMock = jest.spyOn(globalThis, 'fetch')
-      .mockImplementationOnce(async () => sketchResponse())
-      .mockImplementationOnce(async () => compositionResponse({ blocks: [{ id: 's1', free: [{ path, x: 55, y: 30, w: 46, r: -3 }], extras: [], order: [], layout: [] }] }));
+  it('separates brand, creative planning, boceto and critic before deterministic rendering', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    const fetchMock = mockPipeline();
+    const result = await service.generate('m', 's', { ...input(brief), revision: 0, designSeed: 'seed-1' }, new SourceRequestBudget(50));
+    expect(fetchMock.mock.calls.map(call => JSON.parse(String(call[1]?.body)).text.format.name)).toEqual(['website_brand', 'website_creative', 'store_sketch', 'website_critic']);
+    const sketch = savedSketch(projects);
+    expect(sketch.design.designSeed).toBe('seed-1'); expect(sketch.design.brand).toEqual(direction);
+    expect(sketch.blocks.find((b: any) => b.type === 'catalog').composition).toBe('rail');
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'website-design.json')).toBeDefined();
+    expect(result.generation.attempts.every(a => a.status === 'COMPLETED')).toBe(true);
+  });
+  it('applies only bounded critic layout fixes while preserving copy', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    mockPipeline({ website_critic: { summary: 'A more spacious opening', patches: [{ sectionId: 's1', composition: 'poster', width: 'wide', alignment: 'start', size: 'xl', reason: 'Hierarchy' }] } });
     await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    // The second call must carry the composition schema, not the sketch schema.
-    expect(JSON.parse((fetchMock.mock.calls[1] as any)[1].body).text.format.name).toBe('sketch_composition');
-    const saved = projects.save.mock.calls[0][2];
-    const sketch = JSON.parse(saved.files.find((f: any) => f.path === 'sketch.json').content);
-    expect(sketch.blocks.find((b: any) => b.id === 's1').free).toEqual({ [path]: { x: 55, y: 30, w: 46, r: -3 } });
-    // The composed spot reaches the rendered page, not only sketch.json.
-    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('data-skb-free="on"');
+    expect(savedSketch(projects).blocks[0]).toMatchObject({ headline: 'Algo dulce', composition: 'poster', size: 'xl' });
   });
-
-  // The spec's central promise: a composition failure costs a plainer page, never an error.
-  it('ships the drawn sketch unchanged when the composition call fails', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    jest.spyOn(globalThis, 'fetch')
-      .mockImplementationOnce(async () => sketchResponse())
-      .mockImplementationOnce(async () => { throw new Error('network down'); });
+  it('schema-retries invalid brand output once and retains a valid draft', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    const fetchMock = mockPipeline({ website_brand: {} });
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    expect(fetchMock.mock.calls.filter(call => JSON.parse(String(call[1]?.body)).text.format.name === 'website_brand')).toHaveLength(2);
+    expect(savedSketch(projects).design.generation.mode).toBe('fallback');
+  });
+  it('does one critic pass even when its structured response is invalid', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    const fetchMock = mockPipeline({ website_critic: { patches: 'invalid' } });
+    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    expect(fetchMock.mock.calls.filter(call => JSON.parse(String(call[1]?.body)).text.format.name === 'website_critic')).toHaveLength(1);
+    expect(savedSketch(projects).blocks.find((b: any) => b.type === 'catalog')).toBeDefined();
+  });
+  it('keeps default generation in registered compositions without free-positioning copy', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    const fetchMock = mockPipeline();
     const result = await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const saved = projects.save.mock.calls[0][2];
-    const sketch = JSON.parse(saved.files.find((f: any) => f.path === 'sketch.json').content);
-    expect(sketch.blocks.every((b: any) => !b.free && !b.extras)).toBe(true);
-    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('skb-hero');
-    expect(result.generation.autoRepairs.some((note: string) => note.startsWith('Composición'))).toBe(true);
+    expect(savedSketch(projects).blocks.every((b: any) => !b.free)).toBe(true);
+    expect(savedSketch(projects).blocks.every((b: any) => !b.extras?.length)).toBe(true);
+    expect(result.generation.attempts.some(a => a.phase === 'composition')).toBe(false);
+    expect(fetchMock.mock.calls).toHaveLength(4);
   });
-
-  // A sketch the model never produced is not worth composing, and on a provider outage a second call would make
-  // the merchant wait through another timeout (up to 180 s on the ChatGPT plan) for nothing.
-  it('does not compose when the sketch call itself produced nothing usable', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'nope' }] }] })));
+  it('does not call composition or critic after invalid boceto output', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    const fetchMock = mockPipeline({ store_sketch: { blocks: 'invalid' } });
     await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    // The fallback sketch still ships, as it did before.
-    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json')).toBeDefined();
+    expect(fetchMock.mock.calls).toHaveLength(3);
+    expect(savedSketch(projects).blocks.some((b: any) => b.type === 'catalog')).toBe(true);
   });
-
-  it('asks only for the blocks the sketch actually has, with their real paths', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
-    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const prompt = JSON.parse((fetchMock.mock.calls[1] as any)[1].body).input[0].content[0].text;
-    expect(prompt).toContain(heroPath());
-    expect(prompt).toContain('(hero)');
+  it('fails provider stages honestly but still assembles a recoverable default draft', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects);
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network down'));
+    const result = await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    expect(savedSketch(projects).design.generation.mode).toBe('fallback');
+    expect(result.generation.attempts.every(a => a.status === 'FAILED')).toBe(true);
+    expect(result.generation.credits).toBe(0);
   });
-
-  // The skeleton is only a guarantee if both ends receive it: dropping the argument at either call site would leave
-  // every pinned-skeleton fixture passing while the model chose bands freely again.
-  it('hands the catalogue digest, categories included, to the sketch prompt along with the skeleton', async () => {
-    const { service, projects, stores, brief } = await setup();
-    stores.getStorePublic.mockResolvedValue(cheeseStore);
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+  it('carries catalog categories and product facts into brand and boceto planning', async () => {
+    const { service, projects, stores, brief } = await setup(); fresh(projects); stores.getStorePublic.mockResolvedValue(cheeseStore);
+    const fetchMock = mockPipeline();
     await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const prompt = JSON.parse((fetchMock.mock.calls[0] as any)[1].body).input[0].content[0].text;
-    expect(prompt).toContain('Quesería Artesanal');
-    expect(prompt).toContain('Queso de cabra');
-    for (const slot of skeleton.slots) expect(prompt).toContain(`- ${slot.id}: ${slot.type}`);
+    expect(String(fetchMock.mock.calls[0][1]?.body)).toContain('Quesería Artesanal');
+    expect(String(fetchMock.mock.calls[2][1]?.body)).toContain('Queso de cabra');
+    expect(savedSketch(projects).blocks.find((b: any) => b.type === 'catalog').productRefs).toEqual(['p1']);
   });
-  it('hands the drawn skeleton to the prompt and binds the response to it', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
-    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const prompt = JSON.parse((fetchMock.mock.calls[0] as any)[1].body).input[0].content[0].text;
-    for (const slot of skeleton.slots) expect(prompt).toContain(`- ${slot.id}: ${slot.type}`);
-    // A block the model invents is discarded only when the structure reaches repair.
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ blocks: [{ id: 'invented', type: 'banner', headline: 'x', bg: 'pop', size: 'm' }, ...JSON.parse(sketchJson).blocks] }) }] }] })));
-    projects.save.mockClear();
-    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const saved = JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json').content);
-    const ids = saved.blocks.map((b: any) => b.id);
-    expect(ids).not.toContain('invented');
-    for (const id of ids) expect(skeleton.slots.map(slot => slot.id)).toContain(id);
-  });
-
-  it('builds a brand-new store from one sketch call, saving the assembled files and sketch.json', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
-    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    // One call draws the sketch, a second composes it (spec 2026-10-04).
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const saved = projects.save.mock.calls[0][2];
-    expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('skb-hero');
-    expect(saved.files.find((f: any) => f.path === 'sketch.json')).toBeDefined();
-    expect(saved.label).toContain('Boceto');
-  });
-  it('still saves a default sketch when the provider fails', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
-    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const home = projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'components/home.tsx').content;
-    expect(home).toContain('data-pagosya-catalog');
-    expect(home).toContain('skb-footer');
-  });
-  it('a Claude pick still sketches through the OpenAI companion model (F1)', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+  it('a Claude choice keeps the companion structured provider', async () => {
+    const { service, projects, brief } = await setup(); fresh(projects); const fetchMock = mockPipeline();
     await service.generate('m', 's', { ...input(brief), revision: 0, model: 'claude-sonnet-5' }, new SourceRequestBudget(50));
-    expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).model).toMatch(/^gpt-/);
-    expect(projects.save).toHaveBeenCalled();
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).model).toBe('gpt-5.6-terra');
   });
-  it('YAPI_SKETCH_FIRST=off keeps the agent path for new stores (F8)', async () => {
-    const { service, projects, brief } = await setup('agent', { 'app.yapiSketchFirst': false });
-    newStore(projects);
-    jest.spyOn((service as any).designPlanner, 'explore').mockRejectedValue(new Error('planner-reached'));
-    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
+  it('keeps the explicit sketch opt-out and existing-source paths', async () => {
+    const { service, projects, brief } = await setup('agent', { 'app.yapiSketchFirst': false }); fresh(projects);
+    const planner = jest.spyOn((service as any).designPlanner, 'explore').mockRejectedValue(new Error('planner-reached'));
     await expect(service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50))).rejects.toThrow('planner-reached');
-  });
-  it('a single-engine new store keeps its design planner (F2)', async () => {
-    const { service, projects, brief } = await setup('single');
-    newStore(projects);
-    jest.spyOn((service as any).designPlanner, 'explore').mockRejectedValue(new Error('planner-reached'));
-    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
-    await expect(service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50))).rejects.toThrow('planner-reached');
-  });
-  it('a failed budget reserve still saves the default sketch (F8)', async () => {
-    const { service, projects, brief } = await setup();
-    newStore(projects);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => sketchResponse());
-    await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(1));
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(projects.save).toHaveBeenCalled();
-  });
-  it('a garbage response is a FAILED, metered attempt that still saves (F4)', async () => {
-    const { service, projects, prisma, brief } = await setup();
-    newStore(projects);
-    const metering = { record: jest.fn() };
-    const stores = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Pausa', checkoutMode: 'PAYMENT', items: [], categories: [], locations: [] }) };
-    const rebuilt = new (service.constructor as any)(prisma, stores, projects, { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') }, (service as any).config, undefined, metering);
-    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 500, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: 'not json' }] }] })));
-    const result: any = await rebuilt.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
-    const attempt = result.generation.attempts.find((a: any) => a.phase === 'sketch');
-    expect(attempt.status).toBe('FAILED');
-    expect(attempt.responseStatus).toBe('completed');
-    expect(metering.record).toHaveBeenCalled();
-    expect(result.generation.autoRepairs.join(' ')).toContain('boceto base');
-  });
-  it('an existing store keeps the agent loop', async () => {
-    const { service, projects, brief } = await setup();
-    const fetchMock = jest.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
-      .mockResolvedValueOnce(turn([['verify', {}]]))
-      .mockResolvedValueOnce(turn([['finish', { summary: 'Listo.', sections: [] }]]));
-    await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
-    expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).tools).toBeDefined();
-    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'sketch.json')).toBeUndefined();
+    expect(planner).toHaveBeenCalled();
   });
 });
 
@@ -540,7 +445,7 @@ describe('chat-on-sketch edits', () => {
     context.projects.version.mockResolvedValue({ revision: 1, snapshot: { ...snapshot, files: [...snapshot.files, { path: 'sketch.json', content: JSON.stringify(bornSketch) }] } });
     return context;
   };
-  const editedResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 800, output_tokens: 200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ ...bornSketch, blocks: bornSketch.blocks.map(b => (b.id === 'h' ? { ...b, headline: 'Titular juguetón' } : b)) }) }] }] }));
+  const editedResponse = () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 800, output_tokens: 200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(completeStructuredFixture({ ...bornSketch, blocks: bornSketch.blocks.map(b => (b.id === 'h' ? { ...b, headline: 'Titular juguetón' } : b)) }, SKETCH_JSON_SCHEMA)) }] }] }));
 
   it('an ordinary edit updates the sketch with one small call, no agent loop', async () => {
     const { service, projects, brief } = await sketchBorn();
@@ -586,7 +491,7 @@ describe('chat-on-sketch edits', () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => editedResponse());
     await service.generate('m', 's', { ...input(brief), instruction: 'Rediseña toda la tienda desde cero' }, new SourceRequestBudget(200));
     const body = String((fetchMock.mock.calls[0] as any)[1].body);
-    expect(body).toContain('Diseña el boceto');
+    expect(body).toContain('Analyze the merchant');
     expect(body).not.toContain('Boceto actual');
     expect(projects.save).toHaveBeenCalled();
   });

@@ -434,16 +434,59 @@ export function EntranceGroup({ children, delay = 0, stagger, className }: { chi
  * Wrap every page once. Emits the design system CSS and the store's tokens, which also theme
  * the shared cart, product page and checkout.
  */
+/** Shared styling without installing another smooth-scroll controller in the sketch Shell. */
+export function StoreStyles({ tokens }: { tokens: StoreTokens }) {
+  return <style data-pagosya-ui="" dangerouslySetInnerHTML={{ __html: UI_CSS + SKETCH_CATALOG_CSS + themeCss(tokens) }} />;
+}
 export function StoreTheme({ tokens, children }: { tokens: StoreTokens; children: ReactNode }) {
   const motionOn = useUiMotion();
   useSmoothScroll(motionOn);
   useEffect(() => { document.documentElement.dataset.uiMotion = motionOn ? 'on' : 'off'; }, [motionOn]);
   return <div className="ui-root">
-    <style data-pagosya-ui="" dangerouslySetInnerHTML={{ __html: UI_CSS + themeCss(tokens) }} />
+    <StoreStyles tokens={tokens} />
     <a className="ui-skip" href="#contenido">Ir al contenido</a>
     {children}
   </div>;
 }
+
+
+/** Structural catalog options share the platform template and inventory runtime. */
+const SKETCH_CATALOG_CSS = `
+[data-ui-catalog][data-presentation] .ui-card{border-radius:0;box-shadow:none;background:transparent;color:inherit}
+[data-ui-catalog][data-presentation] .ui-card:has([data-product-media][hidden]) .ui-card__body{min-height:16rem;display:flex;flex-direction:column;justify-content:center}
+[data-ui-catalog][data-presentation] .ui-card:has([data-product-media][hidden]) .ui-card__name{font-size:clamp(2rem,4vw,4rem)}
+[data-ui-catalog][data-presentation] .ui-card__price{white-space:nowrap}
+[data-ui-catalog][data-presentation] .ui-card__buy{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem}
+[data-ui-catalog][data-presentation] .ui-card__add{width:auto;min-width:44px;min-height:44px;flex:none;padding:.7rem 1rem;background:transparent;color:inherit;border:1px solid currentColor;border-radius:0}
+[data-ui-catalog][data-presentation] .ui-card__name{font-size:clamp(1.25rem,2.7vw,3rem)}
+[data-ui-catalog][data-presentation] .ui-card__body{padding:1.2rem 0}
+[data-ui-catalog][data-presentation=two-up] [data-pagosya-grid]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+[data-ui-catalog][data-presentation=rail] .menu-item{flex-basis:min(78vw,520px)}
+[data-ui-catalog][data-presentation=index] [data-pagosya-grid]{display:block!important;counter-reset:product}
+[data-ui-catalog][data-presentation=index] .menu-item{counter-increment:product;display:grid;grid-template-columns:3rem 1.3fr 1fr .9fr;align-items:center;gap:2rem;padding:2rem 0;border-top:1px solid currentColor}
+.ui-card__number::before{content:counter(product,decimal-leading-zero)}
+.ui-card__index-title{font:inherit;font-family:var(--ui-display-font);font-size:clamp(1.7rem,4vw,4.5rem);line-height:1.05;margin:0;text-transform:uppercase}
+.ui-card__index-title a{color:inherit;text-decoration:none}
+[data-ui-catalog][data-presentation=index] .ui-card__media{aspect-ratio:1/1}
+[data-ui-catalog][data-presentation=spotlight] [data-pagosya-grid]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+[data-ui-catalog][data-presentation=spotlight] .menu-item:first-child{grid-column:1/-1;grid-row:auto;display:grid;grid-template-columns:1.5fr 1fr;align-items:center;gap:clamp(1rem,5vw,5rem);border-bottom:1px solid currentColor;padding-bottom:3rem}
+[data-ui-catalog][data-presentation=spotlight] .menu-item:first-child .ui-card__name{font-size:clamp(2.5rem,6vw,6rem)}
+[data-ui-catalog][data-presentation=lookbook] [data-pagosya-grid]{display:block!important}
+[data-ui-catalog][data-presentation=lookbook] .menu-item{display:grid;grid-template-columns:1.4fr 1fr;gap:clamp(2rem,8vw,8rem);align-items:center;margin-bottom:6rem}
+[data-ui-catalog][data-presentation=lookbook] .menu-item:nth-child(even){grid-template-columns:1fr 1.4fr}
+[data-ui-catalog][data-presentation=lookbook] .menu-item:nth-child(even) .ui-card__media{order:2}
+[data-ui-catalog][data-presentation=lookbook] .ui-card__name{font-size:clamp(2rem,5vw,5rem)}
+[data-ui-catalog][data-presentation=asymmetric] .menu-item:nth-child(3n+2){padding-top:6rem}
+[data-ui-catalog][data-presentation=asymmetric] .menu-item:nth-child(3n) .ui-card__media{aspect-ratio:1/1}
+@media(max-width:820px){
+[data-ui-catalog][data-presentation=index] .menu-item{grid-template-columns:2rem 1fr 1fr;gap:1rem}
+[data-ui-catalog][data-presentation=index] .ui-card__body{grid-column:2/-1}
+[data-ui-catalog][data-presentation=lookbook] .menu-item:nth-child(n),[data-ui-catalog][data-presentation=spotlight] .menu-item:first-child{display:block;margin-bottom:2rem}
+[data-ui-catalog][data-presentation=lookbook] .menu-item:nth-child(even) .ui-card__media{order:initial}
+[data-ui-catalog][data-presentation=asymmetric] .menu-item:nth-child(n){padding-top:0}
+}
+@media(max-width:599px){[data-ui-catalog][data-presentation=two-up] [data-pagosya-grid],[data-ui-catalog][data-presentation=spotlight] [data-pagosya-grid]{grid-template-columns:1fr!important}}
+`;
 
 /* ------------------------------------------------------------------ primitives */
 
@@ -537,10 +580,14 @@ export function Button({ href, children, variant = 'solid', size = 'md', onClick
     ? <a className="ui-button" data-variant={variant} data-size={size === 'md' ? undefined : size} href={href}>{children}</a>
     : <button className="ui-button" data-variant={variant} data-size={size === 'md' ? undefined : size} type={type} onClick={onClick}>{children}</button>;
 }
-export type Img = { src: string; alt: string; position?: string };
+export type Img = { src: string; alt: string; position?: string; fit?: 'cover' | 'contain'; sketchPhoto?: string; sketchNode?: string; sketchFree?: { x: number; y: number; w?: number; r?: number } };
+function sketchFreeStyle(free?: Img['sketchFree']): CSSProperties {
+  if (!free) return {};
+  return Object.fromEntries([['--skb-fx', free.x], ['--skb-fy', free.y], ['--skb-fw', free.w], ['--skb-fr', free.r]].filter(([, value]) => typeof value === 'number' && Number.isFinite(value)).map(([key, value]) => [key, String(value)])) as CSSProperties;
+}
 function Picture({ image, eager = false }: { image?: Img; eager?: boolean }) {
   if (!image?.src) return null;
-  return <img src={image.src} alt={image.alt} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : undefined} decoding="async" style={image.position ? { objectPosition: image.position } : undefined} />;
+  return <img data-skb-photo={image.sketchPhoto} data-skb-node={image.sketchNode} data-skb-free={image.sketchFree ? 'on' : undefined} src={image.src} alt={image.alt} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : undefined} decoding="async" style={{ objectPosition: image.position, objectFit: image.fit, ...sketchFreeStyle(image.sketchFree) }} />;
 }
 
 /* ------------------------------------------------------------------ commerce chrome */
@@ -625,16 +672,17 @@ export function SiteHeader({ name, tagline, logo, links = [], variant = 'classic
 
 /* ------------------------------------------------------------------ sections */
 
-export function Hero({ variant, eyebrow, title, lead, image, actions, scrollGrow = false, entrance = false }: {
+export function Hero({ variant, eyebrow, title, lead, image, actions, copy: customCopy, media: customMedia, scrollGrow = false, entrance = false }: {
   variant?: 'contained' | 'split' | 'fullbleed' | 'editorial' | 'typographic'; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; image?: Img; actions?: ReactNode;
+  copy?: ReactNode; media?: ReactNode;
   /** The image grows into place as it scrolls into view. */ scrollGrow?: boolean; entrance?: boolean;
 }) {
-  const media = image?.src ? <div className={['ui-hero__media', scrollGrow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} eager /></div> : null;
+  const media = customMedia ?? (image?.src ? <div className={['ui-hero__media', scrollGrow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} eager /></div> : null);
   // With unknown image dimensions, preserve the photograph instead of assuming
   // a wide crop is suitable. Explicit art-directed variants remain available.
   const shape = media ? variant || 'contained' : 'typographic';
   const Copy = entrance ? EntranceGroup : 'div';
-  const copy = <Copy className="ui-hero__copy">
+  const copy = customCopy ?? <Copy className="ui-hero__copy">
     {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
     <Display>{title}</Display>
     {lead ? <Lead>{lead}</Lead> : null}
@@ -697,8 +745,8 @@ function FloatingImage({ image, index, progress, enabled }: { image: Img; index:
 }
 
 /** A coordinated photograph composition; copy stays still and every image remains visible on mobile. */
-export function FloatingMedia({ images, eyebrow, title, lead, actions, motion: animate = true, entrance = false }: {
-  images: Img[]; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; actions?: ReactNode; motion?: boolean; entrance?: boolean;
+export function FloatingMedia({ images, eyebrow, title, lead, actions, copy, sketch = false, mediaFree, motion: animate = true, entrance = false }: {
+  images: Img[]; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; actions?: ReactNode; copy?: ReactNode; sketch?: boolean; mediaFree?: Img['sketchFree']; motion?: boolean; entrance?: boolean;
 }) {
   const ref = useRef<HTMLElement>(null);
   const enabled = useUiMotion();
@@ -706,10 +754,10 @@ export function FloatingMedia({ images, eyebrow, title, lead, actions, motion: a
   const available = images.filter(image => image?.src).slice(0, 5);
   const Copy = entrance ? EntranceGroup : 'div';
   return <section ref={ref} className="ui-floating"><div className="ui-container ui-floating__grid">
-    <Copy className="ui-floating__copy">{eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Display>{title}</Display>
+    {copy ?? <Copy className="ui-floating__copy">{eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Display>{title}</Display>
       {lead ? <Lead>{lead}</Lead> : null}{actions ? <div className="ui-row ui-hero__actions">{actions}</div> : null}
-    </Copy>
-    {available.length ? <div className="ui-floating__stage">{available.map((image, index) =>
+    </Copy>}
+    {available.length ? <div className="ui-floating__stage" data-skb-group={sketch ? 'media' : undefined} data-skb-free={mediaFree ? 'on' : undefined} style={sketchFreeStyle(mediaFree)}>{available.map((image, index) =>
       <FloatingImage key={image.src + index} image={image} index={index} progress={scrollYProgress} enabled={enabled && animate} />)}</div> : null}
   </div></section>;
 }
@@ -887,11 +935,11 @@ export function SectionSequence({ children, className, label }: { children: Reac
   </div>;
 }
 /** A statement whose words light up as it is read. */
-export function Statement({ children, align = 'start' }: { children: string; align?: 'start' | 'center' }) {
+export function Statement({ children, align = 'start', as: Tag = 'p' }: { children: string; align?: 'start' | 'center'; as?: 'p' | 'span' }) {
   const words = children.split(/\s+/).filter(Boolean);
-  return <p className="ui-statement ui-words" data-align={align === 'center' ? 'center' : undefined}>
+  return <Tag className="ui-statement ui-words" data-align={align === 'center' ? 'center' : undefined}>
     {words.map((word, index) => <span key={index}>{word}{index < words.length - 1 ? ' ' : ''}</span>)}
-  </p>;
+  </Tag>;
 }
 export function TextFillStatement(props: { children: string; align?: 'start' | 'center' }) { return <Statement {...props} />; }
 export function Marquee({ items, speed = 38 }: { items: string[]; speed?: number }) {
@@ -916,24 +964,29 @@ export type CatalogFx = 'none' | 'grow' | 'zoom' | 'lift' | 'reveal' | 'grow zoo
  * The live catalog. Product cards are filled by the commerce runtime from real inventory, using
  * this card design; prices, stock, options and purchasing stay platform-owned.
  */
-export function Catalog({ id = 'productos', eyebrow, title, body, layout = 'grid', card = 'classic', fx = 'zoom', columns = 4, showDescription = false }: {
-  id?: string; eyebrow?: ReactNode; title?: ReactNode; body?: ReactNode; layout?: CatalogLayout; card?: CardStyle; fx?: CatalogFx; columns?: 2 | 3 | 4 | 5; showDescription?: boolean;
+export function Catalog({ id = 'productos', eyebrow, title, body, layout = 'grid', card = 'classic', fx = 'zoom', columns = 4, showDescription = false, showAdd = true, heading, presentation, productIds = [], sketch = false }: {
+  id?: string; eyebrow?: ReactNode; title?: ReactNode; body?: ReactNode; layout?: CatalogLayout; card?: CardStyle; fx?: CatalogFx; columns?: 2 | 3 | 4 | 5; showDescription?: boolean; showAdd?: boolean;
+  heading?: ReactNode; presentation?: 'index' | 'two-up' | 'rail' | 'spotlight' | 'asymmetric' | 'lookbook'; productIds?: string[]; sketch?: boolean;
 }) {
+  const purchasing = <>
+    <p className="ui-card__price" data-product-field="price" />
+    <button hidden={!showAdd} type="button" className="ui-card__add" data-product-add>{presentation ? 'Añadir +' : 'Añadir'}</button>
+  </>;
   return <section id={id} className="ui-section" aria-label={typeof title === 'string' ? title : 'Productos'}>
     <div className="ui-container">
-      {title ? <SectionHead eyebrow={eyebrow} title={title} body={body} /> : null}
-      <div data-ui-catalog="" data-layout={layout} data-fx={fx} style={{ '--ui-cols': String(columns) } as CSSProperties}>
-        <div data-pagosya-catalog data-pagosya-grid />
+      {heading ?? (title ? <SectionHead eyebrow={eyebrow} title={title} body={body} /> : null)}
+      <div data-ui-catalog="" data-presentation={presentation} data-layout={layout} data-fx={fx} style={{ '--ui-cols': String(columns) } as CSSProperties}>
+        <div data-pagosya-catalog data-pagosya-grid data-design-product-ids={productIds.length ? productIds.join(',') : undefined} data-skb-group={sketch ? 'items' : undefined} tabIndex={presentation === 'rail' ? 0 : undefined} aria-label={presentation === 'rail' ? 'Productos' : undefined} />
       </div>
       <template data-pagosya-product-template>
-        <article className="ui-card" data-card={card}>
+        <article className="ui-card" data-card={card} data-presentation={presentation}>
+          {presentation === 'index' ? <><span className="ui-card__number" aria-hidden="true" /><h3 className="ui-card__index-title"><a data-product-link><span data-product-field="name" /></a></h3></> : null}
           <a className="ui-card__media" data-product-link data-product-media><img data-product-field="image" alt="" /></a>
           <div className="ui-card__body">
-            <h3 className="ui-card__name"><a data-product-link><span data-product-field="name" /></a></h3>
+            {presentation !== 'index' ? <h3 className="ui-card__name"><a data-product-link><span data-product-field="name" /></a></h3> : null}
             <p className="ui-card__meta" data-product-field="options" />
             {showDescription ? <p className="ui-card__desc" data-product-field="description" /> : null}
-            <p className="ui-card__price" data-product-field="price" />
-            <button className="ui-card__add" data-product-add>Añadir</button>
+            {presentation ? <div className="ui-card__buy">{purchasing}</div> : purchasing}
           </div>
         </article>
       </template>
@@ -946,24 +999,24 @@ export function ProductRail(props: Omit<Parameters<typeof Catalog>[0], 'layout'>
   return <Catalog {...props} layout="rail" />;
 }
 
-export function FeatureSplit({ image, eyebrow, title, children, action, reverse = false, grow = false }: {
-  image: Img; eyebrow?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode; reverse?: boolean; grow?: boolean;
+export function FeatureSplit({ image, eyebrow, title, children, action, copy, sketch = false, mediaFree, reverse = false, grow = false }: {
+  image: Img; eyebrow?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode; reverse?: boolean; grow?: boolean; copy?: ReactNode; sketch?: boolean; mediaFree?: Img['sketchFree'];
 }) {
   return <div className="ui-feature" data-reverse={reverse ? '' : undefined}>
-    <div className={['ui-feature__media', grow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} /></div>
-    <div className="ui-stack">{eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Heading>{title}</Heading>{children}{action ? <div className="ui-row" style={{ marginTop: 'var(--ui-s3)' }}>{action}</div> : null}</div>
+    <div data-skb-group={sketch ? 'media' : undefined} data-skb-free={mediaFree ? 'on' : undefined} style={sketchFreeStyle(mediaFree)} className={['ui-feature__media', grow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} /></div>
+    {copy ?? <div className="ui-stack">{eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Heading>{title}</Heading>{children}{action ? <div className="ui-row" style={{ marginTop: 'var(--ui-s3)' }}>{action}</div> : null}</div>}
   </div>;
 }
-export type Chapter = { eyebrow?: string; title: string; body: string; image?: Img };
+export type Chapter = { eyebrow?: string; title?: ReactNode; body: ReactNode; image?: Img };
 /** Cards that stack over each other as the visitor scrolls. */
 export function StoryChapters({ chapters }: { chapters: Chapter[] }) {
   return <div className="ui-chapters">{chapters.slice(0, 6).map((chapter, index) => <article key={index} className="ui-chapter" style={{ '--i': index } as CSSProperties}>
-    <div className="ui-stack">{chapter.eyebrow ? <Eyebrow>{chapter.eyebrow}</Eyebrow> : null}<Heading as="h3">{chapter.title}</Heading><Text>{chapter.body}</Text></div>
+    <div className="ui-stack">{chapter.eyebrow ? <Eyebrow>{chapter.eyebrow}</Eyebrow> : null}{chapter.title ? <Heading as="h3">{chapter.title}</Heading> : null}<Text>{chapter.body}</Text></div>
     {chapter.image?.src ? <div className="ui-chapter__media"><Picture image={chapter.image} /></div> : null}
   </article>)}</div>;
 }
 export function Gallery({ images, variant = 'mosaic' }: { images: Img[]; variant?: 'mosaic' | 'grid' | 'strip' }) {
-  return <div className="ui-gallery" data-variant={variant}>{images.filter(image => image?.src).slice(0, 12).map((image, index) => <figure key={index} className="ui-gallery__item"><Picture image={image} /></figure>)}</div>;
+  return <div className="ui-gallery" data-variant={variant} tabIndex={variant === 'strip' ? 0 : undefined} aria-label={variant === 'strip' ? 'Galería' : undefined}>{images.filter(image => image?.src).slice(0, 12).map((image, index) => <figure key={index} className="ui-gallery__item"><Picture image={image} /></figure>)}</div>;
 }
 export type TrustPoint = { title: string; detail: string };
 /** Factual reassurance only: what the store really does (delivery, payment, invoice). Never invented claims. */

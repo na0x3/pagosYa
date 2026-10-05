@@ -7,6 +7,8 @@ const expr = (value: string) => `{${JSON.stringify(value)}}`;
 
 const freeVars = (pos: SketchFreePos) => ([['--skb-fx', pos.x], ['--skb-fy', pos.y], ...(pos.w !== undefined ? [['--skb-fw', pos.w]] : []), ...(pos.r ? [['--skb-fr', pos.r]] : [])] as Array<[string, number]>)
   .map(([name, value]) => `[${JSON.stringify(name)} as string]: ${JSON.stringify(String(value))}`).join(', ');
+/** Fixed adapters can carry a position into a React prop that the markup stamper treats as opaque. */
+export const sketchFreeAttributes = (pos?: SketchFreePos) => pos ? `data-skb-free="on" style={{ ${freeVars(pos)} }}` : '';
 
 type Tag = { name: string; end: number; selfClosing: boolean; attrs: Map<string, { start: number; end: number }> };
 
@@ -77,7 +79,7 @@ export function stampFree(markup: string, free?: Record<string, SketchFreePos>):
     const tag = readTag(markup, i);
     const segment = segmentOf(markup, tag);
     const pos = segment ? free[[...stack.map(entry => entry.segment).filter(Boolean), segment].join('/')] : undefined;
-    if (pos) {
+    if (pos && !tag.attrs.has('data-skb-free')) {
       const style = tag.attrs.get('style');
       if (style && markup.startsWith('{{', style.start)) {
         edits.push({ at: style.start + 2, text: ` ${freeVars(pos)},` }, { at: tag.end, text: ' data-skb-free="on"' });
@@ -113,7 +115,7 @@ export function extrasLayer(block: SketchBlock, ctx: SketchContext): string {
 export function withFreeLayer(block: SketchBlock, markup: string, ctx: SketchContext): string {
   const stamped = stampFree(markup, block.free);
   const layer = extrasLayer(block, ctx);
-  return layer ? stamped.replace(/<\/section>\s*$/, `  ${layer}\n  </section>`) : stamped;
+  return layer ? stamped.replace(/<\/(section|footer)>\s*$/, (_match, tag) => `  ${layer}\n  </${tag}>`) : stamped;
 }
 
 /** Desktop keeps the exact spots; below 900px freed parts sit back in their column and inserted elements line up at

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { regenerateSketch, validateDesign } from './design-engine/design-engine';
 import { createHash } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -84,15 +86,28 @@ export class SketchStudioService {
     const { revision, snapshot } = await this.load(merchantId, storeId);
     if (!snapshot || revision !== input.revision) throw new ConflictException('El boceto cambió. Recarga.');
     const ctx = await this.context(merchantId, storeId, snapshot);
-    const { sketch } = repairSketch(input.sketch, ctx);
+    const { sketch: repaired } = repairSketch(input.sketch, ctx);
+    const sketch = repaired.design ? validateDesign(repaired, ctx, false).sketch : repaired;
     const assembled = assembleSketch(sketch, ctx);
     const files = await withSourceIcons([
-      ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE),
+      ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE && file.path !== 'website-design.json'),
       ...assembled,
       { path: SKETCH_FILE, content: JSON.stringify(sketch, null, 2) + '\n' },
     ]);
     const saved = await this.projects.save(merchantId, storeId, { revision: input.revision, label: 'Boceto editado', brief: snapshot.brief, files: await this.withProductTheme(files, sketch) });
     return { revision: saved.revision, sketch };
+  }
+
+  async regenerate(merchantId: string, storeId: string, input: { revision: number; designSeed?: string; sectionId?: string }) {
+    const loaded = await this.get(merchantId, storeId);
+    if (loaded.revision !== input.revision) throw new ConflictException('El boceto cambió. Recarga.');
+    if (!loaded.sketch) throw new BadRequestException('Esta tienda ya es un sitio.');
+    if (input.sectionId && !loaded.sketch.blocks.some(block => block.id === input.sectionId)) throw new BadRequestException('La sección no existe.');
+    const { snapshot } = await this.load(merchantId, storeId);
+    const ctx = await this.context(merchantId, storeId, snapshot);
+    // update() reloads ownership/context and performs the final atomic revision check.
+    const sketch = regenerateSketch(loaded.sketch, ctx, input.designSeed || randomUUID(), input.sectionId);
+    return this.update(merchantId, storeId, { revision: input.revision, sketch });
   }
 
   /** "Generar sitio": the boceto becomes the site, for good. Same deterministic assembly as a Boceto save, saved
@@ -107,7 +122,7 @@ export class SketchStudioService {
     try { parsed = JSON.parse(stored); } catch { parsed = undefined; }
     const { sketch } = repairSketch(parsed, ctx);
     const files = await withSourceIcons([
-      ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE),
+      ...snapshot.files.filter(file => !nextSourceFile(file.path) && file.path !== SKETCH_FILE && file.path !== 'website-design.json'),
       ...assembleSketch(sketch, ctx),
     ]);
     const saved = await this.projects.save(merchantId, storeId, { revision, label: 'Sitio generado desde el boceto', brief: snapshot.brief, files: await this.withProductTheme(files, sketch) });

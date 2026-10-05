@@ -12,7 +12,7 @@ import { sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-ge
 import { SourceRequestBudget } from './source-request-budget';
 import { checkSourceProviderQuota } from './source-provider-error';
 
-export type DesignPlanningAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; failureReason?: string; reasoningEffort?: string; selectedIndex?: number; selectionSource?: 'planner' | 'forced' };
+export type DesignPlanningAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; failureReason?: string; reasoningEffort?: string; selectedIndex?: number; selectionSource?: 'planner' | 'forced' };
 
 @Injectable()
 export class SourceDesignPlanner {

@@ -1,3 +1,4 @@
+import { sketchComponents, type WebsiteDesignSpec } from '@pagosya/shared-types';
 import { ApiError } from './api';
 import type { MerchantStudioApi, SourceVersion } from './api';
 import './source-boceto.css';
@@ -14,13 +15,13 @@ import { sketchApplyMove, sketchCanFree, sketchCanMove, sketchCanRemove, sketchF
 type SketchStyle = { radius: string; buttons: string; cards: string; header: string; footer: string; buttonIcon: string; icons: string; dividers: string; badges: string; fields: string; links: string };
 type SketchAssurance = { icon: string; title: string; detail: string };
 type SketchProduct = { preset: string; layout: string; swatch: string; gallery: string; blocks: string; divider: string; enter: string; media: string; assurances?: SketchAssurance[] };
-type Sketch = { palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; product?: SketchProduct; account?: any; blocks: any[] };
+type Sketch = { design?: WebsiteDesignSpec; palette: Record<'paper' | 'ink' | 'accent' | 'deep' | 'pop', string>; fonts: { display: string; text: string }; scale: string; style?: SketchStyle; product?: SketchProduct; account?: any; blocks: any[] };
 type BlockApply = { movable?: string[]; freeable?: string[]; free?: Record<string, { x: number; y: number; w?: number; r?: number }>; layout?: Record<string, Record<string, string>>; bg?: string; ink?: string; size?: string; variant?: string; align?: string; flip?: boolean; form?: string; photos?: Record<string, string>; cardRatio?: string; cardDesc?: string; cardAdd?: string };
 type SelectionPayload = { id: string; path: string; label: string; reveal?: true; others?: BocetoPick[] };
 type ApplyPayload = { vars?: Record<string, string>; style?: Partial<SketchStyle>; blocks?: Record<string, BlockApply>; selection?: SelectionPayload };
 /** `reload` re-renders the preview from a saved revision: needed after structural edits (add/remove/reorder). */
 /** `resized` runs after a side panel is tucked away or brought back, so the board can refit the page. */
-type Mount = { storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void; resized?: () => void;
+type Mount = { chatOnLeft?: boolean; storeId: string; version: SourceVersion; locked: boolean; saved: (revision: number) => Promise<void>; close?: () => void; apply?: (payload: ApplyPayload) => void; reload?: (revision: number) => void; resized?: () => void;
   /** Boceto phase: the right panel gains a YAPI tab; called with whether the Studio's docked chat should show. */
   yapi?: (visible: boolean) => void;
   /** Boceto phase: the selected block, reported when it changes, as the chat's context (the account page is never one). */
@@ -156,6 +157,8 @@ export function bocetoRevealY(canvasY: number, zoom: number, boardHeight: number
 
 export function createBocetoPanel(api: MerchantStudioApi) {
   let host: HTMLElement | null = null, opts: Mount | null = null;
+  let regenerating = false;
+  let catalogItems: Array<{ id: string; name: string }> = [];
   let sketch: Sketch | null = null, photos: string[] = [], fonts: string[] = [], revision = 0;
   let selected = '', selectedPath = '', timer: ReturnType<typeof setTimeout> | null = null, pending = false, note = '';
   let editSeq = 0, lastSaved = '', statusNode: HTMLElement | null = null, rootNode: HTMLElement | null = null, mountToken = 0;
@@ -174,16 +177,17 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   let revealNext = false;
   /** Side panels sit flush against the walls; each one tucks away behind an arrow and comes back from a tab. */
   const tucked = { layers: false, inspector: false };
+  let sectionsOpen = true;
   let rightTab: 'design' | 'yapi' = 'design', reportedBlock: string | null = null, reportedYapi = false;
   /** A block the Studio dropped as chat context: not re-reported until the merchant picks a block again. */
   let forgottenBlock: string | null = null;
   /** The YAPI tab is on (only offered when the Studio docks a chat, `opts.yapi`). */
-  const yapiTab = () => Boolean(opts?.yapi) && rightTab === 'yapi';
+  const yapiTab = () => !opts?.chatOnLeft && Boolean(opts?.yapi) && rightTab === 'yapi';
   const PANEL_WIDTH = { layers: 240, inspector: 300 };
   /** The workspace reads these to leave room for the docked panels, so the board fills exactly the space between them. */
   const dock = () => {
     const root = (host?.ownerDocument ?? document).documentElement;
-    root.style.setProperty('--bct-left', `${tucked.layers ? 0 : PANEL_WIDTH.layers}px`);
+    root.style.setProperty('--bct-left', `${opts?.chatOnLeft || tucked.layers ? 0 : PANEL_WIDTH.layers}px`);
     root.style.setProperty('--bct-right', `${tucked.inspector ? 0 : yapiTab() ? 360 : PANEL_WIDTH.inspector}px`);
   };
   function tuck(side: keyof typeof tucked, value: boolean) { tucked[side] = value; draw(); opts?.resized?.(); }
@@ -252,7 +256,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       const bg = resolveBg(sketch.palette, block.bg);
       const slots = changedPhotos.get(block.id);
       const photoMap = slots ? Object.fromEntries([...slots].map(slot => [slot, photoSrc(String(getPath(block, slot) || ''))]).filter(([, src]) => src.startsWith('data:image/'))) : undefined;
-      blocks[block.id] = { movable: opts.locked ? [] : movablePaths(block), freeable: opts.locked ? [] : [...sketchFreeablePaths(block), ...(block.extras || []).map((extra: any) => `extras/${extra.id}`)], free: freeSpots(block), bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
+      blocks[block.id] = { movable: (opts.locked || regenerating) ? [] : movablePaths(block), freeable: (opts.locked || regenerating) ? [] : [...sketchFreeablePaths(block), ...(block.extras || []).map((extra: any) => `extras/${extra.id}`)], free: freeSpots(block), bg, ink: inkFor(bg, sketch.palette.ink), size: block.size, align: block.align === 'center' || block.align === 'end' ? block.align : 'start', flip: block.flip === true, ...(block.type === 'hero' ? { variant: block.variant } : {}), ...(block.type === 'newsletter' ? { form: block.form || 'pill' } : {}), ...(photoMap ? { photos: photoMap } : {}), ...(block.type === 'account' ? {} : { layout: block.layout || {} }), ...(block.type === 'catalog' ? { cardRatio: RATIO[block.cardRatio] || '4 / 3', cardDesc: block.cardDesc === false ? 'off' : 'on', cardAdd: block.cardAdd === false ? 'off' : 'on' } : {}) };
     }
     changedPhotos.clear();
     opts.apply({ vars, style: { ...DEFAULT_STYLE, ...(sketch.style || {}) }, blocks });
@@ -357,13 +361,13 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   });
   function turnPicks(r: number) {
     const spots = spotsOf(picks());
-    if (!spots.length || opts?.locked) return;
+    if (!spots.length || (opts?.locked || regenerating)) return;
     for (const { spot } of spots) { if (r) spot.r = r; else delete spot.r; }
     schedule(); draw();
   }
   function unfreePicks() {
     const spots = spotsOf(picks()).filter(entry => !entry.extra);
-    if (!spots.length || opts?.locked) return;
+    if (!spots.length || (opts?.locked || regenerating)) return;
     for (const { block, pick } of spots) sketchUnfree(block, pick.path);
     schedule(); draw();
   }
@@ -388,11 +392,11 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     draw();
   }
   function pasteClipboard(at: { blockId?: string; x?: number; y?: number } = {}) {
-    if (!sketch || opts?.locked || !clip.length) return;
+    if (!sketch || (opts?.locked || regenerating) || !clip.length) return;
     landPasted(pasteClip(sketch, clip, { blockId: at.blockId ?? selected, ...(at.x !== undefined && at.y !== undefined ? { at: { x: at.x, y: at.y } } : {}) }));
   }
   function duplicateSelection() {
-    if (!sketch || opts?.locked || !picks().length) return;
+    if (!sketch || (opts?.locked || regenerating) || !picks().length) return;
     landPasted(duplicatePicks(sketch, picks()));
   }
   const FULL_NOTE = `Este bloque ya tiene ${SKETCH_FREE_MAX} partes sueltas. Devuelve una a su lugar para soltar otra.`;
@@ -413,7 +417,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   }
   type MenuAt = { block?: string; fx?: number; fy?: number };
   function menuItems(at: MenuAt): MenuItem[] {
-    const list = picks(), locked = Boolean(opts?.locked);
+    const list = picks(), locked = Boolean((opts?.locked || regenerating));
     const single = list.length === 1 ? list[0] : null;
     const spots = spotsOf(list);
     const target = blockOf(at.block || list.at(-1)?.id || '');
@@ -466,7 +470,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   }
   function stepBack(redo = false) {
     const from = redo ? redoSteps : undoSteps, to = redo ? undoSteps : redoSteps;
-    if (!sketch || opts?.locked || !from.length) return;
+    if (!sketch || (opts?.locked || regenerating) || !from.length) return;
     const target = from.pop()!, now = JSON.stringify(sketch);
     to.push(now);
     const live = liveStep(JSON.parse(now), JSON.parse(target));
@@ -481,7 +485,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
   const scheduleStructural = () => { structural = true; schedule(); };
 
   async function save() {
-    if (!opts || !sketch || pending) return;
+    if (!opts || !sketch || pending || regenerating) return;
     const payload = JSON.stringify(sketch);
     if (payload === lastSaved) return;
     const seqAtSave = editSeq;
@@ -555,16 +559,70 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     return wrap;
   }
 
+  function regenerationButton(sectionId?: string) {
+    const button = el('button', { type: 'button', className: 'bct-chip', text: sectionId ? 'Regenerar sección' : 'Regenerar diseño' });
+    button.disabled = Boolean((opts?.locked || regenerating));
+    button.addEventListener('click', async () => {
+      if (!opts || !sketch || pending || regenerating) return;
+      if (timer) { clearTimeout(timer); timer = null; }
+      button.disabled = true;
+      try {
+        await save();
+        if (pending || JSON.stringify(sketch) !== lastSaved) { button.disabled = false; return; }
+        if (opts.locked) return;
+        regenerating = true; draw();
+        const result = await api.regenerateSketch(opts.storeId, { revision, ...(sectionId ? { sectionId } : {}) });
+        revision = result.revision; mountedRevision = result.revision; sketch = result.sketch as Sketch; lastSaved = JSON.stringify(sketch); baseline = lastSaved; resetHistory();
+        try { await opts.saved(revision); } catch { /* Saved revision is authoritative. */ }
+        opts.reload?.(revision);
+      } catch { note = 'No se pudo regenerar. Recarga el boceto e intenta otra vez.'; }
+      finally { regenerating = false; draw(); }
+    });
+    return button;
+  }
+
+  // Return existing copy/media to the registered layout without deleting content or image assignments.
+  // This is an explicit merchant action and uses the same autosave and undo history as other edits.
+  function restoreDisposition(blocks: any[]) {
+    if (!sketch || opts?.locked || regenerating) return;
+    for (const block of blocks) { delete block.free; delete block.stickerPos; }
+    scheduleStructural(); draw();
+  }
+
+  function restoreDispositionButton(blocks: any[]) {
+    const button = el('button', { type: 'button', className: 'bct-chip', text: 'Restablecer disposición' });
+    button.dataset.bocetoRestoreLayout = '';
+    button.title = 'Devuelve textos y fotos a su composición. Conserva el contenido.';
+    button.disabled = Boolean(opts?.locked || regenerating || !blocks.some(block => Object.keys(block.free || {}).length || block.stickerPos));
+    button.addEventListener('click', () => restoreDisposition(blocks));
+    return button;
+  }
+
   function blockProps(block: any) {
     const children: HTMLElement[] = [];
+    if (block.type !== 'account') children.push(regenerationButton(block.id), restoreDispositionButton([block]));
     children.push(row('Fondo', bgSwatches(block.bg, next => { block.bg = next; schedule(); draw(); })));
     if (block.type !== 'account') children.push(row('Tamaño', segment(block.size, SIZES, ['S', 'M', 'L', 'XL'], next => { block.size = next; schedule(); draw(); })));
     if (block.type === 'catalog') {
+      if (catalogItems.length) {
+        const featured = el('div', { className: 'bct-chips' });
+        const chosen = new Set<string>(block.productRefs || []);
+        for (const item of catalogItems.slice(0, 60)) {
+          const button = el('button', { type: 'button', className: 'bct-chip', text: item.name });
+          button.setAttribute('aria-pressed', String(chosen.has(item.id)));
+          button.addEventListener('click', () => { if (chosen.has(item.id)) chosen.delete(item.id); else chosen.add(item.id); block.productRefs = [...chosen]; scheduleStructural(); draw(); });
+          featured.append(button);
+        }
+        children.push(row('Destacar primero', featured));
+      }
       children.push(row('Foto', segment(['4-3', '1-1', '3-4'].includes(block.cardRatio) ? block.cardRatio : '4-3', ['4-3', '1-1', '3-4'], ['4:3', '1:1', '3:4'], next => { block.cardRatio = next; schedule(); })));
       children.push(row('Descripción', segment(block.cardDesc === false ? 'off' : 'on', ['on', 'off'], ['Sí', 'No'], next => { block.cardDesc = next === 'on'; schedule(); })));
       children.push(row('Botón añadir', segment(block.cardAdd === false ? 'off' : 'on', ['on', 'off'], ['Sí', 'No'], next => { block.cardAdd = next === 'on'; schedule(); })));
     }
-    if (block.type === 'hero') children.push(row('Composición', select(block.variant, ['photo-right', 'full-bleed', 'stacked'], ['Foto derecha', 'Completa', 'Apilada'], next => { block.variant = next; schedule(); })));
+    const entries = sketchComponents(block.type);
+    const compositions = entries.map(entry => entry.variant);
+    if (compositions.length > 1) children.push(row('Diseño', select(block.composition || entries.find(entry => entry.legacyVariant === block.variant)?.variant || compositions[0], [...compositions], entries.map(entry => entry.label), next => { block.composition = next; restoreDisposition([block]); })));
+    if (PHOTO_BLOCKS.includes(block.type) || block.type === 'gallery') children.push(row('Encuadre', segment(block.imageFit || sketch?.design?.artDirection.imageTreatment || 'cover', ['cover', 'contain'], ['Cubrir', 'Completa'], next => { block.imageFit = next; scheduleStructural(); draw(); })));
     // Symmetry: copy alignment for every content block, and which side the photo sits on.
     if (block.type === 'footer') children.push(row('Alineación', segment(block.align === 'center' || block.align === 'end' ? block.align : 'start', ['start', 'center', 'end'], ['Izq.', 'Centro', 'Der.'], next => { if (next === 'start') delete block.align; else block.align = next; schedule(); draw(); })));
     if (PHOTO_BLOCKS.includes(block.type)) children.push(row('Foto al lado', segment(block.flip ? 'left' : 'right', ['left', 'right'], ['Izquierdo', 'Derecho'], next => { if (next === 'left') block.flip = true; else delete block.flip; schedule(); draw(); })));
@@ -580,10 +638,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     }
     if (block.type === 'marquee') children.push(row('Separador', segment(MARQUEE_GLYPHS.includes(block.glyph) ? block.glyph : '·', MARQUEE_GLYPHS, MARQUEE_GLYPHS, next => { block.glyph = next; scheduleStructural(); draw(); })));
     if (block.type === 'newsletter') {
-      children.push(row('Composición', segment(block.variant === 'split' ? 'split' : 'center', ['center', 'split'], ['Centrada', 'Con foto'], next => { block.variant = next; scheduleStructural(); draw(); })));
       children.push(row('Formulario', segment(['pill', 'stacked', 'underline', 'card'].includes(block.form) ? block.form : 'pill', ['pill', 'stacked', 'underline', 'card'], ['Píldora', 'Apilado', 'Línea', 'Tarjeta'], next => { block.form = next; schedule(); draw(); })));
     }
-    if (block.type === 'footer') children.push(row('Nombre gigante', segment(block.wordmark, ['giant', 'plain'], ['Sí', 'No'], next => { block.wordmark = next; scheduleStructural(); draw(); })));
+    if (block.type === 'footer' && (entries.find(entry => entry.variant === block.composition)?.renderer ?? 'legacy') === 'legacy') children.push(row('Nombre gigante', segment(block.wordmark, ['giant', 'plain'], ['Sí', 'No'], next => { block.wordmark = next; scheduleStructural(); draw(); })));
     if (block.type === 'account') {
       children.push(row('Diseño', segment(block.layout === 'center' ? 'center' : 'split', ['split', 'center'], ['Foto + formulario', 'Centrado'], next => { block.layout = next; scheduleStructural(); draw(); })));
       children.push(row('Foto', photoButton(block, 'photo')));
@@ -591,6 +648,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       children.push(el('p', { className: 'bct-hint', text: 'El formulario de ingreso lo pone pagosYa de forma segura: tú diseñas todo lo que lo rodea. Mira esta página en la pestaña Cuenta.' }));
     }
     if (PHOTO_BLOCKS.includes(block.type)) children.push(row('Foto', photoButton(block, 'photo')));
+    if (block.type === 'hero' && /floating|collage/.test(block.composition || '')) children.push(row('Fotos adicionales', photoToggles(block)));
     if (block.type === 'collections') (block.items || []).forEach((item: any, index: number) => children.push(row(`Foto ${index + 1}`, photoButton(block, `items.${index}.photo`))));
     if (block.type === 'gallery' || block.type === 'reviews') children.push(row(block.type === 'gallery' ? 'Fotos' : 'Fotos clientes', photoToggles(block)));
     if (block.type === 'steps') (block.items || []).forEach((item: any, index: number) => children.push(row(`Ícono ${index + 1}`, iconButton(block, `items.${index}.icon`, item.icon))));
@@ -985,8 +1043,8 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     if (others.length && `${selected}|${selectedPath}` !== groupKey) others = [];
     others = others.filter(pickExists);
     // Figma-equal structure: layers on the left, a selection-driven inspector on the right.
-    const layers = el('aside', { className: 'bct-layers' });
-    layers.append(el('header', { className: 'bct-layers__head' }, [el('h2', { text: 'Capas' }), el('span', { className: 'bct-layers__count', text: `${sketch.blocks.length} bloques` }), dockButton('layers', false)]));
+    const layers = el('aside', { className: opts.chatOnLeft ? 'bct-layers bct-layers--inline' : 'bct-layers' });
+    if (!opts.chatOnLeft) layers.append(el('header', { className: 'bct-layers__head' }, [el('h2', { text: 'Capas' }), el('span', { className: 'bct-layers__count', text: `${sketch.blocks.length} bloques` }), dockButton('layers', false)]));
     const list = el('div', { className: 'bct-blocks' });
     sketch.blocks.forEach((block, index) => {
       const bg = resolveBg(sketch!.palette, block.bg);
@@ -1040,9 +1098,9 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const root = el('aside', { className: 'bct-panel' });
     const close = el('button', { type: 'button', className: 'bct-close', text: '✕', title: 'Cerrar' });
     close.addEventListener('click', () => opts?.close?.());
-    statusNode = el('span', { className: 'bct-status', text: opts.locked ? 'YAPI está cambiando tu boceto…' : pending ? 'Guardando…' : note || 'Se guarda solo' });
+    statusNode = el('span', { className: 'bct-status', text: (opts.locked || regenerating) ? 'YAPI está cambiando tu boceto…' : pending ? 'Guardando…' : note || 'Se guarda solo' });
     // Boceto phase: Diseño | YAPI. With YAPI on, only this header stays; the Studio docks its chat below it.
-    const heading = opts.yapi
+    const heading = opts.yapi && !opts.chatOnLeft
       ? el('div', { className: 'bct-tabs' }, (['design', 'yapi'] as const).map(tab => {
           const button = el('button', { type: 'button', className: `bct-tabs__tab${rightTab === tab ? ' is-on' : ''}`, text: tab === 'design' ? 'Diseño' : 'YAPI' });
           button.dataset.bocetoTab = tab;
@@ -1052,6 +1110,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
         }))
       : el('h2', { text: 'Diseño' });
     root.append(el('header', { className: 'bct-head' }, [heading, statusNode, dockButton('inspector', false), ...(opts.close ? [close] : [])]));
+    if (opts.chatOnLeft) {
+      const sections = el('details', { className: 'bct-sections', open: sectionsOpen });
+      sections.append(el('summary', { text: `Secciones · ${sketch.blocks.length}` }), layers);
+      sections.addEventListener('toggle', () => { sectionsOpen = sections.open; });
+      root.append(sections);
+    }
 
     const current = selectedBlock();
     const openPicker = current && picker && picker.blockId === current.id ? pickerPanel(current) : null;
@@ -1070,6 +1134,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       root.append(el('div', { className: 'bct-props' }, [back, selectedPath ? nodeProps(current, selectedPath) : blockProps(current)]));
     } else {
       const page = section('Página', []);
+      page.append(restoreDispositionButton(sketch.blocks));
+      if (sketch.design) {
+        const direction = sketch.design;
+        page.append(el('p', { className: 'bct-hint', text: `${direction.artDirection.style} · ${direction.brand.personality.join(' / ')} · ${direction.artDirection.typographyTreatment}` }));
+        page.append(regenerationButton());
+      }
       const style = { ...DEFAULT_STYLE, ...(sketch.style || {}) };
       for (const control of STYLE_CONTROLS) page.append(row(control.label, segment(style[control.key], control.values, control.names, next => { sketch!.style = { ...style, [control.key]: next }; schedule(); draw(); })));
       page.append(row('Escala', segment(sketch.scale, SIZES, ['S', 'M', 'L', 'XL'], next => { sketch!.scale = next; schedule(); draw(); })));
@@ -1115,12 +1185,12 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       root.append(page, ficha);
     }
 
-    const wrap = el('div', { className: 'bct-shell' }, [tucked.layers ? dockButton('layers', true) : layers, tucked.inspector ? dockButton('inspector', true) : root]);
-    if (opts.locked) wrap.querySelectorAll('input,select,button:not(.bct-close):not([data-boceto-dock]):not([data-boceto-tab])').forEach(node => ((node as HTMLInputElement).disabled = true));
+    const wrap = el('div', { className: 'bct-shell' }, [...(opts.chatOnLeft ? [] : [tucked.layers ? dockButton('layers', true) : layers]), tucked.inspector ? dockButton('inspector', true) : root]);
+    if ((opts.locked || regenerating)) wrap.querySelectorAll('input,select,button:not(.bct-close):not([data-boceto-dock]):not([data-boceto-tab])').forEach(node => ((node as HTMLInputElement).disabled = true));
     dock();
     const yapiVisible = yapiTab() && !tucked.inspector;
     if (yapiVisible !== reportedYapi) { reportedYapi = yapiVisible; opts.yapi?.(yapiVisible); }
-    rootNode = wrap; drawnLocked = opts.locked;
+    rootNode = wrap; drawnLocked = (opts.locked || regenerating);
     host.replaceChildren(wrap);
     syncSelection();
   }
@@ -1145,7 +1215,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     const key = event.key.toLowerCase(), command = (event.metaKey || event.ctrlKey) && !event.altKey;
     // Text the merchant highlighted in the panel copies as text, as usual.
     if (command && !event.shiftKey && key === 'c' && !document.getSelection()?.toString() && picks().length) { event.preventDefault(); copySelection(); return; }
-    if (opts.locked) return;
+    if ((opts.locked || regenerating)) return;
     if (command && (key === 'z' || (key === 'y' && !event.shiftKey))) { event.preventDefault(); stepBack(key === 'y' || event.shiftKey); return; }
     if (command && !event.shiftKey && key === 'v' && clip.length) { event.preventDefault(); pasteClipboard(); return; }
     if (command && !event.shiftKey && key === 'd' && picks().length) { event.preventDefault(); duplicateSelection(); return; }
@@ -1202,7 +1272,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     /** A node dragged among its siblings on the canvas; `order` is the siblings' keys as the canvas now shows them. */
     remoteNodeMove(id: string, path: string, order: string[]) {
       closeBocetoMenu();
-      if (!sketch || opts?.locked || !path || order.length > 12) return;
+      if (!sketch || (opts?.locked || regenerating) || !path || order.length > 12) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block || !sketchCanMove(block, path)) return;
       const parts = path.split('/'); const key = parts.pop()!;
@@ -1219,14 +1289,14 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (key === 'undo' || key === 'redo') { stepBack(key === 'redo'); return; }
       if (key === 'paste') { pasteClipboard(); return; }
       if (key === 'duplicate') { duplicateSelection(); return; }
-      if (!sketch || !selected || opts?.locked) return;
+      if (!sketch || !selected || (opts?.locked || regenerating)) return;
       if (key === 'delete') removeSelection(); else moveSelection(key === 'up' ? -1 : 1);
     },
     /** After the preview reloads: push the live look and the selection again. */
     resync() { applyLive(); syncSelection(); },
     remoteReorder(id: string, index: number) {
       closeBocetoMenu();
-      if (!sketch || opts?.locked) return;
+      if (!sketch || (opts?.locked || regenerating)) return;
       const from = sketch.blocks.findIndex(block => block.id === id);
       if (from === -1) return;
       const [block] = sketch.blocks.splice(from, 1);
@@ -1235,7 +1305,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     remoteText(id: string, field: string, value: string) {
       closeBocetoMenu();
-      if (!sketch || opts?.locked || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
+      if (!sketch || (opts?.locked || regenerating) || typeof field !== 'string' || !/^[a-zA-Z]+(\.\d+)?(\.[a-zA-Z]+)?$/.test(field)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block) return;
       // An inserted text or button with no words would be dropped by the next save: removing it is Eliminar's job.
@@ -1246,7 +1316,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     /** A sticker drag: percentages inside its positioning box, clamped like the API repair. */
     remoteElMove(id: string, elKey: string, x: number, y: number) {
       closeBocetoMenu();
-      if (!sketch || opts?.locked || elKey !== 'sticker' || !Number.isFinite(x) || !Number.isFinite(y)) return;
+      if (!sketch || (opts?.locked || regenerating) || elKey !== 'sticker' || !Number.isFinite(x) || !Number.isFinite(y)) return;
       const block = allBlocks().find(item => item.id === id);
       if (!block || !['hero', 'split', 'banner'].includes(block.type)) return;
       block.stickerPos = { x: Math.min(100, Math.max(0, Math.round(x * 10) / 10)), y: Math.min(100, Math.max(0, Math.round(y * 10) / 10)) };
@@ -1258,7 +1328,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       if (!sketch) return;
       // The canvas already moved the part: a drop that cannot be kept puts it back where the saved boceto has it.
       const refuse = (why = '') => { if (why) { note = why; draw(); } applyLive(); };
-      if (opts?.locked) return refuse();
+      if ((opts?.locked || regenerating)) return refuse();
       const result = placeFree(blockOf(id), path, x, y, w);
       if (result !== 'ok') return refuse(result === 'full' ? FULL_NOTE : '');
       forgottenBlock = null; focusNode(id, path); picker = null;
@@ -1268,7 +1338,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     remoteFreeMany(moves: Array<{ id: string; path: string; x: number; y: number; w?: number }>) {
       closeBocetoMenu();
       if (!sketch) return;
-      if (opts?.locked) { applyLive(); return; }
+      if ((opts?.locked || regenerating)) { applyLive(); return; }
       const results = moves.slice(0, 40).map(move => placeFree(blockOf(move.id), move.path, move.x, move.y, move.w));
       if (results.includes('full')) note = FULL_NOTE;
       if (results.some(result => result !== 'ok')) applyLive();
@@ -1277,7 +1347,7 @@ export function createBocetoPanel(api: MerchantStudioApi) {
     },
     remoteReorderMany(ids: string[], index: number) {
       closeBocetoMenu();
-      if (!sketch || opts?.locked) return;
+      if (!sketch || (opts?.locked || regenerating)) return;
       const set = new Set(ids);
       const moving = sketch.blocks.filter(block => set.has(block.id));
       if (moving.length < 2 || moving.length !== set.size) return;
@@ -1291,13 +1361,21 @@ export function createBocetoPanel(api: MerchantStudioApi) {
       host = target; opts = options; note = '';
       const born = options.version.snapshot.files.some(file => file.path === 'sketch.json');
       if (!born) { sketch = null; mountedStore = ''; host.replaceChildren(); return; }
-      if (sketch && rootNode && mountedStore === options.storeId && (mountedRevision === options.version.revision || pending || timer)) {
+      if (sketch && rootNode && mountedStore === options.storeId && (mountedRevision === options.version.revision || pending || regenerating || timer)) {
         host.replaceChildren(rootNode);
+        // Reopening the optional canvas must restore its selected tab's chat docking as well as its DOM.
+        opts.yapi?.(yapiTab() && !tucked.inspector);
         // YAPI started or stopped working: redraw so controls lock or unlock, and the canvas drags follow.
-        if (drawnLocked !== options.locked) { closeBocetoMenu(); draw(); applyLive(); }
+        if (drawnLocked !== (options.locked || regenerating)) { closeBocetoMenu(); draw(); applyLive(); }
         return;
       }
       const token = ++mountToken;
+      catalogItems = [];
+      if (typeof api.sourceCatalog === 'function') void api.sourceCatalog(options.storeId).then(catalog => {
+        if (token !== mountToken) return;
+        catalogItems = (Array.isArray(catalog.items) ? catalog.items : []).filter((item): item is { id: string; name: string } => !!item && typeof item.id === 'string' && typeof item.name === 'string');
+        if (sketch) draw();
+      }).catch(() => { /* Catalog controls can be retried on the next mount. */ });
       void api.getSketch(options.storeId).then(result => {
         if (token !== mountToken) return;
         mountedStore = options.storeId; mountedRevision = result.revision;

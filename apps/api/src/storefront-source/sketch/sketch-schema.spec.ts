@@ -481,7 +481,7 @@ describe('repairSketch with a drawn structure', () => {
       for (const block of placed.blocks) {
         const slot = slotOf.get(block.id);
         expect([seed, block.id, slot !== undefined]).toEqual([seed, block.id, true]);
-        const shown = [('photo' in block && block.photo) || '', ...('photos' in block ? block.photos : []), ...(block.type === 'collections' ? block.items.map(item => item.photo || '') : [])].filter(Boolean);
+        const shown = [('photo' in block && block.photo) || '', ...('photos' in block ? block.photos ?? [] : []), ...(block.type === 'collections' ? block.items.map(item => item.photo || '') : [])].filter(Boolean);
         if (!slot!.media) expect([seed, block.id, shown]).toEqual([seed, block.id, []]);
         else checkedMedia += shown.length;
       }
@@ -569,5 +569,33 @@ describe('style vocabulary', () => {
     const { sketch } = repairSketch({ blocks: [] }, sctx, { style: old });
     expect(sketch.style.buttons).toBe('square');
     for (const key of ['buttonIcon', 'icons', 'dividers', 'badges', 'fields', 'links'] as const) expect(sketch.style[key]).toBe(DEFAULT_SKETCH_STYLE[key]);
+  });
+});
+
+describe('collection item links', () => {
+  const linkCtx = { storeName: 'salv', purpose: 'shop' as const, photos: [] };
+  const build = (href: unknown) => repairSketch({ blocks: [
+    { id: 's1', type: 'collections', title: 'Obras', items: [{ title: 'Escena', text: 'Una escena.', href }] },
+    { id: 's2', type: 'story', title: 'Escena de lectura' },
+  ] }, linkCtx).sketch;
+
+  it('keeps an item href that points at a block on the page', () => {
+    const block = build('#skb-s2').blocks.find(b => b.type === 'collections')!;
+    expect(block.items[0].href).toBe('#skb-s2');
+  });
+
+  it('drops an item href whose anchor is on no block, rather than linking into nowhere', () => {
+    const block = build('#skb-does-not-exist').blocks.find(b => b.type === 'collections')!;
+    expect(block.items[0].href).toBeUndefined();
+  });
+
+  it('drops an off-site item href', () => {
+    const block = build('https://evil.example/x').blocks.find(b => b.type === 'collections')!;
+    expect(block.items[0].href).toBeUndefined();
+  });
+
+  it('keeps an in-store page href', () => {
+    const block = build('productos.html').blocks.find(b => b.type === 'collections')!;
+    expect(block.items[0].href).toBe('productos.html');
   });
 });

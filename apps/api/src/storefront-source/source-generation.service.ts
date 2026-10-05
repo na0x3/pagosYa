@@ -1,3 +1,9 @@
+import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
+import { z } from 'zod';
+import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
+import { syncDesignSpec } from './design-engine/design-document';
+import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
+import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
@@ -18,6 +24,7 @@ import { SOURCE_PRODUCT_OPTIONS } from './source-product-options';
 import { MAX_SOURCE_VIDEO_BYTES, sourceVideo } from './source-media';
 import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
 import { derivePhotoFacts } from './source-photo-facts';
+import { sketchImageRole } from './sketch/sketch-assets';
 import { BUNDLED_PHOTO, authoredUploadReferences, bundledPhotoPath, productPhotoReferences, rewriteAuthoredUploads, rewriteProductPhotos, uploadPath } from './source-product-photos';
 import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
@@ -39,9 +46,8 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
-import { applySketchComposition, compositionPrompt, SKETCH_COMPOSITION_SCHEMA } from './sketch';
 import { catalogueDigest } from './sketch/sketch-catalogue-digest';
-import { countSubstance, drawPageStructure, assembleSketch, carryEditorFields, drawSketchDirection, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type SketchContext } from './sketch';
+import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner } from './source-design-planner';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -555,8 +561,10 @@ export class SourceGenerationService {
     const started = Date.now();
     const runTimeout = agentEngine ? agentLimits(chatgptPlan).wallMs + 30_000 : 240_000;
     const signal = AbortSignal.any([leaseController.signal, AbortSignal.timeout(runTimeout), ...[execution?.signal, sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
-    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
+    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
     let sketchFile: SourceProjectFileDto | null = null;
+    let creativeSummary: string | undefined;
+    let websiteDesignFile: SourceProjectFileDto | null = null;
     let generated!: { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
     let agentOutcome: { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>>; requirements: AgentToolbox['requirements']; evidence: AgentToolbox['evidence'] } | undefined;
     /** The product page theme the agent chose (already sanitized and browser-checked); merged into the accepted design below. */
@@ -641,6 +649,8 @@ export class SourceGenerationService {
       // presentation, visual system, design match) are skipped; compilation, the source contract, uploads and preflight stay.
       let lenient = false;
       const acceptCandidate = async () => {
+        websiteDesignFile = generated.files.find(file => file.path === 'website-design.json') ?? websiteDesignFile;
+        generated.files = generated.files.filter(file => file.path !== 'website-design.json');
         if (useNext) {
           generated.files = repairNextSharedComponentReferences(generated.files);
           // A name imported from a local file that does not export it points to the file (or @pagosya/ui) that does.
@@ -729,18 +739,79 @@ export class SourceGenerationService {
         unusedImagePaths = preflight.unusedImagePaths;
       };
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
-      // Sketch-first (sub-project 2): a brand-new store is one cheap structured call plus deterministic assembly.
+      // Yapi orchestrates bounded Design, Boceto and Critic stages; assembly and commerce stay deterministic.
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
       if (sketchFirst) {
         await progress?.('building');
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
         const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: sketchPhotos.map(photo => photo.path) };
-        const direction = drawSketchDirection();
-        // The page's bands are drawn here, not chosen by the model: left to itself it converged on one skeleton every time.
+        let signupEnabled = false;
+        try { const retention = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } }); signupEnabled = (retention?.settings as { signupEnabled?: boolean } | null)?.signupEnabled === true; } catch { /* Unknown support must not produce a fake signup. */ }
+        const designInput: DesignInput = {
+          prompt: sourceRequestContext.getStore()?.request.instruction || dto.instruction,
+          store: { name: sketchCtx.storeName, description: data.aboutText || data.tagline || undefined, category: dto.brief.businessType }, brief: dto.brief,
+          products: data.items, categories: data.categories, purpose: sketchCtx.purpose,
+          designSeed: dto.designSeed || designSeedFor({ storeId, prompt: dto.instruction, products: data.items.map(item => item.id), assets: sketchCtx.photos }),
+          assets: sketchPhotos.map(photo => {
+            const original = assetLegend.find(a => a.path === photo.path)?.original;
+            const use = imageUses.find(use => use.url === original);
+            const product = data.items.find(item => item.imageUrls.includes(photo.path));
+            return { ...photo, role: sketchImageRole({ ...photo, role: use?.role === 'logo' || original === data.logoUrl ? 'logo' : product ? 'product' : use?.role, shot: photoFacts[photo.path]?.shot }), ...(product ? { productId: product.id } : {}) };
+          }),
+          newsletterEnabled: signupEnabled,
+        };
+        // Every stage uses the existing budget, signal, provider and usage receipt. Invalid output
+        // gets one bounded schema retry; provider failures retain deterministic brand-aware defaults.
+        const designStage = async <T>(phase: 'brand' | 'creative' | 'critic', instructions: string, input: unknown, schema: Record<string, unknown>, parser: z.ZodType<T>): Promise<T | undefined> => {
+          this.logger.log(JSON.stringify({ event: `${phase === 'brand' ? 'brand_analysis' : phase === 'creative' ? 'art_direction' : 'design_critique'}_started`, generationId: run.id }));
+          for (let retry = 0; retry < (phase === 'critic' ? 1 : 2); retry++) {
+            const stageAttempt: (typeof attempts)[number] = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
+            attempts.push(stageAttempt);
+            let stageBody: any = null;
+            const startedStage = Date.now();
+            let invalid = false;
+            try {
+              const prompt = phase === 'creative' ? creativeContext(input) : JSON.stringify(input);
+              const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 1000, 3500, 500);
+              try {
+                const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: instructions + (retry ? '\nPrevious output failed validation. Use only declared enum values and complete the required fields.' : ''), input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...(phase === 'critic' ? [] : images)] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: `website_${phase}`, strict: true, schema } } })) });
+                stageBody = await response.json().catch(() => null);
+                if (!response.ok) throw new Error('Design provider unavailable');
+              } finally { allocation.settle(stageBody?.usage); }
+              const parsed = parser.safeParse(sourceResponseJson(stageBody));
+              if (parsed.success) {
+                stageAttempt.status = 'COMPLETED';
+                this.logger.log(JSON.stringify({ event: `${phase === 'brand' ? 'brand_analysis' : phase === 'creative' ? 'art_direction' : 'design_critique'}_completed`, generationId: run.id }));
+                return parsed.data;
+              }
+              invalid = true;
+              stageAttempt.failureReason = 'Structured design output failed schema validation';
+            } catch { stageAttempt.failureReason = 'Design stage unavailable; using validated defaults'; }
+            finally {
+              stageAttempt.durationMs = Date.now() - startedStage;
+              stageAttempt.usage = sourceUsage(model, stageBody?.usage);
+              await this.metering?.record(storeId, `source-design-${phase}`, model, stageBody, stageAttempt.durationMs, stageAttempt.status);
+            }
+            signal.throwIfAborted();
+            if (!invalid) break;
+          }
+          this.logger.warn(JSON.stringify({ event: 'design_stage_fallback', stage: phase, generationId: run.id }));
+          return undefined;
+        };
+        const aiBrand = await designStage('brand', BRAND_ANALYSIS_PROMPT, { request: designInput.prompt, store: designInput.store, brief: dto.brief, catalog: catalogueDigest(data.items, data.categories), assets: designInput.assets, imageFacts: photoFacts }, BRAND_RESPONSE_SCHEMA, brandDirectionSchema);
+        const brandDirection = aiBrand || inferBrand(designInput);
+        const creativePlan = aiBrand ? await designStage('creative', ART_DIRECTION_PROMPT, { brand: brandDirection, request: designInput.prompt, seed: designInput.designSeed, catalogReferences: data.items.slice(0, 60).map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })), catalog: catalogueDigest(data.items, data.categories), assets: designInput.assets, imageFacts: photoFacts, purpose: designInput.purpose, newsletterEnabled: designInput.newsletterEnabled }, CREATIVE_RESPONSE_SCHEMA, creativePlanSchema) : undefined;
+        const enginePlan = compatibleCreativePlan(creativePlan || fallbackCreative(designInput, brandDirection), designInput);
+        const direction = sketchDirection(enginePlan);
+        creativeSummary = `Dirección: ${brandDirection.businessType} · ${enginePlan.artDirection.style}\nTipografía: ${enginePlan.artDirection.typographyTreatment}\nComposición: ${enginePlan.artDirection.composition}\nColores: ${Object.values(enginePlan.palette).join(' / ')}`;
+        await progress?.detail?.({ label: `Dirección: ${enginePlan.artDirection.style} · ${enginePlan.artDirection.typographyTreatment}` });
+        // Convert the creative plan into safe slots constrained by actual merchant content.
         // Published reviews are the only licence for a testimonials band; a failed count is "none", never a throw.
         let publishedReviews = 0;
         try { publishedReviews = (await this.prisma.storeReview.count({ where: { storeId, status: 'PUBLISHED' } })) || 0; } catch { /* unknown counts as none */ }
-        const structure = drawPageStructure(countSubstance({ products: data.items, categories: data.categories, photos: sketchPhotos, brief: dto.brief, reviews: publishedReviews }));
+        const structure = plannedStructure(enginePlan, countSubstance({ products: data.items, categories: data.categories, photos: sketchPhotos, brief: dto.brief, reviews: publishedReviews }), sketchCtx.purpose, !!designInput.newsletterEnabled);
+        this.logger.log(JSON.stringify({ event: 'page_structure_generated', generationId: run.id, sections: structure.slots.length }));
         const prompt = sketchPrompt({ storeName: sketchCtx.storeName, purpose: sketchCtx.purpose, instruction: dto.instruction, brief: dto.brief, photos: sketchPhotos, catalogue: catalogueDigest(data.items, data.categories), direction, structure });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
@@ -751,7 +822,7 @@ export class SourceGenerationService {
           const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 2000, 12_000, 500);
           try {
             const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...images] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
             httpStatus = response.status;
             body = await response.json().catch(() => null);
           } finally { allocation.settle(body?.usage); }
@@ -764,55 +835,33 @@ export class SourceGenerationService {
         const { sketch: drawn, notes, parsed } = sketchFromResponse(body, sketchCtx, { style: direction.style, structure });
         // Fresh generations get the band-rhythm pass (no two adjacent same-bg sections). Boceto hand
         // edits and chat edits never pass through it, so deliberate layouts survive.
-        const placed = ensureBandRhythm(ensureAllPhotosUsed(drawn, sketchCtx));
+        const arranged = ensureBandRhythm(ensureAllPhotosUsed(drawn, sketchCtx));
+        // The model names each card's photo by content hash while writing the card's words from the photo's own
+        // description, so a mistyped hash captions one picture with another's story. Runs after the photo fill,
+        // whose leftovers are placed by position and have the same problem.
+        const paired = repairPhotoPairing(arranged, sketchPhotos);
+        const placed = paired.sketch;
         // `style` now comes from repair: the model's choice, or the drawn direction wherever it said "auto".
         const sketch = { ...placed, blocks: placed.blocks.map(block => (block.type === 'newsletter' ? { ...block, form: direction.newsletterForm } : block)) };
         // A fallen-back attempt is FAILED: absorbed from billing, visible in the receipt, metered like every provider call.
         attempt.status = parsed ? 'COMPLETED' : 'FAILED';
         if (!parsed && !attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida; se usó el boceto base').slice(0, 300);
         if (!parsed) autoRepairs.push('Boceto: la respuesta del modelo no sirvió; se usó el boceto base.');
-        autoRepairs.push(...notes.slice(0, 10).map(note => `Boceto: ${note}`));
+        autoRepairs.push(...[...notes, ...paired.notes].slice(0, 10).map(note => `Boceto: ${note}`));
         await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
-        // Stage 2 (spec 2026-10-04): the page gets composed. Total by construction — any failure keeps the drawn
-        // sketch, so the merchant loses composition, never the store.
-        // A sketch the model never produced is the repaired fallback; composing it buys nothing, and on a provider
-        // outage the second call would only make the merchant wait through another timeout.
-        let composed = sketch;
+        // Registered compositions own geometry and responsive behavior. Do not run the old free-position
+        // pass here: independently positioned copy can overlap adjacent sections. Free editing remains
+        // available in the Boceto canvas; the critic only chooses bounded registry/layout decisions.
+        let composed = attachDesign(sketch, designInput, brandDirection, enginePlan, creativePlan && parsed ? 'ai' : 'fallback');
+        this.logger.log(JSON.stringify({ event: 'assets_assigned', generationId: run.id, assignments: composed.design?.assetAssignments.length || 0 }));
         if (parsed) {
-          const composeAttempt: (typeof attempts)[number] = { model, phase: 'composition', durationMs: 0, status: 'FAILED', usage: null };
-          attempts.push(composeAttempt);
-          const composePrompt = compositionPrompt({ sketch, energy: direction.lines.join(' ') });
-          let composeBody: any = null;
-          let composeStatus = 0;
-          const composeStarted = Date.now();
-          try {
-            const allocation = budget.reserve(model, Math.ceil(composePrompt.length / 3) + 2000, 8_000, 500);
-            try {
-              const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Componé el boceto: soltá partes, insertá elementos y reordená. Usá solo las rutas listadas. JSON estricto según el esquema.', input: [{ role: 'user', content: [{ type: 'input_text', text: composePrompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'sketch_composition', strict: true, schema: SKETCH_COMPOSITION_SCHEMA } } })) });
-              composeStatus = response.status;
-              composeBody = await response.json().catch(() => null);
-            } finally { allocation.settle(composeBody?.usage); }
-          } catch (error) { composeAttempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
-          signal.throwIfAborted();
-          composeAttempt.durationMs = Date.now() - composeStarted;
-          composeAttempt.usage = sourceUsage(model, composeBody?.usage);
-          composeAttempt.responseStatus = typeof composeBody?.status === 'string' ? composeBody.status : composeStatus ? `http_${composeStatus}` : undefined;
-          if (typeof composeBody?.incomplete_details?.reason === 'string') composeAttempt.incompleteReason = composeBody.incomplete_details.reason;
-          let composeParsed: unknown;
-          try { composeParsed = sourceResponseJson(composeBody); } catch { composeParsed = undefined; }
-          if (typeof composeParsed === 'object' && composeParsed !== null) {
-            const applied = applySketchComposition(sketch, composeParsed, sketchCtx);
-            composed = applied.sketch;
-            composeAttempt.status = 'COMPLETED';
-            autoRepairs.push(...applied.notes.slice(0, 5).map(note => `Composición: ${note}`));
-          } else {
-            if (!composeAttempt.failureReason) composeAttempt.failureReason = (composeBody?.error?.message || 'respuesta inválida; se usó el boceto sin componer').slice(0, 300);
-            autoRepairs.push('Composición: el modelo no compuso la página; se usó el boceto tal como salió.');
-          }
-          await this.metering?.record(storeId, 'source-generation', model, composeBody, composeAttempt.durationMs, composeAttempt.status);
+          const critique = await designStage('critic', DESIGN_CRITIC_PROMPT, { brand: brandDirection, design: composed.design, blocks: composed.blocks }, DESIGN_CRITIC_SCHEMA, designCritiqueSchema);
+          if (critique) composed = applyDesignCritique(composed, critique, sketchCtx, designInput);
         }
+        composed = validateDesign(composed, sketchCtx).sketch;
+        this.logger.log(JSON.stringify({ event: 'design_validated', generationId: run.id, findings: composed.design?.quality.findings.length || 0 }));
         generated = { label: `Boceto de ${sketchCtx.storeName}`.slice(0, 120), files: assembleSketch(composed, sketchCtx) };
+        this.logger.log(JSON.stringify({ event: 'design_rendered', generationId: run.id, files: generated.files.length }));
         sketchFile = { path: 'sketch.json', content: JSON.stringify(composed, null, 2) + '\n' };
         lenient = true;
         try { await acceptCandidate(); } finally { lenient = false; }
@@ -824,7 +873,18 @@ export class SourceGenerationService {
         let current: unknown;
         try { current = JSON.parse(previousFiles.find((file: SourceProjectFileDto) => file.path === 'sketch.json')!.content); } catch { current = undefined; }
         const currentSketch = repairSketch(current, sketchCtx).sketch;
-        const prompt = sketchEditPrompt({ sketch: currentSketch, instruction: dto.instruction, targetBlockId: dto.selection?.sectionId?.replace(/^skb-/, ''), photos: sketchCtx.photos.map(path => ({ path })), catalogue: catalogueDigest(data.items, data.categories) });
+        // What the vision pass already knows about each upload. Without it an edit sees bare content hashes and has
+        // no way to tell which photo is which, so it reshuffles them whenever it rewrites a card.
+        let photoFacts: PhotoFact[] = sketchCtx.photos.map(path => ({ path }));
+        try {
+          const manifest = previousFiles.find((file: SourceProjectFileDto) => file.path === 'visual-assets.json');
+          const described = new Map<string, string>();
+          if (manifest) for (const asset of JSON.parse(manifest.content)?.assets ?? []) {
+            if (typeof asset?.path === 'string' && typeof asset?.description === 'string') described.set(asset.path, asset.description);
+          }
+          if (described.size) photoFacts = photoFacts.map(fact => (described.has(fact.path) ? { ...fact, description: described.get(fact.path) } : fact));
+        } catch { /* a damaged manifest only costs the descriptions; the edit still runs on bare paths */ }
+        const prompt = sketchEditPrompt({ sketch: currentSketch, instruction: dto.instruction, targetBlockId: dto.selection?.sectionId?.replace(/^skb-/, ''), photos: photoFacts, catalogue: catalogueDigest(data.items, data.categories) });
         const attempt: (typeof attempts)[number] = { model, phase: 'sketch', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
@@ -851,11 +911,18 @@ export class SourceGenerationService {
           if (!attempt.failureReason) attempt.failureReason = (body?.error?.message || 'respuesta inválida').slice(0, 300);
           throw new BadGatewayException('YAPI no pudo aplicar el cambio al boceto. Tu revisión anterior sigue guardada.');
         }
-        autoRepairs.push(...edited.notes.slice(0, 10).map(note => `Boceto: ${note}`));
+        // An edit rewrites whole cards, so it can shuffle photo references the same way a fresh draw can.
+        const editPaired = repairPhotoPairing(edited.sketch, photoFacts);
+        edited.sketch = editPaired.sketch;
+        autoRepairs.push(...[...edited.notes, ...editPaired.notes].slice(0, 10).map(note => `Boceto: ${note}`));
         // Per-block layout (order, group layout, free spots, inserted elements) is absent from the model schema, so the
         // edit reply would reset it; carry it over by block id. `style` is handled by repair's defaults above, so an
         // edit may now change it deliberately while "auto" keeps the current design.
         edited.sketch.blocks = carryEditorFields(currentSketch, edited.sketch);
+        edited.sketch.dna = currentSketch.dna;
+        edited.sketch.design = syncDesignSpec(currentSketch.design, edited.sketch, sketchCtx);
+        const quality = validateDesign(edited.sketch, sketchCtx, false).quality;
+        if (edited.sketch.design) edited.sketch.design.quality = quality;
         generated = { label: 'Boceto actualizado', files: assembleSketch(edited.sketch, sketchCtx) };
         sketchFile = { path: 'sketch.json', content: JSON.stringify(edited.sketch, null, 2) + '\n' };
         lenient = true;
@@ -1142,12 +1209,13 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...({} as { rewardCreditsCovered?: number }) };
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
     const saveInput = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
       ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
       ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
       ...(sketchFile ? [sketchFile] : []),
+      ...(websiteDesignFile ? [websiteDesignFile] : []),
       { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
       { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
       ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
@@ -1191,6 +1259,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     receipt.rewardCreditsCovered = freeRun ? 0 : await this.coverWithRewardCredits(merchantId, run.id, credits);
     return { ...saved, generation: receipt, ...(agentOutcome ? { agent: agentOutcome } : {}), ...({} as { candidate?: SourceProjectSnapshot; agent?: typeof agentOutcome }) };
     } catch (error) {
+      this.logger.warn(JSON.stringify({ event: 'generation_failed', generationId: run.id, stages: attempts.length }));
       execution?.onAttempts?.(attempts);
       // A FAILED row used to say nothing about why; the last attempt now carries the reason (the internal diagnostic, never shown to a merchant).
       const lastAttempt = attempts.at(-1);

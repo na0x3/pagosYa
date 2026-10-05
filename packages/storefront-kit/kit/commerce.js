@@ -2743,7 +2743,10 @@
     document.querySelectorAll("[data-pagosya-catalog]").forEach((el) => {
       // Inventory is live. An empty-at-generation catalog must not stay permanently hidden.
       el.hidden = false;
+      const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
+      const priority = new Map(priorities.map((id, index) => [id, index]));
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
+      if (priorities.length) selected.sort((a, b) => (priority.get(a.id) ?? priorities.length) - (priority.get(b.id) ?? priorities.length));
       const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
       el.dataset.catalogLayout = layout;
       if (collectionPage) {
