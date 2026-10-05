@@ -50,8 +50,10 @@ export function countSubstance(input: unknown): StoreSubstance {
 
 export function substanceCaps(s: StoreSubstance): { maxLength: number; forbid: SketchBlock['type'][]; maxMedia: number } {
   const forbid: SketchBlock['type'][] = [];
-  if (!s.products) forbid.push('catalog', 'collections');
-  else if (s.categories < 2) forbid.push('collections');
+  // The catalog band is never forbidden: it carries the commerce mount (data-pagosya-catalog and the product
+  // template), so a shop that opens with zero products still needs it to show the first products the merchant
+  // adds, and nothing regenerates the page when they do. Collections are about variety, not the mount.
+  if (s.categories < 2) forbid.push('collections');
   if (s.photos < 2) forbid.push('gallery');
   // A store nobody has bought from has no testimonials, and a band titled "Clientes felices" over invented ones is
   // the one lie this page must not tell. Real reviews are the only licence to draw it.

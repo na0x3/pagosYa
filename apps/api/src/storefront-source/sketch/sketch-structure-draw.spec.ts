@@ -34,13 +34,15 @@ it('always ends on a footer and never opens on one', () => {
 });
 
 // Review Focus 2: nothing to sell, nothing to show.
-it('draws a short page with no commerce bands for an empty store', () => {
+it('draws a short page with a catalog but no collections for an empty store', () => {
   const empty = { products: 0, photos: 0, categories: 0, briefWords: 4, reviews: 0 };
   for (let seed = 1; seed <= 15; seed++) {
     const { slots } = drawPageStructure(empty, seeded(seed));
     expect(slots.length).toBeLessThanOrEqual(substanceCaps(empty).maxLength);
-    expect(slots.map(s => s.type)).not.toContain('catalog');
+    // The catalog is the commerce mount: a zero-product shop keeps it so its first products have somewhere to show.
+    expect(slots.filter(s => s.type === 'catalog')).toHaveLength(1);
     expect(slots.map(s => s.type)).not.toContain('collections');
+    expect(violations({ slots, params: {} as never }, empty)).toEqual([]);
     expect(slots.filter(s => s.media)).toHaveLength(0);
   }
 });

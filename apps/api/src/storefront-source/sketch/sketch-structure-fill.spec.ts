@@ -47,6 +47,22 @@ describe('fillStructure', () => {
     expect(blocks[blocks.length - 1].type).toBe('footer');
   });
 
+  // The catalog is the commerce mount, so it is unvetoable and the empty-band drop (which only touches list-bearing
+  // bands) must never take it, however short the zero-product page is.
+  it('a zero-product page keeps its catalog and footer through the veto, the empty drop and the floor', () => {
+    const empty = { products: 0, photos: 0, categories: 0, briefWords: 4, reviews: 0 };
+    for (let seed = 1; seed <= 40; seed++) {
+      const s = drawPageStructure(empty, seeded(seed));
+      expect(s.slots.filter(slot => slot.type === 'catalog')).toHaveLength(1);
+      for (const response of [[], answering(s).filter(block => block.type !== 'catalog' && block.type !== 'footer')]) {
+        const { blocks } = fillStructure(response, s, ctx);
+        const types = blocks.map(block => block.type);
+        expect(types.filter(type => type === 'catalog')).toHaveLength(1);
+        expect(types[types.length - 1]).toBe('footer');
+      }
+    }
+  });
+
   it('stops the model vetoing its way back to a short habitual page', () => {
     // Bands with no list to be empty, so the cap is what is under test (an unanswered list band is dropped regardless).
     const types: SketchBlock['type'][] = ['hero', 'banner', 'split', 'marquee', 'newsletter', 'catalog', 'footer'];

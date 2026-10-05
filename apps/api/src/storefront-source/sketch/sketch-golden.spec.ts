@@ -3,7 +3,7 @@ import { repairSketch } from './sketch-schema';
 import { applySketchComposition } from './sketch-composition';
 import { compileNextPreview } from '../source-next';
 import { agentPreviewSnapshot, captureAgentDraft } from '../agent/agent-capture';
-import { nextStoreFiles } from '../fixtures/next-store';
+import { nextStoreFiles, nextStoreConfig } from '../fixtures/next-store';
 import { withSourceIcons } from '../source-asset-library';
 
 jest.setTimeout(120_000);
@@ -89,4 +89,29 @@ it('a composed sketch assembles with its free stamps and its band widths', () =>
   expect(page).toContain('data-skb-free="on"');
   expect(page).toContain('"--skb-fr"');
   expect(page).toContain('🥐');
+});
+
+// A shop with zero products is the common first generation. Its catalog band must still render: the heading is
+// visible and the runtime-owned mount stays in the page for the first products the merchant adds.
+it('a zero-product shop renders its catalog band, visible and not bare, at desktop and mobile', async () => {
+  const { sketch } = repairSketch({ blocks: [
+    { id: 'h', type: 'hero', headline: 'Pan de verdad', sub: 'Del horno a tu mesa' },
+    { id: 'c', type: 'catalog', kicker: 'La vitrina', title: 'Nuestros productos' },
+    { id: 'z', type: 'footer', tagline: 'Hecho con calma.' },
+  ] }, { ...ctx, photos: [] });
+  const files = await withSourceIcons(assembleSketch(sketch, { ...ctx, photos: [] }));
+  // A real config with an empty catalogue: the page is a zero-product shop, with the runtime's data in place.
+  const config = { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...nextStoreConfig, data: { ...nextStoreConfig.data, items: [] } })};` };
+  const snapshot = await agentPreviewSnapshot({ brief: { businessType: 'Panadería', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Cálida' }, files: [config] }, files);
+  expect(JSON.parse(snapshot.files.find(file => file.path === 'config.js')!.content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, '')).data.items).toEqual([]);
+  const requirements = [
+    { id: 'r1', description: 'El título del catálogo se ve', page: 'index.html', check: 'text' as const, selector: '#skb-catalogo h2', expected: 'Nuestros productos' },
+    { id: 'r2', description: 'La banda del catálogo ocupa espacio', page: 'index.html', check: 'element' as const, selector: '#skb-catalogo', expected: '1' },
+  ];
+  for (const width of [1280, 390] as const) {
+    const shot = await captureAgentDraft(snapshot, width, undefined, 'index.html', requirements);
+    // `errors` includes the capture's own "catalog hidden" and "stale empty-catalog copy" health checks.
+    expect(shot.errors).toEqual([]);
+    expect(shot.evidence.map(e => [e.id, e.passed])).toEqual([['r1', true], ['r2', true]]);
+  }
 });

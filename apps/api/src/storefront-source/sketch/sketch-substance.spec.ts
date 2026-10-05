@@ -11,7 +11,8 @@ it('counts what the store actually has', () => {
 it('caps an empty store to a short page with no commerce bands', () => {
   const caps = substanceCaps({ products: 0, photos: 0, categories: 0, briefWords: 4, reviews: 0 });
   expect(caps.maxLength).toBeLessThanOrEqual(8);
-  expect(caps.forbid).toEqual(expect.arrayContaining(['catalog', 'collections', 'gallery']));
+  expect(caps.forbid).toEqual(expect.arrayContaining(['collections', 'gallery']));
+  expect(caps.forbid).not.toContain('catalog');
   expect(caps.maxMedia).toBe(0);
 });
 

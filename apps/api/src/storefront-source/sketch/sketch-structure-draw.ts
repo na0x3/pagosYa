@@ -98,7 +98,7 @@ export function drawPageStructure(substance: StoreSubstance, random: () => numbe
     take(type);
   }
 
-  // Exactly one catalog, placed at catalogAt, when the store has something to sell.
+  // Exactly one catalog, placed at catalogAt, whatever the stock: it is the commerce mount.
   if (allowed('catalog')) {
     body.splice(Math.max(0, Math.min(body.length, Math.round(params.catalogAt * body.length))), 0, 'catalog');
   }
@@ -139,7 +139,7 @@ export function violations(structure: PageStructure, substance: StoreSubstance):
   if (slots.length < 6 || slots.length > caps.maxLength) problems.push(`length ${slots.length} outside 6..${caps.maxLength}`);
   if (types[types.length - 1] !== 'footer') problems.push('last slot is not a footer');
   if (types.filter(type => type === 'footer').length !== 1) problems.push('not exactly one footer');
-  if (substance.products > 0 && types.filter(type => type === 'catalog').length !== 1) problems.push('not exactly one catalog');
+  if (types.filter(type => type === 'catalog').length !== 1) problems.push('not exactly one catalog');
   for (const banned of caps.forbid) if (types.includes(banned)) problems.push(`forbidden type present: ${banned}`);
   for (const type of ONCE_ONLY) if (types.filter(candidate => candidate === type).length > 1) problems.push(`repeated once-only type: ${type}`);
   if (types.includes('announce') && types.indexOf('announce') !== 0) problems.push('announce is not the first slot');
