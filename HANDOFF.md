@@ -8,32 +8,57 @@ see `docs/history/SESSION_LOG.md`. For architecture and how to run locally, see
 **This file is only updated when the user explicitly asks.** The Stop hook
 that used to force this every turn was disabled by request. Don't re-add it.
 
-Updated: 2026-09-24
-Branch: `feature/daily-rewards` — **pushed to origin, not merged to main**
-Working tree: clean. `main` = `origin/main` = `b2e4050`; this branch contains it,
-so the merge is a clean `--no-ff`.
+Updated: 2026-10-04
+Branch: `feature/store-page-architecture` — **not merged, not pushed.** 96 commits ahead of `main`;
+only the most recent 29 are the YAPI page-grammar work described below. Merging this branch integrates
+all 96, which is a much larger decision than finishing that work.
+Working tree: `source-publishing.service.ts` + its spec are modified ON PURPOSE (the drawn-signup change,
+complete with four tests, deliberately kept out of every commit). Plus some stray .mov files and `fixit/`.
 
 ## 1. Next action — the owner's call first
 
-**(a) Merge `feature/daily-rewards`.** Review-ready: full API suite (1929 + 34),
-checkout 313, Studio 189 browser, dashboard 73 browser + 19 unit, `pnpm build`,
-`pnpm lint` (0 errors) and `check:boundaries` all green on 2026-09-24. Merging
-was deliberately left to the owner. Open a PR at
-`https://github.com/na0x3/pagosYa/pull/new/feature/daily-rewards` or merge
-locally with `--no-ff` like earlier branches.
+**Build the "modern feel": motion and surface.** Spec is written and committed:
+`docs/superpowers/specs/2026-10-04-yapi-modern-feel-design.md`. Read it before anything else.
 
-**(b) ASFI sub-project 3** (holdback / reserve / automatic payouts). 1 and 2
-are on main. Process is spec → owner approves design → plan → build; start with
-brainstorming. See the ASFI section of the auto-memory.
+Short version: generated stores are **completely static and completely flat** — measured across all
+generated CSS there is **1 `@keyframes` and 2 `animation` rules** (the marquee, nothing else), zero scroll
+triggers, zero sticky, and zero gradients/grain/mix-blend. That, plus every band carrying kicker+title
+furniture, is why the owner says every store looks the same and the newest looks worse. Their words:
+*"yapi now builds like very basic html css, i want that modern feel."*
 
-**(c) Storefront design** — rerun the four benchmarks (~142 credits, needs the
-owner's go-ahead) to render §6.1 photo intelligence, then §6.2. Details in
-`docs/STOREFRONT_DESIGN_PHASE0_RESULT.md` §6a.
+Do steps 1 and 2 from that spec (motion on scroll, then surface/depth) as ONE piece of work, then look at a
+generated store before specifying step 3. Hard constraint from the owner: **no fixed design rules** — add
+capability, never a grammar.
 
-**(d) Keep splitting `dashboard.js`** (4.9k lines) with the `mountX(deps)`
-pattern documented in `docs/CLEAN_CODE_PLAN.md` (Phase 5, continued). Next
-candidates: profile/sessions menu, payment-link lists, finance charts,
-product/catalog import.
+### What shipped today (do not redo it)
+
+The page-grammar program: 14 tasks + a fix wave, all reviewed, on this branch.
+- `drawPageStructure()` generates the page skeleton from drawn parameters BEFORE the model is called;
+  `fillStructure` binds the response to it by slot id, drops inventions, caps vetoes, drops bands that are
+  empty after repair, and owns each band's size/width/media.
+- The prompt carries a real product digest (names, prices, categories, options, facts) instead of 30 bare
+  names; `el bloque catalog los muestra solo` is gone; the energy lines no longer dictate band count.
+- Page-wide component vocabulary went 5 style keys → 11 (buttons ×6, buttonIcon, icons, dividers, badges,
+  fields, links), rendered in CSS and offered to merchants in the Boceto look panel.
+- Verified by the controller, not just by subagents: sketch 307/307, merchant-studio 332/332,
+  source-generation-agent 43/43, both `tsc --noEmit` clean.
+- Ledger with all 49 rulings, deferred minors and known gaps:
+  `.superpowers/sdd/2026-10-04-yapi-page-grammar-real-copy-and-components/progress.md`
+
+### Known gaps, honestly
+
+- **The Boceto look panel's 11 controls have never been seen.** The dashboard serves a PRE-BUILT Studio, so
+  they do not appear until it is rebuilt. Generation uses all 11; the merchant cannot click the new 6 yet.
+- **Nothing has proven the copy got less generic.** `specificityReport` is exported and wired into
+  `apps/api/scripts/evaluate-yapi-agent.ts`, but running it spends the owner's ChatGPT plan and needs port
+  3001. Not run.
+- The one store generated since (2026-10-05T00:24Z) was an EMPTY, UNNAMED store — zero products, store name
+  literally "tienda", which leaks into every band ("Así empieza tienda"). The copy half cannot be judged
+  from it. Generate on a store WITH products and a real name.
+- A real compositional weakness seen there: the hero landed 5th, after announce → catalog → story → steps.
+  The grammar enforces legality, not editorial sense.
+- Pre-existing, NOT from this work: `source-generation.service.spec.ts` "steers planning away from recent
+  fingerprints" was already failing before the plan began.
 
 ## 2. What this branch carries
 
