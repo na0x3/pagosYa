@@ -8,31 +8,48 @@ see `docs/history/SESSION_LOG.md`. For architecture and how to run locally, see
 **This file is only updated when the user explicitly asks.** The Stop hook
 that used to force this every turn was disabled by request. Don't re-add it.
 
-Updated: 2026-10-04
-Branch: `feature/store-page-architecture` — **not merged, not pushed.** 96 commits ahead of `main`;
-only the most recent 29 are the YAPI page-grammar work described below. Merging this branch integrates
-all 96, which is a much larger decision than finishing that work.
+Updated: 2026-10-05
+Branch: `feature/store-page-architecture` — **not merged, not pushed.** 98 commits ahead of `main`;
+only the most recent 31 are the YAPI page-grammar work and the design engine described below. Merging this
+branch integrates all 98, which is a much larger decision than finishing that work.
 Working tree: `source-publishing.service.ts` + its spec are modified ON PURPOSE (the drawn-signup change,
 complete with four tests, deliberately kept out of every commit). Plus some stray .mov files and `fixit/`.
 
 ## 1. Next action — the owner's call first
 
-**Build the "modern feel": motion and surface.** Spec is written and committed:
-`docs/superpowers/specs/2026-10-04-yapi-modern-feel-design.md`. Read it before anything else.
+**Look at a generated store and judge the design engine.** It is built and committed (`a01083bf`,
+`1274e6b2`) but no human has seen its output on a real store. Two ways in:
 
-Short version: generated stores are **completely static and completely flat** — measured across all
-generated CSS there is **1 `@keyframes` and 2 `animation` rules** (the marquee, nothing else), zero scroll
-triggers, zero sticky, and zero gradients/grain/mix-blend. That, plus every band carrying kicker+title
-furniture, is why the owner says every store looks the same and the newest looks worse. Their words:
-*"yapi now builds like very basic html css, i want that modern feel."*
+- `node examples/yapi-design-engine/server.mjs` serves the deterministic demos on http://127.0.0.1:4336 —
+  three AFTER HOURS directions built from the *same* facts, products, prices and photos, plus all 28
+  principal adapters under `/variants/`.
+- Generate with YAPI on a store **with products and a real name**. The last real generation was an empty
+  store called "tienda", which proves nothing about the copy.
 
-Do steps 1 and 2 from that spec (motion on scroll, then surface/depth) as ONE piece of work, then look at a
-generated store before specifying step 3. Hard constraint from the owner: **no fixed design rules** — add
-capability, never a grammar.
+Then specify what is still wrong. Hard constraint from the owner, unchanged: **no fixed design rules** —
+add capability, never a grammar.
 
-### What shipped today (do not redo it)
+### What shipped (do not redo it)
 
-The page-grammar program: 14 tasks + a fix wave, all reviewed, on this branch.
+**The design engine**, built 2026-10-04 evening, committed 2026-10-05 as `a01083bf` + `1274e6b2`.
+Full architecture in `docs/yapi-design-engine.md` — read that before touching it.
+- `apps/api/src/storefront-source/design-engine/`: brand analysis and creative planning calls, a bounded
+  critic (≤3 layout patches, cannot touch copy/prices/products/assets), Zod schemas, deterministic quality
+  repair, seeded brand-aware defaults, and the fixtures.
+- `packages/shared-types/src/sketch-registry.ts` owns the shared composition vocabulary (28 principal
+  adapters across hero/catalog/story/gallery/collections/footer); `website-design.ts` owns design metadata.
+  `StoreSketch` stays authoritative and editable; no new database tables.
+- It answers the modern-feel spec: generated stores now carry keyframe animation, sticky positioning and
+  gradients, against the measured "1 `@keyframes`, zero sticky, zero gradients" that motivated it. The spec
+  (`docs/superpowers/specs/2026-10-04-yapi-modern-feel-design.md`) is still the statement of intent; nobody
+  has confirmed by eye that it is *met*.
+- Verified 2026-10-05 before committing: design-engine/critic/registry/sketch/sketch-studio **77/77**,
+  merchant-studio **340/340**, `tsc --noEmit` clean on api and merchant-studio, shared-types builds.
+  Capture pass over all three AFTER HOURS fixtures and all 28 variants at 1440/820/390: no overflow, no
+  missing images, one h1, commerce hydrating, zero runtime errors (`examples/yapi-design-engine/dist/`,
+  gitignored).
+
+Before that, the page-grammar program: 14 tasks + a fix wave, all reviewed, on this branch.
 - `drawPageStructure()` generates the page skeleton from drawn parameters BEFORE the model is called;
   `fillStructure` binds the response to it by slot id, drops inventions, caps vetoes, drops bands that are
   empty after repair, and owns each band's size/width/media.
@@ -40,25 +57,35 @@ The page-grammar program: 14 tasks + a fix wave, all reviewed, on this branch.
   names; `el bloque catalog los muestra solo` is gone; the energy lines no longer dictate band count.
 - Page-wide component vocabulary went 5 style keys → 11 (buttons ×6, buttonIcon, icons, dividers, badges,
   fields, links), rendered in CSS and offered to merchants in the Boceto look panel.
-- Verified by the controller, not just by subagents: sketch 307/307, merchant-studio 332/332,
-  source-generation-agent 43/43, both `tsc --noEmit` clean.
 - Ledger with all 49 rulings, deferred minors and known gaps:
   `.superpowers/sdd/2026-10-04-yapi-page-grammar-real-copy-and-components/progress.md`
 
 ### Known gaps, honestly
 
+- **Nobody has looked at the design engine's output.** Every claim above it is a passing test or a geometry
+  capture, not a judgement that the stores look good.
+- **Nine tests fail in `apps/api` `storefront-source`, and all nine predate the design engine.** They were
+  checked one by one against the previous commit (`036623da`) and none is a regression from it:
+  - 5 in `source-product-card-presets.spec.ts` — the spec hardcodes a 5-key `DEFAULTS` while the presets
+    ship 6 (`media`). Both files are untouched since before this work.
+  - 1 in `agent/agent-tools.theme.spec.ts` — `set_product_card_theme` grew `assurances` and `media`; the
+    expected key list was never updated. Source and spec both untouched.
+  - 1 in `source-validation-error.spec.ts` — the raw-diagnostics ratchet reads 31 against a `BASELINE` of
+    29. The previous commit scores 31 too, with an identical list.
+  - 1 in `source-commerce-pages.spec.ts` (preview shows a rating with no published summary) and 1 in
+    `source-next-pages.spec.ts` (a hand-written `page-SLUG` no longer demands its hooks). Attributed from
+    the diff, not by a rerun: the design-engine commit touches none of the code either test exercises —
+    the rating line last changed in `708ce191`.
+  - Also still true from before: `source-generation.service.spec.ts` "steers planning away from recent
+    fingerprints".
+- Running the whole `storefront-source` suite at once dies with SIGABRT partway through. Run it in slices.
 - **The Boceto look panel's 11 controls have never been seen.** The dashboard serves a PRE-BUILT Studio, so
   they do not appear until it is rebuilt. Generation uses all 11; the merchant cannot click the new 6 yet.
 - **Nothing has proven the copy got less generic.** `specificityReport` is exported and wired into
   `apps/api/scripts/evaluate-yapi-agent.ts`, but running it spends the owner's ChatGPT plan and needs port
   3001. Not run.
-- The one store generated since (2026-10-05T00:24Z) was an EMPTY, UNNAMED store — zero products, store name
-  literally "tienda", which leaks into every band ("Así empieza tienda"). The copy half cannot be judged
-  from it. Generate on a store WITH products and a real name.
-- A real compositional weakness seen there: the hero landed 5th, after announce → catalog → story → steps.
-  The grammar enforces legality, not editorial sense.
-- Pre-existing, NOT from this work: `source-generation.service.spec.ts` "steers planning away from recent
-  fingerprints" was already failing before the plan began.
+- A real compositional weakness seen in the last real generation: the hero landed 5th, after announce →
+  catalog → story → steps. The grammar enforces legality, not editorial sense.
 
 ## 2. What this branch carries
 
