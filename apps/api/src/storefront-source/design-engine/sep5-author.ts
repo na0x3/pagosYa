@@ -35,6 +35,11 @@ export function sep5AuthorPrompt(input: {
   /** The merchant's own previous files. The Sep-5 engine sent these, and the prompt's last paragraph asks
    *  the model to preserve unrelated copy, navigation and design decisions — which it cannot do without them. */
   previousSource?: unknown;
+  /** The choreography from `sourceMotionPlan({ …, react: false })`. Sep-5 writes its own CSS and site.js, so
+   *  that plan's non-React branch — native CSS/WAAPI and IntersectionObserver in a guarded site.js — is
+   *  directly actionable here, while the registry the engine renders from has no motion parts at all.
+   *  Absent, the prompt stays byte-identical to September 5, which is what the pinning test guards. */
+  motionPlan?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -45,6 +50,12 @@ export function sep5AuthorPrompt(input: {
     'The portable runtime renders the verified catalog into [data-pagosya-catalog], categories into [data-pagosya-categories], cart into [data-pagosya-cart], item count into [data-cart-count], status messages into [data-pagosya-status] (role=status aria-live=polite), and store name into [data-store-name]. You MUST include catalog, cart and status, and link a clear primary action to the catalog. Never hardcode product cards or prices; the runtime renders these from current API data. The runtime owns purchasing behavior but you fully style the markup. It emits document event pagosya:ready with detail.store, preview, demo for additional presentation.',
     'Runtime classes to style: menu-item, menu-item__image, menu-item__copy h3/p, menu-item__price, menu-add, sold-out, order-items, order-empty, order-item, quantity button/output, order-field select, order-total, order-note, checkout-button, catalog-empty. data-category buttons need visible pressed state. Use comfortable reading sizes, 44px controls, clear keyboard focus, responsive mobile order and reduced-motion support. Do not hide content before JS. Avoid empty decorative cards, generic badges, fake rating stars and unnecessary motion. Typography and image crops must feel deliberate.',
     "If assets are unavailable use the business's public product images or a deliberate typography-led composition; never invent a URL. For an edit, preserve unrelated copy, navigation, and design decisions. Return the whole project, not a diff. Keep code concise enough for 18000 output tokens.",
+    // Last, so it is the most specific instruction the model reads. The pinned contract above warns against
+    // "unnecessary motion", which read alone is why nine authored stores produced one @keyframes rule between
+    // them; the closing clause settles which of the two paragraphs governs, and reads correctly for 'off' too.
+    ...(input.motionPlan?.trim()
+      ? [`${input.motionPlan.trim()}\nMotion follows the choreography above; the contract's "unnecessary motion" means decoration that belongs to no concept, and never overrides it.`]
+      : []),
   ].join('\n\n');
 }
 

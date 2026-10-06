@@ -57,3 +57,33 @@ it('carries the merchant previous source into an edit', () => {
   expect(sep5AuthorPrompt({ brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] }))
     .toContain('Previous authored source: []');
 });
+
+// Sep-5 was never asked for movement: measured over the nine benchmark stores it emitted one @keyframes rule
+// and two IntersectionObservers in total, and the pinned contract's only word on the subject is "avoid
+// unnecessary motion". The choreography goes last, so it is the most specific thing the model reads, and it
+// carries the precedence clause because otherwise the two paragraphs contradict each other.
+it('appends the choreography when motion is planned, and keeps September 5 intact when it is not', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  const plan = 'MOTION CHOREOGRAPHY: Choose a motion language that belongs to the selected brand concept.\nUse native CSS/WAAPI and IntersectionObserver in guarded site.js.';
+  const withMotion = sep5AuthorPrompt({ ...base, motionPlan: plan });
+  expect(withMotion).toContain('IntersectionObserver in guarded site.js');
+  expect(withMotion).toContain('Motion follows the choreography above');
+  // The choreography is the last thing in the prompt; the pinned paragraphs still precede it untouched.
+  expect(withMotion.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
+  expect(withMotion).toContain('Avoid empty decorative cards');
+  // No plan, no addition: the byte-for-byte pin above still describes what is sent.
+  const without = sep5AuthorPrompt(base);
+  expect(without).not.toContain('MOTION CHOREOGRAPHY');
+  expect(without).not.toContain('Motion follows the choreography above');
+  expect(sep5AuthorPrompt({ ...base, motionPlan: '   ' })).toBe(without);
+});
+
+// 'off' is a real merchant choice and reaches here as a choreography too. The precedence clause has to read
+// correctly for it, or the prompt ends by arguing with itself.
+it('passes a motion-off choreography through without contradicting it', () => {
+  const off = sep5AuthorPrompt({ brief: {}, instruction: 'Sin animaciones', data: {}, assetLegend: [],
+    motionPlan: 'MOTION CHOREOGRAPHY: motion is off. Keep every scene static and readable; do not add entrances, parallax or animated menus.' });
+  expect(off).toContain('motion is off');
+  expect(off).toContain('Motion follows the choreography above');
+  expect(off).not.toContain('purposeful motion the contract');
+});

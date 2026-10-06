@@ -761,7 +761,12 @@ export class SourceGenerationService {
         // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one
         // attempt, high effort, 18k output tokens. What it writes is the store; nothing re-renders it.
         await progress?.('building');
-        const prompt = sep5AuthorPrompt({ brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles });
+        // The authored files ARE the store here, so the choreography is actionable: Sep-5 writes its own CSS
+        // and site.js. The engine's own motion plan is reused rather than reinvented, in its non-React form.
+        // Not passed on the translation branch below, where only palette, copy and section order survive and
+        // authored motion would be output tokens spent on CSS nothing renders.
+        const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
+        const prompt = sep5AuthorPrompt({ brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles, motionPlan });
         const attempt: (typeof attempts)[number] = { model, phase: 'author', durationMs: 0, status: 'FAILED', usage: null };
         attempts.push(attempt);
         let body: any = null;
@@ -795,7 +800,9 @@ export class SourceGenerationService {
           throw new BadGatewayException('La generación no devolvió una tienda completa. Vuelve a intentarlo.');
         }
         attempt.status = 'COMPLETED';
-        this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION }));
+        // `motion` says whether the choreography was actually sent, so a store that came out static can be
+        // told apart from a run that was never asked for movement.
+        this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none' }));
         generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${owner.slug}`, files: authored.data.files };
         // The Sep-5 run validated only the project contract (apps/api/sep5-run.mjs). The presentation and
         // visual-system contracts were written later, against engine output; holding authored source to them
