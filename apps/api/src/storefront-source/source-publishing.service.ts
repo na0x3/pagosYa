@@ -30,6 +30,24 @@ export function experimentEvidence(a: { visitors: number; buyers: number }, b: {
   return { winner, reason: winner ? 'Ventaja observada con intervalos de conversión del 95% separados. Revisa los resultados antes de aplicar.' : 'Todavía no hay una diferencia clara entre las versiones.' };
 }
 
+/** The design draws its own signup (a boceto newsletter block, a YAPI footer form): a real element carrying
+ * data-pagosya-subscribe-open. A selector string such as "[data-pagosya-subscribe-open]" does not count. */
+const SIGNUP_OPENER = /data-pagosya-subscribe-open(?=[\s>=/"'{])/;
+const RUNTIME_FILES = new Set(['config.js', 'commerce.js', 'retention.js']);
+const drawsSignup = (snapshot: SourceProjectSnapshot) =>
+  snapshot.files.some(f => f.encoding === 'utf8' && !RUNTIME_FILES.has(f.path) && SIGNUP_OPENER.test(f.content));
+
+/** The runtime hides a drawn signup until subscriptions are on, so a published design would show shoppers
+ * nothing. Turn them on for a store that never chose; a merchant who switched them off keeps that choice. */
+async function enableDrawnSignup(tx: Prisma.TransactionClient, storeId: string) {
+  const row = await tx.storeRetention.findUnique({ where: { storeId } });
+  if (!row) { await tx.storeRetention.createMany({ data: [{ storeId, settings: { signupEnabled: true } }], skipDuplicates: true }); return; }
+  const settings = (row.settings ?? {}) as Prisma.JsonObject;
+  if ('signupEnabled' in settings) return;
+  // Losing a race with a settings save only skips the default; the merchant's save wins.
+  await tx.storeRetention.updateMany({ where: { storeId, revision: row.revision }, data: { settings: { ...settings, signupEnabled: true }, revision: { increment: 1 } } });
+}
+
 export async function publicationState(prisma: PrismaService, storeId: string) {
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { contactFormEnabled: true, publicVisibility: true, sourcePublicationPaused: true, publishedSourceRevision: true, publishedRuntimeDigest: true, sourcePublicationVersion: true, sourcePublishedAt: true, status: true, slug: true, checkoutMode: true, merchant: { select: { status: true } } } });
   const experiment = await prisma.storeSourceExperiment.findFirst({ where: { storeId, status: 'RUNNING' } }) || await prisma.storeSourceExperiment.findFirst({ where: { storeId }, orderBy: [{ endedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }] });
@@ -126,6 +144,7 @@ export class SourcePublishingService {
       await this.recordRuntime(tx, storeId, runtime);
       // A new publication was checked against the latest kit, so it clears any earlier rollback pin.
       await tx.store.update({ where: { id: storeId }, data: { publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: revision, publishedRuntimeDigest: null, sourcePublishedAt: new Date() } });
+      if (drawsSignup(snapshot)) await enableDrawnSignup(tx, storeId);
     });
   }
   async visibility(merchantId: string, storeId: string, published: boolean, expected: number) {

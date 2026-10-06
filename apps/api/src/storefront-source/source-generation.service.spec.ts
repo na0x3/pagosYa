@@ -1097,3 +1097,16 @@ describe('merchant-facing source failures', () => {
     expect(merchantFacingSourceFailure(plain)).toBe(plain);
   });
 });
+
+// The authored-source path publishes what Sep-5 writes instead of re-rendering it from a plan, so the
+// static project contract is the only gate its output passes through. If that contract ever starts
+// demanding a product or checkout page, this path would reject every store it exists to reproduce:
+// those pages come from the kit, not from the author.
+it('accepts a Sep-5 authored project as a complete store', () => {
+  const files = [
+    { path: 'index.html', content: '<!doctype html><html lang="es"><head><link rel="stylesheet" href="styles.css"></head><body><header><a data-store-name href="#carta">Ruta 7</a></header><main><section class="hero"><h1>Tu día pide otra ruta.</h1><a href="#carta">Ver la carta</a></section><section id="carta"><div data-pagosya-categories></div><div data-pagosya-catalog></div></section><aside data-pagosya-cart></aside><p data-pagosya-status role="status" aria-live="polite"></p></main><script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>' },
+    { path: 'styles.css', content: ':root{--ink:#15100d;--paper:#fff9ed;--red:#a72820}body{background:var(--paper);color:var(--ink)}' },
+    { path: 'site.js', content: 'document.addEventListener("pagosya:ready", () => {});' },
+  ];
+  expect(() => validateGeneratedSource(files, 'shop')).not.toThrow();
+});

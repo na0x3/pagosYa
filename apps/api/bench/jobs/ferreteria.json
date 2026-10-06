@@ -1,0 +1,10 @@
+{
+  "slug": "bench-ferreteria",
+  "instruction": "Hazme el sitio de la ferretería, que se encuentre rápido lo que uno busca. El negocio: Ferretería de barrio con mostrador: herramienta, fijación, pintura y electricidad al por menor. Clientes: Vecinos y albañiles que necesitan saber si hay stock antes de cruzar la ciudad. Lo principal que debe lograr: Ver si hay stock y apartar. Dirección visual: Denso y utilitario, muchos artículos visibles sin que se vuelva ruido. Nada de minimalismo de boutique.",
+  "brief": {
+    "businessType": "Ferretería de barrio con mostrador: herramienta, fijación, pintura y electricidad al por menor",
+    "audience": "Vecinos y albañiles que necesitan saber si hay stock antes de cruzar la ciudad",
+    "primaryAction": "Ver si hay stock y apartar",
+    "visualDirection": "Denso y utilitario, muchos artículos visibles sin que se vuelva ruido. Nada de minimalismo de boutique."
+  }
+}

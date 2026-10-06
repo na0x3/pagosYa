@@ -1,0 +1,10 @@
+{
+  "slug": "bench-libros",
+  "instruction": "Hazme el sitio de la librería anticuaria, que se sienta papel y no tienda. El negocio: Librería anticuaria: primeras ediciones, mapas y encuadernación, cada ejemplar único. Clientes: Coleccionistas y bibliotecas en Bolivia y el exterior que compran por ejemplar, no por título. Lo principal que debe lograr: Consultar por un ejemplar. Dirección visual: Erudito y tipográfico, de papel y tinta. El ejemplar manda. Nada de grilla de ecommerce.",
+  "brief": {
+    "businessType": "Librería anticuaria: primeras ediciones, mapas y encuadernación, cada ejemplar único",
+    "audience": "Coleccionistas y bibliotecas en Bolivia y el exterior que compran por ejemplar, no por título",
+    "primaryAction": "Consultar por un ejemplar",
+    "visualDirection": "Erudito y tipográfico, de papel y tinta. El ejemplar manda. Nada de grilla de ecommerce."
+  }
+}

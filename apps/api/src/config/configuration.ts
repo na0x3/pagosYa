@@ -121,6 +121,13 @@ export interface AppConfig {
   deepSeek: { apiKey: string; enabled: boolean };
   /** Local-only authenticated bridge; never carries the user's OAuth tokens. */
   chatgptPlan?: { url: string; secret: string };
+  /**
+   * Let the Sep-5 generator author the brand, copy and section order, and have
+   * the design engine render what it decided. Off unless explicitly enabled:
+   * it runs a second generation before the render, so it costs more and is
+   * slower than either engine alone. See docs/SEP5_AUTHORED_PLAN.md.
+   */
+  sep5Author: boolean;
   /** Claude models for YAPI's agent (they run only on the tool-using engine). */
   anthropic: { apiKey: string };
   openAi: {
@@ -277,6 +284,7 @@ function withLocalhostAliases(origins: string[]): string[] {
 
 export default (): { app: AppConfig } => {
   const environment = process.env.NODE_ENV ?? "development";
+  const sep5Author = process.env.YAPI_SEP5_AUTHOR === '1';
   const chatgptPlan = process.env.YAPI_CHATGPT_PLAN_URL
     ? { url: process.env.YAPI_CHATGPT_PLAN_URL, secret: process.env.YAPI_CHATGPT_PLAN_SECRET ?? '' }
     : undefined;
@@ -371,6 +379,7 @@ export default (): { app: AppConfig } => {
     yapiSketchFirst: process.env.YAPI_SKETCH_FIRST !== 'off',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
+    sep5Author,
     deepSeek: { apiKey: chatgptPlan ? '' : process.env.DEEPSEEK_API_KEY ?? "", enabled: !chatgptPlan && process.env.DEEPSEEK_ENABLED !== "false" },
     anthropic: { apiKey: chatgptPlan ? '' : process.env.ANTHROPIC_API_KEY ?? "" },
     openAi: {

@@ -1,0 +1,24 @@
+{
+  "slug": "bench2-book",
+  "instruction": "Hazme la librería, que se note el criterio de quien elige los libros. Nada de portadas en grilla: quiero que el texto y la recomendación del librero manden sobre la imagen. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Librería independiente de fondo escogido: narrativa, ensayo y poesía, con pedidos y envío. Clientes: Lectores en Bolivia que compran por recomendación y no por novedad de vitrina. Lo principal que debe lograr: Elegir un título y pedirlo. Dirección visual: Tipográfica y de papel, con criterio de librero. Nada de grilla de ecommerce ni estrellas de valoración.",
+  "brief": {
+    "businessType": "Librería independiente de fondo escogido: narrativa, ensayo y poesía, con pedidos y envío",
+    "audience": "Lectores en Bolivia que compran por recomendación y no por novedad de vitrina",
+    "primaryAction": "Elegir un título y pedirlo",
+    "visualDirection": "Tipográfica y de papel, con criterio de librero. Nada de grilla de ecommerce ni estrellas de valoración."
+  },
+  "images": [
+    "/Users/saramia/book/0391670e4aa6c6e17eabd029c38257ec.jpg",
+    "/Users/saramia/book/040f7babe18f59b882a0e8628c7bf537.jpg",
+    "/Users/saramia/book/09ee840a3f220da7dc569f34efbd3b1a.jpg",
+    "/Users/saramia/book/0e28403942d9d7724c911c38f8925714.jpg",
+    "/Users/saramia/book/235a25a94aeadea359440bb87a83f857.jpg",
+    "/Users/saramia/book/42151b6bb9ae2be8e2e08864a0bfacc1.jpg",
+    "/Users/saramia/book/454bb4ae82baeafcf4592dbf04d16235.jpg",
+    "/Users/saramia/book/5f2b3c9e1ac6871ece40d2d4a9403304.jpg",
+    "/Users/saramia/book/9270a6b475e0d6af2b6df577f8116da4 (1).jpg",
+    "/Users/saramia/book/99565ae9fb7d6de14130a9519154c916.jpg",
+    "/Users/saramia/book/a1530b1cd3370350b910bf571f43e2c2.jpg",
+    "/Users/saramia/book/b4e87c5fab5abddade015247e8b21bfc.jpg"
+  ]
+}

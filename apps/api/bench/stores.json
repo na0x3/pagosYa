@@ -1,0 +1,76 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "key": "sk_test_vdyfEeQ96QHuvjMOFsOQUjtrVIhAWuMA",
+  "stores": [
+    {
+      "key": "funeraria",
+      "slug": "bench-funeraria",
+      "storeId": "cmuw7rgph0003kpt5a86mc6ku",
+      "name": "Casa Serena",
+      "items": 8
+    },
+    {
+      "key": "soldadura",
+      "slug": "bench-soldadura",
+      "storeId": "cmuw7rgq0000rkpt5mffpe998",
+      "name": "Taller Quispe Metal",
+      "items": 7
+    },
+    {
+      "key": "tatuajes",
+      "slug": "bench-tatuajes",
+      "storeId": "cmuw7rgqa001dkpt5co6g78xn",
+      "name": "Aguja Negra",
+      "items": 7
+    },
+    {
+      "key": "libros",
+      "slug": "bench-libros",
+      "storeId": "cmuw7rgqj001xkpt5y1l98lsa",
+      "name": "Bauzá Libros Antiguos",
+      "items": 6
+    },
+    {
+      "key": "veterinaria",
+      "slug": "bench-veterinaria",
+      "storeId": "cmuw7rgqt002hkpt5850ap14k",
+      "name": "Campo Sano",
+      "items": 7
+    },
+    {
+      "key": "ferreteria",
+      "slug": "bench-ferreteria",
+      "storeId": "cmuw7rgr30033kpt5eqw3khbo",
+      "name": "Ferretería Illimani",
+      "items": 9
+    },
+    {
+      "key": "luthier",
+      "slug": "bench-luthier",
+      "storeId": "cmuw7rgrf003vkpt5oudaztlj",
+      "name": "Taller Ramallo",
+      "items": 6
+    },
+    {
+      "key": "buceo",
+      "slug": "bench-buceo",
+      "storeId": "cmuw7rgro004dkpt5wnhle6ru",
+      "name": "Titicaca Dive",
+      "items": 7
+    },
+    {
+      "key": "vinos",
+      "slug": "bench-vinos",
+      "storeId": "cmuw7rgrz004zkpt5shnn8ikg",
+      "name": "Bodega Cinti Alta",
+      "items": 7
+    },
+    {
+      "key": "laboratorio",
+      "slug": "bench-laboratorio",
+      "storeId": "cmuw7rgs8005lkpt5z8gq06pm",
+      "name": "Laboratorio Andes",
+      "items": 8
+    }
+  ]
+}

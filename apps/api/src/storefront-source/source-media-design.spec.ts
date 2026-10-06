@@ -28,17 +28,19 @@ it('rejects repeated photo-only content without hiding real catalog inventory', 
   expect(await check(Array.from({ length: 4 }, (_, i) => `<section>${photo('width:200px;height:300px', `Editorial ${i}`)}</section>`).join(''))).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-only-sequence]')]));
   expect(await check('<a href="#catalog">Comprar productos</a>' + photo('width:340px;height:510px') + `<div id="catalog" data-pagosya-catalog>${Array.from({ length: 12 }, () => photo('width:200px;height:300px')).join('')}</div>`)).toEqual([]);
 });
-it('rejects an unrequested image pile, while keeping an explicit collage possible', async () => {
+it('lets an authored collage stand by default, and respects an explicit refusal', async () => {
   const html = `<section style="position:relative;height:450px">${photo('position:absolute;width:200px;height:300px;left:0;top:0')}${photo('position:absolute;width:200px;height:300px;left:100px;top:80px')}</section>`;
-  expect(await check(html)).toEqual(expect.arrayContaining([expect.stringContaining('superpuestas')]));
+  // Layering is a design decision the merchant hired Yapi to make; only an explicit "sin collage" withdraws it.
+  expect(await check(html)).toEqual([]);
   expect(await check(html, sourceMediaPolicy('shop', true, 'Quiero un collage')!)).toEqual([]);
+  expect(await check(html, sourceMediaPolicy('shop', true, 'Sin collage')!)).toEqual(expect.arrayContaining([expect.stringContaining('superpuestas')]));
 });
 it('scopes the default to whole-store shopping designs and respects explicit homepage galleries', () => {
   expect(sourceMediaPolicy('portfolio', true, '')).toBeUndefined();
   expect(sourceMediaPolicy('shop', false, 'Cambia el título')).toBeUndefined();
   expect(sourceMediaPolicy('shop', true, 'Usa todas las fotos')).not.toHaveProperty('maxEditorialImages');
   expect(sourceMediaPolicy('shop', true, 'Pon una galería en el inicio')).not.toHaveProperty('maxEditorialImages');
-  expect(sourceMediaPolicy('shop', true, 'Sin galería en inicio, sin collage')).toEqual(policy);
+  expect(sourceMediaPolicy('shop', true, 'Sin galería en inicio, sin collage')).toEqual({ ...policy, allowLayered: false });
 });
 
 it('requires a visible shopping entry instead of a screen filled only by decoration', async () => {

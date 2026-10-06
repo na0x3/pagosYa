@@ -1,0 +1,10 @@
+{
+  "slug": "bench-veterinaria",
+  "instruction": "Hazme el sitio de la veterinaria de campo, claro y directo para el ganadero. El negocio: Servicio veterinario rural para ganado: visita a campo, vacunación, parto asistido y análisis. Clientes: Ganaderos del altiplano y los valles que necesitan que el veterinario llegue a su predio. Lo principal que debe lograr: Agendar una visita a campo. Dirección visual: De campo y de confianza, legible bajo el sol en un celular barato. Nada de clínica de mascotas urbana.",
+  "brief": {
+    "businessType": "Servicio veterinario rural para ganado: visita a campo, vacunación, parto asistido y análisis",
+    "audience": "Ganaderos del altiplano y los valles que necesitan que el veterinario llegue a su predio",
+    "primaryAction": "Agendar una visita a campo",
+    "visualDirection": "De campo y de confianza, legible bajo el sol en un celular barato. Nada de clínica de mascotas urbana."
+  }
+}

@@ -134,3 +134,21 @@ it('exports the kit store tokens so the platform purchase controls follow the pa
   const square = repairSketch({ style: { buttons: 'square' }, blocks: [] }, ctx).sketch;
   expect(assembleSketch(square, ctx).find(file => file.path === 'styles/globals.css')!.content).toContain('--store-radius: 6px');
 });
+
+// Until 2026-10-06 the navigation came from a six-entry map keyed by block type, so every store ever drawn
+// said Productos / Colecciones / Nosotros. An authored label is how a store sounds like itself in the one
+// place a shopper reads first; the map stays as the fallback for a block that does not name itself.
+it('uses the authored navigation label and falls back to the default', () => {
+  const sketch = repairSketch({ blocks: [
+    { id: 'h', type: 'hero', headline: 'Mantecate', sub: 'sub', cta: 'Ver', photo: 'assets/a.jpg' },
+    { id: 'c', type: 'catalog', title: 'La carta', nav: 'CÓMO DISFRUTARLA' },
+    { id: 's', type: 'story', title: 'Proceso', paragraphs: ['uno'] },
+  ] }, ctx).sketch;
+  // Scoped to the header's own nav element: 'Productos' legitimately appears elsewhere, such as the
+  // catalogue page, and the point here is the word a shopper reads in the navigation.
+  const shell = assembleSketch(sketch, ctx).find(file => /Shell/.test(file.path))!.content;
+  const navLinks = shell.match(/<nav className="skb-nav"[\s\S]*?<\/nav>/)![0];
+  expect(navLinks).toContain('CÓMO DISFRUTARLA');
+  expect(navLinks).not.toContain('Productos');
+  expect(navLinks).toContain('Nosotros');
+});

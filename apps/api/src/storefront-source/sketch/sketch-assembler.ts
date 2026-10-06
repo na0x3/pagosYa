@@ -34,7 +34,8 @@ export function assembleSketch(input: StoreSketch, ctx: SketchContext): SourcePr
 
   const seen = new Set<string>();
   const navLinks = sketch.blocks.flatMap(block => {
-    const label = NAV_LABEL[block.type];
+    // The store's own word wins; NAV_LABEL is the fallback for a band that did not name itself.
+    const label = block.nav?.trim() || NAV_LABEL[block.type];
     if (!label || seen.has(block.type)) return [];
     seen.add(block.type);
     return [`<a href=${expr(`index.html#skb-${block.id}`)}>${expr(label)}</a>`];

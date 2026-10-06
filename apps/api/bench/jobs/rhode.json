@@ -1,0 +1,22 @@
+{
+  "slug": "bench2-rhode",
+  "instruction": "Hazme la tienda de belleza con secciones, animaciones suaves y paleta pastel. Quiero poder comparar los tonos entre sí en la misma pantalla, no uno por tarjeta. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Tienda que vende labiales y rubor de la línea rhode en Bolivia, por tono y en sets. Clientes: Clientes jóvenes en Bolivia que siguen skincare y maquillaje y eligen por tono. Lo principal que debe lograr: Elegir su tono y hacer el pedido. Dirección visual: Minimalismo pastel de belleza contemporánea, mucho espacio en blanco, tipografía en minúsculas.",
+  "brief": {
+    "businessType": "Tienda que vende labiales y rubor de la línea rhode en Bolivia, por tono y en sets",
+    "audience": "Clientes jóvenes en Bolivia que siguen skincare y maquillaje y eligen por tono",
+    "primaryAction": "Elegir su tono y hacer el pedido",
+    "visualDirection": "Minimalismo pastel de belleza contemporánea, mucho espacio en blanco, tipografía en minúsculas."
+  },
+  "images": [
+    "/Users/saramia/rhode/1f60386f4cb52e7d4f6e3400f6cbd1aa.jpg",
+    "/Users/saramia/rhode/4a8be5bf49b3e056f1ade90210959b87.jpg",
+    "/Users/saramia/rhode/5a869c62884debb047ddf15cdf3507ec.jpg",
+    "/Users/saramia/rhode/5d0627b22751d9bd5fbdc7ef9fdf7af7.jpg",
+    "/Users/saramia/rhode/85ce257997f0ae6f6c21bf187c119f14.jpg",
+    "/Users/saramia/rhode/8863e98f6d2924853c212d2e68e27731.jpg",
+    "/Users/saramia/rhode/9de0d465caf9d9b7bb397fa085553d21.jpg",
+    "/Users/saramia/rhode/c324b25c8037357ef4856b119d1a1b03.jpg",
+    "/Users/saramia/rhode/db20087b4641fca9142de44c27c8b217.jpg",
+    "/Users/saramia/rhode/f6f39e6da2a532dbdeb241d0d4e8057b.jpg"
+  ]
+}

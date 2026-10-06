@@ -1,0 +1,21 @@
+{
+  "slug": "bench2-pilates",
+  "instruction": "Hazme el estudio de pilates, calmo y corporal, con aire en el diseño. Los horarios y el compromiso semanal importan más que la foto bonita; que se vea el calendario. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Estudio de pilates reformer: clases en grupos de seis, packs de sesiones y clase privada. Clientes: Personas que quieren moverse con guía cercana y horarios fijos durante la semana. Lo principal que debe lograr: Reservar tu primera clase. Dirección visual: Calmo y corporal, con aire y respiración en el espaciado. Nada de gimnasio ni promesas de resultados.",
+  "brief": {
+    "businessType": "Estudio de pilates reformer: clases en grupos de seis, packs de sesiones y clase privada",
+    "audience": "Personas que quieren moverse con guía cercana y horarios fijos durante la semana",
+    "primaryAction": "Reservar tu primera clase",
+    "visualDirection": "Calmo y corporal, con aire y respiración en el espaciado. Nada de gimnasio ni promesas de resultados."
+  },
+  "images": [
+    "/Users/saramia/pilates/0aa5798cd94bee6b70a82ef8ec67d1d8.jpg",
+    "/Users/saramia/pilates/4ab7707963960b02f2aaec01748b316f.jpg",
+    "/Users/saramia/pilates/5ce2c3a43c3540c4d70d9d5666fc5645.jpg",
+    "/Users/saramia/pilates/6570126ab345ec2a2759811fa9b8a0d1.jpg",
+    "/Users/saramia/pilates/69985823c8d31fa290058a0cc4242f20.jpg",
+    "/Users/saramia/pilates/a18b64beb350bc141b69de9cc14e8de0.jpg",
+    "/Users/saramia/pilates/ab6c41e087ae4afef95e679502271557.jpg",
+    "/Users/saramia/pilates/e51660fcbfcc1ac8d3cb465caf9a2489.jpg",
+    "/Users/saramia/pilates/fb0c053314fcfba6e06c766cc6b6bffe.jpg"
+  ]
+}

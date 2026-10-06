@@ -1,0 +1,10 @@
+{
+  "slug": "bench-laboratorio",
+  "instruction": "Hazme el sitio del laboratorio, claro sobre precio, ayuno y tiempo de resultado. El negocio: Laboratorio de análisis clínicos: toma de muestra en sala o a domicilio y resultados en línea. Clientes: Pacientes con una orden médica en mano que quieren saber precio, ayuno y cuándo estará el resultado. Lo principal que debe lograr: Ver un análisis y agendar la toma. Dirección visual: Clínico y tranquilo, que reduzca ansiedad y explique el procedimiento. Nada de stock de doctores sonriendo.",
+  "brief": {
+    "businessType": "Laboratorio de análisis clínicos: toma de muestra en sala o a domicilio y resultados en línea",
+    "audience": "Pacientes con una orden médica en mano que quieren saber precio, ayuno y cuándo estará el resultado",
+    "primaryAction": "Ver un análisis y agendar la toma",
+    "visualDirection": "Clínico y tranquilo, que reduzca ansiedad y explique el procedimiento. Nada de stock de doctores sonriendo."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "slug": "bench2-nutrimar",
+  "instruction": "Hazme el sitio de comida saludable, que se vea editorial y no clínico. Los planes tienen que compararse lado a lado; que se entienda la diferencia sin leer dos veces. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Servicio de comida saludable: planes semanales, platos listos y asesoría nutricional. Clientes: Gente que trabaja y quiere comer bien sin cocinar todos los días. Lo principal que debe lograr: Elegir un plan y empezar la semana. Dirección visual: Fresco y editorial, de revista de bienestar y no de clínica. Nada de iconos de hoja verde ni stock de ensaladas.",
+  "brief": {
+    "businessType": "Servicio de comida saludable: planes semanales, platos listos y asesoría nutricional",
+    "audience": "Gente que trabaja y quiere comer bien sin cocinar todos los días",
+    "primaryAction": "Elegir un plan y empezar la semana",
+    "visualDirection": "Fresco y editorial, de revista de bienestar y no de clínica. Nada de iconos de hoja verde ni stock de ensaladas."
+  },
+  "images": [
+    "/Users/saramia/nutrimar/28190133922979eb538f2a369af4d14f.jpg",
+    "/Users/saramia/nutrimar/3931bb3261314e2e0f5df72a030b40fe.jpg",
+    "/Users/saramia/nutrimar/3ea9b201df6078d34c7c3a25ac8e65d9.jpg",
+    "/Users/saramia/nutrimar/56bf285d1cf1d6597184f9b2414f19db.jpg",
+    "/Users/saramia/nutrimar/72688feefe613b99c125d8b10e788cab.jpg",
+    "/Users/saramia/nutrimar/74324e463993f9cad9fafd6c3d9f374a.jpg",
+    "/Users/saramia/nutrimar/8ab77450e206fd24e86e7ab04111bee1.jpg",
+    "/Users/saramia/nutrimar/8d319164439d55652c5a327d8a4b3f10.jpg",
+    "/Users/saramia/nutrimar/972863848349af96d7531cabcd1a19a7.jpg",
+    "/Users/saramia/nutrimar/ad96c36e150d571bc61e8761bf265c15.jpg",
+    "/Users/saramia/nutrimar/c6e9defcdd8f5ff2ea6ef9d8c62d4194.jpg",
+    "/Users/saramia/nutrimar/c8a95032fd8ae37b7bb8772574906162.jpg"
+  ]
+}

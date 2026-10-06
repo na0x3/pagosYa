@@ -1,0 +1,24 @@
+{
+  "slug": "bench2-ice-cream",
+  "instruction": "Hazme la heladería, que el color salga del helado y no se vea infantil. El menú tiene que poder leerse de un vistazo desde el celular mientras se hace fila. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Heladería artesanal: helado por bocha, litros para llevar y paletas de fruta de temporada. Clientes: Familias y jóvenes en Santa Cruz que compran helado para el momento y para la casa. Lo principal que debe lograr: Armar tu pedido y recogerlo o pedirlo a domicilio. Dirección visual: Dulce sin ser infantil, con el color del propio helado. Nada de tipografía de globo ni plantilla de postres.",
+  "brief": {
+    "businessType": "Heladería artesanal: helado por bocha, litros para llevar y paletas de fruta de temporada",
+    "audience": "Familias y jóvenes en Santa Cruz que compran helado para el momento y para la casa",
+    "primaryAction": "Armar tu pedido y recogerlo o pedirlo a domicilio",
+    "visualDirection": "Dulce sin ser infantil, con el color del propio helado. Nada de tipografía de globo ni plantilla de postres."
+  },
+  "images": [
+    "/Users/saramia/ice-cream/02775f8d6c146926af5eee9ea343b8f4.jpg",
+    "/Users/saramia/ice-cream/027e788299c1e27bbd2b6e0f9a0ce69e.jpg",
+    "/Users/saramia/ice-cream/0d2fb2b358324967ec0261641499a4cf.jpg",
+    "/Users/saramia/ice-cream/206fa48c0e2180985791fa720456cd58.jpg",
+    "/Users/saramia/ice-cream/4d346bebc41406f2dc4529d4907fbdff.jpg",
+    "/Users/saramia/ice-cream/6049ec2eb95db8cb4b881150efae7934.jpg",
+    "/Users/saramia/ice-cream/6d576d887d5251ae9fd81e0df66c2ffc.jpg",
+    "/Users/saramia/ice-cream/9270a6b475e0d6af2b6df577f8116da4.jpg",
+    "/Users/saramia/ice-cream/9b5bb5176f08fc0e97ee15562beb0fc6.jpg",
+    "/Users/saramia/ice-cream/bf54aaeeedc20b8a5277af78db25c600.jpg",
+    "/Users/saramia/ice-cream/df0c316de321d38d554ae13f9e029ee7.jpg",
+    "/Users/saramia/ice-cream/f372b51c3af22cee58cedd0cd2c4d925.jpg"
+  ]
+}

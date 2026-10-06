@@ -1,0 +1,22 @@
+{
+  "slug": "bench2-coffee",
+  "instruction": "Hazme la cafetería con identidad fuerte y propia, que la foto mande. Quiero una carta que se lea como una pizarra de barra, no como un ecommerce. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Cafetería de especialidad: café de origen, bebidas de barra frías y calientes, y repostería para acompañar. Clientes: Clientes urbanos en Bolivia que toman café de especialidad a diario y piden también para la oficina. Lo principal que debe lograr: Elegir su café o combo y hacer el pedido. Dirección visual: Carácter analógico y editorial, calidez de fotografía de película. No una landing genérica de plantilla.",
+  "brief": {
+    "businessType": "Cafetería de especialidad: café de origen, bebidas de barra frías y calientes, y repostería para acompañar",
+    "audience": "Clientes urbanos en Bolivia que toman café de especialidad a diario y piden también para la oficina",
+    "primaryAction": "Elegir su café o combo y hacer el pedido",
+    "visualDirection": "Carácter analógico y editorial, calidez de fotografía de película. No una landing genérica de plantilla."
+  },
+  "images": [
+    "/Users/saramia/coffee/00987bc13471915b4ffab5c67e2cb8d3.jpg",
+    "/Users/saramia/coffee/059c80b765e681ef6091139e5dd43891.jpg",
+    "/Users/saramia/coffee/137f3afa0ac38359a2bac816335413a4.jpg",
+    "/Users/saramia/coffee/4ea2ca2972d02dbafd26763ad20d66e4.jpg",
+    "/Users/saramia/coffee/93f32334501c090a5ed6be121077498d.jpg",
+    "/Users/saramia/coffee/b319c80bb45621ec4a4b796d81e2fa4d.jpg",
+    "/Users/saramia/coffee/d49250d1d15e37e31079db37ac22237c.jpg",
+    "/Users/saramia/coffee/download.png",
+    "/Users/saramia/coffee/e4816932c9cebdb0bc2c20d2c7207632.jpg",
+    "/Users/saramia/coffee/effcb864799cdf83d17268c25eb8a5ca.jpg"
+  ]
+}

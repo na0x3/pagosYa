@@ -1,0 +1,22 @@
+{
+  "slug": "bench2-cuadrizate",
+  "instruction": "Hazme la tienda de láminas, que la obra mande y el color salga de la pintura. La obra tiene que verse a tamaño grande al menos una vez, como en una pared, no solo en miniatura. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Láminas de arte impresas en papel de algodón y enmarcadas a mano en La Paz. Clientes: Clientes en Bolivia que decoran su casa u oficina y buscan una obra lista para colgar. Lo principal que debe lograr: Elegir una lámina y hacer el pedido. Dirección visual: Galería editorial: mucho aire alrededor de la obra y un color tomado de la pintura misma. La obra manda.",
+  "brief": {
+    "businessType": "Láminas de arte impresas en papel de algodón y enmarcadas a mano en La Paz",
+    "audience": "Clientes en Bolivia que decoran su casa u oficina y buscan una obra lista para colgar",
+    "primaryAction": "Elegir una lámina y hacer el pedido",
+    "visualDirection": "Galería editorial: mucho aire alrededor de la obra y un color tomado de la pintura misma. La obra manda."
+  },
+  "images": [
+    "/Users/saramia/cuadrizate/1085d525e739a5f442de64b5b356f06a.jpg",
+    "/Users/saramia/cuadrizate/33cb8be3155ed5bc358871c8f0e690e3.jpg",
+    "/Users/saramia/cuadrizate/3649b8181a33892d2d8a06b0ffce8f6a.jpg",
+    "/Users/saramia/cuadrizate/553c191885bd8721b429eb81c968a0eb.jpg",
+    "/Users/saramia/cuadrizate/6a37660568ed9239253f541b6dc01470.jpg",
+    "/Users/saramia/cuadrizate/76f6475122f2716dd36a54b72aaa0922.jpg",
+    "/Users/saramia/cuadrizate/970304328587afc98b31885e5679c49d.jpg",
+    "/Users/saramia/cuadrizate/bd2071a9b3ab26c07704711ac33d3512.jpg",
+    "/Users/saramia/cuadrizate/f16e314b7b99b6a8b1517078e75cc8a0.jpg",
+    "/Users/saramia/cuadrizate/f2a1f5a00ceefc664add2f820689bf57.jpg"
+  ]
+}

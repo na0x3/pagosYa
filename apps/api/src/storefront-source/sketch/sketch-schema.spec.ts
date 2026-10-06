@@ -599,3 +599,18 @@ describe('collection item links', () => {
     expect(block.items[0].href).toBe('productos.html');
   });
 });
+
+// Measured 2026-10-06 against the nine Sep-5 stores: five slots held 45 hues and dropped 26, about three per
+// store, and the dropped ones fell into three recurring roles — a second bright accent, a soft light field and
+// a mid tone between accent and deep. They are optional so a sketch saved before they existed renders as it did.
+it('keeps the three optional palette roles and falls back when one is absent', () => {
+  const { sketch } = repairSketch({ palette: { paper: '#fff9ed', ink: '#15100d', accent: '#a72820', deep: '#0b241e', pop: '#16627b', spot: '#efb93f', wash: '#f5ead3', mid: '#14392f' }, blocks: [
+    { id: 'h', type: 'hero', headline: 'Mantecate', sub: 's', cta: 'Ver' },
+  ] }, { storeName: 'm', purpose: 'shop', photos: [] });
+  expect(sketch.palette.spot).toBe('#efb93f');
+  expect(sketch.palette.wash).toBe('#f5ead3');
+  expect(sketch.palette.mid).toBe('#14392f');
+  // A band painted with a role this sketch never filled must still render a real colour.
+  expect(resolveBg({ paper: '#fff', ink: '#000', accent: '#f00', deep: '#003', pop: '#ff0' }, 'spot')).toBe('#ff0');
+  expect(resolveBg({ paper: '#fff', ink: '#000', accent: '#f00', deep: '#003', pop: '#ff0' }, 'wash')).toBe('#fff');
+});

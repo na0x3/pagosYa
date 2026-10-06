@@ -292,3 +292,35 @@ it('serves the sanitised DNA motif drawings with the public site, as text the pr
   // Only motif drawings, which every save sanitises; other SVG files stay private as before.
   expect(site.snapshot?.files.some(f => f.path === 'assets/other.svg')).toBe(false);
 });
+
+describe('a published design with a drawn signup turns subscriptions on', () => {
+  afterEach(() => jest.restoreAllMocks());
+  const opener = '<section data-pagosya-subscribe-block><button type="button" data-pagosya-subscribe-open>Suscribirme</button></section>';
+  async function publishWith(row: { settings: object; revision: number } | null, markup = opener) {
+    const setup = checkedPublishing();
+    const second = setup.snapshots[1];
+    setup.snapshots[1] = sourceProjectSnapshot({ ...second, revision: 0, label: 'Diseño', files: second.files.map(f => f.path === 'index.html' ? { ...f, content: f.content + markup } : f) });
+    setup.prisma.storeRetention = { findUnique: jest.fn(async () => row), createMany: jest.fn(async () => ({ count: 1 })), updateMany: jest.fn(async () => ({ count: 1 })) };
+    await setup.record();
+    await setup.service.publish('m', 's', 2, 0);
+    return setup.prisma.storeRetention;
+  }
+  it('creates the setting for a store that never configured subscriptions', async () => {
+    const retention = await publishWith(null);
+    expect(retention.createMany).toHaveBeenCalledWith({ data: [{ storeId: 's', settings: { signupEnabled: true } }], skipDuplicates: true });
+  });
+  it('adds it to settings saved for other features, keeping them and bumping the revision', async () => {
+    const retention = await publishWith({ settings: { emailWorkspace: { sender: 'x' } }, revision: 3 });
+    expect(retention.updateMany).toHaveBeenCalledWith({ where: { storeId: 's', revision: 3 }, data: { settings: { emailWorkspace: { sender: 'x' }, signupEnabled: true }, revision: { increment: 1 } } });
+  });
+  it('respects a merchant who turned subscriptions off', async () => {
+    const retention = await publishWith({ settings: { signupEnabled: false }, revision: 2 });
+    expect(retention.createMany).not.toHaveBeenCalled();
+    expect(retention.updateMany).not.toHaveBeenCalled();
+  });
+  it('leaves settings alone when the design draws no signup (a selector string does not count)', async () => {
+    const retention = await publishWith(null, '<script>document.querySelector("[data-pagosya-subscribe-open]")</script>');
+    expect(retention.findUnique).not.toHaveBeenCalled();
+    expect(retention.createMany).not.toHaveBeenCalled();
+  });
+});

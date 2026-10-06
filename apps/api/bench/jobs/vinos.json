@@ -1,0 +1,10 @@
+{
+  "slug": "bench-vinos",
+  "instruction": "Hazme el sitio de la bodega, con el carácter del valle y no de catálogo de vinos. El negocio: Bodega familiar de altura: vinos de uva criolla, singani y visitas guiadas a la finca. Clientes: Compradores en Bolivia que regalan botella y visitantes que quieren conocer el valle. Lo principal que debe lograr: Elegir una botella o reservar la visita. Dirección visual: Altura, piedra y sol fuerte; nada del cliché de château francés ni de etiqueta dorada.",
+  "brief": {
+    "businessType": "Bodega familiar de altura: vinos de uva criolla, singani y visitas guiadas a la finca",
+    "audience": "Compradores en Bolivia que regalan botella y visitantes que quieren conocer el valle",
+    "primaryAction": "Elegir una botella o reservar la visita",
+    "visualDirection": "Altura, piedra y sol fuerte; nada del cliché de château francés ni de etiqueta dorada."
+  }
+}

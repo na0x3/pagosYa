@@ -10,7 +10,11 @@ import type { PageStructure } from './sketch-structure-draw';
 
 /** The editable sketch a merchant shapes before any site is built (sketch-first YAPI, sub-project 1).
  * `repairSketch` is total: any input yields a usable sketch plus notes — the sketch loop never surfaces errors. */
-export type SketchPalette = { paper: string; ink: string; accent: string; deep: string; pop: string };
+/** Five roles were measured against the nine Sep-5 stores on 2026-10-06: they held 45 hues and dropped 26,
+ *  about three per store. The dropped ones recur as a second bright accent, a soft light field and a mid tone
+ *  between accent and deep, so those three are the widening. They are optional, so a sketch saved before they
+ *  existed renders exactly as it did and the Boceto panel's five controls keep working untouched. */
+export type SketchPalette = { paper: string; ink: string; accent: string; deep: string; pop: string; spot?: string; wash?: string; mid?: string };
 export type SketchSize = 's' | 'm' | 'l' | 'xl';
 /** Tint backgrounds are derived (role mixed softly into paper) so the model never invents pastel
  * hexes and contrast repair keeps working on concrete colors. */
@@ -26,7 +30,9 @@ export const SKETCH_WIDTHS: readonly SketchWidth[] = ['bleed', 'wide', 'narrow',
 /** Editor-wide layout controls every block may carry: copy alignment, mirrored photo side, swapped buttons,
  * band width, copy-column element order and per-group layout (spec 2026-10-03-boceto-structure-and-icons-design;
  * width added by spec 2026-10-04-yapi-composition-and-width-design). */
-export type SketchLayout = { composition?: string; imageFit?: 'cover' | 'contain'; focalPoint?: { x: number; y: number }; productRefs?: string[]; align?: SketchAlign; flip?: boolean; swap?: boolean; width?: SketchWidth; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
+/** `nav` is the block's own word in the site navigation. It lives on the shared layout type because any
+ *  band a shopper can jump to may name itself; an empty one falls back to the generic label. */
+export type SketchLayout = { nav?: string; composition?: string; imageFit?: 'cover' | 'contain'; focalPoint?: { x: number; y: number }; productRefs?: string[]; align?: SketchAlign; flip?: boolean; swap?: boolean; width?: SketchWidth; order?: string[]; layout?: Record<string, SketchGroupLayout>; free?: Record<string, SketchFreePos>; extras?: SketchExtra[] };
 export type StickerPos = { x: number; y: number };
 export type SketchBlock = (
   | { id: string; type: 'hero'; variant: 'photo-right' | 'full-bleed' | 'stacked'; headline: string; sub: string; cta: string; cta2: string; trust: string; badge: string; note: string; sticker: string; caption: string; photo?: string; photos?: string[]; align?: SketchAlign; stickerPos?: StickerPos; order?: string[]; bg: SketchBg; size: SketchSize }
@@ -107,7 +113,12 @@ const DEFAULT_PALETTE: SketchPalette = { paper: '#f6ecd9', ink: '#1f2a24', accen
 const DEFAULT_FONTS = { display: 'fraunces', text: 'epilogue' };
 const SIZES: readonly SketchSize[] = ['s', 'm', 'l', 'xl'];
 const ROLES: readonly (keyof SketchPalette)[] = ['paper', 'ink', 'accent', 'deep', 'pop'];
-const BLOCK_BGS: readonly SketchBg[] = [...ROLES, 'tint-accent', 'tint-deep', 'tint-pop'];
+/** Filled only when the sketch names them; never defaulted, so an unused role stays absent rather than
+ *  becoming a fifth near-neutral nobody chose. */
+const OPTIONAL_ROLES = ['spot', 'wash', 'mid'] as const;
+/** Where an optional role falls back when a band asks for one the sketch never filled. */
+const OPTIONAL_BG_FALLBACK: Record<(typeof OPTIONAL_ROLES)[number], keyof SketchPalette> = { spot: 'pop', wash: 'paper', mid: 'deep' };
+const BLOCK_BGS: readonly SketchBg[] = [...ROLES, ...OPTIONAL_ROLES, 'tint-accent', 'tint-deep', 'tint-pop'];
 const LIMITS = { headline: 120, short: 200, paragraph: 600, list: 6, galleryPhotos: 6 };
 /** Kickers get their ✦ from CSS; a glyph the model typed itself would double it. */
 /** Where a block button may lead: in-store pages and anchors only. */
@@ -122,7 +133,9 @@ export const mixHex = (a: string, b: string, weight: number) => {
 };
 /** A block background to a concrete hex: palette roles directly, tints as 16% of the role into paper. */
 export const resolveBg = (palette: SketchPalette, bg: SketchBg): string =>
-  bg === 'tint-accent' || bg === 'tint-deep' || bg === 'tint-pop' ? mixHex(palette[bg.slice(5) as 'accent' | 'deep' | 'pop'], palette.paper, 0.16) : palette[bg];
+  bg === 'tint-accent' || bg === 'tint-deep' || bg === 'tint-pop' ? mixHex(palette[bg.slice(5) as 'accent' | 'deep' | 'pop'], palette.paper, 0.16)
+    // An optional role the sketch never filled resolves to its nearest required one; a band never renders colourless.
+    : palette[bg] ?? palette[OPTIONAL_BG_FALLBACK[bg as (typeof OPTIONAL_ROLES)[number]]] ?? palette.paper;
 
 const hex = (value: unknown): string | null => {
   const raw = String(value ?? '').trim().toLowerCase();
@@ -315,6 +328,10 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     if (value) palette[role] = value;
     else if (rawPalette[role] !== undefined) notes.push(`color ${role} inválido; se usó el color base`);
   }
+  for (const role of OPTIONAL_ROLES) {
+    const value = hex(rawPalette[role]);
+    if (value) palette[role] = value;
+  }
   // Readability: ink must reach WCAG AA contrast against paper.
   if (contrastRatio(palette.paper, palette.ink) < 4.5) {
     palette.ink = bestInkFor(palette.paper, palette.ink);
@@ -443,6 +460,8 @@ export function repairSketch(input: unknown, ctx: SketchContext, defaults?: { st
     // Shared layout controls: any kept block may carry alignment; photo blocks may mirror; button rows may swap.
     const kept = blocks.length > pushedBefore ? blocks[blocks.length - 1] : undefined;
     if (kept) {
+      // Without an authored label the navigation is the same six words in every store ever drawn.
+      if (typeof block.nav === 'string' && block.nav.trim()) kept.nav = text(block.nav, 24);
       if (typeof block.composition === 'string' && sectionCompositions(kept.type).includes(block.composition)) kept.composition = block.composition;
       if (block.imageFit === 'cover' || block.imageFit === 'contain') kept.imageFit = block.imageFit;
       const focal = block.focalPoint as { x?: unknown; y?: unknown } | undefined;

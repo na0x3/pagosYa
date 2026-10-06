@@ -1,0 +1,24 @@
+{
+  "slug": "bench2-shampoo",
+  "instruction": "Hazme la marca de cuidado capilar, limpia y segura, con el producto en grande. Quiero una forma de encontrar la rutina por tipo de cabello, no una lista plana de productos. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Marca de cuidado capilar: shampoo, acondicionador y tratamientos por tipo de cabello. Clientes: Clientes que buscan fórmula honesta y quieren saber qué lleva cada producto. Lo principal que debe lograr: Encontrar tu rutina y pedirla. Dirección visual: Limpio y seguro de sí, producto en grande, sin promesas infladas ni sellos inventados.",
+  "brief": {
+    "businessType": "Marca de cuidado capilar: shampoo, acondicionador y tratamientos por tipo de cabello",
+    "audience": "Clientes que buscan fórmula honesta y quieren saber qué lleva cada producto",
+    "primaryAction": "Encontrar tu rutina y pedirla",
+    "visualDirection": "Limpio y seguro de sí, producto en grande, sin promesas infladas ni sellos inventados."
+  },
+  "images": [
+    "/Users/saramia/shampoo/16c1e98d4112c62d992662bfae3615f7.jpg",
+    "/Users/saramia/shampoo/1919afed5b3598622f8733fa26b0ad22.jpg",
+    "/Users/saramia/shampoo/1fd849e3aab40cc10d047b6073d031a0.jpg",
+    "/Users/saramia/shampoo/2914f36972828c39b9480d6147628a66.jpg",
+    "/Users/saramia/shampoo/2c739ddb61a9344e720a01f9d6cac75d.jpg",
+    "/Users/saramia/shampoo/4ef2c623187de9fff84bd82344c308c5.jpg",
+    "/Users/saramia/shampoo/529dcef9fb09292f0de374c9a2e9b9e7.jpg",
+    "/Users/saramia/shampoo/6679c0f683a10c4bf41cee9db4f5f4b9.jpg",
+    "/Users/saramia/shampoo/79433df3736414aa0eb7f896e8acc726.jpg",
+    "/Users/saramia/shampoo/8af0262cbc6d4b2e1e83160d69371c7c.jpg",
+    "/Users/saramia/shampoo/97929bcb86c1751f9010d74797052988.jpg",
+    "/Users/saramia/shampoo/a63460b60dedb9dc78d5a7aae227a1ba.jpg"
+  ]
+}

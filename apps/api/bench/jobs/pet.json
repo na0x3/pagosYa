@@ -1,0 +1,24 @@
+{
+  "slug": "bench2-pet",
+  "instruction": "Hazme la tienda de mascotas, cálida y con humor, que se vean los animales. Separa con claridad lo que se compra cada mes de lo que se compra una vez. No uses un hero centrado con un botón debajo. El catálogo no puede ser una grilla uniforme de tarjetas iguales: dale jerarquía, que no todos los productos pesen lo mismo. Usa al menos dos familias tipográficas con contraste real entre ellas y una escala tipográfica amplia. El color principal tiene que salir de las fotos del negocio, no de un gris o un beige por defecto. Incluye al menos una sección que no sea ni portada ni catálogo ni pie de página y que solo tenga sentido para este negocio en particular. Nada de iconos genéricos, insignias de confianza, estrellas de valoración ni tarjetas decorativas vacías. El negocio: Tienda de mascotas: alimento, juguetes, camas y accesorios, con entrega a domicilio. Clientes: Dueños de perros y gatos en la ciudad que reponen alimento cada mes. Lo principal que debe lograr: Armar el pedido del mes. Dirección visual: Cálido y con humor, sin caer en infantil ni en clínica veterinaria. Que se vean los animales.",
+  "brief": {
+    "businessType": "Tienda de mascotas: alimento, juguetes, camas y accesorios, con entrega a domicilio",
+    "audience": "Dueños de perros y gatos en la ciudad que reponen alimento cada mes",
+    "primaryAction": "Armar el pedido del mes",
+    "visualDirection": "Cálido y con humor, sin caer en infantil ni en clínica veterinaria. Que se vean los animales."
+  },
+  "images": [
+    "/Users/saramia/pet/081bb3d7896ab4a5af57bb552efc5d0a.jpg",
+    "/Users/saramia/pet/1393326d9c9fd4458809a9eafdaa5bd9.jpg",
+    "/Users/saramia/pet/19b483638c52f03e1f1a5f49e2a5603f.jpg",
+    "/Users/saramia/pet/2acfa71ecb8dc2530f2f107d4a9cb9eb.jpg",
+    "/Users/saramia/pet/5ff9c99e46b23645f6f1f41f347a1513.jpg",
+    "/Users/saramia/pet/6241c3e13dc38d2af0178f2834a6bdc8.jpg",
+    "/Users/saramia/pet/636af1f60b422b72b34abec81c34c992.jpg",
+    "/Users/saramia/pet/6525ff6a69679de70a902430e83405cf.jpg",
+    "/Users/saramia/pet/6f38568b197a4c6999bb4fffb2782503.jpg",
+    "/Users/saramia/pet/7dccb804b7fb633b2e057b16943dc749.jpg",
+    "/Users/saramia/pet/7e4e0bc81a583f5d6b0b9351e33e3861.jpg",
+    "/Users/saramia/pet/cb72210e1e5119fbae6946e26b1e4e2d.jpg"
+  ]
+}

@@ -56,3 +56,10 @@ examples/premium-benchmark-photos/*/*
 !examples/premium-benchmark-photos/*/scene-*.jpg
 
 .yapi-evaluation/
+
+# Screen recordings and the fixit/ scratch folder: ~300MB of media recorded while
+# reviewing generations, dropped at the root and in fixit/. Evidence for a
+# conversation about a store, never source.
+/*.mov
+/fixit/
+*.bak

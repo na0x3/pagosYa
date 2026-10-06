@@ -16,7 +16,7 @@ import type { SketchContext, SketchStyle, StoreSketch } from './sketch-schema';
  * conversion — any response, including none at all, becomes a usable sketch via repairSketch. */
 
 const string = { type: 'string' } as const;
-const bg = { type: 'string', enum: ['paper', 'ink', 'accent', 'deep', 'pop', 'tint-accent', 'tint-deep', 'tint-pop'] } as const;
+const bg = { type: 'string', enum: ['paper', 'ink', 'accent', 'deep', 'pop', 'spot', 'wash', 'mid', 'tint-accent', 'tint-deep', 'tint-pop'] } as const;
 const size = { type: 'string', enum: ['s', 'm', 'l', 'xl'] } as const;
 const width = { type: 'string', enum: [...SKETCH_WIDTHS] } as const;
 const alignment = { type: 'string', enum: ['start', 'center', 'end'] } as const;
@@ -25,14 +25,14 @@ const block = (type: string, props: Record<string, unknown>) => ({
   type: 'object', additionalProperties: false,
   // Layout controls every block accepts. Strict mode requires every property in `required`, so the inert values
   // ('bleed', 'start', false) are how the model says "leave this alone" — repair drops them.
-  properties: { id: string, type: { type: 'string', enum: [type] }, bg, size, width, align: alignment, flip: bool, swap: bool, composition: { type: 'string', enum: ['auto', ...sectionCompositions(type)] }, ...props },
-  required: ['id', 'type', 'bg', 'size', 'width', 'align', 'flip', 'swap', 'composition', ...Object.keys(props)],
+  properties: { id: string, type: { type: 'string', enum: [type] }, bg, size, width, nav: string, align: alignment, flip: bool, swap: bool, composition: { type: 'string', enum: ['auto', ...sectionCompositions(type)] }, ...props },
+  required: ['id', 'type', 'bg', 'size', 'width', 'nav', 'align', 'flip', 'swap', 'composition', ...Object.keys(props)],
 });
 
 export const SKETCH_JSON_SCHEMA = {
   type: 'object', additionalProperties: false,
   properties: {
-    palette: { type: 'object', additionalProperties: false, properties: { paper: string, ink: string, accent: string, deep: string, pop: string }, required: ['paper', 'ink', 'accent', 'deep', 'pop'] },
+    palette: { type: 'object', additionalProperties: false, properties: { paper: string, ink: string, accent: string, deep: string, pop: string, spot: string, wash: string, mid: string }, required: ['paper', 'ink', 'accent', 'deep', 'pop', 'spot', 'wash', 'mid'] },
     fonts: { type: 'object', additionalProperties: false, properties: { display: string, text: string }, required: ['display', 'text'] },
     scale: size,
     // The page's shape language. 'auto' defers to the direction drawn for this generation, so the model only
@@ -122,6 +122,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     'El color apoya la dirección global: no hay cantidad mínima de bandas saturadas. Usa escala, composición y fotografía para crear ritmo; no alternes fondos por obligación.',
     'Elige sólo secciones útiles para esta marca y sus datos. Prefiere 5–8 secciones fuertes, sin añadir announce, marquee, split ni wordmark sólo porque existen.',
     `Variantes disponibles: ${JSON.stringify(SKETCH_COMPONENT_REGISTRY.map(({ id, type, variant, purpose, needs, mobile }) => ({ id, type, variant, purpose, needs, mobile })))}. composition auto conserva la elección del plan creativo.`,
+    `NAVEGACIÓN: nav es la palabra con la que esta banda aparece en el menú de arriba, escrita por vos y con la voz del negocio ("LA IDEA", "CÓMO DISFRUTARLA", "OFERTA"), hasta 24 caracteres. Dejá "" en las bandas que no van al menú y en las que prefieras la etiqueta genérica. Un menú que dice Productos, Colecciones y Nosotros es el mismo menú que tiene cualquier tienda.`,
     `AJUSTES DE CADA BANDA: el tamaño, el ancho y si lleva foto ya vienen en la lista de arriba y no se negocian: copiá en size y width lo que figura ahí. Lo tuyo es align (start, center, end: mueve el texto), flip (espeja la foto en hero, split, story y newsletter) y swap (pone el botón fantasma primero en hero y split). Si no querés tocar algo: align "start", flip false, swap false.`,
     `style es el LENGUAJE DE FORMAS de toda la página: ${Object.entries(SKETCH_STYLE_OPTIONS).map(([key, values]) => `${key} (${values.join('/')})`).join(', ')}. Elegilo para que acompañe al rubro y a la dirección creativa — una carnicería brutalista no lleva botones pill redondeados. Poné "auto" en las dimensiones que no te importen y el diseño las elige.`,
     `DIRECCIÓN CREATIVA DE ESTA GENERACIÓN (${direction.name}) — interprétala con los colores, fuentes y bloques concretos de esta tienda:`,
@@ -157,6 +158,7 @@ export function sketchEditPrompt(input: { sketch: StoreSketch; instruction: stri
     ...catalogueLines(input.catalogue, 'edit'),
     SITE_SHAPE_RULE,
     COLLECTION_HREF_RULE,
+    'PALETA: paper, ink, accent, deep y pop son obligatorios. spot, wash y mid son tres colores más que podés usar o dejar en "": spot es un segundo color vivo (un sticker, una marquesina, un botón secundario), wash es un campo claro suave distinto del papel, y mid es un tono intermedio entre accent y deep. Están porque las tiendas con identidad propia usan de diez a dieciséis colores, no cinco. Usalos sólo si esta marca los pide; tres colores sin razón no son una identidad.',
     'Textos honestos en el idioma del comercio, español por defecto; colores hex con buen contraste.',
   ].filter(Boolean).join('\n');
 }

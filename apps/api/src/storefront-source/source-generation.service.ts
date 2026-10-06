@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA } from './design-engine/sep5-author';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
@@ -37,6 +38,12 @@ import { anthropicAgentModel } from './agent/agent-model-anthropic';
 
 /** The OpenAI model that runs the parts Claude does not (design planning, the single-call fallback). */
 const CLAUDE_COMPANION_MODEL = 'gpt-5.6-terra' as const;
+/** What apps/api/sep5-run.mjs allowed the September 5 generator, which averaged 250s across the nine stores. */
+const SEP5_CLIENT_TIMEOUT_MS = 900_000;
+/** Reasoning tokens count against max_output_tokens on this API, so the 18,000 apps/api/sep5-run.mjs asked for
+ *  only sufficed because its model's reasoning fit inside it. The prompt still tells the model to write for
+ *  18,000; this is the headroom that keeps a thinking model from truncating the project mid-file. */
+const SEP5_MAX_OUTPUT_TOKENS = 32_000;
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
@@ -412,7 +419,12 @@ export class SourceGenerationService {
     const redesign = !execution?.candidate && (execution?.redesign === true || sourceRedesignRequested(dto.instruction));
     const requestProfile = sourceRequestContext.getStore()?.request.profile || sourceRequestProfile(dto.instruction, Boolean(previous));
     const previousFiles: SourceProjectFileDto[] = (previous?.snapshot as any)?.files || [];
-    const useNext = isNextSource(previousFiles) || !execution?.candidate && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign);
+    // Sep-5 wrote whole static sites, and the static pipeline is what rendered them: the kit supplies the
+    // product, checkout and collection pages, the commerce runtime and the static validators. The flag selects
+    // that pipeline end to end, so a store comes out as it did before the Next migration rather than being
+    // re-rendered from a plan. A store already born in Next keeps its framework; see docs/SEP5_AUTHORED_PLAN.md.
+    const sep5Author = this.config.get<boolean>('app.sep5Author') === true && !execution?.candidate && !isNextSource(previousFiles) && (!previous || redesign);
+    const useNext = !sep5Author && (isNextSource(previousFiles) || !execution?.candidate && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign));
     // The tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) builds component stores; candidates and DeepSeek keep the single call.
     const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && !isDeepSeek(plan.model) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
     const migrating = useNext && !!previous && !isNextSource(previousFiles);
@@ -559,9 +571,12 @@ export class SourceGenerationService {
       void this.prisma.storeSourceGeneration.updateMany({ where: { id: run.id, status: 'RUNNING', activeStoreId: storeId }, data: { heartbeatAt: new Date() } }).then(result => { if (!result.count) leaseController.abort(); }).catch(() => leaseController.abort());
     }, 15_000);
     const started = Date.now();
-    const runTimeout = agentEngine ? agentLimits(chatgptPlan).wallMs + 30_000 : 240_000;
+    // Sep-5 authors a whole project in one call and averaged 250s over the nine benchmark stores, so the
+    // 240s default aborted the run before an average generation finished. apps/api/sep5-run.mjs, which made
+    // those measurements, allowed 900s; the port carries that budget rather than the single-call default.
+    const runTimeout = sep5Author ? 900_000 : agentEngine ? agentLimits(chatgptPlan).wallMs + 30_000 : 240_000;
     const signal = AbortSignal.any([leaseController.signal, AbortSignal.timeout(runTimeout), ...[execution?.signal, sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
-    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
+    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
     let sketchFile: SourceProjectFileDto | null = null;
     let creativeSummary: string | undefined;
     let websiteDesignFile: SourceProjectFileDto | null = null;
@@ -741,7 +756,53 @@ export class SourceGenerationService {
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
       // Yapi orchestrates bounded Design, Boceto and Critic stages; assembly and commerce stay deterministic.
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
-      if (sketchFirst) {
+      if (sep5Author) {
+        // The Sep-5 commit (26f889c8) wrote the store instead of filling a schema, and that is where its voice
+        // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one
+        // attempt, high effort, 18k output tokens. What it writes is the store; nothing re-renders it.
+        await progress?.('building');
+        const prompt = sep5AuthorPrompt({ brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles });
+        const attempt: (typeof attempts)[number] = { model, phase: 'author', durationMs: 0, status: 'FAILED', usage: null };
+        attempts.push(attempt);
+        let body: any = null;
+        const authorStarted = Date.now();
+        try {
+          const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 1000, SEP5_MAX_OUTPUT_TOKENS, 500);
+          try {
+            // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
+            // and this one writes the entire store.
+            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(SEP5_CLIENT_TIMEOUT_MS)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...images] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'high' }, text: { format: { type: 'json_schema', name: 'independent_storefront', strict: true, schema: SEP5_RESPONSE_SCHEMA } } })) });
+            body = await response.json().catch(() => null);
+          } finally { allocation.settle(body?.usage); }
+        } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
+        signal.throwIfAborted();
+        attempt.durationMs = Date.now() - authorStarted;
+        attempt.usage = sourceUsage(model, body?.usage);
+        // A truncated project and a refused one fail identically without these, which is how an "incomplete
+        // response" reached the merchant with nothing for anyone to act on.
+        if (typeof body?.status === 'string') attempt.responseStatus = body.status;
+        if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
+        if (typeof body?.usage?.output_tokens === 'number') attempt.reasoningTokens = body.usage.output_tokens_details?.reasoning_tokens;
+        await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
+        const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
+        // Sep-5's own guard. There is deliberately no fallback to the engine here: a store rendered from a
+        // plan is the output this path exists to avoid, so a failed author stage fails the generation and the
+        // merchant's previous revision stays untouched.
+        if (!authored.success || !sep5ProjectIsUsable(authored.data.files)) {
+          attempt.failureReason ??= `la respuesta no incluyó un proyecto utilizable (${attempt.responseStatus || 'sin estado'}${attempt.incompleteReason ? `: ${attempt.incompleteReason}` : ''})`;
+          this.logger.warn(JSON.stringify({ event: 'sep5_author_unusable', generationId: run.id, status: attempt.responseStatus, reason: attempt.incompleteReason, outputTokens: body?.usage?.output_tokens, reasoningTokens: attempt.reasoningTokens, maxOutputTokens: SEP5_MAX_OUTPUT_TOKENS }));
+          throw new BadGatewayException('La generación no devolvió una tienda completa. Vuelve a intentarlo.');
+        }
+        attempt.status = 'COMPLETED';
+        this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION }));
+        generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${owner.slug}`, files: authored.data.files };
+        // The Sep-5 run validated only the project contract (apps/api/sep5-run.mjs). The presentation and
+        // visual-system contracts were written later, against engine output; holding authored source to them
+        // would reject the designs this path exists to reproduce. The project contract still applies.
+        lenient = true;
+        try { await acceptCandidate(); } finally { lenient = false; }
+      } else if (sketchFirst) {
         await progress?.('building');
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
         const sketchCtx: SketchContext = { storeName: (data as { storeName?: string }).storeName || owner.slug, purpose: sitePurpose === 'shop' ? 'shop' : 'service', photos: sketchPhotos.map(photo => photo.path) };
@@ -762,27 +823,33 @@ export class SourceGenerationService {
         };
         // Every stage uses the existing budget, signal, provider and usage receipt. Invalid output
         // gets one bounded schema retry; provider failures retain deterministic brand-aware defaults.
-        const designStage = async <T>(phase: 'brand' | 'creative' | 'critic', instructions: string, input: unknown, schema: Record<string, unknown>, parser: z.ZodType<T>): Promise<T | undefined> => {
-          this.logger.log(JSON.stringify({ event: `${phase === 'brand' ? 'brand_analysis' : phase === 'creative' ? 'art_direction' : 'design_critique'}_started`, generationId: run.id }));
-          for (let retry = 0; retry < (phase === 'critic' ? 1 : 2); retry++) {
+        const designStage = async <T>(phase: 'brand' | 'creative' | 'critic' | 'author', instructions: string, input: unknown, schema: Record<string, unknown>, parser: z.ZodType<T>): Promise<T | undefined> => {
+          const event = phase === 'brand' ? 'brand_analysis' : phase === 'creative' ? 'art_direction' : phase === 'author' ? 'sep5_author' : 'design_critique';
+          this.logger.log(JSON.stringify({ event: `${event}_started`, generationId: run.id }));
+          // The author stage writes a whole project, so one attempt only: a retry
+          // doubles the most expensive call in the run.
+          for (let retry = 0; retry < (phase === 'critic' || phase === 'author' ? 1 : 2); retry++) {
             const stageAttempt: (typeof attempts)[number] = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
             attempts.push(stageAttempt);
             let stageBody: any = null;
             const startedStage = Date.now();
             let invalid = false;
             try {
-              const prompt = phase === 'creative' ? creativeContext(input) : JSON.stringify(input);
-              const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 1000, 3500, 500);
+              const prompt = phase === 'creative' ? creativeContext(input)
+                : phase === 'author' ? sep5AuthorPrompt(input as Parameters<typeof sep5AuthorPrompt>[0])
+                : JSON.stringify(input);
+              // Sep-5 emits a complete project; 3500 tokens truncates it mid-file.
+              const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 1000, phase === 'author' ? 18000 : 3500, 500);
               try {
                 const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                  body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: instructions + (retry ? '\nPrevious output failed validation. Use only declared enum values and complete the required fields.' : ''), input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...(phase === 'critic' ? [] : images)] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: `website_${phase}`, strict: true, schema } } })) });
+                  body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: instructions + (retry ? '\nPrevious output failed validation. Use only declared enum values and complete the required fields.' : ''), input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...(phase === 'critic' ? [] : images)] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: phase === 'author' ? 'high' : 'low' }, text: { format: { type: 'json_schema', name: `website_${phase}`, strict: true, schema } } })) });
                 stageBody = await response.json().catch(() => null);
                 if (!response.ok) throw new Error('Design provider unavailable');
               } finally { allocation.settle(stageBody?.usage); }
               const parsed = parser.safeParse(sourceResponseJson(stageBody));
               if (parsed.success) {
                 stageAttempt.status = 'COMPLETED';
-                this.logger.log(JSON.stringify({ event: `${phase === 'brand' ? 'brand_analysis' : phase === 'creative' ? 'art_direction' : 'design_critique'}_completed`, generationId: run.id }));
+                this.logger.log(JSON.stringify({ event: `${event}_completed`, generationId: run.id }));
                 return parsed.data;
               }
               invalid = true;
@@ -801,7 +868,15 @@ export class SourceGenerationService {
         };
         const aiBrand = await designStage('brand', BRAND_ANALYSIS_PROMPT, { request: designInput.prompt, store: designInput.store, brief: dto.brief, catalog: catalogueDigest(data.items, data.categories), assets: designInput.assets, imageFacts: photoFacts }, BRAND_RESPONSE_SCHEMA, brandDirectionSchema);
         const brandDirection = aiBrand || inferBrand(designInput);
-        const creativePlan = aiBrand ? await designStage('creative', ART_DIRECTION_PROMPT, { brand: brandDirection, request: designInput.prompt, seed: designInput.designSeed, catalogReferences: data.items.slice(0, 60).map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })), catalog: catalogueDigest(data.items, data.categories), assets: designInput.assets, imageFacts: photoFacts, purpose: designInput.purpose, newsletterEnabled: designInput.newsletterEnabled }, CREATIVE_RESPONSE_SCHEMA, creativePlanSchema) : undefined;
+        // A store already born in Next cannot become static without losing its revision history, so it keeps
+        // the engine as its renderer and takes Sep-5 only as a plan. Every other store reaches the authored
+        // branch above and keeps the real files. The losses this translation reports are the difference.
+        const authored = this.config.get('app.sep5Author')
+          ? await designStage('author', '', { brief: dto.brief, instruction: designInput.prompt, data, assetLegend: designInput.assets }, SEP5_RESPONSE_SCHEMA, sep5FilesSchema)
+          : undefined;
+        const authoredPlan = authored && sep5ProjectIsUsable(authored.files) ? sep5AuthoredPlan(authored.files) : undefined;
+        if (authoredPlan) this.logger.log(JSON.stringify({ event: 'sep5_author_translated', generationId: run.id, losses: authoredPlan.losses }));
+        const creativePlan = authoredPlan?.plan ?? (aiBrand ? await designStage('creative', ART_DIRECTION_PROMPT, { brand: brandDirection, request: designInput.prompt, seed: designInput.designSeed, catalogReferences: data.items.slice(0, 60).map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })), catalog: catalogueDigest(data.items, data.categories), assets: designInput.assets, imageFacts: photoFacts, purpose: designInput.purpose, newsletterEnabled: designInput.newsletterEnabled }, CREATIVE_RESPONSE_SCHEMA, creativePlanSchema) : undefined);
         const enginePlan = compatibleCreativePlan(creativePlan || fallbackCreative(designInput, brandDirection), designInput);
         const direction = sketchDirection(enginePlan);
         creativeSummary = `Dirección: ${brandDirection.businessType} · ${enginePlan.artDirection.style}\nTipografía: ${enginePlan.artDirection.typographyTreatment}\nComposición: ${enginePlan.artDirection.composition}\nColores: ${Object.values(enginePlan.palette).join(' / ')}`;
