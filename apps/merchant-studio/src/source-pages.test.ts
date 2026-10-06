@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canAddStandardPages, listStorePages, openPagesPanel, previewPages } from './source-pages';
+import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 
 const file = (path: string, content = 'x') => ({ path, content });
 const PAGE = '// @pagosya-page\nexport default function P() { return null; }';
@@ -119,5 +120,48 @@ describe('account gate pages', () => {
     const shell = { path: 'components/Shell.tsx', content: 'export function Footer() { return <footer><nav data-pagosya-pages /></footer>; }\nexport default function Shell() { return null; }\n' };
     const existing = ['pages/about', 'pages/contact', 'pages/shipping', 'pages/faq', 'pages/refund-policy', 'pages/privacy', 'pages/terms', 'pages/cookies', 'pages/not-found', 'catalog/collections', 'catalog/search'].map(key => gate(`components/${key}.tsx`));
     expect(canAddStandardPages([shell, ...existing])).toBe(true);
+  });
+});
+
+// An authored (Sep-5) store has no components at all: its pages are its HTML files. Before 2026-10-06 the
+// panel showed such a store "0 páginas" and hid the standard-pages card, so a merchant who kept an authored
+// store could not reach cookies, privacy or terms at all.
+describe('authored (static) stores', () => {
+  const authored = (extra: Array<{ path: string; content: string }> = []) => [
+    file('index.html', '<header>h</header><main>m</main><footer><p>Pie</p></footer>'),
+    file('product.html', '<main>p</main>'), file('checkout.html', '<main>c</main>'),
+    file('styles.css', '.a{}'), file('site.js', '/* */'), ...extra,
+  ];
+
+  it('lists the HTML pages, commerce first, and marks the standard ones', () => {
+    const pages = listStorePages(authored([file('cookies.html', '<main><div data-pagosya-page="cookies"></div></main>')]));
+    expect(pages.map(page => page.url)).toEqual(['index.html', 'product.html', 'checkout.html', 'cookies.html']);
+    expect(pages[0]).toMatchObject({ file: 'index.html', label: 'Inicio', standard: false });
+    // The label comes from the shared route table, not from the filename.
+    expect(pages[3]).toMatchObject({ label: 'Cookies', standard: true });
+  });
+
+  it('offers the standard-pages card while any is missing, and stops once they are all there', () => {
+    expect(canAddStandardPages(authored())).toBe(true);
+    const complete = authored(STOREFRONT_PAGES.filter(page => page.kind)
+      .map(page => file(page.url, `<main><div data-pagosya-page="${page.kind}"></div></main>`)));
+    // Every standard page present and the footer already has its slot: nothing left to add.
+    const withSlot = complete.map(entry => entry.path === 'index.html'
+      ? file('index.html', '<header>h</header><main>m</main><footer><p>Pie</p><nav data-pagosya-pages></nav></footer>')
+      : entry);
+    expect(canAddStandardPages(withSlot)).toBe(false);
+    // All pages present but no footer link yet: still worth offering, that is what it adds.
+    expect(canAddStandardPages(complete)).toBe(true);
+  });
+
+  it('declines when there is no homepage to host them', () => {
+    expect(canAddStandardPages([file('styles.css', '')])).toBe(false);
+  });
+
+  it('leaves a React store on the React path', () => {
+    // The marker alone is enough, and so is the presence of components.
+    expect(listStorePages([...base, file('storefront-framework.json', '{}')]).map(page => page.file))
+      .toEqual(['components/home.tsx', 'components/product.tsx', 'components/checkout.tsx']);
+    expect(canAddStandardPages(base)).toBe(true);
   });
 });

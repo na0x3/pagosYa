@@ -17,9 +17,27 @@ const titleCase = (slug: string) => { const words = slug.replace(/-/g, ' '); ret
 
 type SourceFile = { path: string; content: string };
 
+/** The standard pages an authored store gets as HTML: the ones the runtime fills by kind. The account gates are
+ *  not among them — on an authored store the account link leaves for the trusted origin instead of being a page. */
+const STATIC_STANDARD_URLS = STOREFRONT_PAGES.filter(page => page.kind).map(page => page.url);
+const COMMERCE_URLS = ['index.html', 'product.html', 'checkout.html'];
+/** Either signal means React: a real Next store carries the framework marker, and any store with components
+ *  has them as its pages. An authored store has neither — only HTML, CSS and site.js. */
+const isNextStore = (files: SourceFile[]) =>
+  files.some(file => file.path === 'storefront-framework.json' || /^components\/.+\.tsx$/.test(file.path));
+
 export function listStorePages(files: SourceFile[]): StorePage[] {
   const has = (path: string) => files.some(file => file.path === path);
   const pages: StorePage[] = [];
+  // An authored store's pages ARE its HTML files; there is no component to name them after. Without this the
+  // panel reported "0 páginas" for a store that has five, and the code editor could not open one by URL.
+  if (!isNextStore(files)) {
+    const labels = new Map<string, string>([['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pago'],
+      ...Object.values(STANDARD).map(([label, url]) => [url, label] as [string, string])]);
+    return files.map(file => file.path).filter(path => /^[a-z0-9-]+\.html$/.test(path))
+      .map(url => ({ file: url, label: labels.get(url) ?? titleCase(url.replace(/\.html$/, '')), url, standard: STATIC_STANDARD_URLS.includes(url) }))
+      .sort((a, b) => (COMMERCE_URLS.indexOf(a.url) + 1 || 99) - (COMMERCE_URLS.indexOf(b.url) + 1 || 99) || a.label.localeCompare(b.label));
+  }
   if (has('components/home.tsx')) pages.push({ file: 'components/home.tsx', label: 'Inicio', url: 'index.html', standard: false });
   if (has('components/product.tsx')) pages.push({ file: 'components/product.tsx', label: 'Producto', url: 'product.html', standard: false });
   if (has('components/checkout.tsx')) pages.push({ file: 'components/checkout.tsx', label: 'Pago', url: 'checkout.html', standard: false });
@@ -48,6 +66,14 @@ export function previewPages(files: SourceFile[]): Array<{ url: string; label: s
 
 /** True when the store has a Shell to host the standard pages and is missing some of them or their footer link. */
 export function canAddStandardPages(files: SourceFile[]): boolean {
+  // An authored store hosts them in its own index.html instead of a Shell component. The API decides the same
+  // way (source-projects.service.ts addStandardPages); this only governs whether the card is offered.
+  if (!isNextStore(files)) {
+    const index = files.find(file => file.path === 'index.html');
+    if (!index) return false;
+    if (STATIC_STANDARD_URLS.some(url => !files.some(file => file.path === url))) return true;
+    return !index.content.includes('data-pagosya-pages') && (index.content.match(/<\/footer>/g) ?? []).length === 1;
+  }
   const shell = files.find(file => file.path === 'components/Shell.tsx');
   if (!shell) return false;
   if (STANDARD_FILES.some(path => !files.some(file => file.path === path))) return true;

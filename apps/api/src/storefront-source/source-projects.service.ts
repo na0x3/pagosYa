@@ -9,6 +9,7 @@ import { applyVariantOperations } from './source-product-options';
 import { applyProductSubscriptionOperations, validateProductSubscriptions } from '../payment-links/product-subscriptions';
 import { readFile } from 'node:fs/promises';
 import { withStandardPages } from './source-content-pages';
+import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
 import { publicationState } from './source-publishing.service';
 import { withSourceMotionSettings, type SourceMotionMode, type SourceScrollFeel } from './source-motion';
@@ -228,8 +229,10 @@ export class SourceProjectsService {
     // The stored snapshot as it is, like editFiles: the platform swaps in the current runtime whenever a page renders, and
     // the refreshed (composed) commerce.js is over the size a saved file may have.
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
-    if (!isNextSource(snapshot.files)) throw new BadRequestException('Las páginas estándar solo se agregan a sitios React.');
-    const result = withStandardPages(snapshot.files);
+    // Until 2026-10-06 this refused anything but a React store, so a merchant who kept an authored (Sep-5)
+    // store had no cookies, privacy or terms page and no account navigation. The runtime that fills those
+    // pages is plain JS and never cared which pipeline wrote the store; only the scaffolding was missing.
+    const result = isNextSource(snapshot.files) ? withStandardPages(snapshot.files) : withStaticStandardPages(snapshot.files);
     if (!result.added.length && !result.slotAdded) throw new ConflictException('Este sitio ya tiene las páginas estándar, o su diseño no permite agregarlas.');
     return this.save(merchantId, storeId, { revision, label: 'Páginas estándar agregadas', brief: snapshot.brief, files: result.files });
   }
