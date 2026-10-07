@@ -4,8 +4,8 @@ import { loadFloorKit } from './email-copy-defaults';
 
 function harness({ active = null as any, kit = null as any } = {}) {
   const prisma: any = {
-    store: { findUnique: jest.fn(async () => ({ name: 'Café', publishedSourceRevision: 4 })) },
-    storeSourceVersion: { findFirst: jest.fn(async () => ({ revision: 4, snapshot: { files: [{ path: 'styles.css', content: 'body{}' }, { path: 'index.html', content: '<h1>Café</h1>' }] } })) },
+    store: { findUnique: jest.fn(async () => ({ name: 'Café', publishedSourceRevision: 3 })) },
+    storeSourceVersion: { findFirst: jest.fn(async () => ({ revision: 5, snapshot: { files: [{ path: 'styles.css', content: 'body{}' }, { path: 'index.html', content: '<h1>Café</h1>' }] } })) },
     storeBrandProfile: { findUnique: jest.fn(async () => null) },
     paymentLink: { findMany: jest.fn(async () => [{ name: 'Café de altura' }]) },
   };
@@ -19,12 +19,13 @@ function harness({ active = null as any, kit = null as any } = {}) {
 afterEach(() => jest.restoreAllMocks());
 
 describe('EmailKitService', () => {
+  // The revision recorded is the one whose files the design read (the latest draft), not the published one.
   it('saves a usable design: live for a first look, as a candidate otherwise, recording the site revision', async () => {
     const floor = await loadFloorKit();
     const kit = { raw: { layout: floor.layout!, blocks: Object.values(floor.blocks).join(''), copy: '{}' }, usage: { input_tokens: 10, output_tokens: 10 } };
     const first = harness({ kit });
     expect((await first.service.design('s', 'twin', 'first')).status).toBe('saved');
-    expect(first.kits.saveActive).toHaveBeenCalledWith('s', expect.objectContaining({ mode: 'twin', designedFromRevision: 4 }));
+    expect(first.kits.saveActive).toHaveBeenCalledWith('s', expect.objectContaining({ mode: 'twin', designedFromRevision: 5 }));
     const again = harness({ kit });
     await again.service.design('s', 'bold', 'candidate');
     expect(again.kits.saveCandidate).toHaveBeenCalledWith('s', expect.objectContaining({ mode: 'bold' }));

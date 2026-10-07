@@ -43,8 +43,9 @@ export class EmailKitService {
     const credits = unmetered ? 0 : Math.min(designer.EMAIL_KIT_MAX_CREDITS, Math.ceil((priced?.providerMicroUsd ?? designer.EMAIL_KIT_MAX_CREDITS * CREDIT_MICRO_USD) / CREDIT_MICRO_USD));
     const checked = validateEmailKit(raw);
     if (!checked.usable) return { status: 'unusable', credits, repairs: checked.repairs };
+    // The revision recorded is the one whose files this design read, so "Tu sitio cambió" compares like with like.
     const row = { mode, layout: checked.kit.layout!, blocks: Object.values(checked.kit.blocks).join('\n'), copy: checked.kit.copy,
-      designedFromRevision: store?.publishedSourceRevision ?? version?.revision ?? null, model: designer.EMAIL_KIT_MODEL, credits, repairs: checked.repairs };
+      designedFromRevision: version?.revision ?? store?.publishedSourceRevision ?? null, model: designer.EMAIL_KIT_MODEL, credits, repairs: checked.repairs };
     if (as === 'first') await this.kits.saveActive(storeId, row); else await this.kits.saveCandidate(storeId, row);
     return { status: 'saved', credits, repairs: checked.repairs };
   }
