@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, InternalServerErrorException } from "@nestjs/common";
 import { LedgerAccount, LedgerDirection, OpsRole, SettlementHoldStatus } from "@prisma/client";
 import { LedgerService } from "../ledger/ledger.service";
 import { SettlementAdminService } from "./settlement-admin.service";
@@ -90,6 +90,22 @@ describe("SettlementAdminService overrides and seizure", () => {
     ]);
     expect(tx.reserveSeizure.create).toHaveBeenCalledWith({ data: expect.objectContaining({ merchantId: "m_1", amount: 400, currency: "BOB", externalReference: "TRX-1", opsUserId: "ops_1", opsLabel: "Ana <ana@pagosya.bo>" }) });
     expect(auditLog.record).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "settlement.reserve_seized" }));
+  });
+
+  it("refuses to seize when the holds don't cover what the reserve ledger says, before touching anything", async () => {
+    const { svc, tx } = setup();
+    tx.ledgerEntry.groupBy.mockResolvedValue([{ direction: LedgerDirection.CREDIT, _sum: { amount: 800 } }]);
+    tx.settlementHold.findMany.mockResolvedValue([
+      { id: "only", paymentIntentId: "p1", status: SettlementHoldStatus.RESERVE_HELD, pendingAmount: 0, reserveAmount: 300, createdAt: new Date("2026-09-01") },
+    ]);
+    const logged = jest.spyOn((svc as any).logger, "error").mockImplementation(() => undefined);
+    const attempt = svc.seize("m_1", { amount: 400, currency: "BOB", reason: "Fraude confirmado", externalReference: "TRX-1" }, admin);
+    await expect(attempt).rejects.toBeInstanceOf(InternalServerErrorException);
+    await expect(attempt).rejects.toThrow("La reserva del comercio no cuadra con sus retenciones; revisa antes de retirar.");
+    expect(logged).toHaveBeenCalledWith(expect.stringMatching(/m_1.*400.*300/));
+    expect(tx.settlementHold.update).not.toHaveBeenCalled();
+    expect(tx.ledgerEntry.createMany).not.toHaveBeenCalled();
+    expect(tx.reserveSeizure.create).not.toHaveBeenCalled();
   });
 
   it("only lets an admin seize", async () => {

@@ -28,6 +28,8 @@ export class PayoutDeliveryWorker {
         status: { in: [PayoutStatus.PENDING, PayoutStatus.FAILED] },
         attempts: { lt: MAX_ATTEMPTS },
         OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }],
+        // An ops hold stops money already queued too; the payout waits, untouched, until the hold is lifted.
+        merchant: { payoutHeldAt: null },
       },
       take: 25,
     });
@@ -35,7 +37,7 @@ export class PayoutDeliveryWorker {
     for (const payout of candidates) {
       // Optimistic-concurrency claim, same reasoning as the webhook/invoice workers.
       const claim = await this.prisma.payout.updateMany({
-        where: { id: payout.id, status: payout.status, attempts: payout.attempts },
+        where: { id: payout.id, status: payout.status, attempts: payout.attempts, merchant: { payoutHeldAt: null } },
         data: { attempts: { increment: 1 }, nextRetryAt: new Date(Date.now() + PROCESSING_LEASE_MS) },
       });
       if (claim.count === 0) continue;

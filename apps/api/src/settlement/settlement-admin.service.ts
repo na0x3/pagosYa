@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
 import { LedgerAccount, LedgerDirection, OpsRole, Prisma, SettlementHoldStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { LedgerService } from "../ledger/ledger.service";
@@ -105,7 +105,14 @@ export class SettlementAdminService {
         where: { merchantId, currency: data.currency, status: SettlementHoldStatus.RESERVE_HELD },
         select: { id: true, paymentIntentId: true, status: true, pendingAmount: true, reserveAmount: true, createdAt: true },
       });
-      for (const update of takeFromReserve(data.amount, holds)) {
+      const updates = takeFromReserve(data.amount, holds);
+      const taken = updates.reduce((sum, u) => sum + (holds.find((h) => h.id === u.id)!.reserveAmount - u.reserveAmount), 0);
+      if (taken !== data.amount) {
+        // The RESERVE ledger and the RESERVE_HELD holds should always agree; never post a seizure the holds can't back.
+        this.logger.error(`Reserve seizure refused: merchant ${merchantId} ${data.currency} asked ${data.amount}, reserve ledger ${reserve}, holds cover ${taken}`);
+        throw new InternalServerErrorException("La reserva del comercio no cuadra con sus retenciones; revisa antes de retirar.");
+      }
+      for (const update of updates) {
         await tx.settlementHold.update({ where: { id: update.id }, data: { reserveAmount: update.reserveAmount, status: update.status } });
       }
       const ledgerGroupId = this.ledger.generateGroupId();

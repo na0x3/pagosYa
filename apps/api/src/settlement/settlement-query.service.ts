@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { SettlementHoldStatus } from "@prisma/client";
+import { SettlementHoldStatus, SettlementMode } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettlementPolicyService } from "./settlement-policy.service";
 import { SettlementBalance, merchantBalances } from "./settlement-balances";
@@ -9,7 +9,8 @@ const SCHEDULE_WINDOW_DAYS = 60;
 
 export interface MerchantSettlementPolicy { level: number; levelName: string; delayDays: number; reserveBps: number; reserveDays: number }
 export interface NextLevelPolicy { level: number; name: string; delayDays: number; reserveBps: number; reserveDays: number }
-export interface SettlementSchedule { policy: MerchantSettlementPolicy; nextLevel: NextLevelPolicy | null; releases: ScheduledRelease[] }
+/** policy is null for a non-AGGREGATOR merchant: pagosYa never holds their money, so there is nothing to schedule. */
+export interface SettlementSchedule { policy: MerchantSettlementPolicy | null; nextLevel: NextLevelPolicy | null; releases: ScheduledRelease[] }
 
 @Injectable()
 export class SettlementQueryService {
@@ -31,8 +32,9 @@ export class SettlementQueryService {
   async schedule(merchantId: string, now = new Date()): Promise<SettlementSchedule> {
     const merchant = await this.prisma.merchant.findUniqueOrThrow({
       where: { id: merchantId },
-      select: { level: true, payoutDelayDaysOverride: true, reserveBpsOverride: true, reserveDaysOverride: true },
+      select: { level: true, settlementMode: true, payoutDelayDaysOverride: true, reserveBpsOverride: true, reserveDaysOverride: true },
     });
+    if (merchant.settlementMode !== SettlementMode.AGGREGATOR) return { policy: null, nextLevel: null, releases: [] };
     const [effective, levelPolicy, next, holds] = await Promise.all([
       this.policies.resolve(this.prisma, merchantId),
       this.prisma.merchantLevelPolicy.findUnique({ where: { level: merchant.level } }),

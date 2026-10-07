@@ -44,6 +44,17 @@ describe("PayoutDeliveryWorker.tick", () => {
     expect(payoutsService.createDuePayouts).not.toHaveBeenCalled();
   });
 
+  it("never picks up or claims a payout of a merchant whose payouts ops has held", async () => {
+    const prisma = makeFakePrisma();
+    prisma.payout.findMany.mockResolvedValue([basePayout]);
+    prisma.payout.updateMany.mockResolvedValue({ count: 0 });
+
+    await new PayoutDeliveryWorker(prisma, new LedgerService(), makeFakeProvider() as any).tick();
+
+    expect(prisma.payout.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ merchant: { payoutHeldAt: null } }) }));
+    expect(prisma.payout.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ merchant: { payoutHeldAt: null } }) }));
+  });
+
   it("skips a payout when the optimistic claim loses the race", async () => {
     const prisma = makeFakePrisma();
     prisma.payout.findMany.mockResolvedValue([basePayout]);

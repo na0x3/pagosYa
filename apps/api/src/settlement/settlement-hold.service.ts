@@ -7,6 +7,7 @@ import { laPazDayStart } from "./settlement-dates";
 import { planRefundDrawdown } from "./settlement-drawdown";
 import { accountBalance } from "./settlement-balances";
 import { lockMerchantSettlement } from "./settlement-lock";
+import { inFlightPayoutWhere } from "../payouts/payout-in-flight";
 
 const { CREDIT, DEBIT } = LedgerDirection;
 const { PENDING, RESERVE_HELD, CLOSED } = SettlementHoldStatus;
@@ -56,16 +57,22 @@ export class SettlementHoldService {
   /** Moves every due hold one stage. Each hold commits on its own, so one bad row never blocks the rest. Returns how many moved. */
   async releaseDue(now = new Date()): Promise<number> {
     const select = { id: true, merchantId: true } as const;
+    const tally = { moved: 0, failed: 0 };
+    const release = async (hold: { id: string; merchantId: string }) => {
+      const result = await this.releaseOne(hold, now);
+      if (result === "moved") tally.moved += 1;
+      if (result === "failed") tally.failed += 1;
+    };
     const duePending = await this.prisma.settlementHold.findMany({ where: { status: PENDING, availableAt: { lte: now } }, orderBy: { availableAt: "asc" }, select });
-    let moved = 0;
-    for (const hold of duePending) if (await this.releaseOne(hold, now)) moved += 1;
+    for (const hold of duePending) await release(hold);
     // Second pass after the first, so a hold whose reserve date equals its available date leaves in the same run.
     const dueReserve = await this.prisma.settlementHold.findMany({ where: { status: RESERVE_HELD, reserveReleaseAt: { lte: now } }, orderBy: { reserveReleaseAt: "asc" }, select });
-    for (const hold of dueReserve) if (await this.releaseOne(hold, now)) moved += 1;
-    return moved;
+    for (const hold of dueReserve) await release(hold);
+    if (tally.failed > 0) this.logger.error(`Settlement release: ${tally.moved} hold stage(s) moved, ${tally.failed} failed`);
+    return tally.moved;
   }
 
-  private async releaseOne(ref: { id: string; merchantId: string }, now: Date): Promise<boolean> {
+  private async releaseOne(ref: { id: string; merchantId: string }, now: Date): Promise<"moved" | "skipped" | "failed"> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         await lockMerchantSettlement(tx, ref.merchantId);
@@ -83,7 +90,7 @@ export class SettlementHoldService {
             ], hold.currency);
           }
           await tx.settlementHold.update({ where: { id: hold.id }, data: { pendingAmount: 0, reserveAmount: reserve, status: reserve > 0 ? RESERVE_HELD : CLOSED } });
-          return true;
+          return "moved" as const;
         }
 
         if (hold.status === RESERVE_HELD && hold.reserveReleaseAt <= now) {
@@ -94,14 +101,14 @@ export class SettlementHoldService {
             ], hold.currency);
           }
           await tx.settlementHold.update({ where: { id: hold.id }, data: { reserveAmount: 0, status: CLOSED } });
-          return true;
+          return "moved" as const;
         }
 
-        return false; // already moved by another run, a refund or a seizure
+        return "skipped" as const; // already moved by another run, a refund or a seizure
       });
     } catch (error) {
-      this.logger.error(`Settlement hold ${ref.id} could not be released: ${(error as Error).message}`);
-      return false;
+      this.logger.error(`Settlement hold ${ref.id} (merchant ${ref.merchantId}) could not be released: ${(error as Error).message}`, (error as Error).stack);
+      return "failed";
     }
   }
 
@@ -121,7 +128,12 @@ export class SettlementHoldService {
     if (net <= 0) return params.lines;
 
     await lockMerchantSettlement(tx, params.merchantId);
-    const available = await accountBalance(tx, params.merchantId, LedgerAccount.MERCHANT_PAYABLE, params.currency);
+    // Payouts already created but not yet delivered are still in MERCHANT_PAYABLE yet promised to the bank: treat
+    // them as spent, so the refund takes from pending and reserve before driving available below what they'll debit.
+    // Read after the lock, which createDuePayouts also takes around its check-and-create.
+    const payable = await accountBalance(tx, params.merchantId, LedgerAccount.MERCHANT_PAYABLE, params.currency);
+    const inFlight = await tx.payout.aggregate({ where: inFlightPayoutWhere(params.merchantId, params.currency), _sum: { amount: true } });
+    const available = payable - (inFlight._sum.amount ?? 0);
     const holds = await tx.settlementHold.findMany({
       where: { merchantId: params.merchantId, currency: params.currency, status: { in: [PENDING, RESERVE_HELD] } },
       select: { id: true, paymentIntentId: true, status: true, pendingAmount: true, reserveAmount: true, createdAt: true },
@@ -132,7 +144,7 @@ export class SettlementHoldService {
     }
     const fromPayable = plan.debits.find((d) => d.account === LedgerAccount.MERCHANT_PAYABLE)?.amount ?? 0;
     if (fromPayable > Math.max(available, 0)) {
-      this.logger.warn(`Refund on ${params.paymentIntentId} drives merchant ${params.merchantId} available ${params.currency} balance negative by ${fromPayable - Math.max(available, 0)}`);
+      this.logger.warn(`Refund on ${params.paymentIntentId} drives merchant ${params.merchantId} available ${params.currency} balance (net of in-flight payouts) negative by ${fromPayable - Math.max(available, 0)}`);
     }
     const transactionId = payableDebits[0].transactionId;
     return [

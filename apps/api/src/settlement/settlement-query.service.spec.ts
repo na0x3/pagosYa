@@ -12,7 +12,7 @@ const levels = {
   1: { level: 1, name: "Persona", liveEnabled: true, payoutDelayDays: 7, reserveBps: 1000, reserveDays: 60 },
   2: { level: 2, name: "Negocio", liveEnabled: true, payoutDelayDays: 3, reserveBps: 500, reserveDays: 45 },
 };
-const plain = { level: 1, payoutDelayDaysOverride: null, reserveBpsOverride: null, reserveDaysOverride: null, payoutHeldAt: null };
+const plain = { level: 1, settlementMode: "AGGREGATOR", payoutDelayDaysOverride: null, reserveBpsOverride: null, reserveDaysOverride: null, payoutHeldAt: null };
 
 describe("SettlementQueryService.schedule", () => {
   it("returns the effective policy and the next level's numbers", async () => {
@@ -27,6 +27,14 @@ describe("SettlementQueryService.schedule", () => {
     const policies = { resolve: jest.fn().mockResolvedValue({ delayDays: 1, reserveBps: 0, reserveDays: 0 }) };
     const schedule = await new SettlementQueryService(prismaWith({ ...plain, payoutDelayDaysOverride: 1 }, levels) as any, policies as any).schedule("m_1");
     expect(schedule.nextLevel).toBeNull();
+  });
+
+  it("has no policy, next level or releases for a FACILITATOR merchant (pagosYa never holds their money)", async () => {
+    const policies = { resolve: jest.fn().mockResolvedValue({ delayDays: 7, reserveBps: 1000, reserveDays: 60 }) };
+    const prisma = prismaWith({ ...plain, settlementMode: "FACILITATOR" }, levels);
+    const schedule = await new SettlementQueryService(prisma as any, policies as any).schedule("m_1");
+    expect(schedule).toEqual({ policy: null, nextLevel: null, releases: [] });
+    expect(policies.resolve).not.toHaveBeenCalled();
   });
 
   it("never exposes the internal hold reason", async () => {
