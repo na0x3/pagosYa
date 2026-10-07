@@ -11,13 +11,14 @@ describe("LedgerService", () => {
   const ledger = new LedgerService();
   const base = { merchantId: "merch_1", transactionId: "txn_1", amount: 1000 };
 
-  it("builds a balanced capture journal for AGGREGATOR merchants, netting the fee out", () => {
+  it("builds a balanced capture journal for AGGREGATOR merchants, netting the fee out into MERCHANT_PENDING", () => {
     const lines = ledger.buildCaptureJournal({ ...base, settlementMode: SettlementMode.AGGREGATOR });
     expect(netsToZero(lines)).toBe(true);
     const fee = lines.find((l) => l.account === LedgerAccount.PAGOSYA_FEE_REVENUE);
-    const payable = lines.find((l) => l.account === LedgerAccount.MERCHANT_PAYABLE);
+    const pending = lines.find((l) => l.account === LedgerAccount.MERCHANT_PENDING);
     expect(fee?.amount).toBe(25); // 2.5% of 1000
-    expect(payable?.amount).toBe(975);
+    expect(pending).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 975 });
+    expect(lines.find((l) => l.account === LedgerAccount.MERCHANT_PAYABLE)).toBeUndefined();
   });
 
   it("builds a balanced capture journal for FACILITATOR merchants with full pass-through", () => {
@@ -57,7 +58,7 @@ describe("LedgerService", () => {
     const find = (account: LedgerAccount) => lines.find((l) => l.account === account);
     expect(find(LedgerAccount.RAIL_CLEARING)).toMatchObject({ direction: LedgerDirection.DEBIT, amount: 9580 });
     expect(find(LedgerAccount.RAIL_COST)).toMatchObject({ direction: LedgerDirection.DEBIT, amount: 420 });
-    expect(find(LedgerAccount.MERCHANT_PAYABLE)).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 9410 });
+    expect(find(LedgerAccount.MERCHANT_PENDING)).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 9410 });
     expect(find(LedgerAccount.PAGOSYA_FEE_REVENUE)).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 590 });
   });
 

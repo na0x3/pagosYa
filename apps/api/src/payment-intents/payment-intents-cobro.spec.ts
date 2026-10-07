@@ -25,7 +25,7 @@ function harness(metadata: Record<string, unknown>, livemode = true) {
   const limits = { assertPerPayment: jest.fn(), settle: jest.fn(), release: jest.fn() };
   const invoicing = { enqueueInvoice: jest.fn() };
   const ledger = { buildCaptureJournal: jest.fn(), generateGroupId: jest.fn(), postJournalEntry: jest.fn() };
-  const service = new PaymentIntentsService(db, {} as any, {} as any, ledger as any, { enqueueEvent: jest.fn() } as any, invoicing as any, { send: jest.fn() } as any, config as any, limits as any, { notify: jest.fn() } as any);
+  const service = new PaymentIntentsService(db, {} as any, {} as any, ledger as any, { enqueueEvent: jest.fn() } as any, invoicing as any, { send: jest.fn() } as any, config as any, limits as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
   jest.spyOn(service as any, "sendReceiptEmail").mockResolvedValue(undefined);
   jest.spyOn(service as any, "sendDebtPaymentNotification").mockResolvedValue(undefined);
   return { db, service, invoicing };

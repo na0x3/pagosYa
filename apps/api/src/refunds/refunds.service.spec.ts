@@ -35,7 +35,7 @@ function harness(refundedOrReserved = 0) {
   const webhooks = { enqueueEvent: jest.fn() };
   const config = { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
   const shipments = { cancelForOrder: jest.fn() };
-  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any, shipments as any), prisma, rail, ledger, webhooks, shipments };
+  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any, shipments as any, { applyRefundDrawdown: jest.fn(async (_tx: unknown, p: { lines: unknown[] }) => p.lines) } as any), prisma, rail, ledger, webhooks, shipments };
 }
 
 describe("RefundsService stops the order's shipment on a full refund", () => {

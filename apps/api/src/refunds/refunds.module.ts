@@ -1,3 +1,4 @@
+import { SettlementModule } from "../settlement/settlement.module";
 import { Module } from "@nestjs/common";
 import { RefundsService } from "./refunds.service";
 import { RefundsController } from "./refunds.controller";
@@ -8,7 +9,7 @@ import { AuthModule } from "../auth/auth.module";
 import { ShippingModule } from "../shipping/shipping.module";
 
 @Module({
-  imports: [RailsModule, LedgerModule, WebhooksModule, AuthModule, ShippingModule],
+  imports: [RailsModule, LedgerModule, WebhooksModule, AuthModule, ShippingModule, SettlementModule],
   controllers: [RefundsController],
   providers: [RefundsService],
   exports: [RefundsService],

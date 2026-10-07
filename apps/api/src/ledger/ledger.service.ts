@@ -50,7 +50,7 @@ export class LedgerService {
 
   /**
    * Journal for a succeeded capture. AGGREGATOR merchants have funds pooled
-   * by pagosYa (MERCHANT_PAYABLE is a liability paid out later); FACILITATOR
+   * by pagosYa (the net waits in MERCHANT_PENDING, then MERCHANT_PAYABLE and RESERVE — see SettlementHoldService); FACILITATOR
    * merchants get a pure pass-through entry since funds settle to their bank
    * directly — pagosYa's fee for that mode is invoiced out-of-band, not
    * deducted here.
@@ -80,7 +80,8 @@ export class LedgerService {
       ...(railCost > 0
         ? [{ account: LedgerAccount.RAIL_COST, direction: LedgerDirection.DEBIT, amount: railCost, merchantId, transactionId }]
         : []),
-      { account: LedgerAccount.MERCHANT_PAYABLE, direction: LedgerDirection.CREDIT, amount: net, merchantId, transactionId },
+      // Held until the merchant's payout delay ends — SettlementHoldService moves it to MERCHANT_PAYABLE/RESERVE.
+      { account: LedgerAccount.MERCHANT_PENDING, direction: LedgerDirection.CREDIT, amount: net, merchantId, transactionId },
       { account: LedgerAccount.PAGOSYA_FEE_REVENUE, direction: LedgerDirection.CREDIT, amount: fee, merchantId, transactionId },
     ];
   }

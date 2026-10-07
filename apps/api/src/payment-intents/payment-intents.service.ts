@@ -1,3 +1,4 @@
+import { SettlementHoldService } from "../settlement/settlement-hold.service";
 import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
@@ -137,6 +138,7 @@ export class PaymentIntentsService {
     private readonly config: ConfigService,
     private readonly limits: LimitsService,
     private readonly limitsWarning: LimitsWarningService,
+    private readonly settlement: SettlementHoldService,
     @Optional() private readonly inbox?: InboxService,
   ) {}
 
@@ -662,6 +664,7 @@ export class PaymentIntentsService {
           pricing: pricingForRail(railId, this.config.get<DlocalConfig>("app.dlocal")!),
         });
         await this.ledger.postJournalEntry(tx, this.ledger.generateGroupId(), lines, updated.currency);
+        await this.settlement.recordCapture(tx, { merchantId, paymentIntentId: updated.id, transactionId: transactionRow.id, currency: updated.currency, lines });
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.succeeded", {
           id: updated.id,
           amount: updated.amount,

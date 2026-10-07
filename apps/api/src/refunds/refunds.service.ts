@@ -1,3 +1,4 @@
+import { SettlementHoldService } from "../settlement/settlement-hold.service";
 import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -26,6 +27,7 @@ export class RefundsService {
     private readonly webhooks: WebhookDispatcherService,
     private readonly config: ConfigService,
     private readonly shipments: ShipmentsService,
+    private readonly settlement: SettlementHoldService,
   ) {}
 
   async create(merchantId: string, dto: CreateRefundDto, idempotencyKey?: string) {
@@ -280,12 +282,20 @@ export class RefundsService {
       });
       if ((refunded._sum.amount ?? 0) >= intent.amount) await this.shipments.cancelForOrder(tx, order.id);
     }
-    const lines = this.ledger.buildRefundJournal({
+    const refundJournal = this.ledger.buildRefundJournal({
       merchantId,
       transactionId: refundTransaction.id,
       amount: refundTransaction.amount,
       settlementMode: merchant.settlementMode,
       pricing: pricingForRail(params.railId, this.config.get<DlocalConfig>("app.dlocal")!),
+    });
+    // AGGREGATOR: the merchant's share comes from available, then pending, then reserve (spec: automatic drawdown).
+    const lines = await this.settlement.applyRefundDrawdown(tx, {
+      merchantId,
+      paymentIntentId: intent.id,
+      currency: intent.currency,
+      settlementMode: merchant.settlementMode,
+      lines: refundJournal,
     });
     await this.ledger.postJournalEntry(tx, this.ledger.generateGroupId(), lines, intent.currency);
     await this.webhooks.enqueueEvent(tx, merchantId, "refund.succeeded", {

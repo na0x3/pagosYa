@@ -1,3 +1,4 @@
+import { SettlementModule } from "../settlement/settlement.module";
 import { Module } from "@nestjs/common";
 import { PaymentIntentsService } from "./payment-intents.service";
 import { PaymentIntentsController } from "./payment-intents.controller";
@@ -20,7 +21,7 @@ import { LimitsModule } from "../limits/limits.module";
 import { InboxModule } from "../inbox/inbox.module";
 
 @Module({
-  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule, RefundsModule, LegalModule, LimitsModule, InboxModule],
+  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule, RefundsModule, LegalModule, LimitsModule, InboxModule, SettlementModule],
   controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController, BanecoQrWebhookController, DlocalWebhookController],
   providers: [PaymentIntentsService, DlocalReconciliationWorker],
   exports: [PaymentIntentsService],
