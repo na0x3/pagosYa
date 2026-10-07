@@ -104,8 +104,21 @@ describe('Ajustes › Correos routes', () => {
 
   it('reports no look, and the two receipt types', async () => {
     const res = await get('').expect(200);
-    expect(res.body).toEqual({ kit: 'none', candidate: false, previous: false, siteChanged: false, maxCredits: 25,
+    expect(res.body).toEqual({ kit: 'none', candidate: false, previous: false, siteChanged: false, available: true, maxCredits: 25,
       types: [{ type: 'order_confirmation', label: 'Confirmación de compra', group: 'Compras' }, { type: 'appointment_confirmed', label: 'Cita confirmada', group: 'Compras' }] });
+  });
+
+  it('when the kit tables are missing, status and wording still answer, marked unavailable, instead of a 500', async () => {
+    kits.active.mockRejectedValue(new Error('relation "StoreEmailKit" does not exist'));
+    kits.candidate.mockRejectedValue(new Error('relation "StoreEmailKit" does not exist'));
+    kits.hasPrevious.mockRejectedValue(new Error('relation "StoreEmailKit" does not exist'));
+    kits.overrides.mockRejectedValue(new Error('relation "StoreEmailCopyOverride" does not exist'));
+    const status = (await get('').expect(200)).body;
+    expect(status).toMatchObject({ kit: 'none', available: false, maxCredits: 25 });
+    expect(status.types).toHaveLength(2);
+    const copy = (await get('/copy/order_confirmation').expect(200)).body;
+    expect(copy.available).toBe(false);
+    expect(copy.fields.find((f: any) => f.field === 'subject')).toMatchObject({ value: 'Recibo de tu compra en {tienda}', edited: false });
   });
 
   it('reports siteChanged when the site was published after the look was designed', async () => {

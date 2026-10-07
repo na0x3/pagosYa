@@ -18,6 +18,7 @@ export function mountEmailStudio(container, deps) {
   const base = () => `/stores/${encodeURIComponent(deps.storeId())}/source-project/emails`;
 
   function statusLine(s) {
+    if (s.available === false) return "Tus correos usan el diseño estándar. El diseño propio de tu tienda todavía no está disponible.";
     if (state.busy === "design") return "Diseñando tus correos… puede tardar un par de minutos.";
     if (s.candidate) return "Nuevo diseño listo.";
     if (s.kit === "none") return "Tus correos usan el diseño estándar.";
@@ -26,6 +27,7 @@ export function mountEmailStudio(container, deps) {
   }
 
   function actions(s) {
+    if (s.available === false) return "";
     const off = state.busy ? "disabled" : "";
     if (s.candidate) return `<button type="button" class="primary" data-email-accept ${off}>Usar este diseño</button><button type="button" class="ghost" data-email-discard ${off}>Volver al anterior</button>`;
     const main = s.kit === "none" ? `Diseñar mis correos · hasta ${s.maxCredits} créditos` : s.siteChanged ? "Actualizar correos" : null;
@@ -52,7 +54,7 @@ export function mountEmailStudio(container, deps) {
   }
 
   function form() {
-    if (!state.fields.length) return "";
+    if (!state.fields.length || state.status?.available === false) return "";
     return `<form class="email-studio-copy" data-copy-form novalidate><h4>Texto de este correo</h4>${state.fields.map(f => {
       const value = state.edits[f.field] ?? f.value;
       const input = f.field === "intro"

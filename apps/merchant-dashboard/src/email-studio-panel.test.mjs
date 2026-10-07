@@ -119,3 +119,14 @@ test('a failed preview says so instead of showing empty frames', async () => {
   assert.match(container.textContent, /No pudimos preparar la vista previa/);
   assert.doesNotMatch(container.textContent, /Preparando la vista previa/);
 });
+
+test('when the custom look is unavailable, the preview and test send stay, without design or wording', async () => {
+  const { container, panel } = mount(fakeApi(status({ kit: 'none', available: false })));
+  panel.show(); await settle();
+  assert.equal(container.querySelectorAll('iframe').length, 2);
+  assert.ok(container.querySelector('[data-email-test]'));
+  assert.equal(container.querySelector('[data-email-design]'), null);
+  assert.equal(container.querySelector('[data-email-bold]'), null);
+  assert.equal(container.querySelector('[data-copy-form]'), null);
+  assert.match(container.textContent, /todavía no está disponible/);
+});

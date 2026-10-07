@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, NotFoundException, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Logger, NotFoundException, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { MerchantThrottlerGuard } from '../storefront-source/source-compile-budget';
@@ -25,6 +25,7 @@ const asField = (value: string): EmailCopyField => { if (!Object.hasOwn(EMAIL_CO
 @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller('v1/stores/:storeId/source-project/emails')
 export class StoreEmailController {
+  private readonly logger = new Logger(StoreEmailController.name);
   constructor(private readonly emails: StoreEmailService, private readonly designer: EmailKitService, private readonly kits: EmailKitStore,
     private readonly prisma: PrismaService, @Inject(EMAIL_PROVIDER) private readonly mail: EmailProvider) {}
 
@@ -37,9 +38,16 @@ export class StoreEmailController {
   @Get()
   async status(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string) {
     const store = await this.owned(merchant.id, storeId);
-    const [active, candidate, previous] = await Promise.all([this.kits.active(storeId), this.kits.candidate(storeId), this.kits.hasPrevious(storeId)]);
+    let looks: [Awaited<ReturnType<EmailKitStore['active']>>, unknown, boolean];
+    try { looks = await Promise.all([this.kits.active(storeId), this.kits.candidate(storeId), this.kits.hasPrevious(storeId)]); }
+    catch (error) {
+      // The kit tables may not be migrated yet: the preview and test send still work on the standard look.
+      this.logger.warn(`Email kit status unavailable for ${storeId}: ${(error as Error).message}`);
+      return { kit: 'none', candidate: false, previous: false, siteChanged: false, available: false, maxCredits: EMAIL_KIT_MAX_CREDITS, types: TYPES };
+    }
+    const [active, candidate, previous] = looks;
     const siteChanged = Boolean(active && store.publishedSourceRevision && (active.designedFromRevision ?? 0) < store.publishedSourceRevision);
-    return { kit: active ? 'active' : 'none', candidate: Boolean(candidate), previous, siteChanged, maxCredits: EMAIL_KIT_MAX_CREDITS, types: TYPES };
+    return { kit: active ? 'active' : 'none', candidate: Boolean(candidate), previous, siteChanged, available: true, maxCredits: EMAIL_KIT_MAX_CREDITS, types: TYPES };
   }
 
   @Get('preview')
@@ -80,10 +88,15 @@ export class StoreEmailController {
   async copy(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('type') type: string) {
     const store = await this.owned(merchant.id, storeId);
     const emailType = asType(type);
-    const [active, overrides] = await Promise.all([this.kits.active(storeId), this.kits.overrides(storeId, emailType)]);
+    let available = true;
+    const [active, overrides] = await Promise.all([this.kits.active(storeId), this.kits.overrides(storeId, emailType)]).catch((error: Error) => {
+      this.logger.warn(`Email wording unavailable for ${storeId}: ${error.message}`);
+      available = false;
+      return [null, {} as Partial<Record<EmailCopyField, string>>] as const;
+    });
     // Shown with placeholders intact: the merchant edits the template, not one buyer's copy.
     const base = resolveCopy(emailType, active ? validateEmailCopy(active.copy).copy : {}, {}, { cliente: '{cliente}', tienda: '{tienda}' });
-    return { storeName: store.name, fields: (Object.keys(EMAIL_COPY_FIELDS) as EmailCopyField[]).map(field => ({
+    return { storeName: store.name, available, fields: (Object.keys(EMAIL_COPY_FIELDS) as EmailCopyField[]).map(field => ({
       field, max: EMAIL_COPY_FIELDS[field], value: overrides[field] ?? base[field], edited: overrides[field] !== undefined })) };
   }
 
