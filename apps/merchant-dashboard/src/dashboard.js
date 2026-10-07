@@ -433,6 +433,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   const PAYMENT_PAGE_SIZE = 20;
   let lastStores = [];
   let storeSettings = null;
+  let orderEmailPanel = null;
   let lastInvoicingProfile = null;
   let lastKyc = null;
   let lastCategories = [];
@@ -796,6 +797,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
+    if (nextView === "store-settings" && sessionToken) orderEmailPanel?.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
@@ -1656,6 +1658,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       growth.reset();
       proposals.reset();
       contracts.reset();
+      orderEmailPanel?.reset();
     }
   }
 
@@ -3183,6 +3186,12 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     initStoreEditorSections(document.getElementById("storeSettingsRoot"));
   }).catch(() => {
     document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
+  });
+  import("/src/order-email-panel.mjs").then(({ mountOrderEmailPanel }) => {
+    orderEmailPanel = mountOrderEmailPanel(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId });
+    if (document.body.dataset.dashboardView === "store-settings" && sessionToken) orderEmailPanel.show();
+  }).catch(() => {
+    document.getElementById("orderEmailRoot").textContent = "No pudimos cargar la vista previa del correo. Recarga la página para volver a intentar.";
   });
 
   async function uploadFile(file) {
