@@ -687,7 +687,7 @@ describe("PaymentIntentsService carrier shipments", () => {
 });
 
 describe("PaymentIntentsService subscription enrollment", () => {
-  function harness(settings: unknown, livemode = true) {
+  function harness(settings: unknown, livemode = true, settlementMode = "T0") {
     const activeKey = productSubscriptionKey("store_1", { paymentLinkId: "p1", variantId: null, extraIds: [] }, "ana@mail.com");
     const metadata = {
       storeId: "store_1",
@@ -697,7 +697,7 @@ describe("PaymentIntentsService subscription enrollment", () => {
     const intentRow = { id: "pi_1", livemode, amount: 14400, currency: "BOB", status: "SUCCEEDED", customerEmail: "ana@mail.com", customerName: "Ana", customerPhone: null, consumerUserId: null, metadata };
     const tx: any = {
       $queryRaw: jest.fn().mockResolvedValue([{ status: "PROCESSING", amount: 14400, customerName: "Ana", customerDocument: null, metadata }]),
-      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m1", name: "Tienda", settlementMode: "T0" }) },
+      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m1", name: "Tienda", settlementMode }) },
       transaction: { create: jest.fn().mockResolvedValue({ id: "tx_1" }) },
       paymentIntent: { update: jest.fn().mockResolvedValue(intentRow) },
       storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", storeId: "store_1", status: "AWAITING_PAYMENT", merchantId: "m1", fulfillmentMethod: "pickup", fulfillmentLocationId: "loc_1", fulfillmentLocationName: "Centro" }), update: jest.fn() },
@@ -716,11 +716,13 @@ describe("PaymentIntentsService subscription enrollment", () => {
       },
     };
     const config = { get: jest.fn((key: string) => key === "app.checkoutOrigin" ? "https://pagar.test" : key === "app.orderTrackingSecret" ? "secret" : { bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
+    const ledger = { buildCaptureJournal: jest.fn().mockReturnValue([]), postJournalEntry: jest.fn(), generateGroupId: jest.fn() };
+    const settlement = { recordCapture: jest.fn() };
     const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any,
-      { buildCaptureJournal: jest.fn().mockReturnValue([]), postJournalEntry: jest.fn(), generateGroupId: jest.fn() } as any,
-      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
+      ledger as any,
+      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, settlement as any);
     for (const method of ["decrementStockForCart", "recordCartSales", "recordProductStats", "sendReceiptEmail", "sendDebtPaymentNotification"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
-    return { tx, service, activeKey, pay: () => (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION") };
+    return { tx, service, activeKey, ledger, settlement, pay: () => (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION") };
   }
   const enabledTemplate = { emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: "Pedido {{order}}", body: "Hola {{customer}}" } } } };
 
@@ -740,6 +742,25 @@ describe("PaymentIntentsService subscription enrollment", () => {
     const block = (service as any).sendReceiptEmail.mock.calls[0][2] as string;
     expect(block).toContain("cada mes");
     expect(block).toContain("Próxima entrega:");
+  });
+
+  it("records an AGGREGATOR capture's settlement hold in the capture transaction, from the journal it posted", async () => {
+    const { tx, pay, ledger, settlement } = harness({}, true, "AGGREGATOR");
+    const lines = [
+      { account: "RAIL_CLEARING", direction: "DEBIT", amount: 14400, merchantId: "m1", transactionId: "tx_1" },
+      { account: "MERCHANT_PENDING", direction: "CREDIT", amount: 14040, merchantId: "m1", transactionId: "tx_1" },
+      { account: "PAGOSYA_FEE_REVENUE", direction: "CREDIT", amount: 360, merchantId: "m1", transactionId: "tx_1" },
+    ];
+    ledger.buildCaptureJournal.mockReturnValue(lines);
+    ledger.generateGroupId.mockReturnValue("grp_1");
+    await pay();
+
+    expect(ledger.buildCaptureJournal).toHaveBeenCalledWith(expect.objectContaining({ merchantId: "m1", transactionId: "tx_1", settlementMode: "AGGREGATOR" }));
+    expect(ledger.postJournalEntry).toHaveBeenCalledWith(tx, "grp_1", lines, "BOB");
+    expect(settlement.recordCapture).toHaveBeenCalledTimes(1);
+    expect(settlement.recordCapture).toHaveBeenCalledWith(tx, { merchantId: "m1", paymentIntentId: "pi_1", transactionId: "tx_1", currency: "BOB", lines });
+    expect(settlement.recordCapture.mock.calls[0][0]).toBe(ledger.postJournalEntry.mock.calls[0][0]);
+    expect(settlement.recordCapture.mock.calls[0][1].lines).toBe(ledger.postJournalEntry.mock.calls[0][2]);
   });
 
   it("hands the block to the receipt in test mode too", async () => {

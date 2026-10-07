@@ -35,7 +35,8 @@ function harness(refundedOrReserved = 0) {
   const webhooks = { enqueueEvent: jest.fn() };
   const config = { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
   const shipments = { cancelForOrder: jest.fn() };
-  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any, shipments as any, { applyRefundDrawdown: jest.fn(async (_tx: unknown, p: { lines: unknown[] }) => p.lines) } as any), prisma, rail, ledger, webhooks, shipments };
+  const settlement = { applyRefundDrawdown: jest.fn(async (_tx: unknown, p: { lines: unknown[] }) => p.lines) };
+  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any, shipments as any, settlement as any), prisma, rail, ledger, webhooks, shipments, settlement };
 }
 
 describe("RefundsService stops the order's shipment on a full refund", () => {
@@ -103,6 +104,24 @@ describe("RefundsService financial invariants", () => {
     });
     expect(test.ledger.postJournalEntry).toHaveBeenCalled();
     expect(test.webhooks.enqueueEvent).toHaveBeenCalled();
+  });
+
+  it("posts exactly the lines the settlement drawdown returns, in the same transaction", async () => {
+    const test = harness();
+    const refundJournal = [{ account: "MERCHANT_PAYABLE", direction: "DEBIT", amount: 290, merchantId: "merchant_1", transactionId: "txn_refund_1" }];
+    const drawdown = [
+      { account: "MERCHANT_PAYABLE", direction: "DEBIT", amount: 90, merchantId: "merchant_1", transactionId: "txn_refund_1" },
+      { account: "MERCHANT_PENDING", direction: "DEBIT", amount: 200, merchantId: "merchant_1", transactionId: "txn_refund_1" },
+    ];
+    test.ledger.buildRefundJournal.mockReturnValue(refundJournal);
+    test.settlement.applyRefundDrawdown.mockResolvedValue(drawdown);
+    await test.service.create("merchant_1", { paymentIntentId: "pi_abc", amount: 300 }, "refund-order-drawdown");
+
+    expect(test.settlement.applyRefundDrawdown).toHaveBeenCalledWith(test.prisma, {
+      merchantId: "merchant_1", paymentIntentId: "pi_abc", currency: "BOB", settlementMode: SettlementMode.AGGREGATOR, lines: refundJournal,
+    });
+    expect(test.ledger.postJournalEntry).toHaveBeenCalledWith(test.prisma, "group_1", drawdown, "BOB");
+    expect(test.ledger.postJournalEntry.mock.calls[0][2]).toBe(drawdown);
   });
 
   it("keeps a pending rail refund reserved as PENDING without posting the refund journal yet", async () => {
