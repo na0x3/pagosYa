@@ -1,4 +1,5 @@
-import { LedgerAccount, LedgerDirection, OpsRole, PrismaClient, SettlementHoldStatus, SettlementMode, TransactionStatus, TransactionType } from "@prisma/client";
+import { Logger } from "@nestjs/common";
+import { LedgerDirection, OpsRole, PrismaClient, SettlementHoldStatus, SettlementMode, TransactionStatus, TransactionType } from "@prisma/client";
 import { integrationDatabase } from "../common/testing/integration-database";
 import { LedgerService } from "../ledger/ledger.service";
 import { AuditLogService } from "../ops/audit-log.service";
@@ -7,6 +8,7 @@ import { SettlementHoldService } from "./settlement-hold.service";
 import { SettlementQueryService } from "./settlement-query.service";
 import { SettlementAdminService } from "./settlement-admin.service";
 import { merchantBalances } from "./settlement-balances";
+import { lockMerchantSettlement } from "./settlement-lock";
 
 /**
  * The money invariant behind ASFI row 5: every journal balances, and for each
@@ -57,13 +59,21 @@ harness.describeDb("settlement holds (real Postgres)", () => {
     return intent.id;
   }
 
-  async function refund(merchantId: string, paymentIntentId: string, amount: number) {
-    const txn = await db.transaction.create({ data: { paymentIntentId, type: TransactionType.REFUND, railId: "test", amount, status: TransactionStatus.SUCCEEDED } });
+  async function refundTxn(paymentIntentId: string, amount: number) {
+    return db.transaction.create({ data: { paymentIntentId, type: TransactionType.REFUND, railId: "test", amount, status: TransactionStatus.SUCCEEDED } });
+  }
+
+  async function postRefund(merchantId: string, paymentIntentId: string, transactionId: string, amount: number) {
     await db.$transaction(async (tx) => {
-      const journal = ledger.buildRefundJournal({ merchantId, transactionId: txn.id, amount, settlementMode: SettlementMode.AGGREGATOR });
+      const journal = ledger.buildRefundJournal({ merchantId, transactionId, amount, settlementMode: SettlementMode.AGGREGATOR });
       const lines = await holds.applyRefundDrawdown(tx, { merchantId, paymentIntentId, currency: "BOB", settlementMode: SettlementMode.AGGREGATOR, lines: journal });
       await ledger.postJournalEntry(tx, ledger.generateGroupId(), lines, "BOB");
     });
+  }
+
+  async function refund(merchantId: string, paymentIntentId: string, amount: number) {
+    const txn = await refundTxn(paymentIntentId, amount);
+    await postRefund(merchantId, paymentIntentId, txn.id, amount);
   }
 
   async function payout(merchantId: string, amount: number) {
@@ -88,6 +98,7 @@ harness.describeDb("settlement holds (real Postgres)", () => {
   }
 
   it("keeps the money invariant through capture, release, payout, refund, seizure and reserve release", async () => {
+    const warn = jest.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
     const m = await merchant("lifecycle");
     // Level 1 placeholder from the migration: 7 days, 10% reserve, 60 days.
     await capture(m.id, 10_000, new Date("2026-10-01T15:00:00Z")); // net 9750, reserve 975
@@ -118,14 +129,46 @@ harness.describeDb("settlement holds (real Postgres)", () => {
     // owed = 58500 nets - 26325 paid out - 19500 refunded - 1000 seized
     await expectInvariant(m.id, 11_675);
     expect(await db.auditLogEntry.count({ where: { action: "settlement.reserve_seized", targetId: m.id } })).toBe(1);
+    expect(warn.mock.calls.some(([msg]) => String(msg).includes("negative"))).toBe(true);
+    warn.mockRestore();
   });
 
   it("never spends the same pending money twice when a refund races the daily release", async () => {
     const m = await merchant("race");
     const pi = await capture(m.id, 10_000, new Date("2026-10-01T15:00:00Z")); // net 9750
-    await Promise.all([holds.releaseDue(new Date("2026-10-08T05:00:00Z")), refund(m.id, pi, 10_000)]);
-    const b = await bob(m.id);
-    expect(b.pending).toBe(0);
+    const txn = await refundTxn(pi, 10_000);
+
+    // Hold the merchant's settlement lock ourselves so release and refund both queue behind it.
+    let unlock!: () => void;
+    const gate = new Promise<void>((resolve) => (unlock = resolve));
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => (locked = resolve));
+    const holder = db.$transaction(async (tx) => {
+      await lockMerchantSettlement(tx, m.id);
+      locked();
+      await gate;
+    }, { timeout: 60_000 });
+    await lockTaken;
+
+    const release = holds.releaseDue(new Date("2026-10-08T05:00:00Z"));
+    const refunded = postRefund(m.id, pi, txn.id, 10_000);
+
+    let waiting = 0;
+    for (let i = 0; i < 100 && waiting < 2; i++) {
+      const rows = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`;
+      waiting = Number(rows[0].n);
+      if (waiting < 2) await new Promise((r) => setTimeout(r, 50));
+    }
+    expect(waiting).toBe(2); // both operations are parked on the same advisory lock
+
+    unlock();
+    const [, moved] = await Promise.all([holder, release, refunded]).then(([h, r]) => [h, r] as const);
+
+    const [hold] = await db.settlementHold.findMany({ where: { merchantId: m.id } });
+    expect([0, 1]).toContain(moved);
+    expect(hold.status).toBe(SettlementHoldStatus.CLOSED);
+    expect(hold.pendingAmount).toBe(0);
+    expect((await bob(m.id)).pending).toBe(0);
     await expectInvariant(m.id, 0);
   });
 });
