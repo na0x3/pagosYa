@@ -10,6 +10,7 @@ import { StoreEmailController } from './store-email.controller';
 import { StoreEmailService } from './store-email.service';
 import { EmailKitService } from './email-kit.service';
 import { EmailKitStore } from './email-kit-store';
+import { EmailContentStore } from './email-content-store';
 
 /**
  * The guard is replaced rather than disabled: every route reads or changes a store's
@@ -33,7 +34,8 @@ describe('Ajustes › Correos routes', () => {
     overrides: jest.fn(), setOverride: jest.fn(), clearOverride: jest.fn(),
   };
   const mail = { send: jest.fn() };
-  const prisma = { store: { findFirst: jest.fn() } };
+  const content = { get: jest.fn(), set: jest.fn(), clear: jest.fn(), setSwitch: jest.fn() };
+  const prisma = { store: { findFirst: jest.fn() }, promoCode: { findMany: jest.fn() }, paymentLink: { findMany: jest.fn() } };
   const config = { get: jest.fn() };
 
   beforeAll(async () => {
@@ -43,6 +45,7 @@ describe('Ajustes › Correos routes', () => {
         { provide: StoreEmailService, useValue: emails },
         { provide: EmailKitService, useValue: designer },
         { provide: EmailKitStore, useValue: kits },
+        { provide: EmailContentStore, useValue: content },
         { provide: PrismaService, useValue: prisma },
         { provide: EMAIL_PROVIDER, useValue: mail },
         { provide: ConfigService, useValue: config },
@@ -78,6 +81,12 @@ describe('Ajustes › Correos routes', () => {
     emails.renderReceipt.mockResolvedValue({ html: '<p>Orden: pi_SYNTH001</p>', subject: 'Recibo de tu compra en Café Illimani', repairs: [] });
     designer.design.mockResolvedValue({ status: 'saved', credits: 7, repairs: [] });
     kits.setOverride.mockResolvedValue({ value: 'Mío', repairs: [] });
+    content.get.mockResolvedValue({});
+    content.set.mockResolvedValue({ announcement: { text: 'Envío gratis' } });
+    content.clear.mockResolvedValue({});
+    content.setSwitch.mockResolvedValue({ emails: { order_confirmation: { promo: false } } });
+    prisma.promoCode.findMany.mockResolvedValue([]);
+    prisma.paymentLink.findMany.mockResolvedValue([]);
   });
 
   const get = (path: string, auth = SESSION) => request(app.getHttpServer()).get(BASE + path).set('authorization', auth);
@@ -222,5 +231,64 @@ describe('Ajustes › Correos routes', () => {
   it('refuses a test-send from a secret-key session, which has no address', async () => {
     await post('/test-send', {}, KEY).expect(403);
     expect(mail.send).not.toHaveBeenCalled();
+  });
+
+  describe('the content of the emails', () => {
+    const put = (path: string, body: object) => request(app.getHttpServer()).put(BASE + path).set('authorization', SESSION).send(body);
+    const del = (path: string) => request(app.getHttpServer()).delete(BASE + path).set('authorization', SESSION);
+
+    it('404s every content route for a store the merchant does not own', async () => {
+      prisma.store.findFirst.mockResolvedValue(null);
+      await get('/content').expect(404);
+      await put('/content/announcement', { text: 'x' }).expect(404);
+      await del('/content/announcement').expect(404);
+      await put('/content/emails/order_confirmation/promo', { on: false }).expect(404);
+      expect(content.set).not.toHaveBeenCalled();
+      expect(content.setSwitch).not.toHaveBeenCalled();
+    });
+
+    it('returns the content, every active code with its shared flag, the store photos and the default wording', async () => {
+      prisma.store.findFirst.mockResolvedValue({ name: 'Café Illimani', publishedSourceRevision: 7, bannerUrl: '/v1/uploads/banner.webp' });
+      content.get.mockResolvedValue({ promo: { promoCodeId: 'p2' } });
+      prisma.promoCode.findMany.mockResolvedValue([
+        { id: 'p1', code: 'PRIVADO', discountType: 'FIXED', discountValue: 2000, showInEmails: false },
+        { id: 'p2', code: 'VUELVE10', discountType: 'PERCENT', discountValue: 10, showInEmails: true },
+      ]);
+      prisma.paymentLink.findMany.mockResolvedValue([
+        { name: 'Café', imageUrls: ['/v1/uploads/cafe.webp'] }, { name: 'Taza', imageUrls: ['https://cdn.example/taza.jpg'] }, { name: 'Molinillo', imageUrls: [] },
+      ]);
+      const res = await get('/content').expect(200);
+      expect(res.body).toMatchObject({ available: true, content: { promo: { promoCodeId: 'p2' } },
+        promos: [{ id: 'p1', code: 'PRIVADO', discount: 'Bs 20 en tu próxima compra', shared: false }, { id: 'p2', code: 'VUELVE10', discount: '10% en tu próxima compra', shared: true }],
+        photos: [{ url: '/v1/uploads/banner.webp', label: 'Portada de tu tienda' }, { url: '/v1/uploads/cafe.webp', label: 'Café' }] });
+      expect(res.body.defaults).toEqual(expect.objectContaining({ announcement: 'Gracias por comprar en {tienda}.', note: expect.any(String), storyTitle: 'Sobre {tienda}' }));
+      expect(prisma.promoCode.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { storeId: 'store_1', isActive: true } }));
+    });
+
+    it('reports the content as unavailable while its table is missing', async () => {
+      content.get.mockRejectedValue(new Error('relation "StoreEmailContent" does not exist'));
+      expect((await get('/content').expect(200)).body).toMatchObject({ available: false, content: {}, promos: [], photos: [] });
+    });
+
+    it('saves, clears and switches through the content store', async () => {
+      expect((await put('/content/announcement', { text: 'Envío gratis' }).expect(200)).body).toEqual({ announcement: { text: 'Envío gratis' } });
+      expect(content.set).toHaveBeenCalledWith('store_1', 'announcement', { text: 'Envío gratis' });
+      await del('/content/note').expect(200);
+      expect(content.clear).toHaveBeenCalledWith('store_1', 'note');
+      await put('/content/emails/order_confirmation/promo', { on: false }).expect(200);
+      expect(content.setSwitch).toHaveBeenCalledWith('store_1', 'order_confirmation', 'promo', false);
+    });
+
+    it("passes the store's refusal through, and refuses unknown items, emails and switches", async () => {
+      const { BadRequestException } = await import('@nestjs/common');
+      content.set.mockRejectedValue(new BadRequestException('Elige una foto de tu tienda.'));
+      expect((await put('/content/heroImage', { url: 'https://evil.example/x.png' }).expect(400)).body.message).toBe('Elige una foto de tu tienda.');
+      await put('/content/nope', {}).expect(400);
+      await del('/content/nope').expect(400);
+      await put('/content/emails/nope/promo', { on: false }).expect(400);
+      await put('/content/emails/order_confirmation/note', { on: false }).expect(400);
+      await put('/content/emails/order_confirmation/promo', { on: 'no' }).expect(400);
+      expect(content.setSwitch).not.toHaveBeenCalled();
+    });
   });
 });
