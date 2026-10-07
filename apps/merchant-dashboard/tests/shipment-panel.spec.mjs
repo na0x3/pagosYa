@@ -44,7 +44,6 @@ async function openDashboard(page, stores, responseForRequest) {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
-    localStorage.setItem("pagosya_dashboard_section_storeSettingsSection", "false");
   });
   await page.route("http://localhost:3001/v1/**", async (route) => {
     const request = route.request();

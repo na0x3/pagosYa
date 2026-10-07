@@ -90,3 +90,23 @@ it('closes once from the close button and once from the native close event', () 
   dialog().dispatchEvent(new Event('close'));
   expect(onClose).toHaveBeenCalledTimes(1);
 });
+
+it('inline, it draws only the section into the page: no window, rail, close button or repeated title', async () => {
+  const open = opener('panel');
+  mountSettingsShell(document.body, { initial: 'domain', open, onClose: vi.fn(), inline: true });
+  const host = document.body.querySelector('[data-settings-host]') as HTMLElement;
+  await vi.waitFor(() => expect(host.textContent).toContain('panel:domain'));
+  expect(document.body.querySelector('dialog.settings-shell')).toBeNull();
+  expect(document.body.querySelector('.settings-shell__rail, [data-settings-close], h2')).toBeNull();
+  // The tab names the section; the page keeps only the one-line description under it.
+  expect(document.body.querySelector('.settings-shell--inline')!.textContent).toContain('Compra un nombre para tu tienda');
+});
+
+it('inline, a panel that closes itself after saving comes back fresh', async () => {
+  const open = opener('panel');
+  mountSettingsShell(document.body, { initial: 'brand', open, onClose: vi.fn(), inline: true });
+  const host = document.body.querySelector('[data-settings-host]') as HTMLElement;
+  await vi.waitFor(() => expect(host.querySelector('dialog')).not.toBeNull());
+  host.querySelector('dialog')!.remove();
+  await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(2));
+});

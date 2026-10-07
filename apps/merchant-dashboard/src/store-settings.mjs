@@ -92,19 +92,23 @@ function locationsFromStore(store) {
 }
 
 const TEMPLATE = `<form class="store-settings-form" novalidate>
-  <p class="muted store-settings-intro">Datos que usan el cobro, los pedidos y el seguimiento. Los cambios se aplican al guardar.</p>
   <section class="store-editor-section" aria-labelledby="storeSettingsIdentityTitle">
     <div class="editor-section-head"><h3 id="storeSettingsIdentityTitle">Identidad</h3><p>Aparece en el cobro, los comprobantes y el seguimiento del pedido.</p></div>
+    <div class="store-editor-section-body">
     <div><label for="storeNameInput">Nombre</label><input id="storeNameInput" name="name" maxlength="80" required></div>
     <div><label for="storeTaglineInput">Descripción corta (opcional)</label><input id="storeTaglineInput" name="tagline" maxlength="160" placeholder="Ropa urbana hecha en Bolivia"></div>
-    <div class="store-settings-logo">
-      <div><label for="storeLogoInput">Logo (opcional)</label><input id="storeLogoInput" type="file" accept="image/png,image/jpeg,image/webp"></div>
-      <img class="image-preview" data-logo-preview src="${EMPTY_IMAGE}" alt="Vista previa del logo" hidden>
-      <button type="button" class="ghost" data-logo-remove hidden>Quitar logo</button>
+    <div class="store-settings-logo full">
+      <span class="store-logo-frame"><img data-logo-preview src="${EMPTY_IMAGE}" alt="Vista previa del logo" hidden><span data-logo-empty aria-hidden="true">Logo</span></span>
+      <span class="store-logo-copy"><strong>Logo (opcional)</strong><small class="faint">PNG, JPG o WebP, hasta 8 MB.</small></span>
+      <input id="storeLogoInput" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp">
+      <label class="button-like ghost" for="storeLogoInput" data-logo-pick>Subir logo</label>
+      <button type="button" class="ghost" data-logo-remove hidden>Quitar</button>
+    </div>
     </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsCheckoutTitle">
     <div class="editor-section-head"><h3 id="storeSettingsCheckoutTitle">Cómo termina el pedido</h3><p>Elige si cobras aquí o si solo conectas al cliente con tu canal comercial.</p></div>
+    <div class="store-editor-section-body">
     <fieldset class="visual-conversion store-conversion-settings">
       <legend>Modo de conversión</legend>
       <div class="visual-conversion-options">
@@ -130,9 +134,11 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
         <span><strong>Mostrar avisos de pocas unidades</strong><small>Permite que el cliente vea mensajes como “Solo quedan 3”. Si está apagado, el inventario permanece privado y solo se muestra “Agotado”.</small></span>
       </label>
     </fieldset>
+    </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsContactTitle">
     <div class="editor-section-head"><h3 id="storeSettingsContactTitle">Contacto</h3><p>Se muestra al cliente en el comprobante y el seguimiento.</p></div>
+    <div class="store-editor-section-body">
     <div><label for="storeContactEmailInput">Correo de soporte (opcional)</label><input id="storeContactEmailInput" name="contactEmail" type="email" placeholder="soporte@mitienda.bo"></div>
     <div class="full">
       <label>Enlaces de la tienda (opcional)</label>
@@ -140,17 +146,22 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
       <div data-links></div>
       <button type="button" class="ghost" data-link-add>+ Agregar enlace</button>
     </div>
+    </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsPoliciesTitle">
     <div class="editor-section-head"><h3 id="storeSettingsPoliciesTitle">Políticas para tus clientes</h3><p>Aparecen junto al botón de compra, en el carrito y al pie de tu tienda. Escríbelas con tus condiciones reales; YAPI no las inventa.</p></div>
+    <div class="store-editor-section-body">
     ${POLICY_FIELDS.map(([key, label, hint]) => `<div class="full"><label for="storePolicy-${key}">${label} (opcional)</label><textarea id="storePolicy-${key}" data-policy="${key}" rows="4" maxlength="6000" placeholder="${hint}"></textarea></div>`).join("")}
+    </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsLocationsTitle">
     <div class="editor-section-head"><h3 id="storeSettingsLocationsTitle">Ubicaciones e inventario</h3><p>Agrega sucursales, define si permiten retiro o entrega y reparte el stock real de cada producto.</p></div>
+    <div class="store-editor-section-body">
     <div class="full store-locations-editor">
       <div id="storeLocationsList"></div>
       <button class="ghost" id="storeLocationAdd" type="button">Agregar ubicación</button>
       <p class="faint" style="margin:9px 0 0">El stock de todas las ubicaciones se convierte en el stock total del producto. “Sin límite” mantiene inventario ilimitado en esa sucursal.</p>
+    </div>
     </div>
   </section>
   <p class="store-settings-error" role="alert" data-error hidden></p>
@@ -172,7 +183,7 @@ export function mountStoreSettings(root, deps) {
   const emailInput = $("#storeContactEmailInput"), lowStockInput = $("#storeShowLowStock"), logoInput = $("#storeLogoInput");
   const visibilityInput = /** @type {HTMLInputElement} */ ($("#storePublicVisibility"));
   const policyInput = (/** @type {string} */ key) => /** @type {HTMLTextAreaElement} */ ($(`#storePolicy-${key}`));
-  const logoPreview = $("[data-logo-preview]"), logoRemove = $("[data-logo-remove]");
+  const logoPreview = $("[data-logo-preview]"), logoRemove = $("[data-logo-remove]"), logoEmpty = $("[data-logo-empty]"), logoPick = $("[data-logo-pick]");
   const locationsList = $("#storeLocationsList"), linksHost = $("[data-links]");
   const errorEl = $("[data-error]"), statusEl = $("[data-status]"), saveButton = $("#storeSettingsSave");
   /** @type {Store | null} */
@@ -186,6 +197,8 @@ export function mountStoreSettings(root, deps) {
   /** @type {string | null} */
   let logoUrl = null;
   let locationsEdited = false, busy = false, dirty = false;
+  // Guardar shows only while there is something to save, or a save in flight.
+  const syncActions = () => form.classList.toggle("has-changes", dirty || busy);
 
   const mode = () => /** @type {HTMLInputElement | null} */ (form.querySelector('input[name="storeCheckoutMode"]:checked'))?.value || "payment";
   const activeProducts = () => products.filter((product) => product.status !== "ARCHIVED");
@@ -208,6 +221,8 @@ export function mountStoreSettings(root, deps) {
     logoPreview.hidden = !logoUrl;
     logoPreview.src = logoUrl ? deps.assetUrl(logoUrl) : EMPTY_IMAGE;
     logoRemove.hidden = !logoUrl;
+    logoEmpty.hidden = Boolean(logoUrl);
+    logoPick.textContent = logoUrl ? "Cambiar logo" : "Subir logo";
   }
 
   function renderLinks() {
@@ -318,7 +333,7 @@ export function mountStoreSettings(root, deps) {
   form.addEventListener("change", (/** @type {any} */ event) => { if (event.target.name === "storeCheckoutMode") syncMode(); });
   // Any edit, including list buttons below, marks the form so a background refresh keeps it.
   for (const type of ["input", "change", "click"]) form.addEventListener(type, (/** @type {any} */ event) => {
-    if (type !== "click" || event.target.closest("[data-link-add], .link-remove, #storeLocationAdd, .store-location-remove, [data-logo-remove]")) dirty = true;
+    if (type !== "click" || event.target.closest("[data-link-add], .link-remove, #storeLocationAdd, .store-location-remove, [data-logo-remove]")) { dirty = true; syncActions(); }
   });
 
   logoInput.addEventListener("change", async () => {
@@ -429,7 +444,7 @@ export function mountStoreSettings(root, deps) {
       ...(nextMode !== "external" && { leadCaptureUrl: null }),
       ...(locationsEdited && { locations: serializedLocations() }),
     };
-    busy = true; saveButton.disabled = true; statusEl.textContent = "Guardando…";
+    busy = true; saveButton.disabled = true; statusEl.textContent = "Guardando…"; syncActions();
     try {
       const updated = await deps.api(`/stores/${encodeURIComponent(savedStore.id)}`, { method: "PATCH", body: JSON.stringify(patch) });
       const savedLinks = await deps.api(`/stores/${encodeURIComponent(savedStore.id)}/links`, { method: "PUT", body: JSON.stringify({ links: links.map((link) => ({ label: link.label.trim(), url: link.url.trim() })) }) });
@@ -440,7 +455,7 @@ export function mountStoreSettings(root, deps) {
       statusEl.textContent = "";
       showError(`No se pudieron guardar los cambios: ${messageOf(error)}`);
     } finally {
-      busy = false; saveButton.disabled = false;
+      busy = false; saveButton.disabled = false; syncActions();
     }
   });
 
@@ -469,7 +484,7 @@ export function mountStoreSettings(root, deps) {
       links = (store.links || []).map((link) => ({ label: link.label, url: link.url }));
       locations = locationsFromStore(store);
       seedInventory();
-      locationsEdited = false; dirty = false;
+      locationsEdited = false; dirty = false; syncActions();
       showError(""); statusEl.textContent = "";
       syncMode(); renderLogo(); renderLinks(); renderLocations();
     },

@@ -93,3 +93,18 @@
 .settings-inline button { background: var(--s-ink); color: #fff; }
 .settings-inline button:hover { background: #3f3f46; }
 @media (max-width: 760px) { .settings-shell__host .brand-fields { grid-template-columns: 1fr; } .settings-card article.settings-row { flex-wrap: wrap; } }
+
+/* Inline: the dashboard's Ajustes tabs show one section in a frame that grows to fit, so the page has no
+   window, no viewport height of its own and nothing to scroll. */
+html:has(body.settings-inline-page), body.settings-inline-page, body.settings-inline-page #app { height: auto; min-height: 0; overflow: visible; }
+body.settings-inline-page { margin: 0; }
+.settings-shell--inline { display: block; width: auto; height: auto; max-width: 760px; margin: 0; padding: 2px 2px 24px; border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
+.settings-shell__lead { margin: 0 0 20px; color: var(--s-muted); }
+.settings-shell--inline .settings-shell__host .brand-dialog { position: static; display: block; width: auto; max-width: none; max-height: none; margin: 0; padding: 0; overflow: visible; border: 0; border-radius: 0; box-shadow: none; background: transparent; animation: none; }
+.settings-shell--inline .settings-shell__host .brand-dialog > header { display: none; }
+.settings-shell--inline .settings-card { box-shadow: none; }
+/* Test mode is a fact about the environment, not a warning: a small label, not a banner. */
+.settings-shell--inline .settings-note { display: inline-block; margin: 0 0 14px; padding: 3px 10px; border-radius: 999px; font-size: 12px; }
+.settings-shell--inline .settings-empty { padding: 18px 8px 6px; gap: 4px; }
+.settings-shell--inline .settings-empty svg { width: 30px; height: 30px; }
+.settings-shell--inline .settings-empty strong { font-size: 15px; }

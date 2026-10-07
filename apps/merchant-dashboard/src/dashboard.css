@@ -903,25 +903,12 @@
   .visual-build-log time { color: #555e6a; }
   .visual-build-log span:last-child { color: #d9dee6; }
 
-  .nested-section-body[hidden], .store-editor-section-body[hidden], .editor-settings-group-body[hidden] { display: none !important; }
-  .inline-section-toggle, .editor-section-toggle, .settings-group-toggle { display: inline-flex; align-items: center; gap: 6px; }
-  .inline-section-toggle svg, .editor-section-toggle svg, .settings-group-toggle svg { width: 15px; height: 15px; transition: transform .18s cubic-bezier(.22, 1, .36, 1); }
-  .inline-section-toggle[aria-expanded="false"] svg, .editor-section-toggle[aria-expanded="false"] svg, .settings-group-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+  .nested-section-body[hidden], .editor-settings-group-body[hidden] { display: none !important; }
+  .inline-section-toggle, .settings-group-toggle { display: inline-flex; align-items: center; gap: 6px; }
+  .inline-section-toggle svg, .settings-group-toggle svg { width: 15px; height: 15px; transition: transform .18s cubic-bezier(.22, 1, .36, 1); }
+  .inline-section-toggle[aria-expanded="false"] svg, .settings-group-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
   .inventory-importer.is-collapsed { padding-bottom: 12px; }
   .inventory-importer.is-collapsed .inventory-import-head { align-items: center; }
-  .store-editor-section { min-width: 0; overflow: hidden; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-surface); }
-  .store-editor-section.is-expanded { border-color: var(--pg-border-strong); }
-  .editor-section-head {
-    position: relative; display: block !important; min-width: 0; margin: 0; padding: 14px 124px 13px 14px;
-    border-bottom: 1px solid transparent; background: color-mix(in srgb, var(--pg-accent-soft) 58%, var(--pg-surface));
-  }
-  .store-editor-section.is-expanded .editor-section-head { border-bottom-color: var(--pg-border); }
-  .editor-section-head h3 { margin: 0 0 4px; color: var(--pg-text); font-size: .96rem; letter-spacing: -.01em; }
-  .editor-section-head p { margin: 0; color: var(--pg-text-muted); font-size: .76rem; font-weight: 600; line-height: 1.45; }
-  .editor-section-toggle { position: absolute; top: 50%; right: 10px; min-width: 96px; min-height: 34px; padding: 6px 9px; justify-content: center; transform: translateY(-50%); }
-  .store-editor-section-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px 14px 18px; }
-  .store-editor-section-body > div:not(.editor-feature) { display: flex; flex-direction: column; min-width: 0; }
-  .store-editor-section-body > .full { grid-column: 1 / -1; }
   .editor-settings-group {
     grid-column: 1 / -1;
     display: grid;
@@ -1271,13 +1258,6 @@
     .quick-payment-qr { width: min(100%, 280px); justify-self: center; }
     #loggedInBar { flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
     #loggedInAs { flex: 1 1 100%; max-width: none; white-space: normal; overflow-wrap: break-word; }
-    .store-editor-section-body { grid-template-columns: 1fr; }
-    .store-editor-section-body > .full { grid-column: 1; }
-    /* The toggle keeps its aria-label, so the word can go and give the
-       section's own heading and description the width back. */
-    .editor-section-head { padding-right: 52px; }
-    .editor-section-toggle { min-width: 40px; padding: 6px; }
-    .editor-section-toggle span { display: none; }
     .editor-settings-group { grid-template-columns: 1fr; gap: 15px; padding: 18px 0 24px; }
     .editor-settings-group > .full, .editor-settings-heading { grid-column: 1; }
     .editor-settings-heading { grid-template-columns: 1fr; }
@@ -1597,10 +1577,9 @@
   button, input, textarea, select, .inventory-importer, .inventory-review-table, .store-row {
     border-radius: 2px;
   }
-  .store-editor-section, .visual-upload-zone, .product-variant-row, .order-detail-card {
+  .visual-upload-zone, .product-variant-row, .order-detail-card {
     border-radius: 2px;
   }
-  .store-editor-section { border-width: 2px; }
   button { font-weight: 800; }
   button.primary { border: var(--bento-line-soft) solid var(--bento-keyline); box-shadow: var(--bento-shadow-sm); border-radius: var(--bento-radius);}
   .badge { border: 2px solid currentColor; border-radius: 2px; }
@@ -1910,7 +1889,6 @@
   .board-tile { display: grid; place-items: center; border-radius: 10px; font-size: clamp(14px, 3.4vw, 22px); background: var(--tile-color); box-shadow: inset 0 -3px 0 rgb(0 0 0 / .12); }
   .board-tile-ai_credits_25, .board-tile-sticker_rare, .board-tile-xp_200, .board-tile-ai_credits_5 { outline: 2px solid #ffd76a; box-shadow: 0 0 12px rgb(255 201 86 / .7), inset 0 -3px 0 rgb(0 0 0 / .12); }
 
-.settings-overlay { position: fixed; inset: 0; z-index: 1000; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal; }
 /* Plantillas sits straight on the dashboard background: the frame is transparent (the gallery document is transparent
    and dark too) and grows to the gallery's height, so the page has one scroll and no empty band. YAPI stays out of it. */
 body .store-templates-page .store-resource-frame { background: transparent; color-scheme: dark; min-height: 0; }
@@ -1926,11 +1904,6 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
 @media (min-width: 1000px) { body.template-focus .store-templates-page .store-resource-frame { left: var(--sidebar-w, 196px); width: calc(100vw - var(--sidebar-w, 196px)); } }
 @keyframes template-focus-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { body.template-focus .store-templates-page .store-resource-frame { animation: none; } }
-.settings-more-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.settings-more-list li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--pg-border, #e2ded6); border-radius: 12px; background: var(--pg-surface, #fff); }
-.settings-more-list li div { display: grid; gap: 2px; min-width: 0; }
-.settings-more-list li span { font-size: .85rem; opacity: .75; }
-.settings-more-open { flex: none; min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid currentColor; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
 .mcp-connect form.mcp-create { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 12px 0; }
 .mcp-connect form.mcp-create label { display: grid; gap: 4px; flex: 1 1 240px; font-size: .85rem; }
 .mcp-connect button { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid currentColor; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }

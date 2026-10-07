@@ -56,3 +56,16 @@ it('closes at once for a section that does not exist', async () => {
   expect(post).toHaveBeenCalledWith({ type: 'pagosya:settings-closed', section: 'nope' }, location.origin);
   expect(document.body.querySelector('.settings-shell')).toBeNull();
 });
+
+it('with inline=1 it draws the section into the page for the dashboard\'s Ajustes tab, never a window', async () => {
+  history.replaceState(null, '', '/studio/?embedded=1&library=settings&inline=1&section=shipping&store=s1');
+  const post = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
+  const { mountSettingsPage } = await import('./source-settings-page');
+  const app = document.createElement('div'); document.body.append(app);
+  await mountSettingsPage(app, 'shipping');
+  await vi.waitFor(() => expect(document.body.querySelector('[data-settings-host]')!.textContent).toContain('panel-shipping'));
+  expect(shipping).toHaveBeenCalledWith('s1');
+  expect(document.body.querySelector('dialog.settings-shell, .settings-shell__rail')).toBeNull();
+  expect(document.body.classList.contains('settings-inline-page')).toBe(true);
+  expect(post).not.toHaveBeenCalled();
+});

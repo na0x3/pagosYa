@@ -199,23 +199,63 @@ body.is-logged-in .marketing-tabs button{flex:none;border:1px solid transparent;
 body.is-logged-in .marketing-tabs button[aria-pressed=true]{background:var(--pg-accent-soft);color:var(--pg-text);border-color:var(--pg-border-strong)}
 #marketingPromotions[hidden]{display:none!important}
 
-/* Store settings: one column of labelled sections that saves as a whole. */
-body.is-logged-in .store-settings-form { display: grid; gap: 14px; }
-body.is-logged-in .store-settings-intro { margin: 0; max-width: 68ch; font-size: 13px; line-height: 1.6; }
-body.is-logged-in .store-settings-logo { flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
-body.is-logged-in .store-settings-logo > div { flex: 1 1 200px; min-width: 0; }
-body.is-logged-in .store-settings-logo .image-preview { width: 52px; height: 52px; padding: 4px; object-fit: contain; border: 1px solid var(--pg-border); border-radius: 6px; background: var(--pg-surface); }
+/* Ajustes: one page with tabs. Sections sit flat on the page, separated by a hairline, with the heading on
+   the left and the fields on the right; no boxes inside boxes. */
+body.is-logged-in .settings-page { padding: 0 28px 4px; border: 1px solid var(--pg-border); border-radius: 14px; background: var(--pg-surface); }
+@media (max-width: 860px) { body.is-logged-in .settings-page { padding: 0 16px 4px; } body.is-logged-in .settings-page .settings-tabs { margin: 0 -16px; padding: 0 8px; } }
+body.is-logged-in .settings-page .settings-tabs { margin: 0 -28px; padding: 0 16px; }
+body.is-logged-in .settings-tabs { display: flex; gap: 2px; margin: 0; border-bottom: 1px solid var(--pg-border); overflow-x: auto; scrollbar-width: none; }
+body.is-logged-in .settings-tabs [role="tab"] { flex: none; width: auto; min-height: 44px; margin: 0 0 -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; box-shadow: none; color: var(--pg-text-muted); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+body.is-logged-in .settings-tabs [role="tab"]:hover { color: var(--pg-text); }
+body.is-logged-in .settings-tabs [role="tab"][aria-selected="true"] { border-bottom-color: var(--pg-text); color: var(--pg-text); }
+body.is-logged-in .settings-tabs [role="tab"]:focus-visible { outline: 2px solid var(--pg-text); outline-offset: -3px; }
+body.is-logged-in [data-settings-panel] { padding-top: 24px; }
+body.is-logged-in [data-settings-panel][hidden] { display: none; }
+body.is-logged-in .settings-embed { display: block; width: 100%; min-height: 360px; border: 0; background: transparent; }
+
+body.is-logged-in .store-settings-form { display: block; }
+body.is-logged-in .store-editor-section { display: grid; grid-template-columns: minmax(180px, 250px) minmax(0, 1fr); gap: 16px 40px; min-width: 0; padding: 28px 0; border-top: 1px solid var(--pg-border); }
+body.is-logged-in .store-editor-section:first-child { padding-top: 4px; border-top: 0; }
+body.is-logged-in .editor-section-head h3 { margin: 0 0 6px; color: var(--pg-text); font-size: 15px; letter-spacing: -.01em; }
+body.is-logged-in .editor-section-head p { margin: 0; color: var(--pg-text-muted); font-size: 13px; line-height: 1.55; }
+body.is-logged-in .store-editor-section-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start; min-width: 0; }
+body.is-logged-in .store-editor-section-body > div { display: flex; flex-direction: column; min-width: 0; }
+body.is-logged-in .store-editor-section-body > :is(.full, fieldset) { grid-column: 1 / -1; }
+/* The section heading already says what this is; the legend stays for screen readers. */
+body.is-logged-in .store-conversion-settings > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+body.is-logged-in .store-conversion-settings .visual-conversion-options { grid-template-columns: 1fr; gap: 10px; }
+body.is-logged-in .store-conversion-settings .visual-conversion-option { min-height: 0; padding: 14px 16px; border-width: 1px; border-radius: 10px; }
+body.is-logged-in .store-conversion-settings .visual-conversion-option:has(input:checked) { border-color: var(--pg-text); background: var(--pg-surface); box-shadow: inset 0 0 0 1px var(--pg-text); }
+body.is-logged-in .store-conversion-settings .checkbox-row { margin-top: 6px; }
+
+body.is-logged-in .store-editor-section-body > .store-settings-logo { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; text-align: left; }
+body.is-logged-in .store-logo-frame { display: grid; place-items: center; flex: none; width: 56px; height: 56px; overflow: hidden; border: 1px dashed var(--pg-border-strong, var(--pg-border)); border-radius: 10px; background: var(--pg-surface); color: var(--pg-text-muted); font-size: 11px; }
+body.is-logged-in .store-logo-frame:has(img:not([hidden])) { border-style: solid; }
+body.is-logged-in .store-logo-frame img { width: 100%; height: 100%; padding: 4px; object-fit: contain; }
+body.is-logged-in .store-logo-copy { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; font-size: 14px; }
+body.is-logged-in .store-logo-copy small { font-size: 12px; }
+body.is-logged-in .store-settings-logo .button-like { display: inline-flex; align-items: center; min-height: 38px; margin: 0; padding: 0 14px; border: 1px solid var(--pg-border); border-radius: 8px; background: var(--pg-surface); color: var(--pg-text); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+body.is-logged-in .store-settings-logo .button-like:hover { border-color: var(--pg-border-strong, var(--pg-text-muted)); }
+body.is-logged-in .store-settings-logo input:focus-visible + .button-like { outline: 2px solid var(--pg-text); outline-offset: 2px; }
+@media (max-width: 860px) {
+  body.is-logged-in .store-editor-section { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 22px 0; }
+  body.is-logged-in .store-editor-section-body { grid-template-columns: minmax(0, 1fr); }
+  body.is-logged-in .store-editor-section-body > * { grid-column: 1 !important; }
+  body.is-logged-in .store-settings-logo { flex-wrap: wrap; }
+}
 /* An optional action should not fill the column a field would. */
 body.is-logged-in .store-settings-form :is([data-logo-remove],[data-link-add],#storeLocationAdd) { align-self: start; justify-self: start; width: auto; min-width: max-content; }
 body.is-logged-in .store-link-editor-row .link-remove { width: 44px; min-width: 44px; padding: 0; font-size: 18px; line-height: 1; }
 /* A location's fields fill the cell they were given, like every other field. */
 body.is-logged-in .store-location-editor-grid > div > :is(input,textarea) { width: 100%; }
 body.is-logged-in .store-settings-error { margin: 0; padding: 11px 13px; border: 1px solid var(--pg-error); border-radius: 8px; background: var(--pg-error-soft); color: var(--pg-error); font-size: 13px; line-height: 1.5; }
-/* Long enough a form that Guardar has to stay reachable from any section. */
+/* Long enough a form that Guardar has to stay reachable from any section, but only once there is
+   something to save: an untouched page has no bar at all. */
 body.is-logged-in .store-settings-actions {
-  position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
-  margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--pg-border); background: var(--pg-surface);
+  position: sticky; bottom: 0; z-index: 3; display: none; align-items: center; flex-wrap: wrap; gap: 14px;
+  margin: 8px 0 0; padding: 14px 0; border-top: 1px solid var(--pg-border); background: var(--pg-surface);
 }
+body.is-logged-in .store-settings-form.has-changes .store-settings-actions { display: flex; }
 body.is-logged-in .store-settings-actions button { width: auto; min-width: max-content; }
 
 /* Compact edge rail. Links retain accessible names and native title tooltips. */

@@ -59,8 +59,6 @@ async function openDashboard(page, stores, responseForRequest) {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
-    // The preview lives inside the store-settings block, so it has to start expanded.
-    localStorage.setItem("pagosya_dashboard_section_storeSettingsSection", "true");
   });
   await page.route("http://localhost:3001/v1/**", async (route) => {
     const request = route.request();
@@ -112,6 +110,8 @@ test("the store-settings page renders the buyer's email at phone and desktop wid
   });
 
   await navigateDashboard(page, "store-settings");
+  // The preview lives on Ajustes' Correos tab.
+  await page.getByRole("tab", { name: "Correos" }).click();
 
   const panel = page.locator(".order-email-panel");
   await expect(panel).toBeVisible();
@@ -138,6 +138,38 @@ test("the store-settings page renders the buyer's email at phone and desktop wid
   expect(requests.some((r) => r.path === PREVIEW_PATH)).toBe(true);
 });
 
+/**
+ * A merchant reading this on their own phone has a content column of about 250px. An iframe held
+ * to that by max-width does not scale the email down, it re-lays it out at 250px — so the frame
+ * captioned "Teléfono · 390px" would be showing line breaks no buyer will ever see. The frames
+ * keep their real width and the strip scrolls instead.
+ */
+test("on a phone the frames still render at the width their captions claim", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openDashboard(page, [store("store_1", "Café Illimani")], ({ path }) =>
+    path === PREVIEW_PATH ? { html: AUTHORED_EMAIL, repairs: [] } : undefined,
+  );
+
+  await navigateDashboard(page, "store-settings");
+  // The preview lives on Ajustes' Correos tab.
+  await page.getByRole("tab", { name: "Correos" }).click();
+  const panel = page.locator(".order-email-panel");
+  const frames = panel.locator(".order-email-frame iframe");
+  await expect(frames).toHaveCount(2);
+
+  for (const [index, width] of [[0, 390], [1, 640]]) {
+    expect(Math.round((await frames.nth(index).boundingBox()).width)).toBe(width);
+    // The document inside laid out at that width, not at the column's.
+    const inner = await frames.nth(index).contentFrame().locator("body").evaluate(() => document.documentElement.clientWidth);
+    expect(inner).toBeGreaterThan(width - 4);
+  }
+
+  // The strip scrolls; the page itself must not.
+  const strip = panel.locator(".order-email-frames");
+  expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
 test("the merchant can send themselves a copy, and the panel never supplies the address", async ({ page }) => {
   const requests = await openDashboard(page, [store("store_1", "Café Illimani")], ({ path }) => {
     if (path === PREVIEW_PATH) return { html: AUTHORED_EMAIL, repairs: [] };
@@ -146,6 +178,8 @@ test("the merchant can send themselves a copy, and the panel never supplies the 
   });
 
   await navigateDashboard(page, "store-settings");
+  // The preview lives on Ajustes' Correos tab.
+  await page.getByRole("tab", { name: "Correos" }).click();
   const panel = page.locator(".order-email-panel");
   await expect(panel.locator(".order-email-frame iframe")).toHaveCount(2);
 
@@ -167,6 +201,8 @@ test("a failed preview says so instead of showing an empty frame", async ({ page
   );
 
   await navigateDashboard(page, "store-settings");
+  // The preview lives on Ajustes' Correos tab.
+  await page.getByRole("tab", { name: "Correos" }).click();
   const panel = page.locator(".order-email-panel");
   await expect(panel.locator(".order-email-status")).toContainText("No pudimos preparar la vista previa");
   await expect(panel.locator(".order-email-frame iframe")).toHaveCount(0);

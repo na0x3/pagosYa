@@ -434,6 +434,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   let lastStores = [];
   let storeSettings = null;
   let orderEmailPanel = null;
+  let settingsTabs = null;
   let lastInvoicingProfile = null;
   let lastKyc = null;
   let lastCategories = [];
@@ -531,45 +532,6 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   // first runs, so it runs again over that form once it exists. Sections that
   // already carry their body are left alone, and the remembered key is the
   // section's own heading id so the choice survives a reordering.
-  function initStoreEditorSections(scope = document) {
-    scope.querySelectorAll(".store-editor-section").forEach((section, index) => {
-      if (section.dataset.editorSection === "ready") return;
-      const head = section.querySelector(":scope > .editor-section-head");
-      const title = head?.querySelector("h3")?.textContent?.trim();
-      if (!head || !title) return;
-      section.dataset.editorSection = "ready";
-
-      const body = document.createElement("div");
-      body.className = "store-editor-section-body";
-      body.id = `storeEditorSectionBody${index + 1}`;
-      while (head.nextSibling) body.appendChild(head.nextSibling);
-      section.appendChild(body);
-
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "ghost editor-section-toggle";
-      toggle.setAttribute("aria-controls", body.id);
-      toggle.innerHTML = `<span>Mostrar</span>${COLLAPSE_CHEVRON}`;
-      head.appendChild(toggle);
-
-      const storageKey = `pagosya_store_editor_section_${section.getAttribute("aria-labelledby") || index + 1}`;
-      const setExpanded = (expanded, remember = true) => {
-        body.hidden = !expanded;
-        section.classList.toggle("is-expanded", expanded);
-        toggle.setAttribute("aria-expanded", String(expanded));
-        toggle.setAttribute("aria-label", `${expanded ? "Ocultar" : "Mostrar"} ${title}`);
-        toggle.title = `${expanded ? "Ocultar" : "Mostrar"} ${title}`;
-        toggle.querySelector("span").textContent = expanded ? "Ocultar" : "Mostrar";
-        if (remember) localStorage.setItem(storageKey, String(expanded));
-      };
-
-      // Settings open: a merchant who came here to change one field should not
-      // have to guess which section hides it. Collapsing is theirs to choose.
-      setExpanded(savedExpandedState(storageKey, true), false);
-      toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
-    });
-  }
-
   function initDashboardSidebarToggle() {
     const shell = document.querySelector(".dashboard-shell");
     const toggle = document.getElementById("dashboardSidebarToggle");
@@ -763,7 +725,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
       document.getElementById("dashboardWorkspace").scrollIntoView({ block: "start" });
-      if (event.data.view === "store-settings" && event.data.section && currentStoreId) void openSettingsSection(event.data.section);
+      if (event.data.view === "store-settings" && event.data.section) openSettingsSection(event.data.section);
     }
   });
 
@@ -797,7 +759,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
-    if (nextView === "store-settings" && sessionToken) orderEmailPanel?.show();
+    if (nextView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") orderEmailPanel?.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
@@ -881,7 +843,6 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   inventoryToggle.className = "ghost inline-section-toggle";
   document.querySelector(".inventory-import-head")?.appendChild(inventoryToggle);
   initInlineCollapsible("inventoryImporter", ".inventory-import-head", "inventoryImporterToggle", "pagosya_inventory_importer_expanded", "importador de inventario", false);
-  initStoreEditorSections();
   checkoutOriginEl.addEventListener("change", () => {
     sessionStorage.setItem("pagosya_checkout_origin", checkoutOriginEl.value);
     renderCurrentStoreBanner();
@@ -3153,15 +3114,20 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   }
 
   // The settings page lives under "Tu tienda" rather than a top-level entry of
-  // its own: everything it edits is scoped to the selected store.
-  /** Marca, envíos y dominio: the Studio's own panels, shown over the dashboard. */
-  async function openSettingsSection(section) {
-    if (!currentStoreId) return;
-    sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
-    const { openSettingsOverlay } = await import("/src/settings-overlay.mjs");
-    openSettingsOverlay(currentStoreId, section);
+  // its own: everything it edits is scoped to the selected store. Its tabs show
+  // Marca, Envíos y retiro and Dominio as the Studio's own panels, inline.
+  import("/src/settings-tabs.mjs").then(({ mountSettingsTabs }) => {
+    settingsTabs = mountSettingsTabs(document.getElementById("storeSettingsSection"), {
+      storeId: () => currentStoreId,
+      // The Studio frame reads the API base from the shared session before it loads.
+      beforeLoad: () => sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, "")),
+      onShow: (tab) => { if (tab === "emails" && sessionToken) orderEmailPanel?.show(); },
+    });
+  });
+  /** Opens Ajustes on one of its tabs, for example when the Studio asks for Dominio. */
+  function openSettingsSection(section) {
+    settingsTabs?.select(section);
   }
-  document.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => void openSettingsSection(button.dataset.settingsOpen)));
   import("/src/mcp-connect.mjs").then(({ mountMcpConnect, mountMcpConnectDialog }) => {
     mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
     const connectDialog = mountMcpConnectDialog({ api, apiBase: () => apiBaseEl.value, onCreated: () => { void mcpConnect?.reload(); } });
@@ -3183,13 +3149,12 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       },
     });
     storeSettings.setStore(lastStores.find((store) => store.id === currentStoreId) || null, lastPaymentLinks);
-    initStoreEditorSections(document.getElementById("storeSettingsRoot"));
   }).catch(() => {
     document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
   });
   import("/src/order-email-panel.mjs").then(({ mountOrderEmailPanel }) => {
     orderEmailPanel = mountOrderEmailPanel(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId });
-    if (document.body.dataset.dashboardView === "store-settings" && sessionToken) orderEmailPanel.show();
+    if (document.body.dataset.dashboardView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") orderEmailPanel.show();
   }).catch(() => {
     document.getElementById("orderEmailRoot").textContent = "No pudimos cargar la vista previa del correo. Recarga la página para volver a intentar.";
   });
@@ -3717,8 +3682,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       renderAccount({ kyc, invoicing });
       lastInvoicingProfile = invoicing;
       lastKyc = kyc;
-      document.getElementById("storeSettingsScopeLabel").textContent = selectedStore?.name || "Sin tienda seleccionada";
       storeSettings?.setStore(selectedStore, paymentLinks);
+      settingsTabs?.refresh();
 
       renderTotalFinances(totalFinances);
       renderFinances(finances);

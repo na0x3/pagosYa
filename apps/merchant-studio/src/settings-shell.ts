@@ -20,20 +20,27 @@ export type SettingsShellOptions = {
   /** Draws the section's panel into `host` (a panel appends its own <dialog>). Rejects when it cannot load. */
   open: (section: SettingsSection, host: HTMLElement) => Promise<void>;
   onClose: () => void;
+  /** The dashboard's Ajustes tabs already name the section: draw only its description and panel into the page. */
+  inline?: boolean;
 };
 
 export function mountSettingsShell(app: HTMLElement, options: SettingsShellOptions): { select(section: SettingsSection): Promise<void>; close(): void } {
-  const dialog = document.createElement('dialog');
-  dialog.className = 'settings-shell';
-  dialog.setAttribute('aria-label', 'Ajustes de la tienda');
-  dialog.innerHTML = `<aside class="settings-shell__rail"><p class="settings-shell__store">Ajustes</p><nav aria-label="Secciones de ajustes">${SETTINGS_GROUPS.map(group => `
+  const dialog = document.createElement(options.inline ? 'div' : 'dialog') as HTMLDialogElement;
+  if (options.inline) {
+    dialog.className = 'settings-shell settings-shell--inline';
+    dialog.innerHTML = '<p class="settings-shell__lead"></p><div class="settings-shell__host" data-settings-host></div>';
+  } else {
+    dialog.className = 'settings-shell';
+    dialog.setAttribute('aria-label', 'Ajustes de la tienda');
+    dialog.innerHTML = `<aside class="settings-shell__rail"><p class="settings-shell__store">Ajustes</p><nav aria-label="Secciones de ajustes">${SETTINGS_GROUPS.map(group => `
     <p class="settings-shell__group">${escape(group.label)}</p>${group.items.map(item => `<button type="button" class="settings-shell__item" data-settings-section="${item.id}">${escape(item.label)}</button>`).join('')}`).join('')}</nav></aside>
     <div class="settings-shell__main" tabindex="-1" autofocus><button type="button" class="settings-shell__close" data-settings-close aria-label="Cerrar ajustes">×</button>
       <header class="settings-shell__head"><h2></h2><p></p></header><div class="settings-shell__host" data-settings-host></div></div>`;
+  }
   app.append(dialog);
 
   const host = dialog.querySelector<HTMLElement>('[data-settings-host]')!;
-  const title = dialog.querySelector('h2')!, description = dialog.querySelector('.settings-shell__head p')!;
+  const title = dialog.querySelector('h2'), description = dialog.querySelector('.settings-shell__head p, .settings-shell__lead')!;
   let current: SettingsSection = options.initial, token = 0, finished = false, watcher: MutationObserver | null = null;
 
   const finish = () => { if (finished) return; finished = true; watcher?.disconnect(); options.onClose(); };
@@ -42,7 +49,7 @@ export function mountSettingsShell(app: HTMLElement, options: SettingsShellOptio
     finish();
   };
   dialog.addEventListener('close', finish);
-  dialog.querySelector('[data-settings-close]')!.addEventListener('click', close);
+  dialog.querySelector('[data-settings-close]')?.addEventListener('click', close);
   dialog.querySelectorAll<HTMLButtonElement>('[data-settings-section]').forEach(button => button.addEventListener('click', () => void select(button.dataset.settingsSection as SettingsSection)));
 
   async function select(section: SettingsSection): Promise<void> {
@@ -51,7 +58,8 @@ export function mountSettingsShell(app: HTMLElement, options: SettingsShellOptio
     current = section;
     watcher?.disconnect(); watcher = null;
     const entry = ITEMS.find(item => item.id === section)!;
-    title.textContent = entry.title; description.textContent = entry.description;
+    if (title) title.textContent = entry.title;
+    description.textContent = entry.description;
     dialog.querySelectorAll<HTMLElement>('[data-settings-section]').forEach(button => {
       if (button.dataset.settingsSection === section) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     });
@@ -71,7 +79,7 @@ export function mountSettingsShell(app: HTMLElement, options: SettingsShellOptio
     }
   }
 
-  if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+  if (!options.inline) { if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', ''); }
   void select(options.initial);
   return { select, close };
 }

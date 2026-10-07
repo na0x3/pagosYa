@@ -848,25 +848,17 @@
 
 
 
-    <section class="block" id="storeSettingsSection" data-dashboard-page="store-settings">
-      <div class="panel">
-        <div class="section-head">
-          <div>
-            <h2>Ajustes de la tienda</h2>
-            <p class="finance-scope-chip" id="storeSettingsScopeLabel">Tienda seleccionada</p>
-          </div>
-        </div>
-        <div id="storeSettingsRoot"></div>
-        <section class="store-editor-section settings-more" aria-labelledby="settingsMoreTitle">
-          <div class="editor-section-head"><h3 id="settingsMoreTitle">Marca, envíos y dominio</h3><p>Más ajustes de la tienda seleccionada.</p></div>
-          <ul class="settings-more-list">
-            <li><div><strong>Marca</strong><span>Colores, tipografías y el tono de tu marca.</span></div><button type="button" class="settings-more-open" data-settings-open="brand">Configurar</button></li>
-            <li><div><strong>Envíos y retiro</strong><span>Tarifas de envío y puntos de retiro.</span></div><button type="button" class="settings-more-open" data-settings-open="shipping">Configurar</button></li>
-            <li><div><strong>Dominio</strong><span>Tu propia dirección web para la tienda.</span></div><button type="button" class="settings-more-open" data-settings-open="domain">Configurar</button></li>
-          </ul>
-        </section>
-        <section class="store-editor-section" aria-label="Correo de confirmación"><div id="orderEmailRoot"></div></section>
+    <section class="block settings-page" id="storeSettingsSection" data-dashboard-page="store-settings">
+      <div class="settings-tabs" role="tablist" aria-label="Secciones de ajustes">
+        <button type="button" role="tab" id="settingsTabGeneral" aria-controls="settingsPanelGeneral" data-settings-tab="general">General</button>
+        <button type="button" role="tab" id="settingsTabBrand" aria-controls="settingsPanelStudio" data-settings-tab="brand">Marca</button>
+        <button type="button" role="tab" id="settingsTabShipping" aria-controls="settingsPanelStudio" data-settings-tab="shipping">Envíos y retiro</button>
+        <button type="button" role="tab" id="settingsTabDomain" aria-controls="settingsPanelStudio" data-settings-tab="domain">Dominio</button>
+        <button type="button" role="tab" id="settingsTabEmails" aria-controls="settingsPanelEmails" data-settings-tab="emails">Correos</button>
       </div>
+      <div role="tabpanel" id="settingsPanelGeneral" aria-labelledby="settingsTabGeneral" data-settings-panel="general"><div id="storeSettingsRoot"></div></div>
+      <div role="tabpanel" id="settingsPanelStudio" aria-label="Ajustes del Studio" data-settings-panel="studio" hidden><iframe class="settings-embed" title="Ajustes de la tienda"></iframe></div>
+      <div role="tabpanel" id="settingsPanelEmails" aria-labelledby="settingsTabEmails" data-settings-panel="emails" hidden><div id="orderEmailRoot"></div></div>
     </section>
 
     <section class="block" id="connectAiSection" data-dashboard-page="connect-ai">

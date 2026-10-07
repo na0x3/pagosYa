@@ -343,6 +343,8 @@ export function mountGrowthPanel(deps) {
   }
 
   function focusSettings(section) {
+    // The fields live on Ajustes' General tab, which may not be the one showing.
+    document.querySelector('[data-settings-tab="general"]')?.click();
     const id = `storeSettings${section[0].toUpperCase()}${section.slice(1)}Title`;
     whenPresent(`#${id}`, (heading) => {
       heading.scrollIntoView({ block: "start", behavior: "smooth" });
