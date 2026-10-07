@@ -12,6 +12,12 @@ export const DEFAULT_EMAIL_COPY: Record<EmailType, Record<EmailCopyField, string
     intro: 'Hola {cliente}, tu pago fue confirmado. Este es el detalle de tu pedido.',
     cta: 'Sigue tu pedido',
     signoff: 'Gracias por comprar en {tienda}.',
+    announcement: 'Gracias por comprar en {tienda}.',
+    storyTitle: 'Sobre {tienda}',
+    storyText: 'Somos {tienda}. Cuidamos cada pedido para que llegue tal como lo imaginaste.',
+    note: 'Gracias por confiar en nosotros.',
+    recommendTitle: 'También te puede gustar',
+    helpTitle: '¿Problemas con tu pedido?',
   },
   appointment_confirmed: {
     subject: 'Cita confirmada en {tienda}',
@@ -20,6 +26,12 @@ export const DEFAULT_EMAIL_COPY: Record<EmailType, Record<EmailCopyField, string
     intro: 'Hola {cliente}, tu pago fue confirmado y tu reserva quedó registrada.',
     cta: 'Ver tu reserva',
     signoff: 'Te esperamos en {tienda}.',
+    announcement: 'Gracias por reservar en {tienda}.',
+    storyTitle: 'Sobre {tienda}',
+    storyText: 'Somos {tienda}. Preparamos cada cita para que disfrutes tu visita.',
+    note: 'Gracias por confiar en nosotros.',
+    recommendTitle: 'Otros servicios',
+    helpTitle: '¿Necesitas cambiar tu cita?',
   },
 };
 

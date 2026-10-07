@@ -1,7 +1,7 @@
 import { parse, serialize, type DefaultTreeAdapterMap } from 'parse5';
 import { LITERAL_AMOUNT, sanitizeEmailHtml } from '../storefront-source/source-email-html';
 import {
-  EMAIL_BLOCK_TYPES, EMAIL_COPY_FIELDS, EMAIL_KIT_FILE_MAX_BYTES, EMAIL_TYPES, REQUIRED_EMAIL_BLOCKS,
+  BLOCK_ROWS, EMAIL_BLOCK_TYPES, EMAIL_COPY_FIELDS, EMAIL_KIT_FILE_MAX_BYTES, EMAIL_TYPES, REQUIRED_EMAIL_BLOCKS,
   type EmailBlockType, type EmailCopy, type EmailCopyField, type RawEmailKit, type ValidEmailKit,
 } from './email-kit-contract';
 
@@ -78,15 +78,17 @@ function validateLayout(input: string, repairs: string[]): string | null {
  * their place (a made-up product, a dead button), so it is refused and the standard block is used.
  */
 const FACT_SLOTS: Record<EmailBlockType, string[]> = {
-  hero: ['data-block-title'],
-  heading: ['data-block-title'],
+  hero: ['data-block-title'], heading: ['data-block-title'],
   items: ['data-item-name', 'data-item-quantity', 'data-item-amount', 'data-items-total'],
   button: ['data-block-link', 'data-block-label'],
   products: ['data-product-name', 'data-product-price', 'data-product-link'],
-  promo: ['data-block-code'],
-  note: ['data-block-text'],
+  promo: ['data-block-code', 'data-block-discount'], note: ['data-block-text'],
+  announce: ['data-block-text'], address: ['data-block-title', 'data-line'],
+  steps: ['data-step-icon', 'data-step-title'], trust: ['data-trust-icon', 'data-trust-label'],
+  quote: ['data-quote-text', 'data-quote-author'], story: ['data-block-title', 'data-block-text'],
+  contact: ['data-block-title', 'data-contact-icon', 'data-contact-label', 'data-contact-value'],
 };
-const SLOT_ATTRIBUTE = /^data-(?:block|item|items|product)-/;
+const SLOT_ATTRIBUTE = /^data-(?:block|item|items|product|line|step|trust|quote|contact)(?:-|$)/;
 
 /** Text in an item row belongs in a slot; anything else in the row would print beside every real line. */
 function blankLooseText(row: Element): boolean {
@@ -113,13 +115,18 @@ function validateBlocks(input: string, repairs: string[]): Partial<Record<EmailB
     if (!(EMAIL_BLOCK_TYPES as readonly string[]).includes(type)) { repairs.push(`emails/blocks.html: unknown block "${type}" ignored`); continue; }
     const block = type as EmailBlockType;
     if (out[block]) { repairs.push(`emails/blocks.html: ${block} appears twice, using the first`); continue; }
-    if (block === 'items' && count(el, 'data-item') !== 1) { repairs.push('emails/blocks.html: items needs exactly one data-item row; the standard block is used'); continue; }
-    if (block === 'products' && count(el, 'data-product') !== 1) { repairs.push('emails/blocks.html: products needs exactly one data-product card; the standard block is used'); continue; }
+    const row = BLOCK_ROWS[block];
+    if (row && count(el, row) !== 1) { repairs.push(`emails/blocks.html: ${block} needs exactly one ${row} row; the standard block is used`); continue; }
     const missing = FACT_SLOTS[block].filter(slot => count(el, slot) === 0);
     if (missing.length) { repairs.push(`emails/blocks.html: ${block}: missing ${missing.join(', ')}; the standard block is used`); continue; }
-    if (block === 'items') {
-      const row = [...walk(el)].find(child => attr(child, 'data-item') !== undefined)!;
-      if (blankLooseText(row)) repairs.push('emails/blocks.html: items: text outside a slot in the item row removed');
+    if (row) {
+      const model = [...walk(el)].find(child => attr(child, row) !== undefined)!;
+      if (blankLooseText(model)) repairs.push(`emails/blocks.html: ${block}: text outside a slot in the ${row} row removed`);
+    }
+    const tone = attr(el, 'data-tone');
+    if (tone !== undefined && tone !== 'light' && tone !== 'dark') {
+      el.attrs = el.attrs.filter(a => a.name !== 'data-tone');
+      repairs.push(`emails/blocks.html: ${block}: data-tone "${tone}" removed`);
     }
     if (block === 'items' && LITERAL_AMOUNT.test(textOf(el))) {
       repairs.push('emails/blocks.html: literal amount inside items removed; the platform fills it');

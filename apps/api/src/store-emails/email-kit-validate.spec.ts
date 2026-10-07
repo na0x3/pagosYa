@@ -124,3 +124,37 @@ describe('validateEmailCopy', () => {
     expect(validateEmailCopy(null).copy).toEqual({});
   });
 });
+
+describe('new blocks', () => {
+  const rich = blocks + `
+    <table data-block="announce" data-tone="dark"><tr><td data-block-text></td></tr></table>
+    <table data-block="address"><tr><td><h3 data-block-title></h3><p data-line></p></td></tr></table>
+    <table data-block="steps"><tr><td data-step><img data-step-icon><span data-step-title></span></td></tr></table>
+    <table data-block="trust"><tr><td data-trust><img data-trust-icon><span data-trust-label></span></td></tr></table>
+    <table data-block="quote"><tr><td><p data-quote-text></p><span data-quote-author></span><span data-quote-stars></span></td></tr></table>
+    <table data-block="story"><tr><td><img data-block-image><h3 data-block-title></h3><p data-block-text></p></td></tr></table>
+    <table data-block="contact"><tr><td><h3 data-block-title></h3></td></tr><tr><td data-contact><img data-contact-icon><span data-contact-label></span><a data-contact-value></a></td></tr></table>`;
+
+  it('accepts every new block with its slots and keeps data-tone', () => {
+    const { kit } = validateEmailKit({ layout, blocks: rich, copy: {} });
+    expect(Object.keys(kit.blocks).sort()).toEqual(['address', 'announce', 'button', 'contact', 'heading', 'items', 'note', 'quote', 'steps', 'story', 'trust']);
+    expect(kit.blocks.announce).toContain('data-tone="dark"');
+  });
+  it('refuses a repeated block without exactly one row', () => {
+    const { kit, repairs } = validateEmailKit({ layout, blocks: rich.replace('<td data-step>', '<td data-step></td><td data-step>'), copy: {} });
+    expect(kit.blocks.steps).toBeUndefined();
+    expect(repairs.join(' ')).toMatch(/steps needs exactly one data-step/);
+  });
+  it('refuses a quote without its text slot, so no AI-written testimonial can stand in', () => {
+    expect(validateEmailKit({ layout, blocks: rich.replace('<p data-quote-text></p>', '<p>“Me encantó”</p>'), copy: {} }).kit.blocks.quote).toBeUndefined();
+  });
+  it('drops an invalid data-tone', () => {
+    expect(validateEmailKit({ layout, blocks: rich.replace('data-tone="dark"', 'data-tone="neon"'), copy: {} }).kit.blocks.announce).not.toContain('data-tone');
+  });
+  it('checks the new wording fields with their caps', () => {
+    const { copy } = validateEmailCopy({ order_confirmation: { announcement: 'x'.repeat(120), storyText: 'Hecho a mano en La Paz.', note: 'Desde 2019 con cariño.' } });
+    expect(copy.order_confirmation!.announcement).toHaveLength(90);
+    expect(copy.order_confirmation!.storyText).toBe('Hecho a mano en La Paz.');
+    expect(copy.order_confirmation!.note).toBeUndefined(); // "2019": a four-digit number is dropped as a possible fact
+  });
+});
