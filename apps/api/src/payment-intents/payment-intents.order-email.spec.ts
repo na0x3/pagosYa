@@ -13,17 +13,44 @@ const intent = {
   metadata: { cart: [{ paymentLinkId: "link_1", variantId: "v_1", name: "Zapatos", quantity: 1, unitAmount: 5000 }] },
 };
 
-function build(storeEmail?: unknown) {
-  const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
+function build(storeEmail?: unknown, order: object | null = null) {
+  const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(order) } };
   const email = { send: jest.fn() };
+  // With an order the tracking link needs a checkout origin; the tracking secret falls back to the development one.
+  const config = noopConfig();
+  const pricing = config.get();
+  config.get.mockImplementation((key: string) => (key === "app.checkoutOrigin" ? "https://pagar.bo" : key === "app.orderTrackingSecret" ? undefined : pricing));
   const service = new PaymentIntentsService(
     prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any,
-    noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, undefined, storeEmail as any,
+    config, inertLimits() as any, { notify: jest.fn() } as any, undefined, storeEmail as any,
   );
   return { service, email };
 }
 
+const order = (over: object = {}) => ({ id: "ord_1", storeId: "s1", fulfillmentMethod: null, fulfillmentLocationName: null, recipientName: null,
+  shippingStreet: null, shippingCity: null, shippingDepartment: null, shippingReferences: null, ...over });
+
 describe("PaymentIntentsService HTML confirmation", () => {
+  it("passes the order's delivery to the email, and leaves the text body untouched", async () => {
+    const renderReceipt = jest.fn().mockResolvedValue({ html: "<html></html>", subject: "Asunto", repairs: [] });
+    const delivered = order({ fulfillmentMethod: "delivery", recipientName: "Ana", shippingStreet: "Av. 1", shippingCity: "La Paz", shippingDepartment: null });
+    const withHtml = build({ renderReceipt }, delivered);
+    await (withHtml.service as any).sendReceiptEmail(intent, "Tienda Ejemplo");
+    expect(renderReceipt.mock.calls[0][1].delivery).toEqual({ method: "delivery", recipient: "Ana", lines: ["Av. 1", "La Paz"] });
+
+    const without = build(undefined, delivered);
+    await (without.service as any).sendReceiptEmail(intent, "Tienda Ejemplo");
+    expect(withHtml.email.send.mock.calls[0][0].body).toBe(without.email.send.mock.calls[0][0].body);
+  });
+
+  it("a pickup order names the location, and an order without a method has no delivery", async () => {
+    const renderReceipt = jest.fn().mockResolvedValue({ html: "<html></html>", subject: "Asunto", repairs: [] });
+    await (build({ renderReceipt }, order({ fulfillmentMethod: "pickup", fulfillmentLocationName: "Sucursal Centro" })).service as any).sendReceiptEmail(intent, "Tienda Ejemplo");
+    expect(renderReceipt.mock.calls[0][1].delivery).toEqual({ method: "pickup", location: "Sucursal Centro" });
+    await (build({ renderReceipt }, order()).service as any).sendReceiptEmail(intent, "Tienda Ejemplo");
+    expect(renderReceipt.mock.calls[1][1].delivery).toBeNull();
+  });
+
   it("sends the rendered HTML alongside the text body", async () => {
     const renderReceipt = jest.fn().mockResolvedValue({ html: "<html><body>Orden: pi_html_1</body></html>", subject: "Gracias por tu compra en Tienda Ejemplo", repairs: [] });
     const { service, email } = build({ renderReceipt });

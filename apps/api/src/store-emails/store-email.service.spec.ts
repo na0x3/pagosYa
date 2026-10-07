@@ -8,15 +8,21 @@ const input = (over: object = {}) => ({ storeName: 'Café Illimani', customerNam
   subscription: null, appointment: null, logoUrl: null,
   lines: [{ paymentLinkId: 'pl_1', variantId: 'v_2', name: 'Café', variant: '250 g', extras: null, quantity: 1, amount: 'Bs 150,00' }], ...over });
 
-function harness({ kit = null as any, legacy = null as string | null, base = 'https://api.example' as string | null, brand = [{ field: 'accent', value: '#c2410c' }] as any[], domains = [] as { hostname: string }[] } = {}) {
+function harness({ kit = null as any, legacy = null as string | null, base = 'https://api.example' as string | null, brand = [{ field: 'accent', value: '#c2410c' }] as any[], domains = [] as { hostname: string }[],
+  promos = [] as object[], stored = {} as object, contact = {} as object } = {}) {
   const prisma: any = {
+    storeLink: { findMany: jest.fn(async () => []) },
+    collection: { findMany: jest.fn(async () => []) },
+    storeReview: { findFirst: jest.fn(async () => null) },
+    promoCode: { findMany: jest.fn(async () => promos) },
     storeSourceVersion: { findFirst: jest.fn(async () => (legacy ? { snapshot: { files: [{ path: 'emails/order-confirmation.html', content: legacy }] } } : null)) },
     storeBrandProfile: { findUnique: jest.fn(async () => ({ data: { confirmed: brand, suggested: [] } })) },
     paymentLink: { findMany: jest.fn(async () => [{ id: 'pl_1', name: 'Café', amount: 5000, currency: 'BOB', imageUrls: ['/v1/uploads/cover.webp'], variants: [{ id: 'v_2', imageUrls: ['/v1/uploads/v2.webp'] }] }]) },
-    store: { findUnique: jest.fn(async () => ({ logoUrl: '/v1/uploads/logo.png', slug: 'cafe', customDomains: domains })) },
+    store: { findUnique: jest.fn(async () => ({ name: 'Café Illimani', logoUrl: '/v1/uploads/logo.png', slug: 'cafe', customDomains: domains, policies: {}, locations: [], ...contact })) },
   };
   const kits: any = { active: jest.fn(async () => kit), overrides: jest.fn(async () => ({})) };
-  return new StoreEmailService(prisma, kits, config(base));
+  const content: any = { get: jest.fn(async () => stored) };
+  return new StoreEmailService(prisma, kits, content, config(base));
 }
 
 describe('StoreEmailService.renderReceipt', () => {
@@ -102,5 +108,79 @@ describe('StoreEmailService.renderReceipt', () => {
     // Real prices, in the same form a real receipt uses, so the preview never shows a made-up total.
     expect(sample.total).toBe('50.00 BOB');
     expect((await harness().sampleReceipt('s1', 'Café', 'appointment_confirmed')).appointment).not.toBeNull();
+  });
+
+  describe('the rich receipt', () => {
+    const vuelve = { id: 'p2', code: 'VUELVE10', discountType: 'PERCENT', discountValue: 10 };
+
+    it('the latest shared code goes out by default, with its discount read from the code', async () => {
+      const { html } = await harness({ promos: [vuelve] }).renderReceipt('s1', input());
+      expect(html).toContain('VUELVE10');
+      expect(html).toContain('10% en tu próxima compra');
+    });
+
+    it('a promo picked in Correos but since switched off or deactivated is not sent', async () => {
+      // The query only returns active, shared codes, so a picked code missing from it is gone.
+      const { html } = await harness({ promos: [], stored: { promo: { promoCodeId: 'p1' } } }).renderReceipt('s1', input());
+      expect(html).not.toContain('VUELVE10');
+      expect(html).not.toContain('próxima compra');
+      const picked = await harness({ promos: [{ ...vuelve, id: 'p9', code: 'OTRO5' }, vuelve], stored: { promo: { promoCodeId: 'p2' } } }).renderReceipt('s1', input());
+      expect(picked.html).toContain('VUELVE10');
+      expect(picked.html).not.toContain('OTRO5');
+    });
+
+    it('the merchant can choose no promo at all', async () => {
+      expect((await harness({ promos: [vuelve], stored: { promo: { promoCodeId: null } } }).renderReceipt('s1', input())).html).not.toContain('VUELVE10');
+    });
+
+    it('a per-email switch hides the promo on appointments only', async () => {
+      const service = harness({ promos: [vuelve], stored: { emails: { appointment_confirmed: { promo: false } } } });
+      expect((await service.renderReceipt('s1', input({ appointment: { name: 'Corte', date: '12/10/2026, 10:00' } }))).html).not.toContain('VUELVE10');
+      expect((await service.renderReceipt('s1', input())).html).toContain('VUELVE10');
+    });
+
+    it("renders the merchant's announcement, or none when turned off", async () => {
+      expect((await harness({ stored: { announcement: { text: 'Envío gratis todo octubre' } } }).renderReceipt('s1', input())).html).toContain('Envío gratis todo octubre');
+      expect((await harness({ stored: { announcement: { off: true } } }).renderReceipt('s1', input())).html).not.toContain('Gracias por comprar en Café Illimani.</td>');
+    });
+
+    it('renders the delivery box and contact cards from real data', async () => {
+      const { html } = await harness({ contact: { contactEmail: 'hola@cafe.bo', contactPhone: '+591 70000000', checkoutMode: 'whatsapp' } })
+        .renderReceipt('s1', input({ delivery: { method: 'delivery', recipient: 'Ana', lines: ['Av. 1'] } }));
+      expect(html).toContain('Envío a');
+      expect(html).toContain('Av. 1');
+      expect(html).toContain('hola@cafe.bo');
+      expect(html).toContain('whatsapp-dark.png');
+      expect(html).toContain('href="https://wa.me/59170000000"');
+    });
+
+    it("the merchant's hero photo wins, and only one of the store's uploads", async () => {
+      const { html } = await harness({ stored: { heroImage: { url: '/v1/uploads/hero.webp' } } }).renderReceipt('s1', input());
+      expect(html).toContain('https://api.example/v1/uploads/hero.webp');
+    });
+
+    it('a content lookup failure still sends the full email', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const service = harness({ promos: [vuelve] });
+      (service as any).content.get.mockRejectedValue(new Error('relation "StoreEmailContent" does not exist'));
+      const { html, repairs } = await service.renderReceipt('s1', input());
+      expect(html).toContain('Café');
+      expect(html).toContain('VUELVE10');
+      expect(repairs.join(' ')).toContain('content lookup failed');
+    });
+
+    it('a store facts failure still sends the full email', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const service = harness();
+      (service as any).prisma.promoCode.findMany.mockRejectedValue(new Error('column "showInEmails" does not exist'));
+      const { html, repairs } = await service.renderReceipt('s1', input());
+      expect(html).toContain('Café');
+      expect(html).toContain('href="https://pagar.bo/s/cafe"');
+      expect(repairs.join(' ')).toContain('context lookup failed');
+    });
+
+    it('the sample shows a delivery box', async () => {
+      expect((await harness().sampleReceipt('s1', 'Café', 'order_confirmation')).delivery).toMatchObject({ method: 'delivery', recipient: 'Ana Quispe' });
+    });
   });
 });

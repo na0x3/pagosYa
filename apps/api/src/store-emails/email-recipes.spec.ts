@@ -1,4 +1,4 @@
-import { receiptCalls, receiptType, resolveCopy, richReceiptCalls, type ReceiptData, type ResolvedContent } from './email-recipes';
+import { receiptType, resolveCopy, richReceiptCalls, type ReceiptData, type ResolvedContent } from './email-recipes';
 import type { EmailContext } from './email-context';
 import { DEFAULT_EMAIL_COPY } from './email-copy-defaults';
 
@@ -21,32 +21,10 @@ describe('resolveCopy', () => {
   });
 });
 
-describe('receipt recipes', () => {
-  const copy = resolveCopy('order_confirmation', {}, {}, { cliente: 'Ana', tienda: 'Café Illimani' });
-
-  it('order confirmation: heading, items, button, then the order id', () => {
-    const calls = receiptCalls('order_confirmation', data, copy);
-    expect(calls.map(c => c.block)).toEqual(['heading', 'items', 'button', 'note']);
-    expect((calls.at(-1) as { text: string }).text).toContain('Orden: pi_1');
-  });
-
-  it('drops the button without a tracking link', () => {
-    expect(receiptCalls('order_confirmation', { ...data, trackingUrl: null }, copy).map(c => c.block)).toEqual(['heading', 'items', 'note']);
-  });
-
-  it('adds the subscription note, which always says nothing is charged automatically', () => {
-    const notes = receiptCalls('order_confirmation', { ...data, subscription: 'Tu suscripción se renueva cada mes.' }, copy)
-      .filter(c => c.block === 'note').map(c => (c as { text: string }).text);
-    expect(notes[0]).toBe('Tu suscripción se renueva cada mes. No se cobra automáticamente.');
-  });
-
-  it('appointment: heading, the service and date, items when paid, button, then the order id', () => {
-    const appt = { ...data, appointment: { name: 'Corte de cabello', date: '12/10/2026, 10:00' } };
-    expect(receiptType(appt)).toBe('appointment_confirmed');
-    const calls = receiptCalls('appointment_confirmed', appt, resolveCopy('appointment_confirmed', {}, {}, { cliente: 'Ana', tienda: 'Café' }));
-    expect(calls.map(c => c.block)).toEqual(['heading', 'note', 'items', 'button', 'note']);
-    expect((calls[1] as { text: string }).text).toBe('Corte de cabello · 12/10/2026, 10:00');
-    expect(receiptCalls('appointment_confirmed', { ...appt, items: [] }, copy).map(c => c.block)).not.toContain('items');
+describe('receiptType', () => {
+  it('an appointment is an appointment confirmation, anything else an order confirmation', () => {
+    expect(receiptType({ appointment: { name: 'Corte', date: null } })).toBe('appointment_confirmed');
+    expect(receiptType({ appointment: null })).toBe('order_confirmation');
   });
 });
 
@@ -108,6 +86,18 @@ describe('the rich receipt', () => {
     const drop = Object.fromEntries(calls.filter(c => c.drop !== undefined).map(c => [c.block, c.drop]));
     expect(drop).toMatchObject({ steps: 1, trust: 2, promo: 3, quote: 4, story: 5, products: 6 });
     expect(calls.filter(c => ['hero', 'items', 'contact', 'note'].includes(c.block)).every(c => c.drop === undefined)).toBe(true);
+  });
+
+  it('ends with the order id, after the subscription note, which always says nothing is charged automatically', () => {
+    const notes = richReceiptCalls('order_confirmation', rich({ subscription: 'Tu suscripción se renueva cada mes.' }), copy, ctx, content)
+      .filter(c => c.block === 'note').map(c => (c as { text: string }).text);
+    expect(notes[0]).toBe('Tu suscripción se renueva cada mes. No se cobra automáticamente.');
+    expect(notes.at(-1)).toContain('Orden: pi_1');
+  });
+
+  it('an unpaid appointment has no items section', () => {
+    const appt = rich({ appointment: { name: 'Corte', date: null }, items: [] });
+    expect(richReceiptCalls('appointment_confirmed', appt, copy, ctx, content).map(c => c.block)).not.toContain('items');
   });
 
   it('recommends nothing from the order, and nothing when the merchant turned it off', () => {

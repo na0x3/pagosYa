@@ -5,21 +5,27 @@ import { brandColorTokens, EMPTY_BRAND, type BrandProfile } from '../brand/brand
 import { validateOrderEmailHtml } from '../storefront-source/source-email-html';
 import { renderOrderEmail } from '../order-emails/order-email-render';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
-import { assembleEmail, type EmailItem } from './email-assemble';
+import { assembleWithinBudget, type EmailItem } from './email-assemble';
+import { EmailContentStore, type StoredContent } from './email-content-store';
+import { loadEmailContext, type EmailContext } from './email-context';
 import { loadFloorKit } from './email-copy-defaults';
 import type { EmailType, ValidEmailKit } from './email-kit-contract';
 import { EmailKitStore, type KitRow } from './email-kit-store';
 import * as validate from './email-kit-validate';
 import { layoutColorTokens } from './email-layout-tokens';
 import { emailImageUrl } from './email-image-url';
-import { receiptCalls, receiptType, resolveCopy, type ReceiptData } from './email-recipes';
+import { receiptType, resolveContent, resolveCopy, richReceiptCalls, type Delivery, type ReceiptData } from './email-recipes';
 
 export type ReceiptLine = { paymentLinkId: string | null; variantId: string | null; name: string; variant: string | null; extras: string | null; quantity: number; amount: string };
-export type ReceiptInput = Omit<ReceiptData, 'items'> & { logoUrl: string | null; lines: ReceiptLine[] };
+export type ReceiptInput = Omit<ReceiptData, 'items'> & { logoUrl: string | null; lines: ReceiptLine[]; delivery?: Delivery };
 type Variant = { id?: string; imageUrl?: string; imageUrls?: string[] };
 type KitInput = Pick<KitRow, 'layout' | 'blocks' | 'copy'> & { id?: string };
 const KIT_CACHE_SIZE = 200;
 const formatAmount = (amount: number, currency: string) => `${(amount / 100).toFixed(2)} ${currency}`;
+
+/** The facts of a store we could not look up: every optional section is simply left out. */
+const NO_CONTEXT: EmailContext = { storeUrl: null, heroImage: null, nav: [], socials: [], address: null, policies: [],
+  contact: { email: null, phone: null, whatsapp: false }, delivers: false, review: null, promos: [], recommendations: () => [] };
 
 /**
  * Builds the emails a store sends its buyers from that store's one email look. Fallback:
@@ -32,7 +38,7 @@ export class StoreEmailService {
   private readonly logger = new Logger(StoreEmailService.name);
   /** A saved kit never changes (a redesign is a new row), so its checked form is kept by id. */
   private readonly checkedKits = new Map<string, ReturnType<typeof validate.validateEmailKit>>();
-  constructor(private readonly prisma: PrismaService, private readonly kits: EmailKitStore, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly kits: EmailKitStore, private readonly content: EmailContentStore, private readonly config: ConfigService) {}
 
   private base() { return this.config.get<string | null>('app.publicAssetBaseUrl') ?? null; }
 
@@ -88,7 +94,7 @@ export class StoreEmailService {
       const path = (line.paymentLinkId && line.variantId ? photos.get(`${line.paymentLinkId}|${line.variantId}`) : undefined)
         ?? (line.paymentLinkId ? photos.get(`${line.paymentLinkId}|`) : undefined) ?? null;
       const src = emailImageUrl(path, this.base());
-      return { name: line.name, variant: line.variant, extras: line.extras, quantity: line.quantity, amount: line.amount, image: src ? { src, alt: line.name } : null };
+      return { name: line.name, variant: line.variant, extras: line.extras, quantity: line.quantity, amount: line.amount, image: src ? { src, alt: line.name } : null, productId: line.paymentLinkId };
     });
   }
 
@@ -106,20 +112,23 @@ export class StoreEmailService {
     const store = storeId ? await this.prisma.store.findUnique({ where: { id: storeId }, select: { logoUrl: true, slug: true, customDomains: { where: { status: 'ACTIVE' }, select: { hostname: true }, take: 1 } } }) : null;
     const logoUrl = emailImageUrl(input.logoUrl ?? store?.logoUrl ?? null, this.base());
     const repairs: string[] = [];
-    // A failed lookup (for instance before the kit tables are migrated) costs the store's look, never the email.
-    const guarded = async <T>(lookup: Promise<T>, fallback: T): Promise<T> => {
-      try { return await lookup; }
+    // A failed lookup (for instance before the kit or content tables are migrated) costs the store's look, never the email.
+    const guarded = async <T>(what: string, lookup: () => Promise<T>, fallback: T): Promise<T> => {
+      try { return await lookup(); }
       catch (error) {
         // Logged here: the receipt sender keeps only the html and the subject, so a repair alone would go unseen.
-        this.logger.warn(`Store email kit lookup failed for ${storeId}: ${(error as Error).message}`);
-        repairs.push(`kit lookup failed: ${(error as Error).message}`);
+        this.logger.warn(`Store email ${what} lookup failed for ${storeId}: ${(error as Error).message}`);
+        repairs.push(`${what} lookup failed: ${(error as Error).message}`);
         return fallback;
       }
     };
-    const [brand, items, row, overrides] = await Promise.all([
+    const checkoutOrigin = this.config.get<string>('app.checkoutOrigin') ?? null;
+    const [brand, items, row, overrides, ctx, stored] = await Promise.all([
       this.brand(storeId), this.items(input.lines),
-      opts.kit !== undefined ? Promise.resolve(opts.kit) : storeId ? guarded(this.kits.active(storeId), null) : Promise.resolve(null),
-      storeId ? guarded(this.kits.overrides(storeId, type), {}) : Promise.resolve({}),
+      opts.kit !== undefined ? Promise.resolve(opts.kit) : storeId ? guarded('kit', () => this.kits.active(storeId), null) : Promise.resolve(null),
+      storeId ? guarded('kit', () => this.kits.overrides(storeId, type), {}) : Promise.resolve({}),
+      storeId ? guarded('context', () => loadEmailContext(this.prisma, storeId, { assetBase: this.base(), checkoutOrigin }), NO_CONTEXT) : Promise.resolve(NO_CONTEXT),
+      storeId ? guarded<StoredContent>('content', () => this.content.get(storeId), {}) : Promise.resolve({}),
     ]);
     const checked = row ? this.check(row) : null;
     repairs.push(...(checked?.repairs ?? []));
@@ -140,9 +149,12 @@ export class StoreEmailService {
     // Confirmed brand colours win; without them a stand-in block takes the store layout's own colours.
     const kit = checked?.kit ?? floor;
     const values = new Map([...layoutColorTokens(kit), ...brandColorTokens(brand)]);
-    const data: ReceiptData = { ...input, items };
-    const assembled = assembleEmail(this.resolveKit(kit, values), this.resolveKit(floor, values), receiptCalls(type, data, copy),
-      { storeName: input.storeName, logoUrl, storeUrl: this.storeUrl(store), preheader: copy.preheader, unsubscribeUrl: null, marketing: false });
+    const data: ReceiptData & { delivery: Delivery } = { ...input, items, delivery: input.delivery ?? null };
+    const content = resolveContent(type, stored, ctx, copy, input.storeName, this.base());
+    const assembled = assembleWithinBudget(this.resolveKit(kit, values), this.resolveKit(floor, values), richReceiptCalls(type, data, copy, ctx, content), {
+      storeName: input.storeName, logoUrl, storeUrl: ctx.storeUrl ?? this.storeUrl(store), preheader: copy.preheader, unsubscribeUrl: null, marketing: false,
+      nav: ctx.nav, socials: ctx.socials, address: ctx.address, policies: ctx.policies, iconBase: this.base(),
+    });
     return { html: assembled.html, subject: copy.subject, repairs: [...repairs, ...assembled.repairs] };
   }
 
@@ -158,6 +170,7 @@ export class StoreEmailService {
     const total = formatAmount(priced.filter(p => p.currency === currency).reduce((sum, p) => sum + p.amount * p.quantity, 0), currency);
     return { storeName, customerName: 'Ana', orderId: 'pi_SYNTH001', lines, total, originalTotal: null,
       trackingUrl: 'https://example.test/track/sample', subscription: null, logoUrl: null,
+      delivery: type === 'appointment_confirmed' ? null : { method: 'delivery', recipient: 'Ana Quispe', lines: ['Av. 6 de Agosto 123', 'La Paz'] },
       appointment: type === 'appointment_confirmed' ? { name: 'Corte de cabello', date: '12/10/2026, 10:00' } : null };
   }
 }

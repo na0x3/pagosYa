@@ -1,6 +1,7 @@
 import type { BlockCall, EmailImage, EmailItem } from './email-assemble';
+import type { StoredContent } from './email-content-store';
 import type { EmailContext } from './email-context';
-import type { EmailIcon } from './email-image-url';
+import { emailImageUrl, type EmailIcon } from './email-image-url';
 import { DEFAULT_EMAIL_COPY } from './email-copy-defaults';
 import { EMAIL_COPY_FIELDS, type EmailCopy, type EmailCopyField, type EmailType } from './email-kit-contract';
 
@@ -31,26 +32,40 @@ const NO_AUTO_CHARGE = 'No se cobra automáticamente.';
 
 const subscriptionNote = (line: string) => (/autom[aá]tic/i.test(line) ? line : `${line} ${NO_AUTO_CHARGE}`);
 
-export function receiptCalls(type: EmailType, data: ReceiptData, copy: ResolvedCopy): BlockCall[] {
-  const calls: BlockCall[] = [{ block: 'heading', title: copy.headline, text: copy.intro }];
-  if (type === 'appointment_confirmed' && data.appointment) {
-    calls.push({ block: 'note', text: [data.appointment.name, data.appointment.date].filter(Boolean).join(' · ') });
-  }
-  if (data.items.length) calls.push({ block: 'items', items: data.items, total: data.total, originalTotal: data.originalTotal });
-  if (data.trackingUrl) calls.push({ block: 'button', href: data.trackingUrl, label: copy.cta });
-  if (data.subscription) {
-    calls.push({ block: 'note', text: subscriptionNote(data.subscription.trim()) });
-  }
-  calls.push({ block: 'note', text: `${copy.signoff} Orden: ${data.orderId}` });
-  return calls;
-}
-
 export type Delivery = { method: 'delivery'; recipient: string | null; lines: string[] } | { method: 'pickup'; location: string | null } | null;
 /** The merchant's content for one email, already resolved against their switches and the store's facts. */
 export type ResolvedContent = {
   announcement: string | null; heroImage: EmailImage | null; promo: { code: string; discount: string } | null;
   story: { title: string; text: string; image: EmailImage | null } | null; note: string; recommendations: boolean;
 };
+
+/**
+ * The merchant's saved content for one email, checked against today's facts. A picked promo
+ * code goes out only while it is still active and shared (the context holds only those);
+ * anything the merchant left unset falls back to the store's facts or the resolved wording.
+ */
+export function resolveContent(type: EmailType, stored: StoredContent, ctx: EmailContext, copy: ResolvedCopy, storeName: string, base: string | null): ResolvedContent {
+  const on = stored.emails?.[type] ?? {};
+  const image = (url: string | null | undefined) => { const src = emailImageUrl(url, base); return src ? { src, alt: storeName } : null; };
+
+  const announcement = on.announcement === false || (stored.announcement && 'off' in stored.announcement) ? null
+    : stored.announcement?.text ?? copy.announcement;
+  const promo = on.promo === false || stored.promo?.promoCodeId === null ? null
+    : stored.promo?.promoCodeId ? ctx.promos.find(p => p.id === stored.promo!.promoCodeId) ?? null
+    : ctx.promos[0] ?? null;
+  const story = on.story === false || (stored.story && 'off' in stored.story) ? null
+    : stored.story ? { title: stored.story.title, text: stored.story.text, image: image(stored.story.imageUrl) }
+    : { title: copy.storyTitle, text: copy.storyText, image: null };
+
+  return {
+    announcement,
+    heroImage: image(stored.heroImage?.url),
+    promo: promo && { code: promo.code, discount: promo.discount },
+    story,
+    note: stored.note?.text ?? copy.note,
+    recommendations: stored.recommendations?.on !== false && on.recommendations !== false,
+  };
+}
 
 const STEPS: Record<'delivery' | 'pickup' | 'appointment', [EmailIcon, string][]> = {
   delivery: [['check', 'Confirmado'], ['box', 'Preparando'], ['truck', 'En camino']],

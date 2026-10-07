@@ -7,6 +7,7 @@ import { customAlphabet } from "nanoid";
 import { DebtRecordStatus, LimitReservationStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { StoreEmailService } from '../store-emails/store-email.service';
+import type { Delivery } from '../store-emails/email-recipes';
 import { RailRegistry } from "../rails/rail-registry.service";
 import { PaymentMethodsService } from "../payment-methods/payment-methods.service";
 import { LedgerService } from "../ledger/ledger.service";
@@ -32,6 +33,19 @@ import { applyRenewalPaid, createSubscriptionsFromOrder } from "../operations/su
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
 const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
+
+type OrderFulfillment = { fulfillmentMethod: string | null; fulfillmentLocationName: string | null; recipientName: string | null;
+  shippingStreet: string | null; shippingCity: string | null; shippingDepartment: string | null; shippingReferences: string | null };
+
+/** Where the order goes, for the HTML receipt's delivery box; the text receipt does not carry it. */
+function orderDelivery(order: OrderFulfillment | null): Delivery {
+  if (order?.fulfillmentMethod === "pickup") return { method: "pickup", location: order.fulfillmentLocationName };
+  if (order?.fulfillmentMethod === "delivery") {
+    const lines = [order.shippingStreet, order.shippingReferences, [order.shippingCity, order.shippingDepartment].filter(Boolean).join(", ")].filter((line): line is string => !!line);
+    return { method: "delivery", recipient: order.recipientName, lines };
+  }
+  return null;
+}
 
 function formatAmount(amount: number, currency: string): string {
   return `${(amount / 100).toFixed(2)} ${currency}`;
@@ -823,7 +837,8 @@ export class PaymentIntentsService {
             .join("\n") + "\n"
         : "";
 
-      const order = await this.prisma.storeOrder.findUnique({ where: { paymentIntentId: intent.id }, select: { id: true, storeId: true } });
+      const order = await this.prisma.storeOrder.findUnique({ where: { paymentIntentId: intent.id }, select: { id: true, storeId: true,
+        fulfillmentMethod: true, fulfillmentLocationName: true, recipientName: true, shippingStreet: true, shippingCity: true, shippingDepartment: true, shippingReferences: true } });
       const trackingLine = order
         ? `\nSigue tu pedido aquí:\n${(this.config?.get<string>("app.checkoutOrigin") ?? "http://localhost:5174").replace(/\/$/, "")}/track/${createOrderTrackingToken(order.id, this.config?.get<string>("app.orderTrackingSecret") ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}\n`
         : "";
@@ -863,6 +878,7 @@ export class PaymentIntentsService {
                   : null,
               }
             : null,
+          delivery: orderDelivery(order),
         });
         html = rendered?.html;
         subject = rendered?.subject;

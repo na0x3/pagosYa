@@ -12,8 +12,9 @@ import { SourceRequestBudget } from '../src/storefront-source/source-request-bud
 import { designEmailKit, EMAIL_KIT_MAX_CREDITS, EMAIL_KIT_MODEL, type DesignInput } from '../src/store-emails/email-kit-designer';
 import { validateEmailKit } from '../src/store-emails/email-kit-validate';
 import { loadFloorKit } from '../src/store-emails/email-copy-defaults';
-import { assembleEmail } from '../src/store-emails/email-assemble';
-import { receiptCalls, resolveCopy, type ReceiptData } from '../src/store-emails/email-recipes';
+import { assembleWithinBudget } from '../src/store-emails/email-assemble';
+import type { EmailContext } from '../src/store-emails/email-context';
+import { resolveContent, resolveCopy, richReceiptCalls, type ReceiptData } from '../src/store-emails/email-recipes';
 import { EMAIL_TYPES } from '../src/store-emails/email-kit-contract';
 
 const STORES: (Omit<DesignInput, 'mode'> & { slug: string; modes: DesignInput['mode'][] })[] = [
@@ -42,6 +43,17 @@ function loadEnv() {
   }
 }
 
+/** Store facts for the examples, so every optional section shows; real receipts load them from the store. */
+function exampleContext(storeName: string): EmailContext {
+  const storeUrl = 'https://example.test';
+  return { storeUrl, heroImage: null, nav: [{ label: 'Novedades', href: storeUrl }, { label: 'Colecciones', href: storeUrl }],
+    socials: [{ icon: 'instagram', label: 'Instagram', href: 'https://instagram.com/example' }, { icon: 'tiktok', label: 'TikTok', href: 'https://tiktok.com/@example' }],
+    address: 'Av. 6 de Agosto 123, La Paz', policies: [{ key: 'returns', label: 'Cambios y devoluciones', href: storeUrl }, { key: 'delivery', label: 'Envíos', href: storeUrl }],
+    contact: { email: 'hola@example.test', phone: '+591 70000000', whatsapp: true }, delivers: true,
+    review: { text: `Todo llegó perfecto, se nota el cariño de ${storeName}.`, author: 'Lucía', stars: 5 },
+    promos: [{ id: 'example', code: 'VUELVE10', discount: '10% en tu próxima compra' }], recommendations: () => [] };
+}
+
 async function main() {
   if (!process.argv.includes('--i-accept-costs')) throw new Error('Each kit is a billed model run. Re-run with --i-accept-costs.');
   loadEnv();
@@ -61,8 +73,12 @@ async function main() {
     for (const type of EMAIL_TYPES) {
       const data = sample(store.storeName, type === 'appointment_confirmed');
       const copy = resolveCopy(type, kit.copy, {}, { cliente: 'Ana', tienda: store.storeName });
-      const { html } = assembleEmail(usable ? kit : floor, floor, receiptCalls(type, data, copy),
-        { storeName: store.storeName, logoUrl: null, storeUrl: null, preheader: copy.preheader, unsubscribeUrl: null, marketing: false });
+      const ctx = exampleContext(store.storeName);
+      const delivery = type === 'appointment_confirmed' ? null : { method: 'delivery' as const, recipient: 'Ana Quispe', lines: ['Av. 6 de Agosto 123', 'La Paz'] };
+      const calls = richReceiptCalls(type, { ...data, delivery }, copy, ctx, resolveContent(type, {}, ctx, copy, store.storeName, null));
+      const { html } = assembleWithinBudget(usable ? kit : floor, floor, calls, { storeName: store.storeName, logoUrl: null, storeUrl: ctx.storeUrl,
+        preheader: copy.preheader, unsubscribeUrl: null, marketing: false, nav: ctx.nav, socials: ctx.socials, address: ctx.address, policies: ctx.policies,
+        iconBase: config.get<string>('app.publicAssetBaseUrl') ?? null });
       const file = `${store.slug}-${mode}-${type}.html`;
       await writeFile(join(out, file), html);
       cells.push(`<section><h2>${store.storeName} · ${mode} · ${type}</h2><iframe src="${file}" width="390" height="760"></iframe><iframe src="${file}" width="640" height="760"></iframe></section>`);
