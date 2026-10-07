@@ -928,6 +928,8 @@ model Store {
   imports                      StoreImport[]
   importLinks                  StoreImportLink[]
   extensions                   StoreExtension[]
+  emailKits                    StoreEmailKit[]
+  emailCopyOverrides           StoreEmailCopyOverride[]
 
   @@index([merchantId, createdAt])
 }
@@ -3263,4 +3265,42 @@ model StoreSourceChatJob {
 
   @@unique([storeId, requestId])
   @@index([status, leaseUntil, createdAt])
+}
+
+enum StoreEmailKitStatus {
+  CANDIDATE
+  ACTIVE
+  PREVIOUS
+}
+
+/// One email look per store (spec 2026-10-07-store-email-look-design). At most one row per status per store.
+model StoreEmailKit {
+  id                   String              @id @default(cuid())
+  storeId              String
+  store                Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  status               StoreEmailKitStatus
+  mode                 String
+  layout               String
+  blocks               String
+  copy                 Json
+  designedFromRevision Int?
+  model                String?
+  credits              Int                 @default(0)
+  repairs              Json                @default("[]")
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@unique([storeId, status])
+}
+
+/// A merchant's edit to one line of one email; survives every redesign.
+model StoreEmailCopyOverride {
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  emailType String
+  field     String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@id([storeId, emailType, field])
 }
