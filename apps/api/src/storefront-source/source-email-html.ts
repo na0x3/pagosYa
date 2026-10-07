@@ -108,3 +108,21 @@ export function applyOrderEmailTemplate<T extends { path: string; content: strin
   });
   return { files: out, repairs };
 }
+
+/**
+ * What the live generator is told about the buyer's email. Deliberately NOT added to
+ * design-engine/sep5-author.ts: sep5-author.spec.ts pins that text byte for byte against
+ * sep5-prompt.26f889c8.txt, and a contract bolted on there is exactly what the guard
+ * exists to catch. A September 5 authored store gets the kit floor instead.
+ */
+export const SOURCE_ORDER_EMAIL_DIRECTION =
+  `Also author ${ORDER_EMAIL_TEMPLATE_PATH}: the email the buyer receives after paying, in this store's own typography and palette. ` +
+  'Use table layout and inline styles only — email clients drop flexbox, grid and custom properties, so never rely on display:flex, display:grid or var(--token). ' +
+  'Set an explicit background wherever you set a colour, or Gmail dark mode will invert it until it is unreadable. ' +
+  'Mark the order facts with data-order-greeting, data-order-id, data-order-items containing exactly ONE data-order-item row, and inside that row ' +
+  'data-order-item-name, data-order-item-variant, data-order-item-extras, data-order-item-quantity and data-order-item-amount; then data-order-total, ' +
+  'data-order-original-total, data-order-tracking on a link, data-order-subscription, data-order-appointment-name, data-order-appointment-date, ' +
+  'data-store-name, and data-store-logo on an image. ' +
+  'The platform fills every one of them from the real order: nunca escribas un monto, un total, una fecha ni un número de orden, and never state or imply that the ' +
+  'customer will be charged automáticamente — Bolivian rails cannot charge without the buyer approving each payment. ' +
+  'An element whose value is absent is removed whole, so put its label inside the marked element rather than beside it.';
