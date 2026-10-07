@@ -1,18 +1,19 @@
 import { Logger } from '@nestjs/common';
 import { StoreEmailService } from './store-email.service';
 import { loadFloorKit } from './email-copy-defaults';
+import * as validate from './email-kit-validate';
 
-const config = (base: string | null) => ({ get: (key: string) => (key === 'app.publicAssetBaseUrl' ? base : undefined) }) as any;
+const config = (base: string | null) => ({ get: (key: string) => ({ 'app.publicAssetBaseUrl': base, 'app.checkoutOrigin': 'https://pagar.bo' } as Record<string, unknown>)[key] }) as any;
 const input = (over: object = {}) => ({ storeName: 'Café Illimani', customerName: 'Ana', orderId: 'pi_1', total: 'Bs 150,00', originalTotal: null, trackingUrl: null,
   subscription: null, appointment: null, logoUrl: null,
   lines: [{ paymentLinkId: 'pl_1', variantId: 'v_2', name: 'Café', variant: '250 g', extras: null, quantity: 1, amount: 'Bs 150,00' }], ...over });
 
-function harness({ kit = null as any, legacy = null as string | null, base = 'https://api.example' as string | null } = {}) {
+function harness({ kit = null as any, legacy = null as string | null, base = 'https://api.example' as string | null, brand = [{ field: 'accent', value: '#c2410c' }] as any[], domains = [] as { hostname: string }[] } = {}) {
   const prisma: any = {
     storeSourceVersion: { findFirst: jest.fn(async () => (legacy ? { snapshot: { files: [{ path: 'emails/order-confirmation.html', content: legacy }] } } : null)) },
-    storeBrandProfile: { findUnique: jest.fn(async () => ({ data: { confirmed: [{ field: 'accent', value: '#c2410c' }], suggested: [] } })) },
-    paymentLink: { findMany: jest.fn(async () => [{ id: 'pl_1', name: 'Café', imageUrls: ['/v1/uploads/cover.webp'], variants: [{ id: 'v_2', imageUrls: ['/v1/uploads/v2.webp'] }] }]) },
-    store: { findUnique: jest.fn(async () => ({ logoUrl: '/v1/uploads/logo.png' })) },
+    storeBrandProfile: { findUnique: jest.fn(async () => ({ data: { confirmed: brand, suggested: [] } })) },
+    paymentLink: { findMany: jest.fn(async () => [{ id: 'pl_1', name: 'Café', amount: 5000, currency: 'BOB', imageUrls: ['/v1/uploads/cover.webp'], variants: [{ id: 'v_2', imageUrls: ['/v1/uploads/v2.webp'] }] }]) },
+    store: { findUnique: jest.fn(async () => ({ logoUrl: '/v1/uploads/logo.png', slug: 'cafe', customDomains: domains })) },
   };
   const kits: any = { active: jest.fn(async () => kit), overrides: jest.fn(async () => ({})) };
   return new StoreEmailService(prisma, kits, config(base));
@@ -60,13 +61,46 @@ describe('StoreEmailService.renderReceipt', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('kit lookup failed for s1'));
   });
 
+  it("links the store's name and logo to its address: the active custom domain, else its pagosYa page", async () => {
+    expect((await harness().renderReceipt('s1', input())).html).toContain('href="https://pagar.bo/s/cafe"');
+    expect((await harness({ domains: [{ hostname: 'tienda.bo' }] }).renderReceipt('s1', input())).html).toContain('href="https://tienda.bo"');
+  });
+
+  it('resolves brand colours before filling the order, so buyer text is never rewritten', async () => {
+    const { html } = await harness().renderReceipt('s1', input({ customerName: 'Ana var(--brand-accent)' }));
+    expect(html).toContain('Hola Ana var(--brand-accent),');
+    expect(html.replace('var(--brand-accent),', '')).not.toContain('var(--');
+  });
+
+  it("gives a stand-in block the store layout's colours when the brand has none confirmed", async () => {
+    const floor = await loadFloorKit();
+    const dark = { id: 'dark', layout: '<html><body style="background:#000000;color:#ffffff"><table><tr><td data-email-content style="background:#111111;color:#eeeeee"></td></tr></table></body></html>',
+      blocks: ['heading', 'button', 'note'].map(b => floor.blocks[b as 'heading']).join(''), copy: {} };
+    expect((await harness({ kit: dark, brand: [] }).renderReceipt('s1', input())).html).toContain('color:#eeeeee;background:#111111');
+    // A confirmed brand colour still wins over the layout's.
+    expect((await harness({ kit: dark, brand: [{ field: 'foreground', value: '#222222' }] }).renderReceipt('s1', input())).html).toContain('color:#222222;background:#111111');
+  });
+
+  it('checks a kit once and reuses the result for later receipts', async () => {
+    const floor = await loadFloorKit();
+    const kit = { id: 'k-cache', layout: floor.layout!, blocks: Object.values(floor.blocks).join(''), copy: {} };
+    const spy = jest.spyOn(validate, 'validateEmailKit');
+    const service = harness({ kit });
+    await service.renderReceipt('s1', input());
+    await service.renderReceipt('s1', input());
+    expect(spy.mock.calls.filter(([raw]) => raw.layout === kit.layout && raw.blocks === kit.blocks)).toHaveLength(1);
+    spy.mockRestore();
+  });
+
   it('a null store gets the standard kit', async () => {
     expect((await harness().renderReceipt(null, input())).html).toContain('Café');
   });
 
   it('the sample uses the store\'s own products when it has some', async () => {
     const sample = await harness().sampleReceipt('s1', 'Café Illimani', 'order_confirmation');
-    expect(sample.lines[0]).toMatchObject({ paymentLinkId: 'pl_1', name: 'Café' });
+    expect(sample.lines[0]).toMatchObject({ paymentLinkId: 'pl_1', name: 'Café', quantity: 1, amount: '50.00 BOB' });
+    // Real prices, in the same form a real receipt uses, so the preview never shows a made-up total.
+    expect(sample.total).toBe('50.00 BOB');
     expect((await harness().sampleReceipt('s1', 'Café', 'appointment_confirmed')).appointment).not.toBeNull();
   });
 });
