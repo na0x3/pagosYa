@@ -1,5 +1,5 @@
 import { Logger } from "@nestjs/common";
-import { LedgerDirection, OpsRole, PrismaClient, SettlementHoldStatus, SettlementMode, TransactionStatus, TransactionType } from "@prisma/client";
+import { KycStatus, LedgerDirection, MerchantStatus, OpsRole, PrismaClient, SettlementHoldStatus, SettlementMode, TransactionStatus, TransactionType } from "@prisma/client";
 import { integrationDatabase } from "../common/testing/integration-database";
 import { LedgerService } from "../ledger/ledger.service";
 import { AuditLogService } from "../ops/audit-log.service";
@@ -9,6 +9,9 @@ import { SettlementQueryService } from "./settlement-query.service";
 import { SettlementAdminService } from "./settlement-admin.service";
 import { merchantBalances } from "./settlement-balances";
 import { lockMerchantSettlement } from "./settlement-lock";
+import { PayoutsService } from "../payouts/payouts.service";
+import { PayoutScheduleJob } from "../payouts/payout-schedule.job";
+import { PayoutDeliveryWorker } from "../payouts/payout-delivery.worker";
 
 /**
  * The money invariant behind ASFI row 5: every journal balances, and for each
@@ -173,5 +176,28 @@ harness.describeDb("settlement holds (real Postgres)", () => {
     expect(hold.pendingAmount).toBe(0);
     expect((await bob(m.id)).pending).toBe(0);
     await expectInvariant(m.id, 0);
+  });
+
+  // Last on purpose: the batch releases and pays across every merchant in this database.
+  it("creates one payout per merchant and currency when replicas run the daily batch together, and never delivers a held merchant's", async () => {
+    const m = await merchant("replicas");
+    await db.merchant.update({ where: { id: m.id }, data: { status: MerchantStatus.ACTIVE } });
+    await db.merchantKycSubmission.create({ data: { merchantId: m.id, legalName: "Replicas SRL", payoutBankAccount: "BNB 123", status: KycStatus.APPROVED } });
+    await capture(m.id, 10_000, new Date("2026-10-01T15:00:00Z")); // net 9750 -> 8775 available on Oct 8
+    const payouts = new PayoutsService(db as any, { needsMerchantAcceptance: jest.fn().mockResolvedValue(false) } as any);
+    const job = () => new PayoutScheduleJob(db as any, holds, payouts).run(new Date("2026-10-08T14:00:00Z"));
+
+    await Promise.all([job(), job(), payouts.createDuePayouts(), payouts.createDuePayouts()]);
+
+    const created = await db.payout.findMany({ where: { merchantId: m.id } });
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({ amount: 8_775, currency: "BOB", bankAccount: "BNB 123", status: "PENDING" });
+    expect(await payouts.payoutBlocker(m.id, "BOB")).toBe("in_flight");
+
+    await db.merchant.update({ where: { id: m.id }, data: { payoutHeldAt: new Date(), payoutHoldReason: "Revisión de reclamos" } });
+    const provider = { disburse: jest.fn().mockResolvedValue({ status: "succeeded", railReference: "rail_1" }) };
+    await new PayoutDeliveryWorker(db as any, ledger, provider as any).tick();
+    expect(provider.disburse).not.toHaveBeenCalled();
+    expect(await db.payout.findUniqueOrThrow({ where: { id: created[0].id } })).toMatchObject({ status: "PENDING", attempts: 0 });
   });
 });
