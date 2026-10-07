@@ -5,6 +5,7 @@ import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { MerchantThrottlerGuard } from '../storefront-source/source-compile-budget';
 import { PrismaService } from '../prisma/prisma.service';
 import { EMAIL_PROVIDER } from '../dashboard/tokens';
+import { ConfigService } from '@nestjs/config';
 import { StoreEmailController } from './store-email.controller';
 import { StoreEmailService } from './store-email.service';
 import { EmailKitService } from './email-kit.service';
@@ -33,6 +34,7 @@ describe('Ajustes › Correos routes', () => {
   };
   const mail = { send: jest.fn() };
   const prisma = { store: { findFirst: jest.fn() } };
+  const config = { get: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -43,6 +45,7 @@ describe('Ajustes › Correos routes', () => {
         { provide: EmailKitStore, useValue: kits },
         { provide: PrismaService, useValue: prisma },
         { provide: EMAIL_PROVIDER, useValue: mail },
+        { provide: ConfigService, useValue: config },
       ],
     })
       .overrideGuard(MerchantAuthGuard)
@@ -65,6 +68,7 @@ describe('Ajustes › Correos routes', () => {
   afterAll(() => app.close());
   beforeEach(() => {
     jest.clearAllMocks();
+    config.get.mockReturnValue(undefined);
     prisma.store.findFirst.mockResolvedValue({ name: 'Café Illimani', publishedSourceRevision: 7 });
     kits.active.mockResolvedValue(null);
     kits.candidate.mockResolvedValue(null);
@@ -204,6 +208,15 @@ describe('Ajustes › Correos routes', () => {
     kits.candidate.mockResolvedValue({ copy: { order_confirmation: { headline: 'Del diseño nuevo' } } });
     const res = await get('/copy/order_confirmation').expect(200);
     expect(res.body.fields.find((f: any) => f.field === 'headline').value).toBe('Del diseño nuevo');
+  });
+
+  it('sends to the local test address when one is configured, still only for a signed-in dashboard user', async () => {
+    config.get.mockImplementation((key: string) => (key === 'app.emailTestTo' ? 'dueña@gmail.com' : undefined));
+    await post('/test-send', { type: 'order_confirmation' }).expect(201);
+    expect(mail.send).toHaveBeenCalledWith(expect.objectContaining({ to: 'dueña@gmail.com' }));
+    mail.send.mockClear();
+    await post('/test-send', {}, KEY).expect(403);
+    expect(mail.send).not.toHaveBeenCalled();
   });
 
   it('refuses a test-send from a secret-key session, which has no address', async () => {

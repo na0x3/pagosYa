@@ -86,6 +86,8 @@ export interface AppConfig {
   checkoutOrigin: string;
   /** The API's public https origin; email images are only ever absolute https URLs. */
   publicAssetBaseUrl: string | null;
+  /** Local development only: where store-email test sends go instead of the signed-in account. Always null in production. */
+  emailTestTo: string | null;
   consumerDashboardOrigin: string;
   merchantDashboardOrigin: string;
   orderTrackingSecret: string;
@@ -194,6 +196,11 @@ export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, envi
 
 /** The analytics session key outside production (the production check refuses it: "dev-" / "change-me"). */
 export const DEVELOPMENT_ANALYTICS_SESSION_SECRET = "development-only-analytics-session-secret-change-me";
+
+/** Where store-email test sends go in local development (EMAIL_TEST_TO). Never in production: there a test goes to the signed-in account. */
+export function emailTestRecipient(environment: string, value: string | undefined): string | null {
+  return environment === "production" ? null : value?.trim() || null;
+}
 
 export function assertProductionSecurityConfig(app: AppConfig): void {
   if (app.environment !== "production") return;
@@ -307,6 +314,7 @@ export default (): { app: AppConfig } => {
     internalOpsSecret: process.env.INTERNAL_OPS_SECRET ?? "",
     checkoutOrigin: process.env.CHECKOUT_ORIGIN ?? "http://localhost:5174",
     publicAssetBaseUrl: process.env.PUBLIC_ASSET_BASE_URL?.trim().replace(/\/+$/, "") || null,
+    emailTestTo: emailTestRecipient(environment, process.env.EMAIL_TEST_TO),
     consumerDashboardOrigin: process.env.CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324",
     merchantDashboardOrigin: process.env.MERCHANT_DASHBOARD_ORIGIN ?? "http://localhost:4322",
     orderTrackingSecret: process.env.ORDER_TRACKING_SECRET ?? "development-only-order-tracking-secret-change-me",

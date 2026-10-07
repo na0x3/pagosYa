@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Logger, NotFoundException, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { MerchantThrottlerGuard } from '../storefront-source/source-compile-budget';
 import { EmailProvider } from '../dashboard/interfaces/email-provider.interface';
@@ -27,7 +28,7 @@ const asField = (value: string): EmailCopyField => { if (!Object.hasOwn(EMAIL_CO
 export class StoreEmailController {
   private readonly logger = new Logger(StoreEmailController.name);
   constructor(private readonly emails: StoreEmailService, private readonly designer: EmailKitService, private readonly kits: EmailKitStore,
-    private readonly prisma: PrismaService, @Inject(EMAIL_PROVIDER) private readonly mail: EmailProvider) {}
+    private readonly prisma: PrismaService, @Inject(EMAIL_PROVIDER) private readonly mail: EmailProvider, private readonly config: ConfigService) {}
 
   private async owned(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, publishedSourceRevision: true } });
@@ -120,8 +121,10 @@ export class StoreEmailController {
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   async testSend(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: { type?: string }, @Req() req: { merchantUser?: { email?: string } }) {
     const store = await this.owned(merchant.id, storeId);
-    const to = req.merchantUser?.email;
-    if (!to) throw new ForbiddenException('Sign in to the dashboard to send yourself a test');
+    const sessionAddress = req.merchantUser?.email;
+    if (!sessionAddress) throw new ForbiddenException('Sign in to the dashboard to send yourself a test');
+    // Local development may route every test to one inbox (EMAIL_TEST_TO); configuration keeps it null in production.
+    const to = this.config.get<string | null>('app.emailTestTo') || sessionAddress;
     const emailType = asType(body?.type ?? 'order_confirmation');
     // A design waiting for review is the one sent, so the merchant can check it in their inbox before using it.
     const candidate = await this.kits.candidate(storeId).catch(() => null);

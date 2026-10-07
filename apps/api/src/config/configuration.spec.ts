@@ -1,4 +1,4 @@
-import configuration from "./configuration";
+import configuration, { emailTestRecipient } from "./configuration";
 
 describe('local ChatGPT plan configuration', () => {
   const keys = ['NODE_ENV', 'YAPI_CHATGPT_PLAN_URL', 'YAPI_CHATGPT_PLAN_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY'];
@@ -288,5 +288,26 @@ describe('public asset base URL', () => {
     expect(configuration().app.publicAssetBaseUrl).toBe('https://api.pagosya.bo');
     delete process.env.PUBLIC_ASSET_BASE_URL;
     expect(configuration().app.publicAssetBaseUrl).toBeNull();
+  });
+});
+
+describe('local test-email address', () => {
+  const keep = { to: process.env.EMAIL_TEST_TO, env: process.env.NODE_ENV };
+  afterEach(() => {
+    if (keep.to === undefined) delete process.env.EMAIL_TEST_TO; else process.env.EMAIL_TEST_TO = keep.to;
+    if (keep.env === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = keep.env;
+  });
+  it('reads EMAIL_TEST_TO outside production, and null when unset', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.EMAIL_TEST_TO = ' dueña@gmail.com ';
+    expect(configuration().app.emailTestTo).toBe('dueña@gmail.com');
+    delete process.env.EMAIL_TEST_TO;
+    expect(configuration().app.emailTestTo).toBeNull();
+  });
+  it('ignores EMAIL_TEST_TO in production, where a test always goes to the signed-in account', () => {
+    // Asserted on the rule itself: a production configuration refuses to load in a test environment.
+    expect(emailTestRecipient('production', 'dueña@gmail.com')).toBeNull();
+    expect(emailTestRecipient('development', 'dueña@gmail.com')).toBe('dueña@gmail.com');
+    expect(emailTestRecipient('development', '  ')).toBeNull();
   });
 });
