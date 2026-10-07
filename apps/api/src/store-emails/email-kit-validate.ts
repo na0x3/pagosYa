@@ -14,7 +14,9 @@ const attr = (el: Element, name: string) => el.attrs.find(a => a.name === name)?
 const textOf = (el: Element): string => kids(el).map(c => (isElement(c) ? textOf(c) : ((c as any).value ?? ''))).join('');
 const count = (root: Node, name: string) => [...walk(root)].filter(el => attr(el, name) !== undefined).length;
 
-const AMOUNT = /(?:\b(?:Bs|BOB|USD)\.?|\$)\s?\d[\d.,]*/gi;
+const AMOUNT = /(?:\b(?:Bs|BOB|USD)\.?|\$)\s?\d[\d.,]*|\b\d[\d.,]*\s?(?:Bs\b\.?|BOB\b|USD\b|bolivianos?\b|d[oó]lares\b)/gi;
+const MONTH_DATE = /\b\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|sept?iembre|octubre|noviembre|diciembre)\b/gi;
+const HASH_NUMBER = /#\s?\d+/g;
 const DATE = /\b\d{1,2}\s?[/.-]\s?\d{1,2}(?:\s?[/.-]\s?\d{2,4})?\b/g;
 const ORDER_ID = /\bpi_[A-Za-z0-9]+\b/g;
 const LONG_NUMBER = /\b\d{4,}\b/g;
@@ -31,12 +33,12 @@ export function cleanCopyValue(field: EmailCopyField, value: string): { value: s
     repairs.push(`${field}: placeholder {${name}} removed`);
     return '';
   });
-  for (const [pattern, label] of [[ORDER_ID, 'order number'], [AMOUNT, 'amount'], [DATE, 'date'], [LONG_NUMBER, 'number']] as const) {
+  // A line that states a fact is dropped whole: the platform's wording reads better than a sentence with a hole in it.
+  for (const [pattern, label] of [[ORDER_ID, 'order number'], [HASH_NUMBER, 'order number'], [AMOUNT, 'amount'], [MONTH_DATE, 'date'], [DATE, 'date'], [LONG_NUMBER, 'number']] as const) {
     pattern.lastIndex = 0;
     if (!pattern.test(out)) continue;
     pattern.lastIndex = 0;
-    out = out.replace(pattern, '');
-    repairs.push(`${field}: ${label} removed; the platform fills facts`);
+    return { value: null, repairs: [...repairs, `${field}: ${label} removed; the platform fills facts`] };
   }
   out = out.replace(/\s{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
   const cap = EMAIL_COPY_FIELDS[field];

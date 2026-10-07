@@ -81,10 +81,22 @@ describe('validateEmailCopy', () => {
     expect(repairs).toEqual([]);
   });
 
-  it('removes amounts, dates and order numbers the AI typed', () => {
-    const { copy, repairs } = validateEmailCopy({ order_confirmation: { intro: 'Tu pedido pi_ABC123 de Bs 150,00 llega el 12/10.' } });
-    expect(copy.order_confirmation!.intro).not.toMatch(/pi_ABC123|150|12\/10/);
-    expect(repairs.length).toBeGreaterThan(0);
+  it('drops a line that states an amount, a date or an order number, so the platform wording is used instead', () => {
+    for (const intro of [
+      'Tu pedido pi_ABC123 de Bs 150,00 llega el 12/10.',
+      'Tu pedido de 150 Bs llega el 12 de octubre.',
+      'Pedido #123 por Bs. 1.500,50',
+      'Pagaste 200 bolivianos.',
+    ]) {
+      const { copy, repairs } = validateEmailCopy({ order_confirmation: { intro } });
+      expect(copy.order_confirmation?.intro).toBeUndefined();
+      expect(repairs.join(' ')).toMatch(/removed; the platform fills facts/);
+    }
+  });
+
+  it('keeps ordinary numbers that are not facts', () => {
+    expect(validateEmailCopy({ order_confirmation: { intro: 'Respondemos en 24 horas y damos 2 años de garantía.' } }).copy.order_confirmation?.intro)
+      .toBe('Respondemos en 24 horas y damos 2 años de garantía.');
   });
 
   it('drops a line that implies automatic charging', () => {
