@@ -111,6 +111,18 @@ describe('assembleEmail, rich blocks', () => {
     expect(repairs[0]).toMatch(/products removed/);
   });
 
+  it('a section and its heading share a drop and go together, never leaving a lone title', () => {
+    const lines = Array.from({ length: 40 }, (_, i) => ({ name: `Producto ${i} ${'x'.repeat(200)}`, variant: null, extras: null, quantity: 1, amount: 'Bs 1,00', image: { src: 'https://api.example/v1/uploads/a.webp', alt: 'a' } }));
+    const calls: BlockCall[] = [
+      { block: 'items', items: lines, total: 'Bs 40,00', originalTotal: null },
+      { block: 'heading', title: 'También te puede gustar', text: null, drop: 6 },
+      { block: 'products', products: Array.from({ length: 4 }, () => ({ name: 'p'.repeat(15000), price: 'Bs 1', href: 'https://s', image: null })), drop: 6 },
+    ];
+    const { html, repairs } = assembleWithinBudget(floor, floor, calls, rich);
+    expect(html).not.toContain('También te puede gustar');
+    expect(repairs.slice(0, 2)).toEqual(['budget: products removed to fit Gmail', 'budget: heading removed to fit Gmail']);
+  });
+
   it('stars come from the number, never from text', () => {
     expect(assembleEmail(floor, floor, [{ block: 'quote', text: 'Excelente', author: 'Ana', stars: 4 }], rich).html).toContain('★★★★☆');
   });

@@ -227,7 +227,7 @@ export function assembleEmail(kit: ValidEmailKit, floor: ValidEmailKit, calls: B
 
 /**
  * Assembles the email and, while it is over Gmail's clipping size, removes the optional
- * section with the highest `drop` and tries again. Required sections carry no `drop`, so
+ * section(s) with the highest `drop` and tries again. Required sections carry no `drop`, so
  * the order lines are never what gets cut.
  */
 export function assembleWithinBudget(kit: ValidEmailKit, floor: ValidEmailKit, calls: BlockCall[], layout: LayoutData): { html: string; repairs: string[] } {
@@ -236,10 +236,11 @@ export function assembleWithinBudget(kit: ValidEmailKit, floor: ValidEmailKit, c
   for (;;) {
     const result = assembleEmail(kit, floor, current, layout);
     const over = result.repairs.some(r => r.startsWith('render: clamped'));
-    const droppable = current.map((call, index) => ({ call, index })).filter(({ call }) => call.drop !== undefined);
+    const droppable = current.filter(call => call.drop !== undefined);
     if (!over || !droppable.length) return { html: result.html, repairs: [...dropped, ...result.repairs] };
-    const victim = droppable.reduce((a, b) => (b.call.drop! >= a.call.drop! ? b : a));
-    dropped.push(`budget: ${victim.call.block} removed to fit Gmail`);
-    current = current.filter((_, i) => i !== victim.index);
+    // Calls sharing a drop are one section (a heading and its products), so they leave together, last first.
+    const top = Math.max(...droppable.map(call => call.drop!));
+    for (const call of droppable.filter(call => call.drop === top).reverse()) dropped.push(`budget: ${call.block} removed to fit Gmail`);
+    current = current.filter(call => call.drop !== top);
   }
 }
