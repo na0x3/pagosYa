@@ -63,6 +63,7 @@ enum TransactionStatus {
 enum LedgerAccount {
   RAIL_CLEARING
   MERCHANT_PAYABLE
+  MERCHANT_PENDING
   PAGOSYA_FEE_REVENUE
   RESERVE
   RAIL_COST
@@ -269,6 +270,16 @@ model Merchant {
   // must come from a per-merchant decision instead.
   monthlyLimitOverride        Int?
   perPaymentLimitOverride     Int?
+  // Ops-set settlement overrides (null = use the level policy) and the manual
+  // payout hold. payoutHoldReason is internal and never shown to the merchant.
+  payoutDelayDaysOverride     Int?
+  reserveBpsOverride          Int?
+  reserveDaysOverride         Int?
+  payoutHoldReason            String?
+  payoutHeldAt                DateTime?
+  payoutHeldByLabel           String?
+  settlementHolds             SettlementHold[]
+  reserveSeizures             ReserveSeizure[]
   monthlyVolumes              MerchantMonthlyVolume[]
   kycDocuments                MerchantKycDocument[]
   rewardGrants                RewardGrant[]
@@ -557,6 +568,11 @@ model MerchantLevelPolicy {
   liveEnabled     Boolean
   monthlyLimit    Int?
   perPaymentLimit Int?
+  // ASFI fraud coverage (sub-project 3): days before a capture becomes
+  // payable, and the share (bps) kept back as a rolling reserve for reserveDays.
+  payoutDelayDays Int      @default(7)
+  reserveBps      Int      @default(0)
+  reserveDays     Int      @default(0)
   updatedAt       DateTime @updatedAt
 }
 
@@ -3263,4 +3279,55 @@ model StoreSourceChatJob {
 
   @@unique([storeId, requestId])
   @@index([status, leaseUntil, createdAt])
+}
+
+enum SettlementHoldStatus {
+  PENDING
+  RESERVE_HELD
+  CLOSED
+}
+
+// One row per AGGREGATOR capture: when its merchant net leaves MERCHANT_PENDING,
+// and how much of it RESERVE keeps until reserveReleaseAt. The ledger holds the
+// money; this row holds the schedule. Policy fields are a snapshot at capture.
+model SettlementHold {
+  id               String               @id @default(cuid())
+  merchantId       String
+  merchant         Merchant             @relation(fields: [merchantId], references: [id])
+  paymentIntentId  String
+  transactionId    String               @unique
+  currency         String
+  netAmount        Int
+  pendingAmount    Int
+  reserveAmount    Int
+  availableAt      DateTime
+  reserveReleaseAt DateTime
+  status           SettlementHoldStatus @default(PENDING)
+  delayDays        Int
+  reserveBps       Int
+  reserveDays      Int
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status, availableAt])
+  @@index([status, reserveReleaseAt])
+  @@index([merchantId, currency, status])
+  @@index([paymentIntentId])
+}
+
+// Reserve money paid out as restitution to a buyer by ops (confirmed fraud).
+model ReserveSeizure {
+  id                String   @id @default(cuid())
+  merchantId        String
+  merchant          Merchant @relation(fields: [merchantId], references: [id])
+  amount            Int
+  currency          String
+  reason            String
+  externalReference String
+  opsUserId         String
+  opsLabel          String
+  ledgerGroupId     String
+  createdAt         DateTime @default(now())
+
+  @@index([merchantId, createdAt])
 }
