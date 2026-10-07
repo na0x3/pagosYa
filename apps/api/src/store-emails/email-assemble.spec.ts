@@ -1,4 +1,4 @@
-import { assembleEmail, type BlockCall, type LayoutData } from './email-assemble';
+import { assembleEmail, assembleWithinBudget, type BlockCall, type LayoutData } from './email-assemble';
 import { loadFloorKit } from './email-copy-defaults';
 import type { ValidEmailKit } from './email-kit-contract';
 
@@ -56,7 +56,7 @@ describe('assembleEmail', () => {
 
   it('leaves no slot attributes in the sent HTML', () => {
     const { html } = assembleEmail(floor, floor, [{ block: 'heading', title: 'a', text: 'b' }, items, { block: 'button', href: 'https://t.example', label: 'Sigue' }], layoutData);
-    expect(html).not.toMatch(/data-(?:block|item|items|product|store|email)\b/);
+    expect(html).not.toMatch(/data-(?:block|item|items|product|store|email|line|step|trust|quote|contact|nav|social|policy|tone)\b/);
   });
 
   it('clamps the result to 90 KB and says so', () => {
@@ -70,5 +70,48 @@ describe('assembleEmail', () => {
     const { html, repairs } = assembleEmail({ ...floor, layout: null }, floor, [items], layoutData);
     expect(html).toContain('Taza');
     expect(repairs).toContain('layout: standard layout used');
+  });
+});
+
+const rich: LayoutData = { ...layoutData, nav: [], socials: [], address: null, policies: [], iconBase: 'https://api.example' };
+
+describe('assembleEmail, rich blocks', () => {
+  it('fills repeated rows with icons', () => {
+    const { html } = assembleEmail(floor, floor, [{ block: 'steps', steps: [{ icon: 'check', title: 'Confirmado' }, { icon: 'box', title: 'Preparando' }, { icon: 'truck', title: 'En camino' }] }], rich);
+    expect(html.match(/(?:check|box|truck)-(?:dark|light)\.png/g)).toHaveLength(3);
+    expect(html).toContain('En camino');
+  });
+
+  it('a block on a dark background gets light icons', () => {
+    const kit = { ...floor, blocks: { ...floor.blocks, trust: floor.blocks.trust!.replace('data-tone="light"', 'data-tone="dark"') } };
+    expect(assembleEmail(kit, floor, [{ block: 'trust', items: [{ icon: 'lock', label: 'Pago seguro' }] }], rich).html).toContain('lock-light.png');
+  });
+
+  it('fills header links, social icons, an unknown link as text, the address and policies', () => {
+    const { html } = assembleEmail(floor, floor, [], { ...rich, nav: [{ label: 'Café', href: 'https://s/cafe' }],
+      socials: [{ icon: 'instagram', label: 'Instagram', href: 'https://instagram.com/x' }, { icon: null, label: 'Linktree', href: 'https://linktr.ee/x' }],
+      address: 'Av. 6 de Agosto 123, La Paz', policies: [{ label: 'Cambios', href: 'https://s/cambios' }] });
+    expect(html).toContain('instagram-light.png');
+    expect(html).toMatch(/href="https:\/\/linktr\.ee\/x"[^>]*>Linktree</);
+    expect(html).toContain('Av. 6 de Agosto 123, La Paz');
+    expect(html).toContain('href="https://s/cambios"');
+  });
+
+  it('drops optional sections in priority order to fit 90 KB, never the order lines', () => {
+    const lines = Array.from({ length: 40 }, (_, i) => ({ name: `Producto ${i} ${'x'.repeat(200)}`, variant: null, extras: null, quantity: 1, amount: 'Bs 1,00', image: { src: 'https://api.example/v1/uploads/a.webp', alt: 'a' } }));
+    const calls: BlockCall[] = [
+      { block: 'items', items: lines, total: 'Bs 40,00', originalTotal: null },
+      { block: 'products', products: Array.from({ length: 4 }, () => ({ name: 'p'.repeat(12000), price: 'Bs 1', href: 'https://s', image: null })), drop: 6 },
+      { block: 'story', image: null, title: 't', text: 's'.repeat(6000), drop: 5 },
+      { block: 'quote', text: 'q'.repeat(3000), author: 'Ana', stars: 5, drop: 4 },
+    ];
+    const { html, repairs } = assembleWithinBudget(floor, floor, calls, rich);
+    expect(Buffer.byteLength(html)).toBeLessThanOrEqual(90 * 1024);
+    expect(html).toContain('Producto 39');
+    expect(repairs[0]).toMatch(/products removed/);
+  });
+
+  it('stars come from the number, never from text', () => {
+    expect(assembleEmail(floor, floor, [{ block: 'quote', text: 'Excelente', author: 'Ana', stars: 4 }], rich).html).toContain('★★★★☆');
   });
 });
