@@ -139,3 +139,31 @@ test("the limits page lists merchants with held payouts", async ({ page }) => {
   await expect(page.locator("#payoutHoldsRows tr")).toContainText("Reclamos sin entrega");
   await expect(page.locator("#payoutHoldsEmpty")).toBeHidden();
 });
+
+test("changing a seizure value after arming re-arms instead of submitting", async ({ page }) => {
+  const bodies = [];
+  await openOps(page, {
+    onRequest: async (route, { path, method, request }) => {
+      if (path === "/internal/merchants/merchant_1/reserve_seizures" && method === "POST") {
+        bodies.push(JSON.parse(request.postData()));
+        await route.fulfill({ json: { id: "rs_1" } });
+        return true;
+      }
+      return false;
+    },
+  });
+  await openCase(page);
+  await page.fill("#seizureAmount", "5");
+  await page.fill("#seizureReason", "Fraude confirmado por el banco");
+  await page.fill("#seizureReference", "TRX-991");
+  const submit = page.locator("#reserveSeizureForm button[type=submit]");
+  await submit.click();
+  await expect(submit).toContainText("Confirmar retiro");
+  await page.fill("#seizureAmount", "7");
+  await submit.click();
+  await expect(submit).toContainText("7,00");
+  expect(bodies).toEqual([]);
+  await submit.click();
+  await expect.poll(() => bodies.length).toBe(1);
+  expect(bodies[0].amount).toBe(700);
+});

@@ -895,11 +895,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         : `<div class="support-action-zone settlement-hold" data-state="free"><label for="payoutHoldReason">Motivo de la retención (interno)</label><input id="payoutHoldReason" minlength="8" maxlength="500" placeholder="Reclamos de compradores sin entrega"><div class="action-buttons"><button type="button" class="danger" data-settlement-action="place-hold">Retener pagos</button></div></div>`}
       <form id="settlementOverridesForm">
         <div class="field-row">
-          <div><label for="overrideDelayDays">Demora (días)</label><input id="overrideDelayDays" type="number" min="0" max="90" step="1" value="${o.payoutDelayDaysOverride ?? ""}" placeholder="Usar el del nivel"></div>
-          <div><label for="overrideReservePct">Reserva (%)</label><input id="overrideReservePct" type="number" min="0" max="100" step="0.01" value="${o.reserveBpsOverride != null ? o.reserveBpsOverride / 100 : ""}" placeholder="Usar el del nivel"></div>
+          <div><label for="overrideDelayDays">Demora (días)</label><input id="overrideDelayDays" type="number" min="0" max="90" step="1" value="${esc(o.payoutDelayDaysOverride ?? "")}" placeholder="Usar el del nivel"></div>
+          <div><label for="overrideReservePct">Reserva (%)</label><input id="overrideReservePct" type="number" min="0" max="100" step="0.01" value="${esc(o.reserveBpsOverride != null ? o.reserveBpsOverride / 100 : "")}" placeholder="Usar el del nivel"></div>
         </div>
         <div class="field-row">
-          <div><label for="overrideReserveDays">Días de reserva</label><input id="overrideReserveDays" type="number" min="0" max="365" step="1" value="${o.reserveDaysOverride ?? ""}" placeholder="Usar el del nivel"></div>
+          <div><label for="overrideReserveDays">Días de reserva</label><input id="overrideReserveDays" type="number" min="0" max="365" step="1" value="${esc(o.reserveDaysOverride ?? "")}" placeholder="Usar el del nivel"></div>
           <div></div>
         </div>
         <div class="action-buttons"><button class="primary" type="submit">Guardar condiciones</button></div>
@@ -1343,6 +1343,14 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const monthlyRaw = row.querySelector(".policy-monthly").value.trim();
     const perPaymentRaw = row.querySelector(".policy-per-payment").value.trim();
     const liveEnabled = row.querySelector(".policy-live").checked;
+    // Blank settlement fields are omitted (the API leaves them unchanged) rather than saved as 0.
+    const settlementFields = {};
+    const delayRaw = row.querySelector(".policy-delay").value.trim();
+    const pctRaw = row.querySelector(".policy-reserve-pct").value.trim();
+    const daysRaw = row.querySelector(".policy-reserve-days").value.trim();
+    if (delayRaw !== "") settlementFields.payoutDelayDays = Number(delayRaw);
+    if (pctRaw !== "") settlementFields.reserveBps = Math.round(Number(pctRaw) * 100);
+    if (daysRaw !== "") settlementFields.reserveDays = Number(daysRaw);
     errorEl.textContent = "";
     button.disabled = true;
     try {
@@ -1352,9 +1360,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           monthlyLimit: monthlyRaw === "" ? null : Math.round(Number(monthlyRaw) * 100),
           perPaymentLimit: perPaymentRaw === "" ? null : Math.round(Number(perPaymentRaw) * 100),
           liveEnabled,
-          payoutDelayDays: Number(row.querySelector(".policy-delay").value || 0),
-          reserveBps: Math.round(Number(row.querySelector(".policy-reserve-pct").value || 0) * 100),
-          reserveDays: Number(row.querySelector(".policy-reserve-days").value || 0),
+          ...settlementFields,
         }),
       });
       await refreshLimits();
@@ -1565,6 +1571,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const form = event.target;
     if (form.id !== "settlementOverridesForm" && form.id !== "reserveSeizureForm") return;
     event.preventDefault();
+    if (!selectedMerchant) return;
     const button = form.querySelector("button[type=submit]");
     const merchantPath = `/internal/merchants/${encodeURIComponent(selectedMerchant.id)}`;
     errorEl.textContent = "";
@@ -1584,8 +1591,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         const amount = Math.round(Number(document.getElementById("seizureAmount").value) * 100);
         const currency = document.getElementById("seizureCurrency").value;
         // Two clicks instead of confirm(): a browser dialog would block automation and is easy to dismiss by reflex.
-        if (!form.dataset.confirmed) {
-          form.dataset.confirmed = "1";
+        const reason = document.getElementById("seizureReason").value.trim();
+        const externalReference = document.getElementById("seizureReference").value.trim();
+        const signature = `${amount}|${currency}|${reason}|${externalReference}`;
+        if (form.dataset.confirmed !== signature) {
+          form.dataset.confirmed = signature;
           button.textContent = `Confirmar retiro de ${money(amount, currency)}`;
           return;
         }
@@ -1595,14 +1605,16 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           body: JSON.stringify({
             amount,
             currency,
-            reason: document.getElementById("seizureReason").value.trim(),
-            externalReference: document.getElementById("seizureReference").value.trim(),
+            reason,
+            externalReference,
           }),
         });
       }
       await afterSettlementChange();
     } catch (err) {
       errorEl.textContent = "No pudimos guardar: " + err.message;
+      delete form.dataset.confirmed;
+      if (form.id === "reserveSeizureForm") button.textContent = "Retirar de la reserva";
       button.disabled = false;
     }
   });
