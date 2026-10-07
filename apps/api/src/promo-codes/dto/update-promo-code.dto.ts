@@ -1,8 +1,15 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsBoolean } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsBoolean, IsOptional } from "class-validator";
 
 export class UpdatePromoCodeDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsBoolean()
-  isActive!: boolean;
+  isActive?: boolean;
+
+  /** Whether the code may appear in the store's emails. Off by default, so a private code never leaks. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  showInEmails?: boolean;
 }

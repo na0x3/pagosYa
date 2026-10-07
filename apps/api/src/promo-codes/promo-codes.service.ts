@@ -40,11 +40,17 @@ export class PromoCodesService {
     return this.prisma.promoCode.findMany({ where: { storeId }, orderBy: [{ isActive: "desc" }, { createdAt: "desc" }] });
   }
 
-  async setActive(merchantId: string, storeId: string, id: string, isActive: boolean) {
+  /** Turns a code on or off, and whether it may appear in the store's emails; only the flags given change. */
+  async setFlags(merchantId: string, storeId: string, id: string, flags: { isActive?: boolean; showInEmails?: boolean }) {
+    const data = {
+      ...(flags.isActive !== undefined && { isActive: flags.isActive }),
+      ...(flags.showInEmails !== undefined && { showInEmails: flags.showInEmails }),
+    };
+    if (!Object.keys(data).length) throw new BadRequestException("Indica qué cambiar del código.");
     await this.ownedStoreOrThrow(merchantId, storeId);
     const code = await this.prisma.promoCode.findFirst({ where: { id, storeId }, select: { id: true } });
     if (!code) throw new NotFoundException("Código promocional no encontrado");
-    return this.prisma.promoCode.update({ where: { id }, data: { isActive } });
+    return this.prisma.promoCode.update({ where: { id }, data });
   }
 
   async resolveActiveForStore(storeId: string, rawCode: string) {

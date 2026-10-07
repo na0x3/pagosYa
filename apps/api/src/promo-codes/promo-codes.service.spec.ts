@@ -43,4 +43,20 @@ describe("PromoCodesService", () => {
       code: "VERANO20", discountType: PromoDiscountType.PERCENT, discountValue: 20,
     })).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it("updates only the flags it is given, and refuses an empty change", async () => {
+    const prisma = makePrisma();
+    prisma.promoCode.findFirst.mockResolvedValue({ id: "promo_1" });
+    const service = new PromoCodesService(prisma as any);
+    await service.setFlags("merchant_1", "store_1", "promo_1", { showInEmails: true });
+    expect(prisma.promoCode.update).toHaveBeenCalledWith({ where: { id: "promo_1" }, data: { showInEmails: true } });
+    await expect(service.setFlags("merchant_1", "store_1", "promo_1", {})).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("does not change another store's code", async () => {
+    const prisma = makePrisma();
+    prisma.promoCode.findFirst.mockResolvedValue(null);
+    await expect(new PromoCodesService(prisma as any).setFlags("merchant_1", "store_1", "promo_x", { isActive: false })).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.promoCode.update).not.toHaveBeenCalled();
+  });
 });

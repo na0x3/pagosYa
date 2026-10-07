@@ -30,6 +30,6 @@ export class PromoCodesController {
     @Param("id") id: string,
     @Body() dto: UpdatePromoCodeDto,
   ) {
-    return this.promoCodes.setActive(merchant.id, storeId, id, dto.isActive);
+    return this.promoCodes.setFlags(merchant.id, storeId, id, dto);
   }
 }
