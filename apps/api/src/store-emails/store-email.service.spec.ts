@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { StoreEmailService } from './store-email.service';
 import { loadFloorKit } from './email-copy-defaults';
 
@@ -48,12 +49,15 @@ describe('StoreEmailService.renderReceipt', () => {
   });
 
   it('a kit lookup that fails (the tables are not migrated yet) still renders the standard kit', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const service = harness();
     (service as any).kits.active.mockRejectedValue(new Error('relation "StoreEmailKit" does not exist'));
     (service as any).kits.overrides.mockRejectedValue(new Error('relation "StoreEmailCopyOverride" does not exist'));
     const { html, repairs } = await service.renderReceipt('s1', input());
     expect(html).toContain('Café');
     expect(repairs.join(' ')).toContain('kit lookup failed');
+    // Logged where it happens: the receipt sender keeps only the html and the subject.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('kit lookup failed for s1'));
   });
 
   it('a null store gets the standard kit', async () => {

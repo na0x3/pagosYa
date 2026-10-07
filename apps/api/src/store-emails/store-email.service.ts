@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { brandColorTokens, EMPTY_BRAND, type BrandProfile } from '../brand/brand-profile';
@@ -25,6 +25,7 @@ type Variant = { id?: string; imageUrl?: string; imageUrls?: string[] };
  */
 @Injectable()
 export class StoreEmailService {
+  private readonly logger = new Logger(StoreEmailService.name);
   constructor(private readonly prisma: PrismaService, private readonly kits: EmailKitStore, private readonly config: ConfigService) {}
 
   private base() { return this.config.get<string | null>('app.publicAssetBaseUrl') ?? null; }
@@ -76,7 +77,13 @@ export class StoreEmailService {
     const repairs: string[] = [];
     // A failed lookup (for instance before the kit tables are migrated) costs the store's look, never the email.
     const guarded = async <T>(lookup: Promise<T>, fallback: T): Promise<T> => {
-      try { return await lookup; } catch (error) { repairs.push(`kit lookup failed: ${(error as Error).message}`); return fallback; }
+      try { return await lookup; }
+      catch (error) {
+        // Logged here: the receipt sender keeps only the html and the subject, so a repair alone would go unseen.
+        this.logger.warn(`Store email kit lookup failed for ${storeId}: ${(error as Error).message}`);
+        repairs.push(`kit lookup failed: ${(error as Error).message}`);
+        return fallback;
+      }
     };
     const [brand, items, row, overrides] = await Promise.all([
       this.brand(storeId), this.items(input.lines),
