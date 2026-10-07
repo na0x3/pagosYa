@@ -84,6 +84,8 @@ export interface AppConfig {
   internalRailCallbackSecret: string;
   internalOpsSecret: string;
   checkoutOrigin: string;
+  /** The API's public https origin; email images are only ever absolute https URLs. */
+  publicAssetBaseUrl: string | null;
   consumerDashboardOrigin: string;
   merchantDashboardOrigin: string;
   orderTrackingSecret: string;
@@ -230,6 +232,7 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
   requireSecret("OPERATIONS_ENCRYPTION_KEY", app.operationsEncryptionKey);
   requireSecret("EXTENSIONS_ENCRYPTION_KEY", app.extensionsEncryptionKey);
   requireHttps("CHECKOUT_ORIGIN", app.checkoutOrigin);
+  if (app.publicAssetBaseUrl) requireHttps("PUBLIC_ASSET_BASE_URL", app.publicAssetBaseUrl);
   requireHttps("CONSUMER_DASHBOARD_ORIGIN", app.consumerDashboardOrigin);
   requireHttps("MERCHANT_DASHBOARD_ORIGIN", app.merchantDashboardOrigin);
   requireHttps("PAGOSYA_WEB_ORIGIN", app.email.webOrigin);
@@ -303,6 +306,7 @@ export default (): { app: AppConfig } => {
     internalRailCallbackSecret: process.env.INTERNAL_RAIL_CALLBACK_SECRET ?? "",
     internalOpsSecret: process.env.INTERNAL_OPS_SECRET ?? "",
     checkoutOrigin: process.env.CHECKOUT_ORIGIN ?? "http://localhost:5174",
+    publicAssetBaseUrl: process.env.PUBLIC_ASSET_BASE_URL?.trim().replace(/\/+$/, "") || null,
     consumerDashboardOrigin: process.env.CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324",
     merchantDashboardOrigin: process.env.MERCHANT_DASHBOARD_ORIGIN ?? "http://localhost:4322",
     orderTrackingSecret: process.env.ORDER_TRACKING_SECRET ?? "development-only-order-tracking-secret-change-me",

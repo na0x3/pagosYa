@@ -279,3 +279,14 @@ describe("source framework default", () => {
     expect(configuration().app.sourceFramework).toBe("static");
   });
 });
+
+describe('public asset base URL', () => {
+  const original = process.env.PUBLIC_ASSET_BASE_URL;
+  afterEach(() => { if (original === undefined) delete process.env.PUBLIC_ASSET_BASE_URL; else process.env.PUBLIC_ASSET_BASE_URL = original; });
+  it('reads PUBLIC_ASSET_BASE_URL without a trailing slash, and null when unset', () => {
+    process.env.PUBLIC_ASSET_BASE_URL = 'https://api.pagosya.bo/';
+    expect(configuration().app.publicAssetBaseUrl).toBe('https://api.pagosya.bo');
+    delete process.env.PUBLIC_ASSET_BASE_URL;
+    expect(configuration().app.publicAssetBaseUrl).toBeNull();
+  });
+});
