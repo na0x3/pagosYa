@@ -89,3 +89,22 @@ export function validateOrderEmailHtml(input: string, path = ORDER_EMAIL_TEMPLAT
   const usable = ORDER_EMAIL_REQUIRED_SLOTS.every(slot => html.includes(slot));
   return { html, repairs, usable };
 }
+
+/**
+ * Validates an authored confirmation email inside a generated file list, mirroring
+ * `applySourceKitCss`: the file is replaced with its served form and the violations are
+ * reported as repairs. A list without the template passes through untouched.
+ */
+export function applyOrderEmailTemplate<T extends { path: string; content: string; encoding?: string }>(
+  files: T[],
+): { files: T[]; repairs: string[] } {
+  const repairs: string[] = [];
+  const out = files.map(file => {
+    if (file.path !== ORDER_EMAIL_TEMPLATE_PATH || file.encoding === 'base64' || typeof file.content !== 'string') return file;
+    const checked = validateOrderEmailHtml(file.content, file.path);
+    repairs.push(...checked.repairs);
+    if (!checked.usable) repairs.push(`${file.path}: missing a required slot, the kit template will be used instead`);
+    return { ...file, content: checked.html };
+  });
+  return { files: out, repairs };
+}

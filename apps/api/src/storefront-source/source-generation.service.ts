@@ -77,6 +77,8 @@ import { repairSourceContracts } from './source-autorepair';
 import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { applySourceKitCss, SOURCE_KIT_CSS_DIRECTION, SOURCE_KIT_CSS_DIRECTION_NEXT, SOURCE_KIT_CSS_PATH } from './source-kit-css';
+import { applyOrderEmailTemplate } from './source-email-html';
+import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import { extractSourceMotifs, isSourceMotifFile, sourceMotifConfig, sourceMotifPaths, sourceMotifPrompt } from './source-motifs';
 import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { RewardsService } from "../rewards/rewards.service";
@@ -136,7 +138,7 @@ export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: 
   if (!Array.isArray(files) || files.length > 24) throw new BadGatewayException("La generación no devolvió un proyecto válido.");
   if (purpose === 'shop') validateSourcePriceClaims(files);
   for (const file of files) {
-    if (!file || typeof file.content !== "string" || !(/^(?:pages\/)?[a-zA-Z0-9_-]+\.(html|css|js)$/.test(file.path) || file.path === SOURCE_KIT_CSS_PATH || isSourceMotifFile(file.path)) || ["config.js", "commerce.js", "brand.css"].includes(file.path)) throw new BadGatewayException("La generación intentó cambiar un archivo reservado.");
+    if (!file || typeof file.content !== "string" || !(/^(?:pages\/)?[a-zA-Z0-9_-]+\.(html|css|js)$/.test(file.path) || file.path === SOURCE_KIT_CSS_PATH || file.path === ORDER_EMAIL_TEMPLATE_PATH || isSourceMotifFile(file.path)) || ["config.js", "commerce.js", "brand.css"].includes(file.path)) throw new BadGatewayException("La generación intentó cambiar un archivo reservado.");
     if (file.path.endsWith(".js")) {
       try { new Script(file.content, { filename: file.path }); } catch { throw new BadGatewayException(`Error de sintaxis en ${file.path}. Vuelve a generar.`); }
     }
@@ -702,6 +704,10 @@ export class SourceGenerationService {
         const kitCss = applySourceKitCss(generated.files, { next: useNext });
         generated.files = kitCss.files;
         autoRepairs.push(...kitCss.repairs);
+        // The authored confirmation email is hardened the same way: stripped and reported, never failed.
+        const orderEmail = applyOrderEmailTemplate(generated.files);
+        generated.files = orderEmail.files;
+        autoRepairs.push(...orderEmail.repairs);
         const validationErrors: string[] = [];
         for (const check of [
           () => { if (!lenient) validateSourcePresentation(generated.files, editExisting ? oldFiles : []); },
