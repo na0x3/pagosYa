@@ -153,15 +153,18 @@ harness.describeDb("settlement holds (real Postgres)", () => {
     const release = holds.releaseDue(new Date("2026-10-08T05:00:00Z"));
     const refunded = postRefund(m.id, pi, txn.id, 10_000);
 
-    let waiting = 0;
-    for (let i = 0; i < 100 && waiting < 2; i++) {
-      const rows = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`;
-      waiting = Number(rows[0].n);
-      if (waiting < 2) await new Promise((r) => setTimeout(r, 50));
+    try {
+      let waiting = 0;
+      for (let i = 0; i < 100 && waiting < 2; i++) {
+        const rows = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`;
+        waiting = Number(rows[0].n);
+        if (waiting < 2) await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(waiting).toBe(2); // both operations are parked on the same advisory lock
+    } finally {
+      unlock(); // never leave the lock held, even when the assertion above fails
+      await Promise.allSettled([holder, release, refunded]); // and let both operations finish before the database is dropped
     }
-    expect(waiting).toBe(2); // both operations are parked on the same advisory lock
-
-    unlock();
     const [, moved] = await Promise.all([holder, release, refunded]).then(([h, r]) => [h, r] as const);
 
     const [hold] = await db.settlementHold.findMany({ where: { merchantId: m.id } });
