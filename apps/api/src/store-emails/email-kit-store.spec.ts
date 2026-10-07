@@ -26,7 +26,7 @@ function harness() {
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
-  return { store: new EmailKitStore(prisma) };
+  return { store: new EmailKitStore(prisma), prisma };
 }
 const kit = (layout: string) => ({ mode: 'twin' as const, layout, blocks: '', copy: {}, designedFromRevision: 3, credits: 4, model: 'gpt-5.6-terra', repairs: [] });
 
@@ -80,6 +80,18 @@ describe('EmailKitStore', () => {
     expect(await store.overrides('s', 'order_confirmation')).toEqual({ headline: '¡Gracias por elegirnos!' });
     await store.clearOverride('s', 'order_confirmation', 'headline');
     expect(await store.overrides('s', 'order_confirmation')).toEqual({});
+  });
+
+  it('asks for text when an edit is empty, rather than blaming facts', async () => {
+    const { store } = harness();
+    await expect(store.setOverride('s', 'order_confirmation', 'headline', '   ')).rejects.toThrow(/^Escribe un texto\.$/);
+  });
+
+  it('a first design that loses the race to another saves as a candidate instead of failing', async () => {
+    const { store, prisma } = harness() as any;
+    prisma.storeEmailKit.create.mockRejectedValueOnce(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+    await store.saveActive('s', kit('B'));
+    expect((await store.candidate('s'))!.layout).toBe('B');
   });
 
   it('refuses an edit that is only a fact', async () => {

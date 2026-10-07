@@ -34,7 +34,12 @@ export class EmailKitStore {
   /** A store's first look goes live at once; any later design waits for the merchant. */
   async saveActive(storeId: string, kit: NewKit): Promise<KitRow> {
     if (await this.active(storeId)) return this.saveCandidate(storeId, kit);
-    return create(this.prisma, storeId, 'ACTIVE', kit);
+    try { return await create(this.prisma, storeId, 'ACTIVE', kit); }
+    catch (error) {
+      // Another design became the first look while this one ran (the after-site run and the button): keep this one for review.
+      if ((error as { code?: string })?.code === 'P2002') return this.saveCandidate(storeId, kit);
+      throw error;
+    }
   }
 
   async accept(storeId: string): Promise<void> {
@@ -71,6 +76,7 @@ export class EmailKitStore {
   }
 
   async setOverride(storeId: string, type: EmailType, field: EmailCopyField, value: string): Promise<{ value: string; repairs: string[] }> {
+    if (!value.trim()) throw new BadRequestException('Escribe un texto.');
     const cleaned = cleanCopyValue(field, value);
     if (!cleaned.value) throw new BadRequestException('Ese texto solo tenía datos que pone la plataforma (montos, fechas o números de orden). Escribe un texto.');
     await this.prisma.storeEmailCopyOverride.upsert({
