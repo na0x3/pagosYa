@@ -467,7 +467,7 @@
       [data-pagosya-catalog] .catalog-tabs a[aria-current="page"]{text-decoration:none}
     }
     /* Product page: shared commerce DOM; style selects a presentation and stores supply tokens. */
-    [data-pagosya-product]{--pd-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#302c2a)));--pd-paper:var(--store-background,var(--brand-background,var(--paper,#fffdfb)));--pd-surface:var(--store-surface,var(--brand-surface,var(--pd-paper)));--pd-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--pd-ink))));--pd-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--pd-paper)));--pd-muted:color-mix(in srgb,var(--pd-ink) 64%,var(--pd-paper));--pd-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--pd-ink) 16%,var(--pd-paper))));--pd-tint:color-mix(in srgb,var(--pd-accent) 7%,var(--pd-paper));--pd-radius:min(var(--store-radius,var(--brand-radius,0px)),6px);--pd-heading:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));--pd-body:var(--store-body-font,var(--brand-body-font,var(--font-body,inherit)));box-sizing:border-box;color:var(--pd-ink);background:var(--pd-paper);font-family:var(--pd-body)}
+    [data-pagosya-product]{--pd-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#302c2a)));--pd-paper:var(--store-background,var(--brand-background,var(--paper,#fffdfb)));--pd-surface:var(--store-surface,var(--brand-surface,var(--pd-paper)));--pd-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--pd-ink))));--pd-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--pd-paper)));--pd-muted:color-mix(in srgb,var(--pd-ink) 64%,var(--pd-paper));--pd-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--pd-ink) 16%,var(--pd-paper))));--pd-tint:color-mix(in srgb,var(--pd-accent) 7%,var(--pd-paper));--pd-alert:var(--store-danger,var(--brand-danger,#b3261e));--pd-radius:min(var(--store-radius,var(--brand-radius,0px)),6px);--pd-heading:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));--pd-body:var(--store-body-font,var(--brand-body-font,var(--font-body,inherit)));box-sizing:border-box;color:var(--pd-ink);background:var(--pd-paper);font-family:var(--pd-body)}
     [data-pagosya-product] *{box-sizing:border-box}
     [data-pagosya-product] [hidden]{display:none!important}
     dialog[data-pagosya-product]{width:min(1040px,calc(100% - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:0;border:1px solid var(--pd-line);border-radius:var(--pd-radius);box-shadow:0 16px 64px #0003;overflow:auto;overscroll-behavior:contain}
@@ -591,6 +591,22 @@
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][aria-pressed=true]::before{border:5px solid var(--pd-ink)}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][data-option-price]::after{content:attr(data-option-price);font-size:14px;font-weight:600;color:var(--pd-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]:disabled::after{text-decoration:line-through}
+    /* Compra única vs. suscripción: a grouped card between the options and the purchase row. The
+     * runtime only renders it when the product carries cadences, so these rules idle otherwise.
+     * flow-root, not grid: a rendered legend never joins grid flow, so it would straddle the border.
+     * The legend floats full-width to sit inside the card, and the rest clears it. Spacing is on
+     * margin-top so the two notes, which the runtime hides until they apply, leave no gap behind. */
+    [data-pagosya-product][data-style] .product-detail__subscription{display:flow-root;min-width:0;margin:0 0 18px;padding:14px 16px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-tint)}
+    [data-pagosya-product][data-style] .product-detail__subscription>:not(legend){clear:both}
+    [data-pagosya-product][data-style] .product-detail__subscription legend{float:left;width:100%;margin:0 0 10px;padding:0;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__subscription label{display:flex;align-items:center;gap:10px;min-height:44px;margin:0;font-size:15px;cursor:pointer}
+    [data-pagosya-product][data-style] .product-detail__subscription input[type=radio]{flex:none;width:18px;height:18px;margin:0;accent-color:var(--pd-accent)}
+    [data-pagosya-product][data-style] .product-detail__subscription select{width:100%;min-height:44px;margin:8px 0 0;padding:10px 12px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-paper);color:inherit;font:inherit}
+    [data-pagosya-product][data-style] .product-detail__subscription select:disabled{opacity:.5;cursor:default}
+    [data-pagosya-product][data-style] .product-detail__subscription-price{margin:12px 0 0;font-size:15px;font-weight:600;color:var(--pd-ink);font-variant-numeric:tabular-nums}
+    [data-pagosya-product][data-style] .product-detail__subscription-conflict{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--pd-alert)}
+    [data-pagosya-product][data-style] .product-detail__subscription p:not([class]){margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=dense] .product-detail__subscription{padding:0;border:0;border-radius:0;background:none}
     /* Quantity and action share one row; the live total rides on the dense action. */
     [data-pagosya-product][data-style] .product-detail__purchase{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;gap:10px;margin:22px 0 12px}
     [data-pagosya-product][data-style] .product-detail__quantity{display:flex;align-items:center;justify-content:space-between;min-width:118px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);overflow:hidden}
