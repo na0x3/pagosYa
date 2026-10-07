@@ -1,4 +1,3 @@
-// apps/api/src/store-emails/email-kit-validate.spec.ts
 import { validateEmailKit, validateEmailCopy } from './email-kit-validate';
 
 const layout = `<!doctype html><html><body style="background:#fafafa;color:#111"><table><tr><td data-store-name></td></tr>

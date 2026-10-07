@@ -1,4 +1,3 @@
-// apps/api/src/store-emails/email-copy-defaults.ts
 import { readFile } from 'node:fs/promises';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { EmailCopyField, EmailType, ValidEmailKit } from './email-kit-contract';

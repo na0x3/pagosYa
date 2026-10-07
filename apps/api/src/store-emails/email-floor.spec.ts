@@ -1,4 +1,3 @@
-// apps/api/src/store-emails/email-floor.spec.ts
 import { DEFAULT_EMAIL_COPY, loadFloorKit } from './email-copy-defaults';
 import { EMAIL_BLOCK_TYPES, EMAIL_COPY_FIELDS, EMAIL_TYPES, type EmailCopyField } from './email-kit-contract';
 import { cleanCopyValue } from './email-kit-validate';

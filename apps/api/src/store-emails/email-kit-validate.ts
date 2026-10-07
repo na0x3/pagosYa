@@ -1,4 +1,3 @@
-// apps/api/src/store-emails/email-kit-validate.ts
 import { parse, serialize, type DefaultTreeAdapterMap } from 'parse5';
 import { LITERAL_AMOUNT, sanitizeEmailHtml } from '../storefront-source/source-email-html';
 import {

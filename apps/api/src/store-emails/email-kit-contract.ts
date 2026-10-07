@@ -1,4 +1,3 @@
-// apps/api/src/store-emails/email-kit-contract.ts
 /**
  * The contract between the AI that designs a store's email kit and the platform that
  * assembles every email from it. The author writes slots and never a fact; the platform

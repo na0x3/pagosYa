@@ -1,8 +1,7 @@
-import { parse, parseFragment, serialize, type DefaultTreeAdapterMap } from 'parse5';
+import { parse, parseFragment, serialize } from 'parse5';
+import { attrOf, clampHtml, has, remove, setAttr, setText, walk, type Element, type Node } from '../store-emails/email-dom';
 import { ORDER_EMAIL_ATTRIBUTE_SLOTS, ORDER_EMAIL_RENDER_MAX_BYTES } from './order-email-slots';
 
-type Element = DefaultTreeAdapterMap['element'];
-type Node = DefaultTreeAdapterMap['node'];
 
 export interface OrderEmailLine {
   name: string;
@@ -23,31 +22,6 @@ export interface OrderEmailData {
   trackingUrl: string | null;
   subscription: string | null;
   appointment: { name: string; date: string | null } | null;
-}
-
-const isElement = (node: Node): node is Element => 'tagName' in node;
-const children = (node: Node): Node[] => ('childNodes' in node ? (node.childNodes as Node[]) : []);
-
-function* walk(node: Node): Generator<Element> {
-  for (const child of children(node)) if (isElement(child)) { yield child; yield* walk(child); }
-}
-
-const attrOf = (el: Element, name: string) => el.attrs.find(a => a.name === name);
-const has = (el: Element, name: string) => attrOf(el, name) !== undefined;
-
-function setAttr(el: Element, name: string, value: string) {
-  const existing = attrOf(el, name);
-  if (existing) existing.value = value; else el.attrs.push({ name, value });
-}
-
-/** Text goes in as a text node, so parse5's serializer escapes it. Never string concatenation. */
-function setText(el: Element, value: string) {
-  (el as any).childNodes = [{ nodeName: '#text', value, parentNode: el }];
-}
-
-function remove(el: Element) {
-  const parent: any = (el as any).parentNode;
-  if (parent) parent.childNodes = parent.childNodes.filter((c: Node) => c !== el);
 }
 
 /** Once filled, a slot attribute has done its job and should not reach the buyer. */
@@ -81,20 +55,6 @@ function sanitiseLines(items: unknown, repairs: string[]): OrderEmailLine[] {
     });
   }
   return out;
-}
-
-/**
- * Cuts `html` so that the result, closing tags included, fits the budget. The suffix is
- * reserved up front, and a cut that lands mid-character is trimmed back: a severed UTF-8
- * sequence decodes to U+FFFD, which re-encodes to three bytes and would breach the budget
- * the clamp exists to hold.
- */
-function clampHtml(html: string, maxBytes: number, suffix: string): string {
-  const room = maxBytes - Buffer.byteLength(suffix, 'utf8');
-  if (room <= 0) return suffix.slice(0, maxBytes);
-  let body = Buffer.from(html, 'utf8').subarray(0, room).toString('utf8');
-  while (body && Buffer.byteLength(body, 'utf8') > room) body = body.slice(0, -1);
-  return body + suffix;
 }
 
 export function renderOrderEmail(template: string, data: OrderEmailData): { html: string; repairs: string[] } {
