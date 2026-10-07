@@ -1,3 +1,4 @@
+import { EmailKitService } from '../store-emails/email-kit.service';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
@@ -173,7 +174,7 @@ const SOURCE_PURCHASE_CONTROL_FORM = "The purchase control (the card's .menu-add
 
 @Injectable()
 export class SourceGenerationService {
-  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner(), @Optional() private readonly rewards?: RewardsService) {}
+  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner(), @Optional() private readonly rewards?: RewardsService, @Optional() private readonly emailKits?: EmailKitService) {}
   private readonly logger = new Logger(SourceGenerationService.name);
 
   /** Reward credits are a courtesy discount: a failure here must never fail the merchant's generation. */
@@ -1344,6 +1345,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       return { revision: dto.revision, label: generated.label, digest: sourceProjectDigest(candidate), createdAt: new Date(), restoredFrom: null, createdProducts: [], updatedProducts: [], deletedProducts: [], optionChanges: [], generation: receipt, candidate, ...(agentOutcome ? { agent: agentOutcome } : {}) };
     }
     const saved = await this.projects.save(merchantId, storeId, saveInput, { id: run.id, ...(!products.length && !productOperations.length ? { prepared: artifact } : {}), enablePayments: dto.revision === 0, products, productOperations, data: { model, credits, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: receipt.durationMs, status: 'COMPLETED', activeStoreId: null, revision: dto.revision + 1, completedAt: new Date() } });
+    // The store's email look is made with its first site (spec 2026-10-07): in the background, so the site never waits for it or fails on it.
+    void this.emailKits?.designAfterSite(storeId);
     await this.prisma.storeSourceGeneration.updateMany({ where: { storeId, OR: [{ baseRevision: { lte: dto.revision } }, { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60_000) } }] }, data: { checkpoint: Prisma.DbNull } }).catch(() => { this.logger.warn('No se pudieron limpiar los borradores privados antiguos; la revisión ya está guardada.'); });
     receipt.rewardCreditsCovered = freeRun ? 0 : await this.coverWithRewardCredits(merchantId, run.id, credits);
     return { ...saved, generation: receipt, ...(agentOutcome ? { agent: agentOutcome } : {}), ...({} as { candidate?: SourceProjectSnapshot; agent?: typeof agentOutcome }) };

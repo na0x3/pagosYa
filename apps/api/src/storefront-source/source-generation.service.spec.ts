@@ -85,6 +85,16 @@ describe('Independent source generation',()=>{
     expect(config.dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
     expect(config.dna.product).toBe(config.productPageStyle);
   });
+  it('designs the email look after a site is saved, without waiting for it', async () => {
+    const { prisma, stores, projects, uploads, config } = setup();
+    const emailKits = { designAfterSite: jest.fn(() => new Promise<void>(() => {})) }; // never settles
+    const service = new SourceGenerationService(prisma, stores, projects, uploads, config, undefined, undefined, undefined, undefined, emailKits as any);
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));
+    const result = await service.generate('m', 's', input);
+    expect(projects.save).toHaveBeenCalledTimes(1);
+    expect(emailKits.designAfterSite).toHaveBeenCalledWith('s');
+    expect(result).toBeDefined();
+  });
   it('validates the store kit CSS and every stylesheet, links the kit CSS and records the repairs', async () => {
     const { service, projects } = setup();
     const source = [...files().map(f => f.path === 'styles.css' ? { ...f, content: 'body { color: #222; }\n.menu-add{display:none}' } : f), { path: 'styles/kit.css', content: '.cart-drawer{background:#fff}body{margin:0}' }];
