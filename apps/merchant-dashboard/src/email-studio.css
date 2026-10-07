@@ -1,0 +1,41 @@
+/* Ajustes › Correos: calm light workspace. Uses the palette tokens from calm.css / workspace-design.css. */
+#orderEmailRoot { display: grid; gap: 16px; }
+.email-studio-status { margin: 0; color: var(--pg-text-muted); font-size: 14px; }
+
+/* Both widths sit side by side on a wide screen and wrap on a narrow one. The frames keep their
+   real pixel width and the strip scrolls instead: an iframe narrowed by max-width does not scale
+   its contents, it re-lays them out at the smaller width, so a frame captioned 390px would be
+   showing the merchant some other width's line breaks. min-width lets the strip scroll inside the
+   grid column rather than stretching it. */
+.email-studio-frames { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; overflow-x: auto; min-width: 0; }
+.email-studio-frame { margin: 0; display: grid; gap: 8px; flex: 0 0 auto; }
+.email-studio-frame figcaption { color: var(--pg-text-muted); font-size: 12px; font-weight: 550; }
+.email-studio-frame iframe {
+  display: block;
+  width: var(--email-width, 390px);
+  height: 640px;
+  background: var(--pg-surface, #fff);
+  border: 1px solid var(--pg-border);
+  border-radius: var(--calm-radius, 12px);
+  box-shadow: var(--calm-shadow);
+}
+
+.email-studio { display: grid; gap: 20px; }
+.email-studio-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; }
+.email-studio-head h3 { margin: 0 0 4px; font-size: 15px; }
+.email-studio-head p { margin: 0; color: var(--pg-text-muted); font-size: 13px; }
+.email-studio-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.email-studio-actions button { width: auto; }
+.email-studio-types { display: flex; flex-wrap: wrap; gap: 14px; }
+.email-studio-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.email-studio-group > span { margin-right: 4px; color: var(--pg-text-muted); font-size: 12px; font-weight: 600; }
+.email-studio-group button { width: auto; min-height: 34px; padding: 0 12px; border: 1px solid var(--pg-border); border-radius: 999px; background: var(--pg-surface); color: var(--pg-text); font-size: 13px; }
+.email-studio-group button[aria-pressed="true"] { border-color: var(--pg-text); box-shadow: inset 0 0 0 1px var(--pg-text); }
+.email-studio-copy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; padding-top: 20px; border-top: 1px solid var(--pg-border); }
+.email-studio-copy h4, .email-studio-copy > p, .email-studio-copy > button, .email-studio-copy label[data-copy-row="intro"] { grid-column: 1 / -1; }
+.email-studio-copy h4 { margin: 0; font-size: 14px; }
+.email-studio-copy label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+.email-studio-copy small { color: var(--pg-text-muted); font-weight: 400; }
+.email-studio-copy > button { justify-self: start; width: auto; }
+.email-studio-copy .link { width: auto; min-height: 0; padding: 0; border: 0; background: none; color: var(--pg-text); text-decoration: underline; font-size: inherit; }
+@media (max-width: 860px) { .email-studio-copy { grid-template-columns: minmax(0, 1fr); } }

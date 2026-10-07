@@ -433,7 +433,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   const PAYMENT_PAGE_SIZE = 20;
   let lastStores = [];
   let storeSettings = null;
-  let orderEmailPanel = null;
+  let emailStudio = null;
   let settingsTabs = null;
   let lastInvoicingProfile = null;
   let lastKyc = null;
@@ -759,7 +759,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
-    if (nextView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") orderEmailPanel?.show();
+    if (nextView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") emailStudio?.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
@@ -1619,7 +1619,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       growth.reset();
       proposals.reset();
       contracts.reset();
-      orderEmailPanel?.reset();
+      emailStudio?.reset();
     }
   }
 
@@ -3121,7 +3121,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       storeId: () => currentStoreId,
       // The Studio frame reads the API base from the shared session before it loads.
       beforeLoad: () => sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, "")),
-      onShow: (tab) => { if (tab === "emails" && sessionToken) orderEmailPanel?.show(); },
+      onShow: (tab) => { if (tab === "emails" && sessionToken) emailStudio?.show(); },
     });
   });
   /** Opens Ajustes on one of its tabs, for example when the Studio asks for Dominio. */
@@ -3152,9 +3152,9 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   }).catch(() => {
     document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
   });
-  import("/src/order-email-panel.mjs").then(({ mountOrderEmailPanel }) => {
-    orderEmailPanel = mountOrderEmailPanel(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId });
-    if (document.body.dataset.dashboardView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") orderEmailPanel.show();
+  import("/src/email-studio-panel.mjs").then(({ mountEmailStudio }) => {
+    emailStudio = mountEmailStudio(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId });
+    if (document.body.dataset.dashboardView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") emailStudio.show();
   }).catch(() => {
     document.getElementById("orderEmailRoot").textContent = "No pudimos cargar la vista previa del correo. Recarga la página para volver a intentar.";
   });
