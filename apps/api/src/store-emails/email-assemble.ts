@@ -24,8 +24,11 @@ function fillImage(el: Element, image: EmailImage | null) {
   setAttr(el, 'src', image.src);
   setAttr(el, 'alt', image.alt);
   if (!attrOf(el, 'width')) setAttr(el, 'width', '64');
-  const style = attrOf(el, 'style')?.value ?? '';
-  if (!/background/i.test(style)) setAttr(el, 'style', style ? `${style.replace(/;+$/, '')};background:#eeeeee` : 'background:#eeeeee');
+  // The quiet background goes on the photo's cell when it has one: a client that blocks images hides the <img> box too.
+  const parent: any = (el as any).parentNode;
+  const target: Element = parent?.tagName === 'td' || parent?.tagName === 'th' ? parent : el;
+  const style = attrOf(target, 'style')?.value ?? '';
+  if (!/background/i.test(style)) setAttr(target, 'style', style ? `${style.replace(/;+$/, '')};background:#eeeeee` : 'background:#eeeeee');
   detach(el);
 }
 
