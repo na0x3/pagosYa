@@ -40,7 +40,8 @@ export function cleanCopyValue(field: EmailCopyField, value: string): { value: s
     pattern.lastIndex = 0;
     return { value: null, repairs: [...repairs, `${field}: ${label} removed; the platform fills facts`] };
   }
-  out = out.replace(/\s{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
+  // Every field is one line in the email (a subject above all): line breaks fold into spaces.
+  out = out.replace(/\s+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
   const cap = EMAIL_COPY_FIELDS[field];
   if (out.length > cap) { out = out.slice(0, cap).trimEnd(); repairs.push(`${field}: cut to ${cap} characters`); }
   return { value: out || null, repairs };

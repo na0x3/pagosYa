@@ -114,6 +114,11 @@ describe('validateEmailCopy', () => {
     expect(Object.keys(copy)).toEqual(['order_confirmation']);
   });
 
+  it('folds line breaks into spaces, so a subject stays one line', () => {
+    expect(validateEmailCopy({ order_confirmation: { subject: 'Hola\nBcc: a@b.c', intro: 'Uno\r\n\nDos' } }).copy.order_confirmation)
+      .toEqual({ subject: 'Hola Bcc: a@b.c', intro: 'Uno Dos' });
+  });
+
   it('treats a non-object as empty wording', () => {
     expect(validateEmailCopy('not json').copy).toEqual({});
     expect(validateEmailCopy(null).copy).toEqual({});
