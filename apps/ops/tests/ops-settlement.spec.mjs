@@ -140,6 +140,27 @@ test("the limits page lists merchants with held payouts", async ({ page }) => {
   await expect(page.locator("#payoutHoldsEmpty")).toBeHidden();
 });
 
+test("a failing held-payouts list leaves the rest of the limits page working", async ({ page }) => {
+  await openOps(page, {
+    onRequest: async (route, { path }) => {
+      if (path !== "/internal/payout_holds") return false;
+      await route.fulfill({ status: 500, json: { message: "boom" } });
+      return true;
+    },
+  });
+  await expect(page.locator("#payoutHoldsEmpty")).toHaveText("No pudimos cargar los pagos retenidos.");
+  await expect(page.locator("#payoutHoldsEmpty")).toBeVisible();
+  await expect(page.locator("#payoutHoldsTable")).toBeHidden();
+  await expect(page.locator("#policiesRows tr")).toHaveCount(policies.length);
+  await expect(page.locator("#usdRate")).toHaveValue("6.96");
+});
+
+test("the Fondos card says a facilitator merchant has no delay or reserve", async ({ page }) => {
+  await openOps(page, { settlementBody: settlement({ policy: null, balances: [], releases: [] }) });
+  await openCase(page);
+  await expect(page.locator("#settlementSection")).toContainText("Comercio facilitador: pagosYa no retiene su dinero, sin demora ni reserva.");
+});
+
 test("changing a seizure value after arming re-arms instead of submitting", async ({ page }) => {
   const bodies = [];
   await openOps(page, {

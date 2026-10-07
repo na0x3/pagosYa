@@ -887,7 +887,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const currencies = (data.balances.length ? data.balances : [{ currency: "BOB" }]).map((b) => `<option value="${esc(b.currency)}">${esc(b.currency)}</option>`).join("");
     section.innerHTML = `
       <h4>Fondos</h4>
-      <p class="muted">Política vigente: ${esc(data.policy.delayDays)} días de demora · reserva ${esc(data.policy.reserveBps / 100)}% por ${esc(data.policy.reserveDays)} días.</p>
+      <p class="muted">${data.policy
+        ? `Política vigente: ${esc(data.policy.delayDays)} días de demora · reserva ${esc(data.policy.reserveBps / 100)}% por ${esc(data.policy.reserveDays)} días.`
+        : "Comercio facilitador: pagosYa no retiene su dinero, sin demora ni reserva."}</p>
       ${settlementBalancesHtml(data.balances)}
       ${releases ? `<div class="compact-list">${releases}</div>` : `<p class="muted">No hay liberaciones programadas.</p>`}
       ${data.hold
@@ -1317,7 +1319,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       api("/internal/limits/policies"),
       api("/internal/limits/settings"),
       api("/internal/limits/near_limit"),
-      api("/internal/payout_holds"),
+      // A failing holds list must not take the rest of the limits workspace down with it.
+      api("/internal/payout_holds").catch(() => null),
     ]);
     policiesRowsEl.innerHTML = policies.map(policyRow).join("");
     usdRateEl.value = settings.usdToBobRate ?? "";
@@ -1330,9 +1333,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       nearLimitRowsEl.innerHTML = nearLimit.map(nearLimitRow).join("");
     }
     const holdsTable = document.getElementById("payoutHoldsTable");
-    document.getElementById("payoutHoldsEmpty").style.display = payoutHolds.length ? "none" : "block";
-    holdsTable.style.display = payoutHolds.length ? "table" : "none";
-    document.getElementById("payoutHoldsRows").innerHTML = payoutHolds.map(payoutHoldRow).join("");
+    const holdsEmpty = document.getElementById("payoutHoldsEmpty");
+    const holds = payoutHolds ?? [];
+    holdsEmpty.textContent = payoutHolds ? "Ningún comercio tiene pagos retenidos." : "No pudimos cargar los pagos retenidos.";
+    holdsEmpty.style.display = holds.length ? "none" : "block";
+    holdsTable.style.display = holds.length ? "table" : "none";
+    document.getElementById("payoutHoldsRows").innerHTML = holds.map(payoutHoldRow).join("");
   }
 
   policiesRowsEl.addEventListener("click", async (event) => {
