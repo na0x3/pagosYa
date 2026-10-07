@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AiUsageModule } from '../ai-usage/ai-usage.module';
+import { AuthModule } from '../auth/auth.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
+import { MerchantThrottlerGuard } from '../storefront-source/source-compile-budget';
+import { StoreEmailController } from './store-email.controller';
 import { EmailKitService } from './email-kit.service';
 import { EmailKitStore } from './email-kit-store';
 import { StoreEmailService } from './store-email.service';
 
 @Module({
-  imports: [PrismaModule, AiUsageModule],
-  providers: [EmailKitStore, StoreEmailService, EmailKitService],
+  imports: [PrismaModule, AiUsageModule, DashboardModule, AuthModule],
+  controllers: [StoreEmailController],
+  providers: [EmailKitStore, StoreEmailService, EmailKitService, MerchantThrottlerGuard],
   exports: [EmailKitStore, StoreEmailService, EmailKitService],
 })
 export class StoreEmailModule {}
