@@ -3,7 +3,6 @@ import { Interval } from "@nestjs/schedule";
 import { PayoutStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { LedgerService } from "../ledger/ledger.service";
-import { PayoutsService } from "./payouts.service";
 import { PAYOUT_PROVIDER } from "./tokens";
 import { PayoutProvider } from "./interfaces/payout-provider.interface";
 
@@ -11,22 +10,19 @@ const MAX_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 5_000;
 const PROCESSING_LEASE_MS = 5 * 60_000;
 
-/** Runs the payout batch and delivers due Payout rows. Mirrors WebhookDeliveryWorker/InvoiceEmissionWorker's claim/backoff shape. */
+/** Delivers due Payout rows (created by PayoutScheduleJob). Mirrors WebhookDeliveryWorker/InvoiceEmissionWorker's claim/backoff shape. */
 @Injectable()
 export class PayoutDeliveryWorker {
   private readonly logger = new Logger(PayoutDeliveryWorker.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly payouts: PayoutsService,
     private readonly ledger: LedgerService,
     @Inject(PAYOUT_PROVIDER) private readonly provider: PayoutProvider,
   ) {}
 
   @Interval(10_000)
   async tick(): Promise<void> {
-    await this.payouts.createDuePayouts();
-
     const candidates = await this.prisma.payout.findMany({
       where: {
         status: { in: [PayoutStatus.PENDING, PayoutStatus.FAILED] },

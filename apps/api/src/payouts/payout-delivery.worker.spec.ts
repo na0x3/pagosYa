@@ -33,15 +33,15 @@ const basePayout = {
 };
 
 describe("PayoutDeliveryWorker.tick", () => {
-  it("runs createDuePayouts before delivering candidates", async () => {
+  it("only delivers existing payouts — creating them is the daily batch's job", async () => {
     const prisma = makeFakePrisma();
     prisma.payout.findMany.mockResolvedValue([]);
     const payoutsService = makeFakePayoutsService();
 
-    const worker = new PayoutDeliveryWorker(prisma, payoutsService as any, new LedgerService(), makeFakeProvider() as any);
+    const worker = new PayoutDeliveryWorker(prisma, new LedgerService(), makeFakeProvider() as any);
     await worker.tick();
 
-    expect(payoutsService.createDuePayouts).toHaveBeenCalled();
+    expect(payoutsService.createDuePayouts).not.toHaveBeenCalled();
   });
 
   it("skips a payout when the optimistic claim loses the race", async () => {
@@ -50,7 +50,7 @@ describe("PayoutDeliveryWorker.tick", () => {
     prisma.payout.updateMany.mockResolvedValue({ count: 0 });
     const provider = makeFakeProvider();
 
-    const worker = new PayoutDeliveryWorker(prisma, makeFakePayoutsService() as any, new LedgerService(), provider as any);
+    const worker = new PayoutDeliveryWorker(prisma, new LedgerService(), provider as any);
     await worker.tick();
 
     expect(provider.disburse).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("PayoutDeliveryWorker.tick", () => {
     const provider = makeFakeProvider();
     provider.disburse.mockResolvedValue({ status: "succeeded", railReference: "payout_ref_1", raw: {} });
 
-    const worker = new PayoutDeliveryWorker(prisma, makeFakePayoutsService() as any, new LedgerService(), provider as any);
+    const worker = new PayoutDeliveryWorker(prisma, new LedgerService(), provider as any);
     await worker.tick();
 
     expect(prisma.payout.updateMany).toHaveBeenCalledWith(expect.objectContaining({
@@ -95,7 +95,7 @@ describe("PayoutDeliveryWorker.tick", () => {
     provider.disburse.mockResolvedValue({ status: "failed", failureReason: "bank_account_rejected", raw: {} });
 
     const before = Date.now();
-    const worker = new PayoutDeliveryWorker(prisma, makeFakePayoutsService() as any, new LedgerService(), provider as any);
+    const worker = new PayoutDeliveryWorker(prisma, new LedgerService(), provider as any);
     await worker.tick();
 
     const call = prisma.payout.update.mock.calls[0][0];
@@ -113,7 +113,7 @@ describe("PayoutDeliveryWorker.tick", () => {
     const provider = makeFakeProvider();
     provider.disburse.mockRejectedValue(new Error("bank api down"));
 
-    const worker = new PayoutDeliveryWorker(prisma, makeFakePayoutsService() as any, new LedgerService(), provider as any);
+    const worker = new PayoutDeliveryWorker(prisma, new LedgerService(), provider as any);
     await expect(worker.tick()).resolves.toBeUndefined();
 
     expect(prisma.payout.update).toHaveBeenCalledWith({
@@ -129,7 +129,7 @@ describe("PayoutDeliveryWorker.tick", () => {
     const provider = makeFakeProvider();
     provider.disburse.mockResolvedValue({ status: "failed", failureReason: "x", raw: {} });
 
-    const worker = new PayoutDeliveryWorker(prisma, makeFakePayoutsService() as any, new LedgerService(), provider as any);
+    const worker = new PayoutDeliveryWorker(prisma, new LedgerService(), provider as any);
     await worker.tick();
 
     expect(prisma.payout.update).toHaveBeenCalledWith({

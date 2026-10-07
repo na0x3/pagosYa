@@ -47,8 +47,8 @@ export class PayoutsService {
   }
 
   /**
-   * Enqueues one PENDING Payout per (merchant, currency) with a positive unpaid
-   * balance and no payout of that currency already in flight. USD balances
+   * Run once a day by PayoutScheduleJob: enqueues one PENDING Payout per (merchant, currency)
+   * with a positive available (MERCHANT_PAYABLE) balance and no payout of that currency already in flight. USD balances
    * wait until the merchant's approved KYC has a USD bank account.
    */
   async createDuePayouts(): Promise<void> {
@@ -57,6 +57,11 @@ export class PayoutsService {
     });
 
     for (const merchant of merchants) {
+      // Ops hold (ASFI sub-project 3): the balance keeps accruing; nothing leaves until an admin lifts it.
+      if (merchant.payoutHeldAt) {
+        this.logger.warn(`Payout held by ops: merchant ${merchant.id}`);
+        continue;
+      }
       const balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
       if (!balances.length) continue;
       // Held, not failed: the balance stays in MERCHANT_PAYABLE and goes out on the first run after they accept.

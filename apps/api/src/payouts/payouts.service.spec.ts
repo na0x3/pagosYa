@@ -38,6 +38,31 @@ describe("PayoutsService.getPayableBalance", () => {
 describe("PayoutsService.createDuePayouts", () => {
   const aggregatorMerchant = { id: "m_1", settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE };
 
+  it("skips a merchant whose payouts ops has held", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([{ ...aggregatorMerchant, payoutHeldAt: new Date() }]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+
+    await new PayoutsService(prisma as any, termsAccepted() as any).createDuePayouts();
+
+    expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+
+  it("pays nothing while the available balance is negative", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([
+      { currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 1000 } },
+      { currency: "BOB", direction: LedgerDirection.DEBIT, _sum: { amount: 4000 } },
+    ]);
+
+    await new PayoutsService(prisma as any, termsAccepted() as any).createDuePayouts();
+
+    expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+
   it("holds the payout of a merchant who has not accepted the terms in force", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
