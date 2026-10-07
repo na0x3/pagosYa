@@ -149,6 +149,7 @@
   .fact strong { display: block; margin-top: 5px; font-size: .8125rem; overflow-wrap: anywhere; }
   .dossier-section { padding-top: 20px; }
   .dossier-section h4 { margin: 0 0 10px; font-size: .875rem; }
+  .settlement-balance .negative { color: #b42318; font-weight: 600; }
   .compact-list { display: grid; border-top: 1px solid var(--pg-border); }
   .compact-row { display: grid; grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(90px, 1fr)); gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--pg-border); font-size: .8125rem; align-items: center; }
   .compact-row strong { overflow-wrap: anywhere; }
@@ -612,6 +613,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
               <th>En vivo</th>
               <th>Límite mensual (Bs)</th>
               <th>Límite por pago (Bs)</th>
+              <th>Demora (días)</th>
+              <th>Reserva (%)</th>
+              <th>Días de reserva</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -636,6 +640,20 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
             </tr>
           </thead>
           <tbody id="nearLimitRows"></tbody>
+        </table></div>
+
+        <h3 style="margin-top:24px">Pagos retenidos</h3>
+        <div id="payoutHoldsEmpty" class="empty-state" style="display:none">Ningún comercio tiene pagos retenidos.</div>
+        <div class="table-wrap"><table id="payoutHoldsTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Comercio</th>
+              <th>Motivo</th>
+              <th>Retenido por</th>
+              <th>Desde</th>
+            </tr>
+          </thead>
+          <tbody id="payoutHoldsRows"></tbody>
         </table></div>
       </div>
     </div>
@@ -835,6 +853,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           <div class="action-buttons"><button class="primary" type="submit">Guardar límites</button></div>
         </form>
       </section>
+      <section class="dossier-section" id="settlementSection"><h4>Fondos</h4><p class="muted">Cargando fondos…</p></section>
       <div class="support-action-zone">
         <h4>Acciones de acceso</h4><p class="muted">No vemos contraseñas ni tokens. Cada acción requiere una razón y queda auditada.</p>
         ${merchant.users.length ? `<div class="field-row"><div><label for="supportUserSelect">Usuario</label><select id="supportUserSelect">${loginOptions}</select></div><div><label for="supportActionReason">Razón confirmada</label><input id="supportActionReason" minlength="8" placeholder="Solicitud del titular"></div></div>
@@ -848,12 +867,80 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     `;
   }
 
+  function settlementBalancesHtml(balances) {
+    if (!balances.length) return `<p class="muted">Sin saldo registrado.</p>`;
+    return `<div class="compact-list">${balances.map((b) => `
+      <div class="compact-row settlement-balance" data-currency="${esc(b.currency)}">
+        <strong>${esc(b.currency)}</strong>
+        <span>En espera ${money(b.pending, b.currency)}</span>
+        <span class="${b.available < 0 ? "negative" : ""}">Disponible ${money(b.available, b.currency)}</span>
+        <span>Reserva ${money(b.reserve, b.currency)}</span>
+      </div>`).join("")}</div>`;
+  }
+
+  function renderSettlement(data) {
+    const section = document.getElementById("settlementSection");
+    if (!section) return;
+    const o = data.overrides;
+    const releases = data.releases.slice(0, 5).map((r) => `
+      <div class="compact-row"><strong>${esc(r.date)}</strong><span>${r.toAvailable ? "A disponible " + money(r.toAvailable, r.currency) : ""}</span><span>${r.fromReserve ? "Desde reserva " + money(r.fromReserve, r.currency) : ""}</span><span></span></div>`).join("");
+    const currencies = (data.balances.length ? data.balances : [{ currency: "BOB" }]).map((b) => `<option value="${esc(b.currency)}">${esc(b.currency)}</option>`).join("");
+    section.innerHTML = `
+      <h4>Fondos</h4>
+      <p class="muted">Política vigente: ${esc(data.policy.delayDays)} días de demora · reserva ${esc(data.policy.reserveBps / 100)}% por ${esc(data.policy.reserveDays)} días.</p>
+      ${settlementBalancesHtml(data.balances)}
+      ${releases ? `<div class="compact-list">${releases}</div>` : `<p class="muted">No hay liberaciones programadas.</p>`}
+      ${data.hold
+        ? `<div class="support-action-zone settlement-hold" data-state="held"><p><strong>Pagos retenidos</strong> desde ${dateTime(data.hold.heldAt)} por ${esc(data.hold.heldBy)}.</p><p class="muted">Motivo interno: ${esc(data.hold.reason)}</p><div class="action-buttons"><button type="button" data-settlement-action="lift-hold">Levantar retención</button></div></div>`
+        : `<div class="support-action-zone settlement-hold" data-state="free"><label for="payoutHoldReason">Motivo de la retención (interno)</label><input id="payoutHoldReason" minlength="8" maxlength="500" placeholder="Reclamos de compradores sin entrega"><div class="action-buttons"><button type="button" class="danger" data-settlement-action="place-hold">Retener pagos</button></div></div>`}
+      <form id="settlementOverridesForm">
+        <div class="field-row">
+          <div><label for="overrideDelayDays">Demora (días)</label><input id="overrideDelayDays" type="number" min="0" max="90" step="1" value="${o.payoutDelayDaysOverride ?? ""}" placeholder="Usar el del nivel"></div>
+          <div><label for="overrideReservePct">Reserva (%)</label><input id="overrideReservePct" type="number" min="0" max="100" step="0.01" value="${o.reserveBpsOverride != null ? o.reserveBpsOverride / 100 : ""}" placeholder="Usar el del nivel"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="overrideReserveDays">Días de reserva</label><input id="overrideReserveDays" type="number" min="0" max="365" step="1" value="${o.reserveDaysOverride ?? ""}" placeholder="Usar el del nivel"></div>
+          <div></div>
+        </div>
+        <div class="action-buttons"><button class="primary" type="submit">Guardar condiciones</button></div>
+      </form>
+      <form id="reserveSeizureForm" class="support-action-zone">
+        <h4>Retirar de la reserva</h4>
+        <p class="muted">Solo para restituir a un comprador por un fraude confirmado. Queda auditado.</p>
+        <div class="field-row">
+          <div><label for="seizureAmount">Monto</label><input id="seizureAmount" type="number" min="0.01" step="0.01" required></div>
+          <div><label for="seizureCurrency">Moneda</label><select id="seizureCurrency">${currencies}</select></div>
+        </div>
+        <div class="field-row">
+          <div><label for="seizureReason">Motivo</label><input id="seizureReason" minlength="8" maxlength="500" required></div>
+          <div><label for="seizureReference">Referencia externa</label><input id="seizureReference" minlength="3" maxlength="200" required placeholder="Transferencia al comprador"></div>
+        </div>
+        <div class="action-buttons"><button type="submit" class="danger">Retirar de la reserva</button></div>
+      </form>`;
+  }
+
+  async function refreshSettlement(merchantId) {
+    try {
+      renderSettlement(await api(`/internal/merchants/${encodeURIComponent(merchantId)}/settlement`));
+    } catch (err) {
+      const section = document.getElementById("settlementSection");
+      if (section) section.innerHTML = `<h4>Fondos</h4><p class="muted">No pudimos cargar los fondos: ${esc(err.message)}</p>`;
+    }
+  }
+
+  async function afterSettlementChange() {
+    await refreshSettlement(selectedMerchant.id);
+    await refreshAuditLog();
+    if (limitsWorkspaceEl.style.display !== "none") await refreshLimits();
+  }
+
   async function openSupportCase(caseId, merchantId) {
     supportDossierEmptyEl.textContent = "Cargando expediente…";
     supportDossierEmptyEl.style.display = "grid";
     supportDossierEl.style.display = "none";
     const data = await api(`/internal/support/merchants/${encodeURIComponent(merchantId)}?caseId=${encodeURIComponent(caseId)}`);
     renderDossier(data);
+    await refreshSettlement(merchantId);
     await refreshSupportCases();
   }
 
@@ -1198,6 +1285,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td><input type="checkbox" class="policy-live" ${p.liveEnabled ? "checked" : ""}></td>
         <td><input type="number" class="policy-monthly" step="0.01" min="0" value="${esc(monthlyBs)}" placeholder="${limitPlaceholder}"></td>
         <td><input type="number" class="policy-per-payment" step="0.01" min="0" value="${esc(perPaymentBs)}" placeholder="${limitPlaceholder}"></td>
+        <td><input type="number" class="policy-delay" step="1" min="0" max="90" value="${esc(p.payoutDelayDays ?? "")}"></td>
+        <td><input type="number" class="policy-reserve-pct" step="0.01" min="0" max="100" value="${esc(p.reserveBps == null ? "" : p.reserveBps / 100)}"></td>
+        <td><input type="number" class="policy-reserve-days" step="1" min="0" max="365" value="${esc(p.reserveDays ?? "")}"></td>
         <td><button type="button" class="primary policy-save">Guardar</button></td>
       </tr>`;
   }
@@ -1212,11 +1302,22 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </tr>`;
   }
 
+  function payoutHoldRow(row) {
+    return `
+      <tr>
+        <td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.email)}</span></td>
+        <td>${esc(row.payoutHoldReason)}</td>
+        <td>${esc(row.payoutHeldByLabel)}</td>
+        <td>${dateTime(row.payoutHeldAt)}</td>
+      </tr>`;
+  }
+
   async function refreshLimits() {
-    const [policies, settings, nearLimit] = await Promise.all([
+    const [policies, settings, nearLimit, payoutHolds] = await Promise.all([
       api("/internal/limits/policies"),
       api("/internal/limits/settings"),
       api("/internal/limits/near_limit"),
+      api("/internal/payout_holds"),
     ]);
     policiesRowsEl.innerHTML = policies.map(policyRow).join("");
     usdRateEl.value = settings.usdToBobRate ?? "";
@@ -1228,6 +1329,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       nearLimitTableEl.style.display = "table";
       nearLimitRowsEl.innerHTML = nearLimit.map(nearLimitRow).join("");
     }
+    const holdsTable = document.getElementById("payoutHoldsTable");
+    document.getElementById("payoutHoldsEmpty").style.display = payoutHolds.length ? "none" : "block";
+    holdsTable.style.display = payoutHolds.length ? "table" : "none";
+    document.getElementById("payoutHoldsRows").innerHTML = payoutHolds.map(payoutHoldRow).join("");
   }
 
   policiesRowsEl.addEventListener("click", async (event) => {
@@ -1247,6 +1352,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           monthlyLimit: monthlyRaw === "" ? null : Math.round(Number(monthlyRaw) * 100),
           perPaymentLimit: perPaymentRaw === "" ? null : Math.round(Number(perPaymentRaw) * 100),
           liveEnabled,
+          payoutDelayDays: Number(row.querySelector(".policy-delay").value || 0),
+          reserveBps: Math.round(Number(row.querySelector(".policy-reserve-pct").value || 0) * 100),
+          reserveDays: Number(row.querySelector(".policy-reserve-days").value || 0),
         }),
       });
       await refreshLimits();
@@ -1433,6 +1541,72 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       button.disabled = false;
     }
   });
+
+  supportDossierEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-settlement-action]");
+    if (!button || !selectedMerchant) return;
+    const base = `/internal/merchants/${encodeURIComponent(selectedMerchant.id)}/payout_hold`;
+    errorEl.textContent = "";
+    button.disabled = true;
+    try {
+      if (button.dataset.settlementAction === "place-hold") {
+        await api(base, { method: "POST", body: JSON.stringify({ reason: document.getElementById("payoutHoldReason").value.trim() }) });
+      } else {
+        await api(base, { method: "DELETE" });
+      }
+      await afterSettlementChange();
+    } catch (err) {
+      errorEl.textContent = "No pudimos actualizar la retención: " + err.message;
+      button.disabled = false;
+    }
+  });
+
+  supportDossierEl.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (form.id !== "settlementOverridesForm" && form.id !== "reserveSeizureForm") return;
+    event.preventDefault();
+    const button = form.querySelector("button[type=submit]");
+    const merchantPath = `/internal/merchants/${encodeURIComponent(selectedMerchant.id)}`;
+    errorEl.textContent = "";
+    try {
+      if (form.id === "settlementOverridesForm") {
+        const raw = (id) => document.getElementById(id).value.trim();
+        button.disabled = true;
+        await api(`${merchantPath}/settlement`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            payoutDelayDaysOverride: raw("overrideDelayDays") === "" ? null : Number(raw("overrideDelayDays")),
+            reserveBpsOverride: raw("overrideReservePct") === "" ? null : Math.round(Number(raw("overrideReservePct")) * 100),
+            reserveDaysOverride: raw("overrideReserveDays") === "" ? null : Number(raw("overrideReserveDays")),
+          }),
+        });
+      } else {
+        const amount = Math.round(Number(document.getElementById("seizureAmount").value) * 100);
+        const currency = document.getElementById("seizureCurrency").value;
+        // Two clicks instead of confirm(): a browser dialog would block automation and is easy to dismiss by reflex.
+        if (!form.dataset.confirmed) {
+          form.dataset.confirmed = "1";
+          button.textContent = `Confirmar retiro de ${money(amount, currency)}`;
+          return;
+        }
+        button.disabled = true;
+        await api(`${merchantPath}/reserve_seizures`, {
+          method: "POST",
+          body: JSON.stringify({
+            amount,
+            currency,
+            reason: document.getElementById("seizureReason").value.trim(),
+            externalReference: document.getElementById("seizureReference").value.trim(),
+          }),
+        });
+      }
+      await afterSettlementChange();
+    } catch (err) {
+      errorEl.textContent = "No pudimos guardar: " + err.message;
+      button.disabled = false;
+    }
+  });
+
 
   supportDossierEl.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-support-action]");

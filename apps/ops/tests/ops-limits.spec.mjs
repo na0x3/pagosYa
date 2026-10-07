@@ -23,10 +23,10 @@ const kycSubmission = {
 };
 
 const policies = [
-  { level: 0, name: "Nivel 0", liveEnabled: false, monthlyLimit: null, perPaymentLimit: null },
-  { level: 1, name: "Nivel 1", liveEnabled: true, monthlyLimit: 1_000_000, perPaymentLimit: 200_000 },
-  { level: 2, name: "Nivel 2", liveEnabled: true, monthlyLimit: 10_000_000, perPaymentLimit: 2_000_000 },
-  { level: 3, name: "Nivel 3", liveEnabled: true, monthlyLimit: null, perPaymentLimit: null },
+  { level: 0, name: "Nivel 0", liveEnabled: false, monthlyLimit: null, perPaymentLimit: null, payoutDelayDays: 7, reserveBps: 1000, reserveDays: 60 },
+  { level: 1, name: "Nivel 1", liveEnabled: true, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, payoutDelayDays: 7, reserveBps: 1000, reserveDays: 60 },
+  { level: 2, name: "Nivel 2", liveEnabled: true, monthlyLimit: 10_000_000, perPaymentLimit: 2_000_000, payoutDelayDays: 3, reserveBps: 500, reserveDays: 45 },
+  { level: 3, name: "Nivel 3", liveEnabled: true, monthlyLimit: null, perPaymentLimit: null, payoutDelayDays: 1, reserveBps: 0, reserveDays: 0 },
 ];
 
 const supportCaseSummary = {
@@ -98,6 +98,8 @@ async function openOps(page, { onRequest } = {}) {
     if (path === "/internal/limits/settings") return route.fulfill({ json: { usdToBobRate: "6.96" } });
     if (path === "/internal/limits/near_limit") return route.fulfill({ json: [] });
     if (path === "/internal/support/merchants/merchant_1") return route.fulfill({ json: dossier });
+    if (path === "/internal/payout_holds") return route.fulfill({ json: [] });
+    if (path === "/internal/merchants/merchant_1/settlement") return route.fulfill({ json: { merchantId: "merchant_1", overrides: { payoutDelayDaysOverride: null, reserveBpsOverride: null, reserveDaysOverride: null }, hold: null, policy: { level: 1, levelName: "Persona", delayDays: 7, reserveBps: 1000, reserveDays: 60 }, balances: [], releases: [] } });
 
     return route.fulfill({ status: 404, json: { message: "no mock for " + path } });
   });
@@ -168,7 +170,7 @@ test("the limits page shows policies in Bs and saves centavos", async ({ page })
   await row.locator(".policy-per-payment").fill("3000");
   await row.locator("button.policy-save").click();
 
-  await expect.poll(() => patchBody).toEqual({ monthlyLimit: 2_000_000, perPaymentLimit: 300_000, liveEnabled: true });
+  await expect.poll(() => patchBody).toEqual({ monthlyLimit: 2_000_000, perPaymentLimit: 300_000, liveEnabled: true, payoutDelayDays: 7, reserveBps: 1000, reserveDays: 60 });
 });
 
 test("level 3's policy limits can be left blank — Empresa always runs on its own per-merchant overrides", async ({ page }) => {
@@ -189,7 +191,7 @@ test("level 3's policy limits can be left blank — Empresa always runs on its o
   await expect(row.locator(".policy-per-payment")).toHaveAttribute("placeholder", "Definido por comercio");
   await row.locator("button.policy-save").click();
 
-  await expect.poll(() => patchBody).toEqual({ monthlyLimit: null, perPaymentLimit: null, liveEnabled: true });
+  await expect.poll(() => patchBody).toEqual({ monthlyLimit: null, perPaymentLimit: null, liveEnabled: true, payoutDelayDays: 1, reserveBps: 0, reserveDays: 0 });
 });
 
 test("a 403 saving a policy shows the API message in the error element", async ({ page }) => {
