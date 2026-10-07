@@ -1,4 +1,6 @@
-import { emailImageUrl } from './email-image-url';
+import { existsSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
+import { EMAIL_ICONS, emailIconUrl, emailImageUrl } from './email-image-url';
 
 describe('emailImageUrl', () => {
   const base = 'https://api.pagosya.bo';
@@ -20,5 +22,16 @@ describe('emailImageUrl', () => {
     expect(emailImageUrl(null, base)).toBeNull();
     expect(emailImageUrl('assets/hero.jpg', base)).toBeNull();
     expect(emailImageUrl('/v1/uploads/../secret', base)).toBeNull();
+  });
+});
+
+describe('emailIconUrl', () => {
+  it('points at the public icon route in the requested tone, only over https', () => {
+    expect(emailIconUrl('truck', 'light', 'https://api.pagosya.bo')).toBe('https://api.pagosya.bo/v1/email-assets/icons/truck-light.png');
+    expect(emailIconUrl('truck', 'dark', 'http://localhost:3001')).toBeNull();
+    expect(emailIconUrl('truck', 'dark', null)).toBeNull();
+  });
+  it('ships every icon in both tones', () => {
+    for (const icon of EMAIL_ICONS) for (const tone of ['dark', 'light']) expect(existsSync(kitPath('emails', 'icons', `${icon}-${tone}.png`))).toBe(true);
   });
 });
