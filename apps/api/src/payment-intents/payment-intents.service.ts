@@ -6,7 +6,7 @@ import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { DebtRecordStatus, LimitReservationStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { OrderEmailService } from '../order-emails/order-email.service';
+import { StoreEmailService } from '../store-emails/store-email.service';
 import { RailRegistry } from "../rails/rail-registry.service";
 import { PaymentMethodsService } from "../payment-methods/payment-methods.service";
 import { LedgerService } from "../ledger/ledger.service";
@@ -140,7 +140,7 @@ export class PaymentIntentsService {
     private readonly limitsWarning: LimitsWarningService,
     @Optional() private readonly inbox?: InboxService,
     /** Optional on purpose: without it the buyer still gets the plain-text receipt. */
-    @Optional() private readonly orderEmail?: OrderEmailService,
+    @Optional() private readonly storeEmail?: StoreEmailService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -834,16 +834,19 @@ export class PaymentIntentsService {
        * untouched, so the buyer always receives the receipt they receive today.
        */
       let html: string | undefined;
+      let subject: string | undefined;
       try {
         const trackingUrl = trackingLine ? trackingLine.trim().split('\n').pop() : null;
-        const rendered = await this.orderEmail?.renderForStore(order?.storeId ?? null, {
+        const rendered = await this.storeEmail?.renderReceipt(order?.storeId ?? null, {
           storeName: merchantName,
           logoUrl: null,
           customerName: intent.customerName,
           orderId: intent.id,
-          items: (cart ?? []).map(line => ({
+          lines: (cart ?? []).map(line => ({
+            paymentLinkId: line.paymentLinkId ?? null,
+            variantId: line.variantId ?? null,
             name: line.name,
-            variantName: line.variantName ?? null,
+            variant: line.variantName ?? null,
             extras: line.extras?.length ? selectedExtrasLabel(line.extras) : null,
             quantity: line.quantity,
             amount: formatAmount(line.unitAmount * line.quantity, lineCurrency),
@@ -862,6 +865,7 @@ export class PaymentIntentsService {
             : null,
         });
         html = rendered?.html;
+        subject = rendered?.subject;
       } catch (err) {
         this.logger.warn(`Order email render failed for ${intent.id}: ${(err as Error).message}`);
       }
@@ -869,7 +873,7 @@ export class PaymentIntentsService {
       await this.email.send({
         to: intent.customerEmail,
         ...(html ? { html } : {}),
-        subject: appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`,
+        subject: subject ?? (appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`),
         body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`,
       });
     } catch (err) {
