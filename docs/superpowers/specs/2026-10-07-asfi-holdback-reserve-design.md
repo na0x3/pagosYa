@@ -73,7 +73,8 @@ model SettlementHold {
   id               String               @id @default(cuid())
   merchantId       String
   merchant         Merchant             @relation(fields: [merchantId], references: [id])
-  transactionId    String               @unique
+  paymentIntentId  String               // what a refund knows: finds "the refunded payment's own hold"
+  transactionId    String               @unique // the capture Transaction
   currency         String
   netAmount        Int                  // merchant net credited to PENDING at capture
   pendingAmount    Int                  // still in PENDING (reduced by refund drawdown)
@@ -90,6 +91,7 @@ model SettlementHold {
   @@index([status, availableAt])
   @@index([status, reserveReleaseAt])
   @@index([merchantId, currency, status])
+  @@index([paymentIntentId])
 }
 
 model ReserveSeizure {
@@ -147,7 +149,7 @@ Returns `{ delayDays, reserveBps, reserveDays }`: each field is the merchant ove
 - Calendar days, not business days.
 
 ### Daily job
-`@Cron('0 10 * * *', { timeZone: 'America/La_Paz' })` on a new `SettlementDailyJob`: `releaseDue(now)` then `PayoutsService.createDuePayouts()`. `PayoutDeliveryWorker.tick()` stops calling `createDuePayouts()` and only delivers/retries existing Payout rows.
+`@Cron('0 10 * * *', { timeZone: 'America/La_Paz' })` on a new `PayoutScheduleJob` in `PayoutsModule` (PayoutsModule imports SettlementModule; the reverse would be circular): `releaseDue(now)` then `PayoutsService.createDuePayouts()`. `PayoutDeliveryWorker.tick()` stops calling `createDuePayouts()` and only delivers/retries existing Payout rows.
 
 ### `PayoutsService.createDuePayouts()` changes
 - Skips merchants with `payoutHeldAt` set, logging the merchant id (not the reason).
@@ -199,7 +201,7 @@ The merchant terms must disclose the delay, the reserve and the drawdown order. 
 
 ## Rollout
 
-1. Migration: enum value, columns, two tables, seeded placeholders. Applied to the dev DB by the main session with `prisma migrate dev` — subagents never run prisma migrate/diff/reset on the dev DB.
+1. Migration: enum value, columns, two tables, seeded placeholders, hand-written SQL validated by the integration suites' throwaway databases. It is **not** applied to the shared dev DB while this branch is unmerged (the owner's live app runs another branch against it; foreign migrations there cause drift); it is applied when the branch merges. Subagents never run prisma migrate/diff/reset on the dev DB.
 2. Existing PAYABLE balances stay available; no holds created for past captures.
 3. Ops publishes the new merchant terms version once the lawyer approves the clause.
 4. Production: confirm placeholder numbers with the bank; the bank disbursement adapter remains the mock.
