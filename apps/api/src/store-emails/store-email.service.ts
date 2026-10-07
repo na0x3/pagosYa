@@ -150,7 +150,7 @@ export class StoreEmailService {
     const kit = checked?.kit ?? floor;
     const values = new Map([...layoutColorTokens(kit), ...brandColorTokens(brand)]);
     const data: ReceiptData & { delivery: Delivery } = { ...input, items, delivery: input.delivery ?? null };
-    const content = resolveContent(type, stored, ctx, copy, input.storeName, this.base());
+    const content = resolveContent(type, stored, ctx, copy, { cliente: input.customerName, tienda: input.storeName }, this.base());
     const assembled = assembleWithinBudget(this.resolveKit(kit, values), this.resolveKit(floor, values), richReceiptCalls(type, data, copy, ctx, content), {
       storeName: input.storeName, logoUrl, storeUrl: ctx.storeUrl ?? this.storeUrl(store), preheader: copy.preheader, unsubscribeUrl: null, marketing: false,
       nav: ctx.nav, socials: ctx.socials, address: ctx.address, policies: ctx.policies, iconBase: this.base(),

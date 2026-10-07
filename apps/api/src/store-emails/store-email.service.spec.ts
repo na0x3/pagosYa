@@ -144,6 +144,15 @@ describe('StoreEmailService.renderReceipt', () => {
       expect((await harness({ stored: { announcement: { off: true } } }).renderReceipt('s1', input())).html).not.toContain('Gracias por comprar en Café Illimani.</td>');
     });
 
+    it("fills {cliente} and {tienda} in the merchant's own content", async () => {
+      const { html } = await harness({ stored: { announcement: { text: 'Hola {cliente}, envío gratis en {tienda}' }, note: { text: 'Gracias por elegir {tienda}' },
+        story: { title: 'Sobre {tienda}', text: 'Hecho a mano', imageUrl: null } } }).renderReceipt('s1', input());
+      expect(html).toContain('Hola Ana, envío gratis en Café Illimani');
+      expect(html).toContain('Gracias por elegir Café Illimani');
+      expect(html).toContain('Sobre Café Illimani');
+      expect(html).not.toContain('{tienda}');
+    });
+
     it('renders the delivery box and contact cards from real data', async () => {
       const { html } = await harness({ contact: { contactEmail: 'hola@cafe.bo', contactPhone: '+591 70000000', checkoutMode: 'whatsapp' } })
         .renderReceipt('s1', input({ delivery: { method: 'delivery', recipient: 'Ana', lines: ['Av. 1'] } }));

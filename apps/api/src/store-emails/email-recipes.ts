@@ -44,17 +44,19 @@ export type ResolvedContent = {
  * code goes out only while it is still active and shared (the context holds only those);
  * anything the merchant left unset falls back to the store's facts or the resolved wording.
  */
-export function resolveContent(type: EmailType, stored: StoredContent, ctx: EmailContext, copy: ResolvedCopy, storeName: string, base: string | null): ResolvedContent {
+export function resolveContent(type: EmailType, stored: StoredContent, ctx: EmailContext, copy: ResolvedCopy, vars: { cliente: string | null; tienda: string }, base: string | null): ResolvedContent {
   const on = stored.emails?.[type] ?? {};
-  const image = (url: string | null | undefined) => { const src = emailImageUrl(url, base); return src ? { src, alt: storeName } : null; };
+  const image = (url: string | null | undefined) => { const src = emailImageUrl(url, base); return src ? { src, alt: vars.tienda } : null; };
+  // The merchant writes {cliente} and {tienda} like in the wording form; the resolved copy is already filled.
+  const fill = (text: string) => fillPlaceholders(text, vars);
 
   const announcement = on.announcement === false || (stored.announcement && 'off' in stored.announcement) ? null
-    : stored.announcement?.text ?? copy.announcement;
+    : stored.announcement ? fill(stored.announcement.text) : copy.announcement;
   const promo = on.promo === false || stored.promo?.promoCodeId === null ? null
     : stored.promo?.promoCodeId ? ctx.promos.find(p => p.id === stored.promo!.promoCodeId) ?? null
     : ctx.promos[0] ?? null;
   const story = on.story === false || (stored.story && 'off' in stored.story) ? null
-    : stored.story ? { title: stored.story.title, text: stored.story.text, image: image(stored.story.imageUrl) }
+    : stored.story ? { title: fill(stored.story.title), text: fill(stored.story.text), image: image(stored.story.imageUrl) }
     : { title: copy.storyTitle, text: copy.storyText, image: null };
 
   return {
@@ -62,7 +64,7 @@ export function resolveContent(type: EmailType, stored: StoredContent, ctx: Emai
     heroImage: image(stored.heroImage?.url),
     promo: promo && { code: promo.code, discount: promo.discount },
     story,
-    note: stored.note?.text ?? copy.note,
+    note: stored.note ? fill(stored.note.text) : copy.note,
     recommendations: stored.recommendations?.on !== false && on.recommendations !== false,
   };
 }

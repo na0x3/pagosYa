@@ -75,7 +75,7 @@ async function main() {
       const copy = resolveCopy(type, kit.copy, {}, { cliente: 'Ana', tienda: store.storeName });
       const ctx = exampleContext(store.storeName);
       const delivery = type === 'appointment_confirmed' ? null : { method: 'delivery' as const, recipient: 'Ana Quispe', lines: ['Av. 6 de Agosto 123', 'La Paz'] };
-      const calls = richReceiptCalls(type, { ...data, delivery }, copy, ctx, resolveContent(type, {}, ctx, copy, store.storeName, null));
+      const calls = richReceiptCalls(type, { ...data, delivery }, copy, ctx, resolveContent(type, {}, ctx, copy, { cliente: 'Ana', tienda: store.storeName }, null));
       const { html } = assembleWithinBudget(usable ? kit : floor, floor, calls, { storeName: store.storeName, logoUrl: null, storeUrl: ctx.storeUrl,
         preheader: copy.preheader, unsubscribeUrl: null, marketing: false, nav: ctx.nav, socials: ctx.socials, address: ctx.address, policies: ctx.policies,
         iconBase: config.get<string>('app.publicAssetBaseUrl') ?? null });
