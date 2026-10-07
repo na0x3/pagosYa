@@ -59,6 +59,22 @@ describe('order email validator', () => {
     expect(repairs.join(' ')).toContain('background');
   });
 
+  it('pairs a colour with the background it sits on, not white: light text on a dark cell stays readable', () => {
+    const { html } = validateOrderEmailHtml(wrap('<table><tr><td style="padding:38px;background:#34342b;color:#f5f0e7"><div style="color:#f5f0e7;font-size:16px">Hola</div></td></tr></table>'));
+    expect(html).toMatch(/<div style="color:#f5f0e7;font-size:16px;background:#34342b">/);
+    expect(html).not.toMatch(/<div[^>]*background:#ffffff/);
+  });
+
+  it('reads a bgcolor attribute and a background-color declaration as the background underneath', () => {
+    expect(validateOrderEmailHtml(wrap('<table><tr><td bgcolor="#b9707a"><a style="color:#272820">Ver</a></td></tr></table>')).html).toMatch(/<a style="color:#272820;background:#b9707a">/);
+    expect(validateOrderEmailHtml(wrap('<div style="background-color:#101010"><span style="color:#eee">x</span></div>')).html).toMatch(/<span style="color:#eee;background:#101010">/);
+  });
+
+  it('looks past a background image to the nearest plain colour, and uses white when there is none', () => {
+    expect(validateOrderEmailHtml(wrap('<div style="background:#222"><div style="background:url(https://x/a.png)"><p style="color:#fff">x</p></div></div>')).html).toMatch(/<p style="color:#fff;background:#222">/);
+    expect(validateOrderEmailHtml(wrap('<div><p style="color:#111">x</p></div>')).html).toMatch(/<p style="color:#111;background:#ffffff">/);
+  });
+
   it('leaves an element that already pairs them alone', () => {
     expect(validateOrderEmailHtml(wrap('<p style="color:#111;background:#fff">x</p>')).repairs.join(' ')).not.toContain('background');
   });

@@ -44,6 +44,26 @@ export function sanitizeEmailHtml(input: string, path: string, maxBytes: number)
   return { html: clampEmail(serialize(doc as any), path, maxBytes, repairs), repairs };
 }
 
+/** A plain background colour an element declares itself: bgcolor, background-color, or a background without an image. */
+function ownBackground(el: Element): string | null {
+  const style = el.attrs.find(a => a.name === 'style')?.value ?? '';
+  const color = /(?:^|;)\s*background-color\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+  if (color) return color;
+  const shorthand = /(?:^|;)\s*background\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+  if (shorthand && !/url\(|gradient\(/i.test(shorthand)) return shorthand;
+  const attr = el.attrs.find(a => a.name === 'bgcolor')?.value.trim();
+  return attr || null;
+}
+
+/** The nearest background colour around an element, else white. */
+function backgroundBeneath(el: Element): string {
+  for (let node: any = el.parentNode; node && node.tagName; node = node.parentNode) {
+    const found = ownBackground(node);
+    if (found) return found;
+  }
+  return '#ffffff';
+}
+
 function sanitizeEmailDocument(input: string, path: string): { doc: ReturnType<typeof parse>; repairs: string[] } {
   const repairs: string[] = [];
   let source = input;
@@ -70,9 +90,10 @@ function sanitizeEmailDocument(input: string, path: string): { doc: ReturnType<t
         style.value = style.value.replace(BANNED_DECLS, '').replace(/^;+|;+$/g, '');
         repairs.push(`${path}: layout declaration removed`);
       }
-      // Gmail inverts an unpaired colour in dark mode until it is unreadable.
+      // Gmail inverts an unpaired colour in dark mode until it is unreadable. The pair is the
+      // background the text already sits on: white under light text on a dark cell hides it.
       if (/(?:^|;)\s*color\s*:/i.test(style.value) && !/background(?:-color)?\s*:/i.test(style.value)) {
-        style.value = `${style.value.replace(/;+$/, '')};background:#ffffff`;
+        style.value = `${style.value.replace(/;+$/, '')};background:${backgroundBeneath(el)}`;
         repairs.push(`${path}: background added beside an unpaired colour`);
       }
     }
