@@ -30,10 +30,12 @@ export function mountEmailStudio(container, deps) {
     if (s.available === false) return "";
     const off = state.busy ? "disabled" : "";
     if (s.candidate) return `<button type="button" class="primary" data-email-accept ${off}>Usar este diseño</button><button type="button" class="ghost" data-email-discard ${off}>Volver al anterior</button>`;
-    const main = s.kit === "none" ? `Diseñar mis correos · hasta ${s.maxCredits} créditos` : s.siteChanged ? "Actualizar correos" : null;
+    // Every run states its ceiling before it starts.
+    const cost = ` · hasta ${s.maxCredits} créditos`;
+    const main = s.kit === "none" ? `Diseñar mis correos${cost}` : s.siteChanged ? `Actualizar correos${cost}` : null;
     return [
       main ? `<button type="button" class="primary" data-email-design ${off}>${esc(main)}</button>` : "",
-      s.kit !== "none" ? `<button type="button" class="ghost" data-email-bold ${off}>Más llamativo</button>` : "",
+      s.kit !== "none" ? `<button type="button" class="ghost" data-email-bold ${off}>${esc(`Más llamativo${cost}`)}</button>` : "",
       s.previous ? `<button type="button" class="ghost" data-email-revert ${off}>Volver al anterior</button>` : "",
     ].join("");
   }

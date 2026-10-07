@@ -35,7 +35,9 @@ test('a changed site offers to update; a candidate offers use and back', async (
   const changed = mount(fakeApi(status({ siteChanged: true })));
   changed.panel.show(); await settle();
   assert.match(changed.container.textContent, /Tu sitio cambió/);
-  assert.equal(changed.container.querySelector('[data-email-design]').textContent.trim(), 'Actualizar correos');
+  // Every run states its ceiling before it starts, not only the first design.
+  assert.equal(changed.container.querySelector('[data-email-design]').textContent.trim(), 'Actualizar correos · hasta 25 créditos');
+  assert.equal(changed.container.querySelector('[data-email-bold]').textContent.trim(), 'Más llamativo · hasta 25 créditos');
   const pending = mount(fakeApi(status({ candidate: true, previous: true })));
   pending.panel.show(); await settle();
   assert.ok(pending.container.querySelector('[data-email-accept]'));
