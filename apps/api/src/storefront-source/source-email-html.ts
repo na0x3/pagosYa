@@ -10,7 +10,7 @@ const ALLOWED = new Set(['html', 'head', 'meta', 'title', 'body', 'table', 'thea
   'a', 'p', 'h1', 'h2', 'h3', 'span', 'strong', 'em', 'b', 'i', 'img', 'div', 'ul', 'ol', 'li', 'br', 'hr', 'center']);
 const BANNED_DECLS = /(?:^|;)\s*(?:display\s*:\s*(?:flex|grid|inline-flex|inline-grid)|position\s*:\s*[a-z]+)\s*(?=;|$)/gi;
 /** A currency amount: Bs / BOB / USD / $ followed by a digit. */
-const LITERAL_AMOUNT = /\b(?:Bs|BOB|USD|\$)\s?\d/;
+export const LITERAL_AMOUNT = /\b(?:Bs|BOB|USD|\$)\s?\d/;
 
 const isElement = (node: Node): node is Element => 'tagName' in node;
 const children = (node: Node): Node[] => ('childNodes' in node ? (node.childNodes as Node[]) : []);
@@ -35,11 +35,16 @@ function clampHtml(html: string, maxBytes: number, suffix: string): string {
 }
 
 /**
- * Validated authored email. Like `validateStoreKitCss`, this never throws on content:
- * violations are stripped, clamped or dropped, and reported. `usable` is false when the
- * result is no longer a receipt, and the caller falls back to the kit floor.
+ * The email-safe floor every authored email passes through: inline <style>, keep only the
+ * tags email clients render, drop handlers and unsafe URLs, remove flex/grid/positioning,
+ * pair every colour with a background. Strips and reports; never throws on content.
  */
-export function validateOrderEmailHtml(input: string, path = ORDER_EMAIL_TEMPLATE_PATH): { html: string; repairs: string[]; usable: boolean } {
+export function sanitizeEmailHtml(input: string, path: string, maxBytes: number): { html: string; repairs: string[] } {
+  const { doc, repairs } = sanitizeEmailDocument(input, path);
+  return { html: clampEmail(serialize(doc as any), path, maxBytes, repairs), repairs };
+}
+
+function sanitizeEmailDocument(input: string, path: string): { doc: ReturnType<typeof parse>; repairs: string[] } {
   const repairs: string[] = [];
   let source = input;
   try { source = juice(input, { removeStyleTags: true, preserveMediaQueries: true }); }
@@ -72,6 +77,22 @@ export function validateOrderEmailHtml(input: string, path = ORDER_EMAIL_TEMPLAT
       }
     }
   }
+  return { doc, repairs };
+}
+
+function clampEmail(html: string, path: string, maxBytes: number, repairs: string[]): string {
+  if (Buffer.byteLength(html, 'utf8') <= maxBytes) return html;
+  repairs.push(`${path}: clamped to ${maxBytes} bytes`);
+  return clampHtml(html, maxBytes, '</body></html>');
+}
+
+/**
+ * Validated authored email. Like `validateStoreKitCss`, this never throws on content:
+ * violations are stripped, clamped or dropped, and reported. `usable` is false when the
+ * result is no longer a receipt, and the caller falls back to the kit floor.
+ */
+export function validateOrderEmailHtml(input: string, path = ORDER_EMAIL_TEMPLATE_PATH): { html: string; repairs: string[]; usable: boolean } {
+  const { doc, repairs } = sanitizeEmailDocument(input, path);
 
   // Truthfulness: no literal amount where an order fact belongs. Static copy elsewhere is fine.
   for (const el of [...walk(doc as unknown as Node)]) {
@@ -81,11 +102,7 @@ export function validateOrderEmailHtml(input: string, path = ORDER_EMAIL_TEMPLAT
     for (const node of children(el)) if (!isElement(node)) (node as any).value = '';
   }
 
-  let html = serialize(doc as any);
-  if (Buffer.byteLength(html, 'utf8') > ORDER_EMAIL_MAX_BYTES) {
-    repairs.push(`${path}: clamped to ${ORDER_EMAIL_MAX_BYTES} bytes`);
-    html = clampHtml(html, ORDER_EMAIL_MAX_BYTES, '</body></html>');
-  }
+  const html = clampEmail(serialize(doc as any), path, ORDER_EMAIL_MAX_BYTES, repairs);
   const usable = ORDER_EMAIL_REQUIRED_SLOTS.every(slot => html.includes(slot));
   return { html, repairs, usable };
 }
