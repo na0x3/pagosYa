@@ -59,12 +59,16 @@ const FIELDS = { storeName: "Café Illimani", fields: [
 const status = (over = {}) => ({ kit: "active", candidate: false, previous: false, siteChanged: false, maxCredits: 25,
   types: [{ type: "order_confirmation", label: "Confirmación de compra", group: "Compras" }, { type: "appointment_confirmed", label: "Cita confirmada", group: "Compras" }], ...over });
 
+const CONTENT = { available: true, content: {}, defaults: { announcement: "Gracias por comprar en {tienda}.", storyTitle: "Sobre {tienda}", storyText: "Somos {tienda}.", note: "Gracias por confiar en nosotros." },
+  promos: [{ id: "p2", code: "VUELVE10", discount: "10% en tu próxima compra", shared: true }], photos: [] };
+
 /** Routes the Correos endpoints; `state.status` can be changed by a test to follow a design run. */
 function correos(state) {
-  return ({ path }) => {
+  return ({ path, request }) => {
     if (path === BASE) return state.status;
     if (path.startsWith(`${BASE}/preview`)) return { html: AUTHORED_EMAIL, subject: "x", repairs: [] };
     if (path.startsWith(`${BASE}/copy/`)) return state.copy ?? FIELDS;
+    if (path === `${BASE}/content` && request.method() === "GET") return state.content ?? CONTENT;
     if (path.startsWith(BASE)) return { ok: true, status: "saved", credits: 7, repairs: [], sent: true, value: "x" };
     return undefined;
   };
@@ -197,3 +201,44 @@ test("at 390 px the frames keep their width and the page does not scroll sideway
   expect(Math.round((await frames.nth(0).boundingBox()).width)).toBe(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
+
+test("the content of the emails is edited below the preview, and saving it reloads the preview", async ({ page }) => {
+  const requests = await openCorreos(page, { status: status() });
+  await expect(page.getByRole("heading", { name: "Contenido de tus correos" })).toBeVisible();
+  await expect(page.locator("[data-content-promo] option").first()).toContainText("VUELVE10");
+  const previews = () => requests.filter((r) => r.path === `${BASE}/preview`).length;
+  const before = previews();
+  await page.locator("[data-content-announcement]").fill("Envío gratis todo octubre");
+  await page.getByRole("button", { name: "Guardar contenido" }).click();
+  await expect.poll(() => requests.find((r) => r.method === "PUT" && r.path === `${BASE}/content/announcement`)?.body).toEqual({ text: "Envío gratis todo octubre" });
+  await expect.poll(previews).toBeGreaterThan(before);
+  // A per-email switch saves at once, for the selected email.
+  await page.getByRole("button", { name: "Cita confirmada" }).click();
+  await page.locator('[data-content-switch="promo"]').click();
+  await expect.poll(() => requests.find((r) => r.method === "PUT" && r.path === `${BASE}/content/emails/appointment_confirmed/promo`)?.body).toEqual({ on: false });
+});
+
+test("at 390 px the content panel stacks and the page does not scroll sideways", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openCorreos(page, { status: status() });
+  await expect(page.getByRole("heading", { name: "Contenido de tus correos" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+test("Descuentos: a code is marked to show in the store's emails", async ({ page }) => {
+  const code = { id: "p2", code: "VUELVE10", discountType: "PERCENT", discountValue: 10, isActive: true, showInEmails: false, createdAt: "2026-10-01T12:00:00.000Z" };
+  const requests = await openDashboard(page, [store("store_1", "Café Illimani")], ({ path, request }) => {
+    if (path === "/stores/store_1/promo-codes" && request.method() === "GET") return [code];
+    if (path === "/stores/store_1/promo-codes/p2" && request.method() === "PATCH") return { ...code, ...request.postDataJSON() };
+    return undefined;
+  });
+  await navigateDashboard(page, "marketing");
+  await page.getByRole("button", { name: "Códigos promocionales" }).click();
+  const row = page.locator('[data-promo-code-id="p2"]');
+  await expect(row).toBeVisible();
+  await expect(row).not.toContainText("Se muestra en tus correos");
+  await row.getByLabel("Mostrar en correos").check();
+  await expect(row).toContainText("Se muestra en tus correos");
+  expect(requests.find((r) => r.method === "PATCH" && r.path === "/stores/store_1/promo-codes/p2")?.body).toEqual({ showInEmails: true });
+});
+

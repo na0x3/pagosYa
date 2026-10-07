@@ -891,12 +891,13 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       return;
     }
     promoCodeListEl.innerHTML = lastPromoCodes.map((code) => `<article class="promo-code-row${code.isActive ? "" : " is-disabled"}" data-promo-code-id="${esc(code.id)}">
-      <div class="promo-code-identity"><strong>${esc(code.code)}</strong><span>${code.isActive ? "Activo y listo para compartir" : "Desactivado"}</span></div>
+      <div class="promo-code-identity"><strong>${esc(code.code)}</strong><span>${code.isActive ? "Activo y listo para compartir" : "Desactivado"}</span>${code.showInEmails ? '<span class="promo-code-email">Se muestra en tus correos</span>' : ""}</div>
       <div class="promo-code-value"><strong>${esc(promoCodeDiscountLabel(code))}</strong><span>Creado ${new Intl.DateTimeFormat("es-BO", { dateStyle: "medium" }).format(new Date(code.createdAt))}</span></div>
       <div class="promo-code-actions">
         <button class="ghost" type="button" data-promo-copy="${esc(code.code)}" aria-label="Copiar código ${esc(code.code)}">Copiar</button>
         <button class="ghost" type="button" data-promo-share="${esc(code.code)}" aria-label="Compartir código ${esc(code.code)}">Compartir</button>
         <button class="ghost" type="button" data-promo-toggle="${esc(code.id)}" data-active="${code.isActive}" aria-label="${code.isActive ? "Desactivar" : "Activar"} código ${esc(code.code)}">${code.isActive ? "Desactivar" : "Activar"}</button>
+        <label class="promo-code-email-toggle"><input type="checkbox" data-promo-email="${esc(code.id)}" ${code.showInEmails ? "checked" : ""}> Mostrar en correos</label>
       </div>
     </article>`).join("");
   }
@@ -935,6 +936,28 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       promoCodeStatusEl.classList.remove("is-success");
     } finally {
       setButtonBusy(submit, false, "Crear código");
+    }
+  });
+
+  // A code reaches the store's emails only when the merchant marks it; private codes stay private.
+  promoCodeListEl.addEventListener("change", async (event) => {
+    const box = event.target.closest("[data-promo-email]");
+    if (!box || !currentStoreId) return;
+    box.disabled = true;
+    try {
+      const updated = await api(`/stores/${currentStoreId}/promo-codes/${box.dataset.promoEmail}`, {
+        method: "PATCH",
+        body: JSON.stringify({ showInEmails: box.checked }),
+      });
+      renderPromoCodes(lastPromoCodes.map((code) => code.id === updated.id ? updated : code));
+      promoCodeStatusEl.textContent = updated.showInEmails ? `Código ${updated.code} se mostrará en tus correos.` : `Código ${updated.code} ya no se muestra en tus correos.`;
+      promoCodeStatusEl.classList.add("is-success");
+      requestAnimationFrame(() => promoCodeListEl.querySelector(`[data-promo-email="${CSS.escape(updated.id)}"]`)?.focus());
+    } catch (error) {
+      box.checked = !box.checked;
+      box.disabled = false;
+      promoCodeStatusEl.textContent = error.message;
+      promoCodeStatusEl.classList.remove("is-success");
     }
   });
 
@@ -3153,7 +3176,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
   });
   import("/src/email-studio-panel.mjs").then(({ mountEmailStudio }) => {
-    emailStudio = mountEmailStudio(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId });
+    emailStudio = mountEmailStudio(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId, assetUrl: (path) => `${apiRoot()}${path}` });
     if (document.body.dataset.dashboardView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") emailStudio.show();
   }).catch(() => {
     document.getElementById("orderEmailRoot").textContent = "No pudimos cargar la vista previa del correo. Recarga la página para volver a intentar.";

@@ -1,13 +1,17 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { mountEmailContent } from "./email-content-panel.mjs";
 
 /**
  * Ajustes › Correos: the store's one email look. The merchant designs it (or asks for a bolder
  * version), previews each email at phone and desktop width, edits its wording, undoes a
  * redesign and mails themselves a copy. Previews run in fully closed sandboxes: email HTML
- * never needs to run anything.
+ * never needs to run anything. Below it, the content of the emails (email-content-panel.mjs)
+ * lives in its own element, so redrawing the studio never wipes what the merchant is typing there.
  */
 const WIDTHS = [["Teléfono", 390], ["Escritorio", 640]];
-const FIELD_LABELS = { subject: "Asunto", preheader: "Vista previa", headline: "Título", intro: "Introducción", cta: "Botón", signoff: "Despedida" };
+// The announcement, story and note are edited under "Contenido de tus correos", once for every email.
+const FIELD_LABELS = { subject: "Asunto", preheader: "Vista previa", headline: "Título", intro: "Introducción", cta: "Botón", signoff: "Despedida",
+  recommendTitle: "Título de recomendaciones", helpTitle: "Título de ayuda" };
 
 export function mountEmailStudio(container, deps) {
   if (!container) return { show() {}, reset() {} };
@@ -15,7 +19,18 @@ export function mountEmailStudio(container, deps) {
   let state = fresh();
   let generation = 0;
   let shownFor = null;
+  let view = null;
+  let content = null;
   const base = () => `/stores/${encodeURIComponent(deps.storeId())}/source-project/emails`;
+
+  function ensureDom() {
+    if (view && container.contains(view)) return;
+    view = document.createElement("div");
+    const contentRoot = document.createElement("div");
+    contentRoot.setAttribute("data-email-content-root", "");
+    container.replaceChildren(view, contentRoot);
+    content = mountEmailContent(contentRoot, { api: deps.api, base, type: () => state.type, assetUrl: deps.assetUrl ?? (path => path), onChange: () => void loadEmail() });
+  }
 
   function statusLine(s) {
     if (s.available === false) return "Tus correos usan el diseño estándar. El diseño propio de tu tienda todavía no está disponible.";
@@ -56,13 +71,14 @@ export function mountEmailStudio(container, deps) {
   }
 
   function form() {
-    if (!state.fields.length || state.status?.available === false) return "";
-    return `<form class="email-studio-copy" data-copy-form novalidate><h4>Texto de este correo</h4>${state.fields.map(f => {
+    const fields = state.fields.filter(f => Object.hasOwn(FIELD_LABELS, f.field));
+    if (!fields.length || state.status?.available === false) return "";
+    return `<form class="email-studio-copy" data-copy-form novalidate><h4>Texto de este correo</h4>${fields.map(f => {
       const value = state.edits[f.field] ?? f.value;
       const input = f.field === "intro"
         ? `<textarea data-copy-field="${f.field}" maxlength="${f.max}" rows="3">${esc(value)}</textarea>`
         : `<input data-copy-field="${f.field}" maxlength="${f.max}" value="${esc(value)}">`;
-      return `<label data-copy-row="${f.field}"><span>${esc(FIELD_LABELS[f.field] || f.field)}</span>${input}
+      return `<label data-copy-row="${f.field}"><span>${esc(FIELD_LABELS[f.field])}</span>${input}
         <small><span data-copy-count="${f.field}">${value.length}</span>/${f.max}${f.edited ? ` · Editado por ti · <button type="button" class="link" data-copy-restore="${f.field}">restaurar</button>` : ""}</small></label>`;
     }).join("")}
       <p class="faint">Puedes usar {cliente} y {tienda}. Los montos, fechas y números de orden los pone la plataforma.</p>
@@ -71,9 +87,10 @@ export function mountEmailStudio(container, deps) {
   }
 
   function render() {
+    ensureDom();
     const s = state.status;
-    if (!s) { container.innerHTML = '<div class="email-studio"><p class="email-studio-status" role="status">Cargando…</p></div>'; return; }
-    container.innerHTML = `<div class="email-studio">
+    if (!s) { view.innerHTML = '<div class="email-studio"><p class="email-studio-status" role="status">Cargando…</p></div>'; return; }
+    view.innerHTML = `<div class="email-studio">
       <div class="email-studio-head"><div><h3>Correos</h3><p>${esc(statusLine(s))}</p></div><div class="email-studio-actions">${actions(s)}</div></div>
       <div class="email-studio-types">${typeList(s)}</div>
       ${frames()}
@@ -81,7 +98,7 @@ export function mountEmailStudio(container, deps) {
       <div class="email-studio-actions"><button type="button" class="ghost" data-email-test ${state.busy ? "disabled" : ""}>Enviar una prueba</button></div>
       <p class="email-studio-status" role="status"${state.message ? "" : " hidden"}>${esc(state.message)}</p>
     </div>`;
-    const on = (selector, handler) => container.querySelector(selector)?.addEventListener("click", handler);
+    const on = (selector, handler) => view.querySelector(selector)?.addEventListener("click", handler);
     on("[data-email-design]", () => void design("twin"));
     on("[data-email-bold]", () => void design("bold"));
     on("[data-email-accept]", () => void step("candidate/accept", "Usamos el nuevo diseño."));
@@ -89,11 +106,12 @@ export function mountEmailStudio(container, deps) {
     on("[data-email-revert]", () => void step("revert", "Volvimos al diseño anterior."));
     on("[data-email-test]", () => void testSend());
     on("[data-copy-save]", () => void saveCopy());
-    container.querySelectorAll("[data-email-type]").forEach(button => button.addEventListener("click", () => { state = { ...state, type: button.dataset.emailType, edits: {} }; void loadEmail(); }));
-    container.querySelectorAll("[data-copy-restore]").forEach(button => button.addEventListener("click", () => void restore(button.dataset.copyRestore)));
-    container.querySelectorAll("[data-copy-field]").forEach(input => input.addEventListener("input", () => {
+    // The content's per-email switches follow the selected email.
+    view.querySelectorAll("[data-email-type]").forEach(button => button.addEventListener("click", () => { state = { ...state, type: button.dataset.emailType, edits: {} }; content?.render(); void loadEmail(); }));
+    view.querySelectorAll("[data-copy-restore]").forEach(button => button.addEventListener("click", () => void restore(button.dataset.copyRestore)));
+    view.querySelectorAll("[data-copy-field]").forEach(input => input.addEventListener("input", () => {
       state.edits[input.dataset.copyField] = input.value;
-      const count = container.querySelector(`[data-copy-count="${input.dataset.copyField}"]`);
+      const count = view.querySelector(`[data-copy-count="${input.dataset.copyField}"]`);
       if (count) count.textContent = String(input.value.length);
     }));
   }
@@ -105,6 +123,8 @@ export function mountEmailStudio(container, deps) {
       const s = await deps.api(base());
       if (mine !== generation) return;
       state = { ...state, status: s };
+      // Without the custom look the content tables are not there either: the panel stays hidden.
+      if (s?.available === false) content?.reset(); else void content?.load();
       await loadEmail(mine);
     } catch (error) {
       if (mine !== generation) return;
@@ -199,6 +219,9 @@ export function mountEmailStudio(container, deps) {
       generation += 1;
       shownFor = null;
       state = fresh();
+      content?.reset();
+      view = null;
+      content = null;
       container.innerHTML = "";
     },
   };

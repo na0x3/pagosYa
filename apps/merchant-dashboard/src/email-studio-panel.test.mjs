@@ -5,12 +5,14 @@ import { mountEmailStudio } from './email-studio-panel.mjs';
 
 const TYPES = [{ type: 'order_confirmation', label: 'Confirmación de compra', group: 'Compras' }, { type: 'appointment_confirmed', label: 'Cita confirmada', group: 'Compras' }];
 const FIELDS = { storeName: 'Café', fields: [{ field: 'subject', value: 'Recibo de tu compra en {tienda}', edited: false, max: 90 }, { field: 'headline', value: 'Gracias', edited: true, max: 80 }] };
+const CONTENT = { available: true, content: {}, promos: [], photos: [], defaults: { announcement: 'Gracias por comprar en {tienda}.', storyTitle: 'Sobre {tienda}', storyText: 'Somos {tienda}.', note: 'Gracias.' } };
 const status = (over = {}) => ({ kit: 'active', candidate: false, previous: false, siteChanged: false, maxCredits: 25, types: TYPES, ...over });
 
 function fakeApi(statusBody, calls = []) {
   return async (path, init = {}) => {
     calls.push([init.method || 'GET', path, init.body ? JSON.parse(init.body) : undefined]);
     if (path.endsWith('/emails')) return statusBody;
+    if (path.endsWith('/emails/content') && !init.method) return CONTENT;
     if (path.includes('/emails/preview')) return { html: '<p>PREVIEW</p>', subject: 'x', repairs: [] };
     if (path.includes('/emails/copy/')) return init.method === 'PUT' ? { value: 'Nuevo', repairs: [] } : init.method === 'DELETE' ? { ok: true } : FIELDS;
     return { ok: true, status: 'saved', credits: 7, repairs: [], sent: true };
@@ -132,3 +134,52 @@ test('when the custom look is unavailable, the preview and test send stay, witho
   assert.equal(container.querySelector('[data-copy-form]'), null);
   assert.match(container.textContent, /todavía no está disponible/);
 });
+
+test('the content of the emails sits below the studio and survives its redraws', async () => {
+  const { container, panel, window } = mount(fakeApi(status()));
+  panel.show(); await settle();
+  const root = container.querySelector('[data-email-content-root]');
+  assert.ok(root.querySelector('[data-content-announcement]'));
+  const input = root.querySelector('[data-content-announcement]');
+  input.value = 'Envío gratis'; input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  // Switching email redraws the studio; the content panel keeps what was typed.
+  container.querySelector('[data-email-type="appointment_confirmed"]').click(); await settle();
+  assert.equal(container.querySelector('[data-content-announcement]').value, 'Envío gratis');
+});
+
+test('saving content reloads the preview', async () => {
+  const calls = [];
+  const { container, panel, window } = mount(fakeApi(status(), calls));
+  panel.show(); await settle();
+  const before = calls.filter(([, p]) => p.includes('/emails/preview')).length;
+  const note = container.querySelector('[data-content-note]');
+  note.value = 'Gracias por elegirnos'; note.dispatchEvent(new window.Event('input', { bubbles: true }));
+  container.querySelector('[data-content-save]').click(); await settle();
+  assert.ok(calls.some(([m, p]) => m === 'PUT' && p.endsWith('/emails/content/note')));
+  assert.ok(calls.filter(([, p]) => p.includes('/emails/preview')).length > before);
+});
+
+test('the wording form leaves the announcement, story and note to the content panel', async () => {
+  const fields = { storeName: 'Café', fields: [{ field: 'subject', value: 'Recibo', edited: false, max: 90 }, { field: 'announcement', value: 'Anuncio', edited: false, max: 90 },
+    { field: 'storyText', value: 'Somos', edited: false, max: 300 }, { field: 'helpTitle', value: '¿Problemas con tu pedido?', edited: false, max: 60 }] };
+  const api = async (path, init = {}) => {
+    if (path.endsWith('/emails')) return status();
+    if (path.endsWith('/emails/content')) return CONTENT;
+    if (path.includes('/emails/preview')) return { html: '<p>PREVIEW</p>', subject: 'x', repairs: [] };
+    return fields;
+  };
+  const { container, panel } = mount(api);
+  panel.show(); await settle();
+  const form = container.querySelector('[data-copy-form]');
+  assert.deepEqual([...form.querySelectorAll('[data-copy-field]')].map(i => i.dataset.copyField), ['subject', 'helpTitle']);
+  assert.match(form.textContent, /Título de ayuda/);
+});
+
+test('without the custom look there is no content panel', async () => {
+  const calls = [];
+  const { container, panel } = mount(fakeApi(status({ kit: 'none', available: false }), calls));
+  panel.show(); await settle();
+  assert.equal(container.querySelector('[data-content-save]'), null);
+  assert.ok(!calls.some(([, p]) => p.endsWith('/emails/content')));
+});
+
