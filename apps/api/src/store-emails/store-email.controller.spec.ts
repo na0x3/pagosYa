@@ -192,6 +192,20 @@ describe('Ajustes › Correos routes', () => {
     expect(mail.send).toHaveBeenCalledWith(expect.objectContaining({ to: 'dueña@tienda.test', subject: 'Prueba · Recibo de tu compra en Café Illimani', html: '<p>Orden: pi_SYNTH001</p>' }));
   });
 
+  it('test-sends the new design while one waits for review, so it can be checked in Gmail first', async () => {
+    const candidate = { id: 'k2', layout: 'L', blocks: 'B', copy: {} };
+    kits.candidate.mockResolvedValue(candidate);
+    await post('/test-send', { type: 'order_confirmation' }).expect(201);
+    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.anything(), { kit: candidate });
+  });
+
+  it("shows the waiting design's wording, the one the preview shows", async () => {
+    kits.active.mockResolvedValue({ copy: { order_confirmation: { headline: 'Del diseño actual' } } });
+    kits.candidate.mockResolvedValue({ copy: { order_confirmation: { headline: 'Del diseño nuevo' } } });
+    const res = await get('/copy/order_confirmation').expect(200);
+    expect(res.body.fields.find((f: any) => f.field === 'headline').value).toBe('Del diseño nuevo');
+  });
+
   it('refuses a test-send from a secret-key session, which has no address', async () => {
     await post('/test-send', {}, KEY).expect(403);
     expect(mail.send).not.toHaveBeenCalled();

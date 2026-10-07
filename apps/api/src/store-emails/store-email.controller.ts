@@ -89,7 +89,8 @@ export class StoreEmailController {
     const store = await this.owned(merchant.id, storeId);
     const emailType = asType(type);
     let available = true;
-    const [active, overrides] = await Promise.all([this.kits.active(storeId), this.kits.overrides(storeId, emailType)]).catch((error: Error) => {
+    // While a new design waits for review, its wording is the one the preview shows.
+    const [active, overrides] = await Promise.all([this.kits.candidate(storeId).then(async candidate => candidate ?? this.kits.active(storeId)), this.kits.overrides(storeId, emailType)]).catch((error: Error) => {
       this.logger.warn(`Email wording unavailable for ${storeId}: ${error.message}`);
       available = false;
       return [null, {} as Partial<Record<EmailCopyField, string>>] as const;
@@ -122,7 +123,9 @@ export class StoreEmailController {
     const to = req.merchantUser?.email;
     if (!to) throw new ForbiddenException('Sign in to the dashboard to send yourself a test');
     const emailType = asType(body?.type ?? 'order_confirmation');
-    const { html, subject } = await this.emails.renderReceipt(storeId, await this.emails.sampleReceipt(storeId, store.name, emailType));
+    // A design waiting for review is the one sent, so the merchant can check it in their inbox before using it.
+    const candidate = await this.kits.candidate(storeId).catch(() => null);
+    const { html, subject } = await this.emails.renderReceipt(storeId, await this.emails.sampleReceipt(storeId, store.name, emailType), candidate ? { kit: candidate } : {});
     await this.mail.send({ to, subject: `Prueba · ${subject}`, html,
       body: `Esta es una vista previa del correo que recibe tu cliente en ${store.name}.\n\nLos datos de la orden son de ejemplo.` });
     return { sent: true };
