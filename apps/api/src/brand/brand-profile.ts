@@ -30,8 +30,19 @@ export function brandContext(data: BrandProfile): string {
   return JSON.stringify(Object.fromEntries(BRAND_FIELDS.filter(field => values.has(field)).map(field => [field, values.get(field)])));
 }
 
+/** The custom property a confirmed brand colour is published under. One rule, because the site's
+ *  stylesheet and the order email have to agree on the name or the email silently loses the brand. */
+export function brandTokenName(field: BrandField): string {
+  return `--brand-${field.replace(/[A-Z]/g, c => '-' + c.toLowerCase())}`;
+}
+
+export function brandColorTokens(data: BrandProfile): Map<string, string> {
+  const confirmed = Array.isArray(data?.confirmed) ? data.confirmed : [];
+  return new Map(confirmed.filter(f => colors.has(f?.field) && typeof f.value === 'string').map(f => [brandTokenName(f.field), f.value]));
+}
+
 export function brandStyles(data: BrandProfile, fonts: Record<string, string> = {}): string {
-  const declarations = data.confirmed.filter(f => colors.has(f.field)).map(f => `  --brand-${f.field.replace(/[A-Z]/g, c => '-' + c.toLowerCase())}: ${f.value};`);
+  const declarations = data.confirmed.filter(f => colors.has(f.field)).map(f => `  ${brandTokenName(f.field)}: ${f.value};`);
   const faces: string[] = [];
   for (const [field, path] of Object.entries(fonts)) {
     if (!BRAND_FONT_FIELDS.has(field) || !/^assets\/font-[a-f\d]{12}\.woff2$/.test(path)) continue;

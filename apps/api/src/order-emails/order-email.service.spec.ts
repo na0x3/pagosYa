@@ -1,3 +1,4 @@
+import { brandStyles } from '../brand/brand-profile';
 import { OrderEmailService } from './order-email.service';
 import type { OrderEmailData } from './order-email-render';
 
@@ -52,14 +53,38 @@ describe('OrderEmailService', () => {
     expect(html).toContain('https://cdn.example/l.png');
   });
 
+  // The fixture is the shape BrandProfileService actually stores — a BrandFact keyed by `field`,
+  // named `--brand-accent` by brandTokenName. A `{ name }` fixture passes against code that can
+  // never resolve a real store's colour.
   it('resolves brand tokens to literal values, never leaving a custom property', async () => {
     prisma.storeSourceVersion.findFirst.mockResolvedValue({
       snapshot: { files: [{ path: 'emails/order-confirmation.html', content: authored.replace('<body>', '<body style="color:var(--brand-accent);background:#fff">') }] },
     });
-    prisma.storeBrandProfile.findUnique.mockResolvedValue({ data: { confirmed: [{ name: 'brand-accent', value: '#236452' }] } });
+    prisma.storeBrandProfile.findUnique.mockResolvedValue({ data: { confirmed: [{ field: 'accent', value: '#236452', evidence: '', source: '' }] } });
     const { html } = await service.renderForStore('store_1', sample);
     expect(html).toContain('#236452');
     expect(html).not.toContain('var(--brand');
+  });
+
+  it("prefers the store's colour over a fallback written beside it", async () => {
+    prisma.storeSourceVersion.findFirst.mockResolvedValue({
+      snapshot: { files: [{ path: 'emails/order-confirmation.html', content: authored.replace('<body>', '<body style="color:var(--brand-accent, #111);background:#fff">') }] },
+    });
+    prisma.storeBrandProfile.findUnique.mockResolvedValue({ data: { confirmed: [{ field: 'accent', value: '#236452', evidence: '', source: '' }] } });
+    const { html } = await service.renderForStore('store_1', sample);
+    expect(html).toContain('#236452');
+    expect(html).not.toContain('#111');
+  });
+
+  it('names the email token exactly as the store stylesheet does', async () => {
+    const styles = brandStyles({ confirmed: [{ field: 'accentForeground', value: '#ffffff', evidence: '', source: '' }], suggested: [] });
+    expect(styles).toContain('--brand-accent-foreground:');
+    prisma.storeSourceVersion.findFirst.mockResolvedValue({
+      snapshot: { files: [{ path: 'emails/order-confirmation.html', content: authored.replace('<body>', '<body style="color:var(--brand-accent-foreground);background:#000">') }] },
+    });
+    prisma.storeBrandProfile.findUnique.mockResolvedValue({ data: { confirmed: [{ field: 'accentForeground', value: '#ffffff', evidence: '', source: '' }] } });
+    const { html } = await service.renderForStore('store_1', sample);
+    expect(html).toContain('color:#ffffff');
   });
 
   it('drops an unresolved custom property rather than shipping it', async () => {

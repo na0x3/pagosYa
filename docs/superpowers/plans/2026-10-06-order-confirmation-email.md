@@ -942,7 +942,7 @@ git commit -m "feat(order-email): the buyer's receipt carries the store's own HT
 - Modify: `apps/api/src/storefront-source/source-generation.service.ts` (prompt array, near line 519)
 - Test: `apps/api/src/storefront-source/source-generation.service.spec.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 it('asks the generator for the confirmation email and forbids writing an amount', () => {
@@ -953,12 +953,12 @@ it('asks the generator for the confirmation email and forbids writing an amount'
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd apps/api && npx jest src/storefront-source/source-generation.service.spec.ts -t "confirmation email"`
 Expected: FAIL
 
-- [ ] **Step 3: Add the instruction**
+- [x] **Step 3: Add the instruction**
 
 Add one paragraph to the prompt array, in the voice of its neighbours:
 
@@ -966,17 +966,25 @@ Add one paragraph to the prompt array, in the voice of its neighbours:
 
 **Do not add this to `design-engine/sep5-author.ts`.** `sep5-author.spec.ts` pins that text byte for byte against `sep5-prompt.26f889c8.txt`; a Sep-5 authored store gets the floor instead.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd apps/api && npx jest src/storefront-source/`
 Expected: the new test PASSes and `sep5-author.spec.ts` stays at 8 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/storefront-source/source-generation.service.ts apps/api/src/storefront-source/source-generation.service.spec.ts
 git commit -m "feat(order-email): the generator authors the confirmation email in the store's own voice"
 ```
+
+---
+
+**As built (2026-10-07).** Commit `bc9e9c8b`. Two deviations from the steps above:
+- The direction lives in `source-email-html.ts` as `SOURCE_ORDER_EMAIL_DIRECTION`, not inline in the prompt array, so the sep5 guard can assert on it by name.
+- Its test is a dedicated `source-email-direction.spec.ts` (6 tests) rather than a case in `source-generation.service.spec.ts`. It iterates `ORDER_EMAIL_SLOTS` instead of spot-checking `data-order-total`, and adds the executable form of the bolded warning: `sep5-author.ts` must contain neither the constant nor `order-confirmation`.
+
+`sep5-author.spec.ts` stays at 8 passed, including "sends the September 5 instruction text byte for byte".
 
 ---
 
@@ -993,7 +1001,7 @@ git commit -m "feat(order-email): the generator authors the confirmation email i
 
 The route sits under `v1/stores/:storeId/source-project`, matching `sketch-studio.controller.ts` and `source-assets.controller.ts`, rather than the `/stores/:id/emails/…` shape sketched in the spec. Follow the codebase.
 
-- [ ] **Step 1: Write the failing controller test**
+- [x] **Step 1: Write the failing controller test**
 
 ```ts
 it('renders a preview against sample data behind the merchant guard', async () => {
@@ -1013,12 +1021,12 @@ it("sends a test only to the merchant's own address", async () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd apps/api && npx jest src/order-emails/order-email.controller.spec.ts`
 Expected: FAIL — `Cannot find module './order-email.controller'`
 
-- [ ] **Step 3: Write the controller**
+- [x] **Step 3: Write the controller**
 
 ```ts
 @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
@@ -1049,16 +1057,16 @@ export class OrderEmailController {
 
 The test-send address comes from the authenticated merchant record, never from the request body.
 
-- [ ] **Step 4: Write the panel**
+- [x] **Step 4: Write the panel**
 
 `order-email-panel.mjs`, following `subscriptions-panel.mjs`: fetch the preview, render it into a sandboxed `<iframe srcdoc>` at 390 px and 640 px side by side, show any `repairs` as a muted list, and wire a "Enviar una prueba" button to test-send.
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 Run: `cd apps/api && npx jest src/order-emails/` then `cd apps/merchant-dashboard && npm run test:e2e -- tests/order-email-panel.spec.mjs`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/order-emails/ apps/merchant-dashboard/src/order-email-panel.mjs apps/merchant-dashboard/tests/order-email-panel.spec.mjs
@@ -1067,10 +1075,51 @@ git commit -m "feat(order-email): the merchant previews the buyer's email and ca
 
 ---
 
+**As built (2026-10-07).** Commit `b1286f40`. Deviations, all because the plan's snippet did not match this codebase:
+- **Ownership.** The snippet's `stores.byId(storeId)` has no merchant scope, and `StoresService.byId` does not exist. Any authenticated merchant could have previewed — and mailed themselves — another store's authored email by putting its id in the URL. The controller instead does `prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true } })` and 404s otherwise, matching `sketch-studio.service.ts`. Asserted by two tests.
+- **The test-send address.** The snippet reads `req.merchant.email`, which is always `undefined`: `MerchantAuthGuard` sets `request.merchant = { id }` and puts the address on `request.merchantUser`. A secret key authenticates a merchant but carries no `merchantUser` at all, so that path is refused with 403 rather than defaulted.
+- **`@CurrentMerchant()`**, not `@Req() req: MerchantRequest` (no such type); `merchantUser` is read with an inline-typed `@Req()`, as `dashboard.controller.ts` does.
+- **`server.mjs` allowlist.** A lazily imported `/src/*` module 404s in real use unless listed there — the Task 16 bug recorded in `tests/shipment-panel.spec.mjs`. `order-email-panel.mjs` and `order-email.css` were added; the existing unit test "every module the dashboard loads from /src is one the dev server serves" covers it.
+- **Panel tests.** The plan named only a Playwright spec; both were written. `src/order-email-panel.test.mjs` (8 JSDOM tests) covers rendering, repairs, failure paths, store-switch refetch and reset. `tests/order-email-panel.spec.mjs` (3 tests) is the spec document's substitute for mail-client testing: real `server.mjs`, both widths, frame contents read through `contentFrame()`.
+- The panel renders into a new `#orderEmailRoot` inside the store-settings block, with its own `order-email.css`; iframes are `sandbox=""` (fully closed) since email HTML never needs to run.
+
+---
+
 ## Final verification
 
-- [ ] `cd apps/api && npx tsc --noEmit -p tsconfig.json` — clean
-- [ ] `cd apps/api && npx jest src/order-emails src/storefront-source src/payment-intents` — only the pre-existing DNA-fingerprint failure
-- [ ] `cd apps/merchant-studio && npm run test:e2e -- tests/product-page-kit.spec.ts` — only the pre-existing dense-above-the-fold failure
-- [ ] `node packages/storefront-kit/kit/check-runtimes.mjs` — runtimes parse
+- [x] `cd apps/api && npx tsc --noEmit -p tsconfig.json` — clean
+- [x] `cd apps/api && npx jest src/order-emails src/storefront-source src/payment-intents` — only the pre-existing DNA-fingerprint failure
+- [x] `cd apps/merchant-studio && npm run test:e2e -- tests/product-page-kit.spec.ts` — only the pre-existing dense-above-the-fold failure
+- [x] `node packages/storefront-kit/kit/check-runtimes.mjs` — runtimes parse
 - [ ] Open the preview panel and read the email at phone width against a real store's brand.
+
+
+### Verification as run (2026-10-07)
+
+- `npx tsc --noEmit -p tsconfig.json` — clean, exit 0.
+- `node packages/storefront-kit/kit/check-runtimes.mjs` — "5 storefront runtimes parsed cleanly."
+- `apps/merchant-studio` `product-page-kit.spec.ts` — 17 passed, 1 failed: the documented pre-existing *dense page keeps photo and purchase side by side above the fold at 1280x844*.
+- `src/payment-intents src/order-emails` — 12 suites, 139 tests, all passing.
+- `src/storefront-source` — see the two corrections below.
+
+**One real regression, found and fixed (`364df7fe`).** `source-generation.service.spec.ts`'s
+*"tells a truncated-response repair its actual allowance"* began throwing `BadGatewayException`.
+The direction added in Task 7 is ~1.3k characters, and re-sending the larger stable prompt at the
+13-credit ceiling left the repair reserve below its 1024-token floor. 14 is the measured floor —
+13 fails, 14 passes — which is the same failure mode, and the same fix, as the earlier 12 -> 13 bump
+this test already records. Reproduced in isolation before fixing, so it was not a load artifact.
+
+**This plan's expectation of "only the pre-existing DNA-fingerprint failure" under-counts by one.**
+A clean isolated run of `src/storefront-source` leaves *two* pre-existing failures:
+1. `source-generation.service.spec.ts` › *steers planning away from recent fingerprints* (the DNA one).
+2. `source-commerce-pages.spec.ts` › *never shows a rating without a published summary and never loads
+   reviews in preview* — `[data-product-rating]` is visible in preview when it should be hidden.
+   Pre-existing by construction: between the pre-email baseline and here, the only change to that spec
+   or to any file in `packages/storefront-kit/` is the new `emails/order-confirmation.html`, which a
+   product page never loads. The spec is byte-identical.
+
+**Run this suite with `--maxWorkers=4`.** At full worker count on a developer machine, four suites fail
+with 5000 ms timeouts that pass in isolation — `source-publishing.service`, `source-commerce-info-pages`,
+`source-projects.service`, and intermittently others. This is the contention the `jest.config.js`
+comment already describes for the integration pool. Treat any timeout-shaped failure here as a load
+artifact until it has been reproduced alone.

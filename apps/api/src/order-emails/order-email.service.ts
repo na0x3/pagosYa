@@ -2,12 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { Injectable, Logger } from '@nestjs/common';
 import { kitPath } from '@pagosya/storefront-kit';
 import { PrismaService } from '../prisma/prisma.service';
+import { brandColorTokens, EMPTY_BRAND, type BrandProfile } from '../brand/brand-profile';
 import { validateOrderEmailHtml } from '../storefront-source/source-email-html';
 import { renderOrderEmail, type OrderEmailData } from './order-email-render';
 import { ORDER_EMAIL_TEMPLATE_PATH } from './order-email-slots';
 
 type SnapshotFile = { path: string; content: string };
-type BrandToken = { name: string; value: string };
 
 /**
  * Picks the email a given store sends and renders it. The authored template wins when it
@@ -20,16 +20,16 @@ export class OrderEmailService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Email clients do not support custom properties, so every token becomes a literal. */
-  private resolveTokens(html: string, confirmed: BrandToken[]): string {
-    let out = html;
-    for (const token of confirmed) {
-      if (!token?.name || typeof token.value !== 'string') continue;
-      const name = token.name.startsWith('--') ? token.name.slice(2) : token.name;
-      out = out.split(`var(--${name})`).join(token.value);
-    }
-    // Anything still unresolved falls back to its own declared fallback, or disappears.
-    return out.replace(/var\(\s*--[\w-]+\s*(?:,\s*([^()]*?)\s*)?\)/g, (_match, fallback) => fallback ?? '');
+  /**
+   * Email clients do not support custom properties, so every token becomes a literal: the store's
+   * own confirmed colour when it has one, then the declared fallback, then nothing. One pass, so a
+   * token written with a fallback still resolves to the brand rather than to the fallback.
+   */
+  private resolveTokens(html: string, brand: BrandProfile): string {
+    const values = brandColorTokens(brand);
+    return html.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^()]*?)\s*)?\)/g, (_match, name: string, fallback?: string) =>
+      values.get(name) ?? fallback ?? '',
+    );
   }
 
   /** A logo is only ever fetched over https; anything else is dropped rather than rendered. */
@@ -60,8 +60,7 @@ export class OrderEmailService {
     }
 
     const brand = await this.prisma.storeBrandProfile.findUnique({ where: { storeId }, select: { data: true } });
-    const confirmed = (brand?.data as { confirmed?: BrandToken[] } | null)?.confirmed ?? [];
-    return this.resolveTokens(checked.html, confirmed);
+    return this.resolveTokens(checked.html, (brand?.data as BrandProfile | null) ?? EMPTY_BRAND);
   }
 
   async renderForStore(storeId: string | null, data: OrderEmailData): Promise<{ html: string; repairs: string[] }> {
