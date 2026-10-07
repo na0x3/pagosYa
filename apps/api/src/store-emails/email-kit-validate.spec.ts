@@ -3,7 +3,7 @@ import { validateEmailKit, validateEmailCopy } from './email-kit-validate';
 const layout = `<!doctype html><html><body style="background:#fafafa;color:#111"><table><tr><td data-store-name></td></tr>
   <tr><td data-email-content></td></tr></table></body></html>`;
 const blocks = `<table data-block="heading"><tr><td><h1 data-block-title></h1><p data-block-text></p></td></tr></table>
-  <table data-block="items"><tr data-item><td><img data-item-image><span data-item-name></span><span data-item-amount></span></td></tr>
+  <table data-block="items"><tr data-item><td><img data-item-image><span data-item-name></span><span data-item-quantity></span><span data-item-amount></span></td></tr>
     <tr><td data-items-total></td></tr></table>
   <table data-block="button"><tr><td><a data-block-link><span data-block-label></span></a></td></tr></table>
   <table data-block="note"><tr><td data-block-text></td></tr></table>`;
@@ -46,6 +46,26 @@ describe('validateEmailKit', () => {
     expect(result.kit.blocks.items).not.toContain('150');
     expect(JSON.stringify(result.kit)).not.toContain('<script');
     expect(result.kit.layout).not.toContain('display:flex');
+  });
+
+  it('refuses blocks that lack their fact slots, so AI-written text never stands in for the order', () => {
+    const noSlots = `<table data-block="heading"><tr><td>Gracias Maria</td></tr></table>
+      <table data-block="items"><tr data-item><td>Camisa Oxford azul x2</td></tr><tr><td>Total pagado</td></tr></table>
+      <table data-block="button"><tr><td><a>Ver pedido</a></td></tr></table>
+      <table data-block="note"><tr><td>Te esperamos pronto</td></tr></table>`;
+    const result = validateEmailKit({ layout, blocks: noSlots, copy: {} });
+    expect(result.usable).toBe(false);
+    expect(result.kit.blocks).toEqual({});
+    expect(result.repairs.join(' ')).toMatch(/items: missing data-item-name/);
+    expect(result.repairs.join(' ')).toMatch(/button: missing data-block-link/);
+  });
+
+  it('blanks any text inside an item row that sits outside a slot', () => {
+    const loose = blocks.replace('<span data-item-name></span>', '<span data-item-name></span> Camisa Oxford x2 <span data-item-quantity></span>');
+    const result = validateEmailKit({ layout, blocks: loose, copy: {} });
+    expect(result.kit.blocks.items).toBeDefined();
+    expect(result.kit.blocks.items).not.toContain('Camisa');
+    expect(result.repairs.join(' ')).toMatch(/text outside a slot/);
   });
 
   it('reads copy given as a JSON string, and survives broken JSON', () => {

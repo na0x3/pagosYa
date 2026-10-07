@@ -70,6 +70,35 @@ function validateLayout(input: string, repairs: string[]): string | null {
   return html;
 }
 
+/**
+ * The slots that carry a block's facts. A block without them would show whatever the author typed in
+ * their place (a made-up product, a dead button), so it is refused and the standard block is used.
+ */
+const FACT_SLOTS: Record<EmailBlockType, string[]> = {
+  hero: ['data-block-title'],
+  heading: ['data-block-title'],
+  items: ['data-item-name', 'data-item-quantity', 'data-item-amount', 'data-items-total'],
+  button: ['data-block-link', 'data-block-label'],
+  products: ['data-product-name', 'data-product-price', 'data-product-link'],
+  promo: ['data-block-code'],
+  note: ['data-block-text'],
+};
+const SLOT_ATTRIBUTE = /^data-(?:block|item|items|product)-/;
+
+/** Text in an item row belongs in a slot; anything else in the row would print beside every real line. */
+function blankLooseText(row: Element): boolean {
+  let blanked = false;
+  const visit = (node: Element) => {
+    if (node !== row && node.attrs.some(a => SLOT_ATTRIBUTE.test(a.name))) return;
+    for (const child of kids(node)) {
+      if (isElement(child)) visit(child);
+      else if (((child as any).value ?? '').trim()) { (child as any).value = ''; blanked = true; }
+    }
+  };
+  visit(row);
+  return blanked;
+}
+
 function validateBlocks(input: string, repairs: string[]): Partial<Record<EmailBlockType, string>> {
   const { html, repairs: found } = sanitizeEmailHtml(`<!doctype html><html><body>${input}</body></html>`, 'emails/blocks.html', EMAIL_KIT_FILE_MAX_BYTES);
   repairs.push(...found);
@@ -83,6 +112,12 @@ function validateBlocks(input: string, repairs: string[]): Partial<Record<EmailB
     if (out[block]) { repairs.push(`emails/blocks.html: ${block} appears twice, using the first`); continue; }
     if (block === 'items' && count(el, 'data-item') !== 1) { repairs.push('emails/blocks.html: items needs exactly one data-item row; the standard block is used'); continue; }
     if (block === 'products' && count(el, 'data-product') !== 1) { repairs.push('emails/blocks.html: products needs exactly one data-product card; the standard block is used'); continue; }
+    const missing = FACT_SLOTS[block].filter(slot => count(el, slot) === 0);
+    if (missing.length) { repairs.push(`emails/blocks.html: ${block}: missing ${missing.join(', ')}; the standard block is used`); continue; }
+    if (block === 'items') {
+      const row = [...walk(el)].find(child => attr(child, 'data-item') !== undefined)!;
+      if (blankLooseText(row)) repairs.push('emails/blocks.html: items: text outside a slot in the item row removed');
+    }
     if (block === 'items' && LITERAL_AMOUNT.test(textOf(el))) {
       repairs.push('emails/blocks.html: literal amount inside items removed; the platform fills it');
       for (const cell of walk(el)) for (const n of kids(cell)) if (!isElement(n) && LITERAL_AMOUNT.test((n as any).value ?? '')) (n as any).value = '';
