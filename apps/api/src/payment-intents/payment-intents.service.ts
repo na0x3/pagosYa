@@ -6,6 +6,7 @@ import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { DebtRecordStatus, LimitReservationStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { OrderEmailService } from '../order-emails/order-email.service';
 import { RailRegistry } from "../rails/rail-registry.service";
 import { PaymentMethodsService } from "../payment-methods/payment-methods.service";
 import { LedgerService } from "../ledger/ledger.service";
@@ -138,6 +139,8 @@ export class PaymentIntentsService {
     private readonly limits: LimitsService,
     private readonly limitsWarning: LimitsWarningService,
     @Optional() private readonly inbox?: InboxService,
+    /** Optional on purpose: without it the buyer still gets the plain-text receipt. */
+    @Optional() private readonly orderEmail?: OrderEmailService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -825,8 +828,47 @@ export class PaymentIntentsService {
         ? `\nSigue tu pedido aquí:\n${(this.config?.get<string>("app.checkoutOrigin") ?? "http://localhost:5174").replace(/\/$/, "")}/track/${createOrderTrackingToken(order.id, this.config?.get<string>("app.orderTrackingSecret") ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}\n`
         : "";
 
+      /**
+       * The store's own HTML, when it has one. Its own try/catch and the service's internal
+       * guards mean a failure here costs the styling and nothing else: `body` below is
+       * untouched, so the buyer always receives the receipt they receive today.
+       */
+      let html: string | undefined;
+      try {
+        const trackingUrl = trackingLine ? trackingLine.trim().split('\n').pop() : null;
+        const rendered = await this.orderEmail?.renderForStore(order?.storeId ?? null, {
+          storeName: merchantName,
+          logoUrl: null,
+          customerName: intent.customerName,
+          orderId: intent.id,
+          items: (cart ?? []).map(line => ({
+            name: line.name,
+            variantName: line.variantName ?? null,
+            extras: line.extras?.length ? selectedExtrasLabel(line.extras) : null,
+            quantity: line.quantity,
+            amount: formatAmount(line.unitAmount * line.quantity, lineCurrency),
+          })),
+          total: formatAmount(intent.amount, intent.currency),
+          originalTotal: originalTotal ? originalTotal.trim().replace(/^\(|\)$/g, '') : null,
+          trackingUrl: trackingUrl ?? null,
+          subscription: subscriptionBlock || null,
+          appointment: appointment
+            ? {
+                name: appointment.offeringName ?? 'Cita',
+                date: appointment.startsAt
+                  ? new Date(appointment.startsAt).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })
+                  : null,
+              }
+            : null,
+        });
+        html = rendered?.html;
+      } catch (err) {
+        this.logger.warn(`Order email render failed for ${intent.id}: ${(err as Error).message}`);
+      }
+
       await this.email.send({
         to: intent.customerEmail,
+        ...(html ? { html } : {}),
         subject: appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`,
         body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`,
       });
