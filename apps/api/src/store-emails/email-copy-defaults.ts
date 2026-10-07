@@ -36,5 +36,7 @@ export function loadFloorKit(): Promise<ValidEmailKit> {
     if (!usable) throw new Error(`The floor email kit is invalid: ${repairs.join('; ')}`);
     return kit;
   })();
+  // A failed read must not stick: the next receipt tries again.
+  floor.catch(() => { floor = null; });
   return floor;
 }
