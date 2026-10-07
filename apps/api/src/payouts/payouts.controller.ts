@@ -21,13 +21,16 @@ export class PayoutsController {
   async getBalance(@CurrentMerchant() merchant: { id: string }) {
     const [balances, payoutsHeld] = await Promise.all([this.settlement.balances(merchant.id), this.settlement.payoutsHeld(merchant.id)]);
     const nextBatch = nextPayoutBatch(new Date()).toISOString();
-    const rows = balances.map((b) => ({
+    // The same rule the daily batch applies, so nextPayoutAt never promises a payout it will skip.
+    const blockers = await Promise.all(balances.map((b) => this.payouts.payoutBlocker(merchant.id, b.currency)));
+    const rows = balances.map((b, i) => ({
       currency: b.currency,
       payableBalance: b.available, // existing dashboard clients read this
       available: b.available,
       pending: b.pending,
       reserve: b.reserve,
-      nextPayoutAt: !payoutsHeld && b.available > 0 ? nextBatch : null,
+      nextPayoutAt: b.available > 0 && blockers[i] === null ? nextBatch : null,
+      payoutBlocker: blockers[i], // a code, never the ops hold reason
     }));
     const payableBalance = rows.find((r) => r.currency === "BOB")?.payableBalance ?? 0;
     return { payableBalance, currency: "BOB", payoutsHeld, balances: rows };

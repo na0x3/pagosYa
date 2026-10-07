@@ -2,12 +2,30 @@ import { KycStatus, LedgerDirection, MerchantStatus, PayoutStatus, SettlementMod
 import { PayoutsService } from "./payouts.service";
 
 function makeFakePrisma() {
-  return {
+  const prisma: any = {
     ledgerEntry: { groupBy: jest.fn() },
-    merchant: { findMany: jest.fn() },
+    // findUnique answers from whatever the test gave findMany, so one mock drives both reads.
+    merchant: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(async ({ where }: { where: { id: string } }) => {
+        const rows = ((await prisma.merchant.findMany.mock.results.at(-1)?.value) ?? []) as { id: string }[];
+        return rows.find((m) => m.id === where.id) ?? null;
+      }),
+    },
     payout: { findFirst: jest.fn(), create: jest.fn(), findMany: jest.fn() },
     merchantKycSubmission: { findFirst: jest.fn() },
+    $executeRaw: jest.fn().mockResolvedValue(0),
+    inTransaction: false,
+    $transaction: jest.fn(async (cb: (tx: unknown) => unknown) => {
+      prisma.inTransaction = true;
+      try {
+        return await cb(prisma);
+      } finally {
+        prisma.inTransaction = false;
+      }
+    }),
   };
+  return prisma;
 }
 
 function termsAccepted() {
@@ -102,6 +120,44 @@ describe("PayoutsService.createDuePayouts", () => {
     const service = new PayoutsService(prisma as any, termsAccepted() as any);
     await service.createDuePayouts();
 
+    expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+
+  it("checks and creates each payout inside a transaction that holds the merchant's settlement lock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+    const seen: { inFlightCheck?: boolean; create?: boolean } = {};
+    prisma.payout.findFirst.mockImplementation(async () => { seen.inFlightCheck = prisma.inTransaction; return null; });
+    prisma.payout.create.mockImplementation(async () => { seen.create = prisma.inTransaction; });
+
+    await new PayoutsService(prisma as any, termsAccepted() as any).createDuePayouts();
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual({ inFlightCheck: true, create: true });
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(prisma.payout.findFirst.mock.invocationCallOrder[0]);
+    expect(prisma.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(prisma.payout.create.mock.invocationCallOrder[0]);
+  });
+
+  it("treats a failed payout still due a retry as in flight", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
+    prisma.payout.findFirst.mockResolvedValue({ id: "payout_retrying", status: PayoutStatus.FAILED });
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+
+    await new PayoutsService(prisma as any, termsAccepted() as any).createDuePayouts();
+
+    expect(prisma.payout.findFirst).toHaveBeenCalledWith({
+      where: {
+        merchantId: "m_1",
+        currency: "BOB",
+        OR: [{ status: PayoutStatus.PENDING }, { status: PayoutStatus.FAILED, nextRetryAt: { not: null } }],
+      },
+    });
     expect(prisma.payout.create).not.toHaveBeenCalled();
   });
 
@@ -202,5 +258,45 @@ describe("PayoutsService multi-currency", () => {
     await service.createDuePayouts();
 
     expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("PayoutsService.payoutBlocker", () => {
+  const eligible = { id: "m_1", settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE, payoutHeldAt: null };
+
+  function withMerchant(merchant: Record<string, unknown> | null, kyc: Record<string, unknown> | null = { status: KycStatus.APPROVED, payoutBankAccount: "BNB 123", payoutUsdBankAccount: null }) {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findUnique.mockResolvedValue(merchant as any);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue(kyc);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    return prisma;
+  }
+
+  it("is null for a merchant the batch would pay", async () => {
+    await expect(new PayoutsService(withMerchant(eligible) as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBeNull();
+  });
+
+  it.each([
+    ["held", { ...eligible, payoutHeldAt: new Date() }],
+    ["facilitator", { ...eligible, settlementMode: SettlementMode.FACILITATOR }],
+    ["inactive", { ...eligible, status: MerchantStatus.SUSPENDED }],
+  ])("reports %s", async (blocker, merchant) => {
+    await expect(new PayoutsService(withMerchant(merchant) as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBe(blocker);
+  });
+
+  it("reports terms not accepted", async () => {
+    const terms = { needsMerchantAcceptance: jest.fn().mockResolvedValue(true) };
+    await expect(new PayoutsService(withMerchant(eligible) as any, terms as any).payoutBlocker("m_1", "BOB")).resolves.toBe("terms");
+  });
+
+  it("reports missing KYC and a missing account for the currency", async () => {
+    await expect(new PayoutsService(withMerchant(eligible, null) as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBe("kyc");
+    await expect(new PayoutsService(withMerchant(eligible) as any, termsAccepted() as any).payoutBlocker("m_1", "USD")).resolves.toBe("no_account");
+  });
+
+  it("reports a payout already in flight", async () => {
+    const prisma = withMerchant(eligible);
+    prisma.payout.findFirst.mockResolvedValue({ id: "payout_pending" });
+    await expect(new PayoutsService(prisma as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBe("in_flight");
   });
 });
