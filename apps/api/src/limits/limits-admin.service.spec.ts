@@ -107,3 +107,9 @@ it("404s when the settings row doesn't exist", async () => {
   tx.limitSettings.findUnique.mockResolvedValue(null);
   await expect(service.updateSettings(6.97, admin as any)).rejects.toBeInstanceOf(NotFoundException);
 });
+
+it("saves the settlement columns of a policy straight through", async () => {
+  const { service, tx } = setup();
+  await service.updatePolicy(1, { payoutDelayDays: 5, reserveBps: 800, reserveDays: 30 }, admin as any);
+  expect(tx.merchantLevelPolicy.update).toHaveBeenCalledWith({ where: { level: 1 }, data: { payoutDelayDays: 5, reserveBps: 800, reserveDays: 30 } });
+});
