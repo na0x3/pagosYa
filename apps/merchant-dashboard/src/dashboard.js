@@ -9,6 +9,7 @@ import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
+import { nextLevelSentence, nextPayoutLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
 import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
 
   (() => {
@@ -420,6 +421,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   });
   let lastTotalFinances = null;
   let lastBalances = null;
+  let lastSettlement = null;
   const MONEY_VISIBILITY_KEY = "pagosya_dashboard_hide_money";
   let monetaryValuesHidden = false;
   try {
@@ -2152,17 +2154,43 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     return monetaryValuesHidden ? "••••••" : (cents / 100).toFixed(2);
   }
 
-  // One row per currency in the "Tu cuenta" list on Resumen.
+  // One row per currency in the "Tu cuenta" list on Resumen. available/pending/reserve
+  // come from the settlement split; older responses only carry payableBalance.
   function renderBalanceCards(balances) {
     document.getElementById("balanceCards").innerHTML = balances
-      .map(
-        (entry) => `<div class="overview-balance">
-          <dt>Saldo por desembolsar (${esc(entry.currency)})</dt>
-          <dd>${money(entry.payableBalance, esc(entry.currency))}</dd>
-          <p>Se transfiere a tu cuenta bancaria en el próximo desembolso.</p>
-        </div>`,
-      )
+      .map((entry) => {
+        const currency = esc(entry.currency);
+        const held = [
+          entry.pending ? `En espera ${money(entry.pending, currency)}` : "",
+          entry.reserve ? `Reserva ${money(entry.reserve, currency)}` : "",
+        ].filter(Boolean).join(" · ");
+        return `<div class="overview-balance" data-currency="${currency}">
+          <dt>Saldo por desembolsar (${currency})</dt>
+          <dd>${money(entry.available ?? entry.payableBalance, currency)}</dd>
+          ${held ? `<p class="balance-held">${held}</p>` : ""}
+          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
+        </div>`;
+      })
       .join("");
+  }
+
+  function renderSettlementPanel(schedule) {
+    lastSettlement = schedule;
+    const panel = document.getElementById("settlementPanel");
+    panel.hidden = !schedule?.policy;
+    if (panel.hidden) return;
+    document.getElementById("settlementPolicy").textContent = settlementPolicySentence(schedule.policy);
+    document.getElementById("settlementReleases").innerHTML = (schedule.releases || [])
+      .map((r) => {
+        const currency = esc(r.currency);
+        const parts = [
+          r.toAvailable ? `${money(r.toAvailable, currency)} pasan a disponible` : "",
+          r.fromReserve ? `${money(r.fromReserve, currency)} vuelven de la reserva` : "",
+        ].filter(Boolean).join(" · ");
+        return `<li><strong>${esc(releaseDateLabel(r.date))}</strong> ${parts}</li>`;
+      })
+      .join("") || `<li class="muted">No tienes dinero en espera.</li>`;
+    document.getElementById("settlementNextLevel").textContent = nextLevelSentence(schedule.nextLevel);
   }
 
   function storePublicationState(store) {
@@ -2247,6 +2275,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       }
     }
     if (lastBalances) renderBalanceCards(lastBalances);
+    if (lastSettlement) renderSettlementPanel(lastSettlement);
     if (lastTotalFinances) renderTotalFinances(lastTotalFinances);
     if (lastFinances) renderFinances(lastFinances);
     if (lastPayments.length) renderPaymentRows();
@@ -3649,6 +3678,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         api("/merchants/international_payments").catch(() => null),
         api("/dashboard/terms").catch(() => null),
         api("/dashboard/limits").catch(() => null),
+        api("/merchants/settlement/schedule").catch(() => null),
       ]);
       const stores = await api("/stores");
       if (refreshVersion !== dashboardRefreshVersion) {
@@ -3662,7 +3692,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
 
       const selectedStoreId = currentStoreId;
       const storeQuery = selectedStoreId ? `?storeId=${encodeURIComponent(selectedStoreId)}` : "";
-      const [[balance, kyc, invoicing, payouts, totalFinances, international, terms, limits], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
+      const [[balance, kyc, invoicing, payouts, totalFinances, international, terms, limits, settlementSchedule], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
         overviewPromise,
         api(`/merchants/orders${storeQuery}`),
         selectedStoreId ? api(`/merchants/finances${storeQuery}`) : api("/merchants/finances"),
@@ -3678,6 +3708,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         ? balance.balances
         : [{ currency: balance.currency || "BOB", payableBalance: balance.payableBalance || 0 }];
       renderBalanceCards(lastBalances);
+      document.getElementById("payoutHoldBanner").hidden = !balance.payoutsHeld;
+      renderSettlementPanel(settlementSchedule);
       document.getElementById("internationalPaymentsCard").innerHTML = renderInternationalCard(international);
       const selectedStore = lastStores.find((store) => store.id === currentStoreId) || null;
       const paymentStore = (selectedStore?.checkoutMode || "payment") === "payment";

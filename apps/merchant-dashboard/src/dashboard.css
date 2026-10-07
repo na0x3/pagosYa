@@ -2010,3 +2010,23 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
 
 .session-profile-body p, .session-profile-body small { color: #a9a9a6; }
 
+
+.payout-hold-banner {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.overview-balance .balance-held {
+  color: var(--muted, #667085);
+}
+
+.settlement-releases {
+  margin: 8px 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
