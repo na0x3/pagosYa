@@ -1,8 +1,9 @@
-<table data-block="hero" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:var(--brand-accent, #18181b);color:var(--brand-accent-foreground, #ffffff)">
+<table data-block="hero" data-tone="dark" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:var(--brand-accent, #18181b);color:var(--brand-accent-foreground, #ffffff)">
   <tr><td><img data-block-image width="536" alt="" style="display:block;width:100%;border:0;background:#e7e5e4"></td></tr>
   <tr><td style="padding:24px;background:var(--brand-accent, #18181b);color:var(--brand-accent-foreground, #ffffff)">
     <h1 data-block-title style="margin:0 0 8px;font-size:28px;line-height:1.2;color:var(--brand-accent-foreground, #ffffff);background:var(--brand-accent, #18181b)"></h1>
     <p data-block-text style="margin:0;font-size:16px;line-height:1.5;color:var(--brand-accent-foreground, #ffffff);background:var(--brand-accent, #18181b)"></p>
+    <a data-block-link style="display:inline-block;margin-top:18px;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:bold;text-decoration:none;color:var(--brand-accent, #18181b);background:var(--brand-accent-foreground, #ffffff)"><span data-block-label></span></a>
   </td></tr>
 </table>
 <table data-block="heading" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px">
@@ -38,12 +39,63 @@
     </a>
   </td></tr>
 </table>
-<table data-block="promo" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:2px dashed var(--brand-accent, #18181b)">
+<table data-block="promo" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:2px dashed var(--brand-accent, #18181b)">
   <tr><td align="center" style="padding:20px;background:var(--brand-surface, #ffffff);color:var(--brand-foreground, #18181b)">
+    <p data-block-discount style="margin:0 0 8px;font-size:16px;font-weight:bold;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></p>
     <p data-block-code style="margin:0 0 6px;font-size:24px;font-weight:bold;letter-spacing:.08em;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></p>
     <p data-block-text style="margin:0;font-size:14px;color:#6b6b73;background:var(--brand-surface, #ffffff)"></p>
   </td></tr>
 </table>
 <table data-block="note" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px">
   <tr><td data-block-text style="font-size:13px;line-height:1.55;color:#6b6b73;background:var(--brand-surface, #ffffff)"></td></tr>
+</table>
+<table data-block="announce" data-tone="dark" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border-radius:8px;background:var(--brand-accent, #18181b)">
+  <tr><td align="center" data-block-text style="padding:10px 16px;font-size:13px;font-weight:bold;letter-spacing:.02em;color:var(--brand-accent-foreground, #ffffff);background:var(--brand-accent, #18181b)"></td></tr>
+</table>
+<table data-block="address" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #e7e5e4;border-radius:10px;background:var(--brand-surface, #ffffff)">
+  <tr><td style="padding:18px 20px;background:var(--brand-surface, #ffffff)">
+    <h3 data-block-title style="margin:0 0 8px;font-size:15px;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></h3>
+    <p data-line style="margin:0 0 2px;font-size:14px;line-height:1.5;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></p>
+  </td></tr>
+</table>
+<table data-block="steps" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:var(--brand-surface, #ffffff)">
+  <tr><td data-step align="center" width="33%" style="padding:8px;vertical-align:top;background:var(--brand-surface, #ffffff)">
+    <img data-step-icon width="32" height="32" alt="" style="display:block;margin:0 auto 8px;border:0">
+    <p data-step-title style="margin:0;font-size:13px;font-weight:bold;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></p>
+  </td></tr>
+</table>
+<table data-block="trust" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-top:1px solid #e7e5e4;border-bottom:1px solid #e7e5e4;background:var(--brand-surface, #ffffff)">
+  <tr><td data-trust align="center" width="25%" style="padding:16px 6px;vertical-align:top;background:var(--brand-surface, #ffffff)">
+    <img data-trust-icon width="28" height="28" alt="" style="display:block;margin:0 auto 6px;border:0">
+    <p data-trust-label style="margin:0;font-size:12px;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></p>
+  </td></tr>
+</table>
+<table data-block="quote" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-radius:10px;background:#f5f5f4">
+  <tr><td align="center" style="padding:24px;background:#f5f5f4">
+    <p style="margin:0;font-size:40px;line-height:1;color:var(--brand-accent, #18181b);background:#f5f5f4">&ldquo;</p>
+    <p data-quote-text style="margin:4px 0 10px;font-size:17px;font-style:italic;line-height:1.5;color:var(--brand-foreground, #18181b);background:#f5f5f4"></p>
+    <p data-quote-stars style="margin:0 0 4px;font-size:15px;color:#c8961a;background:#f5f5f4"></p>
+    <p data-quote-author style="margin:0;font-size:13px;color:#6b6b73;background:#f5f5f4"></p>
+  </td></tr>
+</table>
+<table data-block="story" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:var(--brand-surface, #ffffff)">
+  <tr>
+    <td width="50%" style="padding:0 12px 0 0;vertical-align:middle;background:var(--brand-surface, #ffffff)"><img data-block-image width="256" alt="" style="display:block;width:100%;border:0;border-radius:10px"></td>
+    <td width="50%" style="vertical-align:middle;background:var(--brand-surface, #ffffff)">
+      <h3 data-block-title style="margin:0 0 8px;font-size:18px;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></h3>
+      <p data-block-text style="margin:0;font-size:14px;line-height:1.6;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></p>
+    </td>
+  </tr>
+</table>
+<table data-block="contact" data-tone="light" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:var(--brand-surface, #ffffff)">
+  <tr><td colspan="2" style="padding:0 0 12px;background:var(--brand-surface, #ffffff)"><h3 data-block-title style="margin:0;font-size:16px;text-align:center;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></h3></td></tr>
+  <tr><td data-contact width="50%" style="padding:6px;background:var(--brand-surface, #ffffff)">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e7e5e4;border-radius:10px;background:var(--brand-surface, #ffffff)"><tr>
+      <td style="padding:12px 14px;background:var(--brand-surface, #ffffff)">
+        <p data-contact-label style="margin:0 0 2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6b6b73;background:var(--brand-surface, #ffffff)"></p>
+        <a data-contact-value style="font-size:14px;text-decoration:none;color:var(--brand-foreground, #18181b);background:var(--brand-surface, #ffffff)"></a>
+      </td>
+      <td width="32" align="right" style="padding:12px 14px 12px 0;background:var(--brand-surface, #ffffff)"><img data-contact-icon width="22" height="22" alt="" style="display:block;border:0"></td>
+    </tr></table>
+  </td></tr>
 </table>

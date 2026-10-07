@@ -21,3 +21,10 @@ describe('the floor kit', () => {
     }
   });
 });
+
+describe('the floor layout', () => {
+  it('has header links, social icons, address and policy links', async () => {
+    const { layout } = await loadFloorKit();
+    for (const slot of ['data-nav-link', 'data-social', 'data-social-icon', 'data-store-address', 'data-policy-link']) expect(layout).toContain(slot);
+  });
+});
