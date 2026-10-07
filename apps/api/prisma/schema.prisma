@@ -930,6 +930,7 @@ model Store {
   extensions                   StoreExtension[]
   emailKits                    StoreEmailKit[]
   emailCopyOverrides           StoreEmailCopyOverride[]
+  emailContent                 StoreEmailContent?
 
   @@index([merchantId, createdAt])
 }
@@ -1465,6 +1466,8 @@ model PromoCode {
   discountType  PromoDiscountType
   discountValue Int
   isActive      Boolean           @default(true)
+  /// Only codes the merchant marked for emails can appear in one; a private code never leaks.
+  showInEmails  Boolean           @default(false)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -3303,4 +3306,12 @@ model StoreEmailCopyOverride {
   updatedAt DateTime @updatedAt
 
   @@id([storeId, emailType, field])
+}
+
+/// What the merchant chose to say in their emails (announcement, hero photo, promo, story, note), one JSON per store.
+model StoreEmailContent {
+  storeId   String   @id
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
 }
