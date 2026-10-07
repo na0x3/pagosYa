@@ -123,6 +123,19 @@ describe('assembleEmail, rich blocks', () => {
     expect(repairs.slice(0, 2)).toEqual(['budget: products removed to fit Gmail', 'budget: heading removed to fit Gmail']);
   });
 
+  it('an icon never gets the grey photo placeholder behind it', () => {
+    const { html } = assembleEmail(floor, floor, [], { ...rich, socials: [{ icon: 'instagram', label: 'Instagram', href: 'https://instagram.com/x' }] });
+    expect(html).toMatch(/<img[^>]*instagram-light\.png/);
+    expect(html).not.toMatch(/<img[^>]*instagram-light\.png[^>]*#eeeeee/);
+    expect(html).not.toMatch(/<img[^>]*#eeeeee[^>]*instagram-light\.png/);
+  });
+
+  it('a story without a photo takes the full width instead of leaving an empty column', () => {
+    const { html } = assembleEmail(floor, floor, [{ block: 'story', image: null, title: 'Sobre', text: 'Hecho a mano' }], rich);
+    const story = html.slice(html.indexOf('Sobre') - 600, html.indexOf('Hecho a mano'));
+    expect(story).not.toContain('width="50%"');
+  });
+
   it('stars come from the number, never from text', () => {
     expect(assembleEmail(floor, floor, [{ block: 'quote', text: 'Excelente', author: 'Ana', stars: 4 }], rich).html).toContain('★★★★☆');
   });

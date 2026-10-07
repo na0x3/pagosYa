@@ -36,12 +36,16 @@ export type LayoutData = {
 const SLOT = /^data-(?:block|item|items|product|store|email|line|step|trust|quote|contact|nav|social|policy|tone)(?:-|$)/;
 const detach = (el: Element) => { el.attrs = el.attrs.filter(a => !SLOT.test(a.name)); };
 
-/** An image slot gets its source, alt text and a quiet background; a missing image is removed, never left broken. */
-function fillImage(el: Element, image: EmailImage | null) {
+/**
+ * An image slot gets its source and alt text; a missing image is removed, never left broken.
+ * A photo also gets a quiet background for clients that block images; an icon does not, it would show as a grey box.
+ */
+function fillImage(el: Element, image: EmailImage | null, placeholder = true) {
   if (!image) { remove(el); return; }
   setAttr(el, 'src', image.src);
   setAttr(el, 'alt', image.alt);
   if (!attrOf(el, 'width')) setAttr(el, 'width', '64');
+  if (!placeholder) { detach(el); return; }
   // The quiet background goes on the photo's cell when it has one: a client that blocks images hides the <img> box too.
   const parent: any = (el as any).parentNode;
   const target: Element = parent?.tagName === 'td' || parent?.tagName === 'th' ? parent : el;
@@ -78,8 +82,8 @@ function repeat<T>(root: Node, rowSlot: string, entries: T[], fillRow: (row: Ele
   parent.childNodes = parent.childNodes.flatMap((c: Node) => (c === model ? rows : [c]));
 }
 
-function fillImages(root: Node, slot: string, image: EmailImage | null) {
-  for (const el of [...walk(root)]) if (has(el, slot)) fillImage(el, image);
+function fillImages(root: Node, slot: string, image: EmailImage | null, placeholder = true) {
+  for (const el of [...walk(root)]) if (has(el, slot)) fillImage(el, image, placeholder);
 }
 
 /** A block marked as sitting on a dark background takes light icons, and the reverse. */
@@ -135,13 +139,13 @@ function fillBlock(html: string, call: BlockCall, layout: LayoutData): Node[] {
       break;
     case 'steps':
       repeat(root, 'data-step', call.steps, (row, step) => {
-        fillImages(row, 'data-step-icon', iconImage(step.icon, tone, base, ''));
+        fillImages(row, 'data-step-icon', iconImage(step.icon, tone, base, ''), false);
         fillWithin(row, { 'data-step-title': step.title });
       });
       break;
     case 'trust':
       repeat(root, 'data-trust', call.items, (row, item) => {
-        fillImages(row, 'data-trust-icon', iconImage(item.icon, tone, base, ''));
+        fillImages(row, 'data-trust-icon', iconImage(item.icon, tone, base, ''), false);
         fillWithin(row, { 'data-trust-label': item.label });
       });
       break;
@@ -153,13 +157,21 @@ function fillBlock(html: string, call: BlockCall, layout: LayoutData): Node[] {
       break;
     }
     case 'story':
+      // Without a photo the photo's column goes too, and the text takes the full width.
+      if (!call.image) {
+        const cell = [...walk(root)].find(el => el.tagName === 'td' && [...walk(el)].some(e => has(e, 'data-block-image')));
+        if (cell) {
+          for (const sibling of kids((cell as any).parentNode) as Element[]) if (sibling !== cell && sibling.tagName === 'td') setAttr(sibling, 'width', '100%');
+          remove(cell);
+        }
+      }
       fillImages(root, 'data-block-image', call.image);
       fillWithin(root, { 'data-block-title': call.title, 'data-block-text': call.text });
       break;
     case 'contact':
       fillWithin(root, { 'data-block-title': call.title });
       repeat(root, 'data-contact', call.cards, (row, card) => {
-        fillImages(row, 'data-contact-icon', iconImage(card.icon, tone, base, ''));
+        fillImages(row, 'data-contact-icon', iconImage(card.icon, tone, base, ''), false);
         fillWithin(row, { 'data-contact-label': card.label });
         for (const el of [...walk(row)]) if (has(el, 'data-contact-value')) { setText(el, card.value); setAttr(el, 'href', card.href); detach(el); }
       });
@@ -204,7 +216,7 @@ export function assembleEmail(kit: ValidEmailKit, floor: ValidEmailKit, calls: B
     setAttr(a, 'href', s.href);
     const img = [...walk(a)].find(e => has(e, 'data-social-icon'));
     const icon = iconImage(s.icon, 'light', layout.iconBase ?? null, s.label);
-    if (img && icon) fillImage(img, icon); else { if (img) remove(img); setText(a, s.label); }
+    if (img && icon) fillImage(img, icon, false); else { if (img) remove(img); setText(a, s.label); }
   });
 
   fillWithin(doc, {
