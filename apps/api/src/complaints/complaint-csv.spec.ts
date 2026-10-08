@@ -12,4 +12,7 @@ describe("toCsv", () => {
   it("writes null as empty", () => {
     expect(toCsv([{ a: null }], ["a"])).toBe("a\r\n\r\n");
   });
+  it("uses the delimiter it is given and quotes cells that contain it", () => {
+    expect(toCsv([{ a: "Tienda; Uno", b: 3 }], ["a", "b"], ";")).toBe('a;b\r\n"Tienda; Uno";3\r\n');
+  });
 });

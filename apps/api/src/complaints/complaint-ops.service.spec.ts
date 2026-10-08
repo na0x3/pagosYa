@@ -103,6 +103,14 @@ describe("ComplaintOpsService", () => {
     expect(db.complaint.update).toHaveBeenCalledWith({ where: { id: ID }, data: { paymentIntentId: "pi_9", merchantId: "m_9" } });
   });
 
+  it("exports a CSV that Spanish Excel opens in columns with its accents intact", async () => {
+    const { db, service } = setup(null);
+    db.complaint.findMany.mockResolvedValue([{ ...base(), category: "NOT_DELIVERED", request: "REFUND", outcome: null, extendedAt: null, answeredAt: null, storeNameGiven: "Panadería Ñandú", merchant: null }]);
+    const csv = await service.exportCsv("2026-10-01", "2026-10-31");
+    expect(csv.startsWith("\uFEFFnumero;recibido;vence;")).toBe(true);
+    expect(csv).toContain(";Panadería Ñandú;");
+  });
+
   it("marks overdue, due-soon, test and failed-email rows in the queue", async () => {
     const { db, service } = setup(null);
     db.complaint.findMany.mockResolvedValue([

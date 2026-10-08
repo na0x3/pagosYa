@@ -32,6 +32,12 @@ describe("ComplaintIntakeService.create", () => {
     expect(mailer.send).toHaveBeenCalledWith("RECEIVED", "cmg1abcdefghijklmnopqrstu");
   });
 
+  it("gives the buyer their number even when the email provider hangs", async () => {
+    const { mailer, service } = setup(null);
+    mailer.send.mockReturnValue(new Promise(() => undefined));
+    await expect(service.create(dto, [], NOW)).resolves.toEqual(expect.objectContaining({ number: "R-2026-000042" }));
+  }, 2000);
+
   it("answers an unknown reference exactly like a known one", async () => {
     const known = await setup({ id: "pi_abc123", merchantId: "m_1" }).service.create(dto, [], NOW);
     const { tx, service } = setup(null);

@@ -59,6 +59,7 @@ harness.describeDb("complaints (real Postgres)", () => {
 
   it("records the whole journey and refunds from the merchant's held funds", async () => {
     const merchant = await db.merchant.create({ data: { name: "Tienda Uno", email: `tienda-${harness.databaseName}@test.test`, level: 1, settlementMode: SettlementMode.AGGREGATOR } });
+    const merchantUser = await db.merchantUser.create({ data: { merchantId: merchant.id, email: `duena-${harness.databaseName}@test.test`, hashedPassword: "x", emailVerifiedAt: new Date() } });
     const opsUser = await db.opsUser.create({ data: { name: "Ana", email: `ana-${harness.databaseName}@pagosya.bo`, hashedToken: "x", role: OpsRole.SUPPORT_ADMIN } });
     const admin = { id: opsUser.id, name: opsUser.name, email: opsUser.email, role: OpsRole.SUPPORT_ADMIN };
 
@@ -94,10 +95,15 @@ harness.describeDb("complaints (real Postgres)", () => {
 
     await ops.take(id, admin);
     await ops.askMerchant(id, "¿Enviaste el pedido?", admin);
-    await merchantSide.reply(merchant.id, "mu_it", id, "Lo enviamos el lunes por courier.", []);
+    await merchantSide.reply(merchant.id, merchantUser.id, id, "Lo enviamos el lunes por courier.", []);
     await ops.refund(id, { requestId: "req_journey_1" }, admin);
     await ops.answer(id, { outcome: ComplaintOutcome.UPHELD, answer: "Te devolvimos el dinero completo." }, admin);
 
+    // The intake email is sent without awaiting it; let it land before reading the history.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const sent = await db.complaintEvent.findMany({ where: { complaintId: id, type: ComplaintEventType.EMAIL_SENT }, select: { meta: true } });
+    expect(sent.map((e) => (e.meta as { kind: string; to: string }).kind).sort()).toEqual(["ANSWERED", "MERCHANT_ASKED", "RECEIVED"]);
+    expect(sent.some((e) => (e.meta as { to: string }).to === merchantUser.email)).toBe(true);
     const events = await db.complaintEvent.findMany({ where: { complaintId: id, type: { not: ComplaintEventType.EMAIL_SENT } }, orderBy: { createdAt: "asc" } });
     expect(events.map((e) => e.type)).toEqual([
       ComplaintEventType.RECEIVED, ComplaintEventType.LINKED, ComplaintEventType.TAKEN, ComplaintEventType.MERCHANT_ASKED,

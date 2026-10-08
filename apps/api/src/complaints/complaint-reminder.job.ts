@@ -52,7 +52,7 @@ export class ComplaintReminderJob {
     const byComplaint = new Map<string, typeof events>();
     for (const event of events) byComplaint.set(event.complaintId, [...(byComplaint.get(event.complaintId) ?? []), event]);
     for (const [complaintId, list] of byComplaint) {
-      for (const kind of unresolvedEmailFailures(list)) await this.mailer.send(kind as ComplaintEmailKind, complaintId);
+      for (const { kind, to } of unresolvedEmailFailures(list)) await this.mailer.send(kind as ComplaintEmailKind, complaintId, to || undefined);
     }
   }
 }

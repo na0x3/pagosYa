@@ -34,14 +34,15 @@ describe("ComplaintReminderJob", () => {
   it("re-sends each failed email kind once, unless a later send of that kind succeeded", async () => {
     const { prisma, mailer, job } = setup();
     prisma.complaintEvent.findMany.mockResolvedValue([
-      { complaintId: "c1", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "RECEIVED" } },
-      { complaintId: "c1", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "RECEIVED" } },
-      { complaintId: "c2", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "ANSWERED" } },
-      { complaintId: "c2", type: ComplaintEventType.EMAIL_SENT, meta: { kind: "ANSWERED" } },
+      { complaintId: "c1", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "RECEIVED", to: "ana@example.com" } },
+      { complaintId: "c1", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "RECEIVED", to: "ana@example.com" } },
+      { complaintId: "c2", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "ANSWERED", to: "beto@example.com" } },
+      { complaintId: "c2", type: ComplaintEventType.EMAIL_SENT, meta: { kind: "ANSWERED", to: "beto@example.com" } },
+      { complaintId: "c3", type: ComplaintEventType.EMAIL_FAILED, meta: { kind: "MERCHANT_ASKED", to: "a@tienda.bo" } },
+      { complaintId: "c3", type: ComplaintEventType.EMAIL_SENT, meta: { kind: "MERCHANT_ASKED", to: "b@tienda.bo" } },
     ]);
     await job.retryFailedEmails(NOW);
-    expect(mailer.send).toHaveBeenCalledTimes(1);
-    expect(mailer.send).toHaveBeenCalledWith("RECEIVED", "c1");
+    expect(mailer.send.mock.calls).toEqual([["RECEIVED", "c1", "ana@example.com"], ["MERCHANT_ASKED", "c3", "a@tienda.bo"]]);
   });
 
   it("skips the run when another replica holds the lock", async () => {

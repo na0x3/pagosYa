@@ -96,7 +96,9 @@ export class ComplaintIntakeService {
       return created;
     });
 
-    await this.mailer.send("RECEIVED", complaint.id);
+    // Not awaited: the complaint is saved, so a slow provider must not keep the buyer from their number. The mailer
+    // never throws, and a failure is retried by the morning job.
+    void this.mailer.send("RECEIVED", complaint.id);
     return { number: complaint.number, dueAt, trackingUrl: this.mailer.trackingUrl(complaint.id) };
   }
 

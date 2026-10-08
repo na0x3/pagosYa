@@ -19,22 +19,30 @@ const OPEN: ComplaintStatus[] = [ComplaintStatus.RECEIVED, ComplaintStatus.IN_RE
 
 type StoredComplaint = NonNullable<Awaited<ReturnType<PrismaService["complaint"]["findUnique"]>>>;
 
-/** EMAIL_FAILED events not followed by an EMAIL_SENT of the same kind. Events must be in createdAt order. */
+/** The rail's own words for a declined refund, when it gives any. */
 function railFailureReason(raw: Prisma.JsonValue | null): string {
   const value = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const reason = [value.error, value.message, value.reason].find((candidate) => typeof candidate === "string");
   return typeof reason === "string" ? reason.slice(0, 200) : "";
 }
 
-export function unresolvedEmailFailures(events: Array<{ type: ComplaintEventType; meta: Prisma.JsonValue | null }>): string[] {
-  const open = new Set<string>();
+/**
+ * Failed sends not followed by a successful one to the same recipient, as { kind, to }. A failure with no recipient
+ * ("Sin destinatarios verificados") clears on any later success of that kind. Events must be in createdAt order.
+ */
+export function unresolvedEmailFailures(events: Array<{ type: ComplaintEventType; meta: Prisma.JsonValue | null }>): Array<{ kind: string; to: string }> {
+  const open = new Map<string, { kind: string; to: string }>();
   for (const event of events) {
-    const kind = (event.meta as { kind?: string } | null)?.kind;
-    if (!kind) continue;
-    if (event.type === ComplaintEventType.EMAIL_FAILED) open.add(kind);
-    if (event.type === ComplaintEventType.EMAIL_SENT) open.delete(kind);
+    const meta = (event.meta ?? {}) as { kind?: string; to?: string };
+    if (!meta.kind) continue;
+    const to = meta.to ?? "";
+    if (event.type === ComplaintEventType.EMAIL_FAILED) open.set(`${meta.kind}|${to}`, { kind: meta.kind, to });
+    if (event.type === ComplaintEventType.EMAIL_SENT) {
+      open.delete(`${meta.kind}|${to}`);
+      open.delete(`${meta.kind}|`);
+    }
   }
-  return [...open];
+  return [...open.values()];
 }
 
 @Injectable()
@@ -275,7 +283,8 @@ export class ComplaintOpsService {
       include: { merchant: { select: { name: true } } },
     });
     const iso = (at: Date | null) => (at ? at.toISOString() : null);
-    return toCsv(
+    // BOM + ";": Excel in a Spanish locale opens it in columns with accents intact.
+    return "\uFEFF" + toCsv(
       rows.map((row) => ({
         numero: row.number,
         recibido: iso(row.receivedAt),
@@ -291,6 +300,7 @@ export class ComplaintOpsService {
         pago: row.paymentIntentId,
       })),
       ["numero", "recibido", "vence", "extendido", "respondido", "dias_habiles", "categoria", "pedido", "resultado", "estado", "comercio", "pago"],
+      ";",
     );
   }
 }
