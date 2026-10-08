@@ -88,3 +88,26 @@ describe("ComplaintOpsService", () => {
     expect(rows[1]).toEqual(expect.objectContaining({ overdue: false, dueSoon: true, emailFailed: true, test: false }));
   });
 });
+
+describe("ComplaintOpsService money actions", () => {
+  it("refunds the linked payment on the merchant's behalf with a per-refund idempotency key, then records it", async () => {
+    const { db, refunds, audit, service } = setup(base());
+    db.complaintEvent.count.mockResolvedValue(1);
+    await service.refund(ID, 2500, admin);
+    expect(refunds.create).toHaveBeenCalledWith("m_1", { paymentIntentId: "pi_1", amount: 2500, reason: "Reclamo R-2026-000042" }, `complaint-${ID}-refund-2`);
+    expect(db.complaintEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: ComplaintEventType.REFUNDED, meta: { refundId: "re_1", amount: 5000 } }) });
+    expect(audit.record).toHaveBeenCalledWith(db, expect.objectContaining({ action: "complaint.refunded" }));
+  });
+
+  it("refuses a refund from an agent or without a linked payment", async () => {
+    await expect(setup(base()).service.refund(ID, undefined, agent)).rejects.toThrow(ForbiddenException);
+    await expect(setup(base({ paymentIntentId: null })).service.refund(ID, undefined, admin)).rejects.toThrow("Vincula el reclamo a un pago primero.");
+  });
+
+  it("pauses the merchant's payouts with the case number in the reason", async () => {
+    const { settlementAdmin, db, service } = setup(base());
+    await service.pausePayouts(ID, "Varios reclamos de entrega", agent);
+    expect(settlementAdmin.placeHold).toHaveBeenCalledWith("m_1", "Reclamo R-2026-000042: Varios reclamos de entrega", agent);
+    expect(db.complaintEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: ComplaintEventType.PAYOUTS_PAUSED }) });
+  });
+});

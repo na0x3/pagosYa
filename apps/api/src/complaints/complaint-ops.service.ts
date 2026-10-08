@@ -188,6 +188,38 @@ export class ComplaintOpsService {
     return detail;
   }
 
+  /** The refund runs in RefundsService's own transaction (it draws from the merchant's held funds, sub-project 3);
+   * the complaint event and audit entry follow it. A retry with the same n is idempotent. */
+  async refund(id: string, amount: number | undefined, actor: ComplaintOpsActor) {
+    this.assertAdmin(actor);
+    const complaint = await this.prisma.complaint.findUnique({ where: { id } });
+    if (!complaint) throw new NotFoundException("Reclamo no encontrado");
+    assertCan("refund", complaint.status);
+    if (!complaint.paymentIntentId || !complaint.merchantId) throw new ConflictException("Vincula el reclamo a un pago primero.");
+    const n = (await this.prisma.complaintEvent.count({ where: { complaintId: id, type: ComplaintEventType.REFUNDED } })) + 1;
+    const refund = await this.refunds.create(
+      complaint.merchantId,
+      { paymentIntentId: complaint.paymentIntentId, ...(amount ? { amount } : {}), reason: `Reclamo ${complaint.number}` },
+      `complaint-${id}-refund-${n}`,
+    );
+    return this.mutate(id, actor, "complaint.refunded", async (tx) => {
+      await recordComplaintEvent(tx, id, { type: ComplaintEventType.REFUNDED, actor: ComplaintActor.OPS, actorId: actor.id, meta: { refundId: refund.id, amount: refund.amount } });
+      return { refundId: refund.id, amount: refund.amount };
+    });
+  }
+
+  async pausePayouts(id: string, reason: string, actor: ComplaintOpsActor) {
+    const complaint = await this.prisma.complaint.findUnique({ where: { id } });
+    if (!complaint) throw new NotFoundException("Reclamo no encontrado");
+    assertCan("pausePayouts", complaint.status);
+    if (!complaint.merchantId) throw new ConflictException("Vincula el reclamo a un comercio primero.");
+    await this.settlementAdmin.placeHold(complaint.merchantId, `Reclamo ${complaint.number}: ${reason.trim()}`, actor);
+    return this.mutate(id, actor, "complaint.payouts_paused", async (tx) => {
+      await recordComplaintEvent(tx, id, { type: ComplaintEventType.PAYOUTS_PAUSED, actor: ComplaintActor.OPS, actorId: actor.id, body: reason.trim() });
+      return { merchantId: complaint.merchantId };
+    });
+  }
+
   async attachment(id: string, attachmentId: string) {
     const attachment = await this.prisma.complaintAttachment.findFirst({ where: { id: attachmentId, complaintId: id } });
     if (!attachment) throw new NotFoundException("Archivo no encontrado");
