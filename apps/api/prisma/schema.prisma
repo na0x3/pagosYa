@@ -178,6 +178,7 @@ model OpsUser {
   assignedSupportCases SupportCase[]           @relation("SupportCaseAssignee")
   supportNotes         SupportCaseNote[]
   legalDocuments       LegalDocument[]
+  assignedComplaints   Complaint[]             @relation("ComplaintAssignee")
 }
 
 // Generic append-only trail for sensitive ops actions (KYC review today;
@@ -238,6 +239,132 @@ model SupportCaseNote {
   @@index([caseId, createdAt])
 }
 
+enum ComplaintStatus {
+  RECEIVED
+  IN_REVIEW
+  WAITING_MERCHANT
+  ANSWERED
+}
+
+enum ComplaintCategory {
+  NOT_DELIVERED
+  NOT_AS_DESCRIBED
+  UNRECOGNIZED_CHARGE
+  DUPLICATE_CHARGE
+  REFUND_NOT_RECEIVED
+  OTHER
+}
+
+enum ComplaintRequest {
+  REFUND
+  DELIVERY
+  OTHER
+}
+
+enum ComplaintOutcome {
+  UPHELD
+  PARTIALLY_UPHELD
+  NOT_UPHELD
+}
+
+enum ComplaintActor {
+  BUYER
+  OPS
+  MERCHANT
+  SYSTEM
+}
+
+enum ComplaintEventType {
+  RECEIVED
+  EMAIL_CONFIRMED
+  BUYER_MESSAGE
+  TAKEN
+  LINKED
+  NOTE
+  MERCHANT_ASKED
+  MERCHANT_REPLIED
+  EXTENDED
+  ANSWERED
+  REFUNDED
+  PAYOUTS_PAUSED
+  EMAIL_SENT
+  EMAIL_FAILED
+}
+
+// ASFI sub-project 4: a buyer complaint pagosYa registers, investigates and answers.
+model Complaint {
+  id                String                @id @default(cuid())
+  number            String                @unique
+  status            ComplaintStatus       @default(RECEIVED)
+  category          ComplaintCategory
+  request           ComplaintRequest
+  buyerName         String
+  buyerEmail        String
+  buyerPhone        String?
+  referenceGiven    String?
+  storeNameGiven    String?
+  paymentIntentId   String?
+  paymentIntent     PaymentIntent?        @relation(fields: [paymentIntentId], references: [id])
+  merchantId        String?
+  merchant          Merchant?             @relation(fields: [merchantId], references: [id])
+  description       String
+  outcome           ComplaintOutcome?
+  answer            String?
+  assignedOpsUserId String?
+  assignedOpsUser   OpsUser?              @relation("ComplaintAssignee", fields: [assignedOpsUserId], references: [id])
+  receivedAt        DateTime              @default(now())
+  dueAt             DateTime
+  extendedAt        DateTime?
+  extensionReason   String?
+  merchantDueAt     DateTime?
+  emailConfirmedAt  DateTime?
+  answeredAt        DateTime?
+  events            ComplaintEvent[]
+  attachments       ComplaintAttachment[]
+
+  @@index([status, dueAt])
+  @@index([merchantId, receivedAt])
+  @@index([buyerEmail])
+}
+
+// Append-only: the code never updates or deletes a row (sub-project 7 makes it tamper-evident).
+model ComplaintEvent {
+  id          String                @id @default(cuid())
+  complaintId String
+  complaint   Complaint             @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  type        ComplaintEventType
+  actor       ComplaintActor
+  actorId     String?
+  body        String?
+  meta        Json?
+  createdAt   DateTime              @default(now())
+  attachments ComplaintAttachment[]
+
+  @@index([complaintId, createdAt])
+  @@index([type, createdAt])
+}
+
+model ComplaintAttachment {
+  id          String          @id @default(cuid())
+  complaintId String
+  complaint   Complaint       @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  eventId     String?
+  event       ComplaintEvent? @relation(fields: [eventId], references: [id])
+  uploadedBy  ComplaintActor
+  storageKey  String
+  fileName    String
+  contentType String
+  sizeBytes   Int
+  createdAt   DateTime        @default(now())
+
+  @@index([complaintId])
+}
+
+model ComplaintCounter {
+  year Int @id
+  last Int
+}
+
 model Merchant {
   id                          String                      @id @default(cuid())
   name                        String
@@ -287,6 +414,7 @@ model Merchant {
   // Set when the free YAPI build after a Shopify import is saved (spec 2026-09-27 §3): one per merchant.
   importBuildUsedAt           DateTime?
   storeImports                StoreImport[]
+  complaints                  Complaint[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -665,6 +793,7 @@ model PaymentIntent {
   limitAmountBob       Int?
   limitFxRate          Decimal?                @db.Decimal(10, 4)
   limitStatus          LimitReservationStatus?
+  complaints           Complaint[]
 
   @@index([merchantId, createdAt])
   @@index([consumerUserId, createdAt])
