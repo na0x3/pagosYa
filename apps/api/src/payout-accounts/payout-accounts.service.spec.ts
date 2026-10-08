@@ -36,7 +36,7 @@ describe("PayoutAccountsService.create", () => {
     const { db, email, service } = setup();
     const view = await service.create("m_1", dto, png as any);
     expect(db.payoutAccount.create).toHaveBeenCalledWith({ data: expect.objectContaining({ merchantId: "m_1", bankCode: "BNB", accountNumber: "4012345678", holderName: "Ana Pérez", isChange: false, proofContentType: "image/png" }) });
-    expect(view).toEqual(expect.objectContaining({ accountLast4: "5678", bankName: "Banco Nacional de Bolivia" }));
+    expect(view).toEqual(expect.objectContaining({ accountLast4: "5678", bankName: "Banco Nacional de Bolivia", ownerType: null }));
     expect(email.send).not.toHaveBeenCalled();
   });
 

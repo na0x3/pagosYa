@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BANKS, accountStatusLabel, currentAccounts } from "./payout-accounts.mjs";
+import { BANKS, accountStatusLabel, currentAccounts, maskAccountText, ownerFitsLevel } from "./payout-accounts.mjs";
 
 const row = (over) => ({ id: "pa", bankCode: "BNB", bankName: "Banco Nacional de Bolivia", accountLast4: "5678", holderName: "Ana Pérez", status: "APPROVED", isChange: false, payableFrom: "2026-10-01T15:00:00.000Z", reviewNote: null, createdAt: "2026-10-01T15:00:00.000Z", ...over });
 
@@ -26,4 +26,16 @@ test("says where each account stands, in La Paz time", () => {
   assert.equal(accountStatusLabel(row(), now), "Aprobada · recibe desembolsos");
   assert.equal(accountStatusLabel(row({ payableFrom: "2026-10-11T19:00:00.000Z" }), now), "Aprobada · desde el 11/10/2026 15:00");
   assert.equal(accountStatusLabel(row({ status: "REJECTED", reviewNote: "Otro titular" }), now), "No aprobada: Otro titular");
+});
+
+test("masks only the account number, keeping the bank and holder readable", () => {
+  assert.equal(maskAccountText("Banco Nacional de Bolivia 4012345678 — Ana Pérez"), "Banco Nacional de Bolivia ····5678 — Ana Pérez");
+  assert.equal(maskAccountText(""), "");
+});
+
+test("reuses an approved account only for a level its owner fits", () => {
+  assert.equal(ownerFitsLevel("PERSON", 1), true);
+  assert.equal(ownerFitsLevel("PERSON", 2), false);
+  assert.equal(ownerFitsLevel("COMPANY", 2), true);
+  assert.equal(ownerFitsLevel(null, 1), false);
 });

@@ -20,7 +20,7 @@ type AccountRow = Prisma.PayoutAccountGetPayload<object>;
 function merchantView(a: AccountRow) {
   return {
     id: a.id, bankCode: a.bankCode, bankName: bankName(a.bankCode), accountLast4: a.accountNumber.slice(-4), holderName: a.holderName,
-    status: a.status, isChange: a.isChange, payableFrom: a.payableFrom, reviewNote: a.reviewNote, createdAt: a.createdAt,
+    status: a.status, isChange: a.isChange, ownerType: a.ownerType ?? null, payableFrom: a.payableFrom, reviewNote: a.reviewNote, createdAt: a.createdAt,
   };
 }
 export type MerchantPayoutAccountView = ReturnType<typeof merchantView>;

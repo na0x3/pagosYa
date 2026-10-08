@@ -140,3 +140,29 @@ test("the proof opens through the ops token", async ({ page }) => {
   await page.locator("#cuentas").getByRole("button", { name: "Ver comprobante" }).click();
   await expect.poll(() => proofRequested).toBe(true);
 });
+
+test("the identity review shows its account's status and opens its proof", async ({ page }) => {
+  let proofRequested = false;
+  const submission = {
+    id: "kyc_1", targetLevel: 1, legalName: "Ana Pérez", taxId: null, legalRepName: "Ana Pérez", legalRepDocumentId: "7654321", payoutBankAccount: "Banco Nacional de Bolivia 4012345678 — Ana Pérez",
+    ciFrontDocId: null, ciBackDocId: null, selfieDocId: null, createdAt: "2026-10-08T15:00:00.000Z",
+    merchant: { id: "m_1", name: "Tienda Uno", email: "t@example.com", settlementMode: "AGGREGATOR", level: 0 },
+    payoutAccounts: [{ id: "pa_1", status: "APPROVED", isChange: false, bankCode: "BNB", accountNumber: "4012345678", holderName: "Ana Pérez", ownerType: "PERSON" }],
+  };
+  await openOps(page, {
+    onRequest: async (route, { path, request }) => {
+      if (path === "/v1/merchants/kyc/pending") { await route.fulfill({ json: [submission] }); return true; }
+      if (path === "/internal/payout_accounts/pa_1/proof") { proofRequested = request.headers().authorization === "Bearer ops_test"; await route.fulfill({ contentType: "application/pdf", body: "%PDF-1.7" }); return true; }
+      return false;
+    },
+  });
+  const row = page.locator('#rows tr[data-id="kyc_1"]');
+  await expect(row).toContainText("Cuenta aprobada");
+  await row.getByRole("button", { name: "Ver comprobante" }).click();
+  await expect.poll(() => proofRequested).toBe(true);
+});
+
+test("payout accounts are masked to the bank and the last 4 digits", async ({ page }) => {
+  await openOps(page);
+  await expect.poll(() => page.evaluate(() => window.maskedValue("Banco Nacional de Bolivia 4012345678 — Ana Pérez"))).toBe("Banco Nacional de Bolivia ····5678 — Ana Pérez");
+});

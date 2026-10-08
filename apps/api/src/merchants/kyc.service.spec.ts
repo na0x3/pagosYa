@@ -304,3 +304,14 @@ describe("KycService.review", () => {
     await expect(service.review("kyc_1", { decision: KycStatus.APPROVED }, actor)).rejects.toThrow(BadRequestException);
   });
 });
+
+describe("KycService.listPending", () => {
+  it("shows ops the payout account sent with each identity, so they see its status and can open its proof", async () => {
+    const prisma = makeFakePrisma() as any;
+    prisma.merchantKycSubmission.findMany = jest.fn().mockResolvedValue([]);
+    await new KycService(prisma, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any).listPending();
+    expect(prisma.merchantKycSubmission.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      include: expect.objectContaining({ payoutAccounts: { select: { id: true, status: true, isChange: true, bankCode: true, accountNumber: true, holderName: true, ownerType: true }, orderBy: { createdAt: "desc" }, take: 1 } }),
+    }));
+  });
+});

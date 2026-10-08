@@ -92,7 +92,11 @@ export class KycService {
   async listPending() {
     return this.prisma.merchantKycSubmission.findMany({
       where: { status: KycStatus.PENDING_REVIEW },
-      include: { merchant: { select: { id: true, name: true, email: true, settlementMode: true, level: true } } },
+      include: {
+        merchant: { select: { id: true, name: true, email: true, settlementMode: true, level: true } },
+        // The account sent with this identity: ops see whether it is approved and can open its proof.
+        payoutAccounts: { select: { id: true, status: true, isChange: true, bankCode: true, accountNumber: true, holderName: true, ownerType: true }, orderBy: { createdAt: "desc" }, take: 1 },
+      },
       orderBy: { createdAt: "asc" },
     });
   }

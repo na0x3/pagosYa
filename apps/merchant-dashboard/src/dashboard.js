@@ -10,6 +10,7 @@ import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
 import { bankOptionsHtml, mountPayoutAccountPanel } from "/src/payout-account-panel.mjs";
+import { maskAccountText, ownerFitsLevel } from "/src/payout-accounts.mjs";
 import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
 import { nextLevelSentence, nextPayoutLabel, payoutBlockerLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
 import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
@@ -397,7 +398,9 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   // The identity form reuses an account already approved or under review instead of asking for another.
   function syncKycAccountFields() {
     const { approved, waiting } = payoutPanel.current();
-    const existing = waiting ?? approved;
+    const targetLevel = Number(document.querySelector('#kycForm [name="targetLevel"]')?.value || 1);
+    // An approved account is reused only for a level its owner fits; a business level needs one in the company's name.
+    const existing = waiting ?? (approved && ownerFitsLevel(approved.ownerType, targetLevel) ? approved : null);
     const note = document.getElementById("kycAccountExisting");
     const fields = document.getElementById("kycAccountFields");
     note.hidden = !existing;
@@ -408,6 +411,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     fields.style.display = existing ? "none" : "";
     fields.querySelectorAll("input, select").forEach((el) => { el.required = !existing; });
   }
+  document.querySelector('#kycForm [name="targetLevel"]')?.addEventListener("change", () => syncKycAccountFields());
   // Reclamos (ASFI sub-project 4): complaints pagosYa sent this merchant for their side.
   const complaintsPanel = mountComplaintsPanel({ api, signedIn: () => !!sessionToken });
   // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
@@ -2464,6 +2468,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   // full account number on every line.
   function maskBankAccount(s) {
     const str = String(s ?? "");
+    // Payouts now carry "{bank} {number} — {holder}": mask the number only, so the merchant can tell which account it was.
+    if (/\d{6,}/.test(str)) return maskAccountText(str);
     const digits = str.replace(/\D/g, "");
     if (digits.length <= 4) return str;
     return str.slice(0, -4).replace(/[0-9]/g, "•") + str.slice(-4);
@@ -4049,6 +4055,9 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         const proof = document.getElementById("kycAccountProof").files?.[0];
         if (proof) accountForm.append("proof", proof);
         payoutAccountId = (await api("/dashboard/payout_accounts", { method: "POST", body: accountForm })).id;
+        // Remembered before the identity call: if that fails, a retry reuses this account instead of sending it again.
+        await payoutPanel.show();
+        syncKycAccountFields();
       }
       for (const key of ["bankCode", "accountNumber", "holderName", "payoutBankAccount"]) delete data[key];
       const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, payoutAccountId };

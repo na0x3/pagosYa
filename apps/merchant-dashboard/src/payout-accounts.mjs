@@ -40,3 +40,14 @@ export function accountStatusLabel(account, now = new Date()) {
   if (account.status === "APPROVED") return "Aprobada · recibe desembolsos";
   return "Reemplazada";
 }
+
+/** Masks the account number (any run of 6+ digits) to its last 4, keeping the bank and holder readable. */
+export function maskAccountText(value) {
+  return String(value ?? "").replace(/\d{6,}/g, (digits) => `····${digits.slice(-4)}`);
+}
+
+/** Level 1 → the verified person; levels 2–3 → the company or, if sole proprietorship, its owner (same rule as the API). */
+export function ownerFitsLevel(ownerType, level) {
+  if (!ownerType) return false;
+  return level <= 1 ? ownerType === "PERSON" : ownerType !== "PERSON";
+}
