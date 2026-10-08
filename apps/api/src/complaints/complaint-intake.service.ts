@@ -8,7 +8,7 @@ import { ANSWER_BUSINESS_DAYS, addBusinessDays, complaintYear } from "./complain
 import { CheckedComplaintFile, UploadedComplaintFile, checkComplaintFiles, safeFileName } from "./complaint-files";
 import { formatComplaintNumber, nextComplaintNumber } from "./complaint-number";
 import { readComplaintToken } from "./complaint-token";
-import { recordComplaintEvent } from "./complaint-events";
+import { lockComplaint, recordComplaintEvent } from "./complaint-events";
 import { assertCan } from "./complaint-state";
 import { ComplaintMailer } from "./complaint-mailer";
 import { SECOND_INSTANCE_NOTICE } from "./complaint-emails";
@@ -153,6 +153,10 @@ export class ComplaintIntakeService {
     assertCan("buyerMessage", complaint.status);
     const stored = await storeComplaintFiles(this.files, checkComplaintFiles(uploads));
     await this.prisma.$transaction(async (tx) => {
+      // Re-checked under the lock: ops may have answered since the first read.
+      await lockComplaint(tx, complaint.id);
+      const current = await tx.complaint.findUnique({ where: { id: complaint.id }, select: { status: true } });
+      assertCan("buyerMessage", current?.status ?? ComplaintStatus.ANSWERED);
       const event = await recordComplaintEvent(tx, complaint.id, { type: ComplaintEventType.BUYER_MESSAGE, actor: ComplaintActor.BUYER, body: body.trim() });
       for (const { storageKey, file } of stored) {
         await tx.complaintAttachment.create({

@@ -3,9 +3,12 @@ import { ComplaintActor, ComplaintEventType, ComplaintStatus } from "@prisma/cli
 import { PrismaService } from "../prisma/prisma.service";
 import { PrivateFilesService } from "../commerce-platform/private-files.service";
 import { UploadedComplaintFile, checkComplaintFiles, safeFileName } from "./complaint-files";
-import { recordComplaintEvent } from "./complaint-events";
+import { lockComplaint, recordComplaintEvent } from "./complaint-events";
 import { assertCan, nextStatus } from "./complaint-state";
 import { storeComplaintFiles } from "./complaint-intake.service";
+
+/** Questions and replies are stamped with the merchant they were for; after a relink the new merchant sees only theirs. */
+const forMerchant = (meta: unknown, merchantId: string) => (meta as { merchantId?: string } | null)?.merchantId === merchantId;
 
 const attachmentView = (a: { id: string; fileName: string; contentType: string; sizeBytes: number }) => ({ id: a.id, fileName: a.fileName, contentType: a.contentType, sizeBytes: a.sizeBytes });
 
@@ -56,9 +59,9 @@ export class ComplaintMerchantService {
       receivedAt: c.receivedAt,
       merchantDueAt: c.merchantDueAt,
       payment: c.paymentIntent,
-      questions: c.events.filter((e) => e.type === ComplaintEventType.MERCHANT_ASKED).map((e) => ({ at: e.createdAt, body: e.body ?? "" })),
+      questions: c.events.filter((e) => e.type === ComplaintEventType.MERCHANT_ASKED && forMerchant(e.meta, merchantId)).map((e) => ({ at: e.createdAt, body: e.body ?? "" })),
       replies: c.events
-        .filter((e) => e.type === ComplaintEventType.MERCHANT_REPLIED)
+        .filter((e) => e.type === ComplaintEventType.MERCHANT_REPLIED && forMerchant(e.meta, merchantId))
         .map((e) => ({ at: e.createdAt, body: e.body ?? "", late: Boolean((e.meta as { late?: boolean } | null)?.late), attachments: e.attachments.map(attachmentView) })),
       buyerAttachments: c.events.flatMap((e) => e.attachments.filter((a) => a.uploadedBy === ComplaintActor.BUYER)).map(attachmentView),
     };
@@ -70,8 +73,13 @@ export class ComplaintMerchantService {
     const stored = await storeComplaintFiles(this.files, checkComplaintFiles(uploads));
     const late = !!complaint.merchantDueAt && now.getTime() > complaint.merchantDueAt.getTime();
     await this.prisma.$transaction(async (tx) => {
-      await tx.complaint.update({ where: { id }, data: { status: nextStatus("merchantReply", complaint.status) } });
-      const event = await recordComplaintEvent(tx, id, { type: ComplaintEventType.MERCHANT_REPLIED, actor: ComplaintActor.MERCHANT, actorId: merchantUserId, body: body.trim(), meta: { late } });
+      // Re-checked under the lock: ops may have answered or relinked since the first read.
+      await lockComplaint(tx, id);
+      const current = await tx.complaint.findUnique({ where: { id }, select: { status: true, merchantId: true } });
+      if (!current || current.merchantId !== merchantId) throw new NotFoundException("Reclamo no encontrado");
+      assertCan("merchantReply", current.status);
+      await tx.complaint.update({ where: { id }, data: { status: nextStatus("merchantReply", current.status) } });
+      const event = await recordComplaintEvent(tx, id, { type: ComplaintEventType.MERCHANT_REPLIED, actor: ComplaintActor.MERCHANT, actorId: merchantUserId, body: body.trim(), meta: { late, merchantId } });
       for (const { storageKey, file } of stored) {
         await tx.complaintAttachment.create({
           data: { complaintId: id, eventId: event.id, uploadedBy: ComplaintActor.MERCHANT, storageKey, fileName: safeFileName(file.originalname), contentType: file.contentType, sizeBytes: file.size },
@@ -83,8 +91,12 @@ export class ComplaintMerchantService {
 
   async attachment(merchantId: string, id: string, attachmentId: string) {
     await this.load(merchantId, id);
-    const attachment = await this.prisma.complaintAttachment.findFirst({ where: { id: attachmentId, complaintId: id, uploadedBy: { in: [ComplaintActor.BUYER, ComplaintActor.MERCHANT] } } });
-    if (!attachment) throw new NotFoundException("Archivo no encontrado");
+    const attachment = await this.prisma.complaintAttachment.findFirst({
+      where: { id: attachmentId, complaintId: id, uploadedBy: { in: [ComplaintActor.BUYER, ComplaintActor.MERCHANT] } },
+      include: { event: { select: { meta: true } } },
+    });
+    const visible = attachment && (attachment.uploadedBy === ComplaintActor.BUYER || forMerchant(attachment.event?.meta, merchantId));
+    if (!attachment || !visible) throw new NotFoundException("Archivo no encontrado");
     return { bytes: await this.files.get(attachment.storageKey), fileName: attachment.fileName, contentType: attachment.contentType };
   }
 }

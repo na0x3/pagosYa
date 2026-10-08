@@ -103,6 +103,13 @@ describe("ComplaintIntakeService.track", () => {
     await expect(service.track("bad.token")).rejects.toThrow("Reclamo no encontrado");
   });
 
+  it("refuses a buyer message that lands after the answer, even when it passed the first check", async () => {
+    const { prisma, tx, service } = setup(null);
+    prisma.complaint.findUnique = jest.fn().mockResolvedValueOnce(stored).mockResolvedValueOnce({ status: ComplaintStatus.ANSWERED });
+    await expect(service.addMessage(createComplaintToken(stored.id, "s"), "una cosa más", [])).rejects.toThrow("Este reclamo ya fue respondido.");
+    expect(tx.complaintEvent.create).not.toHaveBeenCalledWith({ data: expect.objectContaining({ type: ComplaintEventType.BUYER_MESSAGE }) });
+  });
+
   it("refuses a buyer message after the answer", async () => {
     const { prisma, service } = setup(null);
     prisma.complaint.findUnique = jest.fn().mockResolvedValue({ ...stored, status: ComplaintStatus.ANSWERED });

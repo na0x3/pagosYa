@@ -130,21 +130,35 @@ export class ComplaintOpsService {
   link(id: string, data: { paymentIntentId?: string; merchantId?: string }, actor: ComplaintOpsActor) {
     return this.mutate(id, actor, "complaint.linked", async (tx, complaint) => {
       assertCan("link", complaint.status);
-      let merchantId = data.merchantId ?? null;
+      let merchantId: string;
       let paymentIntentId = complaint.paymentIntentId;
       if (data.paymentIntentId) {
         const payment = await tx.paymentIntent.findUnique({ where: { id: data.paymentIntentId }, select: { id: true, merchantId: true } });
         if (!payment) throw new BadRequestException("No existe un pago con esa referencia.");
         paymentIntentId = payment.id;
         merchantId = payment.merchantId;
-      } else if (merchantId) {
-        if (!(await tx.merchant.findUnique({ where: { id: merchantId }, select: { id: true } }))) throw new BadRequestException("Comercio no encontrado.");
+      } else if (data.merchantId) {
+        if (!(await tx.merchant.findUnique({ where: { id: data.merchantId }, select: { id: true } }))) throw new BadRequestException("Comercio no encontrado.");
+        if (complaint.paymentIntentId) {
+          const linked = await tx.paymentIntent.findUnique({ where: { id: complaint.paymentIntentId }, select: { merchantId: true } });
+          if (linked && linked.merchantId !== data.merchantId) throw new BadRequestException("El pago vinculado es de otro comercio.");
+        }
+        merchantId = data.merchantId;
       } else {
         throw new BadRequestException("Indica un pago o un comercio.");
       }
-      await tx.complaint.update({ where: { id }, data: { paymentIntentId, merchantId } });
-      await recordComplaintEvent(tx, id, { type: ComplaintEventType.LINKED, actor: ComplaintActor.OPS, actorId: actor.id, meta: { paymentIntentId, merchantId } });
-      return { paymentIntentId, merchantId };
+      // A different merchant never inherits the previous one's question: the ask is taken back and ops asks again.
+      const reassigned = complaint.merchantId !== null && complaint.merchantId !== merchantId;
+      await tx.complaint.update({
+        where: { id },
+        data: {
+          paymentIntentId,
+          merchantId,
+          ...(reassigned ? { merchantDueAt: null, status: complaint.status === ComplaintStatus.WAITING_MERCHANT ? ComplaintStatus.IN_REVIEW : complaint.status } : {}),
+        },
+      });
+      await recordComplaintEvent(tx, id, { type: ComplaintEventType.LINKED, actor: ComplaintActor.OPS, actorId: actor.id, meta: { paymentIntentId, merchantId, previousMerchantId: complaint.merchantId } });
+      return { paymentIntentId, merchantId, previousMerchantId: complaint.merchantId };
     });
   }
 
@@ -162,7 +176,7 @@ export class ComplaintOpsService {
       if (!complaint.merchantId) throw new ConflictException("Vincula el reclamo a un comercio primero.");
       const merchantDueAt = addBusinessDays(now, MERCHANT_BUSINESS_DAYS);
       await tx.complaint.update({ where: { id }, data: { status: nextStatus("askMerchant", complaint.status), merchantDueAt } });
-      await recordComplaintEvent(tx, id, { type: ComplaintEventType.MERCHANT_ASKED, actor: ComplaintActor.OPS, actorId: actor.id, body: question.trim(), meta: { merchantDueAt: merchantDueAt.toISOString() } });
+      await recordComplaintEvent(tx, id, { type: ComplaintEventType.MERCHANT_ASKED, actor: ComplaintActor.OPS, actorId: actor.id, body: question.trim(), meta: { merchantDueAt: merchantDueAt.toISOString(), merchantId: complaint.merchantId } });
       return { merchantDueAt: merchantDueAt.toISOString() };
     });
     await this.mailer.send("MERCHANT_ASKED", id);

@@ -80,6 +80,23 @@ describe("ComplaintOpsService", () => {
     await expect(setup(base({ status: ComplaintStatus.ANSWERED })).service.answer(ID, { outcome: ComplaintOutcome.UPHELD, answer: "otra vez otra respuesta" }, admin, NOW)).rejects.toThrow("Este reclamo ya fue respondido.");
   });
 
+  it("relinking to another merchant takes the question back, so the new merchant isn't shown it", async () => {
+    const { db, service } = setup(base({ status: ComplaintStatus.WAITING_MERCHANT, merchantDueAt: new Date("2026-10-13T03:59:59.999Z") }));
+    await service.link(ID, { paymentIntentId: "pi_9" }, agent);
+    expect(db.complaint.update).toHaveBeenCalledWith({ where: { id: ID }, data: { paymentIntentId: "pi_9", merchantId: "m_9", merchantDueAt: null, status: ComplaintStatus.IN_REVIEW } });
+  });
+
+  it("refuses a merchant who doesn't own the payment already linked", async () => {
+    const { service } = setup(base());
+    await expect(service.link(ID, { merchantId: "m_2" }, agent)).rejects.toThrow("El pago vinculado es de otro comercio.");
+  });
+
+  it("stamps the merchant asked on the question", async () => {
+    const { db, service } = setup(base());
+    await service.askMerchant(ID, "¿Enviaste el pedido?", agent, NOW);
+    expect(db.complaintEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: ComplaintEventType.MERCHANT_ASKED, meta: expect.objectContaining({ merchantId: "m_1" }) }) });
+  });
+
   it("link takes the merchant from the payment when a payment is given", async () => {
     const { db, service } = setup(base({ merchantId: null, paymentIntentId: null }));
     await service.link(ID, { paymentIntentId: "pi_9" }, agent);
