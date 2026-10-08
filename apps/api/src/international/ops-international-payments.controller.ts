@@ -18,6 +18,11 @@ export class OpsInternationalPaymentsController {
     return this.international.listRequests();
   }
 
+  @Get("availability")
+  availability() {
+    return this.international.availability();
+  }
+
   @Post(":merchantId/approve")
   approve(@Param("merchantId") merchantId: string, @Body() dto: InternationalActionDto, @CurrentOpsUser() actor: SupportActor) {
     return this.international.decide(merchantId, "approve", dto.reason, actor);

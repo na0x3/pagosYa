@@ -2209,6 +2209,10 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
 
   function renderInternationalCard(intl) {
     if (!intl) return "";
+    // Switched off platform-wide (INTERNATIONAL_PAYMENTS_ENABLED): nothing to request until it returns.
+    if (intl.available === false) {
+      return '<section class="panel" role="region" aria-label="Pagos internacionales"><h3>Pagos internacionales</h3><p>Los pagos internacionales no están disponibles por ahora.</p></section>';
+    }
     const fee = `${(intl.feeBps / 100).toFixed(1).replace(".", ",")}%`;
     const states = {
       OFF: `<p>Recibe pagos de compradores fuera de Bolivia con tarjeta y métodos locales. Se cobra en USD con una comisión de ${fee}.</p>
@@ -3713,6 +3717,9 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       document.getElementById("payoutHoldBanner").hidden = !balance.payoutsHeld;
       renderSettlementPanel(settlementSchedule);
       document.getElementById("internationalPaymentsCard").innerHTML = renderInternationalCard(international);
+      // No USD payouts while international payments are off, so the verification form doesn't ask for a USD account.
+      const usdAccountField = document.querySelector('input[name="payoutUsdBankAccount"]')?.closest("div");
+      if (usdAccountField) usdAccountField.hidden = international?.available === false;
       const selectedStore = lastStores.find((store) => store.id === currentStoreId) || null;
       const paymentStore = (selectedStore?.checkoutMode || "payment") === "payment";
 

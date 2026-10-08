@@ -1,4 +1,4 @@
-import configuration, { emailTestRecipient } from "./configuration";
+import configuration, { dlocalChargesAllowed, emailTestRecipient, parseDlocalConfig } from "./configuration";
 
 describe('local ChatGPT plan configuration', () => {
   const keys = ['NODE_ENV', 'YAPI_CHATGPT_PLAN_URL', 'YAPI_CHATGPT_PLAN_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY'];
@@ -343,5 +343,20 @@ describe('database pool size', () => {
     expect(configuration().app.databaseUrl).toContain('connection_limit=10');
     process.env.DATABASE_URL = 'postgresql://localhost:54329/pagosya?connection_limit=5';
     expect(configuration().app.databaseUrl).toContain('connection_limit=5');
+  });
+});
+
+describe('international payments switch', () => {
+  it('is off unless INTERNATIONAL_PAYMENTS_ENABLED is "true"', () => {
+    expect(parseDlocalConfig({}).internationalPaymentsEnabled).toBe(false);
+    expect(parseDlocalConfig({ INTERNATIONAL_PAYMENTS_ENABLED: 'true' }).internationalPaymentsEnabled).toBe(true);
+  });
+
+  it('blocks dLocal charges everywhere while off, and changes nothing else when on', () => {
+    expect(dlocalChargesAllowed({ enabled: true, internationalPaymentsEnabled: false }, 'production')).toBe(false);
+    expect(dlocalChargesAllowed({ enabled: false, internationalPaymentsEnabled: false }, 'development')).toBe(false);
+    expect(dlocalChargesAllowed({ enabled: true, internationalPaymentsEnabled: true }, 'production')).toBe(true);
+    expect(dlocalChargesAllowed({ enabled: false, internationalPaymentsEnabled: true }, 'production')).toBe(false);
+    expect(dlocalChargesAllowed({ enabled: false, internationalPaymentsEnabled: true }, 'development')).toBe(true);
   });
 });

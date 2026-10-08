@@ -603,6 +603,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <h2>Pagos internacionales</h2>
         <p class="muted" style="margin: 2px 0 0">Solicitudes de comercios para cobrar en USD con dLocal. Aprobar o rechazar queda auditado.</p>
       </div>
+      <p id="intlOffNotice" class="muted" hidden>Los pagos internacionales están desactivados en la plataforma. Puedes rechazar solicitudes, pero no aprobarlas.</p>
       <div id="notConnected5" class="empty-state">Conecta para consultar las solicitudes.</div>
       <div id="intlEmpty" class="empty-state" style="display:none">No hay solicitudes pendientes.</div>
       <div class="table-wrap"><table id="intlTable" style="display:none">
@@ -1200,8 +1201,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
   const settlementBadge = (mode) => `<span class="badge badge-${mode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(mode)}</span>`;
 
+  // Switched off platform-wide (INTERNATIONAL_PAYMENTS_ENABLED): ops can still reject, never approve.
+  let intlAvailable = true;
+
   async function refreshInternationalPayments() {
-    lastIntlRequests = await api("/internal/international_payments");
+    const [requests, availability] = await Promise.all([
+      api("/internal/international_payments"),
+      api("/internal/international_payments/availability").catch(() => ({ available: true })),
+    ]);
+    lastIntlRequests = requests;
+    intlAvailable = availability.available !== false;
+    document.getElementById("intlOffNotice").hidden = intlAvailable;
     if (lastIntlRequests.length === 0) {
       intlTableEl.style.display = "none";
       intlDossierEl.style.display = "none";
@@ -1235,7 +1245,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <label for="intlReason">Motivo (queda en la auditoría)</label>
         <textarea id="intlReason" minlength="8" maxlength="500" required placeholder="Verificamos la actividad internacional y la cuenta en USD del comercio."></textarea>
         <div class="panel-row" style="margin-top:8px">
-          <button class="approve" type="submit" value="approve" name="action">Aprobar</button>
+          ${intlAvailable ? '<button class="approve" type="submit" value="approve" name="action">Aprobar</button>' : ""}
           <button class="reject" type="submit" value="reject" name="action">Rechazar</button>
         </div>
       </form>

@@ -13,6 +13,12 @@ export interface BanecoQrConfig {
 
 export interface DlocalConfig {
   enabled: boolean;
+  /**
+   * Product switch for international payments as a whole (INTERNATIONAL_PAYMENTS_ENABLED). Off by default while dLocal
+   * has not confirmed the account: no checkout offer, no new merchant requests or approvals, no dLocal charge, in any
+   * environment. `enabled` still says whether the real dLocal client (vs fixtures) would be used once it is on.
+   */
+  internationalPaymentsEnabled: boolean;
   baseUrl: string;
   login: string;
   transKey: string;
@@ -39,6 +45,7 @@ function nonNegativeNumber(value: string | undefined, fallback: number): number 
 export function parseDlocalConfig(env: NodeJS.ProcessEnv): DlocalConfig {
   return {
     enabled: env.DLOCAL_ENABLED === "true",
+    internationalPaymentsEnabled: env.INTERNATIONAL_PAYMENTS_ENABLED === "true",
     baseUrl: env.DLOCAL_BASE_URL ?? "https://sandbox.dlocal.com",
     login: env.DLOCAL_LOGIN ?? "",
     transKey: env.DLOCAL_TRANS_KEY ?? "",
@@ -198,7 +205,8 @@ function databaseUrlWithPoolSettings(value: string): string {
  * dLocal fixture mode (DLOCAL_ENABLED=false) fakes payments, so international
  * charges may only be offered outside production unless the real client is on.
  */
-export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, environment: string | undefined): boolean {
+export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled" | "internationalPaymentsEnabled">, environment: string | undefined): boolean {
+  if (!dlocal.internationalPaymentsEnabled) return false;
   return dlocal.enabled || environment !== "production";
 }
 

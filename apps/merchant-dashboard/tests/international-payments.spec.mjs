@@ -116,6 +116,21 @@ test("merchant sees separate BOB and USD balances and can request international 
   await expect(card.getByText("Agrega una cuenta en USD")).toBeVisible();
 });
 
+test("while international payments are switched off, the card says so and the USD account field is hidden", async ({ page }) => {
+  await page.route("**/v1/merchants/balance", (route) => route.fulfill({ json: { payableBalance: 0, currency: "BOB", balances: [] } }));
+  await page.route("**/v1/merchants/international_payments", (route) => route.fulfill({ json: {
+    available: false, status: "OFF", settlementMode: "AGGREGATOR", feeBps: 590,
+    fxRateAvailable: true, usdPayoutAccountOnFile: false, note: null,
+  } }));
+
+  await openOverview(page);
+
+  const card = page.getByRole("region", { name: "Pagos internacionales" });
+  await expect(card.getByText("Los pagos internacionales no están disponibles por ahora.")).toBeVisible();
+  await expect(card.getByRole("button")).toHaveCount(0);
+  await expect(page.locator('input[name="payoutUsdBankAccount"]')).toBeHidden();
+});
+
 test("shows a fallback BOB balance card when the merchant has no ledger entries yet", async ({ page }) => {
   await page.route("**/v1/merchants/balance", (route) => route.fulfill({ json: {
     payableBalance: 0, currency: "BOB", balances: [],
