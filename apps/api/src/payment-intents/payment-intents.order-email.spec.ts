@@ -63,6 +63,16 @@ describe("PaymentIntentsService HTML confirmation", () => {
     expect(renderReceipt.mock.calls[0][1].lines[0]).toMatchObject({ paymentLinkId: "link_1", variantId: "v_1", name: "Zapatos", quantity: 1 });
   });
 
+  it("links the complaints page with the payment filled in, in both the text and the HTML receipt", async () => {
+    const renderReceipt = jest.fn().mockResolvedValue({ html: "<html><body><p>Hola</p></body></html>", subject: "Asunto", repairs: [] });
+    const { service, email } = build({ renderReceipt });
+    await (service as any).sendReceiptEmail(intent, "Tienda Ejemplo");
+
+    const sent = email.send.mock.calls[0][0];
+    expect(sent.body).toContain("¿Problemas con tu compra? Presenta un reclamo: https://pagar.bo/reclamos?ref=pi_html_1");
+    expect(sent.html).toMatch(/<p>Hola<\/p><p [^>]*>¿Problemas con tu compra\? <a href="https:\/\/pagar\.bo\/reclamos\?ref=pi_html_1"/);
+  });
+
   it("leaves the text body byte-identical to the one sent without HTML", async () => {
     const withHtml = build({ renderReceipt: jest.fn().mockResolvedValue({ html: "<html></html>", subject: "Asunto", repairs: [] }) });
     await (withHtml.service as any).sendReceiptEmail(intent, "Tienda Ejemplo");
