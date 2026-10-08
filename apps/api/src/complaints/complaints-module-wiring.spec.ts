@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ComplaintsModule } from "./complaints.module";
 import { ComplaintIntakeService } from "./complaint-intake.service";
 import { ComplaintOpsService } from "./complaint-ops.service";
+import { ComplaintMerchantService } from "./complaint-merchant.service";
 
 /** Compiles the real ComplaintsModule so a missing import (ops guard, refunds, settlement admin) fails here, not at boot. */
 describe("ComplaintsModule wiring", () => {
@@ -20,5 +21,6 @@ describe("ComplaintsModule wiring", () => {
 
     expect(moduleRef.get(ComplaintIntakeService)).toBeInstanceOf(ComplaintIntakeService);
     expect(moduleRef.get(ComplaintOpsService)).toBeInstanceOf(ComplaintOpsService);
+    expect(moduleRef.get(ComplaintMerchantService)).toBeInstanceOf(ComplaintMerchantService);
   });
 });

@@ -9,10 +9,12 @@ import { ComplaintIntakeService } from "./complaint-intake.service";
 import { ComplaintOpsService } from "./complaint-ops.service";
 import { PublicComplaintsController } from "./public-complaints.controller";
 import { OpsComplaintsController } from "./ops-complaints.controller";
+import { ComplaintMerchantService } from "./complaint-merchant.service";
+import { DashboardComplaintsController } from "./dashboard-complaints.controller";
 
 @Module({
   imports: [DashboardModule, OpsModule, RefundsModule, SettlementModule],
-  controllers: [PublicComplaintsController, OpsComplaintsController],
-  providers: [PrivateFilesService, ComplaintMailer, ComplaintIntakeService, ComplaintOpsService],
+  controllers: [PublicComplaintsController, OpsComplaintsController, DashboardComplaintsController],
+  providers: [PrivateFilesService, ComplaintMailer, ComplaintIntakeService, ComplaintOpsService, ComplaintMerchantService],
 })
 export class ComplaintsModule {}
