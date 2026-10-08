@@ -14,6 +14,6 @@ import { SettlementAdminService } from "./settlement-admin.service";
   imports: [LedgerModule, AuthModule, DashboardModule, OpsModule],
   controllers: [DashboardSettlementController, OpsSettlementController],
   providers: [SettlementPolicyService, SettlementHoldService, SettlementQueryService, SettlementAdminService],
-  exports: [SettlementPolicyService, SettlementHoldService, SettlementQueryService],
+  exports: [SettlementPolicyService, SettlementHoldService, SettlementQueryService, SettlementAdminService],
 })
 export class SettlementModule {}
