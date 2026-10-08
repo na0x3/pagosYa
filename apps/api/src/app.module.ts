@@ -21,6 +21,7 @@ import { InvoicingModule } from "./invoicing/invoicing.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { OpsModule } from "./ops/ops.module";
 import { LimitsModule } from "./limits/limits.module";
+import { SettlementModule } from "./settlement/settlement.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HealthModule } from "./health/health.module";
 import { PaymentLinksModule } from "./payment-links/payment-links.module";
@@ -94,6 +95,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     PayoutsModule,
     OpsModule,
     LimitsModule,
+    SettlementModule,
     DashboardModule,
     RewardsModule,
     HealthModule,

@@ -31,7 +31,7 @@ export class LimitsAdminService {
     return this.prisma.merchantLevelPolicy.findMany({ orderBy: { level: "asc" } });
   }
 
-  async updatePolicy(level: number, data: { monthlyLimit?: number | null; perPaymentLimit?: number | null; liveEnabled?: boolean }, actor: LimitsAdmin) {
+  async updatePolicy(level: number, data: { monthlyLimit?: number | null; perPaymentLimit?: number | null; liveEnabled?: boolean; payoutDelayDays?: number; reserveBps?: number; reserveDays?: number }, actor: LimitsAdmin) {
     this.assertAdmin(actor);
     return this.prisma.$transaction(async (tx) => {
       const before = await tx.merchantLevelPolicy.findUnique({ where: { level } });

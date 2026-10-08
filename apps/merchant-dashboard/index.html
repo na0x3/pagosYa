@@ -254,6 +254,7 @@
       <section class="panel overview-setup" id="overviewSetup" aria-labelledby="overviewSetupTitle" hidden></section>
       <section class="panel overview-account" aria-labelledby="overviewAccountTitle">
         <h2 id="overviewAccountTitle">Tu cuenta</h2>
+        <p class="payout-hold-banner" id="payoutHoldBanner" role="status" hidden>Tus pagos están en pausa. Escríbenos a soporte.</p>
         <dl class="overview-account-list">
           <div id="balanceCards" style="display:contents"></div>
           <div><dt>Verificación (KYC)</dt><dd><span class="badge" id="kycBadge">—</span></dd></div>
@@ -924,6 +925,12 @@
     </section>
 
     <section class="block" id="payoutsSection" data-dashboard-page="payouts">
+      <div class="panel settlement-panel" id="settlementPanel" hidden>
+        <h2>Cuándo recibes tu dinero</h2>
+        <p id="settlementPolicy"></p>
+        <ul class="settlement-releases" id="settlementReleases"></ul>
+        <p class="muted" id="settlementNextLevel"></p>
+      </div>
       <div class="panel">
         <div class="section-head">
           <h2>Desembolsos</h2>

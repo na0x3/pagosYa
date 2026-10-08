@@ -36,7 +36,7 @@ function harness(options: {
   const webhooks = { enqueueEvent: jest.fn() };
   const config = { get: jest.fn().mockReturnValue({ bobPerUsd: 6.96, intlFeeBps: 590, costBps: 420 }) };
   const shipments = { cancelForOrder: jest.fn() };
-  const service = new RefundsService(prisma, { get: jest.fn() } as any, ledger as any, webhooks as any, config as any, shipments as any);
+  const service = new RefundsService(prisma, { get: jest.fn() } as any, ledger as any, webhooks as any, config as any, shipments as any, { applyRefundDrawdown: jest.fn(async (_tx: unknown, p: { lines: unknown[] }) => p.lines) } as any);
   jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
   jest.spyOn((service as any).logger, "warn").mockImplementation(() => undefined);
   return { service, prisma, ledger, webhooks, shipments };

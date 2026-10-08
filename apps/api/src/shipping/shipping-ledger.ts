@@ -3,7 +3,11 @@ import type { JournalLine } from '../ledger/ledger.service';
 
 const { DEBIT, CREDIT } = LedgerDirection;
 
-/** Posted after the capture journal for platform-account shipments: the shipping line never becomes the merchant's money. */
+/**
+ * Posted after the capture journal for platform-account shipments: the shipping line never becomes the merchant's money.
+ * Not wired yet (shipments Phase 2). When it is, for AGGREGATOR captures it must debit MERCHANT_PENDING (where the
+ * capture net now lands) and reduce that capture's SettlementHold.pendingAmount by the same amount.
+ */
 export function shippingCollectedJournal(p: { merchantId: string; transactionId: string; amount: number }): JournalLine[] {
   return [
     { account: LedgerAccount.MERCHANT_PAYABLE, direction: DEBIT, amount: p.amount, merchantId: p.merchantId, transactionId: p.transactionId },

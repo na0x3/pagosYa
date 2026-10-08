@@ -10,7 +10,7 @@ function noopConfig() {
 const inertLimits = () => ({ assertPerPayment: jest.fn(), reserve: jest.fn().mockResolvedValue({ crossedWarning: false }), settle: jest.fn(), release: jest.fn() });
 
 function makeService() {
-  return new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+  return new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 }
 
 describe("PaymentIntentsService cart option inventory", () => {
@@ -30,7 +30,7 @@ describe("PaymentIntentsService cart option inventory", () => {
       appointment: { updateMany: jest.fn() },
     };
     const prisma = { $transaction: jest.fn((callback) => callback(tx)) };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await service.cancelById("pi_1");
 
@@ -262,7 +262,7 @@ describe("PaymentIntentsService cart option inventory", () => {
 describe("PaymentIntentsService merchant transaction list", () => {
   it("filters transactions by the selected store when requested", async () => {
     const prisma = { paymentIntent: { findMany: jest.fn().mockResolvedValue([]) } };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await service.listForMerchant("merchant_1", "store_1");
 
@@ -280,7 +280,7 @@ describe("PaymentIntentsService merchant transaction list", () => {
 describe("PaymentIntentsService directed charge recipients", () => {
   it("persists a merchant-supplied recipient when creating a direct charge", async () => {
     const prisma = { paymentIntent: { create: jest.fn().mockImplementation(({ data }) => data) } };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await service.createInTransaction(prisma as any, "merchant_1", false, {
       amount: 3500,
@@ -304,7 +304,7 @@ describe("PaymentIntentsService directed charge recipients", () => {
     // the size counted against ASFI limits, so a caller must never be able to seed it.
     const prisma = { paymentIntent: { create: jest.fn().mockImplementation(({ data }) => data) } };
     const limits = inertLimits();
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), limits as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), limits as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await service.createInTransaction(prisma as any, "merchant_1", true, {
       amount: 1000,
@@ -325,7 +325,7 @@ describe("PaymentIntentsService directed charge recipients", () => {
         }),
       },
     };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await expect(service.checkoutRecipient({
       customerName: null,
@@ -345,7 +345,7 @@ describe("PaymentIntentsService directed charge recipients", () => {
 describe("PaymentIntentsService callback admission", () => {
   function callbackHarness(intent: Record<string, unknown>) {
     const prisma = { paymentIntent: { findUnique: jest.fn().mockResolvedValue(intent) } };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
     const applyRailResult = jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: intent });
     return { service, applyRailResult };
   }
@@ -445,7 +445,7 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     const paymentMethods = { findOrCreate: jest.fn().mockResolvedValue({ id: "pm_1", type: "LOCAL_METHOD" }) };
     const config = { get: jest.fn((key: string) => (key === "app.environment" ? env.environment ?? "development" : { ...dlocalCfg, enabled: env.enabled ?? false })) };
     // Reorder to the real constructor signature; config is always last.
-    const service = new PaymentIntentsService(prisma as any, railRegistry as any, paymentMethods as any, {} as any, {} as any, {} as any, {} as any, config as any, inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, railRegistry as any, paymentMethods as any, {} as any, {} as any, {} as any, {} as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
     jest.spyOn(service as any, "assertCartStillAvailable").mockResolvedValue(undefined);
     jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
     jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: {}, railResult: {} });
@@ -565,7 +565,7 @@ describe("PaymentIntentsService.latestAuthorization", () => {
       .mockResolvedValueOnce({ merchantId: "m_1", transactions: [{ railReference: "D-2", status: "PENDING" }] })
       .mockResolvedValueOnce({ merchantId: "m_1", transactions: [] })
       .mockResolvedValueOnce(null);
-    const service = new PaymentIntentsService({ paymentIntent: { findUnique } } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService({ paymentIntent: { findUnique } } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await expect(service.latestAuthorization("pi_1")).resolves.toEqual({ merchantId: "m_1", railReference: "D-2", status: "PENDING" });
     await expect(service.latestAuthorization("pi_1")).resolves.toEqual({ merchantId: "m_1", railReference: null, status: null });
@@ -581,7 +581,7 @@ describe("PaymentIntentsService receipts", () => {
   it("labels a converted intent's cart lines in BOB and appends the original BOB total next to the charged USD total", async () => {
     const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
     const email = { send: jest.fn() };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await (service as any).sendReceiptEmail(
       {
@@ -610,7 +610,7 @@ describe("PaymentIntentsService receipts", () => {
   it("leaves a domestic receipt byte-identical (no original-total suffix, line currency unchanged)", async () => {
     const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
     const email = { send: jest.fn() };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await (service as any).sendReceiptEmail(
       {
@@ -634,7 +634,7 @@ describe("PaymentIntentsService receipt subscription block", () => {
   it("appends the subscription block to the fallback receipt", async () => {
     const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
     const email = { send: jest.fn() };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
     await (service as any).sendReceiptEmail(
       { id: "pi_3", amount: 5000, currency: "BOB", customerEmail: "ana@example.com", customerName: "Ana", metadata: { cart: [] } },
       "Tienda Ejemplo",
@@ -659,7 +659,7 @@ describe("PaymentIntentsService carrier shipments", () => {
       storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", amount: 12500 }), update: jest.fn() },
       shipment: { updateMany: jest.fn(async () => ({ count: 1 })) },
     };
-    const service = new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
     for (const method of ["assertCartStillAvailable", "decrementStockForCart", "recordCartSales", "recordProductStats"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
     jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
 
@@ -677,7 +677,7 @@ describe("PaymentIntentsService carrier shipments", () => {
       shipment: { updateMany: jest.fn(async () => ({ count: 1 })) },
       appointment: { updateMany: jest.fn() },
     };
-    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
 
     await service.cancelById("pi_1");
 
@@ -687,7 +687,7 @@ describe("PaymentIntentsService carrier shipments", () => {
 });
 
 describe("PaymentIntentsService subscription enrollment", () => {
-  function harness(settings: unknown, livemode = true) {
+  function harness(settings: unknown, livemode = true, settlementMode = "T0") {
     const activeKey = productSubscriptionKey("store_1", { paymentLinkId: "p1", variantId: null, extraIds: [] }, "ana@mail.com");
     const metadata = {
       storeId: "store_1",
@@ -697,7 +697,7 @@ describe("PaymentIntentsService subscription enrollment", () => {
     const intentRow = { id: "pi_1", livemode, amount: 14400, currency: "BOB", status: "SUCCEEDED", customerEmail: "ana@mail.com", customerName: "Ana", customerPhone: null, consumerUserId: null, metadata };
     const tx: any = {
       $queryRaw: jest.fn().mockResolvedValue([{ status: "PROCESSING", amount: 14400, customerName: "Ana", customerDocument: null, metadata }]),
-      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m1", name: "Tienda", settlementMode: "T0" }) },
+      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m1", name: "Tienda", settlementMode }) },
       transaction: { create: jest.fn().mockResolvedValue({ id: "tx_1" }) },
       paymentIntent: { update: jest.fn().mockResolvedValue(intentRow) },
       storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", storeId: "store_1", status: "AWAITING_PAYMENT", merchantId: "m1", fulfillmentMethod: "pickup", fulfillmentLocationId: "loc_1", fulfillmentLocationName: "Centro" }), update: jest.fn() },
@@ -716,11 +716,13 @@ describe("PaymentIntentsService subscription enrollment", () => {
       },
     };
     const config = { get: jest.fn((key: string) => key === "app.checkoutOrigin" ? "https://pagar.test" : key === "app.orderTrackingSecret" ? "secret" : { bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
+    const ledger = { buildCaptureJournal: jest.fn().mockReturnValue([]), postJournalEntry: jest.fn(), generateGroupId: jest.fn() };
+    const settlement = { recordCapture: jest.fn() };
     const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any,
-      { buildCaptureJournal: jest.fn().mockReturnValue([]), postJournalEntry: jest.fn(), generateGroupId: jest.fn() } as any,
-      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any);
+      ledger as any,
+      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, settlement as any);
     for (const method of ["decrementStockForCart", "recordCartSales", "recordProductStats", "sendReceiptEmail", "sendDebtPaymentNotification"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
-    return { tx, service, activeKey, pay: () => (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION") };
+    return { tx, service, activeKey, ledger, settlement, pay: () => (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION") };
   }
   const enabledTemplate = { emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: "Pedido {{order}}", body: "Hola {{customer}}" } } } };
 
@@ -742,6 +744,25 @@ describe("PaymentIntentsService subscription enrollment", () => {
     expect(block).toContain("Próxima entrega:");
   });
 
+  it("records an AGGREGATOR capture's settlement hold in the capture transaction, from the journal it posted", async () => {
+    const { tx, pay, ledger, settlement } = harness({}, true, "AGGREGATOR");
+    const lines = [
+      { account: "RAIL_CLEARING", direction: "DEBIT", amount: 14400, merchantId: "m1", transactionId: "tx_1" },
+      { account: "MERCHANT_PENDING", direction: "CREDIT", amount: 14040, merchantId: "m1", transactionId: "tx_1" },
+      { account: "PAGOSYA_FEE_REVENUE", direction: "CREDIT", amount: 360, merchantId: "m1", transactionId: "tx_1" },
+    ];
+    ledger.buildCaptureJournal.mockReturnValue(lines);
+    ledger.generateGroupId.mockReturnValue("grp_1");
+    await pay();
+
+    expect(ledger.buildCaptureJournal).toHaveBeenCalledWith(expect.objectContaining({ merchantId: "m1", transactionId: "tx_1", settlementMode: "AGGREGATOR" }));
+    expect(ledger.postJournalEntry).toHaveBeenCalledWith(tx, "grp_1", lines, "BOB");
+    expect(settlement.recordCapture).toHaveBeenCalledTimes(1);
+    expect(settlement.recordCapture).toHaveBeenCalledWith(tx, { merchantId: "m1", paymentIntentId: "pi_1", transactionId: "tx_1", currency: "BOB", lines });
+    expect(settlement.recordCapture.mock.calls[0][0]).toBe(ledger.postJournalEntry.mock.calls[0][0]);
+    expect(settlement.recordCapture.mock.calls[0][1].lines).toBe(ledger.postJournalEntry.mock.calls[0][2]);
+  });
+
   it("hands the block to the receipt in test mode too", async () => {
     const { service, pay } = harness({}, false);
     await pay();
@@ -753,7 +774,7 @@ describe("PaymentIntentsService.resolveStaleBanecoQr (N1)", () => {
   function setup(status: string | Error, railReference: string | null = "qr_1", cancel?: jest.Mock) {
     const rail: any = { getStatus: status instanceof Error ? jest.fn().mockRejectedValue(status) : jest.fn().mockResolvedValue({ status, railReference: "qr_1", raw: {} }), cancelQr: cancel ?? jest.fn().mockResolvedValue(undefined) };
     const prisma: any = { transaction: { findFirst: jest.fn().mockResolvedValue(railReference ? { railReference } : null) } };
-    const service = new PaymentIntentsService(prisma, { get: jest.fn().mockReturnValue(rail) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any);
+    const service = new PaymentIntentsService(prisma, { get: jest.fn().mockReturnValue(rail) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
     const apply = jest.spyOn(service, "applyCallbackResult").mockResolvedValue({} as any);
     return { service, rail, apply };
   }

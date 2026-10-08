@@ -22,7 +22,7 @@ function build(storeEmail?: unknown, order: object | null = null) {
   config.get.mockImplementation((key: string) => (key === "app.checkoutOrigin" ? "https://pagar.bo" : key === "app.orderTrackingSecret" ? undefined : pricing));
   const service = new PaymentIntentsService(
     prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any,
-    config, inertLimits() as any, { notify: jest.fn() } as any, undefined, storeEmail as any,
+    config, inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any, undefined, storeEmail as any,
   );
   return { service, email };
 }
