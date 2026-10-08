@@ -9,6 +9,7 @@ import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
+import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
 import { nextLevelSentence, nextPayoutLabel, payoutBlockerLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
 import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
 
@@ -389,6 +390,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     signedIn: () => !!sessionToken,
     apiBase: () => apiBaseEl.value,
   });
+  // Reclamos (ASFI sub-project 4): complaints pagosYa sent this merchant for their side.
+  const complaintsPanel = mountComplaintsPanel({ api, signedIn: () => !!sessionToken });
   // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
   const growth = mountGrowthPanel({
     api,
@@ -595,6 +598,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     subscriptions: ["Suscripciones", "Clientes que compran tus productos de forma recurrente."],
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
+    complaints: ["Reclamos", "Los reclamos de compradores sobre tus pagos que pagosYa te pide revisar. Responde antes de la fecha indicada."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
     "connect-ai": ["Conecta tu IA", "Usa Claude, ChatGPT, Claude Code, Cursor o Codex con tu tienda. Tu IA diseña y carga productos; publicar y cobrar siguen siendo tuyos."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
@@ -761,6 +765,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
+    if (nextView === "complaints") complaintsPanel.show();
     if (nextView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") emailStudio?.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
