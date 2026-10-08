@@ -43,6 +43,7 @@ async function openOps(page, { onRequest, settlementBody = settlement(), holds =
     if (path === "/internal/limits/near_limit") return route.fulfill({ json: [] });
     if (path === "/internal/payout_holds") return route.fulfill({ json: holds });
     if (path === "/internal/complaints") return route.fulfill({ json: [] });
+    if (path === "/internal/payout_accounts") return route.fulfill({ json: [] });
     if (path === "/internal/international_payments/availability") return route.fulfill({ json: { available: true } });
     if (path === "/internal/support/merchants/merchant_1") return route.fulfill({ json: dossier });
     if (path === "/internal/merchants/merchant_1/settlement" && method === "GET") return route.fulfill({ json: settlementBody });

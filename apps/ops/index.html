@@ -401,6 +401,9 @@
   .complaint-detail form { display: grid; gap: 8px; margin: 12px 0; }
   .complaint-detail textarea, .complaint-detail input, .complaint-detail select { width: 100%; }
   .complaint-history { padding-left: 18px; }
+  .payout-account { margin: 12px 0; }
+  .payout-account form { display: grid; gap: 6px; margin: 10px 0; }
+  .payout-account label { display: flex; gap: 8px; align-items: center; }
 </style>
 </head>
 <body>
@@ -428,6 +431,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <nav class="ops-nav" aria-label="Secciones de operaciones">
     <a href="#soporte">Soporte de cuentas</a>
     <a href="#reclamos">Reclamos</a>
+    <a href="#cuentas">Cuentas por revisar</a>
     <a href="#revisiones">Revisiones KYC</a>
     <a href="#incidencias">Incidencias</a>
     <a href="#dominios">Dominios</a>
@@ -496,6 +500,16 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           <div id="supportDossier" style="display:none" aria-live="polite"></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="block" id="cuentas">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Cuentas por revisar</h2>
+        <p class="muted">Ningún desembolso sale a una cuenta sin un comprobante aprobado. Un cambio de cuenta lo aprueba solo un administrador y paga 72 horas después.</p>
+      </div>
+      <div id="payoutAccountsList"><div class="empty-state">Conecta para ver las cuentas.</div></div>
     </div>
   </section>
 
@@ -990,7 +1004,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}${s.taxId ? `<br><span class="muted">NIT ${esc(s.taxId)}</span>` : ""}</td>
         <td>${s.legalRepName ? `${esc(s.legalRepName)}${s.legalRepDocumentId ? `<br><span class="muted">${esc(s.legalRepDocumentId)}</span>` : ""}` : `<span class="muted">—</span>`}</td>
-        <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
+        <td>${esc(s.payoutBankAccount)}<br><span class="muted">La cuenta se aprueba en <a href="#cuentas">Cuentas por revisar</a></span></td>
         <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : ""].filter(Boolean).join(","))}">
           <button type="button" class="secondary kyc-view-photos">Ver fotos</button>
           <div class="kyc-photos"></div>
@@ -1545,6 +1559,93 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
   });
 
+  function payoutExpectedName(row) {
+    const e = row.expected || {};
+    if (e.level >= 2) return `Nombre esperado: ${e.legalName ?? "—"} (o ${e.legalRepName ?? "—"} si es unipersonal)`;
+    return `Nombre esperado: ${e.legalName ?? "—"}`;
+  }
+
+  function renderPayoutAccount(row) {
+    const company = (row.expected?.level ?? 0) >= 2;
+    const canApprove = !row.isChange || opsRole === "SUPPORT_ADMIN";
+    return `<article class="panel payout-account" data-account="${esc(row.id)}">
+      <h3>${esc(row.merchant.name)} · ${row.isChange ? "Cambio de cuenta" : "Primera cuenta"}${row.kycPending ? ' <span class="badge">con verificación de identidad</span>' : ""}</h3>
+      <p>${esc(row.bankName ?? row.bankCode)} · ${esc(row.accountNumber)} · ${esc(row.holderName)}</p>
+      <p class="muted">${esc(payoutExpectedName(row))} · enviada ${esc(dateTime(row.createdAt))}</p>
+      <button type="button" class="secondary" data-proof>Ver comprobante</button>
+      ${canApprove ? `<form data-approve>
+        <label><input type="checkbox" name="nameMatches"> El nombre coincide</label>
+        <label><input type="checkbox" name="numberMatches"> El número coincide</label>
+        <label><input type="checkbox" name="bankMatches"> El banco coincide</label>
+        ${company ? `<label>A nombre de <select name="ownerType" aria-label="A nombre de"><option value="COMPANY">Empresa</option><option value="SOLE_PROPRIETOR">Unipersonal (a nombre del dueño)</option></select></label>
+        <label data-reason style="display:none">Por qué está a nombre del dueño <input name="reason"></label>` : ""}
+        <button class="approve" type="submit" disabled>Aprobar cuenta</button>
+      </form>` : '<p class="muted">Solo un administrador puede aprobar un cambio de cuenta.</p>'}
+      <form data-reject>
+        <label>Motivo del rechazo <input name="rejectReason"></label>
+        <button class="reject" type="submit">Rechazar cuenta</button>
+      </form>
+    </article>`;
+  }
+
+  async function payoutAccountAction(id, action, body) {
+    try {
+      await api(`/internal/payout_accounts/${encodeURIComponent(id)}/${action}`, { method: "POST", body: JSON.stringify(body) });
+      errorEl.textContent = "";
+      await loadPayoutAccounts();
+    } catch (error) {
+      errorEl.textContent = error.message;
+    }
+  }
+
+  function bindPayoutAccount(card) {
+    const id = card.dataset.account;
+    card.querySelector("[data-proof]").addEventListener("click", async () => {
+      const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/payout_accounts/${encodeURIComponent(id)}/proof`, { headers: { authorization: "Bearer " + opsTokenEl.value } });
+      if (!res.ok) { errorEl.textContent = "No se pudo abrir el comprobante."; return; }
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    });
+    const approve = card.querySelector("[data-approve]");
+    if (approve) {
+      const button = approve.querySelector("button[type=submit]");
+      const sync = () => {
+        const ticks = ["nameMatches", "numberMatches", "bankMatches"].every((name) => approve.elements[name].checked);
+        const owner = approve.elements.ownerType?.value ?? "PERSON";
+        const reasonWrap = approve.querySelector("[data-reason]");
+        if (reasonWrap) reasonWrap.style.display = owner === "SOLE_PROPRIETOR" ? "" : "none";
+        const reasonOk = owner !== "SOLE_PROPRIETOR" || approve.elements.reason.value.trim().length >= 8;
+        button.disabled = !(ticks && reasonOk);
+      };
+      approve.addEventListener("input", sync);
+      approve.addEventListener("change", sync);
+      approve.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const owner = approve.elements.ownerType?.value ?? "PERSON";
+        payoutAccountAction(id, "approve", {
+          checks: { nameMatches: approve.elements.nameMatches.checked, numberMatches: approve.elements.numberMatches.checked, bankMatches: approve.elements.bankMatches.checked },
+          ownerType: owner,
+          ...(owner === "SOLE_PROPRIETOR" ? { reason: approve.elements.reason.value.trim() } : {}),
+        });
+      });
+    }
+    card.querySelector("[data-reject]").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const reason = event.currentTarget.elements.rejectReason.value.trim();
+      if (reason.length < 8) { errorEl.textContent = "Escribe el motivo del rechazo (mínimo 8 caracteres)."; return; }
+      payoutAccountAction(id, "reject", { reason });
+    });
+  }
+
+  async function loadPayoutAccounts() {
+    const rows = await api("/internal/payout_accounts");
+    const list = document.getElementById("payoutAccountsList");
+    if (!rows.length) { list.innerHTML = '<div class="empty-state">No hay cuentas por revisar.</div>'; return; }
+    list.innerHTML = rows.map(renderPayoutAccount).join("");
+    list.querySelectorAll("[data-account]").forEach(bindPayoutAccount);
+  }
+
   async function refresh() {
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
@@ -1565,7 +1666,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       const me = await api("/internal/ops_users/me");
       whoamiEl.textContent = `Sesión de ${me.name} <${me.email}> · ${me.role}`;
       opsRole = me.role;
-      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits(), loadComplaints().catch(() => null)]);
+      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits(), loadComplaints().catch(() => null), loadPayoutAccounts().catch(() => null)]);
     } catch (err) {
       errorEl.textContent = "No pudimos actualizar la consola: " + err.message;
       whoamiEl.textContent = "";
