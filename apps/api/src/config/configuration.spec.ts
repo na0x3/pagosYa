@@ -311,3 +311,37 @@ describe('local test-email address', () => {
     expect(emailTestRecipient('development', '  ')).toBeNull();
   });
 });
+
+describe('database pool size', () => {
+  const keep = { env: process.env.NODE_ENV, url: process.env.DATABASE_URL, size: process.env.DATABASE_POOL_SIZE };
+  afterEach(() => {
+    for (const [key, value] of [['NODE_ENV', keep.env], ['DATABASE_URL', keep.url], ['DATABASE_POOL_SIZE', keep.size]] as const) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  });
+  beforeEach(() => {
+    process.env.NODE_ENV = 'development';
+    process.env.DATABASE_URL = 'postgresql://localhost:54329/pagosya?schema=public';
+    delete process.env.DATABASE_POOL_SIZE;
+  });
+
+  // The daily payout batch holds one connection for the merchant's settlement lock and reads through another.
+  it('refuses a pool of one connection, set either way', () => {
+    process.env.DATABASE_POOL_SIZE = '1';
+    expect(() => configuration()).toThrow('DATABASE_POOL_SIZE must be an integer from 2 to 100');
+    delete process.env.DATABASE_POOL_SIZE;
+    process.env.DATABASE_URL = 'postgresql://localhost:54329/pagosya?schema=public&connection_limit=1';
+    expect(() => configuration()).toThrow('connection_limit');
+  });
+
+  it('refuses an invalid pool size instead of silently leaving the pool unset', () => {
+    process.env.DATABASE_POOL_SIZE = '0';
+    expect(() => configuration()).toThrow('DATABASE_POOL_SIZE');
+  });
+
+  it('keeps the default of 10 and an explicit limit of 2 or more', () => {
+    expect(configuration().app.databaseUrl).toContain('connection_limit=10');
+    process.env.DATABASE_URL = 'postgresql://localhost:54329/pagosya?connection_limit=5';
+    expect(configuration().app.databaseUrl).toContain('connection_limit=5');
+  });
+});

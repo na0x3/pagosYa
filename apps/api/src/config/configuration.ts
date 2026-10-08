@@ -170,20 +170,28 @@ function parseBoundedInteger(name: string, value: string | undefined, fallback: 
   return parsed;
 }
 
+// The daily payout batch holds one connection for a merchant's settlement lock while it reads through another, so a
+// single-connection pool would wait on itself until pool_timeout.
+const MIN_DATABASE_POOL_SIZE = 2;
+
 function databaseUrlWithPoolSettings(value: string): string {
   if (!value) return value;
+  let url: URL;
   try {
-    const url = new URL(value);
-    if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, 1, 100)));
-    }
-    if (!url.searchParams.has("pool_timeout")) {
-      url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
-    }
-    return url.toString();
+    url = new URL(value);
   } catch {
     return value;
   }
+  const explicitLimit = url.searchParams.get("connection_limit");
+  if (explicitLimit === null) {
+    url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, MIN_DATABASE_POOL_SIZE, 100)));
+  } else if (!(Number.parseInt(explicitLimit, 10) >= MIN_DATABASE_POOL_SIZE)) {
+    throw new Error(`DATABASE_URL connection_limit must be at least ${MIN_DATABASE_POOL_SIZE}`);
+  }
+  if (!url.searchParams.has("pool_timeout")) {
+    url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
+  }
+  return url.toString();
 }
 
 /**
