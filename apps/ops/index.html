@@ -395,6 +395,12 @@
     .support-sidebar { border-right: 0; border-bottom: 3px solid var(--pg-border); padding: 0 0 20px; box-shadow: none; }
     h2 { font-size: 1.6rem; }
   }
+  #complaintsRows tr { cursor: pointer; }
+  tr.is-overdue td { color: #b42318; font-weight: 600; }
+  tr.is-due-soon td:first-child::after { content: " · vence pronto"; color: #b54708; font-weight: 400; }
+  .complaint-detail form { display: grid; gap: 8px; margin: 12px 0; }
+  .complaint-detail textarea, .complaint-detail input, .complaint-detail select { width: 100%; }
+  .complaint-history { padding-left: 18px; }
 </style>
 </head>
 <body>
@@ -421,6 +427,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
   <nav class="ops-nav" aria-label="Secciones de operaciones">
     <a href="#soporte">Soporte de cuentas</a>
+    <a href="#reclamos">Reclamos</a>
     <a href="#revisiones">Revisiones KYC</a>
     <a href="#incidencias">Incidencias</a>
     <a href="#dominios">Dominios</a>
@@ -489,6 +496,24 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           <div id="supportDossier" style="display:none" aria-live="polite"></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="block" id="reclamos">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Reclamos de compradores</h2>
+        <p class="muted">Cada reclamo vence 5 días hábiles después de recibido. Los vencidos aparecen en rojo.</p>
+      </div>
+      <div class="panel-row complaints-filters">
+        <div><label for="complaintsStatus">Estado</label><select id="complaintsStatus"><option value="">Abiertos</option><option value="RECEIVED">Recibido</option><option value="IN_REVIEW">En revisión</option><option value="WAITING_MERCHANT">Esperando al comercio</option><option value="ANSWERED">Respondido</option></select></div>
+        <div><label for="complaintsSearch">Buscar</label><input id="complaintsSearch" placeholder="Número, correo o comercio"></div>
+        <div><label for="complaintsFrom">Desde</label><input type="date" id="complaintsFrom"></div>
+        <div><label for="complaintsTo">Hasta</label><input type="date" id="complaintsTo"></div>
+        <div><button type="button" id="complaintsExport">Exportar CSV</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Número</th><th>Vence</th><th>Estado</th><th>Comprador</th><th>Comercio</th><th>Asignado</th></tr></thead><tbody id="complaintsRows"></tbody></table></div>
+      <div id="complaintDetail" class="panel complaint-detail" hidden aria-live="polite"></div>
     </div>
   </section>
 
@@ -1394,6 +1419,108 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     }
   });
 
+  let opsRole = null;
+  const COMPLAINT_STATUS = { RECEIVED: "Recibido", IN_REVIEW: "En revisión", WAITING_MERCHANT: "Esperando al comercio", ANSWERED: "Respondido" };
+  const COMPLAINT_CATEGORY = { NOT_DELIVERED: "Pedido no recibido", NOT_AS_DESCRIBED: "Producto distinto o dañado", UNRECOGNIZED_CHARGE: "Cobro no reconocido", DUPLICATE_CHARGE: "Cobro duplicado", REFUND_NOT_RECEIVED: "Reembolso no recibido", OTHER: "Otro" };
+  const COMPLAINT_OUTCOME = { UPHELD: "A favor del comprador", PARTIALLY_UPHELD: "Parcialmente a favor", NOT_UPHELD: "No a favor" };
+  const COMPLAINT_EVENT = { RECEIVED: "Reclamo recibido", EMAIL_CONFIRMED: "Correo confirmado", BUYER_MESSAGE: "Mensaje del comprador", TAKEN: "Tomado", LINKED: "Vinculado", NOTE: "Nota interna", MERCHANT_ASKED: "Consulta al comercio", MERCHANT_REPLIED: "Respuesta del comercio", EXTENDED: "Plazo extendido", ANSWERED: "Respuesta enviada", REFUNDED: "Reembolso", PAYOUTS_PAUSED: "Desembolsos en pausa", EMAIL_SENT: "Correo enviado", EMAIL_FAILED: "Correo no entregado" };
+  const complaintsRowsEl = document.getElementById("complaintsRows");
+  const complaintDetailEl = document.getElementById("complaintDetail");
+
+  async function loadComplaints() {
+    const params = new URLSearchParams();
+    const status = document.getElementById("complaintsStatus").value;
+    const q = document.getElementById("complaintsSearch").value.trim();
+    if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    const rows = await api(`/internal/complaints${params.size ? `?${params}` : ""}`);
+    complaintsRowsEl.innerHTML = rows.map((r) => `
+      <tr class="${r.overdue ? "is-overdue" : r.dueSoon ? "is-due-soon" : ""}" data-complaint="${esc(r.id)}">
+        <td>${esc(r.number)}${r.test ? ' <span class="badge">prueba</span>' : ""}${r.emailFailed ? ' <span class="badge">correo no entregado</span>' : ""}</td>
+        <td>${esc(dateTime(r.dueAt))}</td>
+        <td>${esc(COMPLAINT_STATUS[r.status])}</td>
+        <td>${esc(r.buyerName)}<br><small>${esc(r.buyerEmail)}</small></td>
+        <td>${esc(r.merchant?.name ?? "—")}</td>
+        <td>${esc(r.assignedTo?.name ?? "—")}</td>
+      </tr>`).join("") || `<tr><td colspan="6">No hay reclamos.</td></tr>`;
+    complaintsRowsEl.querySelectorAll("[data-complaint]").forEach((tr) => tr.addEventListener("click", () => openComplaint(tr.dataset.complaint)));
+  }
+
+  async function complaintAction(id, path, body) {
+    try {
+      const detail = await api(`/internal/complaints/${encodeURIComponent(id)}/${path}`, { method: "POST", body: JSON.stringify(body ?? {}) });
+      renderComplaint(detail);
+      await loadComplaints();
+    } catch (error) {
+      errorEl.textContent = error.message;
+    }
+  }
+
+  async function openComplaintFile(id, attachmentId) {
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`, { headers: { authorization: "Bearer " + opsTokenEl.value } });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  function renderComplaint(c) {
+    const admin = opsRole === "SUPPORT_ADMIN";
+    const open = c.status !== "ANSWERED";
+    complaintDetailEl.hidden = false;
+    complaintDetailEl.innerHTML = `
+      <h3>Reclamo ${esc(c.number)} · ${esc(COMPLAINT_STATUS[c.status])}</h3>
+      <p>Vence ${esc(dateTime(c.dueAt))}${c.extendedAt ? ` (extendido: ${esc(c.extensionReason)})` : ""}</p>
+      <p><strong>${esc(c.buyerName)}</strong> · ${esc(c.buyerEmail)}${c.buyerPhone ? ` · ${esc(c.buyerPhone)}` : ""}</p>
+      ${c.sameEmailCount ? `<p class="badge">Otro reclamo del mismo correo (${esc(c.sameEmailCount)})</p>` : ""}
+      <p>${esc(COMPLAINT_CATEGORY[c.category])} · pide: ${esc(c.request)}</p>
+      <p>${c.payment ? `Pago ${esc(c.payment.id)} · ${esc(money(c.payment.amount, c.payment.currency))} · ${esc(c.payment.status)}${c.payment.livemode ? "" : " · prueba"}` : `Sin pago vinculado (referencia escrita: ${esc(c.referenceGiven ?? "—")}, tienda: ${esc(c.storeNameGiven ?? "—")})`}</p>
+      <p>${c.merchant ? `Comercio ${esc(c.merchant.name)}${c.merchant.payoutHeldAt ? " · desembolsos en pausa" : ""}` : "Sin comercio vinculado"}</p>
+      <h4>Historial</h4>
+      <ol class="complaint-history">${c.events.map((e) => `<li><time>${esc(dateTime(e.createdAt))}</time> · ${esc(COMPLAINT_EVENT[e.type] ?? e.type)}${e.body ? `<br>${esc(e.body)}` : ""}${e.attachments.map((a) => ` <button type="button" class="ghost" data-file="${esc(a.id)}">${esc(a.fileName)}</button>`).join("")}</li>`).join("")}</ol>
+      ${open ? `<button type="button" id="complaintTake">Tomar</button>` : ""}
+      ${open ? `<form id="complaintLinkForm"><label>Vincular pago<input id="complaintLinkPayment" placeholder="pi_…"></label><button type="submit">Vincular</button></form>` : ""}
+      <form id="complaintNoteForm"><label>Nota interna<textarea id="complaintNote" rows="2"></textarea></label><button type="submit">Guardar nota</button></form>
+      ${c.status === "IN_REVIEW" && c.merchant ? `<form id="complaintAskForm"><label>Consulta al comercio<textarea id="complaintQuestion" rows="2"></textarea></label><button type="submit" id="complaintAskMerchant">Consultar al comercio</button></form>` : ""}
+      ${c.merchant && !c.merchant.payoutHeldAt ? `<form id="complaintPauseForm"><label>Motivo de la pausa<input id="complaintPauseReason"></label><button type="submit" id="complaintPause">Pausar desembolsos</button></form>` : ""}
+      ${admin && open && !c.extendedAt ? `<form id="complaintExtendForm"><label>Motivo de la extensión<input id="complaintExtendReason"></label><button type="submit" id="complaintExtend">Extender plazo (5 días hábiles)</button></form>` : ""}
+      ${admin && c.payment ? `<form id="complaintRefundForm"><label>Monto a reembolsar (Bs, vacío = total)<input id="complaintRefundAmount" inputmode="decimal"></label><button type="submit" id="complaintRefund">Reembolsar</button></form>` : ""}
+      ${admin && (c.status === "IN_REVIEW" || c.status === "WAITING_MERCHANT") ? `<form id="complaintAnswerForm"><label>Resultado<select id="complaintOutcome"><option value="">Elige</option>${Object.entries(COMPLAINT_OUTCOME).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</select></label><label>Respuesta al comprador<textarea id="complaintAnswer" rows="5"></textarea></label><button type="submit" id="complaintAnswerSend">Enviar respuesta final</button></form>` : ""}
+      ${c.status === "ANSWERED" ? `<p><strong>${esc(COMPLAINT_OUTCOME[c.outcome] ?? "")}</strong></p><p>${esc(c.answer)}</p>` : ""}`;
+    const on = (id, handler) => { const el = complaintDetailEl.querySelector(id); if (el) el.addEventListener(el.tagName === "FORM" ? "submit" : "click", (event) => { event.preventDefault(); handler(); }); };
+    on("#complaintTake", () => complaintAction(c.id, "take"));
+    on("#complaintLinkForm", () => complaintAction(c.id, "link", { paymentIntentId: complaintDetailEl.querySelector("#complaintLinkPayment").value.trim() }));
+    on("#complaintNoteForm", () => complaintAction(c.id, "notes", { body: complaintDetailEl.querySelector("#complaintNote").value }));
+    on("#complaintAskForm", () => complaintAction(c.id, "ask_merchant", { question: complaintDetailEl.querySelector("#complaintQuestion").value }));
+    on("#complaintPauseForm", () => complaintAction(c.id, "pause_payouts", { reason: complaintDetailEl.querySelector("#complaintPauseReason").value }));
+    on("#complaintExtendForm", () => complaintAction(c.id, "extend", { reason: complaintDetailEl.querySelector("#complaintExtendReason").value }));
+    on("#complaintRefundForm", () => {
+      const raw = complaintDetailEl.querySelector("#complaintRefundAmount").value.replace(",", ".").trim();
+      complaintAction(c.id, "refund", raw ? { amount: Math.round(Number(raw) * 100) } : {});
+    });
+    on("#complaintAnswerForm", () => complaintAction(c.id, "answer", { outcome: complaintDetailEl.querySelector("#complaintOutcome").value, answer: complaintDetailEl.querySelector("#complaintAnswer").value }));
+    complaintDetailEl.querySelectorAll("[data-file]").forEach((button) => button.addEventListener("click", () => openComplaintFile(c.id, button.dataset.file)));
+  }
+
+  async function openComplaint(id) {
+    renderComplaint(await api(`/internal/complaints/${encodeURIComponent(id)}`));
+  }
+
+  document.getElementById("complaintsStatus").addEventListener("change", loadComplaints);
+  document.getElementById("complaintsSearch").addEventListener("input", () => { clearTimeout(window.__complaintsSearchTimer); window.__complaintsSearchTimer = setTimeout(loadComplaints, 250); });
+  document.getElementById("complaintsExport").addEventListener("click", async () => {
+    const from = document.getElementById("complaintsFrom").value;
+    const to = document.getElementById("complaintsTo").value;
+    if (!from || !to) return;
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/export.csv?from=${from}&to=${to}`, { headers: { authorization: "Bearer " + opsTokenEl.value } });
+    if (!res.ok) return;
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await res.blob());
+    link.download = `reclamos-${from}-${to}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+  });
+
   async function refresh() {
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
@@ -1413,7 +1540,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     try {
       const me = await api("/internal/ops_users/me");
       whoamiEl.textContent = `Sesión de ${me.name} <${me.email}> · ${me.role}`;
-      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits()]);
+      opsRole = me.role;
+      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits(), loadComplaints().catch(() => null)]);
     } catch (err) {
       errorEl.textContent = "No pudimos actualizar la consola: " + err.message;
       whoamiEl.textContent = "";
