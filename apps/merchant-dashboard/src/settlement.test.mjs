@@ -36,3 +36,10 @@ test("explains why a balance is not paid out, without the ops hold reason", () =
   assert.equal(payoutBlockerLabel("in_flight", "BOB"), "Hay un desembolso en camino; el siguiente sale cuando llegue.");
   for (const code of ["inactive", "facilitator", "kyc", null, undefined]) assert.equal(payoutBlockerLabel(code, "BOB"), "");
 });
+
+test("explains the payout account steps", () => {
+  assert.equal(payoutBlockerLabel("account_missing", "BOB"), "Agrega tu cuenta bancaria con un comprobante para recibir desembolsos.");
+  assert.equal(payoutBlockerLabel("account_review", "BOB"), "Estamos revisando tu cuenta bancaria.");
+  assert.equal(payoutBlockerLabel("account_waiting", "BOB", { payableFrom: "2026-10-11T19:00:00.000Z" }), "Tu nueva cuenta recibe desembolsos desde el 11/10/2026 15:00.");
+  assert.equal(payoutBlockerLabel("account_waiting", "BOB"), "Tu nueva cuenta recibe desembolsos en unos días.");
+});

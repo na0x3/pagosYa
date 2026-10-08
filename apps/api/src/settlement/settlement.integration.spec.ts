@@ -183,6 +183,8 @@ harness.describeDb("settlement holds (real Postgres)", () => {
     const m = await merchant("replicas");
     await db.merchant.update({ where: { id: m.id }, data: { status: MerchantStatus.ACTIVE } });
     await db.merchantKycSubmission.create({ data: { merchantId: m.id, legalName: "Replicas SRL", payoutBankAccount: "BNB 123", status: KycStatus.APPROVED } });
+    // Payouts go only to an account approved against proof (payout account ownership check).
+    await db.payoutAccount.create({ data: { merchantId: m.id, bankCode: "BNB", accountNumber: "4012345678", holderName: "Replicas SRL", proofStorageKey: "3f2504e0-4f89-11d3-9a0c-0305e82c3301", proofFileName: "c.pdf", proofContentType: "application/pdf", status: "APPROVED", reviewedAt: new Date(), payableFrom: new Date(0) } });
     await capture(m.id, 10_000, new Date("2026-10-01T15:00:00Z")); // net 9750 -> 8775 available on Oct 8
     const payouts = new PayoutsService(db as any, { needsMerchantAcceptance: jest.fn().mockResolvedValue(false) } as any);
     const job = () => new PayoutScheduleJob(db as any, holds, payouts).run(new Date("2026-10-08T14:00:00Z"));
@@ -191,7 +193,8 @@ harness.describeDb("settlement holds (real Postgres)", () => {
 
     const created = await db.payout.findMany({ where: { merchantId: m.id } });
     expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({ amount: 8_775, currency: "BOB", bankAccount: "BNB 123", status: "PENDING" });
+    expect(created[0]).toMatchObject({ amount: 8_775, currency: "BOB", bankAccount: "Banco Nacional de Bolivia 4012345678 — Replicas SRL", status: "PENDING" });
+    expect(created[0].payoutAccountId).toBeTruthy();
     expect(await payouts.payoutBlocker(m.id, "BOB")).toBe("in_flight");
 
     await db.merchant.update({ where: { id: m.id }, data: { payoutHeldAt: new Date(), payoutHoldReason: "Revisión de reclamos" } });
