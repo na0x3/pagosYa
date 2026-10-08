@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing";
 import { ConfigModule } from "@nestjs/config";
+import { ThrottlerModule } from "@nestjs/throttler";
 import configuration from "../config/configuration";
 import { PrismaModule } from "../prisma/prisma.module";
 import { PrismaService } from "../prisma/prisma.service";
@@ -21,11 +22,13 @@ import { InboxService } from "./inbox.service";
  * `imports`, which a test that only asserts "InboxModule compiles" would not
  * catch. PrismaService is overridden because a live datasource is not needed
  * to prove wiring and must not be dialled from a unit test.
+ * ThrottlerModule stands in for the global one AppModule registers, which the
+ * guards these modules provide (MerchantThrottlerGuard) need to resolve.
  */
 describe("InboxModule wiring", () => {
   it("StoresModule satisfies StoreCheckoutService's optional inbox dependency", async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), PrismaModule, StoresModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), ThrottlerModule.forRoot([]), PrismaModule, StoresModule],
     })
       .overrideProvider(PrismaService)
       .useValue({})
@@ -37,7 +40,7 @@ describe("InboxModule wiring", () => {
 
   it("PaymentIntentsModule satisfies PaymentIntentsService's optional inbox dependency", async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), PrismaModule, PaymentIntentsModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), ThrottlerModule.forRoot([]), PrismaModule, PaymentIntentsModule],
     })
       .overrideProvider(PrismaService)
       .useValue({})
