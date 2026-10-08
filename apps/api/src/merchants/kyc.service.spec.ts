@@ -93,6 +93,18 @@ describe("KycService.submit", () => {
     expect(prisma.merchantKycSubmission.create).not.toHaveBeenCalled();
   });
 
+  it("refuses to reuse an approved personal account for a business level", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.ACTIVE, level: 1 });
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue(null);
+    prisma.payoutAccount.findFirst.mockResolvedValue({ ...waitingAccount, status: "APPROVED", ownerType: "PERSON" });
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any);
+    await expect(service.submit("m_1", { ...submitDto, targetLevel: 2 } as any)).rejects.toThrow("Para el nivel Negocio necesitamos una cuenta a nombre de la empresa");
+    prisma.payoutAccount.findFirst.mockResolvedValue({ ...waitingAccount, status: "APPROVED", ownerType: "COMPANY" });
+    prisma.merchantKycSubmission.create.mockResolvedValue({ id: "kyc_2" });
+    await expect(service.submit("m_1", { ...submitDto, targetLevel: 2 } as any)).resolves.toEqual({ id: "kyc_2" });
+  });
+
   it("links a waiting account to the new submission, and leaves an approved one alone", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.PENDING, level: 0 });
@@ -102,7 +114,7 @@ describe("KycService.submit", () => {
     await service.submit("m_1", submitDto);
     expect(prisma.payoutAccount.update).toHaveBeenCalledWith({ where: { id: "pa_1" }, data: { kycSubmissionId: "kyc_9" } });
     prisma.payoutAccount.update.mockClear();
-    prisma.payoutAccount.findFirst.mockResolvedValue({ ...waitingAccount, status: "APPROVED" });
+    prisma.payoutAccount.findFirst.mockResolvedValue({ ...waitingAccount, status: "APPROVED", ownerType: "COMPANY" });
     await service.submit("m_1", submitDto);
     expect(prisma.payoutAccount.update).not.toHaveBeenCalled();
   });
@@ -265,7 +277,7 @@ describe("KycService.review", () => {
     const accounts = accountsOk();
     const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accounts as any);
     await service.review("kyc_1", { decision: KycStatus.REJECTED, note: "Fotos ilegibles" }, actor);
-    expect(accounts.rejectLinkedToSubmission).toHaveBeenCalledWith(prisma, "kyc_1", "Fotos ilegibles");
+    expect(accounts.rejectLinkedToSubmission).toHaveBeenCalledWith(prisma, { submissionId: "kyc_1", merchantId: "m_1", note: "Fotos ilegibles", actor });
     accounts.rejectLinkedToSubmission.mockClear();
     prisma.merchantKycSubmission.findUnique.mockResolvedValue({ id: "kyc_1", merchantId: "m_1", status: KycStatus.PENDING_REVIEW, targetLevel: 1 });
     await service.review("kyc_1", { decision: KycStatus.APPROVED, note: "ok" }, actor);

@@ -266,7 +266,7 @@ describe("PayoutsService multi-currency", () => {
     ]);
   });
 
-  it("creates separate BOB and USD payouts to the matching bank accounts", async () => {
+  it("pays the BOB balance to its approved account and holds the USD one until dollar accounts are checked", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
     prisma.payout.findFirst.mockResolvedValue(null);
@@ -280,8 +280,8 @@ describe("PayoutsService multi-currency", () => {
     await service.createDuePayouts();
 
     expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ amount: 5000, currency: "BOB", bankAccount: "Banco Nacional de Bolivia 4012345678 — Ana Pérez", payoutAccountId: "pa_1" }) });
-    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ amount: 900, currency: "USD", bankAccount: "US 987" }) });
-    expect(prisma.payout.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ merchantId: "m_1", currency: "USD" }) });
+    expect(prisma.payout.create).toHaveBeenCalledTimes(1);
+    expect(prisma.payout.create).not.toHaveBeenCalledWith({ data: expect.objectContaining({ currency: "USD" }) });
   });
 
   it("holds a USD balance when no USD bank account is on file", async () => {
@@ -382,5 +382,21 @@ describe("PayoutsService payout account", () => {
     const prisma = ready();
     await new PayoutsService(prisma as any, termsAccepted() as any).createDuePayouts();
     expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ payoutAccountId: "pa_1", bankAccount: "Banco Nacional de Bolivia 4012345678 — Ana Pérez" }) });
+  });
+});
+
+describe("PayoutsService dollar payouts", () => {
+  it("never pays a dollar balance until dollar accounts are checked like bolivianos accounts", async () => {
+    const prisma = makeFakePrisma();
+    const merchant = { id: "m_1", settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE };
+    prisma.merchant.findMany.mockResolvedValue([merchant]);
+    prisma.merchant.findUnique.mockResolvedValue(merchant);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "USD", direction: LedgerDirection.CREDIT, _sum: { amount: 900 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutUsdBankAccount: "US 987" });
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    await expect(service.payoutBlocker("m_1", "USD")).resolves.toBe("no_account");
+    await service.createDuePayouts();
+    expect(prisma.payout.create).not.toHaveBeenCalled();
   });
 });

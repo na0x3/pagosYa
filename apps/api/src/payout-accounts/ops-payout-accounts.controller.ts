@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, StreamableFile, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Post, StreamableFile, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { OpsAuthGuard } from "../ops/guards/ops-auth.guard";
 import { CurrentOpsUser } from "../ops/decorators/current-ops-user.decorator";
@@ -15,6 +15,8 @@ export class OpsPayoutAccountsController {
   @Get() queue() { return this.accounts.pendingQueue(); }
 
   @Get(":id/proof")
+  @Header("Cache-Control", "no-store")
+  @Header("X-Content-Type-Options", "nosniff")
   async proof(@Param("id") id: string, @CurrentOpsUser() actor: PayoutAccountActor) {
     const file = await this.accounts.proof(id, actor);
     return new StreamableFile(file.bytes, { type: file.contentType, disposition: `inline; filename="${file.fileName}"` });

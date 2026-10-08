@@ -90,8 +90,8 @@ export class PayoutsService {
       bankAccount = accountSnapshot(account);
       payoutAccountId = account.id;
     } else {
-      bankAccount = currency === "USD" ? approvedKyc.payoutUsdBankAccount : null;
-      if (!bankAccount) return { blocker: "no_account" };
+      // Dollar accounts are not yet checked against proof, so no dollar payout leaves until they are.
+      return { blocker: "no_account" };
     }
     // Until it succeeds a payout's amount is still in MERCHANT_PAYABLE, so a second one would pay it twice.
     if (await db.payout.findFirst({ where: inFlightPayoutWhere(merchantId, currency) })) return { blocker: "in_flight" };

@@ -33,3 +33,15 @@ export function validateApproval(input: { isChange: boolean; actorRole: OpsRole;
 export function payableFromFor(isChange: boolean, approvedAt: Date): Date {
   return new Date(approvedAt.getTime() + (isChange ? CHANGE_WAIT_MS : 0));
 }
+
+/** Masks the account number (any run of 6+ digits) to its last 4, keeping the bank and holder readable. */
+export function maskAccountText(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.replace(/\d{6,}/g, (digits) => `····${digits.slice(-4)}`);
+}
+
+/** Whether an approved account's owner type fits a verification level (level 1: the person; 2–3: the company or its owner). */
+export function ownerFitsLevel(ownerType: PayoutAccountOwner | null | undefined, level: number): boolean {
+  if (!ownerType) return false;
+  return level <= 1 ? ownerType === PayoutAccountOwner.PERSON : ownerType !== PayoutAccountOwner.PERSON;
+}

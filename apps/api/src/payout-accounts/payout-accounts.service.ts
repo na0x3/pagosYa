@@ -46,7 +46,7 @@ export class PayoutAccountsService {
       // The same lock the payout batch takes: a change and a batch never interleave, and two changes can't both pass.
       await lockMerchantSettlement(tx, merchantId);
       if (await tx.payoutAccount.findFirst({ where: { merchantId, currency: CURRENCY, status: PayoutAccountStatus.PENDING_REVIEW } })) {
-        throw new ConflictException("Ya tienes un cambio de cuenta en revisión.");
+        throw new ConflictException("Ya tienes una cuenta en revisión.");
       }
       const approved = await tx.payoutAccount.findFirst({ where: { merchantId, currency: CURRENCY, status: PayoutAccountStatus.APPROVED } });
       return tx.payoutAccount.create({
@@ -89,7 +89,7 @@ export class PayoutAccountsService {
     return out;
   }
 
-  private async decide(id: string, actor: PayoutAccountActor, action: string, work: (tx: Prisma.TransactionClient, account: AccountRow) => Promise<{ data: Prisma.PayoutAccountUpdateInput; metadata: Record<string, unknown> }>) {
+  private async decide(id: string, actor: PayoutAccountActor, action: string, work: (tx: Prisma.TransactionClient, account: AccountRow) => Promise<{ data: Prisma.PayoutAccountUncheckedUpdateManyInput; metadata: Record<string, unknown> }>) {
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.payoutAccount.findUnique({ where: { id } });
       if (!account) throw new NotFoundException("Cuenta no encontrada");
@@ -97,17 +97,23 @@ export class PayoutAccountsService {
       const current = await tx.payoutAccount.findUnique({ where: { id } });
       if (!current || current.status !== PayoutAccountStatus.PENDING_REVIEW) throw new ConflictException("Esta cuenta ya fue revisada.");
       const { data, metadata } = await work(tx, current);
-      const updated = await tx.payoutAccount.update({ where: { id }, data });
+      // Conditional on still waiting: a decision that landed first (e.g. the identity was rejected) is never overwritten.
+      const { count } = await tx.payoutAccount.updateMany({ where: { id, status: PayoutAccountStatus.PENDING_REVIEW }, data });
+      if (count === 0) throw new ConflictException("Esta cuenta ya fue revisada.");
       await this.auditLog.record(tx, { actorType: "OPS_USER", actorId: actor.id, actorLabel: label(actor), action, targetType: "PayoutAccount", targetId: id, metadata: { merchantId: current.merchantId, isChange: current.isChange, ...metadata } });
-      return updated;
+      return { ...current, ...data } as AccountRow;
     });
   }
 
   async approve(id: string, dto: ApprovePayoutAccountDto, actor: PayoutAccountActor, now = new Date()) {
     const updated = await this.decide(id, actor, "payout_account.approved", async (tx, account) => {
       const merchant = await tx.merchant.findUniqueOrThrow({ where: { id: account.merchantId } });
-      const submission = account.kycSubmissionId ? await tx.merchantKycSubmission.findFirst({ where: { id: account.kycSubmissionId } }) : null;
-      const level = Math.max(merchant.level, submission?.targetLevel ?? 0);
+      // The proof is compared with an identity: the one sent with this account, else the merchant's approved one.
+      const submission = account.kycSubmissionId
+        ? await tx.merchantKycSubmission.findFirst({ where: { id: account.kycSubmissionId } })
+        : await tx.merchantKycSubmission.findFirst({ where: { merchantId: account.merchantId, status: "APPROVED" }, orderBy: { createdAt: "desc" } });
+      if (!submission || submission.status === "REJECTED") throw new ConflictException("Esta cuenta no tiene una verificación de identidad para comparar.");
+      const level = Math.max(merchant.level, submission.targetLevel ?? 0);
       validateApproval({ isChange: account.isChange, actorRole: actor.role, level, checks: dto.checks, ownerType: dto.ownerType, reason: dto.reason });
       const payableFrom = payableFromFor(account.isChange, now);
       await tx.payoutAccount.updateMany({
@@ -115,7 +121,7 @@ export class PayoutAccountsService {
         data: { status: PayoutAccountStatus.REPLACED },
       });
       return {
-        data: { status: PayoutAccountStatus.APPROVED, ownerType: dto.ownerType, checks: { nameMatches: dto.checks.nameMatches, numberMatches: dto.checks.numberMatches, bankMatches: dto.checks.bankMatches }, reviewNote: dto.reason?.trim() || null, reviewedAt: now, reviewedByOpsUser: { connect: { id: actor.id } }, reviewedByLabel: label(actor), payableFrom },
+        data: { status: PayoutAccountStatus.APPROVED, ownerType: dto.ownerType, checks: { nameMatches: dto.checks.nameMatches, numberMatches: dto.checks.numberMatches, bankMatches: dto.checks.bankMatches }, reviewNote: dto.reason?.trim() || null, reviewedAt: now, reviewedByOpsUserId: actor.id, reviewedByLabel: label(actor), payableFrom },
         metadata: { checks: dto.checks, ownerType: dto.ownerType, reason: dto.reason ?? null, payableFrom: payableFrom.toISOString() },
       };
     });
@@ -126,7 +132,7 @@ export class PayoutAccountsService {
 
   async reject(id: string, reason: string, actor: PayoutAccountActor) {
     const updated = await this.decide(id, actor, "payout_account.rejected", async () => ({
-      data: { status: PayoutAccountStatus.REJECTED, reviewNote: reason.trim(), reviewedAt: new Date(), reviewedByOpsUser: { connect: { id: actor.id } }, reviewedByLabel: label(actor) },
+      data: { status: PayoutAccountStatus.REJECTED, reviewNote: reason.trim(), reviewedAt: new Date(), reviewedByOpsUserId: actor.id, reviewedByLabel: label(actor) },
       metadata: { reason: reason.trim() },
     }));
     await this.notify(updated.merchantId, "No aprobamos tu cuenta para desembolsos",
@@ -134,12 +140,20 @@ export class PayoutAccountsService {
     return updated;
   }
 
-  /** Called inside the identity review's transaction when ops reject the identity. */
-  async rejectLinkedToSubmission(tx: Prisma.TransactionClient, submissionId: string, note: string) {
-    await tx.payoutAccount.updateMany({
-      where: { kycSubmissionId: submissionId, status: PayoutAccountStatus.PENDING_REVIEW },
-      data: { status: PayoutAccountStatus.REJECTED, reviewNote: note, reviewedAt: new Date() },
-    });
+  /**
+   * Called inside the identity review's transaction when ops reject the identity: the first account sent with it
+   * loses the identity it was checked against, so it is rejected too — waiting or already approved. Audited per account.
+   */
+  async rejectLinkedToSubmission(tx: Prisma.TransactionClient, input: { submissionId: string; merchantId: string; note: string; actor: { id: string; name: string; email: string } }) {
+    await lockMerchantSettlement(tx, input.merchantId);
+    const where = { kycSubmissionId: input.submissionId, isChange: false, status: { in: [PayoutAccountStatus.PENDING_REVIEW, PayoutAccountStatus.APPROVED] } };
+    const affected = await tx.payoutAccount.findMany({ where, select: { id: true } });
+    if (!affected.length) return;
+    const actorLabel = `${input.actor.name} <${input.actor.email}>`;
+    await tx.payoutAccount.updateMany({ where, data: { status: PayoutAccountStatus.REJECTED, reviewNote: input.note, reviewedAt: new Date(), reviewedByOpsUserId: input.actor.id, reviewedByLabel: actorLabel } });
+    for (const { id } of affected) {
+      await this.auditLog.record(tx, { actorType: "OPS_USER", actorId: input.actor.id, actorLabel, action: "payout_account.rejected", targetType: "PayoutAccount", targetId: id, metadata: { merchantId: input.merchantId, reason: input.note, becauseIdentityRejected: true } });
+    }
   }
 
   async proof(id: string, actor: PayoutAccountActor) {

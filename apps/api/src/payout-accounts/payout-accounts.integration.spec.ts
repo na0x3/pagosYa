@@ -69,7 +69,7 @@ harness.describeDb("payout accounts (real Postgres)", () => {
     const results = await Promise.allSettled([accounts.create(m.id, account("5012345678"), png() as any), accounts.create(m.id, account("6012345678"), png() as any)]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
-    expect(String(refused.reason.message)).toContain("Ya tienes un cambio de cuenta en revisión");
+    expect(String(refused.reason.message)).toContain("Ya tienes una cuenta en revisión");
     expect(await db.payoutAccount.count({ where: { merchantId: m.id, status: PayoutAccountStatus.PENDING_REVIEW } })).toBe(1);
   });
 

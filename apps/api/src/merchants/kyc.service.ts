@@ -8,7 +8,7 @@ import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
 import { IdentityDocumentsService } from "./identity-documents.service";
 import type { OpsActor } from "./ops-actor";
 import { PayoutAccountsService } from "../payout-accounts/payout-accounts.service";
-import { accountSnapshot } from "../payout-accounts/payout-account-rules";
+import { accountSnapshot, ownerFitsLevel } from "../payout-accounts/payout-account-rules";
 
 /**
  * pagosYa-side half of merchant onboarding: collect KYC once, review it
@@ -54,6 +54,10 @@ export class KycService {
       where: { id: dto.payoutAccountId, merchantId, status: { in: [PayoutAccountStatus.PENDING_REVIEW, PayoutAccountStatus.APPROVED] } },
     });
     if (!account) throw new BadRequestException("Agrega tu cuenta bancaria con su comprobante");
+    // An approved account was checked for one kind of owner; a business level needs one in the company's name.
+    if (account.status === PayoutAccountStatus.APPROVED && !ownerFitsLevel(account.ownerType, targetLevel)) {
+      throw new BadRequestException("Para el nivel Negocio necesitamos una cuenta a nombre de la empresa (o de su dueño si es unipersonal). Agrega una nueva con su comprobante.");
+    }
 
     const submission = await this.prisma.merchantKycSubmission.create({
       data: {
@@ -117,7 +121,7 @@ export class KycService {
       // A stale submission (e.g. targetLevel 1, still pending after ops raised
       // the merchant to level 3 directly) must never LOWER the merchant's level.
       if (dto.decision === KycStatus.REJECTED) {
-        await this.payoutAccounts.rejectLinkedToSubmission(tx, submissionId, dto.note ?? "Verificación rechazada");
+        await this.payoutAccounts.rejectLinkedToSubmission(tx, { submissionId, merchantId: submission.merchantId, note: dto.note ?? "Verificación rechazada", actor });
       }
 
       let resultingLevel: number | undefined;

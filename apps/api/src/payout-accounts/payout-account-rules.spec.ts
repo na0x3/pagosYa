@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { OpsRole, PayoutAccountOwner } from "@prisma/client";
-import { accountSnapshot, bankName, normaliseAccountNumber, payableFromFor, validateApproval } from "./payout-account-rules";
+import { accountSnapshot, bankName, maskAccountText, normaliseAccountNumber, ownerFitsLevel, payableFromFor, validateApproval } from "./payout-account-rules";
 
 const ticks = { nameMatches: true, numberMatches: true, bankMatches: true };
 const base = { isChange: false, actorRole: OpsRole.SUPPORT_AGENT, level: 1, checks: ticks, ownerType: PayoutAccountOwner.PERSON };
@@ -48,5 +48,20 @@ describe("payout account rules", () => {
 
   it("refuses with 400s", () => {
     expect(() => validateApproval({ ...base, checks: { ...ticks, bankMatches: false } })).toThrow(BadRequestException);
+  });
+
+  it("masks only the account number, keeping the bank and the holder readable", () => {
+    expect(maskAccountText("Banco Nacional de Bolivia 4012345678 — Maria Rojas")).toBe("Banco Nacional de Bolivia ····5678 — Maria Rojas");
+    expect(maskAccountText("1000200030004000")).toBe("····4000");
+    expect(maskAccountText("US-99887766")).toBe("US-····7766");
+    expect(maskAccountText(null)).toBeNull();
+  });
+
+  it("knows which owner types fit a level", () => {
+    expect(ownerFitsLevel(PayoutAccountOwner.PERSON, 1)).toBe(true);
+    expect(ownerFitsLevel(PayoutAccountOwner.PERSON, 2)).toBe(false);
+    expect(ownerFitsLevel(PayoutAccountOwner.COMPANY, 2)).toBe(true);
+    expect(ownerFitsLevel(PayoutAccountOwner.SOLE_PROPRIETOR, 3)).toBe(true);
+    expect(ownerFitsLevel(null, 1)).toBe(false);
   });
 });

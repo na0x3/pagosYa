@@ -18,7 +18,7 @@ function setup(state: { approved?: any; pending?: any; account?: any; merchantLe
       findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn(async ({ data }) => ({ id: "pa_new", createdAt: NOW, status: PayoutAccountStatus.PENDING_REVIEW, payableFrom: null, reviewNote: null, ...data })),
       update: jest.fn(async ({ data }) => ({ ...state.account, ...data })),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      updateMany: jest.fn(async ({ where, data }: any) => { if (where.id === "pa_new") Object.assign(state.account ?? {}, data); return { count: 1 }; }),
     },
     merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m_1", level: state.merchantLevel ?? 1 }) },
     merchantKycSubmission: { findFirst: jest.fn().mockResolvedValue({ legalName: "Ana Pérez", legalRepName: "Ana Pérez", targetLevel: 1 }) },
@@ -53,7 +53,7 @@ describe("PayoutAccountsService.create", () => {
 
   it("allows one waiting account at a time, checked under the merchant's lock", async () => {
     const { db, service } = setup({ pending: { id: "pa_wait" } });
-    await expect(service.create("m_1", dto, png as any)).rejects.toThrow("Ya tienes un cambio de cuenta en revisión");
+    await expect(service.create("m_1", dto, png as any)).rejects.toThrow("Ya tienes una cuenta en revisión");
     expect(db.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(db.payoutAccount.findFirst.mock.invocationCallOrder[0]);
   });
 
@@ -69,6 +69,11 @@ describe("PayoutAccountsService.create", () => {
   });
 });
 
+const setupWith = (db: any, account: any) => {
+  db.payoutAccount.findUnique.mockResolvedValue(account);
+  return new PayoutAccountsService(db, { put: jest.fn(), get: jest.fn() } as any, { record: jest.fn() } as any, { send: jest.fn().mockResolvedValue(undefined) } as any);
+};
+
 describe("PayoutAccountsService review", () => {
   const waiting = (over = {}) => ({ id: "pa_new", merchantId: "m_1", currency: "BOB", status: PayoutAccountStatus.PENDING_REVIEW, isChange: false, kycSubmissionId: null, accountNumber: "4012345678", bankCode: "BNB", holderName: "Ana Pérez", ...over });
   const approveDto = { checks: { nameMatches: true, numberMatches: true, bankMatches: true }, ownerType: PayoutAccountOwner.PERSON };
@@ -76,7 +81,7 @@ describe("PayoutAccountsService review", () => {
   it("approves a first account payable at once", async () => {
     const { db, audit, service } = setup({ account: waiting() });
     await service.approve("pa_new", approveDto, agent, NOW);
-    expect(db.payoutAccount.update).toHaveBeenCalledWith({ where: { id: "pa_new" }, data: expect.objectContaining({ status: PayoutAccountStatus.APPROVED, payableFrom: NOW, ownerType: PayoutAccountOwner.PERSON, reviewedByOpsUser: { connect: { id: "ops_b" } } }) });
+    expect(db.payoutAccount.updateMany).toHaveBeenCalledWith({ where: { id: "pa_new", status: PayoutAccountStatus.PENDING_REVIEW }, data: expect.objectContaining({ status: PayoutAccountStatus.APPROVED, payableFrom: NOW, ownerType: PayoutAccountOwner.PERSON, reviewedByOpsUserId: "ops_b" }) });
     expect(audit.record).toHaveBeenCalledWith(db, expect.objectContaining({ action: "payout_account.approved" }));
   });
 
@@ -84,7 +89,7 @@ describe("PayoutAccountsService review", () => {
     await expect(setup({ account: waiting({ isChange: true }) }).service.approve("pa_new", approveDto, agent, NOW)).rejects.toThrow("Solo un administrador");
     const { db, email, service } = setup({ account: waiting({ isChange: true }) });
     await service.approve("pa_new", approveDto, admin, NOW);
-    expect(db.payoutAccount.update).toHaveBeenCalledWith({ where: { id: "pa_new" }, data: expect.objectContaining({ payableFrom: new Date("2026-10-11T19:00:00.000Z") }) });
+    expect(db.payoutAccount.updateMany).toHaveBeenCalledWith({ where: { id: "pa_new", status: PayoutAccountStatus.PENDING_REVIEW }, data: expect.objectContaining({ payableFrom: new Date("2026-10-11T19:00:00.000Z") }) });
     expect(db.payoutAccount.updateMany).toHaveBeenCalledWith({ where: { merchantId: "m_1", currency: "BOB", status: PayoutAccountStatus.APPROVED, id: { not: "pa_new" } }, data: { status: PayoutAccountStatus.REPLACED } });
     expect(email.send.mock.calls[0][0].body).toContain("11/10/2026");
   });
@@ -104,14 +109,42 @@ describe("PayoutAccountsService review", () => {
   it("rejects with a reason, audited and emailed", async () => {
     const { db, audit, email, service } = setup({ account: waiting({ isChange: true }) });
     await service.reject("pa_new", "El titular del certificado es otra persona", agent);
-    expect(db.payoutAccount.update).toHaveBeenCalledWith({ where: { id: "pa_new" }, data: expect.objectContaining({ status: PayoutAccountStatus.REJECTED, reviewNote: "El titular del certificado es otra persona" }) });
+    expect(db.payoutAccount.updateMany).toHaveBeenCalledWith({ where: { id: "pa_new", status: PayoutAccountStatus.PENDING_REVIEW }, data: expect.objectContaining({ status: PayoutAccountStatus.REJECTED, reviewNote: "El titular del certificado es otra persona" }) });
     expect(audit.record).toHaveBeenCalledWith(db, expect.objectContaining({ action: "payout_account.rejected" }));
     expect(email.send.mock.calls[0][0].body).toContain("El titular del certificado es otra persona");
   });
 
-  it("rejects the waiting first account of a rejected identity", async () => {
-    const { db, service } = setup();
-    await service.rejectLinkedToSubmission(db, "kyc_1", "Documentos ilegibles");
-    expect(db.payoutAccount.updateMany).toHaveBeenCalledWith({ where: { kycSubmissionId: "kyc_1", status: PayoutAccountStatus.PENDING_REVIEW }, data: expect.objectContaining({ status: PayoutAccountStatus.REJECTED, reviewNote: "Documentos ilegibles" }) });
+  it("rejects the first account of a rejected identity, waiting or already approved, under the lock and audited", async () => {
+    const { db, audit, service } = setup();
+    db.payoutAccount.findMany.mockResolvedValue([{ id: "pa_1" }]);
+    await service.rejectLinkedToSubmission(db, { submissionId: "kyc_1", merchantId: "m_1", note: "Documentos ilegibles", actor: agent });
+    expect(db.$executeRaw).toHaveBeenCalled();
+    expect(db.payoutAccount.updateMany).toHaveBeenCalledWith({
+      where: { kycSubmissionId: "kyc_1", isChange: false, status: { in: [PayoutAccountStatus.PENDING_REVIEW, PayoutAccountStatus.APPROVED] } },
+      data: expect.objectContaining({ status: PayoutAccountStatus.REJECTED, reviewNote: "Documentos ilegibles", reviewedByOpsUserId: "ops_b" }),
+    });
+    expect(audit.record).toHaveBeenCalledWith(db, expect.objectContaining({ action: "payout_account.rejected", targetId: "pa_1", metadata: expect.objectContaining({ reason: "Documentos ilegibles", becauseIdentityRejected: true }) }));
+  });
+
+  it("refuses to approve an account with no identity to compare it against", async () => {
+    const { db, service } = setup({ account: waiting() });
+    db.merchantKycSubmission.findFirst.mockResolvedValue(null);
+    await expect(service.approve("pa_new", approveDto, admin, NOW)).rejects.toThrow("Esta cuenta no tiene una verificación de identidad para comparar.");
+    db.merchantKycSubmission.findFirst.mockResolvedValue({ legalName: "Ana Pérez", targetLevel: 1, status: "REJECTED" });
+    await expect(setupWith(db, waiting({ kycSubmissionId: "kyc_1" })).approve("pa_new", approveDto, admin, NOW)).rejects.toThrow("Esta cuenta no tiene una verificación de identidad para comparar.");
+  });
+
+  it("never lets an approval overwrite a decision that landed first", async () => {
+    const { db, service } = setup({ account: waiting() });
+    db.payoutAccount.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.approve("pa_new", approveDto, agent, NOW)).rejects.toThrow("Esta cuenta ya fue revisada.");
+  });
+});
+
+describe("OpsPayoutAccountsController", () => {
+  it("never lets a browser cache or sniff a bank proof", () => {
+    const { OpsPayoutAccountsController } = jest.requireActual("./ops-payout-accounts.controller");
+    const headers = Reflect.getMetadata("__headers__", OpsPayoutAccountsController.prototype.proof) as Array<{ name: string; value: string }>;
+    expect(headers).toEqual(expect.arrayContaining([{ name: "Cache-Control", value: "no-store" }, { name: "X-Content-Type-Options", value: "nosniff" }]));
   });
 });
