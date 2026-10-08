@@ -9,6 +9,7 @@ import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
+import { bankOptionsHtml, mountPayoutAccountPanel } from "/src/payout-account-panel.mjs";
 import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
 import { nextLevelSentence, nextPayoutLabel, payoutBlockerLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
 import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
@@ -390,6 +391,23 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     signedIn: () => !!sessionToken,
     apiBase: () => apiBaseEl.value,
   });
+  // Desembolsos → Cuenta para desembolsos (payout account ownership).
+  const payoutPanel = mountPayoutAccountPanel({ api });
+  document.querySelector('#kycForm select[name="bankCode"]').innerHTML = bankOptionsHtml();
+  // The identity form reuses an account already approved or under review instead of asking for another.
+  function syncKycAccountFields() {
+    const { approved, waiting } = payoutPanel.current();
+    const existing = waiting ?? approved;
+    const note = document.getElementById("kycAccountExisting");
+    const fields = document.getElementById("kycAccountFields");
+    note.hidden = !existing;
+    note.dataset.accountId = existing?.id ?? "";
+    note.textContent = existing ? `Tus desembolsos irán a ${existing.bankName ?? existing.bankCode} ····${existing.accountLast4} (${existing.holderName}).` : "";
+    // form.inline children are display:grid, which beats [hidden]; set it outright.
+    fields.hidden = Boolean(existing);
+    fields.style.display = existing ? "none" : "";
+    fields.querySelectorAll("input, select").forEach((el) => { el.required = !existing; });
+  }
   // Reclamos (ASFI sub-project 4): complaints pagosYa sent this merchant for their side.
   const complaintsPanel = mountComplaintsPanel({ api, signedIn: () => !!sessionToken });
   // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
@@ -2160,7 +2178,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
           <dt>Saldo por desembolsar (${currency})</dt>
           <dd>${money(entry.available ?? entry.payableBalance, currency)}</dd>
           ${held ? `<p class="balance-held">${held}</p>` : ""}
-          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || payoutBlockerLabel(entry.payoutBlocker, entry.currency) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
+          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || payoutBlockerLabel(entry.payoutBlocker, entry.currency, { payableFrom: payoutPanel.current().waitingPayableFrom }) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
         </div>`;
       })
       .join("");
@@ -3713,6 +3731,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       lastBalances = balance.balances?.length
         ? balance.balances
         : [{ currency: balance.currency || "BOB", payableBalance: balance.payableBalance || 0 }];
+      await payoutPanel.show();
+      syncKycAccountFields();
       renderBalanceCards(lastBalances);
       document.getElementById("payoutHoldBanner").hidden = !balance.payoutsHeld;
       renderSettlementPanel(settlementSchedule);
@@ -4021,7 +4041,17 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       const [ciFrontDocId, ciBackDocId, selfieDocId] = await Promise.all(
         ["kycDocFront", "kycDocBack", "kycDocSelfie"].map((id) => uploadKycPhoto(document.getElementById(id))),
       );
-      const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId };
+      // The account goes first, with its proof; the identity then points at it (payout account ownership).
+      let payoutAccountId = document.getElementById("kycAccountExisting").dataset.accountId;
+      if (!payoutAccountId) {
+        const accountForm = new FormData();
+        for (const key of ["bankCode", "accountNumber", "holderName"]) accountForm.append(key, String(data[key] ?? ""));
+        const proof = document.getElementById("kycAccountProof").files?.[0];
+        if (proof) accountForm.append("proof", proof);
+        payoutAccountId = (await api("/dashboard/payout_accounts", { method: "POST", body: accountForm })).id;
+      }
+      for (const key of ["bankCode", "accountNumber", "holderName", "payoutBankAccount"]) delete data[key];
+      const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, payoutAccountId };
       for (const key of Object.keys(payload)) if (payload[key] === "" || payload[key] === undefined) delete payload[key];
       await api("/merchants/kyc", { method: "POST", body: JSON.stringify(payload) });
       await refresh();
