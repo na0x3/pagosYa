@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchBuyerLegal, legalConfirmFields, legalNoticeHtml, parseBuyerLegal } from "./legal-notice";
+import { complaintsLinkHtml, fetchBuyerLegal, legalConfirmFields, legalNoticeHtml, parseBuyerLegal } from "./legal-notice";
 
 describe("parseBuyerLegal", () => {
   it("reads the versions and ignores malformed payloads", () => {
@@ -12,6 +12,10 @@ describe("parseBuyerLegal", () => {
 });
 
 describe("legalNoticeHtml", () => {
+  it("links the complaints page", () => {
+    expect(complaintsLinkHtml("https://checkout.pagosya.bo")).toBe('<a href="https://checkout.pagosya.bo/reclamos" target="_blank" rel="noopener">Presentar un reclamo</a>');
+  });
+
   it("renders nothing while no buyer terms are published", () => {
     expect(legalNoticeHtml(null)).toBe("");
   });
@@ -22,6 +26,10 @@ describe("legalNoticeHtml", () => {
     expect(html).toContain("Al pagar aceptas los");
     expect(html).toContain('href="https://pagosya.bo/terminos/compradores?version=v1"');
     expect(html).toContain('href="https://pagosya.bo/privacidad?version=p1"');
+  });
+
+  it("puts the complaints link in the notice beside the Pay button", () => {
+    expect(legalNoticeHtml({ termsVersion: "v1", privacyVersion: null }, "https://pagosya.bo", "https://checkout.pagosya.bo")).toContain('href="https://checkout.pagosya.bo/reclamos"');
   });
 
   it("leaves the privacy link out when no policy is published", () => {

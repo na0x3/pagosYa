@@ -32,13 +32,21 @@ export async function fetchBuyerLegal(apiBase: string, fetchImpl: typeof fetch =
   return parseBuyerLegal(terms, privacy);
 }
 
-export function legalNoticeHtml(legal: BuyerLegal | null, siteBase = SITE_BASE): string {
+// The checkout also serves store domains, each of which answers /reclamos itself.
+const currentOrigin = () => (typeof window === "undefined" ? "https://checkout.pagosya.bo" : window.location.origin);
+
+/** ASFI sub-project 4: the public complaints page, linked wherever pagosYa's buyer terms are. */
+export function complaintsLinkHtml(siteOrigin = currentOrigin()): string {
+  return `<a href="${siteOrigin}/reclamos" target="_blank" rel="noopener">Presentar un reclamo</a>`;
+}
+
+export function legalNoticeHtml(legal: BuyerLegal | null, siteBase = SITE_BASE, complaintsOrigin = currentOrigin()): string {
   if (!legal) return "";
   const terms = `<a href="${siteBase}/terminos/compradores?version=${encodeURIComponent(legal.termsVersion)}" target="_blank" rel="noopener">Términos</a>`;
   const privacy = legal.privacyVersion
     ? ` y la <a href="${siteBase}/privacidad?version=${encodeURIComponent(legal.privacyVersion)}" target="_blank" rel="noopener">Política de privacidad</a>`
     : "";
-  return `<p class="legal-notice">Al pagar aceptas los ${terms}${privacy} de pagosYa.</p>`;
+  return `<p class="legal-notice">Al pagar aceptas los ${terms}${privacy} de pagosYa. · ${complaintsLinkHtml(complaintsOrigin)}</p>`;
 }
 
 export function legalConfirmFields(legal: BuyerLegal | null): { buyerTermsVersion?: string; buyerPrivacyVersion?: string } {
