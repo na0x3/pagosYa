@@ -123,6 +123,40 @@ describe("PayoutsService.createDuePayouts", () => {
     expect(prisma.payout.create).not.toHaveBeenCalled();
   });
 
+  it("keeps paying the other merchants when one merchant's check-and-create fails", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant, { ...aggregatorMerchant, id: "m_2" }]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+    prisma.payout.create.mockRejectedValueOnce(new Error("deadlock detected"));
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    const logError = jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+
+    await expect(service.createDuePayouts()).resolves.toBeUndefined();
+
+    expect(prisma.payout.create).toHaveBeenCalledTimes(2);
+    expect(prisma.payout.create).toHaveBeenLastCalledWith({ data: expect.objectContaining({ merchantId: "m_2" }) });
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining("m_1"), expect.anything());
+  });
+
+  it("keeps paying the other merchants when reading one merchant's balance fails", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant, { ...aggregatorMerchant, id: "m_2" }]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy
+      .mockRejectedValueOnce(new Error("connection reset"))
+      .mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+
+    await service.createDuePayouts();
+
+    expect(prisma.payout.create).toHaveBeenCalledTimes(1);
+    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ merchantId: "m_2" }) });
+  });
+
   it("checks and creates each payout inside a transaction that holds the merchant's settlement lock", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);

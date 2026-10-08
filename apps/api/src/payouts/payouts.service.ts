@@ -97,25 +97,41 @@ export class PayoutsService {
       where: { settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE },
     });
 
+    // One merchant's failure (a deadlock, a dropped connection) is logged and left for tomorrow's run; it never costs
+    // the merchants after it their payout.
     for (const merchant of merchants) {
-      const balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
+      let balances: { currency: string; payableBalance: number }[];
+      try {
+        balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
+      } catch (error) {
+        this.logger.error(`Payout batch could not read merchant ${merchant.id}'s balances: ${(error as Error).message}`, (error as Error).stack);
+        continue;
+      }
       for (const { currency } of balances) {
-        await this.prisma.$transaction(async (tx) => {
-          await lockMerchantSettlement(tx, merchant.id);
-          const check = await this.checkPayout(merchant.id, currency, tx);
-          if (check.blocker) {
-            if (check.blocker === "held") this.logger.warn(`Payout held by ops: merchant ${merchant.id}`);
-            if (check.blocker === "terms") this.logger.warn(`Payout held: merchant ${merchant.id} has not accepted the terms in force`);
-            return;
-          }
-          const amount = (await this.getPayableBalances(merchant.id, tx)).find((b) => b.currency === currency)?.payableBalance ?? 0;
-          if (amount <= 0) return;
-          await tx.payout.create({
-            data: { merchantId: merchant.id, amount, currency, bankAccount: check.bankAccount, nextRetryAt: new Date() },
-          });
-        });
+        try {
+          await this.createDuePayout(merchant.id, currency);
+        } catch (error) {
+          this.logger.error(`Payout batch failed for merchant ${merchant.id} (${currency}): ${(error as Error).message}`, (error as Error).stack);
+        }
       }
     }
+  }
+
+  private async createDuePayout(merchantId: string, currency: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockMerchantSettlement(tx, merchantId);
+      const check = await this.checkPayout(merchantId, currency, tx);
+      if (check.blocker) {
+        if (check.blocker === "held") this.logger.warn(`Payout held by ops: merchant ${merchantId}`);
+        if (check.blocker === "terms") this.logger.warn(`Payout held: merchant ${merchantId} has not accepted the terms in force`);
+        return;
+      }
+      const amount = (await this.getPayableBalances(merchantId, tx)).find((b) => b.currency === currency)?.payableBalance ?? 0;
+      if (amount <= 0) return;
+      await tx.payout.create({
+        data: { merchantId, amount, currency, bankAccount: check.bankAccount, nextRetryAt: new Date() },
+      });
+    });
   }
 
   async listForMerchant(merchantId: string, options: { exportPdf?: boolean } = {}) {
