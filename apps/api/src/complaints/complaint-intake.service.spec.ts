@@ -46,6 +46,12 @@ describe("ComplaintIntakeService.create", () => {
     expect(tx.paymentIntent.findUnique).not.toHaveBeenCalled();
   });
 
+  it("also looks up an older payment whose id is a plain cuid", async () => {
+    const { tx, service } = setup({ id: "cmg1abcdefghijklmnopqrstu", merchantId: "m_1" });
+    await service.create({ ...dto, reference: "cmg1abcdefghijklmnopqrstu" }, [], NOW);
+    expect(tx.paymentIntent.findUnique).toHaveBeenCalledWith({ where: { id: "cmg1abcdefghijklmnopqrstu" }, select: { id: true, merchantId: true } });
+  });
+
   it("requires a reference or a store name", async () => {
     const { service } = setup(null);
     await expect(service.create({ ...dto, reference: " ", storeName: undefined }, [], NOW)).rejects.toThrow("Escribe la referencia de tu pago o el nombre de la tienda.");

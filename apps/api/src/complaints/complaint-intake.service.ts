@@ -14,7 +14,8 @@ import { ComplaintMailer } from "./complaint-mailer";
 import { SECOND_INSTANCE_NOTICE } from "./complaint-emails";
 import { CreateComplaintDto } from "./dto/create-complaint.dto";
 
-const PAYMENT_ID = /^pi_[0-9a-z]+$/;
+// Payment intents get "pi_…" ids from PaymentIntentsService; rows created any other way keep the schema's cuid default.
+export const PAYMENT_ID = /^(pi_[0-9a-z]+|c[a-z0-9]{20,40})$/;
 
 export type BuyerComplaintView = {
   number: string;

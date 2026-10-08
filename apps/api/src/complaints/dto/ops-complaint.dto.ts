@@ -11,7 +11,7 @@ export class ExportComplaintsQuery {
   @ApiProperty() @Matches(/^\d{4}-\d{2}-\d{2}$/) to!: string;
 }
 export class LinkComplaintDto {
-  @ApiPropertyOptional() @IsOptional() @Matches(/^pi_[0-9a-z]+$/) paymentIntentId?: string;
+  @ApiPropertyOptional() @IsOptional() @Matches(/^(pi_[0-9a-z]+|c[a-z0-9]{20,40})$/) paymentIntentId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(40) merchantId?: string;
 }
 export class ComplaintNoteDto { @ApiProperty() @IsString() @Length(2, 5000) body!: string; }
