@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { nextLevelSentence, nextPayoutLabel, releaseDateLabel, settlementPolicySentence } from "./settlement.mjs";
+import { nextLevelSentence, nextPayoutLabel, payoutBlockerLabel, releaseDateLabel, settlementPolicySentence } from "./settlement.mjs";
 
 test("describes the policy in plain words", () => {
   assert.equal(
@@ -26,4 +26,13 @@ test("labels the next payout in La Paz time", () => {
 
 test("formats a release day", () => {
   assert.equal(releaseDateLabel("2026-11-30"), "30/11/2026");
+});
+
+test("explains why a balance is not paid out, without the ops hold reason", () => {
+  assert.equal(payoutBlockerLabel("held", "BOB"), "En pausa mientras revisamos tu cuenta.");
+  assert.equal(payoutBlockerLabel("terms", "BOB"), "Acepta los términos vigentes para recibir tu próximo desembolso.");
+  assert.equal(payoutBlockerLabel("no_account", "USD"), "Agrega una cuenta bancaria en dólares para recibir este saldo.");
+  assert.equal(payoutBlockerLabel("no_account", "BOB"), "Agrega una cuenta bancaria en bolivianos para recibir este saldo.");
+  assert.equal(payoutBlockerLabel("in_flight", "BOB"), "Hay un desembolso en camino; el siguiente sale cuando llegue.");
+  for (const code of ["inactive", "facilitator", "kyc", null, undefined]) assert.equal(payoutBlockerLabel(code, "BOB"), "");
 });

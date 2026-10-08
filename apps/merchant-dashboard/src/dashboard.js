@@ -9,7 +9,7 @@ import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
-import { nextLevelSentence, nextPayoutLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
+import { nextLevelSentence, nextPayoutLabel, payoutBlockerLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
 import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
 
   (() => {
@@ -2155,7 +2155,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
           <dt>Saldo por desembolsar (${currency})</dt>
           <dd>${money(entry.available ?? entry.payableBalance, currency)}</dd>
           ${held ? `<p class="balance-held">${held}</p>` : ""}
-          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
+          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || payoutBlockerLabel(entry.payoutBlocker, entry.currency) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
         </div>`;
       })
       .join("");

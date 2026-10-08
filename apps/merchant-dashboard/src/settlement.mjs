@@ -31,3 +31,22 @@ export function nextPayoutLabel(iso, now = new Date()) {
   const at = laPaz(new Date(iso));
   return at.day === laPaz(now).day ? `Próximo pago: hoy ${at.time}` : `Próximo pago: ${releaseDateLabel(at.day)} ${at.time}`;
 }
+
+const CURRENCY_NAMES = { BOB: "bolivianos", USD: "dólares" };
+
+// Why the daily payout will skip this balance (GET /merchants/balance payoutBlocker). The ops hold reason never
+// reaches the merchant; the pause banner above the balances says the rest.
+export function payoutBlockerLabel(code, currency) {
+  switch (code) {
+    case "held":
+      return "En pausa mientras revisamos tu cuenta.";
+    case "terms":
+      return "Acepta los términos vigentes para recibir tu próximo desembolso.";
+    case "no_account":
+      return `Agrega una cuenta bancaria en ${CURRENCY_NAMES[currency] ?? currency} para recibir este saldo.`;
+    case "in_flight":
+      return "Hay un desembolso en camino; el siguiente sale cuando llegue.";
+    default:
+      return "";
+  }
+}
