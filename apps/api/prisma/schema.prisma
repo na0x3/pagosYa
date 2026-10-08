@@ -179,6 +179,7 @@ model OpsUser {
   supportNotes         SupportCaseNote[]
   legalDocuments       LegalDocument[]
   assignedComplaints   Complaint[]             @relation("ComplaintAssignee")
+  reviewedPayoutAccounts PayoutAccount[]     @relation("PayoutAccountReviewer")
 }
 
 // Generic append-only trail for sensitive ops actions (KYC review today;
@@ -417,6 +418,7 @@ model Merchant {
   importBuildUsedAt           DateTime?
   storeImports                StoreImport[]
   complaints                  Complaint[]
+  payoutAccounts              PayoutAccount[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -658,9 +660,55 @@ model Payout {
   nextRetryAt   DateTime?
   paidOutAt     DateTime?
   createdAt     DateTime     @default(now())
+  payoutAccountId String?
+  payoutAccount   PayoutAccount? @relation(fields: [payoutAccountId], references: [id])
 
   @@index([status, nextRetryAt])
   @@index([merchantId, createdAt])
+}
+
+enum PayoutAccountStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REPLACED
+}
+
+enum PayoutAccountOwner {
+  PERSON
+  COMPANY
+  SOLE_PROPRIETOR
+}
+
+// A bank account a merchant asked to be paid to, and the proof that it is theirs. Payouts use only an APPROVED
+// one whose payableFrom has passed (payout account ownership check).
+model PayoutAccount {
+  id                  String                 @id @default(cuid())
+  merchantId          String
+  merchant            Merchant               @relation(fields: [merchantId], references: [id])
+  currency            String                 @default("BOB")
+  bankCode            String
+  accountNumber       String
+  holderName          String
+  proofStorageKey     String
+  proofFileName       String
+  proofContentType    String
+  status              PayoutAccountStatus    @default(PENDING_REVIEW)
+  isChange            Boolean                @default(false)
+  ownerType           PayoutAccountOwner?
+  checks              Json?
+  reviewNote          String?
+  reviewedAt          DateTime?
+  reviewedByOpsUserId String?
+  reviewedByOpsUser   OpsUser?               @relation("PayoutAccountReviewer", fields: [reviewedByOpsUserId], references: [id])
+  reviewedByLabel     String?
+  payableFrom         DateTime?
+  kycSubmissionId     String?
+  kycSubmission       MerchantKycSubmission? @relation(fields: [kycSubmissionId], references: [id])
+  createdAt           DateTime               @default(now())
+  payouts             Payout[]
+
+  @@index([merchantId, currency, status])
 }
 
 model MerchantKycSubmission {
@@ -687,6 +735,7 @@ model MerchantKycSubmission {
   ciFrontDocId         String?
   ciBackDocId          String?
   selfieDocId          String?
+  payoutAccounts       PayoutAccount[]
 
   @@index([merchantId, createdAt])
 }
