@@ -95,15 +95,15 @@ harness.describeDb("complaints (real Postgres)", () => {
     await ops.take(id, admin);
     await ops.askMerchant(id, "¿Enviaste el pedido?", admin);
     await merchantSide.reply(merchant.id, "mu_it", id, "Lo enviamos el lunes por courier.", []);
-    await ops.refund(id, undefined, admin);
+    await ops.refund(id, { requestId: "req_journey_1" }, admin);
     await ops.answer(id, { outcome: ComplaintOutcome.UPHELD, answer: "Te devolvimos el dinero completo." }, admin);
 
     const events = await db.complaintEvent.findMany({ where: { complaintId: id, type: { not: ComplaintEventType.EMAIL_SENT } }, orderBy: { createdAt: "asc" } });
     expect(events.map((e) => e.type)).toEqual([
       ComplaintEventType.RECEIVED, ComplaintEventType.LINKED, ComplaintEventType.TAKEN, ComplaintEventType.MERCHANT_ASKED,
-      ComplaintEventType.MERCHANT_REPLIED, ComplaintEventType.REFUNDED, ComplaintEventType.ANSWERED,
+      ComplaintEventType.MERCHANT_REPLIED, ComplaintEventType.REFUND_REQUESTED, ComplaintEventType.REFUNDED, ComplaintEventType.ANSWERED,
     ]);
-    expect(refunds.create).toHaveBeenCalledWith(merchant.id, { paymentIntentId: intent.id, reason: `Reclamo ${number}` }, `complaint-${id}-refund-1`);
+    expect(refunds.create).toHaveBeenCalledWith(merchant.id, { paymentIntentId: intent.id, reason: `Reclamo ${number}` }, `complaint-${id}-req_journey_1`);
     expect(await db.transaction.count({ where: { paymentIntentId: intent.id, type: TransactionType.REFUND } })).toBe(1);
     const heldAfter = (await merchantBalances(db as any, merchant.id)).find((b) => b.currency === "BOB")!;
     expect(heldAfter.pending).toBeLessThan(heldBefore.pending);

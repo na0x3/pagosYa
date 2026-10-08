@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { ComplaintActor, ComplaintEventType, ComplaintOutcome, ComplaintStatus, OpsRole, Prisma } from "@prisma/client";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ComplaintActor, ComplaintEventType, ComplaintOutcome, ComplaintStatus, OpsRole, Prisma, TransactionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PrivateFilesService } from "../commerce-platform/private-files.service";
 import { AuditLogService } from "../ops/audit-log.service";
@@ -7,7 +7,7 @@ import { RefundsService } from "../refunds/refunds.service";
 import { SettlementAdminService } from "../settlement/settlement-admin.service";
 import { laPazDayStart } from "../settlement/settlement-dates";
 import { EXTENSION_BUSINESS_DAYS, MERCHANT_BUSINESS_DAYS, addBusinessDays, businessDaysBetween } from "./complaint-dates";
-import { recordComplaintEvent } from "./complaint-events";
+import { lockComplaint, recordComplaintEvent } from "./complaint-events";
 import { assertCan, nextStatus } from "./complaint-state";
 import { ComplaintMailer } from "./complaint-mailer";
 import { toCsv } from "./complaint-csv";
@@ -20,6 +20,12 @@ const OPEN: ComplaintStatus[] = [ComplaintStatus.RECEIVED, ComplaintStatus.IN_RE
 type StoredComplaint = NonNullable<Awaited<ReturnType<PrismaService["complaint"]["findUnique"]>>>;
 
 /** EMAIL_FAILED events not followed by an EMAIL_SENT of the same kind. Events must be in createdAt order. */
+function railFailureReason(raw: Prisma.JsonValue | null): string {
+  const value = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const reason = [value.error, value.message, value.reason].find((candidate) => typeof candidate === "string");
+  return typeof reason === "string" ? reason.slice(0, 200) : "";
+}
+
 export function unresolvedEmailFailures(events: Array<{ type: ComplaintEventType; meta: Prisma.JsonValue | null }>): string[] {
   const open = new Set<string>();
   for (const event of events) {
@@ -49,6 +55,7 @@ export class ComplaintOpsService {
   /** Loads the complaint, runs one action, writes its audit entry in the same transaction, returns the fresh detail. */
   private async mutate(id: string, actor: ComplaintOpsActor, action: string, work: (tx: Prisma.TransactionClient, complaint: StoredComplaint) => Promise<Record<string, unknown>>) {
     await this.prisma.$transaction(async (tx) => {
+      await lockComplaint(tx, id);
       const complaint = await tx.complaint.findUnique({ where: { id } });
       if (!complaint) throw new NotFoundException("Reclamo no encontrado");
       const metadata = await work(tx, complaint);
@@ -188,23 +195,42 @@ export class ComplaintOpsService {
     return detail;
   }
 
-  /** The refund runs in RefundsService's own transaction (it draws from the merchant's held funds, sub-project 3);
-   * the complaint event and audit entry follow it. A retry with the same n is idempotent. */
-  async refund(id: string, amount: number | undefined, actor: ComplaintOpsActor) {
+  /**
+   * The refund runs in RefundsService's own transaction (it draws from the merchant's held funds, sub-project 3).
+   * The console sends one requestId per refund form: a REFUND_REQUESTED marker for it is written under the complaint's
+   * row lock before the rail is called, so a double click or a retry after a timeout never refunds twice. Only a
+   * refund the rail made (or is still making) is recorded as REFUNDED; a declined one is REFUND_FAILED and ops is told
+   * to pay the buyer another way.
+   */
+  async refund(id: string, request: { amount?: number; requestId: string }, actor: ComplaintOpsActor) {
     this.assertAdmin(actor);
-    const complaint = await this.prisma.complaint.findUnique({ where: { id } });
-    if (!complaint) throw new NotFoundException("Reclamo no encontrado");
-    assertCan("refund", complaint.status);
-    if (!complaint.paymentIntentId || !complaint.merchantId) throw new ConflictException("Vincula el reclamo a un pago primero.");
-    const n = (await this.prisma.complaintEvent.count({ where: { complaintId: id, type: ComplaintEventType.REFUNDED } })) + 1;
+    const complaint = await this.prisma.$transaction(async (tx) => {
+      await lockComplaint(tx, id);
+      const found = await tx.complaint.findUnique({ where: { id } });
+      if (!found) throw new NotFoundException("Reclamo no encontrado");
+      assertCan("refund", found.status);
+      if (!found.paymentIntentId || !found.merchantId) throw new ConflictException("Vincula el reclamo a un pago primero.");
+      const repeated = await tx.complaintEvent.findFirst({ where: { complaintId: id, type: ComplaintEventType.REFUND_REQUESTED, meta: { path: ["requestId"], equals: request.requestId } } });
+      if (repeated) throw new ConflictException("Este reembolso ya se pidió.");
+      await recordComplaintEvent(tx, id, { type: ComplaintEventType.REFUND_REQUESTED, actor: ComplaintActor.OPS, actorId: actor.id, meta: { requestId: request.requestId, amount: request.amount ?? null } });
+      return found;
+    });
     const refund = await this.refunds.create(
-      complaint.merchantId,
-      { paymentIntentId: complaint.paymentIntentId, ...(amount ? { amount } : {}), reason: `Reclamo ${complaint.number}` },
-      `complaint-${id}-refund-${n}`,
+      complaint.merchantId!,
+      { paymentIntentId: complaint.paymentIntentId!, ...(request.amount ? { amount: request.amount } : {}), reason: `Reclamo ${complaint.number}` },
+      `complaint-${id}-${request.requestId}`,
     );
+    if (refund.status === TransactionStatus.FAILED) {
+      const reason = railFailureReason(refund.rawResponse);
+      await this.mutate(id, actor, "complaint.refund_failed", async (tx) => {
+        await recordComplaintEvent(tx, id, { type: ComplaintEventType.REFUND_FAILED, actor: ComplaintActor.OPS, actorId: actor.id, body: reason, meta: { refundId: refund.id, amount: refund.amount, requestId: request.requestId } });
+        return { refundId: refund.id, amount: refund.amount, reason };
+      });
+      throw new UnprocessableEntityException(`El medio de pago no hizo el reembolso${reason ? ` (${reason})` : ""}. Haz una transferencia manual al comprador y regístrala en una nota.`);
+    }
     return this.mutate(id, actor, "complaint.refunded", async (tx) => {
-      await recordComplaintEvent(tx, id, { type: ComplaintEventType.REFUNDED, actor: ComplaintActor.OPS, actorId: actor.id, meta: { refundId: refund.id, amount: refund.amount } });
-      return { refundId: refund.id, amount: refund.amount };
+      await recordComplaintEvent(tx, id, { type: ComplaintEventType.REFUNDED, actor: ComplaintActor.OPS, actorId: actor.id, meta: { refundId: refund.id, amount: refund.amount, status: refund.status, requestId: request.requestId } });
+      return { refundId: refund.id, amount: refund.amount, status: refund.status };
     });
   }
 

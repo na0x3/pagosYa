@@ -1484,7 +1484,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       ${c.status === "IN_REVIEW" && c.merchant ? `<form id="complaintAskForm"><label>Consulta al comercio<textarea id="complaintQuestion" rows="2"></textarea></label><button type="submit" id="complaintAskMerchant">Consultar al comercio</button></form>` : ""}
       ${c.merchant && !c.merchant.payoutHeldAt ? `<form id="complaintPauseForm"><label>Motivo de la pausa<input id="complaintPauseReason"></label><button type="submit" id="complaintPause">Pausar desembolsos</button></form>` : ""}
       ${admin && open && !c.extendedAt ? `<form id="complaintExtendForm"><label>Motivo de la extensión<input id="complaintExtendReason"></label><button type="submit" id="complaintExtend">Extender plazo (5 días hábiles)</button></form>` : ""}
-      ${admin && c.payment ? `<form id="complaintRefundForm"><label>Monto a reembolsar (Bs, vacío = total)<input id="complaintRefundAmount" inputmode="decimal"></label><button type="submit" id="complaintRefund">Reembolsar</button></form>` : ""}
+      ${admin && c.payment ? `<form id="complaintRefundForm"><label>Monto a reembolsar (${esc(c.payment.currency)}, vacío = total)<input id="complaintRefundAmount" inputmode="decimal"></label><button type="submit" id="complaintRefund">Reembolsar</button></form>` : ""}
       ${admin && (c.status === "IN_REVIEW" || c.status === "WAITING_MERCHANT") ? `<form id="complaintAnswerForm"><label>Resultado<select id="complaintOutcome"><option value="">Elige</option>${Object.entries(COMPLAINT_OUTCOME).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</select></label><label>Respuesta al comprador<textarea id="complaintAnswer" rows="5"></textarea></label><button type="submit" id="complaintAnswerSend">Enviar respuesta final</button></form>` : ""}
       ${c.status === "ANSWERED" ? `<p><strong>${esc(COMPLAINT_OUTCOME[c.outcome] ?? "")}</strong></p><p>${esc(c.answer)}</p>` : ""}`;
     const on = (id, handler) => { const el = complaintDetailEl.querySelector(id); if (el) el.addEventListener(el.tagName === "FORM" ? "submit" : "click", (event) => { event.preventDefault(); handler(); }); };
@@ -1494,9 +1494,23 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     on("#complaintAskForm", () => complaintAction(c.id, "ask_merchant", { question: complaintDetailEl.querySelector("#complaintQuestion").value }));
     on("#complaintPauseForm", () => complaintAction(c.id, "pause_payouts", { reason: complaintDetailEl.querySelector("#complaintPauseReason").value }));
     on("#complaintExtendForm", () => complaintAction(c.id, "extend", { reason: complaintDetailEl.querySelector("#complaintExtendReason").value }));
+    // One id per rendered form: a double click or a resend after a timeout is the same refund to the API.
+    const refundRequestId = "req_" + crypto.randomUUID().replace(/-/g, "");
     on("#complaintRefundForm", () => {
-      const raw = complaintDetailEl.querySelector("#complaintRefundAmount").value.replace(",", ".").trim();
-      complaintAction(c.id, "refund", raw ? { amount: Math.round(Number(raw) * 100) } : {});
+      const raw = complaintDetailEl.querySelector("#complaintRefundAmount").value.trim();
+      if (raw && !/^\d+([.,]\d{1,2})?$/.test(raw)) {
+        errorEl.textContent = "Escribe el monto con números, por ejemplo 25 o 25,50. Déjalo vacío para reembolsar el total.";
+        return;
+      }
+      const amount = raw ? Math.round(Number(raw.replace(",", ".")) * 100) : null;
+      if (amount !== null && amount <= 0) {
+        errorEl.textContent = "El monto debe ser mayor que cero.";
+        return;
+      }
+      const label = amount ? money(amount, c.payment.currency) : `el total, ${money(c.payment.amount, c.payment.currency)}`;
+      if (!window.confirm(`¿Reembolsar ${label} al comprador? Sale de los fondos del comercio y no se puede deshacer.`)) return;
+      errorEl.textContent = "";
+      complaintAction(c.id, "refund", { ...(amount ? { amount } : {}), requestId: refundRequestId });
     });
     on("#complaintAnswerForm", () => complaintAction(c.id, "answer", { outcome: complaintDetailEl.querySelector("#complaintOutcome").value, answer: complaintDetailEl.querySelector("#complaintAnswer").value }));
     complaintDetailEl.querySelectorAll("[data-file]").forEach((button) => button.addEventListener("click", () => openComplaintFile(c.id, button.dataset.file)));

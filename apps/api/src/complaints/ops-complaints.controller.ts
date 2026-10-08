@@ -28,7 +28,7 @@ export class OpsComplaintsController {
   @Post(":id/extend") extend(@Param("id") id: string, @Body() dto: ExtendComplaintDto, @CurrentOpsUser() actor: ComplaintOpsActor) { return this.complaints.extend(id, dto.reason, actor); }
   @Post(":id/answer") answer(@Param("id") id: string, @Body() dto: AnswerComplaintDto, @CurrentOpsUser() actor: ComplaintOpsActor) { return this.complaints.answer(id, dto, actor); }
 
-  @Post(":id/refund") refund(@Param("id") id: string, @Body() dto: ComplaintRefundDto, @CurrentOpsUser() actor: ComplaintOpsActor) { return this.complaints.refund(id, dto.amount, actor); }
+  @Post(":id/refund") refund(@Param("id") id: string, @Body() dto: ComplaintRefundDto, @CurrentOpsUser() actor: ComplaintOpsActor) { return this.complaints.refund(id, dto, actor); }
   @Post(":id/pause_payouts") pause(@Param("id") id: string, @Body() dto: ComplaintPauseDto, @CurrentOpsUser() actor: ComplaintOpsActor) { return this.complaints.pausePayouts(id, dto.reason, actor); }
 
   @Get(":id/attachments/:attachmentId")

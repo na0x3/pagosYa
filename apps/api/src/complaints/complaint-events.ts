@@ -21,3 +21,8 @@ export function recordComplaintEvent(db: Prisma.TransactionClient | PrismaClient
     },
   });
 }
+
+/** Serialises every write to one complaint: status checks then see the latest committed state (READ COMMITTED). */
+export async function lockComplaint(tx: Prisma.TransactionClient, complaintId: string): Promise<void> {
+  await tx.$queryRaw`SELECT "id" FROM "Complaint" WHERE "id" = ${complaintId} FOR UPDATE`;
+}

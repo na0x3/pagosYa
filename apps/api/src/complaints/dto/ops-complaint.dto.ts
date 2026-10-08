@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ComplaintOutcome, ComplaintStatus } from "@prisma/client";
-import { IsEnum, IsInt, IsOptional, IsPositive, IsString, Length, Matches, MaxLength } from "class-validator";
+import { IsEnum, IsInt, IsOptional, IsPositive, IsString, Length, Matches, MaxLength, ValidateIf } from "class-validator";
 
 export class ListComplaintsQuery {
   @ApiPropertyOptional({ enum: ComplaintStatus }) @IsOptional() @IsEnum(ComplaintStatus) status?: ComplaintStatus;
@@ -22,6 +22,9 @@ export class AnswerComplaintDto {
   @ApiProperty() @IsString() @Length(20, 5000) answer!: string;
 }
 export class ComplaintRefundDto {
-  @ApiPropertyOptional({ description: "Minor units; omit for a full refund" }) @IsOptional() @IsInt() @IsPositive() amount?: number;
+  /** Absent means a full refund; null or anything not a positive integer is refused, never read as "full". */
+  @ApiPropertyOptional({ description: "Minor units; omit for a full refund" }) @ValidateIf((dto: ComplaintRefundDto) => dto.amount !== undefined) @IsInt() @IsPositive() amount?: number;
+  /** One per refund form in the console, so a repeated submit is recognised. */
+  @ApiProperty() @Matches(/^[A-Za-z0-9_-]{8,64}$/) requestId!: string;
 }
 export class ComplaintPauseDto { @ApiProperty() @IsString() @Length(8, 500) reason!: string; }

@@ -102,3 +102,33 @@ test("an agent does not see extend, answer or refund", async ({ page }) => {
   await expect(page.locator("#complaintRefund")).toHaveCount(0);
   await expect(page.locator("#complaintAskMerchant")).toBeVisible();
 });
+
+test("a refund amount that isn't a number is refused, and a valid one is confirmed with its currency before it is sent", async ({ page }) => {
+  const calls = [];
+  await openOps(page, {
+    onRequest: async (route, { path, request }) => {
+      if (path === "/internal/complaints") { await route.fulfill({ json: [row()] }); return true; }
+      if (path === "/internal/complaints/c1/refund") { calls.push(JSON.parse(request.postData())); await route.fulfill({ json: detail({ status: "IN_REVIEW" }) }); return true; }
+      if (path === "/internal/complaints/c1") { await route.fulfill({ json: detail({ status: "IN_REVIEW", payment: { id: "pi_1", amount: 5000, currency: "USD", status: "SUCCEEDED", livemode: true, createdAt: "2026-09-30T15:00:00.000Z" } }) }); return true; }
+      return false;
+    },
+  });
+  await page.goto("/#reclamos");
+  await page.locator("#complaintsRows tr").first().click();
+  await expect(page.locator("#complaintRefundForm")).toContainText("USD");
+
+  await page.fill("#complaintRefundAmount", "50 Bs");
+  await page.click("#complaintRefund");
+  await expect(page.locator("#error")).toContainText("Escribe el monto con números");
+  expect(calls).toHaveLength(0);
+
+  const dialogs = [];
+  page.once("dialog", (dialog) => { dialogs.push(dialog.message()); dialog.accept(); });
+  await page.fill("#complaintRefundAmount", "25,50");
+  await page.click("#complaintRefund");
+  await expect.poll(() => calls.length).toBe(1);
+  expect(dialogs[0]).toContain("25,50");
+  expect(dialogs[0]).toContain("USD");
+  expect(calls[0].amount).toBe(2550);
+  expect(calls[0].requestId).toMatch(/^req_[A-Za-z0-9]{8,}$/);
+});
