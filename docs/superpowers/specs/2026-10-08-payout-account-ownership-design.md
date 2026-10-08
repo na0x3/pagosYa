@@ -124,6 +124,7 @@ One waiting account per merchant and currency is enforced in code under the merc
 - A merchant sends a change, then sends the identity form to move up a level: the identity form's account fields are prefilled from the waiting change and do not create a second waiting account.
 - Ops reject the first account while approving the identity: the merchant is ACTIVE (live payments allowed, limits apply) but payouts stay paused with `account_missing` until a new proof is approved.
 - A change approved while a payout is already on its way: the in-flight payout keeps its account (it was approved at creation); the next one uses the new account after 72 h.
+- Ops reject the identity itself: its waiting first account is rejected with the same reason in the same transaction.
 - Facilitator merchants: unaffected (no payouts through pagosYa).
 
 ## Testing
