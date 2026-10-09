@@ -1,4 +1,4 @@
-const VIEWS = new Set(['registro', 'recuperar', 'pedidos', 'direcciones', 'perfil', 'suscripciones']);
+const VIEWS = new Set(['registro', 'recuperar', 'pedidos', 'direcciones', 'perfil', 'suscripciones', 'unirme', 'membresias']);
 
 /** Where a sandboxed store may send the shopper: its own account pages on this trusted origin (spec
  * 2026-09-30-store-account-page-files-design). `verificar` and `restablecer` are left out: they only work with an email token. */

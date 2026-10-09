@@ -9,6 +9,7 @@ import { app } from "../ui/app";
 import { itemVariants, selectedVariantFor, selectedExtrasFor, optionStock, cart, itemExtras, productStockLimit, productCartQuantity, optionCartQuantity, productConfigurationComplete, selectedProductImageByItem, stockStatus, remainingStock, activeProductDiscount, discountRemainingLabel, discountedProductAmount, selectedOptionsByItem, selectedExtraIdsByItem, extraDisplayAmount, salePriceHtml, selectedUnitAmount, originalSelectedUnitAmount, selectedVariantByItem, saveCart } from "../cart/cart";
 import { categoryIdFromLocation, categoryPageUrl, storeCatalogUrl, productPageUrl } from "./routes";
 import { productImagePosition } from "./catalog";
+import { membershipPurchaseHtml } from "../account/membership-views";
 import { escapeHtml, initials, formatAmount } from "../ui/html";
 import { ICON_ARROW_LEFT, ICON_ARROW_RIGHT, ICON_LOCK, ICON_WHATSAPP, ICON_EXTERNAL } from "../ui/icons";
 import { applyStoreTheme } from "./theme";
@@ -232,7 +233,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
         ${subscriptionsAvailable(store) && item.subscriptionOptions?.length ? `<div data-subscription-slot>${subscriptionChoiceHtml(item, selectedCadence, selectedVariant, selectedExtras, cadenceConflict)}</div>` : ""}
-        <div class="product-detail-purchase">
+        ${item.fulfillmentType === "MEMBERSHIP" ? membershipPurchaseHtml(slug, item) : `<div class="product-detail-purchase">
           <div>
             <span class="product-detail-selection-title">${selectionLabels.length ? 'Tu selección' : 'Tu producto'}</span>
             <div class="product-detail-selection-summary">${selectionLabels.length ? selectionLabels.map(label => `<span>${escapeHtml(label)}</span>`).join('') : escapeHtml(item.name)}</div>
@@ -249,7 +250,7 @@ export function renderProductPage(slug: string, store: Store, productId: string)
                     <button type="button" class="qty-plus" aria-label="Agregar una unidad de ${escapeHtml(item.name)}" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
                   </div>`
           }
-        </div>
+        </div>`}
       <aside class="product-detail-information" aria-label="Información de ${escapeHtml(item.name)}">
         <details open>
           <summary>El producto<span aria-hidden="true"></span></summary>

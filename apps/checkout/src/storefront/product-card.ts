@@ -104,7 +104,9 @@ export function renderProductCard(
         <div class="store-item-price">${salePriceHtml(item, selectedUnitAmount(item, selectedVariant, selectedExtras), originalSelectedUnitAmount(item, selectedVariant, selectedExtras), "store-item-current-price")}${stockNote}</div>
       </div>
       ${
-        soldOut
+        item.fulfillmentType === "MEMBERSHIP"
+          ? `<a class="primary product-page-link" href="${escapeHtml(detailUrl)}">Hacerme miembro</a>`
+          : soldOut
           ? ""
           : `<div class="qty-stepper">
               <button type="button" class="qty-minus" aria-label="Quitar una unidad de ${escapeHtml(item.name)}" ${qty === 0 ? "disabled" : ""}>−</button>

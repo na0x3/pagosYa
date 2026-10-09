@@ -72,7 +72,8 @@ export async function fetchSession(clientSecret: string, publishableKey?: string
 export interface StoreItem {
   /** Frequencies this product can be subscribed to, with the discount for each. */
   subscriptionOptions?: Array<{ cadence: "WEEKLY" | "BIWEEKLY" | "MONTHLY"; discountPercent: number }>;
-  fulfillmentType?: 'PHYSICAL' | 'DIGITAL';
+  fulfillmentType?: 'PHYSICAL' | 'DIGITAL' | 'MEMBERSHIP';
+  membershipPeriods?: Array<{ id: string; months: number; amount: number }>;
   id: string;
   categoryId: string | null;
   name: string;

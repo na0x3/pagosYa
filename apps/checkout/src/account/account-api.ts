@@ -5,6 +5,10 @@ export type CustomerProfile = { id: string; storeId: string; email: string; name
 export type CustomerAddress = { id: string; label: string; recipient: string; phone: string; department: string; city: string; street: string; references: string };
 export type CustomerOrder = { id: string; status: string; amount: number; currency: string; createdAt: string; items: unknown; fulfillmentMethod?: string | null };
 export type CustomerSubscription = { id: string; status: string; itemName: string | null; quantity: number | null; cadence: string | null; startedAt?: string; nextBillingAt: string | null; canceledAt?: string | null };
+export type MemberPeriod = { id: string; months: number; label: string; amount?: number };
+export type MemberView = { id: string; productId: string; name: string; state: "ACTIVE" | "GRACE" | "LAPSED" | "CANCELED_ACTIVE" | "CANCELED"; stateLabel: string;
+  accessUntil: string | null; nextBillingAt: string | null; amount: number; currency: string; period: MemberPeriod | null; pendingPeriod: MemberPeriod | null;
+  periods: Array<MemberPeriod & { amount: number }>; renewalUrl: string | null };
 export type CustomerSession = { token: string; expiresAt: string; customer: CustomerProfile };
 
 export class AccountError extends Error {
@@ -43,6 +47,9 @@ export const accountApi = {
   replaceAddresses: (slug: string, token: string, addresses: Array<Partial<CustomerAddress>>) => call<CustomerAddress[]>(slug, "me/addresses", { method: "PUT", token, body: { addresses } }),
   orders: (slug: string, token: string) => call<CustomerOrder[]>(slug, "me/orders", { token }),
   subscriptions: (slug: string, token: string) => call<CustomerSubscription[]>(slug, "me/subscriptions", { token }),
+  memberships: (slug: string, token: string) => call<MemberView[]>(slug, "me/memberships", { token }),
+  joinMembership: (slug: string, token: string, body: { productId: string; periodId: string; consent: true }) => call<{ checkoutUrl: string }>(slug, "me/memberships", { method: "POST", token, body }),
+  membershipAction: (slug: string, token: string, id: string, action: "cancel" | "resume" | "period", periodId?: string) => call<MemberView>(slug, `me/memberships/${encodeURIComponent(id)}/${action}`, { method: "POST", token, body: periodId ? { periodId } : {} }),
   exportData: (slug: string, token: string) => call<Record<string, unknown>>(slug, "me/export", { token }),
   deleteAccount: (slug: string, token: string, password: string) => call<{ ok: true }>(slug, "me", { method: "DELETE", token, body: { password } }),
 };

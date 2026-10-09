@@ -21,4 +21,8 @@ describe('isAccountDestination', () => {
     expect(isAccountDestination(new URL('https://pay.test/cuenta/a.b/pedidos'), 'https://pay.test', 'a.b')).toBe(true);
     expect(isAccountDestination(new URL('https://pay.test/cuenta/axb/pedidos'), 'https://pay.test', 'a.b')).toBe(false);
   });
+  it('lets a store send the shopper to the membership checkout and Mis membresías', () => {
+    expect(isAccountDestination(new URL('https://pay.test/cuenta/cafe/unirme?producto=club&periodo=m1'), 'https://pay.test', 'cafe')).toBe(true);
+    expect(isAccountDestination(new URL('https://pay.test/cuenta/cafe/membresias'), 'https://pay.test', 'cafe')).toBe(true);
+  });
 });

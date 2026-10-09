@@ -17,3 +17,14 @@ describe("restoreCart subscription lines", () => {
     expect([...restore(mode).entries()]).toEqual([[cartItemKey("p1"), 1]]);
   });
 });
+
+describe("restoreCart memberships", () => {
+  it("drops a membership product from a restored cart", () => {
+    const club = { id: "club", name: "Club", amount: 5000, currency: "BOB", variants: [], extras: [], fulfillmentType: "MEMBERSHIP" };
+    const store = { storeId: "s1", checkoutMode: "payment", items: [item, club] } as never;
+    localStorage.setItem("pagosya_cart_s1", JSON.stringify({ [cartItemKey("club")]: 1, [cartItemKey("p1")]: 1 }));
+    const cart = restoreCart(store, () => null, () => null).cart;
+    expect([...cart.keys()].some(key => key.includes("club"))).toBe(false);
+    expect([...cart.keys()]).toEqual([cartItemKey("p1")]);
+  });
+});

@@ -69,7 +69,7 @@ export function restoreCart(store: Store, productStockLimit: (item: StoreItem) =
       // corrupt values — a stale or tampered cart must never crash the storefront.
       const { paymentLinkId, variantId, extraIds, cadence } = parseCartItemKey(key);
       const item = store.items.find((candidate) => candidate.id === paymentLinkId);
-      if (!item || !Number.isInteger(qty) || qty <= 0) continue;
+      if (!item || item.fulfillmentType === 'MEMBERSHIP' || !Number.isInteger(qty) || qty <= 0) continue;
       if (cadence && !(subscriptionsAvailable(store) && item.subscriptionOptions?.some((option) => option.cadence === cadence))) continue;
       const variants = (item.variants ?? []);
       if (variants.length > 0 && (!variantId || !variants.some((variant) => variant.id === variantId))) continue;

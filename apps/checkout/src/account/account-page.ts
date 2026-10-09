@@ -7,12 +7,13 @@ import { markPrivateStorePage } from "../store-seo";
 import { app } from "../ui/app";
 import { escapeHtml, formatAmount } from "../ui/html";
 import { accountApi, AccountError, type CustomerAddress, type CustomerOrder, type CustomerProfile, type CustomerSubscription } from "./account-api";
+import { alreadyMemberHtml, joinHtml, membershipsHtml, rememberJoin, takePendingJoin } from "./membership-views";
 import { clearSession, readSession, saveSession } from "./account-session";
 
-export const ACCOUNT_VIEWS = ["ingresar", "registro", "recuperar", "restablecer", "verificar", "pedidos", "suscripciones", "direcciones", "perfil"] as const;
+export const ACCOUNT_VIEWS = ["ingresar", "registro", "recuperar", "restablecer", "verificar", "pedidos", "suscripciones", "direcciones", "perfil", "unirme", "membresias"] as const;
 export type AccountView = (typeof ACCOUNT_VIEWS)[number];
-const SIGNED_IN_VIEWS: readonly AccountView[] = ["pedidos", "suscripciones", "direcciones", "perfil"];
-const NAV_LABEL: Record<string, string> = { pedidos: "Mis pedidos", suscripciones: "Suscripciones", direcciones: "Direcciones", perfil: "Mi perfil" };
+const SIGNED_IN_VIEWS: readonly AccountView[] = ["pedidos", "suscripciones", "membresias", "direcciones", "perfil"];
+const NAV_LABEL: Record<string, string> = { pedidos: "Mis pedidos", suscripciones: "Suscripciones", membresias: "Membresías", direcciones: "Direcciones", perfil: "Mi perfil" };
 const ORDER_STATUS: Record<string, string> = { AWAITING_PAYMENT: "Esperando pago", PAID: "Pagado", PREPARING: "Preparando", READY_FOR_PICKUP: "Listo para retirar", SHIPPED: "Enviado", DELIVERED: "Entregado", CANCELED: "Cancelado", REFUNDED: "Reembolsado" };
 const SUBSCRIPTION_STATUS: Record<string, string> = { ACTIVE: "Activa", PAUSED: "Pausada", CANCELED: "Cancelada" };
 const CADENCE: Record<string, string> = { WEEKLY: "cada semana", BIWEEKLY: "cada dos semanas", MONTHLY: "cada mes" };
@@ -86,13 +87,19 @@ async function go(view: AccountView) {
   await show(view);
 }
 
+async function afterSignIn(slug: string) {
+  const pending = takePendingJoin(slug);
+  if (pending) { window.history.pushState({}, "", `${path(slug, "unirme")}${pending}`); await show("unirme"); }
+  else await go("pedidos");
+}
+
 async function show(view: AccountView): Promise<void> {
   state.view = view;
   const slug = state.slug;
   const token = accountPreview() ? null : readSession(slug);
   const context: Context = { slug, storeName: state.storeName, signedIn: Boolean(token), preview: accountPreview() };
   document.title = `Mi cuenta — ${state.storeName}`;
-  if (view === "ingresar") { if (token) { await go("pedidos"); return; } app.innerHTML = loginHtml(context); return; }
+  if (view === "ingresar") { if (token) { await afterSignIn(slug); return; } app.innerHTML = loginHtml(context); return; }
   if (view === "registro") { app.innerHTML = registerHtml(context); return; }
   if (view === "recuperar") { app.innerHTML = forgotHtml(context); return; }
   if (view === "restablecer") { state.resetToken = takeToken() || state.resetToken; app.innerHTML = (state.resetToken || accountPreview()) ? resetHtml(context) : invalidLinkHtml(context); return; }
@@ -105,11 +112,26 @@ async function show(view: AccountView): Promise<void> {
     catch (error) { app.innerHTML = shell(context, `<h1>No pudimos confirmar tu correo</h1><p role="alert">${escapeHtml(messageOf(error))}</p><p><a href="${escapeHtml(path(slug, "registro"))}">Crear la cuenta de nuevo</a></p>`); }
     return;
   }
+  if (view === "unirme" && !accountPreview()) {
+    const query = window.location.search;
+    if (!token) { rememberJoin(slug, query); app.innerHTML = loginHtml(context, "Ingresa o crea tu cuenta para hacerte miembro."); return; }
+    const params = new URLSearchParams(query);
+    const store = await fetchStore(slug).catch(() => null);
+    const product = store?.items.find(item => item.id === params.get("producto") && item.fulfillmentType === "MEMBERSHIP");
+    if (!product) { app.innerHTML = shell(context, `<h1>Membresía no disponible</h1><p>Esta membresía ya no está disponible.</p><p><a href="/s/${encodeURIComponent(slug)}">Volver a la tienda</a></p>`); return; }
+    const mine = await accountApi.memberships(slug, token).catch(() => []);
+    const current = mine.find(row => row.productId === product.id && ["ACTIVE", "GRACE", "CANCELED_ACTIVE"].includes(row.state));
+    app.innerHTML = shell(context, current
+      ? alreadyMemberHtml(context, `Ya eres miembro hasta el ${day(current.accessUntil)}.`)
+      : joinHtml(context, product, params.get("periodo") ?? ""));
+    return;
+  }
   if (accountPreview()) { app.innerHTML = accountPreviewHtml(context, view); return; }
   if (!token) { app.innerHTML = loginHtml(context, "Ingresa para ver tu cuenta."); return; }
   app.innerHTML = shell(context, "<p role=\"status\">Cargando…</p>");
   try {
     if (view === "pedidos") app.innerHTML = ordersHtml(context, await accountApi.orders(slug, token));
+    else if (view === "membresias") app.innerHTML = shell(context, membershipsHtml(context, await accountApi.memberships(slug, token)));
     else if (view === "suscripciones") app.innerHTML = subscriptionsHtml(context, await accountApi.subscriptions(slug, token));
     else if (view === "direcciones") { const me = await accountApi.me(slug, token); state.addresses = me.addresses; app.innerHTML = addressesHtml(context, me.addresses); }
     else app.innerHTML = profileHtml(context, await accountApi.me(slug, token));
@@ -137,7 +159,7 @@ async function onSubmit(event: Event) {
     if (name === "login") {
       const session = await accountApi.login(slug, { email: value("email"), password: value("password") });
       saveSession(slug, session);
-      await go("pedidos");
+      await afterSignIn(slug);
     } else if (name === "register") {
       const answer = await accountApi.register(slug, { name: value("name"), email: value("email"), password: value("password") });
       form.reset(); say(answer.message);
@@ -148,6 +170,16 @@ async function onSubmit(event: Event) {
       await accountApi.resetPassword(slug, { token: state.resetToken, password: value("password") });
       state.resetToken = ""; clearSession(slug);
       app.innerHTML = shell({ slug, storeName: state.storeName, signedIn: false }, `<h1>Listo</h1><p>Listo: ya tienes tu contraseña nueva. Ingresa con ella.</p><p><a class="primary" href="${escapeHtml(path(slug, "ingresar"))}">Ingresar</a></p>`);
+    } else if (token && name === "join") {
+      const periodId = form.querySelector<HTMLInputElement>('[name=periodId]:checked')?.value ?? "";
+      if (!(form.elements.namedItem("consent") as HTMLInputElement).checked) { say("Acepta las condiciones de la membresía para continuar.", true); return; }
+      try {
+        const { checkoutUrl } = await accountApi.joinMembership(slug, token, { productId: form.dataset.product!, periodId, consent: true });
+        window.location.assign(checkoutUrl);
+      } catch (error) {
+        if (error instanceof AccountError && error.status === 409) { const own = { slug, storeName: state.storeName, signedIn: true }; app.innerHTML = shell(own, alreadyMemberHtml(own, error.message)); return; }
+        throw error;
+      }
     } else if (token && name === "profile") {
       await accountApi.updateProfile(slug, token, { name: value("name"), phone: value("phone") });
       say("Guardado.");
@@ -182,7 +214,7 @@ async function onClick(event: Event) {
     }
   }
   if (accountPreview()) return;
-  const target = (event.target as HTMLElement).closest<HTMLElement>("[data-logout], [data-remove-address], [data-export], [data-retry]");
+  const target = (event.target as HTMLElement).closest<HTMLElement>("[data-logout], [data-remove-address], [data-export], [data-retry], [data-member-action]");
   if (!target) return;
   const slug = state.slug, token = readSession(slug);
   if (target.hasAttribute("data-retry")) { await show(state.view); return; }
@@ -194,7 +226,12 @@ async function onClick(event: Event) {
   }
   if (!token) return;
   try {
-    if (target.hasAttribute("data-remove-address")) {
+    if (target.hasAttribute("data-member-action")) {
+      const action = target.dataset.memberAction as "cancel" | "resume";
+      await accountApi.membershipAction(slug, token, target.dataset.id!, action);
+      await show("membresias");
+      say(action === "cancel" ? "Cancelamos las renovaciones. Tu acceso sigue hasta la fecha pagada." : "Tu membresía vuelve a renovarse.");
+    } else if (target.hasAttribute("data-remove-address")) {
       state.addresses = await accountApi.replaceAddresses(slug, token, state.addresses.filter(address => address.id !== target.dataset.removeAddress));
       await show("direcciones");
     } else if (target.hasAttribute("data-export")) {
@@ -208,13 +245,24 @@ async function onClick(event: Event) {
   } catch (error) { say(messageOf(error), true); }
 }
 
+async function onChange(event: Event) {
+  const select = (event.target as HTMLElement).closest<HTMLSelectElement>("[data-member-period]");
+  const token = readSession(state.slug);
+  if (!select || !token || accountPreview()) return;
+  try {
+    await accountApi.membershipAction(state.slug, token, select.dataset.id!, "period", select.value);
+    await show("membresias");
+    say("Listo: el nuevo período aplica desde la próxima renovación.");
+  } catch (error) { say(messageOf(error), true); }
+}
+
 export async function renderAccount(slug: string, view: AccountView): Promise<void> {
   document.body.classList.remove("store-page", "product-detail-page", "payment-page", "payment-success-page", "debt-collection-page", "subscription-manage-page");
   document.body.classList.add("account-page");
   markPrivateStorePage();
   const store = accountPreview() ? null : await fetchStore(slug).catch(() => null);
   state = { ...state, slug, storeName: store?.storeName || slug, addresses: [], resetToken: slug === state.slug ? state.resetToken : "" };
-  if (!bound.has(app)) { bound.add(app); app.addEventListener("submit", onSubmit); app.addEventListener("click", onClick); }
+  if (!bound.has(app)) { bound.add(app); app.addEventListener("submit", onSubmit); app.addEventListener("click", onClick); app.addEventListener("change", onChange); }
   if (accountEmbedded()) bindAccountEmbed(app);
   await show(view);
 }
