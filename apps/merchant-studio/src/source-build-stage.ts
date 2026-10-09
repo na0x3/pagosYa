@@ -1,14 +1,16 @@
 import './source-build-progress.css';
 import { escapeHtml as escape } from './studio-ui';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
+import { LOADER_STAR } from './source-loader-star';
 
 /**
  * The waiting room for a generation, which routinely runs 60-120 seconds.
  *
- * It shows the step YAPI is actually on and the time spent, and nothing moves:
- * the merchant asked for no animation while YAPI thinks (2026-09-30), and it once
- * showed a face, a wireframe of blocks and a small game that only got in the way.
- * The status line and the step list carry the real information.
+ * It shows the step YAPI is actually on and the time spent. The one thing that
+ * moves is the bouncing pagosYa star: the merchant asked for no animation while
+ * YAPI thinks (2026-09-30), then for the star (2026-10-08). It once showed a face,
+ * a wireframe of blocks and a small game that only got in the way. The status line
+ * and the step list carry the real information.
  */
 
 export type BuildStageState = { status: string; progress: BuildProgress | null };
@@ -32,6 +34,7 @@ export function formatElapsed(seconds: number): string {
 
 export function renderBuildStage(state: BuildStageState): string {
   return `<div class="yapi-stage" data-build-stage>
+    <div class="yapi-stage__star">${LOADER_STAR}</div>
     <p class="yapi-stage__status" data-stage-status role="status">${escape(state.status)}</p>
     <div class="yapi-stage__meter"><span data-stage-meter style="width:0%"></span></div>
     <p class="yapi-stage__meta"><span data-stage-elapsed>0:00</span><button type="button" class="yapi-stage__link" data-stage-steps aria-expanded="false" hidden>Ver pasos</button></p>

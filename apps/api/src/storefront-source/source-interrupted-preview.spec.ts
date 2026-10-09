@@ -59,3 +59,10 @@ it('restores the last renderable stage even if later unfinished edits broke comp
   expect(agentPreviewSnapshot).toHaveBeenCalledWith(expect.anything(), authored);
   expect(result.files).toEqual(expect.arrayContaining(authored));
 });
+it('returns the request the draft was built from, so the Studio can finish it instead of starting over', async () => {
+  const { service, prisma, run } = setup();
+  Object.assign(run, { requestJobId: 'job-1' });
+  prisma.storeSourceChatJob = { findFirst: jest.fn().mockResolvedValue({ input: { instruction: 'Una gelatería editorial', assetUrls: ['/v1/uploads/a.jpg'], currentPage: 'index.html', setupAction: 'generate' } }) };
+  expect(await service.interruptedPreview('merchant', 'store')).toMatchObject({ retry: { text: 'Una gelatería editorial', assetUrls: ['/v1/uploads/a.jpg'], currentPage: 'index.html', setupAction: 'generate' } });
+  expect(prisma.storeSourceChatJob.findFirst).toHaveBeenCalledWith({ where: { id: 'job-1', storeId: 'store', merchantId: 'merchant' }, select: { input: true } });
+});

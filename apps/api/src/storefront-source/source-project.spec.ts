@@ -22,6 +22,13 @@ export function sourceFixture(): SaveSourceProjectDto {
 }
 
 describe("Independent source artifacts", () => {
+  it('keeps the Plantilla a design started from in the saved brief, and adds nothing to a brief without one', () => {
+    const kept = sourceProjectSnapshot({ ...sourceFixture(), brief: { ...sourceFixture().brief, templateId: 'miga', templateRevision: 2 } });
+    expect(kept.brief).toMatchObject({ templateId: 'miga', templateRevision: 2 });
+    expect(sourceProjectSnapshot(sourceFixture()).brief).toEqual(sourceFixture().brief);
+    const invalid = sourceProjectSnapshot({ ...sourceFixture(), brief: { ...sourceFixture().brief, templateId: '../x', templateRevision: 0 } as any });
+    expect(invalid.brief).toEqual(sourceFixture().brief);
+  });
   it('holds the files of a template store with its standard pages: up to 250 files, not one more', () => {
     const many = (count: number) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...Array.from({ length: count - sourceFixture().files.length }, (_, i) => ({ path: `components/pages/p${i}.tsx`, content: 'x' }))] });
     expect(() => many(250)).not.toThrow();

@@ -20,6 +20,14 @@ export class SourceTemplatesListController {
   list() {
     return this.templates.list();
   }
+
+  /** The template as designed, with its demo shop: Plantillas › Ver. Same for every merchant, so the browser may keep it. */
+  @Get(':templateId/demo')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Header('Cache-Control', 'private, max-age=300')
+  demo(@Param('templateId') templateId: string) {
+    return this.templates.demo(templateId);
+  }
 }
 
 @ApiTags('storefront-templates')

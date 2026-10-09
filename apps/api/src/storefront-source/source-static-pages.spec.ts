@@ -1,6 +1,7 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 import { withStaticStandardPages, withStaticNavSlot } from './source-static-pages';
 import { validateLegacySources } from './source-legacy';
+import { validateGeneratedSource } from './source-generation.service';
 
 /** The shape a Sep-5 authored store actually has, modelled on the store generated on 2026-10-06:
  *  a head with its own stylesheet, then header / main / footer, then the three runtime scripts. */
@@ -29,7 +30,7 @@ const store = () => [{ path: 'index.html', content: authored }, { path: 'styles.
 it('adds every standard page the React side offers, at the URLs the runtime links to', () => {
   const { files, added } = withStaticStandardPages(store());
   // The same set, so a merchant is not offered different pages depending on how their store was built.
-  expect(added.slice().sort()).toEqual(STOREFRONT_PAGES.filter(page => page.kind).map(page => page.url).sort());
+  expect(added.slice().sort()).toEqual(STOREFRONT_PAGES.filter(page => page.kind || page.owner === 'account').map(page => page.url).sort());
   expect(added).toContain('cookies.html');
   expect(added).toContain('privacidad.html');
   expect(added).toContain('terminos.html');
@@ -92,4 +93,29 @@ it('declines rather than guesses when the authored markup is ambiguous', () => {
   expect(withStaticStandardPages([{ path: 'index.html', content: '<footer>f</footer><main>a</main><main>b</main>' }]).added).toEqual([]);
   // A store with no homepage has no shell to build from.
   expect(withStaticStandardPages([{ path: 'styles.css', content: '' }]).added).toEqual([]);
+});
+
+// Authored stores had no login page at all: the Studio's page menu lists a store's HTML files, and only React stores
+// were given the account gates. The Studio swaps `[data-account-gate] .ui-container` for the trusted form; a published
+// store keeps the button, which commerce.js points at the account app by its data-pagosya-account view.
+it('adds the login and account gates in the store own shell', () => {
+  const { files, added } = withStaticStandardPages(store());
+  expect(added).toEqual(expect.arrayContaining(['acceso-ingresar.html', 'acceso-registro.html', 'cuenta-pedidos.html', 'cuenta-perfil.html']));
+  const login = files.find(file => file.path === 'acceso-ingresar.html')!.content;
+  expect(login).toContain('<section class="ui-account-gate" data-account-gate="login">');
+  expect(login).toMatch(/data-account-gate="login">[\s\S]*<div class="ui-container">[\s\S]*data-pagosya-account="login"/);
+  expect(login).toContain('<title>Ingresar</title>');
+  expect(login).toContain('class="site-header"');
+  expect(login).not.toContain('data-pagosya-catalog');
+  expect(files.find(file => file.path === 'cuenta-pedidos.html')!.content).toContain('data-account-gate="orders"');
+});
+
+// The 24-file cap bounds what a model writes; 19 platform pages on top of an authored project must not trip it.
+it('keeps a full authored project with its standard pages under the generated-file cap', () => {
+  const extra = Array.from({ length: 8 }, (_, index) => ({ path: `extra-${index}.css`, content: '.x{}' }));
+  const { files } = withStaticStandardPages([...store(), ...extra]);
+  expect(files.length).toBeGreaterThan(24);
+  expect(() => validateGeneratedSource(files, 'shop')).not.toThrow();
+  // The model's own files still count.
+  expect(() => validateGeneratedSource([...files, ...Array.from({ length: 14 }, (_, index) => ({ path: `more-${index}.css`, content: '.x{}' }))], 'shop')).toThrow(/proyecto válido/);
 });

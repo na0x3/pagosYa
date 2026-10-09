@@ -5,7 +5,6 @@ import privacyRuntime from '@pagosya/storefront-kit/kit/privacy.js?raw';
 import commerceRuntime from '@pagosya/storefront-kit/kit/commerce.js?raw';
 import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
-import accountSlotRuntime from './source-account-slot.js?raw';
 import editModeRuntime from './source-preview-edit-mode.js?raw';
 import bocetoModeRuntime from './source-preview-boceto-mode.js?raw';
 
@@ -147,6 +146,16 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
         parent.postMessage({type:'pagosya:hosted-request', id, action, body},'*');
       });
     }
+    ${navigation.accountForms === true ? `{
+      let accountSequence = 0;
+      window.PAGOSYA_ACCOUNT_REQUEST = (action, body) => new Promise((resolve, reject) => {
+        const id = ++accountSequence;
+        const receive = event => { if (event.source !== parent || event.data?.type !== 'pagosya:account-response' || event.data.id !== id) return; clearTimeout(timer); window.removeEventListener('message', receive); resolve({ ok: event.data.ok === true, body: event.data.body }); };
+        const timer = setTimeout(() => { window.removeEventListener('message', receive); reject(new Error('timeout')); }, 15000);
+        window.addEventListener('message', receive);
+        parent.postMessage({ type: 'pagosya:account-request', id, action, body }, '*');
+      });
+    }` : ''}
     document.addEventListener('click', function(event) {
       const pay = event.target.closest('button[data-pay],button[data-finish-demo]');
       if (${navigation.paymentForm === true} && pay && !pay.disabled) {
@@ -195,7 +204,6 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       if (fragment) { try { document.getElementById(decodeURIComponent(fragment.slice(1)))?.scrollIntoView(); } catch {} }
     });`;
   flag.textContent += '\n' + videoLoopRuntime;
-  if (navigation.accountForms === true) flag.textContent += '\n' + accountSlotRuntime;
   // Edit mode (visual selection) belongs to the Studio preview only: a published, hosted page never carries it.
   if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime + '\n' + bocetoModeRuntime;
   policy.after(flag);

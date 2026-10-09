@@ -132,6 +132,12 @@ export interface AppConfig {
    * slower than either engine alone. See docs/SEP5_AUTHORED_PLAN.md.
    */
   sep5Author: boolean;
+  /**
+   * After the authored store passes its checks, render it, show the model its own screenshots and keep the
+   * corrected project. On with sep5Author unless YAPI_SEP5_SELF_REVIEW=0: a
+   * second whole-project call, so roughly double the time and tokens of an authored run.
+   */
+  sep5SelfReview: boolean;
   /** Claude models for YAPI's agent (they run only on the tool-using engine). */
   anthropic: { apiKey: string };
   openAi: {
@@ -295,6 +301,7 @@ function withLocalhostAliases(origins: string[]): string[] {
 export default (): { app: AppConfig } => {
   const environment = process.env.NODE_ENV ?? "development";
   const sep5Author = process.env.YAPI_SEP5_AUTHOR === '1';
+  const sep5SelfReview = sep5Author && process.env.YAPI_SEP5_SELF_REVIEW !== '0';
   const chatgptPlan = process.env.YAPI_CHATGPT_PLAN_URL
     ? { url: process.env.YAPI_CHATGPT_PLAN_URL, secret: process.env.YAPI_CHATGPT_PLAN_SECRET ?? '' }
     : undefined;
@@ -392,6 +399,7 @@ export default (): { app: AppConfig } => {
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
     sep5Author,
+    sep5SelfReview,
     deepSeek: { apiKey: chatgptPlan ? '' : process.env.DEEPSEEK_API_KEY ?? "", enabled: !chatgptPlan && process.env.DEEPSEEK_ENABLED !== "false" },
     anthropic: { apiKey: chatgptPlan ? '' : process.env.ANTHROPIC_API_KEY ?? "" },
     openAi: {

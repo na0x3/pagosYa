@@ -70,7 +70,10 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     }
     if (requirements.some(r => r.check === 'video-paused' && r.profile === profile)) await page.waitForTimeout(500);
     const health = await page.evaluate(() => ({
-      missing: Array.from(document.images).filter(img => img.getBoundingClientRect().width > 0 && !img.naturalWidth).map(img => img.getAttribute('src') || '(sin ruta)').slice(0, 8),
+      // The runtime's second card photo has only data-src until the shopper reaches the card (commerce.js loadCardAlt).
+      illustrations: Array.from(document.querySelectorAll<HTMLElement>('[data-illustration]')).map(el => el.dataset.illustration || ''),
+      colourless: Array.from(document.querySelectorAll<HTMLElement>('[data-illustration]')).filter(el => { const colour = getComputedStyle(el).backgroundColor; return colour === 'transparent' || /^rgba\(.*,\s*0\)$/.test(colour); }).map(el => el.dataset.illustration || ''),
+      missing: Array.from(document.images).filter(img => img.getBoundingClientRect().width > 0 && !img.naturalWidth && !img.matches('.menu-item__image-alt:not([src])')).map(img => img.getAttribute('src') || '(sin ruta)').slice(0, 8),
       overflow: document.documentElement.scrollWidth > innerWidth + 2,
       hiddenCatalog: Array.from(document.querySelectorAll<HTMLElement>('[data-pagosya-catalog]')).some(el => {
         const style = getComputedStyle(el);
@@ -97,6 +100,10 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     }));
     if (mediaPolicy && !['product.html', 'checkout.html', 'productos.html'].includes(entry)) errors.push(...await page.evaluate(evaluateSourceMediaDesign, { ...mediaPolicy, page: entry }));
     errors.push(...health.missing.map(path => 'Imagen no disponible: ' + path));
+    // A store-colour illustration is a CSS mask: a wrong path draws nothing and raises no image error.
+    errors.push(...[...new Set(health.illustrations)].filter(src => !snapshot.files.some(file => '/' + file.path === src || file.path === src)).slice(0, 8).map(src => 'Ilustración no disponible: ' + src));
+    // A tone such as var(--butter) on a store without that variable paints the mask transparent.
+    errors.push(...[...new Set(health.colourless)].slice(0, 8).map(src => 'Ilustración sin color visible: ' + src));
     errors.push(...[...new Set(health.brokenSections)].slice(0, 8).map(hash => 'Enlace a sección inexistente: ' + hash));
     if (health.overflow) errors.push('La página desborda horizontalmente.');
     if (health.staleCatalogCopy) errors.push('Texto permanente de catálogo vacío fuera del runtime. Usa texto de marca que siga siendo válido al añadir productos; el catálogo administra su estado vacío.');

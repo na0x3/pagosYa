@@ -1656,6 +1656,17 @@
 
   /* Right: sign-in on a dark panel. */
   .login-pane { position: relative; display: grid; grid-template-rows: 1fr auto; gap: 18px; padding: clamp(24px, 4vw, 48px); }
+  /* Two halves exactly one window tall: the page itself never scrolls (it used to grow 57px past a 756px window and
+     slide the whole login); only the sign-in column scrolls if a short window cannot hold it. */
+  @media (min-width: 861px) {
+    .login-split { height: 100dvh; min-height: 0; }
+    .login-pane { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  }
+  @media (min-width: 861px) and (max-height: 820px) {
+    .login-pane { gap: 12px; padding: 20px clamp(24px, 4vw, 48px); }
+    .login-card { gap: 10px; padding: 24px 28px; }
+    .login-sub { margin-bottom: 6px; }
+  }
   .login-card { display: grid; align-content: center; gap: 14px; justify-self: center; align-self: center; width: min(100%, 440px);
     padding: clamp(24px, 3vw, 40px); border: 1px solid #ffffff1f; border-radius: 24px;
     background: hsl(222 40% 6% / .72); backdrop-filter: blur(20px) saturate(1.15); -webkit-backdrop-filter: blur(20px) saturate(1.15);

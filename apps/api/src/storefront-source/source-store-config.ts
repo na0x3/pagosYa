@@ -28,3 +28,15 @@ export function sourceStoreConfigData(publicStore: SourcePublicStore, apiUrl: UR
     items: publicStore.items.map((item) => ({ ...item, imageUrls: item.imageUrls.map((url) => new URL(url, apiUrl).href), variants: item.variants?.map(variant => ({ ...variant, ...(variant.imageUrl ? { imageUrl: new URL(variant.imageUrl, apiUrl).href } : {}) })), extras: item.extras?.map(extra => ({ ...extra, ...(extra.imageUrl ? { imageUrl: new URL(extra.imageUrl, apiUrl).href } : {}) })) })),
   };
 }
+
+/** The store's catalog as it is now, written into config.js: a preview built from saved files (a revision, or a
+ *  draft on top of one) would otherwise show the products the store had when those files were saved. */
+export function withLiveCatalog<T extends { path: string; content: string }>(files: T[], catalog: unknown): T[] {
+  return files.map(file => {
+    if (file.path !== 'config.js') return file;
+    const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
+    if (!match) return file;
+    const config = JSON.parse(match[1]);
+    return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data: catalog })};` };
+  });
+}

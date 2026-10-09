@@ -12,3 +12,9 @@
 .product-content-editor [aria-invalid=true]{border-color:#a62e21}
 .product-content-editor :is(button,input,select,summary):focus-visible{outline:2px solid currentColor;outline-offset:3px}
 .product-block-actions{justify-content:space-between;margin-top:12px}
+/* Long product page sections (spec 2026-10-09). */
+.product-content-editor .product-block-origin{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#eef3ff;color:#2a4ea2;font-size:11px;font-weight:600;vertical-align:middle}
+.product-content-editor fieldset[data-item-index]{display:grid;gap:8px;margin:8px 0;padding:10px 12px;border:1px solid #e3e1db;border-radius:10px}
+.product-content-editor fieldset[data-item-index] legend{padding:0 4px;font-size:11px;color:#6b665c}
+.product-content-editor textarea{width:100%;min-height:64px;resize:vertical;font:inherit}
+.product-page-regenerate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 0;font-size:13px}

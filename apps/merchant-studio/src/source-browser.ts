@@ -1,4 +1,4 @@
-import { mountSourceAccountPreview } from './source-account-preview';
+import { mountSourceAccountDemo } from './source-account-demo';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
 import { sourcePreviewDocument, receivePreviewNavigation, createPreviewImageLoader, type SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml } from './studio-ui';
@@ -12,17 +12,19 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
   const params = new URLSearchParams(location.search);
   const storeId = params.get('store') || '';
   const revision = Number(params.get('revision'));
-  // Plantillas › Ver: a template on the store's catalog instead of a saved version.
+  // Plantillas › Ver: the template as designed, on its demo shop, instead of a saved version.
   const templateId = params.get('template') || '';
   const page = params.get('page') || 'index.html';
-  const cartKey = `pagosya_source_preview_cart:${storeId}:${templateId ? `template:${templateId}` : revision}`;
+  // «Ver en navegador» on a draft the editor shows (YAPI's unsaved work): that draft, on top of its saved revision.
+  const draft = !templateId && params.get('draft') === '1';
+  const cartKey = `pagosya_source_preview_cart:${storeId}:${templateId ? `template:${templateId}` : draft ? `draft:${revision}` : revision}`;
   app.className = 'source-browser';
-  app.innerHTML = `<p class="source-browser-message source-browser-loading" role="status">${LOADER_STAR}<span>${templateId ? 'Preparando la vista previa con tus productos…' : 'Abriendo la vista previa…'}</span></p>`;
+  app.innerHTML = `<p class="source-browser-message source-browser-loading" role="status">${LOADER_STAR}<span>${templateId ? 'Abriendo la plantilla…' : 'Abriendo la vista previa…'}</span></p>`;
   try {
     const token = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!token) throw new Error(templateId ? 'Abre esta vista desde «Ver» en Plantillas.' : 'Abre esta vista desde «Ver en navegador» en el editor de tu tienda.');
     const api = new MerchantStudioApi(token);
-    const { snapshot, title } = templateId ? await templateSnapshot(api, storeId, templateId) : await versionSnapshot(api, storeId, revision);
+    const { snapshot, title } = templateId ? await templateSnapshot(api, templateId) : draft ? await draftSnapshot(api, storeId, revision) : await versionSnapshot(api, storeId, revision);
     const hydrated = await createPreviewImageLoader(API_BASE_URL)(snapshot);
     let cart = [];
     try { cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch { /* Start with an empty preview cart. */ }
@@ -32,11 +34,7 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     const frame = app.querySelector('iframe')!;
     bindSourcePaymentPreview(() => frame, () => hydrated);
     frame.srcdoc = html;
-    mountSourceAccountPreview(frame, hydrated, nextPage => {
-      if (!hydrated.files.some(file => file.path === nextPage)) return;
-      frame.srcdoc = sourcePreviewDocument(hydrated, nextPage, {paymentForm:true,accountForms:true});
-      const destination = new URL(location.href); destination.searchParams.set('page',nextPage); history.replaceState(null,'',destination.href);
-    });
+    mountSourceAccountDemo(frame);
     const controller = new AbortController();
     window.addEventListener('pagehide', () => controller.abort(), { once: true });
     window.addEventListener('message', event => {
@@ -61,10 +59,13 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
   }
 }
 
-/** A template dressed in the store's products, named after the template (a missing name list only costs the name). */
-async function templateSnapshot(api: MerchantStudioApi, storeId: string, templateId: string): Promise<{ snapshot: SourceSnapshot; title: string }> {
-  if (!storeId) throw new Error('El enlace de vista previa no es válido. Vuelve a abrirlo desde Plantillas.');
-  const [snapshot, templates] = await Promise.all([api.templatePreview(storeId, templateId), api.listTemplates().catch(() => [])]);
+/**
+ * The template as its designer made it, named after the template (a missing name list only costs the name). Dressed in
+ * the merchant's store it kept its demo copy beside their name and photos and read as a broken store; "Usar" in the
+ * Studio is where a template meets the store's products.
+ */
+async function templateSnapshot(api: MerchantStudioApi, templateId: string): Promise<{ snapshot: SourceSnapshot; title: string }> {
+  const [snapshot, templates] = await Promise.all([api.templateDemo(templateId), api.listTemplates().catch(() => [])]);
   return { snapshot, title: `${templates.find(template => template.id === templateId)?.name || templateId} · Plantilla` };
 }
 
@@ -86,4 +87,13 @@ async function versionSnapshot(api: MerchantStudioApi, storeId: string, revision
     }) };
   }
   return { snapshot, title: `${version.label} · Vista previa` };
+}
+
+/** The draft the editor shows, as it composes it: the draft's files over its saved revision, which keeps the photos
+ *  the draft does not resend. The draft endpoint already carries the store's current catalog. */
+async function draftSnapshot(api: MerchantStudioApi, storeId: string, revision: number): Promise<{ snapshot: SourceSnapshot; title: string }> {
+  const [{ snapshot: base }, draft] = await Promise.all([versionSnapshot(api, storeId, revision), api.sourceDraftPreview(storeId)]);
+  if (!draft.files?.length) throw new Error('Este borrador ya no está disponible. Vuelve al editor para ver el diseño guardado.');
+  const kept = base.files.filter(file => file.encoding === 'base64' && !draft.files!.some(next => next.path === file.path));
+  return { snapshot: { ...base, files: [...draft.files, ...kept] } as SourceSnapshot, title: 'Borrador de YAPI · Vista previa' };
 }

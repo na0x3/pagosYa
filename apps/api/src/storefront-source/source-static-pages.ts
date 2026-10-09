@@ -20,6 +20,32 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 /** The same filter the React side uses, so both pipelines offer the merchant exactly one set of pages. */
 const PAGES = STOREFRONT_PAGES.filter(page => page.kind).map(page => ({ url: page.url, kind: page.kind!, label: page.label }));
 
+/** The customer-access and account pages, as the React side's ACCOUNT_PAGES: the gate view is the key's last segment. */
+const ACCOUNT_PAGES = STOREFRONT_PAGES.filter(page => page.owner === 'account').map(page => ({ url: page.url, view: page.key.split('/')[1], label: page.label }));
+
+/** The pages this module writes. They are copies of the store's own index.html, rebuilt from it at every save,
+ *  so a redesign leaves them out of what it shows the model. */
+export const STATIC_STANDARD_PAGE_PATHS: readonly string[] = [...PAGES, ...ACCOUNT_PAGES].map(page => page.url);
+
+/** The copy and gate rules of the kit's AccountGatePage (packages/storefront-kit/kit/ui.tsx), which an authored store
+ *  cannot import. The store runtime draws the account forms in the container where a trusted parent answers its account
+ *  bridge (Studio, full-window preview, published store); an exported site keeps the button, pointed at the account app. */
+const GATE_COPY: Record<string, { title: string; lead: string; action: string }> = {
+  login: { title: 'Ingresa a tu cuenta', lead: 'Revisa tus pedidos y guarda tus datos para comprar más rápido.', action: 'Ingresar' },
+  register: { title: 'Crea tu cuenta', lead: 'Con una cuenta sigues tus pedidos y guardas tus direcciones.', action: 'Crear cuenta' },
+  'forgot-password': { title: 'Recupera tu contraseña', lead: 'Te enviamos un enlace a tu correo para elegir una contraseña nueva.', action: 'Recuperar contraseña' },
+  'reset-password': { title: 'Elige una contraseña nueva', lead: 'Pide un enlace a tu correo y desde ahí eliges la contraseña nueva.', action: 'Pedir un enlace' },
+  orders: { title: 'Mis pedidos', lead: 'Mira el estado y el detalle de tus compras.', action: 'Ver mis pedidos' },
+  addresses: { title: 'Mis direcciones', lead: 'Guarda y cambia las direcciones donde recibes tus pedidos.', action: 'Ver mis direcciones' },
+  profile: { title: 'Mi perfil', lead: 'Cambia tus datos, descarga tu información o elimina tu cuenta.', action: 'Ver mi perfil' },
+  subscriptions: { title: 'Mis suscripciones', lead: 'Revisa y administra tus entregas recurrentes.', action: 'Ver mis suscripciones' },
+};
+const GATE_CSS = '.ui-account-gate{box-sizing:border-box;min-height:45vh;padding-block:clamp(40px,6vw,88px)}.ui-account-gate>.ui-container{box-sizing:border-box;width:calc(100% - 48px);max-width:1120px;margin-inline:auto}.ui-account-gate h1{max-width:22ch;margin:0 0 28px;font-size:clamp(32px,4.5vw,60px);line-height:1.08;text-wrap:balance}.ui-account-gate p{font-size:clamp(17px,1.4vw,21px);line-height:1.6;max-width:48ch;margin:0 0 32px}.ui-account-gate .ui-button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:48px;max-width:100%;padding:14px 24px;font:inherit;font-weight:700;text-decoration:none;border:1px solid currentColor;color:inherit}.ui-account-gate .ui-button[aria-disabled=true]{opacity:.55}@media(max-width:600px){.ui-account-gate>.ui-container{width:calc(100% - 32px)}.ui-account-gate .ui-button{width:100%}}';
+const gateMarkup = (view: string) => {
+  const copy = GATE_COPY[view];
+  return `<section class="ui-account-gate" data-account-gate="${view}"><style data-pagosya-standard-pages>${GATE_CSS}</style><div class="ui-container"><h1>${copy.title}</h1><p>${copy.lead}</p><a class="ui-button" href="#" data-pagosya-account="${view}">${copy.action}</a></div></section>`;
+};
+
 /** The runtime fills this with the information links and the account link; it stays hidden until it does. */
 const NAV_SLOT = '<nav data-pagosya-pages class="pagosya-info-nav" aria-label="Información" hidden></nav>';
 
@@ -41,15 +67,15 @@ export function withStaticNavSlot(html: string): string | null {
   return `${html.slice(0, close)}  ${NAV_SLOT}\n  ${html.slice(close)}`;
 }
 
-/** Everything inside `<main …>` replaced by the mount, keeping the element's own attributes so the page keeps
+/** Everything inside `<main …>` replaced by `content`, keeping the element's own attributes so the page keeps
  *  the store's layout and spacing. Null when there is no single unambiguous main to stand in for. */
-function withPageMount(html: string, kind: string, label: string): string | null {
+function withPageMount(html: string, content: string, label: string): string | null {
   const open = onlyIndexOf(html, '<main');
   const close = onlyIndexOf(html, '</main>');
   if (open < 0 || close < 0 || close < open) return null;
   const openEnd = html.indexOf('>', open);
   if (openEnd < 0 || openEnd > close) return null;
-  const page = `${html.slice(0, openEnd + 1)}\n    <div data-pagosya-page="${kind}"></div>\n  ${html.slice(close)}`;
+  const page = `${html.slice(0, openEnd + 1)}\n    ${content}\n  ${html.slice(close)}`;
   // The authored title describes the homepage, and this is a different page. The platform still owns the
   // rest of the head and rewrites the SEO block on publication.
   return page.replace(/<title>[\s\S]*?<\/title>/, `<title>${label}</title>`);
@@ -70,7 +96,12 @@ export function withStaticStandardPages(files: SourceProjectFileDto[]): { files:
   for (const page of PAGES) {
     if (files.some(file => file.path === page.url)) continue;
     // The slot is applied to the shell first, so every page this adds carries the footer navigation too.
-    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, page.kind, page.label);
+    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, `<div data-pagosya-page="${page.kind}"></div>`, page.label);
+    if (content) added.push({ path: page.url, content });
+  }
+  for (const page of ACCOUNT_PAGES) {
+    if (files.some(file => file.path === page.url) || !GATE_COPY[page.view]) continue;
+    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, gateMarkup(page.view), page.label);
     if (content) added.push({ path: page.url, content });
   }
 

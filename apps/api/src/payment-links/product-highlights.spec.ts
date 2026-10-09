@@ -1,7 +1,7 @@
 import { normalizeProductHighlights, PRODUCT_HIGHLIGHT_ICONS } from './product-highlights';
 
 describe('product highlights', () => {
-  it('keeps at most four approved rows with known icons', () => {
+  it('keeps at most six approved rows with known icons', () => {
     expect(normalizeProductHighlights([
       { icon: 'fuel', label: '  Gasolina  ', detail: '  1.6 L  ' },
       { icon: 'car', label: 'Automático' },
@@ -13,9 +13,20 @@ describe('product highlights', () => {
       { icon: 'car', label: 'Automático' },
       { icon: 'truck', label: 'Entrega', detail: 'A domicilio' },
       { icon: 'gauge', label: '0 a 100' },
+      { icon: 'leaf', label: 'De más' },
     ]);
   });
 
+  it('keeps up to six rows, marks YAPI rows and treats every other row as the merchant\'s', () => {
+    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((label, i) => ({ icon: 'check', label, ...(i === 0 ? { origin: 'yapi' } : i === 1 ? { origin: 'merchant' } : {}) }));
+    const kept = normalizeProductHighlights(rows as any);
+    expect(kept).toHaveLength(6);
+    expect(kept[0]).toEqual({ icon: 'check', label: 'A', origin: 'yapi' });
+    expect(kept[1]).toEqual({ icon: 'check', label: 'B' });
+  });
+  it('accepts the cold, heat and carry icons', () => {
+    for (const icon of ['thermometer', 'laptop', 'backpack', 'umbrella']) expect(PRODUCT_HIGHLIGHT_ICONS).toContain(icon);
+  });
   it('drops unknown icons, blank labels and repeated labels', () => {
     expect(normalizeProductHighlights([
       { icon: 'rocket', label: 'Inventado' },

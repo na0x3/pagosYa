@@ -1,7 +1,8 @@
 import { normalizeProductVariants, type ProductVariant } from './product-variants';
 import { normalizeProductHighlights } from "./product-highlights";
 import { normalizeContentBlocks, readContentBlocks } from './product-content-blocks';
-import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from "@nestjs/common";
+import { ProductPageWriterService } from "../product-content/product-page-writer.service";
 import { ConfigService } from "@nestjs/config";
 import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
 import { PaymentLinkStatus, Prisma } from "@prisma/client";
@@ -190,6 +191,7 @@ export class PaymentLinksService {
     private readonly uploads: UploadsService,
     private readonly siatCatalogs: SiatCatalogService,
     private readonly config: ConfigService,
+    @Optional() private readonly pageWriter?: ProductPageWriterService,
   ) {}
 
   private async validateFiscalMapping(
@@ -495,6 +497,8 @@ export class PaymentLinksService {
       },
     });
     await this.syncSharedExtraInventory(storeId, extras);
+    // The long product page is written in the background; the merchant's save never waits for YAPI.
+    void this.pageWriter?.fill(storeId, created.id, 'auto').catch(error => this.logger.warn(JSON.stringify({ event: 'product_page_failed', storeId, productId: created.id, reason: (error as Error).message.slice(0, 200) })));
     return created;
   }
 

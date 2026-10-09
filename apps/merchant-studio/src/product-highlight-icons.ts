@@ -6,7 +6,8 @@ export const PRODUCT_HIGHLIGHT_ICON_LABELS: Array<[string, string]> = [
   ['leaf', 'Hoja'], ['ruler', 'Medidas'], ['drop', 'Gota'], ['sun', 'Sol'], ['flame', 'Llama'], ['snowflake', 'Frío'],
   ['shirt', 'Prenda'], ['wash', 'Lavado'], ['sparkle', 'Brillo'], ['hand', 'Mano'], ['scissors', 'Tijeras'],
   ['cup', 'Taza'], ['wheat', 'Trigo'], ['chef-hat', 'Cocina'], ['bottle', 'Botella'],
+  ['thermometer', 'Temperatura'], ['laptop', 'Laptop'], ['backpack', 'Mochila'], ['umbrella', 'Lluvia'],
   ['shield', 'Garantía'], ['star', 'Estrella'], ['heart', 'Favorito'], ['recycle', 'Reciclable'], ['check', 'Verificado'],
 ];
 export const PRODUCT_HIGHLIGHT_ICONS = PRODUCT_HIGHLIGHT_ICON_LABELS.map(([name]) => name);
-export type ProductHighlightInput = { icon: string; label: string; detail?: string };
+export type ProductHighlightInput = { icon: string; label: string; detail?: string; origin?: 'yapi' };

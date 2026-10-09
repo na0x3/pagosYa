@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { PaymentLinksService } from "./payment-links.service";
 
-function makeService() {
+function makeService(pageWriter?: { fill: jest.Mock }) {
   const prisma = {
     store: { findFirst: jest.fn().mockResolvedValue({ id: "store_1" }) },
     category: {
@@ -38,7 +38,7 @@ function makeService() {
   const uploads = { deleteFiles: jest.fn(), getBuffer: jest.fn() };
   const siatCatalogs = { assertProductClassification: jest.fn() };
   const config = { get: jest.fn() };
-  return { service: new PaymentLinksService(prisma as any, uploads as any, siatCatalogs as any, config as any), prisma, siatCatalogs, config };
+  return { service: new PaymentLinksService(prisma as any, uploads as any, siatCatalogs as any, config as any, pageWriter as any), prisma, siatCatalogs, config };
 }
 
 describe("PaymentLinksService legacy option stock", () => {
@@ -768,5 +768,16 @@ describe("PaymentLinksService product image framing", () => {
     });
 
     expect(prisma.paymentLink.update.mock.calls[0][0].data.imagePositions).toEqual(["10% 20%", "50% 50%"]);
+  });
+});
+
+describe("PaymentLinksService long product page", () => {
+  it("asks YAPI to write the new product's long page in the background, never waiting or failing on it", async () => {
+    for (const pageWriter of [{ fill: jest.fn(() => new Promise(() => {})) }, { fill: jest.fn().mockRejectedValue(new Error("plan down")) }]) {
+      const { service } = makeService(pageWriter as any);
+      const created = await service.create("merchant_1", "store_1", { name: "Bolso", amount: 9000 } as any);
+      expect(created.id).toBe("link_bolso");
+      expect(pageWriter.fill).toHaveBeenCalledWith("store_1", "link_bolso", "auto");
+    }
   });
 });

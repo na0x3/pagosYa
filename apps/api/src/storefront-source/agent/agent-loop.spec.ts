@@ -3,7 +3,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { AgentToolbox } from './agent-tools';
-import { runAgent, agentLimits, AGENT_LIMITS, type AgentModel, type AgentModelTurn } from './agent-loop';
+import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, type AgentModel, type AgentModelTurn } from './agent-loop';
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
@@ -156,6 +156,30 @@ describe('agent limits', () => {
   it('gives a free ChatGPT-plan run twice the time, because the bridge is slower than a paid API', () => {
     expect(agentLimits(false)).toEqual(AGENT_LIMITS);
     expect(agentLimits(true)).toEqual({ ...AGENT_LIMITS, wallMs: 720_000 });
+  });
+
+  it('stops the agent before the run is aborted, even after a slow design phase, and keeps its full budget when there is room', () => {
+    const plan = agentLimits(true);
+    const runStart = 0, deadline = runStart + agentRunHeadroom(plan.wallMs);
+    // 2026-10-08, store "excess": design took 106 s, then the old 750 s hard stop aborted the agent mid-verify.
+    expect(agentWallWithin(plan, deadline, 106_000).wallMs).toBe(plan.wallMs);
+    const designDone = 106_000, agentStop = designDone + agentWallWithin(plan, deadline, designDone).wallMs;
+    expect(deadline - agentStop).toBeGreaterThanOrEqual(AGENT_CLOSE_MS);
+    // A design phase that overruns its allowance shortens the agent instead of letting the run be aborted.
+    const late = agentWallWithin(plan, deadline, 400_000);
+    expect(late.wallMs).toBeLessThan(plan.wallMs);
+    expect(deadline - (400_000 + late.wallMs)).toBe(AGENT_CLOSE_MS);
+    expect(agentWallWithin(plan, deadline, deadline).wallMs).toBe(0);
+    expect(agentWallWithin(plan, deadline, 0).toolCalls).toBe(plan.toolCalls);
+  });
+
+  it('tells a run that ran out of time from one that was cancelled', async () => {
+    const cancelled = new AbortController(); cancelled.abort();
+    expect(abortedByTimeout(cancelled.signal)).toBe(false);
+    const timed = AbortSignal.any([new AbortController().signal, AbortSignal.timeout(1)]);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(abortedByTimeout(timed)).toBe(true);
+    expect(abortedByTimeout(undefined)).toBe(false);
   });
 });
 

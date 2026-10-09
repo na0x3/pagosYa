@@ -731,6 +731,35 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     }
   });
 
+  // Each card's thumbnail runs that store's whole live site (scripts, animations, video) in its own Studio. They load
+  // only near the screen, three at a time, and are unloaded when "Mi tienda" is left, so none runs behind other pages.
+  const THUMBNAIL_LOADS = 3;
+  let thumbnailObserver = null, thumbnailsLoading = 0;
+  const thumbnailQueue = [];
+  function loadNextThumbnails() {
+    while (thumbnailsLoading < THUMBNAIL_LOADS && thumbnailQueue.length) {
+      const frame = thumbnailQueue.shift();
+      if (!frame.isConnected || frame.getAttribute("src") || document.body.dataset.dashboardView !== "stores") continue;
+      thumbnailsLoading++;
+      frame.addEventListener("load", () => { thumbnailsLoading = Math.max(0, thumbnailsLoading - 1); loadNextThumbnails(); }, { once: true });
+      frame.src = frame.dataset.thumbnailSrc;
+    }
+  }
+  function watchStoreThumbnails() {
+    thumbnailObserver?.disconnect(); thumbnailObserver = null; thumbnailQueue.length = 0; thumbnailsLoading = 0;
+    if (document.body.dataset.dashboardView !== "stores") return;
+    thumbnailObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) if (entry.isIntersecting) { thumbnailObserver.unobserve(entry.target); thumbnailQueue.push(entry.target); }
+      loadNextThumbnails();
+    }, { rootMargin: "240px 0px" });
+    document.querySelectorAll("#storeRows iframe[data-thumbnail-src]:not([src])").forEach(frame => thumbnailObserver.observe(frame));
+  }
+  function unloadStoreThumbnails() {
+    thumbnailObserver?.disconnect(); thumbnailObserver = null; thumbnailQueue.length = 0; thumbnailsLoading = 0;
+    // Detaching the frame ends its document; a fresh copy without src waits for the next visit.
+    document.querySelectorAll("#storeRows iframe[data-thumbnail-src][src]").forEach(frame => { const fresh = frame.cloneNode(false); fresh.removeAttribute("src"); frame.replaceWith(fresh); });
+  }
+
   function setDashboardView(view, { remember = true } = {}) {
     if (view === "content") view = "workspace";
     if (view === "discounts") { view = "marketing"; document.getElementById("marketingTabs").dataset.tab = "promotions"; document.getElementById("marketingPromotions").hidden = false; document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed",String(tab.dataset.marketingTab === "promotions"))); }
@@ -738,6 +767,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     const viewChanged = document.body.dataset.dashboardView !== nextView;
     if (viewChanged) {
       document.body.dataset.dashboardView = nextView;
+      if (nextView === "stores") watchStoreThumbnails(); else unloadStoreThumbnails();
       document.querySelectorAll("[data-dashboard-page]").forEach((element) => {
         element.hidden = element.dataset.dashboardPage !== nextView;
         element.classList.remove("page-entering");
@@ -2038,7 +2068,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button><button class="store-create-tile" id="openShopifyImport" type="button"><span aria-hidden="true">↧</span><strong>Traer mi tienda de Shopify</strong><small>Productos, fotos y páginas</small></button>` + visible.map(store => {
       const revision = store.sourceProject?.revision || store.publishedSourceRevision;
       const cover = store.bannerUrl || store.heroSlides?.[0]?.imageUrl || store.publicityImageUrl;
-      const preview = revision ? `<iframe src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
+      const preview = revision ? `<iframe data-thumbnail-src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
       const state = statusFor(store), stateLabel = { published: "Publicada", draft: "Borrador", archived: "Archivada" }[state];
       return `<article class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
         <div class="store-card-preview">${preview}</div>
@@ -2049,6 +2079,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
     document.getElementById("openShopifyImport").addEventListener("click", openShopifyImport);
     document.querySelectorAll(".store-card-menu").forEach(menu => menu.addEventListener("click", event => event.stopPropagation()));
+    watchStoreThumbnails();
 
     document.querySelectorAll(".store-row").forEach((row) => {
       row.setAttribute("tabindex", "0");

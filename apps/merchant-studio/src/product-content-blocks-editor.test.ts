@@ -31,11 +31,11 @@ it('preserves saved ids and text, reorders and deletes blocks', () => {
   t.click('[data-block-row="1"] [data-block-up]'); expect(t.editor.values()).toEqual([media, compare]);
   t.click('[data-block-row="0"] [data-block-delete]'); expect(t.editor.values()).toEqual([compare]);
 });
-it('disables adding at six and makes a seventh impossible', () => {
-  const t = setup(); for (let i = 0; i < 7; i++) t.click('[data-block-add="media"]');
-  expect(t.host.querySelectorAll('[data-block-row]')).toHaveLength(6);
+it('disables adding at twelve and makes a thirteenth impossible', () => {
+  const t = setup(); for (let i = 0; i < 13; i++) t.click('[data-block-add="media"]');
+  expect(t.host.querySelectorAll('[data-block-row]')).toHaveLength(12);
   expect(t.host.querySelector<HTMLButtonElement>('[data-block-add="media"]')!.disabled).toBe(true);
-  expect(t.host.querySelector('[data-block-count]')!.textContent).toBe('6 de 6');
+  expect(t.host.querySelector('[data-block-count]')!.textContent).toBe('12 de 12');
 });
 it('marks removed pool photos invalid and refuses to save until corrected', () => {
   const t = setup([compare]); t.removePhoto();
@@ -53,4 +53,52 @@ it('escapes saved text on redraw and disposes its delegated handlers', () => {
   t.editor.refreshPhotos(); expect(t.host.querySelector('img')).toBeNull();
   expect(t.editor.values()[0]).toMatchObject({ caption: '\"><img src=x onerror=alert(1)>' });
   t.editor.dispose(); expect(t.host.childElementCount).toBe(0);
+});
+
+const story: ContentBlockInput = { id: 'blk_aaaaaaaaaaa2', type: 'story', origin: 'yapi', problem: 'Llevas tres bolsas.', tried: 'La lonchera se derrama.', solution: 'Un solo bolso.' };
+const faq: ContentBlockInput = { id: 'blk_aaaaaaaaaaa5', type: 'faq', origin: 'yapi', items: [{ q: '¿Cabe mi laptop?', a: 'Sí.' }, { q: '¿Se lava?', a: 'Con un paño.' }] };
+const versus: ContentBlockInput = { id: 'blk_aaaaaaaaaaa4', type: 'versus', origin: 'yapi', ours: 'Este bolso', theirs: 'Lo de siempre', rows: [{ label: 'Zona fría', ours: true, theirs: false }, { label: 'Funda laptop', ours: true, theirs: false }] };
+const details: ContentBlockInput = { id: 'blk_aaaaaaaaaaa3', type: 'details', origin: 'yapi', items: [{ imageUrl: a.preview, title: 'Zona fría', text: 'Abajo.', alt: 'Zona fría abierta' }] };
+const features: ContentBlockInput = { id: 'blk_aaaaaaaaaaa1', type: 'features', origin: 'yapi', items: [{ icon: 'snowflake', label: 'Frío', detail: '12 h' }, { icon: 'laptop', label: 'Laptop', detail: '15.6"' }, { icon: 'drop', label: 'Impermeable', detail: 'Repele el agua' }] };
+
+it('keeps every long-page section exactly as it was when the merchant only saves, and says who wrote it', () => {
+  const t = setup([story, versus, faq, details, features, media]);
+  expect(t.editor.values()).toEqual([story, versus, faq, details, features, media]);
+  expect(t.host.textContent).toContain('Escrito por YAPI');
+  expect(t.host.textContent).toContain('Preguntas frecuentes');
+});
+it("editing a YAPI section makes it the merchant's", () => {
+  const t = setup([story]);
+  const field = t.host.querySelector<HTMLTextAreaElement>('[data-block-field="problem"]')!;
+  field.value = 'Cargas demasiadas cosas.'; field.dispatchEvent(new Event('input', { bubbles: true }));
+  const { origin, ...rest } = story as any;
+  expect(t.editor.values()[0]).toEqual({ ...rest, problem: 'Cargas demasiadas cosas.' });
+});
+it('edits list items, adds and removes them within limits, and flips comparison marks', () => {
+  const t = setup([faq, versus]);
+  t.click('[data-block-row="0"] [data-item-add]');
+  const rows = () => t.host.querySelectorAll('[data-block-row="0"] [data-item-index]');
+  expect(rows()).toHaveLength(3);
+  t.click('[data-block-row="0"] [data-item-remove="2"]');
+  expect(rows()).toHaveLength(2);
+  expect(t.host.querySelector<HTMLButtonElement>('[data-block-row="0"] [data-item-remove="1"]')!.disabled).toBe(true);
+  const theirs = t.host.querySelector<HTMLInputElement>('[data-block-row="1"] [data-item-index="0"] [data-item-field="theirs"]')!;
+  theirs.checked = true; theirs.dispatchEvent(new Event('change', { bubbles: true }));
+  expect((t.editor.values()[1] as any).rows[0]).toEqual({ label: 'Zona fría', ours: true, theirs: true });
+  expect(t.editor.values()[1]).not.toHaveProperty('origin');
+  // Adding or removing a row is an edit too: both sections are now the merchant's.
+  expect(t.editor.values()[0]).not.toHaveProperty('origin');
+});
+it('refuses to save an emptied section or a removed detail photo', () => {
+  const t = setup([story, details]);
+  const field = t.host.querySelector<HTMLTextAreaElement>('[data-block-field="tried"]')!;
+  field.value = '  '; field.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(() => t.editor.values()).toThrow(/bloque 1/);
+  field.value = 'Otra cosa.'; field.dispatchEvent(new Event('input', { bubbles: true }));
+  t.removePhoto(); // keeps photo a, the detail uses a — still valid
+  expect(t.editor.values()).toHaveLength(2);
+});
+it('allows twelve blocks', () => {
+  const t = setup();
+  expect(t.host.querySelector('[data-block-count]')!.textContent).toBe('0 de 12');
 });

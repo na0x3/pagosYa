@@ -19,7 +19,8 @@ type SourceFile = { path: string; content: string };
 
 /** The standard pages an authored store gets as HTML: the ones the runtime fills by kind. The account gates are
  *  not among them — on an authored store the account link leaves for the trusted origin instead of being a page. */
-const STATIC_STANDARD_URLS = STOREFRONT_PAGES.filter(page => page.kind).map(page => page.url);
+// The information pages and the account gates (login, registro, pedidos…), as the API's withStaticStandardPages adds them.
+const STATIC_STANDARD_URLS = STOREFRONT_PAGES.filter(page => page.kind || page.owner === 'account').map(page => page.url);
 const COMMERCE_URLS = ['index.html', 'product.html', 'checkout.html'];
 /** Either signal means React: a real Next store carries the framework marker, and any store with components
  *  has them as its pages. An authored store has neither — only HTML, CSS and site.js. */
@@ -89,7 +90,7 @@ export async function openPagesPanel(api: MerchantStudioApi, storeId: string, ve
   dialog.setAttribute('aria-label', 'Páginas de tu tienda');
   const rows = pages.map(page => `<article class="settings-row"><div><strong>${escape(page.label)}</strong><p>${escape(page.url)}${page.standard ? ' · base estándar' : ''}</p></div><div class="settings-actions"><button type="button" class="button" data-ask-page="${escape(page.file)}">Pedir un cambio a YAPI</button></div></article>`).join('');
   const add = canAddStandardPages(files)
-    ? `<section class="settings-card"><h3>Páginas estándar</h3><p>Agrega nosotros, contacto, envíos, preguntas frecuentes, reembolsos, privacidad, términos, cookies, colecciones y búsqueda, con lo que ya escribiste en Ajustes. Queda como una revisión nueva: no se publica hasta que la publiques.</p><button type="button" class="button button--publish" data-add-standard-pages>Agregar páginas estándar</button></section>`
+    ? `<section class="settings-card"><h3>Páginas estándar</h3><p>Agrega nosotros, contacto, envíos, preguntas frecuentes, reembolsos, privacidad, términos, cookies, colecciones y búsqueda, con lo que ya escribiste en Ajustes, y las páginas de cuenta de tus clientes: ingresar, crear cuenta y mis pedidos. Queda como una revisión nueva: no se publica hasta que la publiques.</p><button type="button" class="button button--publish" data-add-standard-pages>Agregar páginas estándar</button></section>`
     : '';
   dialog.innerHTML = `<header><div><h2>Páginas de tu tienda</h2><p>Cada página tiene su propia dirección y puede aparecer en el menú.</p></div><button class="button" type="button" data-close-pages>Cerrar</button></header>
     <section class="source-pages-explainer"><strong>Una base para cada página. El contenido lo pone tu negocio.</strong><p>Al aplicar una plantilla compatible se incluyen páginas estándar con el diseño de tu tienda. YAPI puede personalizarlas o crear otras cuando se lo pides.</p><details><summary>¿Por qué algunas tienen poco contenido?</summary><p>Nosotros, contacto, envíos y políticas toman la información guardada en Ajustes. Si faltan esos datos, la página puede existir sin contenido completo. Búsqueda y colecciones dependen del catálogo; pedidos y perfil dependen de la cuenta del cliente.</p><p>Completa tus datos o pide a YAPI un cambio específico. Las páginas nuevas y los cambios de diseño quedan en un borrador hasta que los publiques.</p></details></section>

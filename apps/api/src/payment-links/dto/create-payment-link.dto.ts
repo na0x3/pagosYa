@@ -51,14 +51,43 @@ export class ProductHighlightDto {
 
   @IsOptional() @IsString() @IsSafeText() @Length(1, 40)
   detail?: string;
+
+  @IsOptional() @IsIn(['yapi', 'merchant'])
+  origin?: 'yapi' | 'merchant';
 }
 
 export class ContentBlockDto {
   @IsOptional() @IsString() @MaxLength(32)
   id?: string;
 
-  @IsIn(['media', 'compare'])
-  type!: 'media' | 'compare';
+  @IsIn(['media', 'compare', 'story', 'versus', 'faq', 'details', 'features'])
+  type!: 'media' | 'compare' | 'story' | 'versus' | 'faq' | 'details' | 'features';
+
+  /** Set by YAPI on what it wrote; Studio drops it when the merchant edits the block. */
+  @IsOptional() @IsIn(['yapi', 'merchant'])
+  origin?: 'yapi' | 'merchant';
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(220)
+  problem?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(220)
+  tried?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(260)
+  solution?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
+  ours?: string;
+
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(24)
+  theirs?: string;
+
+  /** Rows and items are checked field by field by normalizeContentBlocks; the DTO only bounds their size. */
+  @IsOptional() @IsArray() @ArrayMaxSize(8)
+  rows?: unknown[];
+
+  @IsOptional() @IsArray() @ArrayMaxSize(8)
+  items?: unknown[];
 
   @IsOptional() @IsString() @IsSafeText() @MaxLength(160)
   alt?: string;
@@ -249,15 +278,15 @@ export class CreatePaymentLinkDto {
   @Type(() => ProductSpecificationDto)
   specifications?: ProductSpecificationDto[];
 
-  @ApiPropertyOptional({ description: "Up to four approved highlights with an icon shown on the product page.", type: [ProductHighlightDto] })
+  @ApiPropertyOptional({ description: "Up to six approved highlights with an icon shown on the product page.", type: [ProductHighlightDto] })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(4)
+  @ArrayMaxSize(6)
   @ValidateNested({ each: true })
   @Type(() => ProductHighlightDto)
   highlights?: ProductHighlightDto[];
 
-  @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => ContentBlockDto)
+  @IsOptional() @IsArray() @ArrayMaxSize(12) @ValidateNested({ each: true }) @Type(() => ContentBlockDto)
   contentBlocks?: ContentBlockDto[];
 
   @ApiPropertyOptional({

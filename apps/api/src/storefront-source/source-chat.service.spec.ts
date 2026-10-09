@@ -1,7 +1,9 @@
 import { rankDirections } from './source-directions';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { SourceConversationFailure } from './source-conversation-failure';
-import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF } from './source-chat.service';
+import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF, TEMPLATE_KEEP_BRIEF, templateDemoPhotoNote } from './source-chat.service';
+import { templateReferenceRequested } from './source-template-state';
+import { sourceRequestContext } from './source-request-context';
 import { SourceRequestBudget } from './source-request-budget';
 import { sourceRequestProfile } from './source-request-profile';
 import { sourceRedesignRequested } from './source-context';
@@ -17,7 +19,7 @@ function setup(messages: any[] = []) {
     storeSourceVersion: { count: jest.fn().mockResolvedValue(1) },
   };
   const projects: any = { current: jest.fn().mockResolvedValue({ revision: 1 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessType: 'Café Aroma', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Editorial' } } }) };
-  const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Carta editorial' }), newBudget: jest.fn((maxCredits?: number) => new SourceRequestBudget(maxCredits)) };
+  const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Carta editorial' }), newBudget: jest.fn((maxCredits?: number) => new SourceRequestBudget(maxCredits)), catalog: jest.fn().mockResolvedValue({ storeName: 'Café Aroma', items: [] }), interruptedPreview: jest.fn().mockResolvedValue({ at: null }) };
   // Existing first-site tests exercise the from-scratch path; the template path sets startFrom explicitly.
   const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Café de especialidad, estilo cálido y editorial.', generationInstruction: request.instruction, imageUses: [], startFrom: 'scratch' }) };
   const templates: any = { apply: jest.fn().mockResolvedValue({ revision: 1, label: 'Plantilla: Tostado' }) };
@@ -556,6 +558,25 @@ it('serves the live draft preview only to the store owner and only when it is ne
   agentDraftPreviews.clear('s');
 });
 
+it('shows the products the store has now in a draft preview, live or preserved, not the ones baked when its files were saved', async () => {
+  const { service, generation } = firstShop();
+  const heladito = { id: 'p1', name: 'heladitox' };
+  generation.catalog.mockResolvedValue({ storeName: 'excess', items: [heladito] });
+  const baked = { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"slug":"excess","data":{"storeName":"excess","items":[]}};' };
+  const items = (files: Array<{ path: string; content: string }>) => JSON.parse(files.find(file => file.path === 'config.js')!.content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;$/, ''));
+  agentDraftPreviews.set('s', [baked, { path: 'index.html', content: '<h1>Borrador</h1>' }]);
+  const live = await service.draftPreview('m', 's');
+  expect(items(live.files!)).toEqual({ slug: 'excess', data: { storeName: 'excess', items: [heladito] } });
+  agentDraftPreviews.clear('s');
+  generation.interruptedPreview.mockResolvedValue({ at: 5, interrupted: true, files: [baked] });
+  const preserved = await service.draftPreview('m', 's');
+  expect(preserved.interrupted).toBe(true);
+  expect(items(preserved.files!).data.items).toEqual([heladito]);
+  generation.interruptedPreview.mockResolvedValue({ at: 5, interrupted: true });
+  expect(await service.draftPreview('m', 's', 5)).toEqual({ at: 5, interrupted: true });
+  expect(generation.catalog).toHaveBeenCalledTimes(2);
+});
+
 it('refuses a direction that was not offered', async () => {
   const { service } = firstShop();
   await expect(service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Lujo', directionId: 'lujo-sobrio' })).rejects.toThrow('direcciones sugeridas');
@@ -673,6 +694,127 @@ it('treats a rework request on a store without a template as an ordinary edit', 
   await service.send('m', 's', { ...request, instruction: 'Hazla más única' });
   expect(generation.generate.mock.calls[0][2].instruction).not.toContain(TEMPLATE_REWORK_BRIEF);
   expect(generation.generate.mock.calls[0][6]?.redesign).toBeFalsy();
+});
+
+describe('keeping the template a store started from', () => {
+  const templateBrief = (templateRevision?: number) => ({ snapshot: { brief: { businessType: 'Pilates', audience: 'V', primaryAction: 'Reservar', visualDirection: 'Plantilla', sitePurpose: 'shop', templateId: 'pausa', ...(templateRevision ? { templateRevision } : {}) }, files: [] } });
+  const decided = (rework: boolean) => ({ action: 'generate', reply: '', summary: 'Panadería', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework });
+  const currentRequest = (instruction: string) => instruction.split('Pedido actual del comercio:').at(-1)!;
+
+  it('uses the template as the base when the merchant asks for it as a reference, even worded as "rehaz mi tienda"', async () => {
+    const { service, projects, dialogue, generation } = setup();
+    projects.version.mockResolvedValue(templateBrief());
+    dialogue.decide.mockResolvedValue(decided(false));
+    await service.send('m', 's', { ...request, instruction: 'Rehaz mi tienda para mi panadería usando la plantilla como referencia' });
+    const [, , dto, , , , execution] = generation.generate.mock.calls[0];
+    expect(currentRequest(dto.instruction)).toContain(TEMPLATE_KEEP_BRIEF);
+    expect(sourceRedesignRequested(dto.instruction)).toBe(false);
+    expect(sourceRequestProfile(dto.instruction, true).scope).not.toBe('full-redesign');
+    expect(execution?.redesign).toBeFalsy();
+    expect(execution?.keepTemplate).toBe(true);
+  });
+
+  it('names the template demo photos still in the store, so none stays in view, and asks for confident copy', async () => {
+    const { service, projects, dialogue, generation } = setup();
+    const files = [{ path: 'assets/template-pausa-hero.jpg', content: '' }, { path: 'components/home.tsx', content: '' }];
+    projects.version.mockResolvedValue({ snapshot: { ...templateBrief().snapshot, files } });
+    dialogue.decide.mockResolvedValue(decided(false));
+    await service.send('m', 's', { ...request, instruction: 'Usa la plantilla como referencia para mi panadería' });
+    const { instruction } = generation.generate.mock.calls[0][2];
+    expect(instruction).toContain('assets/template-pausa-hero.jpg');
+    expect(instruction).toContain('Ninguna puede quedar a la vista');
+    expect(TEMPLATE_KEEP_BRIEF).toContain('en vez de escribir que estará disponible');
+    const edit = setup();
+    edit.projects.version.mockResolvedValue({ snapshot: { ...templateBrief().snapshot, files } });
+    edit.dialogue.decide.mockResolvedValue(decided(false));
+    await edit.service.send('m', 's', { ...request, instruction: 'Cambia el título' });
+    expect(edit.generation.generate.mock.calls[0][2].instruction).not.toContain('assets/template-pausa-hero.jpg');
+  });
+
+  it('lists only the demo photos the store still holds', () => {
+    const manifest = { id: 'pausa', name: 'Pausa', photos: [{ slot: 'hero', role: 'hero', demo: 'hero.jpg' }, { slot: 'p1', role: 'product', demo: 'p1.jpg' }] } as any;
+    expect(templateDemoPhotoNote(manifest, [{ path: 'assets/template-pausa-p1.jpg' }])).toContain('[{"path":"assets/template-pausa-p1.jpg","role":"product"}]');
+    expect(templateDemoPhotoNote(manifest, [{ path: 'assets/logo.png' }])).toBe('');
+  });
+
+  it('keeps an untouched template as the base for the first request about the business', async () => {
+    const { service, projects, dialogue, generation } = setup();
+    projects.version.mockResolvedValue(templateBrief(1));
+    dialogue.decide.mockResolvedValue(decided(false));
+    await service.send('m', 's', { ...request, instruction: 'Mi negocio es una panadería, pon mis textos y mis productos' });
+    expect(currentRequest(generation.generate.mock.calls[0][2].instruction)).toContain(TEMPLATE_KEEP_BRIEF);
+  });
+
+  it('leaves an explicit redesign of an untouched template, and ordinary edits of a touched one, as they were', async () => {
+    const redesign = setup();
+    redesign.projects.version.mockResolvedValue(templateBrief(1));
+    redesign.dialogue.decide.mockResolvedValue(decided(false));
+    await redesign.service.send('m', 's', { ...request, instruction: 'Rediseña toda la tienda' });
+    expect(redesign.generation.generate.mock.calls[0][2].instruction).not.toContain(TEMPLATE_KEEP_BRIEF);
+    expect(sourceRedesignRequested(redesign.generation.generate.mock.calls[0][2].instruction)).toBe(true);
+    const edit = setup();
+    edit.projects.version.mockResolvedValue(templateBrief());
+    edit.dialogue.decide.mockResolvedValue(decided(false));
+    await edit.service.send('m', 's', { ...request, instruction: 'Cambia el título' });
+    expect(edit.generation.generate.mock.calls[0][2].instruction).not.toContain(TEMPLATE_KEEP_BRIEF);
+  });
+
+  it('lets a rework win over keeping the template', async () => {
+    const { service, projects, dialogue, generation } = setup();
+    projects.version.mockResolvedValue(templateBrief(1));
+    dialogue.decide.mockResolvedValue(decided(true));
+    await service.send('m', 's', { ...request, instruction: 'Usa la plantilla como referencia pero moderna y clínica' });
+    const [, , dto, , , , execution] = generation.generate.mock.calls[0];
+    expect(dto.instruction).toContain(TEMPLATE_REWORK_BRIEF);
+    expect(dto.instruction).not.toContain(TEMPLATE_KEEP_BRIEF);
+    expect(execution?.redesign).toBe(true);
+    expect(execution?.keepTemplate).toBeUndefined();
+  });
+
+  it('changes nothing for a store that did not start from a template', async () => {
+    const { service, dialogue, generation } = setup();
+    dialogue.decide.mockResolvedValue(decided(false));
+    const words = 'Rehaz mi tienda usando la plantilla como referencia';
+    await service.send('m', 's', { ...request, instruction: words });
+    const [, , dto, , , , execution] = generation.generate.mock.calls[0];
+    expect(dto.instruction).not.toContain(TEMPLATE_KEEP_BRIEF);
+    expect(sourceRedesignRequested(dto.instruction)).toBe(sourceRedesignRequested(words));
+    expect(execution?.redesign).toBeFalsy();
+    expect(execution?.keepTemplate).toBeUndefined();
+  });
+
+  it('reads a queued request with the template brief, and leaves other queued requests as they came', async () => {
+    const run = async (brief: any) => {
+      const { service, projects, dialogue, generation } = setup();
+      projects.version.mockResolvedValue(brief);
+      dialogue.decide.mockResolvedValue(decided(false));
+      let seen: any;
+      generation.generate.mockImplementation(async () => { seen = sourceRequestContext.getStore()?.request.profile; return { revision: 2, label: 'x' }; });
+      const instruction = 'Rehaz mi tienda usando la plantilla como referencia';
+      const queued: any = { signal: new AbortController().signal, jobId: 'j', assertLease: jest.fn(), request: { version: 1, instruction, baseRevision: 1, assetUrls: [], profile: sourceRequestProfile(instruction, true) } };
+      await sourceRequestContext.run(queued, () => service.send('m', 's', { ...request, instruction }));
+      return { seen, queued };
+    };
+    const kept = await run(templateBrief());
+    expect(kept.queued.request.profile.scope).toBe('full-redesign');
+    expect(kept.seen.scope).not.toBe('full-redesign');
+    const plain = await run({ snapshot: { brief: { businessType: 'Café', audience: 'V', primaryAction: 'Comprar', visualDirection: 'x', sitePurpose: 'shop' }, files: [] } });
+    expect(plain.seen).toBe(plain.queued.request.profile);
+  });
+});
+
+describe('templateReferenceRequested', () => {
+  it.each([
+    ['Usa la plantilla como referencia para mi panadería', true],
+    ['Mantén el estilo de la plantilla pero con mis productos', true],
+    ['Hazla basada en la plantilla Pausa', true],
+    ['Que no parezca plantilla', false],
+    ['Hazla más única, menos como la plantilla', false],
+    ['Cámbiala por otra plantilla', false],
+    ['Usa esta web como referencia: https://example.com', false],
+  ])('%s → %s', (instruction, expected) => {
+    expect(templateReferenceRequested(instruction)).toBe(expected);
+  });
 });
 
 describe('final review fixes', () => {
@@ -828,4 +970,24 @@ it('does not turn an automatically ranked direction into a binding merchant pale
   expect(instruction).toContain('azul y blanco');
   expect(instruction).not.toContain('Dirección visual elegida por el comercio (obligatoria)');
   expect(instruction).not.toContain('#f7f4ee');
+});
+
+it('finishes a preserved draft with the decision it was built from, even after the merchant chatted since', async () => {
+  const decision = { action: 'generate', reply: '', summary: 'Gelatería', generationInstruction: 'Diseña la gelatería', imageUses: [], startFrom: 'unknown', templates: [], chosenTemplateId: '', rework: false };
+  const history = [
+    { role: 'USER', content: 'Crea mi gelatería', metadata: {}, createdAt: new Date(Date.now() - 3_600_000) },
+    { role: 'ASSISTANT', content: 'No pude completar tu pedido.', metadata: { failed: true, sourceRetry: { fingerprint: 'old', decision } }, createdAt: new Date(Date.now() - 3_500_000) },
+    { role: 'USER', content: '¿Por qué no pudo verificarse?', metadata: {}, createdAt: new Date(Date.now() - 600_000) },
+    { role: 'ASSISTANT', content: 'Se acabó el tiempo.', metadata: {}, createdAt: new Date(Date.now() - 590_000) },
+  ];
+  const { service, dialogue, generation } = setup(history);
+  await service.send('m', 's', { ...request, instruction: 'Crea mi gelatería', resumeDraft: true });
+  expect(dialogue.decide).not.toHaveBeenCalled();
+  const [, , dto, , , , execution] = generation.generate.mock.calls[0];
+  expect(dto.instruction).toContain('Diseña la gelatería');
+  expect(execution?.resumeDraft).toBe(true);
+  const fresh = setup(history);
+  await fresh.service.send('m', 's', { ...request, instruction: 'Crea mi gelatería' });
+  expect(fresh.dialogue.decide).toHaveBeenCalled();
+  expect(fresh.generation.generate.mock.calls[0]?.[6]?.resumeDraft).toBeUndefined();
 });

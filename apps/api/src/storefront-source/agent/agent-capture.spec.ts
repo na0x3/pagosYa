@@ -21,6 +21,34 @@ describe('agent capture', () => {
     const snapshot = { brief: {}, files: [{ path: 'index.html', content: '<html><head><style>[data-pagosya-catalog]{display:none}</style></head><body><h1>Tienda</h1><div data-pagosya-catalog></div></body></html>' }] } as any;
     expect((await captureAgentDraft(snapshot, 390)).errors).toContain('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
   });
+  it('ignores the runtime second photo that waits for the shopper but still rejects an authored image with no path', async () => {
+    const snapshot = (extra: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"></head><body><h1>Tienda</h1><div data-pagosya-catalog><article class="menu-item" style="position:relative"><img class="menu-item__image-alt" data-src="assets/second.jpg" alt="" aria-hidden="true" style="position:absolute;width:100%;opacity:0"></article></div>${extra}</body></html>` }] }) as any;
+    expect((await captureAgentDraft(snapshot(''), 390)).errors).toEqual([]);
+    expect((await captureAgentDraft(snapshot('<img alt="Foto" style="width:120px;height:80px">'), 390)).errors).toEqual(['Imagen no disponible: (sin ruta)']);
+  });
+  it('paints store-colour art with a mask, shows colour art as an image, and names a missing illustration', async () => {
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const art = '<Illustration src="/assets/creative/fluent-mono/soft-ice-cream.svg" tone="accent" size={80} /><Illustration src="/assets/creative/fluent-flat/coffee.svg" label="Café" /><Illustration src="/assets/creative/fluent-mono/no-such-thing.svg" />';
+    const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Illustration } from '@pagosya/ui';").replace('</h1>', `</h1>${art}`) } : f);
+    const snapshot = await agentPreviewSnapshot(base, authored);
+    expect(snapshot.files.some(f => f.path === 'assets/creative/fluent-mono/soft-ice-cream.svg')).toBe(true);
+    const shot = await captureAgentDraft(snapshot, 390);
+    expect(shot.errors).toEqual(['Ilustración no disponible: /assets/creative/fluent-mono/no-such-thing.svg']);
+  });
+  it('gives store-colour art a visible colour on a store without kit tokens, and names a tone that resolves to nothing', async () => {
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const art = '<Illustration src="/assets/creative/fluent-mono/soft-ice-cream.svg" tone="accent" /><Illustration src="/assets/creative/fluent-mono/strawberry.svg" tone="var(--not-defined)" />';
+    const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Illustration } from '@pagosya/ui';").replace('</h1>', `</h1>${art}`) } : f);
+    const shot = await captureAgentDraft(await agentPreviewSnapshot(base, authored), 390);
+    expect(shot.errors).toEqual(['Ilustración sin color visible: /assets/creative/fluent-mono/strawberry.svg']);
+  });
+  it('never puts an unsafe src into a CSS url, and reports a path with a query, which the preview cannot load', async () => {
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const art = '<img src="/assets/creative/fluent-flat/coffee.svg?v=1" alt="" aria-hidden="true" width="40" height="40" /><Illustration src="/assets/creative/fluent-mono/soft-ice-cream.svg?v=1#x" /><Illustration src={`/assets/creative/fluent-mono/x.svg") , url("https://example.com/a.svg`} />';
+    const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Illustration } from '@pagosya/ui';").replace('</h1>', `</h1>${art}`) } : f);
+    const shot = await captureAgentDraft(await agentPreviewSnapshot(base, authored), 390);
+    expect(shot.errors).toEqual(['/assets/creative/fluent-flat/coffee.svg?v=1', '/assets/creative/fluent-mono/soft-ice-cream.svg?v=1#x', '/assets/creative/fluent-mono/x.svg") , url("https://example.com/a.svg'].map(src => 'Imagen no disponible: ' + src));
+  });
   it('rejects broken skip links while allowing real, encoded, named and cross-page destinations', async () => {
     const snapshot = { brief: {}, files: [{ path: 'index.html', content: `<!doctype html><html><head><meta charset="utf-8"></head><body>
       <a href="#contenido">Saltar al contenido</a><a href="index.html#contenido">Repetido</a>

@@ -46,6 +46,7 @@ import { createHash } from 'node:crypto';
 import { currentSourceRuntimeBundle } from './source-runtime';
 import fs = require('node:fs/promises');
 import { kitPath } from '@pagosya/storefront-kit';
+import { creativeAssetCatalog, creativeAssetFile } from './source-creative-assets';
 import { sourceProjectDigest, sourceProjectSnapshot, type SourceProjectSnapshot } from './source-project';
 
 const checkRequired = 'Revisa la tienda en escritorio y móvil antes de publicarla.';
@@ -291,6 +292,41 @@ it('serves the sanitised DNA motif drawings with the public site, as text the pr
   expect(site.snapshot?.files.find(f => f.path === 'motifs/sol.svg')).toEqual({ path: 'motifs/sol.svg', content: drawing, encoding: 'utf8' });
   // Only motif drawings, which every save sanitises; other SVG files stay private as before.
   expect(site.snapshot?.files.some(f => f.path === 'assets/other.svg')).toBe(false);
+});
+
+it('serves library illustrations byte-identical to the kit with the public site, and nothing posing as one', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'c'.repeat(64) }) } };
+  const service = new SourcePublishingService(prisma);
+  const cone = creativeAssetFile(creativeAssetCatalog().find(asset => asset.path === 'assets/creative/fluent-mono/soft-ice-cream.svg')!);
+  const coffee = creativeAssetFile(creativeAssetCatalog().find(asset => asset.path === 'assets/creative/fluent-flat/coffee.svg')!);
+  jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [
+    { path: 'index.html', content: '<img src="/assets/creative/fluent-flat/coffee.svg" alt="">', encoding: 'utf8' },
+    cone,
+    { ...coffee, content: coffee.content.replace('<svg', '<svg onload="alert(1)"') },
+    { path: 'assets/creative/fluent-flat/not-in-kit.svg', content: cone.content, encoding: 'utf8' },
+  ] } as any);
+  const site = await service.publicSite('demo');
+  expect(site.snapshot?.files.find(f => f.path === cone.path)).toEqual(cone);
+  expect(site.snapshot?.files.some(f => f.path === coffee.path)).toBe(false);
+  expect(site.snapshot?.files.some(f => f.path === 'assets/creative/fluent-flat/not-in-kit.svg')).toBe(false);
+});
+
+it('serves the store icons with the public site, sanitised, so the header bag and arrows are not blank', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'c'.repeat(64) }) } };
+  const service = new SourcePublishingService(prisma);
+  const bag = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+  jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [
+    { path: 'index.html', content: '<img src="/assets/icons/shopping-bag.svg" alt="">', encoding: 'utf8' },
+    { path: 'assets/icons/shopping-bag.svg', content: bag + '\n', encoding: 'utf8' },
+    { path: 'assets/icons/x.svg', content: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" onload="alert(1)"><script>alert(2)</script><path d="M1 1h20"/></svg>', encoding: 'utf8' },
+    { path: 'assets/icons/LICENSE.txt', content: 'ISC', encoding: 'utf8' },
+    { path: 'assets/other.svg', content: bag, encoding: 'utf8' },
+  ] } as any);
+  const files = (await service.publicSite('demo')).snapshot!.files;
+  expect(files.find(f => f.path === 'assets/icons/shopping-bag.svg')).toEqual({ path: 'assets/icons/shopping-bag.svg', content: bag, encoding: 'utf8' });
+  const x = files.find(f => f.path === 'assets/icons/x.svg');
+  expect(x?.content ?? '').not.toMatch(/script|onload/);
+  expect(files.some(f => f.path === 'assets/icons/LICENSE.txt' || f.path === 'assets/other.svg')).toBe(false);
 });
 
 describe('a published design with a drawn signup turns subscriptions on', () => {

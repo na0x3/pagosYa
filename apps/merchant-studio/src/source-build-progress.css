@@ -14,7 +14,8 @@
 .source-build-progress li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0 9px 4px; color: #333; }
 .source-build-progress small { display: block; font-size: 11px; color: #777; }
 .build-state { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #bbb; border-radius: 5px; color: #555; }
-.build-state.is-running { border-radius: 50%; border-color: #333; background: #333; }
+/* The running step is the bouncing pagosYa star (source-loader-star.css), not a filled dot. */
+.build-state.is-running { width: 20px; height: 20px; flex-basis: 20px; border: 0; background: none; overflow: visible; }
 .build-duration { color: #888; font-size: 12px; }
 .build-waiting { color: #737373; font: 13px/1.6 Arial, Helvetica, sans-serif; }
 
@@ -54,3 +55,4 @@
 .source-mode .message--remote-user .message-attachments a { display: block; border-radius: 12px; overflow: hidden; background: #e2e2e2; }
 .source-mode .message--remote-user .message-attachments img, .source-mode .message--remote-user .message-attachments video { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; border-radius: 12px; background: #e2e2e2; }
 .source-mode .message--remote-user .message-attachments[data-count="1"] img { min-width: min(100%, 280px); }
+.yapi-stage__star { display: flex; flex-direction: column; align-items: center; }

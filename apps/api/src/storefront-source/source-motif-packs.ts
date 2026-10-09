@@ -110,3 +110,23 @@ export function sanitizeRuntimeMotifPack(value: unknown): SourceRuntimeMotifPack
   });
   return kept.length ? { id, motifs: kept } : undefined;
 }
+
+/** config.js `motifPack` at save: YAPI's choice this run wins (a pack id, or null to remove it); untouched (undefined),
+ * or a pack that no longer loads, keeps the pack the store had, re-sanitised. */
+export function chosenMotifPack(choice: string | null | undefined, previous: unknown): SourceRuntimeMotifPack | undefined {
+  if (choice === null) return undefined;
+  return (typeof choice === 'string' ? loadMotifPack(choice) : undefined) ?? sanitizeRuntimeMotifPack(previous);
+}
+
+/** The draft's config.js with the pack set or removed, so previews, screenshots and verify show it. */
+export function snapshotWithMotifPack<S extends { files: Array<{ path: string; content: string }> }>(snapshot: S, pack: SourceRuntimeMotifPack | undefined): S {
+  return { ...snapshot, files: snapshot.files.map(file => {
+    if (file.path !== 'config.js') return file;
+    const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
+    if (!match) return file;
+    try {
+      const { motifPack: _previous, ...config } = JSON.parse(match[1]);
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(pack ? { ...config, motifPack: pack } : config)};` };
+    } catch { return file; }
+  }) };
+}

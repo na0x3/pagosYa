@@ -8,6 +8,21 @@ export const AGENT_LIMITS = { toolCalls: 40, wallMs: 360_000, screenshots: 8 };
 /** A run on the merchant's own ChatGPT plan is free but slower than a paid API (calls of 20-90 s), so it gets twice the time. */
 export const agentLimits = (chatgptPlan: boolean) => chatgptPlan ? { ...AGENT_LIMITS, wallMs: AGENT_LIMITS.wallMs * 2 } : AGENT_LIMITS;
 
+/** The clock only stops the agent between turns, so it must stop early enough for one long model turn (112 s was
+ *  measured), the final checks and the save to fit before the run's hard stop. */
+export const AGENT_CLOSE_MS = 180_000;
+/** Design planning runs before the agent on the same run clock (106 s measured on 2026-10-08, when a 30 s margin
+ *  aborted a finished store as "cancelled"). */
+const AGENT_PRE_AGENT_MS = 240_000;
+/** The run's hard stop for the agent engine: the agent's own budget plus room before and after it. */
+export const agentRunHeadroom = (wallMs: number) => wallMs + AGENT_PRE_AGENT_MS + AGENT_CLOSE_MS;
+/** The agent's budget measured against the run's hard stop: it stops on its own, warned and rescuable, before the run is aborted. */
+export function agentWallWithin<T extends { wallMs: number }>(limits: T, runDeadline: number, now = Date.now()): T {
+  return { ...limits, wallMs: Math.max(0, Math.min(limits.wallMs, runDeadline - now - AGENT_CLOSE_MS)) };
+}
+/** True when the run stopped because its time ran out rather than because someone cancelled it. */
+export const abortedByTimeout = (signal?: AbortSignal) => Boolean(signal?.aborted && (signal.reason as { name?: string } | undefined)?.name === 'TimeoutError');
+
 /** Model ↔ tools until a gated finish, a limit, exhausted retries or cancellation. Never saves anything itself. */
 export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox; instructions: string; opening: unknown[]; limits?: Partial<typeof AGENT_LIMITS>; signal?: AbortSignal; onStep?: (step: AgentStep) => void | Promise<void>; now?: () => number; sleep?: (ms: number) => Promise<void> }): Promise<AgentRunResult> {
   const limits = { ...AGENT_LIMITS, ...input.limits };

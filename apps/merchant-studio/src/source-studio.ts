@@ -1,7 +1,7 @@
 import { buildIsActive, sourceBuildTransition, type SourceBuildSession, type SourceBuildEvent } from './source-build-session';
 import { renderPagePicker, bindPagePicker } from './source-page-picker';
 import { mountCodeHighlight } from './source-code-highlight';
-import { mountSourceAccountPreview } from './source-account-preview';
+import { mountSourceAccountDemo } from './source-account-demo';
 import { codeFileEditable, codeFileForPage, renderCodeBrowser } from './source-code-tree';
 import { composeActionMode } from './source-studio-actions';
 import { createDirectEditor } from './source-direct-editor';
@@ -29,7 +29,7 @@ import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
 import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
-import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
+import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
 import { QUICK_ACTIONS, createSelectionState, matchEditableText } from './source-selection';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
@@ -37,6 +37,7 @@ import './source-studio.css';
 import './source-browser.css';
 import './source-workspace-design.css';
 import { bindSourcePaymentPreview } from './source-payment-preview';
+import { focusDebugEnabled, recordFocusLoss, watchComposerFocus } from './source-focus-debug';
 
 const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['deepseek-v4-flash', 'DeepSeek Flash · económico'], ['deepseek-v4-pro', 'DeepSeek Pro'], ['deepseek-v4-flash-vision-exp', 'DeepSeek Flash Vision · experimental'], ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 · económico'], ['claude-sonnet-5', 'Claude Sonnet 5 · equilibrado'], ['claude-opus-5-5', 'Claude Opus 5.5 · avanzado']] as const;
 const SOURCE_MODEL_STORAGE = "pagosya_source_model";
@@ -50,7 +51,7 @@ const PREMIUM_SOURCE_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'deepseek-v4-pro'
 const PREMIUM_MODEL_TTL_MS = 2 * 60 * 60 * 1000;
 
 type Attachment = { file: File; src: string; url?: string };
-type RetrySubmission = { text: string; assetUrls: string[]; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; currentPage: string; selection?: { sectionId: string }; templateId?: string; directionId?: string };
+type RetrySubmission = { text: string; assetUrls: string[]; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; currentPage: string; selection?: { sectionId: string }; templateId?: string; directionId?: string; resumeDraft?: boolean };
 export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const params = new URLSearchParams(location.search);
   const embedded = params.get('embedded') === '1' && window.parent !== window;
@@ -94,6 +95,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   });
   let liveCatalog: JsonRecord | null = null;
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
+  let renderedAt = 0;
+  watchComposerFocus(app, () => ({ busy, mode, renderedAt, storeId }));
   const directEditor = createDirectEditor(api);
   const bocetoPanel = createBocetoPanel(api);
   const loadPreviewImages = createPreviewImageLoader(API_BASE_URL);
@@ -254,7 +257,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountPreview(frame, snapshot, nextPage => { if (snapshot.files.some(file => file.path === nextPage)) { page = nextPage; previewNavigation = {}; clearSelection(); render(); } }); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -269,6 +272,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let liveDraft: { at: number; interrupted?: boolean; snapshot: SourceVersion['snapshot'] } | null = null;
   let showSavedRevision = false;
   const showingDraft = () => Boolean(liveDraft && !showSavedRevision && mode === 'preview');
+  /** Why «Ver en navegador» is unavailable, or what it opens: a disabled button otherwise gives no reason. */
+  const browserHint = () => busy ? 'Disponible cuando YAPI termine' : dirty() ? 'Guarda o descarta tus cambios de código para abrirla' : productForm ? 'Cierra el formulario de producto para abrirla' : visualEditPending ? 'Espera a que se guarde tu cambio' : showingDraft() ? 'Abrir el borrador en una pestaña nueva' : 'Abrir la vista previa en una pestaña nueva';
   let pendingSubmission: { text: string; imageCount: number; hasVideo: boolean; files: Array<{ src: string; video: boolean }> } | null = null;
   let buildStage: { update(state: BuildStageState): void; destroy(): void } | null = null;
   let idleFace: { destroy(): void } | null = null;
@@ -276,7 +281,11 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   // outside what render() replaces, so the stars keep their flight across re-renders.
   let starField: { destroy(): void } | null = null;
   let retrySubmission: RetrySubmission | null = null;
+  /** The request the preserved draft was built from; "Guardar borrador" resends it with resumeDraft. */
+  let draftRetry: SourceDraftRetry | null = null;
   let toastTimer: number | undefined;
+  /** The browser checks the last load started; they open every page at four widths and can take minutes. */
+  let checksRun: Promise<void> = Promise.resolve();
   let mode = 'preview', mobile = false, page = 'index.html', filePath = 'index.html', draft: string | null = null;
   let bocetoOpen = false;
   // A structured draft opens in YAPI + preview. The canvas is an optional editing mode.
@@ -390,7 +399,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; clearSelection(); fieldsCache = null; scheduleEstimate();
     await refreshInterruptedDraft().catch(() => {});
     // A saved design shows at once; the browser checks load every page at four widths and report when done.
-    if (version) { if (waitForChecks) { render(); await runChecks(); } else void runChecks(); }
+    if (version) { checksRun = runChecks(); if (waitForChecks) { render(); await checksRun; } }
   }
   async function boot() {
     stores = await api.listStores();
@@ -434,6 +443,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (storeId !== selectedStore || state.revision !== revision || !result.interrupted || !result.at || !result.files) return;
     const saved = version?.snapshot.files.filter(file => file.encoding === 'base64' && !result.files!.some(next => next.path === file.path)) || [];
     liveDraft = { at: result.at, interrupted: true, snapshot: { ...(version?.snapshot ?? {}), files: [...result.files, ...saved] } as SourceVersion['snapshot'] };
+    draftRetry = result.retry ?? null;
     showSavedRevision = false;
     mode = 'preview';
   }
@@ -459,6 +469,26 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     };
     timer = window.setTimeout(poll, 500);
     return () => { controller.abort(); window.clearTimeout(timer); };
+  }
+  /** "Guardar borrador": finish the preserved run with its own request (resumeDraft), so its design is saved instead of rebuilt
+   *  from the saved revision. True once a new revision is saved. */
+  async function finishDraft(): Promise<boolean> {
+    if (!draftRetry || busy) return false;
+    const retry = draftRetry, before = state.revision;
+    await send(retry.text, retry.setupAction, retry.assetUrls, retry.templateId, retry.directionId, { ...retry, resumeDraft: true });
+    const saved = state.revision > before;
+    if (saved) draftRetry = null;
+    return saved;
+  }
+  const draftNeedsSaving = () => Boolean(liveDraft?.interrupted && !showSavedRevision && draftRetry);
+  /** A new message while a preserved draft shows builds on that draft: it is saved first, then the message goes out. */
+  async function saveDraftThenSend() {
+    const pending = { text: instruction, assets };
+    if (!pending.text.trim() && !pending.assets.length) return;
+    instruction = ''; assets = [];
+    const saved = await finishDraft();
+    instruction = pending.text; assets = pending.assets;
+    if (saved) await send(instruction); else render();
   }
   async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string, retry?: RetrySubmission) {
     if (!text.trim() && assets.length) text = 'Te comparto estas imágenes para el sitio.';
@@ -502,15 +532,22 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); });
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, retry?.resumeDraft ? { resumeDraft: true } : undefined);
         stopProgress();
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
         render();
         if (result.revision) {
-          mode = 'preview'; await load(result.revision.revision, true);
-          toast = checks?.some(row => row.status === 'failed') ? 'Cambios guardados con errores pendientes. Revisa el resultado en el chat.' : checks?.some(row => row.status === 'warning' || row.status === 'skipped') ? 'Diseño comprobado con pasos pendientes. Revisa el resultado en el chat.' : 'Comprobaciones terminadas. Revisa el diseño antes de publicar.';
+          mode = 'preview'; await load(result.revision.revision);
+          // The merchant keeps chatting and browsing while the checks run; publishing waits for them.
+          const checkedRevision = version?.revision;
+          void checksRun.then(() => {
+            if (version?.revision !== checkedRevision || checking || !checks) return;
+            toast = checks.some(row => row.status === 'failed') ? 'Cambios guardados con errores pendientes. Revisa el resultado en el chat.' : checks.some(row => row.status === 'warning' || row.status === 'skipped') ? 'Diseño comprobado con pasos pendientes. Revisa el resultado en el chat.' : 'Comprobaciones terminadas. Revisa el diseño antes de publicar.';
+            render(); window.clearTimeout(toastTimer);
+            toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 4000);
+          });
         }
       } catch (e) {
         // A failed generation may still have saved the message. Do not put that
@@ -685,6 +722,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     void send(`Construye un borrador completo de mi tienda a partir del único producto de esta foto. Te delego el diseño, los colores y la composición. Usa esta imagen como foto del producto, conserva los datos confirmados y no inventes precio, stock, reseñas ni condiciones de entrega. No publiques. ${instruction.trim().slice(0, 11000)}`, 'product-photo');
   }
   function render() {
+    renderedAt = performance.now();
     const pageMenuOpen = Boolean(app.querySelector<HTMLDetailsElement>('.source-page-menu')?.open);
     // An async render while the merchant is typing to YAPI (cost estimate, checks) rebuilds the
     // composer; its text survives via `instruction`, so only focus and caret need carrying over.
@@ -739,8 +777,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ] })}</div>
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
-          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><button class="button" id="source-boceto-close" aria-pressed="true" title="Desactivar edición manual" ${disabled(locked)}>Editar en Boceto</button><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft() || bocetoPhase())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button>${bocetoPhase() ? `<button id="source-boceto-tab" aria-pressed="false" title="Activar edición manual" ${disabled(locked || showingDraft() || historical())}>Editar en Boceto</button>` : ''}</div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version || showingDraft())}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${bocetoPhase() ? `<button class="button button--publish" id="source-boceto-generate" ${disabled(locked || historical() || showingDraft())}>Generar sitio</button>` : `${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}`}</div>`}</header>
-          <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.</span><button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
+          <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><button class="button" id="source-boceto-close" aria-pressed="true" title="Desactivar edición manual" ${disabled(locked)}>Editar en Boceto</button><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft() || bocetoPhase())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button>${bocetoPhase() ? `<button id="source-boceto-tab" aria-pressed="false" title="Activar edición manual" ${disabled(locked || showingDraft() || historical())}>Editar en Boceto</button>` : ''}</div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="${browserHint()}" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${bocetoPhase() ? `<button class="button button--publish" id="source-boceto-generate" ${disabled(locked || historical() || showingDraft())}>Generar sitio</button>` : `${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}`}</div>`}</header>
+          <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>${draftRetry ? 'Este borrador todavía no está guardado. Guárdalo para seguir trabajando sobre él.' : 'Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.'}</span>${draftRetry ? `<button class="button button--primary" id="source-save-draft" ${disabled(locked)}>Guardar borrador</button>` : ''}<button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
           ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
@@ -813,6 +851,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (field && !field.disabled) {
         field.focus({ preventScroll: true });
         try { field.setSelectionRange(typing.start ?? field.value.length, typing.end ?? field.value.length); } catch { /* best effort */ }
+      } else if (focusDebugEnabled()) {
+        recordFocusLoss({ kind: 'render', reason: field ? 'composer-disabled' : 'composer-missing', busy, visualEditPending, dirty: dirty(), productForm: Boolean(productForm), mode, storeId });
       }
     }
   }
@@ -1000,7 +1040,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     on('source-open-browser', () => {
       if (!version || busy || dirty()) return;
       const url = new URL(location.href);
-      url.search = new URLSearchParams({ source: '1', browser: '1', store: storeId, revision: String(version.revision), page, ...(previewNavigation.query ? { query: previewNavigation.query } : {}), ...(previewNavigation.fragment ? { anchor: previewNavigation.fragment } : {}) }).toString();
+      url.search = new URLSearchParams({ source: '1', browser: '1', store: storeId, revision: String(version.revision), ...(showingDraft() ? { draft: '1' } : {}), page, ...(previewNavigation.query ? { query: previewNavigation.query } : {}), ...(previewNavigation.fragment ? { anchor: previewNavigation.fragment } : {}) }).toString();
       url.hash = '';
       // A same-origin tab inherits this session; sever its opener immediately.
       sessionStorage.setItem('pagosya_merchant_api_base', API_BASE_URL);
@@ -1009,7 +1049,8 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       else { error = 'El navegador bloqueó la pestaña. Permite ventanas emergentes y vuelve a intentarlo.'; render(); }
     });
     app.querySelector('#agent-command')?.addEventListener('input', event => { instruction = (event.target as HTMLTextAreaElement).value; const retry = app.querySelector<HTMLButtonElement>('#source-retry-message'); if (retry) retry.disabled = busy || dirty() || historical() || Boolean(instruction.trim()) || assets.length > 0; scheduleEstimate(); });
-    app.querySelector('[data-composer]')?.addEventListener('submit', event => { event.preventDefault(); if (productPhoto) sendProductPhoto(); else void send(instruction); });
+    app.querySelector('[data-composer]')?.addEventListener('submit', event => { event.preventDefault(); if (productPhoto) sendProductPhoto(); else if (draftNeedsSaving()) void saveDraftThenSend(); else void send(instruction); });
+    on('source-save-draft', () => void finishDraft());
     app.querySelectorAll<HTMLButtonElement>('[data-suggestion]').forEach(button => button.addEventListener('click', () => {
       instruction = button.dataset.suggestion || ''; const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) field.value = instruction; scheduleEstimate(); focusComposer();
     }));

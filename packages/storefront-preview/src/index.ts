@@ -3,4 +3,4 @@ export { sourcePreviewDocument, uploadImageSource, receivePreviewNavigation, rec
 export { compactPreviewImageData, createPreviewImageLoader, hostedImageUrls, hostedCatalogImages } from './source-preview-media';
 export * from './source-location';
 
-export { mountSourceAccountHost, ACCOUNT_SOURCE_PAGES } from './source-account-host';
+export { mountSourceAccountBridge, createPasswordGuard, type AccountBridgeHandler, type PasswordGuard } from './account-bridge';

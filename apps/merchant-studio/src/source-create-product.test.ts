@@ -172,6 +172,26 @@ it('blocks saving when a photo used only by an untouched variant set was removed
   expect(api.updateProduct).not.toHaveBeenCalled();
 });
 
+it("keeps YAPI's untouched highlights marked, makes an edited one the merchant's, and allows six", async () => {
+  const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p' }), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+  const guide = createProductForm(api as unknown as MerchantStudioApi, 's', saved, () => {}, { id: 'p', name: 'Bolso', amount: 1000, imageUrls: [], highlights: [{ icon: 'snowflake', label: 'Frío', origin: 'yapi' }, { icon: 'laptop', label: 'Laptop', origin: 'yapi' }] } as any);
+  document.body.append(guide.element);
+  for (let i = 0; i < 3; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  // Reaching the highlights step shows the product's existing rows without the merchant adding one first.
+  await vi.waitFor(() => expect(guide.element.querySelectorAll('[data-highlight-row]')).toHaveLength(2));
+  const label = guide.element.querySelector<HTMLInputElement>('[data-highlight-row="0"] [data-highlight-text]')!;
+  label.value = 'Frío de verdad'; label.dispatchEvent(new Event('input', { bubbles: true }));
+  for (let i = 0; i < 5; i++) guide.element.querySelector<HTMLButtonElement>('[data-highlight-add]')!.click();
+  expect(guide.element.querySelectorAll('[data-highlight-row]')).toHaveLength(6);
+  guide.element.querySelectorAll<HTMLInputElement>('[data-highlight-text]').forEach((input, index) => { if (index > 1) { input.value = `Dato ${index}`; input.dispatchEvent(new Event('input', { bubbles: true })); } });
+  for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  const sent = api.updateProduct.mock.calls[0][2].highlights;
+  expect(sent[0]).toEqual({ icon: 'snowflake', label: 'Frío de verdad' });
+  expect(sent[1]).toEqual(expect.objectContaining({ label: 'Laptop', origin: 'yapi' }));
+  expect(sent).toHaveLength(6);
+});
+
 describe('product content blocks in the guide', () => {
   const a = '/v1/uploads/11111111-1111-1111-1111-111111111111.jpg', b = '/v1/uploads/22222222-2222-2222-2222-222222222222.jpg';
   const blocks = [
@@ -191,6 +211,55 @@ describe('product content blocks in the guide', () => {
     expect(select.value).toMatch(/^https?:/); expect(select.value).toContain(b);
     t.save(); await vi.waitFor(() => expect(t.saved).toHaveBeenCalledOnce());
     expect(t.api.updateProduct.mock.calls[0][2].contentBlocks).toEqual(blocks);
+  });
+  it("saves YAPI's long-page sections intact, mapping detail photos back to uploaded URLs", async () => {
+    const story = { id: 'blk_cccccccccccc', type: 'story' as const, origin: 'yapi' as const, problem: 'Llevas tres bolsas.', tried: 'La lonchera se derrama.', solution: 'Un solo bolso.' };
+    const details = { id: 'blk_dddddddddddd', type: 'details' as const, origin: 'yapi' as const, items: [{ imageUrl: a, title: 'Zona fría', text: 'Abajo.', alt: 'Zona fría abierta' }] };
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p' }), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 's', saved, () => {}, { id: 'p', name: 'Bolso', amount: 1000, imageUrls: [a, b], contentBlocks: [story, details, blocks[0]] } as any);
+    document.body.append(guide.element);
+    for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    expect(api.updateProduct.mock.calls[0][2].contentBlocks).toEqual([story, details, blocks[0]]);
+  });
+  it('regenerates the long page with YAPI on demand, showing what came back, and says so when it fails', async () => {
+    const story = { id: 'blk_cccccccccccc', type: 'story' as const, origin: 'yapi' as const, problem: 'Nuevo problema.', tried: 'Lo de antes.', solution: 'La solución.' };
+    let finish!: (value: unknown) => void;
+    const api = { updateProduct: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }),
+      regenerateProductPage: vi.fn(() => new Promise(resolve => { finish = resolve; })) };
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 's', vi.fn(), () => {}, { id: 'p', name: 'Bolso', amount: 1000, imageUrls: [a] } as any);
+    document.body.append(guide.element);
+    const button = guide.element.querySelector<HTMLButtonElement>('[data-page-regenerate]')!;
+    button.click();
+    expect(api.regenerateProductPage).toHaveBeenCalledWith('s', 'p');
+    expect(button.disabled).toBe(true);
+    finish({ highlights: [{ icon: 'snowflake', label: 'Frío', origin: 'yapi' }], contentBlocks: [story] });
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    expect(guide.element.querySelector('[data-product-content-blocks]')!.textContent).toContain('Historia');
+    api.regenerateProductPage.mockImplementationOnce(() => Promise.reject(new Error('plan down')));
+    button.click();
+    await vi.waitFor(() => expect(guide.element.querySelector('[data-page-regenerate-status]')!.textContent).toContain('No se pudo generar'));
+    expect(createProductForm(api as unknown as MerchantStudioApi, 's', vi.fn(), () => {}).element.querySelector('[data-page-regenerate]')).toBeNull();
+  });
+  it('never regenerates over unsaved changes, and says the new page is already live', async () => {
+    const story = { id: 'blk_cccccccccccc', type: 'story' as const, origin: 'yapi' as const, problem: 'Problema.', tried: 'Antes.', solution: 'Solución.' };
+    const api = { updateProduct: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }), regenerateProductPage: vi.fn().mockResolvedValue({ highlights: [], contentBlocks: [story] }) };
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 's', vi.fn(), () => {}, { id: 'p', name: 'Bolso', amount: 1000, imageUrls: [a], contentBlocks: [story] } as any);
+    document.body.append(guide.element);
+    const status = () => guide.element.querySelector('[data-page-regenerate-status]')!.textContent;
+    const field = guide.element.querySelector<HTMLTextAreaElement>('[data-block-field="problem"]')!;
+    field.value = 'Lo escribí yo.'; field.dispatchEvent(new Event('input', { bubbles: true }));
+    guide.element.querySelector<HTMLButtonElement>('[data-page-regenerate]')!.click();
+    expect(api.regenerateProductPage).not.toHaveBeenCalled();
+    expect(status()).toContain('Guarda tus cambios');
+    field.value = 'Problema.'; field.dispatchEvent(new Event('input', { bubbles: true }));
+    // Typing the old text back still counts as an edit (the section is now the merchant's), so it stays protected.
+    guide.element.querySelector<HTMLButtonElement>('[data-page-regenerate]')!.click();
+    expect(api.regenerateProductPage).not.toHaveBeenCalled();
+    const clean = createProductForm(api as unknown as MerchantStudioApi, 's', vi.fn(), () => {}, { id: 'p', name: 'Bolso', amount: 1000, imageUrls: [a], contentBlocks: [story] } as any);
+    document.body.append(clean.element);
+    clean.element.querySelector<HTMLButtonElement>('[data-page-regenerate]')!.click();
+    await vi.waitFor(() => expect(clean.element.querySelector('[data-page-regenerate-status]')!.textContent).toContain('ya está en tu tienda'));
   });
   it('blocks saving after a block photo was removed from the pool', () => {
     const t = edit(); t.guide.element.querySelectorAll<HTMLButtonElement>('[data-remove-photo]')[1].click(); t.save();

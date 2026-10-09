@@ -21,6 +21,21 @@ describe('agent instructions', () => {
     expect(creative).not.toContain('clamp(3.2rem, 9vw, 8.5rem)');
     expect(creative.startsWith('CONTRATOS')).toBe(true);
   });
+  it('lets YAPI rewrite a policy through Ajustes when asked, never by hard-coding it in a page', () => {
+    const prompt = agentInstructions('CONTRATOS', 'shop', false, false);
+    expect(prompt).toContain('set_store_policy');
+    expect(prompt).toContain('never invent deadlines, fees or conditions');
+    expect(prompt).not.toContain('To change their wording the merchant edits Ajustes.');
+  });
+  it('sends pictures to the library first and leaves shapes to the design', () => {
+    for (const prompt of [agentInstructions('CONTRATOS', 'shop', true, true), agentInstructions('CONTRATOS', 'shop', false, false)]) {
+      expect(prompt).toContain('ILLUSTRATIONS.');
+      expect(prompt).toContain('search_illustrations');
+      expect(prompt).toContain('Shapes are not pictures');
+      expect(prompt).toContain('<Illustration');
+      expect(prompt).toContain('set_motif_pack');
+    }
+  });
   it('keep local edits to the requested change', () => {
     const local = agentInstructions('CONTRATOS', 'shop', false, false);
     expect(local).not.toContain('Producto estrella');

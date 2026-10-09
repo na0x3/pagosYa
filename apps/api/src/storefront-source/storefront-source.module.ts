@@ -31,8 +31,9 @@ import { SourceTemplatesService } from "./source-templates.service";
 
 /** AI-generated storefront source projects (Studio): YAPI chat, generation, design jobs,
  * visual review, and publishing. See docs/ARCHITECTURE.md for the pipeline. */
+import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
-  imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule],
+  imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, ProductPageModule],
   controllers: [SketchStudioController, SourceChatJobsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController],
   providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],

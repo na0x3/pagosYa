@@ -140,4 +140,20 @@ describe('SourceTemplatesService', () => {
     templates.registry = { ...templates.registry, galleryTemplates: () => [] };
     await expect(templates.preview('m1', 'store-1', 'prueba')).resolves.toBeDefined();
   });
+
+  // Plantillas › Ver shows the template as its designer made it. Dressed in a real store, its demo copy ("DROP 03",
+  // a discount code) sat next to the merchant's name and photos and read as a broken store.
+  it('builds the as-designed demo once, from nothing of the merchant', async () => {
+    const { templates, projects } = service(0);
+    (projects as any).prepare = jest.fn(async (input: any) => ({ schemaVersion: 1, brief: input.brief, files: input.files }));
+    const publicStores = (templates as any).publicStores;
+    const [first, second] = await Promise.all([templates.demo('prueba'), templates.demo('prueba')]);
+    expect(first).toBe(second);
+    expect((projects as any).prepare).toHaveBeenCalledTimes(1);
+    expect(publicStores.getStorePublic).not.toHaveBeenCalled();
+    expect(projects.current).not.toHaveBeenCalled();
+    const config = first.files.find((file: any) => file.path === 'config.js')!.content;
+    expect(config).toContain('Tu marca');
+    expect(() => templates.demo('../prueba')).toThrow(NotFoundException);
+  });
 });

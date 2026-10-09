@@ -47,7 +47,22 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
     try { return await cache.get(url)!; }
     catch { cache.delete(url); return ''; }
   }
-  return async (snapshot: SourceSnapshot): Promise<SourceSnapshot> => {
+  /** Upload URLs quoted in authored pages, scripts and styles: a template's photo slots live in its compiled
+   *  components, not in the catalog, and the sandbox cannot fetch them. Only quoted literals are touched. */
+  const UPLOAD_LITERAL = /(["'(])((?:https?:\/\/[^"'()\s]+)?\/(?:api\/)?v1\/uploads\/[a-f0-9-]+\.(?:png|jpe?g|webp|avif|gif))(["')])/gi;
+  async function inlineUploads(snapshot: SourceSnapshot): Promise<SourceSnapshot> {
+    const files = await Promise.all(snapshot.files.map(async entry => {
+      if (entry.path === 'config.js' || (entry.encoding && entry.encoding !== 'utf8') || !/\.(?:js|html|css)$/.test(entry.path) || !entry.content.includes('/uploads/')) return entry;
+      const urls = [...new Set([...entry.content.matchAll(UPLOAD_LITERAL)].map(match => match[2]))];
+      if (!urls.length) return entry;
+      const inlined = new Map(await Promise.all(urls.map(async url => [url, await image(url)] as const)));
+      const content = entry.content.replace(UPLOAD_LITERAL, (whole, open, url, close) => { const data = inlined.get(url); return typeof data === 'string' && data ? `${open}${data}${close}` : whole; });
+      return content === entry.content ? entry : { ...entry, content };
+    }));
+    return files.some((entry, index) => entry !== snapshot.files[index]) ? { ...snapshot, files } : snapshot;
+  }
+  return async (input: SourceSnapshot): Promise<SourceSnapshot> => {
+    const snapshot = await inlineUploads(input);
     const file = snapshot.files.find(file => file.path === 'config.js');
     if (!file) return snapshot;
     let config;

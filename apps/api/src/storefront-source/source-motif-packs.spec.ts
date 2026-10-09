@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { drawingProblems, listMotifPacks, loadMotifPack, MOTIF_PACK_PLACEMENTS, sanitizeRuntimeMotifPack, validateMotifPackDir } from './source-motif-packs';
+import { chosenMotifPack, drawingProblems, listMotifPacks, loadMotifPack, snapshotWithMotifPack, MOTIF_PACK_PLACEMENTS, sanitizeRuntimeMotifPack, validateMotifPackDir } from './source-motif-packs';
 import { withSanitizedMotifs } from './source-motifs';
 import { FIXTURE_DRAWINGS, fixturePack } from './fixtures/motif-pack';
 
@@ -109,5 +109,36 @@ describe('config.js motifPack', () => {
     const junk = withSanitizedMotifs([config({ slug: 's', motifPack: 'paws' })]);
     expect(junk.repairs).toEqual(['config.js: motif pack dropped']);
     expect(read(junk.files)).toEqual({ slug: 's' });
+  });
+});
+
+describe('chosenMotifPack', () => {
+  it("uses this run's pack, removes it on null, and otherwise keeps what the store had", () => {
+    const icecream = loadMotifPack('icecream')!;
+    expect(chosenMotifPack('icecream', undefined)).toEqual(icecream);
+    expect(chosenMotifPack(null, icecream)).toBeUndefined();
+    expect(chosenMotifPack(undefined, icecream)?.id).toBe('icecream');
+    expect(chosenMotifPack(undefined, undefined)).toBeUndefined();
+    // A pack that no longer loads (deleted or broken since the checkpoint) keeps the store's pack instead of removing it.
+    expect(chosenMotifPack('no-such-pack', icecream)?.id).toBe('icecream');
+  });
+});
+
+describe('snapshotWithMotifPack', () => {
+  const snapshot = { files: [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"slug":"dacho","motifPack":{"id":"coffee","motifs":[]}};' }, { path: 'index.html', content: '<h1>x</h1>' }] };
+  it('sets, replaces and removes config.motifPack without touching other keys or files', () => {
+    const set = snapshotWithMotifPack(snapshot, loadMotifPack('icecream'));
+    const config = JSON.parse(set.files[0].content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;$/, ''));
+    expect(config.slug).toBe('dacho');
+    expect(config.motifPack.id).toBe('icecream');
+    expect(set.files[1]).toBe(snapshot.files[1]);
+    expect(snapshotWithMotifPack(snapshot, undefined).files[0].content).not.toContain('motifPack');
+  });
+});
+
+describe('snapshotWithMotifPack on a config it cannot read', () => {
+  it('leaves the file untouched instead of failing every preview', () => {
+    const odd = { files: [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {broken' }] };
+    expect(snapshotWithMotifPack(odd, loadMotifPack('icecream'))).toEqual(odd);
   });
 });

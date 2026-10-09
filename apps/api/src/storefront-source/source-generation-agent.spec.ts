@@ -5,7 +5,7 @@ import { inferBrand, fallbackCreative } from './design-engine/design-engine';
 import { sketchFreeablePaths } from '@pagosya/shared-types';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { repairSketch } from './sketch';
-import { SourceGenerationService } from './source-generation.service';
+import { fillsProductPagesAfterSave, SourceGenerationService } from './source-generation.service';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceProjectsService } from './source-projects.service';
 import { templateDemoRevision } from './source-templates';
@@ -58,6 +58,35 @@ describe('generate() with the agent engine', () => {
     expect(result.agent).toEqual(expect.objectContaining({ summary: 'Cambié el título principal.', sections: ['Portada'] }));
     expect(result.generation.attempts.filter((a: any) => a.phase === 'agent')).toHaveLength(3);
     expect(review).not.toHaveBeenCalled();
+  });
+  it('writes a policy YAPI rewrote to Ajustes when the run saves, merged with what Ajustes has now, and into the saved config', async () => {
+    jest.spyOn(compositionReview, 'reviewSourceComposition').mockRejectedValue(new Error('Local edits must not spend a composition review'));
+    const { service, projects, prisma, brief } = await setup();
+    prisma.store = { ...(prisma.store || {}), findUnique: jest.fn().mockResolvedValue({ policies: { delivery: 'Envíos en 48 h.', returns: 'Antes.' } }), update: jest.fn().mockResolvedValue({}) };
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([plan, ['set_store_policy', { kind: 'returns', text: 'Cambios en 7 días con la boleta.' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Actualicé la política de cambios.', sections: ['Cambios y devoluciones'] }]]));
+    await service.generate('m', 's', { ...input(brief), instruction: 'Cambia la política de devoluciones: 7 días con boleta' }, new SourceRequestBudget(50));
+    const policies = { delivery: 'Envíos en 48 h.', returns: 'Cambios en 7 días con la boleta.' };
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: 's' }, data: { policies } });
+    const config = projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'config.js').content;
+    expect(JSON.parse(config.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, '')).data.policies).toEqual(policies);
+  });
+  it('does not rewrite product pages after a small edit, and fills them after a new store or a redesign', async () => {
+    expect(fillsProductPagesAfterSave(false, false)).toBe(false);
+    expect(fillsProductPagesAfterSave(true, false)).toBe(true);
+    expect(fillsProductPagesAfterSave(false, true)).toBe(true);
+    jest.spyOn(compositionReview, 'reviewSourceComposition').mockRejectedValue(new Error('Local edits must not spend a composition review'));
+    const { service, brief } = await setup();
+    const pageWriter = { fillStore: jest.fn(() => new Promise(() => {})) };
+    (service as any).pageWriter = pageWriter;
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título.', sections: ['Portada'] }]]));
+    await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
+    expect(pageWriter.fillStore).not.toHaveBeenCalled();
   });
   it.each(['gpt-5.6-terra', 'claude-sonnet-5'])('wires independent review for a redesign with %s using the shared budget and vision provider', async model => {
     const { service, projects, brief } = await setup();
@@ -324,6 +353,26 @@ describe('generate() with the agent engine', () => {
     expect(planner).toHaveBeenCalledTimes(2);
   });
 
+  // 2026-10-08, store "excess": after the merchant chatted, the request key no longer matched and the next message rebuilt the template.
+  it('finishes the preserved draft on "Guardar borrador" even when the request no longer matches it', async () => {
+    const { service, prisma, brief } = await setup();
+    const concept = { name: 'Quiet', premise: 'A focused store', opening: 'Brand', flow: 'Catalog', typography: 'Sans', imagery: 'Existing photos', mobile: 'Stack', layout: { sections: ['hero', 'catalog'], catalogSection: 'catalog', standaloneIntro: true, productsInOpening: false, productPage: 'editorial' } };
+    const design = { selected: 0, concepts: ['Quiet', 'Air', 'Grid'].map(name => ({ ...concept, name, opening: name + ' opening', flow: name + ' flow' })) };
+    const planner = jest.spyOn((service as any).designPlanner, 'explore').mockResolvedValue(design);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [
+      { type: 'function_call', call_id: 'plan', name: plan[0], arguments: JSON.stringify(plan[1]) },
+      { type: 'function_call', call_id: 'edit', name: 'edit_file', arguments: JSON.stringify({ path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }) },
+      { type: 'function_call', call_id: 'stop', name: 'finish', arguments: JSON.stringify({ status: 'partial', summary: 'Falta verificar.', sections: [], remaining: ['r1'] }) },
+    ] })));
+    const request = { ...input(brief), instruction: 'Rediseña toda la tienda desde cero' };
+    await expect(service.generate('m', 's', request, new SourceRequestBudget(200))).rejects.toThrow('Falta verificar');
+    const checkpoint = prisma.storeSourceGeneration.updateMany.mock.calls.map((call: any[]) => call[0].data.checkpoint).find((value: any) => value?.design);
+    prisma.storeSourceGeneration.findFirst.mockResolvedValue({ checkpoint });
+    const moved = { ...request, instruction: 'Rediseña toda la tienda desde cero, versión final' };
+    await expect(service.generate('m', 's', moved, new SourceRequestBudget(200), [], undefined, { resumeDraft: true })).rejects.toThrow('Falta verificar');
+    expect(planner).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the single engine when the switch says single', async () => {
     const { service, projects, brief } = await setup('single');
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [] })));
@@ -494,5 +543,31 @@ describe('chat-on-sketch edits', () => {
     expect(body).toContain('Analyze the merchant');
     expect(body).not.toContain('Boceto actual');
     expect(projects.save).toHaveBeenCalled();
+  });
+});
+
+// Spec 2026-10-08-store-built-in-account-pages: the account pages' theme is saved and carried over like the store's other choices.
+describe('account pages theme', () => {
+  it('saves what YAPI chose as config.accountTheme and keeps it through a later edit', async () => {
+    const { service, projects, brief } = await setup();
+    const request = { ...input(brief), instruction: 'Cambia el título principal a "Tu calma" y haz el login con un panel' };
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }], ['set_account_theme', { layout: 'panel', photo: null, css: null }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título y la cuenta.', sections: ['Portada'] }]]));
+    await service.generate('m', 's', request, new SourceRequestBudget(50));
+    const config = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, ''));
+    expect(config(projects.save.mock.calls[0]).accountTheme).toEqual({ layout: 'panel' });
+    // The next run starts from what was saved and does not touch the account pages.
+    const saved = projects.save.mock.calls[0][2];
+    projects.current.mockResolvedValue({ revision: 2, slug: 's' });
+    projects.version.mockResolvedValue({ snapshot: { brief: saved.brief, files: saved.files } });
+    jest.restoreAllMocks();
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Tu calma', replacement: 'Tu pausa' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título.', sections: ['Portada'] }]]));
+    await service.generate('m', 's', { ...input(brief), revision: 2 }, new SourceRequestBudget(50));
+    expect(config(projects.save.mock.calls[1]).accountTheme).toEqual({ layout: 'panel' });
   });
 });

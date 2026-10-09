@@ -368,7 +368,8 @@
   }
   document.addEventListener('click', event => {
     const link = event.target.closest('[data-article-url]');
-    if (link && hosted) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
+    // Only the account app on the checkout origin is outside the store; the store's own account pages navigate as usual.
+    if (link && hosted && /^https?:/i.test(link.getAttribute('href') || '')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
   });
   const cartKey = `pagosya:cart:${config.slug || 'store'}`;
   function restoreCart(items) {
@@ -711,6 +712,24 @@
     [data-pagosya-product][data-style] .product-detail__highlights{display:grid;gap:12px 18px;margin:0 0 20px;padding:0;list-style:none}
     [data-pagosya-product][data-style] .product-detail__highlights li{display:flex;align-items:center;gap:10px;min-width:0;font-size:12px;line-height:1.35}
     [data-pagosya-product][data-style] .product-detail__highlights strong{display:block;font-size:12.5px;font-weight:600}
+    [data-pagosya-product][data-style] .product-long{max-width:1200px;margin:0 auto;padding:0 clamp(20px,4vw,48px)}
+    [data-pagosya-product][data-style] .product-long>section{margin:clamp(48px,7vw,96px) 0}
+    [data-pagosya-product][data-style] .product-long h2{margin:0 0 20px;font-family:var(--store-heading-font,inherit);font-size:clamp(26px,3.2vw,40px);line-height:1.1}
+    [data-pagosya-product][data-style] .product-long__features ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;margin:0;padding:0;list-style:none}
+    [data-pagosya-product][data-style] .product-long__features li{display:grid;gap:6px;padding:20px;border:1px solid var(--store-border,rgba(0,0,0,.12));border-radius:var(--store-radius,12px)}
+    [data-pagosya-product][data-style] .product-long__features svg{width:32px;height:32px;color:var(--store-accent,currentColor)}
+    [data-pagosya-product][data-style] .product-long__story{display:grid;gap:14px;max-width:760px;font-size:18px;line-height:1.55}
+    [data-pagosya-product][data-style] .product-long__details{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+    [data-pagosya-product][data-style] .product-long__details img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--store-radius,12px)}
+    [data-pagosya-product][data-style] .product-long__details figcaption{display:grid;gap:4px;margin-top:10px}
+    [data-pagosya-product][data-style] .product-long__versus table{width:100%;border-collapse:collapse}
+    [data-pagosya-product][data-style] .product-long__versus th,[data-pagosya-product][data-style] .product-long__versus td{padding:14px 12px;border-bottom:1px solid var(--store-border,rgba(0,0,0,.12));text-align:center}
+    [data-pagosya-product][data-style] .product-long__versus th[scope=row]{text-align:left;font-weight:500}
+    [data-pagosya-product][data-style] .product-long__mark[data-yes=true]{color:var(--store-accent,currentColor)}
+    [data-pagosya-product][data-style] .product-long__faq details{border-bottom:1px solid var(--store-border,rgba(0,0,0,.12));padding:16px 0}
+    [data-pagosya-product][data-style] .product-long__faq summary{cursor:pointer;font-weight:600}
+    [data-pagosya-product][data-style] .product-long__buy{display:grid;justify-items:center;gap:8px;margin:clamp(32px,5vw,64px) 0;text-align:center}
+    [data-pagosya-product][data-style] .product-long__buy .checkout-button{min-width:min(100%,360px)}
     [data-pagosya-product][data-style] .product-detail__highlights span{display:block;color:var(--pd-muted);overflow-wrap:anywhere}
     [data-pagosya-product][data-style] .pd-icon{flex:0 0 26px;width:26px;height:26px;overflow:visible;color:var(--pd-ink)}
     [data-pagosya-product][data-style=editorial] .product-detail__highlights{grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr));gap:16px 10px;margin:0 0 22px;padding:18px 0;border-top:1px solid var(--pd-line);border-bottom:1px solid var(--pd-line)}
@@ -1147,8 +1166,8 @@
   const accountUrl = () => { try { return config.slug && config.checkoutOrigin ? new URL(`/cuenta/${encodeURIComponent(config.slug)}`, config.checkoutOrigin).href : ''; } catch { return ''; } };
   // The gate pages (components/auth, components/account) only point at the trusted account app; this fills in where.
   const ACCOUNT_GATE_PATHS = { login: '', register: '/registro', 'forgot-password': '/recuperar', 'reset-password': '/recuperar', orders: '/pedidos', addresses: '/direcciones', profile: '/perfil', subscriptions: '/suscripciones' };
-  function renderAccountGates() {
-    const base = accountUrl();
+  function renderAccountGateLinks() {
+    const base = accountEntry();
     // Account access is a platform baseline even when an authored shell omits it.
     // Existing local account navigation and the information slot remain authoritative.
     if (base && !document.querySelector('[data-pagosya-pages],a[data-pagosya-account],a[href="acceso-ingresar.html"],a[href="cuenta-perfil.html"]')) {
@@ -1164,13 +1183,156 @@
     document.querySelectorAll('a[data-pagosya-account]').forEach(link => {
       const view = link.getAttribute('data-pagosya-account');
       if (!view) return;
+      if (accountBridge && ACCOUNT_PAGES[view]) { link.setAttribute('href', ACCOUNT_PAGES[view]); link.removeAttribute('aria-disabled'); return; }
       if (base && Object.prototype.hasOwnProperty.call(ACCOUNT_GATE_PATHS, view)) { link.setAttribute('href', base + ACCOUNT_GATE_PATHS[view]); link.removeAttribute('aria-disabled'); return; }
       link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.textContent = 'Cuenta no disponible';
     });
   }
+  // ---- Shopper account (spec 2026-10-08-store-built-in-account-pages): drawn here and styled by the store; the trusted
+  // parent keeps the session and calls the API. Without a parent (an exported static site) the gate keeps its link.
+  const ACCOUNT_PAGES = { login: 'acceso-ingresar.html', register: 'acceso-registro.html', 'forgot-password': 'acceso-olvide-mi-contrasena.html', 'reset-password': 'acceso-restablecer-contrasena.html', orders: 'cuenta-pedidos.html', addresses: 'cuenta-direcciones.html', profile: 'cuenta-perfil.html', subscriptions: 'cuenta-suscripciones.html' };
+  const ACCOUNT_LAYOUTS = ['card', 'split', 'minimal', 'panel'];
+  const SIGNED_IN_VIEWS = ['orders', 'addresses', 'profile', 'subscriptions'];
+  const accountBridge = typeof window.PAGOSYA_ACCOUNT_REQUEST === 'function' ? window.PAGOSYA_ACCOUNT_REQUEST : null;
+  const accountEntry = () => accountBridge ? ACCOUNT_PAGES.login : accountUrl();
+  const accountAsk = async (action, body = {}) => { try { return await accountBridge(action, body); } catch { return { ok: false, body: { message: 'No pudimos conectar. Inténtalo de nuevo.' } }; } };
+  const accountTheme = () => { const theme = config.accountTheme && typeof config.accountTheme === 'object' ? config.accountTheme : {}; return { layout: ACCOUNT_LAYOUTS.includes(theme.layout) ? theme.layout : 'card', photo: typeof theme.photo === 'string' ? theme.photo : '', css: typeof theme.css === 'string' ? theme.css : '' }; };
+  const accountGo = page => { const link = document.createElement('a'); link.href = page; link.hidden = true; document.body.append(link); link.click(); link.remove(); };
+  const accountInput = (name, label, type, autocomplete, value = '') => `<label data-part="field"><span data-part="label">${escape(label)}</span><input data-part="input" name="${name}" type="${type}" autocomplete="${autocomplete}" value="${escape(value)}" ${type === 'tel' ? '' : 'required'}></label>`;
+  const ACCOUNT_FORMS = {
+    login: { title: 'Ingresa a tu cuenta', lead: 'Revisa tus pedidos y compra más rápido.', fields: [['email', 'Correo', 'email', 'email'], ['password', 'Contraseña', 'password', 'current-password']], submit: 'Ingresar', action: 'login', links: [['register', '¿No tienes cuenta? Crea una'], ['forgot-password', '¿Olvidaste tu contraseña?']] },
+    register: { title: 'Crea tu cuenta', lead: 'Sigue tus pedidos y guarda tus direcciones.', fields: [['name', 'Nombre', 'text', 'name'], ['email', 'Correo', 'email', 'email'], ['password', 'Contraseña (8 caracteres o más)', 'password', 'new-password']], submit: 'Crear cuenta', action: 'register', links: [['login', 'Ya tengo una cuenta']] },
+    'forgot-password': { title: 'Recupera tu contraseña', lead: 'Te enviamos un enlace para elegir una nueva.', fields: [['email', 'Correo', 'email', 'email']], submit: 'Enviar enlace', action: 'forgot', links: [['login', 'Volver a ingresar']] },
+    'reset-password': { title: 'Elige una contraseña nueva', lead: 'Usa 8 caracteres o más.', fields: [['password', 'Contraseña nueva', 'password', 'new-password']], submit: 'Guardar contraseña', action: 'reset', links: [['login', 'Volver a ingresar']] },
+  };
+  const ACCOUNT_ORDER_STATUS = { AWAITING_PAYMENT: 'Esperando pago', PAID: 'Pagado', PREPARING: 'Preparando', READY_FOR_PICKUP: 'Listo para retirar', SHIPPED: 'Enviado', DELIVERED: 'Entregado', CANCELED: 'Cancelado', REFUNDED: 'Reembolsado' };
+  const ACCOUNT_SUBSCRIPTION_STATUS = { ACTIVE: 'Activa', PAUSED: 'Pausada', CANCELED: 'Cancelada' };
+  const ACCOUNT_CADENCE = { WEEKLY: 'cada semana', BIWEEKLY: 'cada dos semanas', MONTHLY: 'cada mes' };
+  const accountDay = iso => { try { return iso ? new Date(iso).toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : ''; } catch { return ''; } };
+  // Unlayered on purpose: the store's own generic rules (h1, input) must not undo the form; YAPI's theme comes after and wins.
+  const ACCOUNT_CSS = `
+[data-account-gate] [data-part=account]{--acc-bg:var(--account-background,var(--ui-paper,#fff));--acc-ink:var(--account-foreground,var(--ui-ink,#111));--acc-accent:var(--account-accent,var(--ui-accent,#111));--acc-radius:var(--account-radius,var(--ui-radius-control,10px));display:grid;gap:var(--ui-s5,24px);color:var(--acc-ink)}
+[data-account-gate] [data-part=card]{display:grid;gap:var(--ui-s3,12px)}
+[data-account-gate] [data-layout=card] [data-part=card]{width:100%;max-width:440px;margin-inline:auto;box-sizing:border-box;padding:clamp(24px,4vw,40px);background:var(--ui-surface,var(--acc-bg));border:1px solid var(--ui-line,#0002);border-radius:calc(var(--acc-radius) * 1.6)}
+[data-account-gate] [data-layout=split]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+[data-account-gate] [data-layout=split] [data-part=media]{margin:0}
+[data-account-gate] [data-layout=split] [data-part=media] img{display:block;width:100%;height:100%;min-height:320px;object-fit:cover;border-radius:var(--ui-radius-media,12px)}
+[data-account-gate] [data-layout=minimal] [data-part=card]{max-width:560px}
+[data-account-gate] [data-layout=panel]{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+[data-account-gate] [data-part=title]{margin:0;font-family:var(--ui-display-font,var(--store-heading-font,inherit));font-size:clamp(28px,3vw,40px);line-height:1.1}
+[data-account-gate] [data-part=lead]{margin:0;opacity:.8}
+[data-account-gate] [data-part=form]{display:grid;gap:var(--ui-s4,16px)}
+[data-account-gate] [data-part=field]{display:grid;gap:6px}
+[data-account-gate] [data-part=label]{font-size:.85em;font-weight:600}
+[data-account-gate] [data-part=input]{box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
+[data-account-gate] [data-part=submit]{min-height:48px;background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0;font:inherit;font-weight:700;cursor:pointer}
+[data-account-gate] [data-part=link]{color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
+[data-account-gate] [data-part=error]:empty{display:none}
+[data-account-gate] [data-part=error]{margin:0;color:#b42318;font-weight:600}
+[data-account-gate] [data-part=notice]{margin:0;padding:10px 12px;border-radius:var(--acc-radius);background:color-mix(in srgb,var(--acc-accent) 10%,transparent)}
+[data-account-gate] [data-part=nav]{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+[data-account-gate] [data-part=nav-item][aria-current=page]{font-weight:700;text-decoration:underline}
+[data-account-gate] [data-part=list]{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+[data-account-gate] :is([data-part=order],[data-part=address]){display:grid;gap:4px;padding:14px 16px;border:1px solid var(--ui-line,#0002);border-radius:var(--acc-radius)}
+[data-account-gate] [data-part=danger]{display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--ui-line,#0002)}
+@media (max-width:720px){[data-account-gate] :is([data-layout=split],[data-layout=panel]){grid-template-columns:1fr}[data-account-gate] [data-layout=split] [data-part=media] img{min-height:0;max-height:220px}}
+`;
+  function accountFrame(slot, inner) {
+    const { layout, photo } = accountTheme();
+    const media = layout === 'split' && photo ? `<figure data-part="media"><img src="${escape(photo)}" alt=""></figure>` : '';
+    slot.innerHTML = `<section data-part="account" data-layout="${layout}">${media}<div data-part="card">${preview ? '<p data-part="notice">Vista previa · No se crean cuentas</p>' : ''}${inner}</div></section>`;
+  }
+  // A submitted form keeps what the shopper typed and shows the API's message in its error part.
+  function accountSubmit(form, action, done) {
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const error = form.querySelector('[data-part=error]'); if (error) error.textContent = '';
+      const button = form.querySelector('[data-part=submit]'); if (button) button.disabled = true;
+      const result = await accountAsk(action, Object.fromEntries(new FormData(form)));
+      if (button) button.disabled = false;
+      if (!result.ok) { if (error) error.textContent = result.body?.message || 'No pudimos completar la operación.'; return; }
+      done(result);
+    });
+  }
+  function accountForm(slot, view, { notice = '', after = '' } = {}) {
+    const form = ACCOUNT_FORMS[view];
+    accountFrame(slot, `<h1 data-part="title">${escape(form.title)}</h1><p data-part="lead">${escape(form.lead)}</p>${notice ? `<p data-part="notice">${escape(notice)}</p>` : ''}<form data-part="form" novalidate>${form.fields.map(field => accountInput(...field)).join('')}<p data-part="error" role="alert"></p><button data-part="submit" class="ui-button" data-variant="solid" type="submit">${escape(form.submit)}</button></form>${form.links.map(([target, label]) => `<a data-part="link" href="${ACCOUNT_PAGES[target]}">${escape(label)}</a>`).join('')}`);
+    accountSubmit(slot.querySelector('form'), form.action, result => {
+      if (form.action === 'login') accountGo(after || ACCOUNT_PAGES.orders);
+      else if (form.action === 'reset') accountForm(slot, 'login', { notice: 'Tu contraseña quedó guardada. Ya puedes ingresar.' });
+      else accountFrame(slot, `<h1 data-part="title">${escape(form.title)}</h1><p data-part="notice">${escape(result.body?.message || 'Listo. Revisa tu correo.')}</p><a data-part="link" href="${ACCOUNT_PAGES.login}">Ir a ingresar</a>`);
+    });
+  }
+  const ACCOUNT_NAV = [['orders', 'Pedidos'], ['subscriptions', 'Suscripciones'], ['addresses', 'Direcciones'], ['profile', 'Perfil']];
+  const ACCOUNT_TITLES = { orders: 'Mis pedidos', subscriptions: 'Mis suscripciones', addresses: 'Mis direcciones', profile: 'Mi perfil' };
+  const ADDRESS_FIELDS = [['label', 'Nombre de la dirección', 'text', 'off'], ['recipient', 'Quién recibe', 'text', 'name'], ['phone', 'Teléfono', 'tel', 'tel'], ['department', 'Departamento', 'text', 'address-level1'], ['city', 'Ciudad', 'text', 'address-level2'], ['street', 'Dirección', 'text', 'street-address'], ['references', 'Referencias', 'text', 'off']];
+  function accountBody(view, data) {
+    const list = Array.isArray(data) ? data : [];
+    if (view === 'orders') return list.length ? `<ul data-part="list">${list.map(order => `<li data-part="order"><strong>Pedido del ${escape(accountDay(order.createdAt))}</strong><span data-part="order-status">${escape(ACCOUNT_ORDER_STATUS[order.status] || order.status || '')}</span><span>${escape(money(Number(order.amount) || 0, order.currency || 'BOB'))}</span><span data-part="hint">${escape((Array.isArray(order.items) ? order.items : []).map(item => `${item.quantity || 1} × ${item.name || ''}`).join(', '))}</span></li>`).join('')}</ul>` : '<p data-part="empty">Todavía no tienes pedidos.</p>';
+    if (view === 'subscriptions') return list.length ? `<ul data-part="list">${list.map(item => `<li data-part="order"><strong>${escape(item.itemName || 'Suscripción')}</strong><span data-part="order-status">${escape(ACCOUNT_SUBSCRIPTION_STATUS[item.status] || item.status || '')}</span><span data-part="hint">${escape([item.quantity ? `${item.quantity} ×` : '', ACCOUNT_CADENCE[item.cadence] || '', item.nextBillingAt ? `próxima: ${accountDay(item.nextBillingAt)}` : ''].filter(Boolean).join(' '))}</span></li>`).join('')}</ul>` : '<p data-part="empty">No tienes suscripciones.</p>';
+    if (view === 'addresses') {
+      const addresses = Array.isArray(data?.addresses) ? data.addresses : [];
+      return `${addresses.length ? `<ul data-part="list">${addresses.map((address, index) => `<li data-part="address"><strong>${escape(address.label || 'Dirección')}</strong><span>${escape([address.street, address.city, address.department].filter(Boolean).join(', '))}</span><span data-part="hint">${escape([address.recipient, address.phone].filter(Boolean).join(' · '))}</span><button data-part="link" type="button" data-account-remove="${index}">Quitar</button></li>`).join('')}</ul>` : '<p data-part="empty">Todavía no guardaste direcciones.</p>'}<form data-part="form" data-account-address novalidate><h2 data-part="lead">Agregar una dirección</h2>${ADDRESS_FIELDS.map(field => accountInput(...field)).join('')}<p data-part="error" role="alert"></p><button data-part="submit" class="ui-button" data-variant="solid" type="submit">Guardar dirección</button></form>`;
+    }
+    const me = data && typeof data === 'object' ? data : {};
+    return `<form data-part="form" data-account-profile novalidate>${accountInput('name', 'Nombre', 'text', 'name', me.name || '')}${accountInput('phone', 'Teléfono', 'tel', 'tel', me.phone || '')}<p data-part="error" role="alert"></p><button data-part="submit" class="ui-button" data-variant="solid" type="submit">Guardar cambios</button></form><button data-part="link" type="button" data-account-export>Descargar mis datos</button><form data-part="danger" data-account-delete novalidate><strong>Eliminar mi cuenta</strong><span data-part="hint">Borra tus datos personales. Tus pedidos quedan con la tienda.</span>${accountInput('password', 'Tu contraseña', 'password', 'current-password')}<p data-part="error" role="alert"></p><button data-part="submit" class="ui-button" data-variant="outline" type="submit">Eliminar mi cuenta</button></form>`;
+  }
+  async function accountSignedIn(slot, view, name) {
+    const result = await accountAsk(view === 'profile' || view === 'addresses' ? 'me' : view);
+    if (!result.ok && result.body?.status === 401) { accountForm(slot, 'login', { notice: 'Tu sesión terminó. Vuelve a ingresar.', after: ACCOUNT_PAGES[view] }); return; }
+    const nav = `<nav data-part="nav" aria-label="Mi cuenta">${ACCOUNT_NAV.map(([key, label]) => `<a data-part="nav-item" href="${ACCOUNT_PAGES[key]}"${key === view ? ' aria-current="page"' : ''}>${escape(label)}</a>`).join('')}<button data-part="link" type="button" data-account-logout>Salir</button></nav>`;
+    const body = result.ok ? accountBody(view, result.body) : `<p data-part="error" role="alert">${escape(result.body?.message || 'No pudimos cargar tu cuenta.')}</p>`;
+    accountFrame(slot, `${nav}<h1 data-part="title">${escape(ACCOUNT_TITLES[view])}</h1>${name ? `<p data-part="lead">Hola, ${escape(name)}</p>` : ''}${body}`);
+    slot.querySelector('[data-account-logout]')?.addEventListener('click', async () => { await accountAsk('logout'); accountGo(ACCOUNT_PAGES.login); });
+    const profile = slot.querySelector('[data-account-profile]');
+    if (profile) accountSubmit(profile, 'update-me', () => accountSignedIn(slot, view, name));
+    slot.querySelector('[data-account-export]')?.addEventListener('click', () => void accountAsk('export'));
+    const remove = slot.querySelector('[data-account-delete]');
+    if (remove) accountSubmit(remove, 'delete', () => accountGo(ACCOUNT_PAGES.login));
+    const saved = Array.isArray(result.body?.addresses) ? result.body.addresses : [];
+    const address = slot.querySelector('[data-account-address]');
+    if (address) address.addEventListener('submit', async event => {
+      event.preventDefault();
+      const entry = Object.fromEntries(new FormData(address));
+      const outcome = await accountAsk('addresses', { addresses: [...saved, entry] });
+      if (!outcome.ok) { address.querySelector('[data-part=error]').textContent = outcome.body?.message || 'No pudimos guardar la dirección.'; return; }
+      accountSignedIn(slot, view, name);
+    });
+    slot.querySelectorAll('[data-account-remove]').forEach(button => button.addEventListener('click', async () => {
+      const index = Number(button.getAttribute('data-account-remove'));
+      await accountAsk('addresses', { addresses: saved.filter((_, at) => at !== index) });
+      accountSignedIn(slot, view, name);
+    }));
+  }
+  let accountDrawn = false;
+  async function renderAccountViews() {
+    const gates = [...document.querySelectorAll('[data-account-gate]')];
+    if (!gates.length || accountDrawn) return;
+    accountDrawn = true;
+    const kit = document.createElement('style'); kit.dataset.pagosyaKit = 'account'; kit.textContent = ACCOUNT_CSS; document.head.append(kit);
+    const theme = accountTheme();
+    // Defence in depth: the API sanitized this CSS (account-theme.ts); this only refuses what the sanitizer never emits.
+    if (theme.css && theme.css.length <= 8000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|!\s*important/i.test(theme.css)) {
+      const style = document.createElement('style'); style.dataset.pagosyaKit = 'account-theme'; style.textContent = theme.css; document.head.append(style);
+    }
+    const state = await accountAsk('state');
+    const signedIn = state.ok && state.body?.signedIn === true;
+    for (const gate of gates) {
+      const view = gate.getAttribute('data-account-gate');
+      const slot = gate.querySelector('.ui-container') || gate;
+      if (SIGNED_IN_VIEWS.includes(view)) { if (signedIn) await accountSignedIn(slot, view, state.body.name); else accountForm(slot, 'login', { after: ACCOUNT_PAGES[view] }); }
+      else if (view === 'login' && signedIn && !preview) accountGo(ACCOUNT_PAGES.orders);
+      else if (ACCOUNT_FORMS[view]) accountForm(slot, view, view === 'login' && state.body?.verified === true ? { notice: 'Tu correo quedó confirmado. Ya puedes ingresar.' } : view === 'login' && state.body?.verified === false ? { notice: 'El enlace de verificación no es válido o ya se usó.' } : {});
+    }
+  }
+  function renderAccountGates() {
+    renderAccountGateLinks();
+    if (accountBridge) void renderAccountViews();
+  }
   document.addEventListener('click', event => {
     const link = event.target.closest && event.target.closest('[data-pagosya-account]');
-    if (link && hosted) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
+    // Only the account app on the checkout origin is outside the store; the store's own account pages navigate as usual.
+    if (link && hosted && /^https?:/i.test(link.getAttribute('href') || '')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
   });
   const infoText = value => (typeof value === 'string' ? value.trim() : '');
   const infoParagraphs = text => text.split(/\n{2,}/).map(paragraph => `<p>${escape(paragraph).replace(/\n/g, '<br>')}</p>`).join('');
@@ -1250,7 +1412,7 @@
     renderAccountGates();
     const live = force || ready;
     if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
-      const account = accountUrl();
+      const account = accountEntry();
       slot.innerHTML = INFO_LINKS.filter(([kind]) => infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '');
       slot.hidden = !slot.innerHTML;
     });
@@ -1431,7 +1593,7 @@
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('productos.html'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
-    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
@@ -1506,6 +1668,10 @@
     wheat: { motion: 'sway', paths: '<path d="M12 22V9"/><path d="M12 9c0-2 1.5-4 4-4 0 2.5-1.5 4-4 4z"/><path d="M12 9c0-2-1.5-4-4-4 0 2.5 1.5 4 4 4z"/><path d="M12 15c0-2 1.5-4 4-4 0 2.5-1.5 4-4 4z"/><path d="M12 15c0-2-1.5-4-4-4 0 2.5 1.5 4 4 4z"/>' },
     'chef-hat': { motion: 'bob', paths: '<path d="M6 21h12"/><path d="M7 18h10v-4a4 4 0 0 0 .8-7.8A4 4 0 0 0 12 3a4 4 0 0 0-5.8 3.2A4 4 0 0 0 7 14z"/>' },
     bottle: { motion: 'tilt', paths: '<path d="M10 2h4v3l2 3v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-3z"/><path d="M8 13h8"/>' },
+    thermometer: { motion: 'bob', paths: '<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/><path d="M12 9v6"/>' },
+    laptop: { motion: 'tilt', paths: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>' },
+    backpack: { motion: 'sway', paths: '<path d="M5 10a7 7 0 0 1 14 0v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M9 6V4a3 3 0 0 1 6 0v2"/><path d="M8 14h8v4"/>' },
+    umbrella: { motion: 'sway', paths: '<path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v7a2 2 0 0 0 4 0"/>' },
     shield: { motion: 'draw', paths: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/><path class="pd-check" d="m9 12 2 2 4-4"/>' },
     star: { motion: 'twinkle', paths: '<path d="m12 3 2.7 5.6 6.3.9-4.5 4.4 1 6.1-5.5-2.9-5.5 2.9 1-6.1L3 9.5l6.3-.9z"/>' },
     heart: { motion: 'beat', paths: '<path d="M12 20s-7-4.4-7-9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7 3.5C19 15.6 12 20 12 20z"/>' },
@@ -1515,7 +1681,7 @@
   function highlightsMarkup(p) {
     const rows = (Array.isArray(p?.highlights) ? p.highlights : [])
       .filter(row => row && highlightIcons[row.icon] && typeof row.label === 'string' && row.label.trim())
-      .slice(0, 4);
+      .slice(0, 6);
     if (!rows.length) return '';
     return `<ul class="product-detail__highlights" data-part="highlights" aria-label="Destacados del producto">${rows.map(row => {
       const icon = highlightIcons[row.icon];
@@ -1542,6 +1708,42 @@
       if (blocks.length === 6) break;
     }
     return blocks.length ? `<section class="product-detail__blocks" data-part="blocks" aria-label="Más sobre este producto">${blocks.join('')}</section>` : '';
+  }
+  /* The long product page (spec 2026-10-09): product data the store draws below the product. Text is escaped, photos
+   * go through safeUrl, and the repeated buy button only scrolls to the purchase box, so options are never skipped. */
+  const pageBlock = (p, type) => (Array.isArray(p?.contentBlocks) ? p.contentBlocks : []).find(block => block && block.type === type);
+  const nonEmpty = value => typeof value === 'string' && value.trim();
+  function buyAgainMarkup() {
+    const lines = [];
+    if (store.shippingEnabled) lines.push('Envío a domicilio');
+    if (store.shippingPickupEnabled) lines.push('Retiro en tienda');
+    if (nonEmpty(storePolicies().returns)) lines.push('Cambios y devoluciones según la política de la tienda');
+    return `<div class="product-long__buy" data-part="buy-again"><button type="button" class="checkout-button" data-buy-again>Comprar ahora</button>${lines.length ? `<p>${lines.map(escape).join(' · ')}</p>` : ''}</div>`;
+  }
+  function longPageTop(p) {
+    const parts = [];
+    const features = pageBlock(p, 'features');
+    const featureItems = (features?.items || []).filter(item => item && highlightIcons[item.icon] && nonEmpty(item.label));
+    if (featureItems.length >= 3) parts.push(`<section class="product-long__features" data-part="features"><h2>${escape(nonEmpty(features.title) || 'Lo que lo hace especial')}</h2><ul>${featureItems.map(item => { const icon = highlightIcons[item.icon]; return `<li data-part="feature"><svg class="pd-icon pd-${escape(icon.motion)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon.paths}</svg><strong>${escape(item.label)}</strong>${nonEmpty(item.detail) ? `<span>${escape(item.detail)}</span>` : ''}</li>`; }).join('')}</ul></section>`);
+    const story = pageBlock(p, 'story');
+    if (story && nonEmpty(story.problem) && nonEmpty(story.tried) && nonEmpty(story.solution)) parts.push(`<section class="product-long__story" data-part="story">${nonEmpty(story.title) ? `<h2>${escape(story.title)}</h2>` : ''}<p data-part="story-problem">${escape(story.problem)}</p><p data-part="story-tried">${escape(story.tried)}</p><p data-part="story-solution">${escape(story.solution)}</p></section>`);
+    const details = (pageBlock(p, 'details')?.items || []).map(item => ({ ...item, url: safeUrl(item?.imageUrl) })).filter(item => item.url && nonEmpty(item.title) && nonEmpty(item.alt));
+    if (details.length) parts.push(`<section class="product-long__details" data-part="details">${details.map(item => `<figure data-part="detail"><img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><figcaption><strong>${escape(item.title)}</strong>${nonEmpty(item.text) ? `<span>${escape(item.text)}</span>` : ''}</figcaption></figure>`).join('')}</section>`);
+    if (parts.length) parts.push(buyAgainMarkup());
+    const versus = pageBlock(p, 'versus');
+    const rows = (versus?.rows || []).filter(row => row && nonEmpty(row.label) && typeof row.ours === 'boolean' && typeof row.theirs === 'boolean');
+    if (versus && rows.length >= 2 && nonEmpty(versus.ours) && nonEmpty(versus.theirs)) {
+      const mark = yes => `<span class="product-long__mark" data-yes="${yes}" aria-label="${yes ? 'Sí' : 'No'}">${yes ? '✓' : '✕'}</span>`;
+      parts.push(`<section class="product-long__versus" data-part="versus">${nonEmpty(versus.title) ? `<h2>${escape(versus.title)}</h2>` : ''}<table><thead><tr><th scope="col"><span class="product-detail__sr">Característica</span></th><th scope="col">${escape(versus.ours)}</th><th scope="col">${escape(versus.theirs)}</th></tr></thead><tbody>${rows.map(row => `<tr><th scope="row">${escape(row.label)}</th><td>${mark(row.ours)}</td><td>${mark(row.theirs)}</td></tr>`).join('')}</tbody></table></section>`);
+    }
+    return parts.length ? `<div class="product-long" data-part="long-page">${parts.join('')}</div>` : '';
+  }
+  function longPageBottom(p) {
+    const faq = pageBlock(p, 'faq');
+    const items = (faq?.items || []).filter(item => item && nonEmpty(item.q) && nonEmpty(item.a));
+    const hasTop = !!longPageTop(p);
+    if (!hasTop && items.length < 2) return '';
+    return `<div class="product-long" data-part="long-page">${hasTop ? buyAgainMarkup() : ''}${items.length >= 2 ? `<section class="product-long__faq" data-part="faq"><h2>${escape(nonEmpty(faq.title) || 'Preguntas frecuentes')}</h2>${items.map(item => `<details data-part="faq-item"><summary>${escape(item.q)}</summary><p>${escape(item.a)}</p></details>`).join('')}</section>` : ''}</div>`;
   }
   // A stored choice wins; older stores read their catalog, and spec-heavy catalogs get the dense page.
   function productPageStyle() {
@@ -1576,6 +1778,13 @@
     if (buy && (variant || !selectedProduct.variants?.length)) buy.dataset.add = lineKey(selectedProduct.id, variant?.id, selectedCadence());
     updateQuantity();
     renderCart();
+  });
+  // "Comprar ahora" on the long product page brings the shopper back to the purchase box, so options are never skipped.
+  detail.addEventListener("click", event => {
+    if (!event.target.closest?.("[data-buy-again]")) return;
+    const target = detail.querySelector(".product-detail__options button:not([disabled]), .product-detail__options input, .product-detail__options select, .product-detail__buy:not([hidden])");
+    target?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    target?.focus({ preventScroll: true });
   });
   detail.addEventListener("click", event => {
     if (fullProductPage || event.target !== detail) return;

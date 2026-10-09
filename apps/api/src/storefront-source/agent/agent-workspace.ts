@@ -11,7 +11,9 @@ export class AgentWorkspace {
   private readonly map = new Map<string, SourceProjectFileDto>();
   private readonly changed = new Set<string>();
   version = 0;
-  constructor(files: SourceProjectFileDto[], private readonly options: { redesign: boolean }) {
+  /** rewriteComponents: a store kept on its template may replace whole components (copy, sections) for a new business,
+   *  while styles/globals.css, where the template's look lives, still takes only local edits. */
+  constructor(files: SourceProjectFileDto[], private readonly options: { redesign: boolean; rewriteComponents?: boolean }) {
     for (const file of files) this.map.set(file.path, { ...file });
   }
   list() { return [...this.map.keys()].filter(nextSourceFile); }
@@ -40,7 +42,8 @@ export class AgentWorkspace {
   write(path: string, content: string): AgentEditResult {
     if (!this.writable(path)) return { ok: false, reason: 'path', message: `Solo se pueden escribir componentes y styles/globals.css (no ${path}).` };
     const existing = this.map.get(path);
-    if (existing && !this.options.redesign && sourceLinesKept(existing.content, content) < LOCAL_REWRITE_KEPT_LINES) {
+    const rewritable = this.options.redesign || this.options.rewriteComponents === true && path.startsWith('components/');
+    if (existing && !rewritable && sourceLinesKept(existing.content, content) < LOCAL_REWRITE_KEPT_LINES) {
       return { ok: false, reason: 'rewrite', message: `${path} cambiaría casi por completo; usa edit_file para los cambios puntuales.` };
     }
     this.set(path, content);

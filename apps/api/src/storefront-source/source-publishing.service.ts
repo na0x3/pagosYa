@@ -10,8 +10,12 @@ import { sourceProjectDigest, sourceProjectSnapshot, type SourceProjectSnapshot 
 import { sourceMotionMode, withSourceMotion } from './source-motion';
 import { withSeededDna } from './source-dna';
 import { isSourceMotifFile } from './source-motifs';
+import { isKitCreativeFile } from './source-creative-assets';
+import { sanitizeMotifSvg } from './source-svg-sanitize';
 
 const PUBLIC_ASSET = /\.(png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i;
+/** Lucide line icons the asset library bundles (assets/icons/NAME.svg). */
+const ICON_PATH = /^assets\/icons\/[a-z0-9-]{2,40}\.svg$/;
 const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', mp4: 'video/mp4', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf' };
 /** Published revisions are immutable, so their decoded media can be cached by store and revision. */
 const ASSET_CACHE_REVISIONS = 12;
@@ -210,8 +214,12 @@ export class SourcePublishingService {
     const assetPath = `/stores/public/${encodeURIComponent(slug)}/source-site/assets/${await this.assetVersion(store.id, revision)}/`;
     // Stores published before the DNA existed get one seeded by the store id, without regenerating.
     const publicFiles = withSeededDna(files, store.id)
+      // Store icons reach visitors only as the SVG sanitiser rewrites them: a store saved under an older icon set keeps
+      // its icons, and anything that is not a plain drawing is dropped.
+      .flatMap(f => { if (!ICON_PATH.test(f.path)) return [f]; const svg = f.encoding === 'base64' ? null : sanitizeMotifSvg(f.content).svg; return svg ? [{ ...f, content: svg }] : []; })
       // DNA motif drawings travel as text (every save sanitises them); the preview inlines them for a hero <img>.
-      .filter(f => (/\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) || isSourceMotifFile(f.path) && f.encoding !== 'base64') && !['server.mjs', 'build.mjs'].includes(f.path))
+      // Library illustrations travel the same way, but only byte-identical to the kit's own files.
+      .filter(f => (/\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) || isSourceMotifFile(f.path) && f.encoding !== 'base64' || isKitCreativeFile(f) || ICON_PATH.test(f.path)) && !['server.mjs', 'build.mjs'].includes(f.path))
       // Binary media is served by publicAsset; the site JSON only names it.
       .map(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path) ? { path: f.path, encoding: 'url' as const, content: '' } : f);
     return { published: true, revision, visitToken, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };

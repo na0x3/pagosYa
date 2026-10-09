@@ -53,10 +53,12 @@ export class StoreCustomersService {
     return name;
   }
 
-  /** The account pages are served by the checkout app, a trusted origin: a password never passes through the sandboxed store. */
+  /** The store's own account page on its published address (spec 2026-10-08-store-built-in-account-pages). The token rides in
+   * the fragment, which the trusted page reads and removes; the store frame never receives it. Old /cuenta links still work. */
   private link(slug: string, view: 'verificar' | 'restablecer', token: string) {
-    const url = new URL(`/cuenta/${encodeURIComponent(slug)}/${view}`, this.config.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174');
-    url.searchParams.set('token', token);
+    const url = new URL(`/s/${encodeURIComponent(slug)}`, this.config.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174');
+    url.searchParams.set('source_page', view === 'verificar' ? 'acceso-ingresar.html' : 'acceso-restablecer-contrasena.html');
+    url.hash = `${view}=${token}`;
     return url.href;
   }
 

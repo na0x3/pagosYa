@@ -12,10 +12,15 @@ const MAX_CHARS = 3000, MAX_RULES = 40, MAX_DECLARATIONS = 200, MAX_COMPOUNDS = 
 const SCOPE = '[data-pagosya-product][data-style] ';
 /** Idempotence: stored designs are normalized again on every load, so the sanitizer accepts its own output
  * (the scope prefix on selectors, the pt- prefix on keyframes) and returns it unchanged. */
-const withoutScope = (text: string) => text.split(SCOPE).join('');
-const keyframeName = (name: string) => name.startsWith('pt-') ? name : `pt-${name}`;
+const withoutScope = (text: string) => text.split(active.scope).join('');
+const keyframeName = (name: string) => name.startsWith(active.keyframePrefix) ? name : `${active.keyframePrefix}${name}`;
 /** Parts that are boxes the theme may size (width/height). Text parts keep the kit's sizing. */
 const SIZED_PARTS = new Set(['swatch', 'thumb', 'thumbs', 'frame', 'decor-a', 'decor-b', 'block', 'block-media', 'block-compare', 'blocks', 'gallery', 'stage']);
+/** What one kind of page may restyle: its parts, the scope every selector is prefixed with, the parts that may be sized,
+ * the keyframes prefix, the variables values may read, and parts whose declarations a page refuses outright. */
+export type ThemeCssProfile = { parts: readonly string[]; sizedParts: readonly string[]; scope: string; keyframePrefix: string; variables: RegExp; variableHint: string; refuse?: (part: string, property: string) => boolean };
+type ActiveProfile = ThemeCssProfile & { sized: Set<string>; compound: RegExp };
+const activate = (profile: ThemeCssProfile): ActiveProfile => ({ ...profile, sized: new Set(profile.sizedParts), compound: compoundFor(profile.parts) });
 
 class Reject extends Error {}
 type Ctx = { parts: string[]; pseudo: boolean; decor: boolean; motion: 'none' | 'reduce' | 'no-preference'; keyframes: Set<string> };
@@ -158,7 +163,7 @@ const offset: Validator = (value, ctx) => {
 };
 /** Sizes keep a floor (24px, the WCAG 2.2 minimum target; 10% / 5vw / 5vh) so a theme cannot hide a control by shrinking it; only the decor slots may be 0. */
 const size: Validator = (value, ctx) => {
-  if (!ctx.parts.every(part => SIZED_PARTS.has(part))) fail('this part keeps the kit\'s sizing');
+  if (!ctx.parts.every(part => active.sized.has(part))) fail('this part keeps the kit\'s sizing');
   const v = value.trim().toLowerCase();
   if (v === 'auto') return v;
   const l = parseLength(v);
@@ -219,13 +224,15 @@ function bannedValue(value: string): string | null {
   if (value.includes('\\')) return 'escape sequences are not allowed';
   if (/url\s*\(|image-set|expression|@import|javascript:/i.test(value)) return 'urls, image-set and script values are not allowed';
   if (/(?:^|[^\w-])(?:calc|clamp|min|max|env|attr)\s*\(/i.test(value)) return 'calc(), clamp(), min(), max(), env() and attr() are not allowed; use literal values';
-  for (const match of value.matchAll(/var\(\s*(--[^,)\s]*)/gi)) if (!/^--(?:pd|store|brand|pt)-[a-z0-9-]+$/i.test(match[1])) return `variable ${match[1]} is not allowed (only --pd-, --store-, --brand- and --pt- variables)`;
+  for (const match of value.matchAll(/var\(\s*(--[^,)\s]*)/gi)) if (!active.variables.test(match[1])) return `variable ${match[1]} is not allowed (only ${active.variableHint} variables)`;
   return null;
 }
 
 // ---- selectors ----------------------------------------------------------------------------------------------------------
-const PART_ALTERNATION = [...COSMETIC_PARTS].sort((a, b) => b.length - a.length).join('|');
-const COMPOUND = new RegExp(`^\\[data-part=(?:"|')?(${PART_ALTERNATION})(?:"|')?\\](?:\\[data-part-type=(?:"|')?(media|compare)(?:"|')?\\])?((?::(?:hover|focus-visible|active|first-child|last-child|nth-child\\(\\d{1,2}\\)))*)(::(?:before|after))?$`);
+function compoundFor(parts: readonly string[]) {
+  const PART_ALTERNATION = [...parts].sort((a, b) => b.length - a.length).join('|');
+  return new RegExp(`^\\[data-part=(?:"|')?(${PART_ALTERNATION})(?:"|')?\\](?:\\[data-part-type=(?:"|')?(media|compare)(?:"|')?\\])?((?::(?:hover|focus-visible|active|first-child|last-child|nth-child\\(\\d{1,2}\\)))*)(::(?:before|after))?$`);
+}
 type ParsedSelector = { selector: string; last: string; pseudo: boolean };
 function parseSelector(raw: string): ParsedSelector | string {
   const refusal = `selector "${raw.trim()}" is not allowed (only [data-part=…] selectors on the cosmetic parts, with :hover, :focus-visible, :active, :first-child, :last-child, :nth-child() and one ::before/::after on the last part)`;
@@ -237,7 +244,7 @@ function parseSelector(raw: string): ParsedSelector | string {
       if (expectCompound || i === tokens.length - 1) return refusal;
       out.push('>'); expectCompound = true; continue;
     }
-    const m = tokens[i].match(COMPOUND);
+    const m = tokens[i].match(active.compound);
     const isLast = i === tokens.length - 1;
     if (!m || (m[4] && !isLast)) return refusal;
     compounds++;
@@ -245,11 +252,21 @@ function parseSelector(raw: string): ParsedSelector | string {
     last = m[1]; pseudo = !!m[4]; expectCompound = false;
   }
   if (!compounds || compounds > MAX_COMPOUNDS || expectCompound) return refusal;
-  return { selector: SCOPE + out.join(' '), last, pseudo };
+  return { selector: active.scope + out.join(' '), last, pseudo };
 }
 
 // ---- the sanitizer ------------------------------------------------------------------------------------------------------
-export function sanitizeProductThemeCss(input: unknown): ThemeCssReport {
+const PRODUCT_PROFILE: ThemeCssProfile = { parts: COSMETIC_PARTS, sizedParts: [...SIZED_PARTS], scope: SCOPE, keyframePrefix: 'pt-', variables: /^--(?:pd|store|brand|pt)-[a-z0-9-]+$/i, variableHint: '--pd-, --store-, --brand- and --pt-' };
+let active: ActiveProfile;
+export function sanitizeProductThemeCss(input: unknown): ThemeCssReport { return sanitizeThemeCss(input, PRODUCT_PROFILE); }
+/** The same guarded sanitizer for another kind of page (the account pages, spec 2026-10-08). Synchronous, so the active
+ * profile is set for exactly this call. */
+export function sanitizeThemeCss(input: unknown, profile: ThemeCssProfile): ThemeCssReport {
+  const previous = active;
+  active = activate(profile);
+  try { return sanitizeActive(input); } finally { active = previous; }
+}
+function sanitizeActive(input: unknown): ThemeCssReport {
   const dropped: ThemeCssReport['dropped'] = [];
   const closed = (reason: string): ThemeCssReport => ({ css: '', dropped: [...dropped, { reason }] });
   if (typeof input !== 'string') return closed('CSS must be text');
@@ -273,6 +290,7 @@ export function sanitizeProductThemeCss(input: unknown): ThemeCssReport {
   const checkDeclaration = (decl: Declaration, ctx: Ctx, allowed?: Set<string>): { prop: string; value: string } | null => {
     const prop = decl.prop.toLowerCase();
     const drop = (reason: string) => { dropped.push({ declaration: `${prop}: ${decl.value}`, reason }); return null; };
+    if (active.refuse && ctx.parts.some(part => active.refuse!(part, prop))) return drop('protected part: it must stay visible and usable');
     if (decl.important) return drop('!important is not allowed');
     if (prop.startsWith('--')) return drop('custom properties are not allowed');
     if (prop.startsWith('-')) return drop(`property '${prop}' is not allowed (no vendor properties)`);

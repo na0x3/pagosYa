@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, SEP5_AUTHOR_VERSION } from './sep5-author';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -86,4 +86,33 @@ it('passes a motion-off choreography through without contradicting it', () => {
   expect(off).toContain('motion is off');
   expect(off).toContain('Motion follows the choreography above');
   expect(off).not.toContain('purposeful motion the contract');
+});
+
+// The pinned contract asks for catalog, cart and status only, so authored stores shipped with no way to sign in
+// or search. The shell is opt-in so the byte-for-byte pin above still describes the unadorned prompt, and it
+// precedes the choreography, which stays the last thing the model reads.
+it('asks for the store shell when told to, before the choreography', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  expect(sep5AuthorPrompt(base)).not.toContain('STORE SHELL');
+  const shelled = sep5AuthorPrompt({ ...base, storeShell: true, motionPlan: 'MOTION CHOREOGRAPHY: subtle.' });
+  expect(shelled).toContain(SEP5_STORE_SHELL);
+  expect(SEP5_STORE_SHELL).toContain('data-pagosya-account="login"');
+  expect(SEP5_STORE_SHELL).toContain('href="buscar.html"');
+  expect(SEP5_STORE_SHELL).toContain('data-cart-count');
+  expect(SEP5_STORE_SHELL).toContain('data-pagosya-pages');
+  expect(shelled.indexOf('STORE SHELL')).toBeLessThan(shelled.indexOf('MOTION CHOREOGRAPHY'));
+  expect(shelled.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
+});
+
+it('shows the model its own draft and what the browser measured', () => {
+  const draft = [{ path: 'index.html', content: '<h1>Eje</h1>' }];
+  const prompt = sep5ReviewPrompt({ brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [], storeShell: true, draft, measured: ['390px: la página es más ancha que la pantalla (512px).'] });
+  expect(prompt).toContain(`Previous authored source: ${JSON.stringify(draft)}`);
+  expect(prompt).toContain('SELF-REVIEW');
+  expect(prompt).toContain('- 390px: la página es más ancha que la pantalla (512px).');
+  expect(prompt).toContain(SEP5_STORE_SHELL);
+  expect(sep5ReviewPrompt({ brief: {}, instruction: '', data: {}, assetLegend: [], draft, measured: [] })).not.toContain('Measured by the browser');
+  // "Nothing to fix" is an empty files list, so a clean draft does not cost a second full write.
+  expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: [], files: [] }).success).toBe(true);
+  expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: ['a', 'b', 'c', 'd', 'e', 'f', 'g'], files: [] }).success).toBe(false);
 });

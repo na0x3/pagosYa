@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision } from './source-templates';
+import { assembleTemplateRevision, templateDemoRevision } from './source-templates';
 import { sourcePublicApiUrl } from './source-store-config';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
@@ -34,6 +34,23 @@ export class SourceTemplatesService {
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
     });
     return { current, assembled };
+  }
+
+  private readonly demos = new Map<string, Promise<SourceProjectSnapshot>>();
+
+  /** The template as its designer made it, on the demo store: what Plantillas › Ver shows. It reads nothing of the
+   *  merchant's, so it is built once per template and process; a failed build is not kept. */
+  demo(templateId: string): Promise<SourceProjectSnapshot> {
+    const manifest = this.registry.templateManifest(templateId);
+    if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
+    let pending = this.demos.get(manifest.id);
+    if (!pending) {
+      pending = templateDemoRevision(manifest, this.registry.templateSourceFiles(manifest.id))
+        .then(assembled => this.projects.prepare({ revision: 0, ...assembled }) as Promise<SourceProjectSnapshot>);
+      pending.catch(() => this.demos.delete(manifest.id));
+      this.demos.set(manifest.id, pending);
+    }
+    return pending;
   }
 
   /** The template on this store as it would be saved, for the gallery's preview. Nothing is persisted. */

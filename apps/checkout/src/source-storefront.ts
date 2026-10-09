@@ -1,5 +1,5 @@
-import { sourceAccountBranding } from '@pagosya/shared-types';
-import { mountSourceAccountHost } from '@pagosya/storefront-preview';
+import { createPasswordGuard, mountSourceAccountBridge } from '@pagosya/storefront-preview';
+import { blockedStoreMessage, createAccountBridgeHandler, takeAccountEmailToken } from './account/account-bridge-handler';
 import { isAccountDestination } from './account-destinations';
 import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
@@ -122,7 +122,14 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
   const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
-  const disposeAccount = mountSourceAccountHost(frame, {checkoutOrigin:location.origin,slug,preview:merchantPreview,branding:sourceAccountBranding({...store,name:store.storeName},prepared),navigate:page => { if (prepared.files.some(file => file.path === page)) show(page); }});
+  // The store draws its account pages; this origin keeps the session, calls the API and guards typed passwords
+  // (spec 2026-10-08-store-built-in-account-pages-design). An emailed token is read here and never reaches the store.
+  const emailToken = takeAccountEmailToken(location, history);
+  const passwords = createPasswordGuard();
+  const disposeAccount = mountSourceAccountBridge(frame, createAccountBridgeHandler(slug, { preview: merchantPreview, emailToken: () => emailToken, download: data => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = `mis-datos-${slug}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } }), passwords);
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
   // G1: the frame only names moments; consent, the session, dedupe and sending happen here.
@@ -134,6 +141,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const receive = async (event: MessageEvent) => {
     if (event.source !== frame.contentWindow || event.origin !== 'null' || !frame.isConnected) return;
     const data = event.data;
+    // Password guard: a store message that carries a password typed on its account pages goes nowhere.
+    const guarded = blockedStoreMessage(passwords, data);
+    if (guarded.blocked) { if (guarded.reply) (event.source as Window).postMessage(guarded.reply, '*'); return; }
     if (data?.type === 'pagosya:cart-changed') {
       const items = validatedCart(data.items);
       if (items) { navigation.cart = previewCart(items); cartStorage.save(items); }

@@ -297,6 +297,11 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
   }
 
+  /** Rewrites YAPI's own long-page sections for one product; the merchant's edits stay. */
+  regenerateProductPage(storeId: string, productId: string): Promise<{ highlights: import('./product-highlight-icons').ProductHighlightInput[]; contentBlocks: import('./product-content-blocks-editor').ContentBlockInput[] }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}/page/regenerate`, { method: 'POST' });
+  }
+
   suggestProductHighlights(storeId: string, input: { name: string; description?: string | null; specifications?: Array<{ label: string; value: string }>; tags?: string[] }): Promise<{ highlights: Array<{ icon: string; label: string; detail?: string }> }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
   }
@@ -317,8 +322,8 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void): Promise<SourceChatResult> {
-    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}) }) });
+  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { resumeDraft?: boolean }): Promise<SourceChatResult> {
+    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}), ...(options?.resumeDraft ? { resumeDraft: true } : {}) }) });
     onAccepted?.(job);
     return this.waitSourceChatJob(storeId, job);
   }
@@ -347,7 +352,7 @@ export class MerchantStudioApi {
   }
 
   /** The agent's latest clean draft while it builds; files only when newer than `since`. */
-  sourceDraftPreview(storeId: string, since?: number, signal?: AbortSignal): Promise<{ at: number | null; interrupted?: boolean; files?: Array<{ path: string; content: string; encoding?: string }> }> {
+  sourceDraftPreview(storeId: string, since?: number, signal?: AbortSignal): Promise<{ at: number | null; interrupted?: boolean; files?: Array<{ path: string; content: string; encoding?: string }>; retry?: SourceDraftRetry }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/draft-preview${since !== undefined ? `?since=${since}` : ''}`, { signal });
   }
 
@@ -422,6 +427,11 @@ export class MerchantStudioApi {
 
   listTemplates(): Promise<import("./source-templates").TemplateSummary[]> {
     return this.request(`/store-templates`);
+  }
+
+  /** The template as designed, on its demo shop: Plantillas › Ver. */
+  templateDemo(templateId: string): Promise<import("@pagosya/storefront-preview").SourceSnapshot> {
+    return this.request(`/store-templates/${encodeURIComponent(templateId)}/demo`);
   }
 
   templatePreview(storeId: string, templateId: string): Promise<import("@pagosya/storefront-preview").SourceSnapshot> {
@@ -532,3 +542,6 @@ export type SourceScrollFeel = 'native' | 'soft' | 'cinematic';
 export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial' };
 export type SourceGenerationEstimate = { billingMode?: 'usage' | 'chatgpt-plan'; model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
 export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };
+
+/** The request a preserved draft was built from (API: source-draft-retry.ts); resent with resumeDraft to finish and save it. */
+export type SourceDraftRetry = { text: string; assetUrls: string[]; currentPage: string; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; selection?: { sectionId: string }; templateId?: string; directionId?: string };

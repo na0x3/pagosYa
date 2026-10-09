@@ -52,6 +52,12 @@ describe('AgentWorkspace', () => {
     expect(ws.write('styles/globals.css', '.a { color: red; }\n.b { color: green; }\n.c { color: blue; }')).toEqual({ ok: true });
     expect(new AgentWorkspace(base, { redesign: true }).write('styles/globals.css', 'body { margin: 0; }')).toEqual({ ok: true });
   });
+  it('lets a store kept on its template replace whole components, never its stylesheet', () => {
+    const ws = new AgentWorkspace(base, { redesign: false, rewriteComponents: true });
+    expect(ws.write('components/home.tsx', 'export default function Home() { return <h1>Panadería Trigo</h1>; }')).toEqual({ ok: true });
+    expect(ws.write('styles/globals.css', 'body { margin: 0; }')).toMatchObject({ ok: false, reason: 'rewrite' });
+    expect(new AgentWorkspace(base, { redesign: false }).write('components/home.tsx', 'export default function Home() { return null; }')).toMatchObject({ ok: false, reason: 'rewrite' });
+  });
   it('returns every file in the original order with new files last', () => {
     const ws = new AgentWorkspace(base, { redesign: false });
     ws.edit('components/home.tsx', 'Hola', 'Chau');

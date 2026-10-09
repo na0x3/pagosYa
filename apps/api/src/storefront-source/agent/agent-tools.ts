@@ -8,13 +8,18 @@ import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { verifyAgentDraft, type AgentFinding } from './agent-verify';
 import { checkProductThemeOnSnapshot, type ThemeCheckFailure } from '../product-theme-check';
+import { resolveAccountTheme, snapshotWithAccountTheme, type AccountTheme } from '../account-theme';
+import { checkAccountThemeOnSnapshot } from '../account-theme-check';
 import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from './agent-capture';
+import { searchIllustrations } from './agent-illustrations';
+import { chosenMotifPack, listMotifPacks, loadMotifPack, snapshotWithMotifPack } from '../source-motif-packs';
+import { AGENT_POLICY_KINDS, policyTextProblem, snapshotWithPolicies, type AgentPolicyKind, type PendingPolicies } from '../source-agent-policies';
 import { SOURCE_DNA_ENUMS } from '../source-dna';
 import { ASSURANCE_ICONS } from '../product-theme';
 import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
 import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
-export type AgentToolName = 'inspect_asset' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_appearance' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme';
+export type AgentToolName = 'inspect_asset' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
 export type AgentCompositionFinding = { id: string; page: string; section: string; severity: 'major' | 'minor'; observation: string; correction: string };
 export type AgentCompositionReview = { findings: AgentCompositionFinding[]; summary: string };
@@ -24,22 +29,32 @@ export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceP
   reviewComposition?: (input: AgentCompositionReviewInput) => Promise<AgentCompositionReview>;
   /** False when the merchant's request does not concern the product page (a local edit elsewhere); the theme tool then refuses. */
   themeAllowed?: boolean;
+  /** set_account_theme only on a new store, a redesign, or a request about the account pages. */
+  accountThemeAllowed?: boolean;
+  /** set_motif_pack only on a new store, a redesign, or a request about decoration; never on an unrelated local edit. */
+  motifPackAllowed?: boolean;
   mediaPolicy?: SourceMediaPolicy;
   taskRequired?: boolean;
   onDiagnostic?: (finding: { tool: string; digest: string; durationMs: number; output: string }) => void;
   /** Opens a themed draft in a browser and reports what the theme broke; defaults to the real Playwright check. */
   checkTheme?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<ThemeCheckFailure[]>;
+  /** The account pages' browser check; replaceable in tests. */
+  checkAccountTheme?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<ThemeCheckFailure[]>;
 };
 
 const object = (properties: Record<string, object>) => ({ type: 'object', additionalProperties: false, properties, required: Object.keys(properties) });
 const text = { type: 'string' };
 const nullableEnum = (values: readonly string[]) => ({ type: ['string', 'null'], enum: [...values, null] });
 const tool = (name: AgentToolName, description: string, properties: Record<string, object>) => ({ type: 'function' as const, name, description, parameters: object(properties), strict: true as const });
+const POLICY_NAMES: Record<AgentPolicyKind, string> = { returns: 'Cambios y devoluciones', delivery: 'Envíos y entregas', privacy: 'Privacidad', terms: 'Términos' };
 export const AGENT_TOOLS = [
   tool('inspect_asset', 'Inspecciona los bytes de una imagen local: dimensiones, formato y vista reducida. No inventes rutas.', { path: text }),
+  tool('search_illustrations', 'Busca dibujos profesionales (ilustraciones de objetos, comida, animales, caras, plantas, símbolos) por tema, en español o inglés, ANTES de dibujar una figura a mano. Devuelve hasta 12 temas numerados con sus rutas y una hoja con las imágenes. tone: colour (a color), store (línea de un color que toma la paleta de la tienda) o null (ambos). No sirve para formas de diseño (bordes, sombras, bloques, ondas).', { query: text, tone: nullableEnum(['colour', 'store']) }),
   tool('inspect_project', 'Rutas, propietarios, operaciones y archivos de imágenes disponibles en este borrador.', {}),
   tool('plan_task', 'Registra entre 1 y 12 requisitos del pedido original, sin añadir decoraciones opcionales como obligaciones. El plan no se puede reducir después de editar; solo corregir selectores conservando cada resultado esperado.', { requirements: { type: 'array', minItems: 1, maxItems: 12, items: object({ id: { ...text, description: 'ID único r1, r2, etc.' }, description: text, page: { ...text, description: 'Ruta HTML local, por ejemplo index.html o product.html.' }, check: { type: 'string', enum: ['text','absent_text','image','element','style','navigation','video','video-paused','layout'] }, selector: text, expected: { ...text, description: 'text/absent_text: texto literal; element: entero positivo; style: propiedad:valor; image: assets/foto.webp (varias rutas separadas por comas, TODAS visibles), nunca una descripción, un selector ni una data URL; navigation: pagina.html; video/video-paused: assets/video.mp4; layout: viewport-cover o no-overflow.' }, profile: { type: ['string','null'], enum: ['normal','reduced-motion',null] } }) } }),
-  tool('set_account_appearance', 'Cambia la apariencia del formulario de cuenta protegido. Colores hex de 6 dígitos y radio entre 0 y 24px; null conserva el valor.', { background: { type: ['string','null'] }, foreground: { type: ['string','null'] }, accent: { type: ['string','null'] }, radius: { type: ['string','null'] } }),
+  tool('set_account_theme', 'Diseña las páginas de cuenta (ingresar, registro, pedidos, perfil): layout card|split|minimal|panel, photo (una ruta assets/ de la tienda, solo para split) y CSS opcional sobre [data-part=…] (account, card, media, title, lead, form, field, label, input, hint, submit, link, error, notice, nav, nav-item, list, order, order-status, address, empty, danger). Los campos, el botón, los errores y los enlaces nunca se pueden ocultar. null conserva el valor.', { layout: { type: ['string','null'] }, photo: { type: ['string','null'] }, css: { type: ['string','null'] } }),
+  tool('set_motif_pack', `Activa para toda la tienda un paquete de motivos dibujados por pagosYa (botones, separadores, patrón, estados vacíos), pintados con la paleta de la tienda, o null para quitarlo. Solo si el tema de la tienda coincide con el paquete y la identidad es lúdica; nunca en una identidad seria o minimalista. Paquetes: ${listMotifPacks().map(pack => `${pack.id} (${pack.name})`).join(', ')}.`, { id: nullableEnum(listMotifPacks().map(pack => pack.id)) }),
+  tool('set_store_policy', 'Reescribe una política de la tienda guardada en Ajustes (returns: Cambios y devoluciones, delivery: Envíos y entregas, privacy: Privacidad, terms: Términos), que las páginas estándar muestran. Se guarda en Ajustes al terminar. Solo cuando el comercio lo pide; usa sus datos y no inventes plazos, costos ni condiciones. Texto simple; text null o vacío la quita.', { kind: { type: 'string', enum: [...AGENT_POLICY_KINDS] }, text: { type: ['string', 'null'] } }),
   tool('create_page', 'Crea una página independiente con URL propia. Reutiliza el Shell real de la tienda en content; después añade su enlace al menú compartido. No crea secciones de inicio.', { slug: text, content: text }),
   tool('list_files', 'Lista los archivos editables de la tienda.', {}),
   tool('read_file', 'Lee un archivo editable completo.', { path: text }),
@@ -71,6 +86,12 @@ export class AgentToolbox {
   repairs: string[] = [];
   /** The product page theme the agent chose; merged into the accepted design when the run finishes. */
   pendingTheme: ProductThemeResult['dna'] | null = null;
+  /** The account pages' theme the agent chose (already sanitized); saved as config.accountTheme. */
+  pendingAccountTheme: AccountTheme | null = null;
+  /** The motif pack YAPI chose this run: a pack id, null to remove the store's pack, undefined when untouched. */
+  pendingMotifPack: string | null | undefined = undefined;
+  /** Shopper policies YAPI rewrote this run (null removes one); written to Ajustes when the run saves. */
+  pendingPolicies: PendingPolicies = {};
   private shots = 0;
   private compositionCalls = 0;
   private compositionCache = new Map<string, AgentCompositionReview>();
@@ -125,10 +146,28 @@ export class AgentToolbox {
 
   private async previewSnapshot() {
     const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files().filter(f => nextSourceFile(f.path)));
-    return this.pendingTheme ? snapshotWithProductTheme(snapshot, this.pendingTheme) : snapshot;
+    const themed = this.pendingTheme ? snapshotWithProductTheme(snapshot, this.pendingTheme) : snapshot;
+    const accounted = this.pendingAccountTheme ? snapshotWithAccountTheme(themed, this.pendingAccountTheme) : themed;
+    const packed = this.pendingMotifPack === undefined ? accounted : snapshotWithMotifPack(accounted, chosenMotifPack(this.pendingMotifPack, undefined));
+    return snapshotWithPolicies(packed, this.pendingPolicies);
   }
 
   /** Opens the draft's product page with the pending theme applied. Any failure, or no way to check, removes the CSS. */
+  /** Opens the draft's sign-in and sign-up pages with the pending account theme. Any failure, or no way to check, removes the CSS. */
+  private async checkPendingAccountTheme(): Promise<AgentFinding[]> {
+    const theme = this.pendingAccountTheme!;
+    const drop = (messages: string[]): AgentFinding[] => {
+      const { css: _removed, ...kept } = theme;
+      this.pendingAccountTheme = kept;
+      return [...messages.map(message => ({ source: 'theme' as const, message })), { source: 'theme' as const, message: 'Se quitó el CSS de las páginas de cuenta; el layout se conserva. Llama de nuevo a set_account_theme con CSS que no oculte, tape ni achique los campos, el botón, los enlaces o los errores.' }];
+    };
+    try {
+      const snapshot = snapshotWithAccountTheme(await agentPreviewSnapshot(this.ctx.base, this.workspace.files().filter(f => nextSourceFile(f.path))), theme);
+      const failures = await (this.ctx.checkAccountTheme ?? (snap => checkAccountThemeOnSnapshot(snap as never, { signal: this.ctx.signal })))(snapshot);
+      return failures.length ? drop(failures.map(f => `${f.control} (${f.viewport}): ${f.reason}`)) : [];
+    } catch (error) { return drop([`No se pudo comprobar las páginas de cuenta: ${(error as Error).message.slice(0, 300)}`]); }
+  }
+
   private async checkPendingTheme(): Promise<AgentFinding[]> {
     const theme = this.pendingTheme!;
     const drop = (messages: string[]): AgentFinding[] => {
@@ -146,12 +185,14 @@ export class AgentToolbox {
     const started = Date.now();
     const version = this.workspace.version;
     const theme = this.pendingTheme;
+    const pack = this.pendingMotifPack;
+    const policies = this.pendingPolicies;
     let result: { output: string; image?: string };
     try { result = await this.execute(name, rawArgs); }
     catch (error) { result = { output: `No se pudo ejecutar ${name}: ${(error as Error).message.slice(0, 1500)}` }; }
     // Show each renderable stage without waiting for acceptance checks. An incomplete
     // edit keeps the last preview; it never replaces it with an empty/error page.
-    if (this.ctx.onPreview && name !== 'verify' && (version !== this.workspace.version || theme !== this.pendingTheme)) {
+    if (this.ctx.onPreview && name !== 'verify' && (version !== this.workspace.version || theme !== this.pendingTheme || pack !== this.pendingMotifPack || policies !== this.pendingPolicies)) {
       try { this.ctx.onPreview((await this.previewSnapshot()).files); } catch { /* keep the last renderable preview */ }
     }
     // No source, inputs, credentials, or images in persistent diagnostics.
@@ -164,7 +205,7 @@ export class AgentToolbox {
     if (!args || typeof args !== 'object') return { output: 'Herramienta o argumentos inválidos: se esperaba un objeto.' };
     const ws = this.workspace;
     const step = (kind: AgentToolName, label: string, thumbnail?: string) => { this.steps.push({ kind, label, at: Date.now(), ...(thumbnail ? { thumbnail } : {}) }); };
-    if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','set_account_appearance','set_product_card_theme'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
+    if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','set_account_theme','set_product_card_theme','set_motif_pack','set_store_policy'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
     switch (name) {
       case 'create_page': {
         const slug = String(args.slug || '');
@@ -186,12 +227,17 @@ export class AgentToolbox {
         step('inspect_asset', `Inspeccionó ${asset.path}`);
         return { output:JSON.stringify({path:asset.path,format:metadata.format,width:metadata.width,height:metadata.height,bytes:bytes.length,available:true}), image:'data:image/jpeg;base64,'+image.toString('base64') };
       }
+      case 'search_illustrations': {
+        const query = String(args.query || '').slice(0, 80);
+        step('search_illustrations', `Buscó ilustraciones: ${query}`);
+        return searchIllustrations(query, args.tone === 'colour' || args.tone === 'store' ? args.tone : null);
+      }
       case 'inspect_project': return { output: JSON.stringify(agentProjectIndex([...this.ctx.base.files.filter(f => !nextSourceFile(f.path)), ...ws.files()])) };
       case 'plan_task': {
         const planned = validateTaskRequirements(args.requirements, ws.files());
         assertTaskFeasibility(planned, this.ctx.base.files);
         assertMerchantTaskCoverage(planned, this.ctx.merchantInstruction || this.ctx.instruction);
-        if (this.requirements.length && (ws.changedPaths().length || this.pendingTheme)) {
+        if (this.requirements.length && (ws.changedPaths().length || this.pendingTheme || this.pendingMotifPack !== undefined || Object.keys(this.pendingPolicies).length)) {
           // A generated selector can become stale. Repair its binding, never the promised outcome.
           const unchangedIntent = planned.length === this.requirements.length && planned.every(next => {
             const original = this.requirements.find(r => r.id === next.id);
@@ -205,22 +251,14 @@ export class AgentToolbox {
         // The original request is already retained in the opening transcript.
         return { output: JSON.stringify({ requirements: this.requirements }) };
       }
-      case 'set_account_appearance': {
-        const allowed = /cuenta|login|account|ingres|registro|contraseña|formulario|sitio|tienda|redise|redesign/i.test(this.ctx.instruction);
-        if (!allowed) return { output: 'Este pedido no cambia la apariencia de la cuenta.' };
-        const values: string[] = [];
-        for (const key of ['background','foreground','accent','radius']) {
-          if (args[key] == null) continue;
-          if (typeof args[key] !== 'string' || !(key === 'radius' ? /^(?:[0-9]|1[0-9]|2[0-4])px$/ : /^#[a-f0-9]{6}$/i).test(args[key])) return { output: 'Valor inválido: ' + key };
-          values.push(`--account-${key}: ${args[key]};`);
-        }
-        if (!values.length) return { output: 'Indica al menos un ajuste.' };
-        const path = 'styles/globals.css';
-        const css = ws.list().includes(path) ? ws.read(path) : '';
-        const result = ws.write(path, css + '\n:root { ' + values.join(' ') + ' }\n');
-        if (!result.ok) return { output: result.message };
-        step('set_account_appearance', 'Actualizó la apariencia de la cuenta');
-        return { output: 'Apariencia aplicada al formulario protegido. Los colores se normalizan para mantener el contraste.' };
+      case 'set_account_theme': {
+        if (!this.ctx.accountThemeAllowed) return { output: 'Este pedido no cambia la cuenta.' };
+        const assets = [...ws.files(), ...(this.ctx.base?.files ?? [])].map(file => file.path).filter(path => path.startsWith('assets/'));
+        const merged = { ...(this.pendingAccountTheme ?? {}), ...Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null && value !== undefined)) };
+        const { theme, dropped } = resolveAccountTheme(merged, assets);
+        this.pendingAccountTheme = theme;
+        step('set_account_theme', 'Diseñó las páginas de cuenta');
+        return { output: dropped.length ? 'Tema de cuenta guardado. Se quitó: ' + dropped.join('; ') : 'Tema de cuenta guardado.' };
       }
       case 'list_files': return { output: JSON.stringify(ws.list()) };
       case 'read_file':
@@ -260,6 +298,7 @@ export class AgentToolbox {
         // The theme is checked in a real browser only on a draft that builds; a theme that hides, covers or shrinks a
         // protected control loses its CSS (the params stay), and the draft is not clean until verified again.
         if (!findings.length && this.pendingTheme?.productCss) findings.push(...await this.checkPendingTheme());
+        if (!findings.length && this.pendingAccountTheme?.css) findings.push(...await this.checkPendingAccountTheme());
         if (this.ctx.taskRequired && !this.requirements.length) findings.push({ source: 'scope', message: 'Falta plan_task con los requisitos originales.' });
         if (!findings.length) {
           const blocked = await this.ctx.gate?.(ws.files());
@@ -328,6 +367,28 @@ export class AgentToolbox {
           dropped.push(...(result.report.assuranceNotes ?? []).map(note => `- ${note}`));
           return { output: [`Tema de la ficha guardado en el borrador${chosen.preset ? ` (preset ${chosen.preset})` : ''}: ${card}. CSS: ${rules} reglas.`, dropped.length ? `El saneador descartó:\n${dropped.join('\n')}\nCorrígelo y vuelve a llamar la herramienta (reemplaza el tema completo).` : 'Nada descartado.'].join('\n') };
         } catch (error) { return { output: `Herramienta o argumentos inválidos: ${(error as Error).message}` }; }
+      }
+      case 'set_motif_pack': {
+        if (this.ctx.motifPackAllowed === false) return { output: 'Este pedido no cambia la decoración de la tienda; no actives ni quites un paquete de motivos.' };
+        const id = args.id === null ? null : String(args.id);
+        const pack = id === null ? undefined : loadMotifPack(id);
+        if (id !== null && !pack) return { output: `El paquete ${id} no existe o no es válido. Elige uno de la lista o null.` };
+        this.pendingMotifPack = id;
+        this.lastVerify = null;
+        step('set_motif_pack', pack ? `Activó el paquete de motivos ${pack.id}` : 'Quitó el paquete de motivos');
+        return { output: pack ? `Paquete ${pack.id} activado para toda la tienda: ${pack.motifs.map(motif => motif.placement).join(', ')}. Míralo con screenshot antes de terminar.` : 'Paquete de motivos quitado de la tienda.' };
+      }
+      case 'set_store_policy': {
+        const kind = args.kind as AgentPolicyKind;
+        if (!(AGENT_POLICY_KINDS as readonly string[]).includes(kind)) return { output: 'Elige returns, delivery, privacy o terms.' };
+        const text = typeof args.text === 'string' && args.text.trim() ? args.text.replace(/\r\n?/g, '\n').trim() : null;
+        const problem = text === null ? null : policyTextProblem(text);
+        if (problem) return { output: problem };
+        // A new object, so run() sees the change and refreshes the Studio preview.
+        this.pendingPolicies = { ...this.pendingPolicies, [kind]: text };
+        this.lastVerify = null;
+        step('set_store_policy', `${text === null ? 'Quitó' : 'Actualizó'} la política ${POLICY_NAMES[kind]}`);
+        return { output: text === null ? `Política ${POLICY_NAMES[kind]} quitada; se guardará en Ajustes al terminar.` : `Política ${POLICY_NAMES[kind]} lista; se guardará en Ajustes al terminar y la página estándar la mostrará. Revísala con screenshot si cambia lo visible.` };
       }
       case 'finish': {
         if (this.stopped) return { output: 'Borrador incompleto: ' + this.stopped.summary };

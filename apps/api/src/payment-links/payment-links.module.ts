@@ -6,9 +6,10 @@ import { DashboardModule } from "../dashboard/dashboard.module";
 import { AuthModule } from "../auth/auth.module";
 import { UploadsModule } from "../uploads/uploads.module";
 import { InvoicingModule } from "../invoicing/invoicing.module";
+import { ProductPageModule } from "../product-content/product-page.module";
 
 @Module({
-  imports: [DashboardModule, AuthModule, UploadsModule, InvoicingModule],
+  imports: [DashboardModule, AuthModule, UploadsModule, InvoicingModule, ProductPageModule],
   controllers: [PaymentLinksController, ProductSubscriptionsPublicController],
   providers: [PaymentLinksService],
   exports: [PaymentLinksService],

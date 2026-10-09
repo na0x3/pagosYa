@@ -42,6 +42,9 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     primaryAction: text(input.brief.primaryAction, "primary action", 500),
     visualDirection: text(input.brief.visualDirection, "visual direction", 2000),
     ...(input.brief.businessInformation ? { businessInformation: text(input.brief.businessInformation, "business information", 80000) } : {}),
+    // The Plantilla a design started from: without it YAPI cannot keep, adapt or rework the template (spec 2026-09-26).
+    ...(typeof input.brief.templateId === 'string' && /^[a-z0-9-]{1,40}$/.test(input.brief.templateId) ? { templateId: input.brief.templateId } : {}),
+    ...(Number.isInteger(input.brief.templateRevision) && input.brief.templateRevision! >= 1 ? { templateRevision: input.brief.templateRevision } : {}),
   };
   const paths = new Set<string>();
   let total = 0, videoTotal = 0;

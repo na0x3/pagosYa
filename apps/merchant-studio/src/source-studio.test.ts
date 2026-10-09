@@ -221,6 +221,31 @@ it('shows no visual-resources or design-improvement tools above the YAPI compose
   expect(app.querySelector('.source-canvas-tools, [data-source-visual-tools], [data-source-design-jobs]')).toBeNull();
 });
 
+it('frees the composer and Ver en navegador as soon as YAPI saves, while the browser checks still run', async () => {
+  let finishChecks!: (rows: typeof passed) => void;
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue({ at: null });
+  const next = { ...version, revision: 3 };
+  vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockImplementation(async () => {
+    vi.mocked(MerchantStudioApi.prototype.sourceState).mockResolvedValue({ revision: 3, versions: [next], nextBefore: null });
+    vi.mocked(MerchantStudioApi.prototype.sourceVersion).mockResolvedValue(next);
+    vi.mocked(checkSourceWebsite).mockReturnValueOnce(new Promise(resolve => { finishChecks = resolve; }));
+    return { userMessage: { id: 'u', role: 'USER', content: 'Cambia el color' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Listo' }, revision: next } as any;
+  });
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(publish().disabled).toBe(false));
+  const composer = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  composer.value = 'Cambia el color'; composer.dispatchEvent(new Event('input', { bubbles: true }));
+  app.querySelector('[data-composer]')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(finishChecks).toBeTypeOf('function'));
+  await vi.waitFor(() => expect(app.querySelector<HTMLTextAreaElement>('#agent-command')!.disabled).toBe(false));
+  expect(app.querySelector<HTMLButtonElement>('#source-open-browser')!.disabled).toBe(false);
+  expect(publish().disabled).toBe(true);
+  finishChecks(passed);
+  await vi.waitFor(() => expect(app.querySelector('.toast')?.textContent).toContain('Comprobaciones terminadas'));
+  expect(publish().disabled).toBe(false);
+});
+
 it('retries the original page context after navigating the preview', async () => {
   const text = 'Rediseña todo mi sitio';
   const withGallery = { ...version, snapshot: { ...version.snapshot, files: [...version.snapshot.files, { path: 'galeria.html', content: '<h1>Galería</h1>' }] } };
@@ -425,4 +450,54 @@ it('review: after the Studio clears the chip (Esc), picking the block again brin
   await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')).toBeNull());
   (app.querySelector('[data-boceto-node="copy"]') as HTMLElement).click();
   await vi.waitFor(() => expect(app.querySelector('[data-selection-chip]')?.textContent).toContain('Portada'));
+});
+
+// 2026-10-08, store "excess": a design YAPI finished but could not save stayed a preserved draft; the next message rebuilt the template.
+const preserved = { at: 5, interrupted: true, files: [{ path: 'index.html', content: '<h1>Gelato</h1>' }], retry: { text: 'Crea mi gelatería', assetUrls: ['/v1/uploads/a.jpg'], currentPage: 'index.html' } };
+const answered = { userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Listo' } } as any;
+
+it('saves a preserved draft by finishing the run it came from', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue(preserved);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue(answered);
+  await mountSourceStudio(app);
+  const save = await vi.waitFor(() => { const button = app.querySelector<HTMLButtonElement>('#source-save-draft'); expect(button).toBeTruthy(); return button!; });
+  expect(app.textContent).toContain('Este borrador todavía no está guardado');
+  save.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalled());
+  expect(sent.mock.calls[0][1]).toBe('Crea mi gelatería');
+  expect(sent.mock.calls[0][2]).toEqual(['/v1/uploads/a.jpg']);
+  expect(sent.mock.calls[0].at(-1)).toEqual({ resumeDraft: true });
+});
+
+it('builds a new message on the preserved draft: the draft is saved first, then the message goes out', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue(preserved);
+  const state = vi.spyOn(MerchantStudioApi.prototype, 'sourceState');
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockImplementation(async () => {
+    state.mockResolvedValue({ revision: 3, versions: [{ ...version, revision: 3 }], nextBefore: null });
+    vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue({ at: null });
+    return { ...answered, revision: { revision: 3, label: 'Gelatería' } };
+  });
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('#source-save-draft')).toBeTruthy());
+  const field = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  field.value = 'Agrega una sección de sabores'; field.dispatchEvent(new Event('input'));
+  app.querySelector<HTMLFormElement>('[data-composer]')!.requestSubmit();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
+  expect(sent.mock.calls[0][1]).toBe('Crea mi gelatería');
+  expect(sent.mock.calls[0].at(-1)).toEqual({ resumeDraft: true });
+  expect(sent.mock.calls[1][1]).toContain('Agrega una sección de sabores');
+  expect(sent.mock.calls[1].at(-1)).toBeUndefined();
+});
+
+it('keeps the new message in the box when the draft could not be saved', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue(preserved);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue(answered);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('#source-save-draft')).toBeTruthy());
+  const field = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
+  field.value = 'Agrega una sección de sabores'; field.dispatchEvent(new Event('input'));
+  app.querySelector<HTMLFormElement>('[data-composer]')!.requestSubmit();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+  await vi.waitFor(() => expect(app.querySelector<HTMLTextAreaElement>('#agent-command')!.value).toBe('Agrega una sección de sabores'));
+  expect(sent).toHaveBeenCalledTimes(1);
 });

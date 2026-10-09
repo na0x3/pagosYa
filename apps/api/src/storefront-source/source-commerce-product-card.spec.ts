@@ -47,6 +47,16 @@ afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splic
 /** The pre-theme markup: data-part hooks and the empty decor slots are the only allowed additions. */
 const stripAdditions = (html: string) => html.replace(/<span class="product-detail__decor"[^>]*><\/span>/g, '').replace(/ data-part="[^"]*"/g, '').replace(/ data-part-type="[^"]*"/g, '');
 
+describe('product highlights in the kit', () => {
+  it('draws up to six highlights, including the cold, heat and carry icons', async () => {
+    const highlights = ['thermometer', 'laptop', 'backpack', 'umbrella', 'snowflake', 'flame', 'drop'].map((icon, i) => ({ icon, label: `Dato ${i}` }));
+    const { detail } = await open(undefined, [product({ highlights })]);
+    const rows = detail().querySelectorAll('[data-part="highlights"] li');
+    expect(rows).toHaveLength(6);
+    rows.forEach((row: any) => expect(row.querySelector('svg path, svg rect, svg circle')).not.toBeNull());
+  });
+});
+
 describe('product card DNA in the kit', () => {
   it('a store without productCard DNA renders the product page exactly as before (golden)', async () => {
     const { detail } = await open(undefined);

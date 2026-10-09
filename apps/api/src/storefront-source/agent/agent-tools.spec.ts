@@ -17,7 +17,7 @@ const finish = JSON.stringify({ summary: 'Cambié el título', sections: ['Porta
 
 describe('AgentToolbox', () => {
   it('declares every tool with a strict JSON schema', () => {
-    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['inspect_asset', 'inspect_project', 'plan_task', 'set_account_appearance', 'create_page', 'list_files', 'read_file', 'edit_file', 'edit_file_batch', 'write_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
+    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['inspect_asset', 'search_illustrations', 'inspect_project', 'plan_task', 'set_account_theme', 'set_motif_pack', 'set_store_policy', 'create_page', 'list_files', 'read_file', 'edit_file', 'edit_file_batch', 'write_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
     for (const tool of AGENT_TOOLS) expect(tool.strict).toBe(true);
   });
   it('reads and edits, recording merchant-facing steps without source code', async () => {
@@ -95,5 +95,28 @@ describe('AgentToolbox screenshots', () => {
     expect(result.output).toContain('Ya no quedan capturas');
     expect(result.output).toContain('finish');
     expect(result.image).toBeUndefined();
+  });
+});
+
+// Spec 2026-10-08-store-built-in-account-pages: YAPI designs the account pages; the controls always stay usable.
+describe('set_account_theme', () => {
+  const box = (instruction: string, accountThemeAllowed: boolean) => new AgentToolbox({ workspace: new AgentWorkspace([...authored, { path: 'assets/hero.jpg', content: 'x', encoding: 'base64' } as any], { redesign: false }), previous: authored, base, instruction, purpose: 'shop', maxScreenshots: 8, accountThemeAllowed } as any);
+  it('stores a sanitized theme and reports what it dropped', async () => {
+    const tools = box('haz el login más elegante', true);
+    const result = await tools.run('set_account_theme', JSON.stringify({ layout: 'split', photo: 'assets/hero.jpg', css: '[data-part=input]{display:none}' }));
+    expect(tools.pendingAccountTheme).toEqual({ layout: 'split', photo: 'assets/hero.jpg' });
+    expect(result.output).toContain('protected part');
+  });
+  it('keeps what an earlier call set when a field is null', async () => {
+    const tools = box('rediseña la cuenta', true);
+    await tools.run('set_account_theme', JSON.stringify({ layout: 'panel', photo: null, css: null }));
+    await tools.run('set_account_theme', JSON.stringify({ layout: null, photo: null, css: '[data-part=title]{letter-spacing:1px}' }));
+    expect(tools.pendingAccountTheme?.layout).toBe('panel');
+    expect(tools.pendingAccountTheme?.css).toContain('letter-spacing');
+  });
+  it('refuses the tool on an edit that is not about the account', async () => {
+    const tools = box('cambia el footer', false);
+    expect((await tools.run('set_account_theme', JSON.stringify({ layout: 'panel', photo: null, css: null }))).output).toContain('no cambia la cuenta');
+    expect(tools.pendingAccountTheme).toBeNull();
   });
 });

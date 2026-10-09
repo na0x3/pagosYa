@@ -22,6 +22,32 @@ describe('preview variant photography', () => {
     expect(hosted.contentBlocks[0].imageUrl).toBe('https://api.test' + a);
     expect(hosted.contentBlocks[1]).toMatchObject({ beforeUrl: 'https://api.test' + a, afterUrl: 'https://api.test' + b });
   });
+  // A template's photo slots are string literals in its compiled components, not catalog data; the sandbox cannot
+  // fetch them, so a template applied to a store showed its hero as a broken image.
+  it('inlines upload photos quoted in compiled pages, leaving everything else alone', async () => {
+    vi.stubGlobal('location', { href: 'http://localhost:5175' });
+    vi.stubGlobal('FileReader', class {
+      result = ''; onload?: () => void;
+      readAsDataURL(blob: Blob) { void blob.text().then(value => { this.result = 'data:' + value; this.onload?.(); }); }
+    });
+    const fetch = vi.fn((url: string) => Promise.resolve(new Response(new Blob([url], { type: 'image/jpeg' }), { headers: { 'content-type': 'image/jpeg' } })));
+    vi.stubGlobal('fetch', fetch);
+    const hero = 'http://localhost:3001/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+    const compiled = `const photos={"hero":"${hero}","detail":"assets/template-barrio-detail.jpg"};const again='${hero}';const bg="url(${hero})";`;
+    const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [
+      { path: '_compiled/home.js', content: compiled },
+      { path: 'notes.txt', content: `"${hero}"` },
+      { path: 'assets/photo.jpg', content: 'AAAA', encoding: 'base64' },
+    ] } as SourceSnapshot);
+    const page = result.files.find(file => file.path === '_compiled/home.js')!.content;
+    expect(page).toContain('"hero":"data:' + hero + '"');
+    expect(page).toContain(`'data:${hero}'`);
+    expect(page).toContain('url(data:' + hero + ')');
+    expect(page).toContain('"assets/template-barrio-detail.jpg"');
+    // One fetch per photo, however often it is quoted, and only text pages are read.
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(result.files.find(file => file.path === 'notes.txt')!.content).toBe(`"${hero}"`);
+  });
   it('keeps a large variant grid compact without changing the runtime catalog', () => {
     const image = 'data:image/jpeg;base64,' + 'abcd'.repeat(10000);
     const config = { data:{items:[{name:'Suéter',imageUrls:[image],variants:Array.from({length:60},(_,i)=>({id:String(i),imageUrl:image}))}]} };

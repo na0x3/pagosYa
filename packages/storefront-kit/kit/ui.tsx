@@ -513,6 +513,17 @@ export function Lead({ children }: { children: ReactNode }) { return <p classNam
 export function Text({ children, muted = false }: { children: ReactNode; muted?: boolean }) { return <p className={muted ? 'ui-text ui-muted' : 'ui-text'}>{children}</p>; }
 export function Hairline() { return <hr className="ui-hairline" />; }
 export function Badge({ children }: { children: ReactNode }) { return <span className="ui-badge">{children}</span>; }
+// Stores that never mount StoreTheme have no --ui-* tokens: the art then takes the text colour instead of vanishing.
+const ILLUSTRATION_TONES: Record<string, string> = { ink: 'var(--ui-ink, currentColor)', accent: 'var(--ui-accent, currentColor)', onAccent: 'var(--ui-on-accent, currentColor)', paper: 'var(--ui-paper, currentColor)', surface: 'var(--ui-surface, currentColor)' };
+/** A picture from the illustration library (assets/creative/…). Store-colour art (fluent-mono, motif packs) is painted
+ * in a store colour through a CSS mask; colour art is a plain image. Decorative unless a label is given. */
+export function Illustration({ src, tone = 'accent', size = 96, label, className }: { src: string; tone?: 'ink' | 'accent' | 'onAccent' | 'paper' | 'surface' | (string & {}); size?: number; label?: string; className?: string }) {
+  // Only a library path goes into a CSS url(); anything else (or anything with quotes or brackets) is a plain image.
+  if (!/^\/?assets\/creative\/(?:fluent-mono|motif-[a-z0-9-]+)\/[a-z0-9-]+\.svg$/.test(src)) return <img className={className} src={src} alt={label || ''} aria-hidden={label ? undefined : true} width={size} height={size} />;
+  const mask = `url("${src}") center / contain no-repeat`;
+  return <span className={['ui-illustration', className].filter(Boolean).join(' ')} data-illustration={src} {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
+    style={{ display: 'inline-block', width: size, height: size, flex: 'none', backgroundColor: ILLUSTRATION_TONES[tone] ?? tone, WebkitMask: mask, mask }} />;
+}
 /** The body of a standard store page that has no content yet. Only tests use it: a customer must never see it, so no
  * store gets a page file until the sub-project that owns that page replaces this with real content. */
 export function StandardPagePlaceholder({ title }: { title: string }) {
@@ -563,8 +574,8 @@ const ACCOUNT_GATE_COPY: Record<AccountGateView, { title: string; lead: string; 
   profile: { title: 'Mi perfil', lead: 'Cambia tus datos, descarga tu información o elimina tu cuenta.', action: 'Ver mi perfil' },
   subscriptions: { title: 'Mis suscripciones', lead: 'Revisa y administra tus entregas recurrentes.', action: 'Ver mis suscripciones' },
 };
-/** Reserves the inline account slot in Studio and hosted storefronts. The trusted parent renders the form in a sibling iframe;
- * authored code receives only geometry. Static exports retain the secure account-link fallback below. */
+/** The account page's slot: the store runtime draws the sign-in, sign-up and account views here, styled by the store, where a
+ * trusted parent answers its account bridge (spec 2026-10-08). Static exports keep the account-link fallback below. */
 export function AccountGatePage({ view }: { view: AccountGateView }) {
   const copy = ACCOUNT_GATE_COPY[view];
   return <main id="contenido" className="ui-account-gate" data-account-gate={view}>

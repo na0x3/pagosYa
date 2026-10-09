@@ -143,7 +143,12 @@ describe('authored (static) stores', () => {
 
   it('offers the standard-pages card while any is missing, and stops once they are all there', () => {
     expect(canAddStandardPages(authored())).toBe(true);
-    const complete = authored(STOREFRONT_PAGES.filter(page => page.kind)
+    // Every information page but no login: authored stores were given only these until 2026-10-08, so the card returns.
+    const infoOnly = authored(STOREFRONT_PAGES.filter(page => page.kind)
+      .map(page => file(page.url, `<main><div data-pagosya-page="${page.kind}"></div></main>`)))
+      .map(entry => entry.path === 'index.html' ? file('index.html', '<header>h</header><main>m</main><footer><p>Pie</p><nav data-pagosya-pages></nav></footer>') : entry);
+    expect(canAddStandardPages(infoOnly)).toBe(true);
+    const complete = authored(STOREFRONT_PAGES.filter(page => page.kind || page.owner === 'account')
       .map(page => file(page.url, `<main><div data-pagosya-page="${page.kind}"></div></main>`)));
     // Every standard page present and the footer already has its slot: nothing left to add.
     const withSlot = complete.map(entry => entry.path === 'index.html'

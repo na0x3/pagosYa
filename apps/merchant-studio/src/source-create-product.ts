@@ -34,6 +34,15 @@ export type ProductGuideStep = typeof PRODUCT_GUIDE_STEPS[number];
 const GUIDE_STEP_NUMBER: Record<ProductGuideStep, number> = { description: 2, price: 3, photos: 5, stock: 7 };
 
 /** Fixed YAPI questions. Keep answers, combinations and successful uploads on retry. */
+/** Every photo a block points at, mapped between uploaded paths and the previews the editor picks from. Sections
+ * without photos (story, comparison, FAQ, features) pass through untouched. */
+function mapBlockPhotos(block: ContentBlockInput, map: (url: string) => string): ContentBlockInput {
+  if (block.type === 'media') return { ...block, imageUrl: map(block.imageUrl) };
+  if (block.type === 'compare') return { ...block, beforeUrl: map(block.beforeUrl), afterUrl: map(block.afterUrl) };
+  if (block.type === 'details') return { ...block, items: block.items.map(item => ({ ...item, imageUrl: map(item.imageUrl) })) };
+  return block;
+}
+
 export function createProductForm(api: MerchantStudioApi, storeId: string, onSaved: () => void, onClose: () => void, initial?: ProductGuideRecord, startAt?: ProductGuideStep) {
   const dialog = document.createElement('section');
   dialog.className = 'product-create-panel';
@@ -50,8 +59,8 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <section data-guide-step="1"><label>Nombre del producto<input name="name" required maxlength="120" autocomplete="off" placeholder="Ej. Suéter Merino"></label></section>
       <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
       <section data-guide-step="3" hidden><label>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label></section>
-      <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 4 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p></section>
-      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div></section>
+      <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 6 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p></section>
+      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div>${initial?.id ? '<p class="product-page-regenerate"><button type="button" data-page-regenerate>Regenerar con YAPI</button> <span data-page-regenerate-status role="status"></span></p>' : ''}</section>
       <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
       <section data-guide-step="7" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
       <section data-guide-step="8" hidden><div data-product-review class="product-review"></div>
@@ -189,11 +198,29 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   }
   let optionDrafts: VariantDraft[] = initial?.variants?.map(v => ({ ...v, amount: String(v.amount / 100), stock: v.stock == null ? '' : String(v.stock), imageUrl: v.imageUrl ? uploadedPreview(v.imageUrl) : undefined, imageUrls: (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).map(uploadedPreview) })) || [];
   const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: optionDrafts, onChange: rows => { optionDrafts = rows; }, basePrice: () => priceInput.value, photos: () => photos.map(p => p.preview) });
-  const blockEditor = mountContentBlocksEditor(dialog.querySelector<HTMLElement>('[data-product-content-blocks]')!, {
+  const mountBlocks = (blocks: ContentBlockInput[]) => mountContentBlocksEditor(dialog.querySelector<HTMLElement>('[data-product-content-blocks]')!, {
     photos: () => photos,
-    initial: (initial?.contentBlocks || []).map(block => block.type === 'media'
-      ? { ...block, imageUrl: uploadedPreview(block.imageUrl) }
-      : { ...block, beforeUrl: uploadedPreview(block.beforeUrl), afterUrl: uploadedPreview(block.afterUrl) }),
+    initial: blocks.map(block => mapBlockPhotos(block, uploadedPreview)),
+  });
+  let blockEditor = mountBlocks(initial?.contentBlocks || []);
+  // What the dialog last loaded from the server: regenerating rewrites the saved product, so unsaved edits would be lost.
+  const pageSnapshot = () => { try { return JSON.stringify({ highlights, blocks: blockEditor.values() }); } catch { return 'unsaved'; } };
+  let pageBaseline = pageSnapshot();
+  // YAPI rewrites only its own sections and highlights; whatever the merchant edited stays (spec 2026-10-09).
+  dialog.querySelector<HTMLButtonElement>('[data-page-regenerate]')?.addEventListener('click', event => {
+    const button = event.currentTarget as HTMLButtonElement, status = dialog.querySelector<HTMLElement>('[data-page-regenerate-status]')!;
+    if (!initial?.id || button.disabled) return;
+    if (pageSnapshot() !== pageBaseline) { status.textContent = 'Guarda tus cambios antes de regenerar con YAPI.'; return; }
+    button.disabled = true; status.textContent = 'YAPI está escribiendo la página del producto…';
+    api.regenerateProductPage(storeId, initial.id).then(result => {
+      highlights.splice(0, highlights.length, ...(result.highlights || []).map(row => ({ ...row })));
+      highlightsAsked = true;
+      drawHighlights();
+      blockEditor.dispose();
+      blockEditor = mountBlocks(result.contentBlocks || []);
+      pageBaseline = pageSnapshot();
+      status.textContent = 'Listo: la nueva página ya está en tu tienda. Puedes editarla aquí y guardar.';
+    }).catch(() => { status.textContent = 'No se pudo generar; reintentar.'; }).finally(() => { button.disabled = false; });
   });
   optionsToggle.addEventListener('change', () => { optionsHost.hidden = !optionsToggle.checked; stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked; dialog.querySelector<HTMLElement>('[data-variant-stock]')!.hidden = !optionsToggle.checked; });
   const showError = (message: string) => { error.textContent = message; error.hidden = !message; };
@@ -222,23 +249,26 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     if (field.hasAttribute('data-highlight-icon')) entry.icon = field.value;
     if (field.hasAttribute('data-highlight-text')) entry.label = field.value;
     if (field.hasAttribute('data-highlight-detail')) entry.detail = field.value;
+    // An edited row is the merchant's: YAPI never rewrites it.
+    delete entry.origin;
   });
   dialog.addEventListener('click', event => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-highlight-remove],[data-highlight-add]');
     if (!button || busy) return;
-    if (button.hasAttribute('data-highlight-add')) { if (highlights.length < 4) highlights.push({ icon: PRODUCT_HIGHLIGHT_ICON_LABELS[0][0], label: '' }); }
+    if (button.hasAttribute('data-highlight-add')) { if (highlights.length < 6) highlights.push({ icon: PRODUCT_HIGHLIGHT_ICON_LABELS[0][0], label: '' }); }
     else highlights.splice(Number(button.dataset.highlightRemove), 1);
     drawHighlights();
   });
   /** Ask YAPI once per product; the merchant keeps whatever they approve. */
   async function askHighlights() {
-    if (highlightsAsked || highlights.length) return;
+    // A product that already has highlights shows them instead of asking YAPI again.
+    if (highlightsAsked || highlights.length) { drawHighlights(); return; }
     highlightsAsked = true;
     highlightStatus().textContent = 'YAPI está proponiendo destacados…';
     try {
       const { rows } = parseSpecificationLines((form.elements.namedItem('specifications') as HTMLTextAreaElement).value);
       const result = await api.suggestProductHighlights(storeId, { name: nameInput.value.trim(), description: (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || null, specifications: rows });
-      highlights.push(...result.highlights.slice(0, 4));
+      highlights.push(...result.highlights.slice(0, 6));
       highlightStatus().textContent = highlights.length ? 'Revisa y edita lo que quieras publicar.' : 'YAPI no encontró datos para destacar. Puedes añadirlos tú.';
     } catch {
       highlightStatus().textContent = 'No pudimos proponer destacados. Puedes añadirlos tú.';
@@ -385,7 +415,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       if (ownCode) Object.assign(input, { codigoProducto: ownCode });
       if (activitySelect.value && sinCodeSelect.value && unitSelect.value) Object.assign(input, { actividadEconomica: activitySelect.value, codigoProductoSin: sinCodeSelect.value, unidadMedida: Number(unitSelect.value) });
     }
-    const approved = highlights.map(row => ({ icon: row.icon, label: row.label.trim(), ...(row.detail?.trim() ? { detail: row.detail.trim() } : {}) })).filter(row => row.label).slice(0, 4);
+    const approved = highlights.map(row => ({ icon: row.icon, label: row.label.trim(), ...(row.detail?.trim() ? { detail: row.detail.trim() } : {}), ...(row.origin === 'yapi' ? { origin: 'yapi' as const } : {}) })).filter(row => row.label).slice(0, 6);
     if (approved.length || initial?.highlights?.length) Object.assign(input, { highlights: approved });
     setBusy(true); showError(''); status.textContent = photos.length ? 'Subiendo fotos…' : 'Guardando producto…';
     void (async () => {
@@ -395,7 +425,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       }
       input.variants?.forEach(variant => { if (variant.imageUrl) variant.imageUrl = photos.find(photo => photo.preview === variant.imageUrl)!.url; if (variant.imageUrls) variant.imageUrls = variant.imageUrls.map(url => photos.find(photo => photo.preview === url)!.url!); });
       const uploaded = (preview: string) => photos.find(photo => photo.preview === preview)!.url!;
-      if (input.contentBlocks) input.contentBlocks = input.contentBlocks.map(block => block.type === 'media' ? { ...block, imageUrl: uploaded(block.imageUrl) } : { ...block, beforeUrl: uploaded(block.beforeUrl), afterUrl: uploaded(block.afterUrl) });
+      if (input.contentBlocks) input.contentBlocks = input.contentBlocks.map(block => mapBlockPhotos(block, uploaded));
       status.textContent = 'Guardando producto…';
       if (initial) {
         const update: Partial<typeof input> = {...input, variants: variants || []};
