@@ -103,6 +103,7 @@ import { sourcePublicApiUrl, sourceStoreConfigData } from "./source-store-config
 import { SourceProjectsService } from "./source-projects.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
+import { repairCommercePageWiring } from "./commerce-page-wiring";
 
 import { Prisma } from '@prisma/client';
 import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-generation-policy';
@@ -737,6 +738,12 @@ export class SourceGenerationService {
         const orderEmail = applyOrderEmailTemplate(generated.files);
         generated.files = orderEmail.files;
         autoRepairs.push(...orderEmail.repairs);
+        // A product or checkout page that forgot its mount, stylesheet or commerce scripts is wired in place, never failed.
+        if (!useNext) {
+          const wiring = repairCommercePageWiring(generated.files);
+          generated.files = wiring.files;
+          autoRepairs.push(...wiring.repairs);
+        }
         const validationErrors: string[] = [];
         for (const check of [
           () => { if (!lenient) validateSourcePresentation(generated.files, editExisting ? oldFiles : []); },
