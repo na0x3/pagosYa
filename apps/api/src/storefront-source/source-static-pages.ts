@@ -88,26 +88,42 @@ function withPageMount(html: string, content: string, label: string): string | n
  * touched. A store with no `index.html` to build from comes back unchanged, exactly as the React side
  * returns a store with no `Shell.tsx` unchanged.
  */
-export function withStaticStandardPages(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; added: string[]; slotAdded: boolean } {
+/** What sits inside the single `<main …>`, trimmed; null when there is no unambiguous main. */
+function mainInner(html: string): string | null {
+  const open = onlyIndexOf(html, '<main');
+  const close = onlyIndexOf(html, '</main>');
+  if (open < 0 || close < 0 || close < open) return null;
+  const openEnd = html.indexOf('>', open);
+  return openEnd < 0 || openEnd > close ? null : html.slice(openEnd + 1, close).trim();
+}
+
+export function withStaticStandardPages(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; added: string[]; refreshed: string[]; slotAdded: boolean } {
   const index = files.find(file => file.path === 'index.html' && file.encoding !== 'base64');
-  if (!index) return { files, added: [], slotAdded: false };
+  if (!index) return { files, added: [], refreshed: [], slotAdded: false };
 
   const added: SourceProjectFileDto[] = [];
-  for (const page of PAGES) {
-    if (files.some(file => file.path === page.url)) continue;
+  // A page that is still the platform's own copy (its main holds only the stock mount) is rebuilt from the current
+  // index.html, so a header or footer fixed later reaches it too. A page someone authored is left alone.
+  const refreshed = new Map<string, string>();
+  const standard = [
+    ...PAGES.map(page => ({ url: page.url, label: page.label, mount: `<div data-pagosya-page="${page.kind}"></div>` })),
+    ...ACCOUNT_PAGES.filter(page => GATE_COPY[page.view]).map(page => ({ url: page.url, label: page.label, mount: gateMarkup(page.view) })),
+  ];
+  for (const page of standard) {
+    const existing = files.find(file => file.path === page.url);
+    if (existing && (existing.encoding === 'base64' || mainInner(existing.content) !== page.mount.trim())) continue;
     // The slot is applied to the shell first, so every page this adds carries the footer navigation too.
-    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, `<div data-pagosya-page="${page.kind}"></div>`, page.label);
-    if (content) added.push({ path: page.url, content });
-  }
-  for (const page of ACCOUNT_PAGES) {
-    if (files.some(file => file.path === page.url) || !GATE_COPY[page.view]) continue;
-    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, gateMarkup(page.view), page.label);
-    if (content) added.push({ path: page.url, content });
+    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, page.mount, page.label);
+    if (!content) continue;
+    if (!existing) added.push({ path: page.url, content });
+    else if (content !== existing.content) refreshed.set(page.url, content);
   }
 
   // The pages the store already had need the slot as well, or the navigation appears only on the new ones.
   let slotAdded = false;
   const patched = files.map(file => {
+    const rebuilt = refreshed.get(file.path);
+    if (rebuilt !== undefined) return { ...file, content: rebuilt };
     if (file.encoding === 'base64' || !/\.html$/i.test(file.path)) return file;
     const withSlot = withStaticNavSlot(file.content);
     if (!withSlot) return file;
@@ -115,5 +131,5 @@ export function withStaticStandardPages(files: SourceProjectFileDto[]): { files:
     return { ...file, content: withSlot };
   });
 
-  return { files: [...patched, ...added], added: added.map(page => page.path), slotAdded };
+  return { files: [...patched, ...added], added: added.map(page => page.path), refreshed: [...refreshed.keys()], slotAdded };
 }

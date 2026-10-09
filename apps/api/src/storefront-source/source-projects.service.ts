@@ -233,7 +233,7 @@ export class SourceProjectsService {
     // store had no cookies, privacy or terms page and no account navigation. The runtime that fills those
     // pages is plain JS and never cared which pipeline wrote the store; only the scaffolding was missing.
     const result = isNextSource(snapshot.files) ? withStandardPages(snapshot.files) : withStaticStandardPages(snapshot.files);
-    if (!result.added.length && !result.slotAdded) throw new ConflictException('Este sitio ya tiene las páginas estándar, o su diseño no permite agregarlas.');
+    if (!result.added.length && !(result as { refreshed?: string[] }).refreshed?.length && !result.slotAdded) throw new ConflictException('Este sitio ya tiene las páginas estándar, o su diseño no permite agregarlas.');
     return this.save(merchantId, storeId, { revision, label: 'Páginas estándar agregadas', brief: snapshot.brief, files: result.files });
   }
 

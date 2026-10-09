@@ -907,7 +907,7 @@ export class SourceGenerationService {
         // every authored store instead of only when the merchant later asks. Built from the final index.html, so
         // they share its header, footer and stylesheet; a store whose markup declines the surgery keeps without.
         const pages = withStaticStandardPages(generated.files);
-        if (pages.added.length || pages.slotAdded) {
+        if (pages.added.length || pages.refreshed.length || pages.slotAdded) {
           const before = { generated, repairs: autoRepairs.length, motifs: motifFiles, preview: acceptedPreviewFiles, unused: unusedImagePaths };
           generated = { ...generated, files: pages.files };
           lenient = true;

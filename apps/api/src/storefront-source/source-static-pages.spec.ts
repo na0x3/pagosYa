@@ -119,3 +119,32 @@ it('keeps a full authored project with its standard pages under the generated-fi
   // The model's own files still count.
   expect(() => validateGeneratedSource([...files, ...Array.from({ length: 14 }, (_, index) => ({ path: `more-${index}.css`, content: '.x{}' }))], 'shop')).toThrow(/proyecto válido/);
 });
+
+describe('standard pages follow the current home shell', () => {
+  // Huerta Viva (2026-10-09): the standard pages were copied once from a header whose links had been stripped;
+  // fixing index.html later never reached them, so 16 pages kept a dead menu and footer.
+  it('rebuilds an untouched platform copy from the current index.html', () => {
+    const first = withStaticStandardPages(store()).files;
+    const fixedNav = authored.replace('<a href="index.html">teidns</a>', '<a href="index.html">teidns</a><a href="nosotros.html">Nosotros</a>');
+    const next = withStaticStandardPages(first.map(file => (file.path === 'index.html' ? { ...file, content: fixedNav } : file)));
+    const terms = next.files.find(file => file.path === 'terminos.html')!.content;
+    expect(terms).toContain('<a href="nosotros.html">Nosotros</a>');
+    expect(next.refreshed).toContain('terminos.html');
+    expect(next.added).toEqual([]);
+  });
+
+  it('keeps a standard page someone authored', () => {
+    const first = withStaticStandardPages(store()).files;
+    const own = first.map(file => (file.path === 'nosotros.html' ? { ...file, content: file.content.replace(/<main([^>]*)>[\s\S]*<\/main>/, '<main$1><h1>Nuestra huerta</h1></main>') } : file));
+    const next = withStaticStandardPages(own.map(file => (file.path === 'index.html' ? { ...file, content: file.content.replace('teidns</a>', 'teidns</a><a href="faq.html">FAQ</a>') } : file)));
+    expect(next.files.find(file => file.path === 'nosotros.html')!.content).toContain('<h1>Nuestra huerta</h1>');
+    expect(next.refreshed).not.toContain('nosotros.html');
+  });
+
+  it('reports nothing when the copies already match the shell', () => {
+    const once = withStaticStandardPages(store()).files;
+    const twice = withStaticStandardPages(once);
+    expect(twice.refreshed).toEqual([]);
+    expect(twice.files.map(file => file.content)).toEqual(once.map(file => file.content));
+  });
+});
