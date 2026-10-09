@@ -35,3 +35,19 @@ export function offersPayload(rows, savedCadences) {
     remove: rows.filter(row => !row.checked && savedCadences.includes(row.cadence)).map(row => row.cadence),
   };
 }
+
+export const MEMBER_STATUS_FILTERS = [["", "Todos"], ["ACTIVE", "Activos"], ["LAPSED", "Vencidos"], ["CANCELED", "Cancelados"]];
+export const MEMBER_STATE_TONE = { ACTIVE: "ok", GRACE: "warn", LAPSED: "muted", CANCELED_ACTIVE: "muted", CANCELED: "muted" };
+
+export function memberFigures(summary) {
+  const members = summary.members || { active: 0, monthlyRecurring: 0, currency: summary.currency || "BOB" };
+  return [
+    { label: "Miembros activos", value: String(members.active) },
+    { label: "Ingreso mensual de membresías", value: formatMoney(members.monthlyRecurring, members.currency) },
+  ];
+}
+
+export function validateGraceDays(value) {
+  const days = Number(value);
+  return String(value).trim() !== "" && Number.isInteger(days) && days >= 0 && days <= 30 ? null : "Los días de gracia van de 0 a 30.";
+}

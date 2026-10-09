@@ -1,5 +1,5 @@
 import { escapeHtml as esc } from "./html.mjs";
-import { CADENCES, CADENCE_LABEL, STATUS_LABEL, STATUS_TONE, formatMoney, offersPayload, subscriberWhatsAppUrl, summaryFigures, validateOffers } from "./subscriptions.mjs";
+import { CADENCES, CADENCE_LABEL, STATUS_LABEL, STATUS_TONE, MEMBER_STATUS_FILTERS, MEMBER_STATE_TONE, formatMoney, memberFigures, offersPayload, subscriberWhatsAppUrl, summaryFigures, validateGraceDays, validateOffers } from "./subscriptions.mjs";
 
 /**
  * Suscripciones: subscribers (key figures, filters, table, row actions) and a Configuración tab
@@ -17,7 +17,7 @@ export function mountSubscriptionsPanel(deps) {
   if (!root) return { show() {}, reset() {} };
 
   const STATUS_FILTERS = [["", "Todas"], ["ACTIVE", "Activa"], ["PAUSED", "Pausada"], ["PENDING", "Pago pendiente"], ["CANCELED", "Cancelada"]];
-  const fresh = () => ({ tab: "subscribers", loading: false, summary: null, items: [], nextCursor: null, filters: { status: "", productId: "", q: "" }, offers: new Map(), editing: null, confirming: null, message: "" });
+  const fresh = () => ({ tab: "subscribers", loading: false, summary: null, items: [], nextCursor: null, filters: { status: "", productId: "", q: "" }, memberItems: [], memberCursor: null, memberFilters: { status: "", productId: "", q: "" }, offers: new Map(), editing: null, confirming: null, message: "" });
   let state = fresh();
   let generation = 0;
   let offersGeneration = 0;
@@ -26,7 +26,7 @@ export function mountSubscriptionsPanel(deps) {
   const storePath = (suffix = "") => `/stores/${encodeURIComponent(deps.storeId())}${suffix}`;
   const base = (suffix = "") => storePath(`/subscriptions${suffix}`);
   const productName = (id) => deps.products().find((product) => product.id === id)?.name || "este producto";
-  const eligibleProducts = () => deps.products().filter((product) => product.fulfillmentType !== "DIGITAL");
+  const eligibleProducts = () => deps.products().filter((product) => product.fulfillmentType !== "DIGITAL" && product.fulfillmentType !== "MEMBERSHIP");
   const failure = (error, fallback) => { state.message = error?.message || fallback; render(); };
 
   async function loadSubscribers(append = false) {
@@ -47,13 +47,24 @@ export function mountSubscriptionsPanel(deps) {
     render();
   }
 
+  async function loadMembers(append = false) {
+    const mine = ++generation;
+    const params = new URLSearchParams(Object.entries({ kind: "membership", ...state.memberFilters, ...(append && state.memberCursor ? { cursor: state.memberCursor } : {}) }).filter(([, value]) => value));
+    const [summary, page] = await Promise.all([append && state.summary ? state.summary : deps.api(base("/summary")), deps.api(base(`?${params}`))]);
+    if (mine !== generation) return;
+    state = { ...state, loading: false, summary, memberItems: append ? [...state.memberItems, ...page.items] : page.items, memberCursor: page.nextCursor };
+    render();
+  }
+  const membershipProducts = () => deps.products().filter((product) => product.fulfillmentType === "MEMBERSHIP");
+
   function render() {
     const active = document.activeElement;
     const focusName = root.contains(active) ? active.name || null : null;
-    const caret = focusName === "q" ? active.selectionStart : null;
-    root.innerHTML = `${headHtml()}${state.tab === "settings" ? settingsHtml() : subscribersHtml()}${state.message ? `<p class="subs-status" role="status">${esc(state.message)}</p>` : `<p class="subs-status" role="status" hidden></p>`}`;
-    if (focusName === "q") {
-      const input = root.querySelector('[name="q"]');
+    const searchField = focusName === "q" || focusName === "memberQ";
+    const caret = searchField ? active.selectionStart : null;
+    root.innerHTML = `${headHtml()}${state.tab === "settings" ? settingsHtml() : state.tab === "members" ? membersHtml() : subscribersHtml()}${state.message ? `<p class="subs-status" role="status">${esc(state.message)}</p>` : `<p class="subs-status" role="status" hidden></p>`}`;
+    if (searchField) {
+      const input = root.querySelector(`[name="${focusName}"]`);
       input?.focus();
       if (input && caret !== null) input.setSelectionRange(caret, caret);
     }
@@ -61,8 +72,8 @@ export function mountSubscriptionsPanel(deps) {
 
   function headHtml() {
     const tab = (id, label) => `<button type="button" role="tab" aria-selected="${state.tab === id}" data-tab="${id}">${label}</button>`;
-    return `<header class="subs-head"><p>Clientes que reciben tus productos cada semana, quincena o mes.</p>
-      <div class="subs-tabs" role="tablist" aria-label="Suscripciones">${tab("subscribers", "Suscriptores")}${tab("settings", "Configuración")}</div></header>`;
+    return `<header class="subs-head"><p>Clientes que reciben tus productos cada semana, quincena o mes, y tus miembros.</p>
+      <div class="subs-tabs" role="tablist" aria-label="Suscripciones">${tab("subscribers", "Suscriptores")}${tab("members", "Miembros")}${tab("settings", "Configuración")}</div></header>`;
   }
 
   function confirmRow(text, yesAttrs, yesLabel) {
@@ -127,6 +138,48 @@ export function mountSubscriptionsPanel(deps) {
       <td class="subs-actions">${buttons.join("")}</td></tr>${confirm}`;
   }
 
+  function membersHtml() {
+    const { summary, memberItems } = state;
+    if (!summary) return `<div class="subs-card subs-empty"><p>${state.loading ? "Cargando miembros…" : "Elige una tienda para ver sus miembros."}</p></div>`;
+    if (!membershipProducts().length && !memberItems.length) {
+      return `<div class="subs-card subs-empty"><h3>Aún no vendes membresías</h3><p>Crea un producto de tipo Membresía con sus períodos y precios. Tus clientes se unen con «Hacerme miembro» y reciben un enlace para pagar cada renovación.</p></div>`;
+    }
+    const figures = memberFigures(summary).map((figure) => `<div><dt>${esc(figure.label)}</dt><dd>${esc(figure.value)}</dd></div>`).join("");
+    const statusOptions = MEMBER_STATUS_FILTERS.map(([value, label]) => `<option value="${value}" ${state.memberFilters.status === value ? "selected" : ""}>${label}</option>`).join("");
+    const productOptions = `<option value="">Todas las membresías</option>${membershipProducts().map((product) => `<option value="${esc(product.id)}" ${state.memberFilters.productId === product.id ? "selected" : ""}>${esc(product.name)}</option>`).join("")}`;
+    const table = memberItems.length
+      ? `<div class="subs-table-wrap"><table class="subs-table"><thead><tr><th>Miembro</th><th>Membresía</th><th>Período</th><th>Activa hasta</th><th>Último pago</th><th>Estado</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody>${memberItems.map(memberRowHtml).join("")}</tbody></table></div>`
+      : `<p class="subs-card subs-empty">No hay miembros con estos filtros.</p>`;
+    return `<dl class="subs-figures">${figures}</dl>
+      <div class="subs-filters">
+        <label><span class="sr-only">Estado</span><select name="memberStatus">${statusOptions}</select></label>
+        <label><span class="sr-only">Membresía</span><select name="memberProductId">${productOptions}</select></label>
+        <label><span class="sr-only">Buscar</span><input type="search" name="memberQ" placeholder="Buscar por nombre o correo" value="${esc(state.memberFilters.q)}" autocomplete="off"></label>
+      </div>
+      ${table}
+      ${state.memberCursor ? `<button type="button" class="subs-quiet subs-more" data-more-members>Cargar más</button>` : ""}`;
+  }
+
+  function memberRowHtml(row) {
+    const id = esc(row.id);
+    const buttons = [];
+    if (row.displayStatus === "PENDING_PAYMENT") buttons.push(`<button type="button" class="subs-quiet" data-resend="${id}">Reenviar enlace</button>`);
+    if (row.status === "ACTIVE") buttons.push(`<button type="button" class="subs-quiet is-danger" data-act="cancel" data-id="${id}">Cancelar</button>`);
+    const confirm = state.confirming === row.id
+      ? `<tr class="subs-confirm-row"><td colspan="7">${confirmRow(`¿Cancelar la membresía de ${row.customerName}? No habrá más renovaciones; su acceso sigue hasta la fecha pagada.`, `data-act="cancel" data-confirmed data-id="${id}"`, "Sí, cancelar")}</td></tr>`
+      : "";
+    const until = row.accessUntil ? new Date(row.accessUntil).toLocaleDateString("es-BO") : "—";
+    const paid = row.lastPaidAt ? new Date(row.lastPaidAt).toLocaleDateString("es-BO") : "—";
+    return `<tr>
+      <td><strong>${esc(row.customerName)}</strong><small>${esc(row.customerEmail)}</small></td>
+      <td>${esc(row.itemName)}<small>${esc(formatMoney(row.amount, row.currency))}</small></td>
+      <td>${esc(row.periodLabel)}</td>
+      <td>${esc(until)}</td>
+      <td>${esc(paid)}</td>
+      <td><span class="pill pill--${esc(MEMBER_STATE_TONE[row.membershipState] || "muted")}">${esc(row.membershipStateLabel)}</span>${row.livemode ? "" : ` <span class="pill pill--muted">Prueba</span>`}</td>
+      <td class="subs-actions">${buttons.join("")}</td></tr>${confirm}`;
+  }
+
   function settingsHtml() {
     const summary = state.summary;
     const enabled = Boolean(summary?.enabled);
@@ -134,6 +187,7 @@ export function mountSubscriptionsPanel(deps) {
       ? confirmRow(`${summary?.active ?? 0} suscriptores seguirán recibiendo sus renovaciones. Puedes cancelarlas desde Suscripciones.`, "data-confirm-switch-off", "Sí, desactivar")
       : "";
     const rows = deps.products().map((product) => {
+      if (product.fulfillmentType === "MEMBERSHIP") return `<tr class="is-disabled"><td>${esc(product.name)}</td><td><small>Membresía: se renueva por período</small></td><td></td></tr>`;
       if (product.fulfillmentType === "DIGITAL") return `<tr class="is-disabled"><td>${esc(product.name)}</td><td><small>No disponible para productos digitales</small></td><td></td></tr>`;
       const offers = state.offers.get(product.id) || [];
       const chips = offers.length
@@ -151,6 +205,12 @@ export function mountSubscriptionsPanel(deps) {
       <section class="subs-card">
         <h3>Frecuencias por producto</h3>
         ${rows ? `<div class="subs-table-wrap"><table class="subs-table"><thead><tr><th>Producto</th><th>Frecuencias</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p>Aún no tienes productos.</p>`}
+      </section>
+      <section class="subs-card">
+        <h3>Membresías</h3>
+        <label>Días de gracia para renovar <input type="number" name="graceDays" min="0" max="30" step="1" value="${esc(summary?.membershipGraceDays ?? 7)}"></label>
+        <p>Si un miembro no paga su renovación, sigue activo estos días. Después, su membresía vence.</p>
+        <button type="button" class="primary" data-save-grace>Guardar</button>
       </section>`;
   }
 
@@ -164,8 +224,8 @@ export function mountSubscriptionsPanel(deps) {
   }
 
   async function setEnabled(enabled) {
-    const result = await deps.api(base("/settings"), { method: "PUT", body: JSON.stringify({ enabled }) });
-    state.summary = { ...(state.summary || { active: 0, monthlyRecurring: 0, currency: "BOB", renewalsThisWeek: 0, renewalPayRate: null }), enabled: result.enabled };
+    const result = await deps.api(base("/settings"), { method: "PUT", body: JSON.stringify({ enabled, membershipGraceDays: state.summary?.membershipGraceDays ?? 7 }) });
+    state.summary = { ...(state.summary || { active: 0, monthlyRecurring: 0, currency: "BOB", renewalsThisWeek: 0, renewalPayRate: null }), enabled: result.enabled, membershipGraceDays: result.membershipGraceDays };
     state.confirming = null;
     state.message = enabled
       ? "Tu tienda ya ofrece suscripciones."
@@ -181,6 +241,7 @@ export function mountSubscriptionsPanel(deps) {
         state.tab = target.dataset.tab; state.message = ""; state.confirming = null; state.editing = null;
         render();
         if (state.tab === "settings") await loadOffers();
+        if (state.tab === "members") await loadMembers();
         return;
       }
       if (target.hasAttribute("data-go-settings")) { state.tab = "settings"; state.message = ""; render(); await loadOffers(); return; }
@@ -191,7 +252,7 @@ export function mountSubscriptionsPanel(deps) {
         state.confirming = null;
         await deps.api(base(`/${encodeURIComponent(id)}`), { method: "PATCH", body: JSON.stringify({ action: act }) });
         state.message = "Listo.";
-        await loadSubscribers();
+        await (state.tab === "members" ? loadMembers() : loadSubscribers());
         return;
       }
       if (target.dataset.resend || target.dataset.whatsapp) {
@@ -210,6 +271,17 @@ export function mountSubscriptionsPanel(deps) {
         state.confirming = null;
         const result = await deps.api(base(`/products/${encodeURIComponent(state.filters.productId)}/reprice`), { method: "POST" });
         state.message = `Avisamos a ${result.affected} suscriptores. El nuevo precio aplica desde el ${new Date(result.effectiveFrom).toLocaleDateString("es-BO")}.`;
+        render();
+        return;
+      }
+      if (target.hasAttribute("data-more-members")) { await loadMembers(true); return; }
+      if (target.hasAttribute("data-save-grace")) {
+        const value = root.querySelector('[name="graceDays"]').value;
+        const problem = validateGraceDays(value);
+        if (problem) { state.message = problem; render(); return; }
+        const result = await deps.api(base("/settings"), { method: "PUT", body: JSON.stringify({ enabled: Boolean(state.summary?.enabled), membershipGraceDays: Number(value) }) });
+        state.summary = { ...state.summary, membershipGraceDays: result.membershipGraceDays };
+        state.message = "Guardamos los días de gracia.";
         render();
         return;
       }
@@ -243,6 +315,11 @@ export function mountSubscriptionsPanel(deps) {
         await setEnabled(input.checked);
         return;
       }
+      if (input.name === "memberStatus" || input.name === "memberProductId") {
+        state.memberFilters[input.name === "memberStatus" ? "status" : "productId"] = input.value;
+        state.confirming = null;
+        await loadMembers();
+      }
       if (input.name === "status" || input.name === "productId") {
         state.filters[input.name] = input.value;
         state.confirming = null;
@@ -252,6 +329,12 @@ export function mountSubscriptionsPanel(deps) {
   });
 
   root.addEventListener("input", (event) => {
+    if (event.target.name === "memberQ") {
+      clearTimeout(searchTimer);
+      const value = event.target.value.trim();
+      searchTimer = setTimeout(() => { state.memberFilters.q = value; void loadMembers().catch((error) => failure(error, "No pudimos buscar.")); }, 300);
+      return;
+    }
     if (event.target.name !== "q") return;
     clearTimeout(searchTimer);
     const value = event.target.value.trim();
@@ -263,7 +346,7 @@ export function mountSubscriptionsPanel(deps) {
       if (!deps.signedIn()) return;
       state.loading = true;
       render();
-      const loading = state.tab === "settings" ? Promise.all([loadSubscribers(), loadOffers()]) : loadSubscribers();
+      const loading = state.tab === "settings" ? Promise.all([loadSubscribers(), loadOffers()]) : state.tab === "members" ? loadMembers() : loadSubscribers();
       void loading.catch((error) => { state.loading = false; failure(error, "No pudimos cargar las suscripciones."); });
     },
     reset() {
