@@ -339,6 +339,7 @@ export class SubscriptionsService {
     for (const subscription of candidates) {
       try {
         const terms = await this.termsFor(subscription, storeId, now);
+        if (!terms && subscription.membershipPeriodId) { await this.endGoneMembership(store.name, subscription); continue; } // period rows deleted with the product
         if (!terms) continue;
         if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); continue; }
         if (subscription.paymentLinkId && !terms.membership && advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count) <= now) {
@@ -579,8 +580,12 @@ export class SubscriptionsService {
   async expireLapsedMemberships(merchantId: string, storeId: string) {
     const store = await ownedStore(this.prisma, merchantId, storeId);
     const cutoff = new Date(Date.now() - store.membershipGraceDays * DAY_MS);
-    const invoices = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", dueAt: { lte: cutoff } }, orderBy: { dueAt: "asc" }, take: 200 });
-    const owners = invoices.length ? await this.prisma.customerSubscription.findMany({ where: { id: { in: [...new Set(invoices.map(invoice => invoice.subscriptionId))] }, membershipPeriodId: { not: null } } }) : [];
+    // Only membership subscriptions are considered, so stuck plan/product invoices can never starve the 200-invoice window.
+    const members = await this.prisma.customerSubscription.findMany({ where: { merchantId, storeId, status: "ACTIVE", membershipPeriodId: { not: null } } });
+    if (!members.length) return { lapsed: 0 };
+    const invoices = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", dueAt: { lte: cutoff }, subscriptionId: { in: members.map(member => member.id) } }, orderBy: { dueAt: "asc" }, take: 200 });
+    const invoiced = new Set(invoices.map(invoice => invoice.subscriptionId));
+    const owners = members.filter(member => invoiced.has(member.id));
     const ownerById = new Map(owners.map(owner => [owner.id, owner]));
     const origins = await originLivemodes(this.prisma, owners, this.logger);
     const livemode = await this.storeLivemode(merchantId, store);

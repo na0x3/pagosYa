@@ -97,4 +97,25 @@ describe("membership renewals", () => {
     await service.expireMissedRenewals("merchant_1", "store_1");
     expect(prisma.subscriptionInvoice.updateMany).not.toHaveBeenCalled();
   });
+
+  it("only looks at membership subscriptions when lapsing, so other stuck invoices cannot starve them", async () => {
+    prisma.subscriptionInvoice.findMany.mockResolvedValue([]);
+    await service.expireLapsedMemberships("merchant_1", "store_1");
+    expect(prisma.customerSubscription.findMany.mock.calls[0][0].where).toEqual(expect.objectContaining({ membershipPeriodId: { not: null } }));
+    expect(prisma.subscriptionInvoice.findMany.mock.calls[0][0].where.subscriptionId).toEqual({ in: [member.id] });
+  });
+
+  it("does not query invoices when the store has no members", async () => {
+    prisma.customerSubscription.findMany.mockResolvedValue([]);
+    expect(await service.expireLapsedMemberships("merchant_1", "store_1")).toEqual({ lapsed: 0 });
+    expect(prisma.subscriptionInvoice.findMany).not.toHaveBeenCalled();
+  });
+
+  it("ends a membership whose period rows were deleted with its product", async () => {
+    prisma.membershipPeriod.findMany.mockResolvedValue([]);
+    await service.generateSubscriptionInvoices("merchant_1", "store_1");
+    expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+    expect(prisma.customerSubscription.updateMany).toHaveBeenCalledWith({ where: { id: member.id, status: "ACTIVE" }, data: expect.objectContaining({ status: "CANCELED", activeKey: null }) });
+    expect(email.send.mock.calls[0][0].subject).toContain("terminó");
+  });
 });
