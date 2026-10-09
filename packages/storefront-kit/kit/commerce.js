@@ -382,7 +382,7 @@
     document.querySelectorAll('[data-pagosya-checkout-status]').forEach(el => { el.textContent = text; el.hidden = !text; });
   }
   document.addEventListener('click', event => {
-    const link = event.target.closest('[data-article-url]');
+    const link = event.target.closest('[data-article-url],[data-membership-join]');
     // Only the account app on the checkout origin is outside the store; the store's own account pages navigate as usual.
     if (link && hosted && /^https?:/i.test(link.getAttribute('href') || '')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
   });

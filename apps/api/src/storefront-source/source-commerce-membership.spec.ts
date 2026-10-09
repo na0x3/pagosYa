@@ -11,7 +11,7 @@ const club = { id: 'club', name: 'Club del café', amount: 5000, currency: 'BOB'
   membershipPeriods: [{ id: 'm1', months: 1, amount: 5000 }, { id: 'm12', months: 12, amount: 48000 }] };
 const windows: any[] = [];
 const errors: Error[] = [];
-async function open(items: any[] = [club], seed?: (w: any) => void) {
+async function open(items: any[] = [club], seed?: (w: any) => void, hosted = false) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!error.message.includes('Could not parse CSS stylesheet')) errors.push(error); });
   const dom = new JSDOM('<html><head></head><body><button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog></section><section data-pagosya-cart></section></body></html>', { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole });
@@ -21,6 +21,7 @@ async function open(items: any[] = [club], seed?: (w: any) => void) {
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.matchMedia = () => ({ matches: true });
   seed?.(w);
+  if (hosted) { w.PAGOSYA_HOSTED = true; w.PAGOSYA_HOSTED_REQUEST = jest.fn(async () => ({ ok: true, body: {} })); }
   const data = { storeName: 'Marca', checkoutMode: 'payment', items };
   w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
@@ -54,5 +55,16 @@ describe('memberships in the kit', () => {
   it('drops a membership from a restored cart', async () => {
     const { query } = await open([club], w => w.localStorage.setItem(CART_KEY, JSON.stringify([{ id: 'club', quantity: 1 }])));
     expect(query('[data-cart-count]').textContent.trim()).toMatch(/^0?$/);
+  });
+
+  it('in a hosted store the join link leaves the frame through the parent', async () => {
+    const { query, w } = await open([club], undefined, true);
+    const posted: any[] = [];
+    w.parent.postMessage = (message: any) => posted.push(message);
+    query('.menu-add').click();
+    const click = new w.MouseEvent('click', { bubbles: true, cancelable: true });
+    query('[data-membership-join]').dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(posted.filter(m => m.type === 'pagosya:source-external')).toEqual([{ type: 'pagosya:source-external', url: 'https://pay.test/cuenta/marca/unirme?producto=club&periodo=m1' }]);
   });
 });
