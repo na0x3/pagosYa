@@ -7,6 +7,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { json, type NextFunction, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import helmet from "helmet";
+import { Agent, setGlobalDispatcher } from "undici";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { PrismaService } from "./prisma/prisma.service";
@@ -142,6 +143,12 @@ async function bootstrap() {
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup("docs", app, document);
+  }
+
+  // The local ChatGPT-plan bridge answers only once the model has finished, so a whole-store authoring call
+  // (~250s on average, up to the 900s the generator allows) outlives fetch's default 300s wait for headers.
+  if (config.get('app.chatgptPlan') && config.get<string>("app.environment") === "development") {
+    setGlobalDispatcher(new Agent({ headersTimeout: 15 * 60_000, bodyTimeout: 15 * 60_000 }));
   }
 
   const port = config.get<number>("app.port") ?? 3000;
