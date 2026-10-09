@@ -8,6 +8,7 @@ function setup(overrides: { generate?: jest.Mock; automations?: jest.Mock } = {}
     generateSubscriptionInvoices: overrides.generate ?? jest.fn().mockResolvedValue({}),
     sendDueSubscriptionReminders: jest.fn().mockResolvedValue({}),
     expireMissedRenewals: jest.fn().mockResolvedValue({}),
+    expireLapsedMemberships: jest.fn().mockResolvedValue({}),
   };
   const worker = new OperationsWorker(prisma, operations, appointments, subscriptions);
   const error = jest.spyOn((worker as any).logger, "warn").mockImplementation(() => undefined);

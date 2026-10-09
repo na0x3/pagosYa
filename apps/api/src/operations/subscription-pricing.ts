@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 export const CADENCES = ["WEEKLY", "BIWEEKLY", "MONTHLY"] as const;
 export type Cadence = typeof CADENCES[number];
 export const PRODUCT_NOTICE_HOURS = 72;
+export const MEMBERSHIP_NOTICE_HOURS = 120;
 export const LAST_REMINDER_AFTER_DAYS = 3;
 export const MISSED_AFTER_DAYS = 7;
 export const REPRICE_NOTICE_DAYS = 7;
@@ -56,27 +57,31 @@ export function productSubscriptionKey(storeId: string, line: { paymentLinkId: s
   return createHash("sha256").update(`${storeId}:product:${line.paymentLinkId}:${line.variantId ?? ""}:${extras}:${email.trim().toLowerCase()}`).digest("hex");
 }
 
-export type SubscriptionTerms = { name: string; interval: string; count: number; amount: number; currency: string; noticeHours: number; product: boolean };
+export type SubscriptionTerms = { name: string; interval: string; count: number; amount: number; currency: string; noticeHours: number; product: boolean; membership: boolean };
 export type TermsPlan = { id: string; name: string; amount: number; currency: string; interval: string; intervalCount: number; reminderHoursBefore: number };
 export type TermsSubscription = {
   planId: string | null; paymentLinkId: string | null; amountOverride?: number | null; nextAmountOverride?: number | null;
   itemName?: string | null; cadence?: string | null; unitAmount?: number | null; quantity?: number | null; currency?: string | null;
-  pendingUnitAmount?: number | null; pendingFrom?: Date | null; fulfillment?: unknown;
+  pendingUnitAmount?: number | null; pendingFrom?: Date | null; fulfillment?: unknown; membershipPeriodId?: string | null;
 };
 
 /** What one period of this subscription costs and when its notice goes out; null when it cannot be billed. */
-export function subscriptionTerms(subscription: TermsSubscription, plan: TermsPlan | null, now = new Date()): SubscriptionTerms | null {
+export function subscriptionTerms(subscription: TermsSubscription, plan: TermsPlan | null, now = new Date(), membershipPeriod: { months: number; amount: number } | null = null): SubscriptionTerms | null {
+  if (subscription.membershipPeriodId) {
+    if (!membershipPeriod) return null;
+    return { name: subscription.itemName ?? "Membresía", interval: "MONTHLY", count: membershipPeriod.months, amount: membershipPeriod.amount, currency: subscription.currency ?? "BOB", noticeHours: MEMBERSHIP_NOTICE_HOURS, product: false, membership: true };
+  }
   if (subscription.paymentLinkId) {
     if (!isCadence(subscription.cadence) || !subscription.unitAmount || !subscription.quantity) return null;
     const { interval, count } = cadenceInterval(subscription.cadence);
     const unit = subscription.pendingUnitAmount && subscription.pendingFrom && subscription.pendingFrom <= now ? subscription.pendingUnitAmount : subscription.unitAmount;
     const fee = Number((subscription.fulfillment as { fee?: unknown } | null)?.fee) || 0;
-    return { name: subscription.itemName ?? "Suscripción", interval, count, amount: unit * subscription.quantity + fee, currency: subscription.currency ?? "BOB", noticeHours: PRODUCT_NOTICE_HOURS, product: true };
+    return { name: subscription.itemName ?? "Suscripción", interval, count, amount: unit * subscription.quantity + fee, currency: subscription.currency ?? "BOB", noticeHours: PRODUCT_NOTICE_HOURS, product: true, membership: false };
   }
   if (!plan || subscription.planId !== plan.id) return null;
   return {
     name: plan.name, interval: plan.interval, count: plan.intervalCount,
     amount: subscription.nextAmountOverride ?? subscription.amountOverride ?? plan.amount,
-    currency: plan.currency, noticeHours: plan.reminderHoursBefore, product: false,
+    currency: plan.currency, noticeHours: plan.reminderHoursBefore, product: false, membership: false,
   };
 }

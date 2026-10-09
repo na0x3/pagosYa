@@ -50,12 +50,12 @@ describe("subscriptionTerms", () => {
   it("reads a plan subscription from its plan", () => {
     expect(subscriptionTerms({ planId: "plan_1", paymentLinkId: null, amountOverride: null, nextAmountOverride: 1200 },
       { id: "plan_1", name: "Café mensual", amount: 1000, currency: "BOB", interval: "MONTHLY", intervalCount: 1, reminderHoursBefore: 24 }, now))
-      .toEqual({ name: "Café mensual", interval: "MONTHLY", count: 1, amount: 1200, currency: "BOB", noticeHours: 24, product: false });
+      .toEqual({ name: "Café mensual", interval: "MONTHLY", count: 1, amount: 1200, currency: "BOB", noticeHours: 24, product: false, membership: false });
   });
   it("reads a product subscription from its locked price, quantity and delivery fee", () => {
     expect(subscriptionTerms({ planId: null, paymentLinkId: "p1", itemName: "Café 500 g", cadence: "BIWEEKLY", unitAmount: 7200, quantity: 2, currency: "BOB",
       pendingUnitAmount: null, pendingFrom: null, fulfillment: { fee: 1500 } }, null, now))
-      .toEqual({ name: "Café 500 g", interval: "WEEKLY", count: 2, amount: 15900, currency: "BOB", noticeHours: 72, product: true });
+      .toEqual({ name: "Café 500 g", interval: "WEEKLY", count: 2, amount: 15900, currency: "BOB", noticeHours: 72, product: true, membership: false });
   });
   it("applies a pending price only once it is effective", () => {
     const sub = { planId: null, paymentLinkId: "p1", itemName: "Café", cadence: "MONTHLY", unitAmount: 7200, quantity: 1, currency: "BOB",
@@ -75,5 +75,15 @@ describe("advanceBillingDate month ends", () => {
     expect(advanceBillingDate(new Date("2026-08-31T15:00:00Z"), "MONTHLY", 3)).toEqual(new Date("2026-11-30T15:00:00Z"));
     expect(advanceBillingDate(new Date("2028-02-29T15:00:00Z"), "YEARLY", 1)).toEqual(new Date("2029-02-28T15:00:00Z"));
     expect(advanceBillingDate(new Date("2026-10-01T15:00:00Z"), "MONTHLY", 1)).toEqual(new Date("2026-11-01T15:00:00Z"));
+  });
+});
+
+describe("subscriptionTerms for memberships", () => {
+  it("bills a membership from its period, 120 h ahead", () => {
+    expect(subscriptionTerms({ planId: null, paymentLinkId: "club", membershipPeriodId: "m3", itemName: "Club", currency: "BOB" }, null, new Date(), { months: 3, amount: 9000 }))
+      .toEqual({ name: "Club", interval: "MONTHLY", count: 3, amount: 9000, currency: "BOB", noticeHours: 120, product: false, membership: true });
+  });
+  it("cannot bill a membership whose period is gone", () => {
+    expect(subscriptionTerms({ planId: null, paymentLinkId: "club", membershipPeriodId: "m3" }, null)).toBeNull();
   });
 });

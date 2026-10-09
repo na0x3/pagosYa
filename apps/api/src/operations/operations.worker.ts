@@ -32,6 +32,9 @@ export class OperationsWorker {
         await this.subscriptions.expireMissedRenewals(store.merchantId, store.id).catch((error: Error) => {
           this.logger.warn(`Missed renewals failed for ${store.id}: ${error.message}`);
         });
+        await this.subscriptions.expireLapsedMemberships(store.merchantId, store.id).catch((error: Error) => {
+          this.logger.warn(`Membership lapse failed for ${store.id}: ${error.message}`);
+        });
       }
       await this.appointments.releaseExpiredAppointmentHolds();
     } catch (error) {

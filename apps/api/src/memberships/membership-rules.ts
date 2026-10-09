@@ -4,7 +4,7 @@ import { advanceBillingDate } from "../operations/subscription-pricing";
 
 /** Membership arithmetic shared by the owner API, checkout, enrollment and the renewal engine (spec 2026-10-09). */
 export const MEMBERSHIP_MONTHS = [1, 3, 6, 12] as const;
-export const MEMBERSHIP_NOTICE_HOURS = 120;
+export { MEMBERSHIP_NOTICE_HOURS } from "../operations/subscription-pricing";
 export const MAX_MEMBERSHIP_PERIODS = 4;
 export const MEMBERSHIP_CONSENT_TEXT = "Cada período te enviaremos un enlace para pagar; no se cobra nada automáticamente.";
 const MAX_AMOUNT = 2_147_483_647;

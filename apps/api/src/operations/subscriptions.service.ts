@@ -20,6 +20,7 @@ import {
 } from "./dto/operations.dto";
 import { ownedStore, clean, paymentCheckoutUrl, subscriptionIdentityKey, readStockVariants, DAY_MS } from "./operations-helpers";
 import { advanceBillingDate, LAST_REMINDER_AFTER_DAYS, MISSED_AFTER_DAYS, subscriptionTerms, type SubscriptionTerms } from "./subscription-pricing";
+import { membershipTermsPeriod } from "../memberships/membership-rules";
 import { subscriptionManageUrl } from "./subscription-manage-token";
 import { originLivemodes, originMatchesStore } from "./subscription-origin";
 
@@ -268,6 +269,15 @@ export class SubscriptionsService {
 
   private async sendChargeNotice(storeName: string, subscription: CustomerSubscription, terms: SubscriptionTerms, invoice: { amount: number; currency: string; dueAt?: Date; periodStart?: Date }, checkoutUrl: string, kind: "first" | "reminder" | "last"): Promise<boolean> {
     const amount = `${(invoice.amount / 100).toFixed(2)} ${invoice.currency}`;
+    if (terms.membership) {
+      const due = invoice.dueAt ?? invoice.periodStart;
+      const date = due ? due.toLocaleDateString("es-BO", { day: "numeric", month: "long" }) : "";
+      const subject = kind === "first" ? `Tu membresía ${terms.name} vence el ${date} · ${storeName}`
+        : kind === "reminder" ? `Recordatorio: renueva tu membresía ${terms.name} · ${storeName}`
+        : `Último recordatorio: tu membresía ${terms.name} · ${storeName}`;
+      return this.sendSubscriptionNotice(subscription.customerEmail, subject,
+        `Hola ${subscription.customerName}, ${kind === "first" ? `tu membresía ${terms.name} vence el ${date}.` : `la renovación de tu membresía ${terms.name} sigue pendiente.`}\nTotal: ${amount}\nRenueva con un toque: ${checkoutUrl}\n\nNo se cobra nada automáticamente. Puedes cambiar de período o cancelar desde tu cuenta en ${storeName}.`);
+    }
     if (!terms.product) {
       return this.sendSubscriptionNotice(subscription.customerEmail,
         kind === "first" ? `Tu cobro de ${terms.name} en ${storeName}` : `Recordatorio: ${terms.name} en ${storeName}`,
@@ -286,7 +296,17 @@ export class SubscriptionsService {
       `Hola ${subscription.customerName}, ${lead}\nTotal: ${amount}\nPágalo con un toque: ${checkoutUrl}\n\nNo se cobra nada automáticamente. Puedes saltar, pausar o cancelar aquí: ${this.manageUrl(subscription.id)}`);
   }
 
+  async membershipPeriodsFor(subscriptions: Array<Pick<CustomerSubscription, "membershipPeriodId" | "pendingPeriodId">>) {
+    const ids = [...new Set(subscriptions.flatMap(s => [s.membershipPeriodId, s.pendingPeriodId]).filter((id): id is string => !!id))];
+    const rows = ids.length ? await this.prisma.membershipPeriod.findMany({ where: { id: { in: ids } }, select: { id: true, months: true, amount: true } }) : [];
+    return new Map(rows.map(row => [row.id, { months: row.months, amount: row.amount }]));
+  }
+
   private async termsFor(subscription: CustomerSubscription, storeId: string, now = new Date()) {
+    if (subscription.membershipPeriodId) {
+      const period = membershipTermsPeriod(subscription, await this.membershipPeriodsFor([subscription]));
+      return subscriptionTerms(subscription, null, now, period);
+    }
     const plan = subscription.planId ? await this.prisma.subscriptionPlan.findFirst({ where: { id: subscription.planId, storeId } }) : null;
     return subscriptionTerms(subscription, plan, now);
   }
@@ -321,7 +341,7 @@ export class SubscriptionsService {
         const terms = await this.termsFor(subscription, storeId, now);
         if (!terms) continue;
         if (!originMatchesStore(subscription, origins, livemode)) { this.logOriginSkip(subscription.id, livemode); continue; }
-        if (subscription.paymentLinkId && advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count) <= now) {
+        if (subscription.paymentLinkId && !terms.membership && advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count) <= now) {
           // More than a whole period overdue (e.g. after a suspension): skip the missed periods instead of billing one per run.
           const earliest = new Date(now.getTime() + terms.noticeHours * 3_600_000);
           let next = subscription.nextBillingAt;
@@ -331,6 +351,10 @@ export class SubscriptionsService {
         }
         const generationAt = new Date(subscription.nextBillingAt.getTime() - terms.noticeHours * 3_600_000);
         if (generationAt > now) continue;
+        if (terms.membership) {
+          const product = await this.prisma.paymentLink.findFirst({ where: { id: subscription.paymentLinkId!, storeId, status: "ACTIVE", fulfillmentType: "MEMBERSHIP" } });
+          if (!product) { await this.endGoneMembership(store.name, subscription); continue; }
+        }
         if (terms.product) {
           const availability = await this.renewalAvailability(subscription);
           if (availability === "gone") { await this.endGoneSubscription(store.name, subscription); continue; }
@@ -351,6 +375,7 @@ export class SubscriptionsService {
             where: { id: subscription.id, status: "ACTIVE", nextBillingAt: subscription.nextBillingAt },
             data: {
               nextBillingAt: advanceBillingDate(subscription.nextBillingAt, terms.interval, terms.count), nextAmountOverride: null,
+              ...(terms.membership && subscription.pendingPeriodId ? { membershipPeriodId: subscription.pendingPeriodId, unitAmount: terms.amount, pendingPeriodId: null } : {}),
               ...(pendingApplies ? { unitAmount: subscription.pendingUnitAmount, pendingUnitAmount: null, pendingFrom: null } : {}),
             },
           });
@@ -484,6 +509,13 @@ export class SubscriptionsService {
       `Hola ${subscription.customerName}, ${subscription.itemName ?? "este producto"} ya no está disponible en ${storeName}, así que tu suscripción terminó. No se hizo ningún cobro.`);
   }
 
+  private async endGoneMembership(storeName: string, subscription: CustomerSubscription) {
+    const ended = await this.prisma.customerSubscription.updateMany({ where: { id: subscription.id, status: "ACTIVE" }, data: { status: "CANCELED", activeKey: null, canceledAt: new Date() } });
+    const until = subscription.accessUntil ? subscription.accessUntil.toLocaleDateString("es-BO", { day: "numeric", month: "long", year: "numeric" }) : "";
+    if (ended.count) await this.sendSubscriptionNotice(subscription.customerEmail, `Tu membresía terminó · ${storeName}`,
+      `Hola ${subscription.customerName}, ${storeName} dejó de ofrecer ${subscription.itemName ?? "esta membresía"}, así que no habrá más renovaciones.${until ? ` Tu acceso sigue hasta el ${until}.` : ""} No se hizo ningún cobro.`);
+  }
+
   private async skipOutOfStockPeriod(storeName: string, subscription: CustomerSubscription, terms: SubscriptionTerms) {
     await this.prisma.$transaction(async (tx) => {
       await tx.subscriptionInvoice.upsert({
@@ -509,6 +541,7 @@ export class SubscriptionsService {
     let paused = 0;
     for (const invoice of invoices) {
       try {
+        if (ownerById.get(invoice.subscriptionId)?.membershipPeriodId) continue; // memberships lapse on their own grace days
         const owner = ownerById.get(invoice.subscriptionId);
         if (owner && !originMatchesStore(owner, origins, livemode)) { this.logOriginSkip(owner.id, livemode); continue; }
         // Bank calls first, outside any transaction: paid or unconfirmed QRs are left for the next run (paid ones are settled by the check itself).
@@ -541,5 +574,41 @@ export class SubscriptionsService {
       }
     }
     return { missed, paused };
+  }
+
+  async expireLapsedMemberships(merchantId: string, storeId: string) {
+    const store = await ownedStore(this.prisma, merchantId, storeId);
+    const cutoff = new Date(Date.now() - store.membershipGraceDays * DAY_MS);
+    const invoices = await this.prisma.subscriptionInvoice.findMany({ where: { merchantId, storeId, status: "DUE", dueAt: { lte: cutoff } }, orderBy: { dueAt: "asc" }, take: 200 });
+    const owners = invoices.length ? await this.prisma.customerSubscription.findMany({ where: { id: { in: [...new Set(invoices.map(invoice => invoice.subscriptionId))] }, membershipPeriodId: { not: null } } }) : [];
+    const ownerById = new Map(owners.map(owner => [owner.id, owner]));
+    const origins = await originLivemodes(this.prisma, owners, this.logger);
+    const livemode = await this.storeLivemode(merchantId, store);
+    let lapsed = 0;
+    for (const invoice of invoices) {
+      const owner = ownerById.get(invoice.subscriptionId);
+      if (!owner) continue;
+      try {
+        if (!originMatchesStore(owner, origins, livemode)) { this.logOriginSkip(owner.id, livemode); continue; }
+        const outcome = await this.staleQrOutcome(invoice.paymentIntentId); // bank call, before the transaction
+        if (outcome === "paid" || outcome === "unknown") continue;
+        const done = await this.prisma.$transaction(async (tx) => {
+          if (invoice.paymentIntentId && !(await this.cancelUnpaidIntent(tx, invoice.paymentIntentId, outcome))) return false;
+          if (!(await tx.subscriptionInvoice.updateMany({ where: { id: invoice.id, status: "DUE" }, data: { status: "MISSED" } })).count) return false;
+          if (invoice.orderId) {
+            const order = await tx.storeOrder.updateMany({ where: { id: invoice.orderId, status: OrderFulfillmentStatus.AWAITING_PAYMENT }, data: { status: OrderFulfillmentStatus.CANCELED } });
+            if (order.count) await tx.storeOrderStatusEvent.create({ data: { orderId: invoice.orderId, status: OrderFulfillmentStatus.CANCELED } });
+          }
+          return (await tx.customerSubscription.updateMany({ where: { id: owner.id, status: "ACTIVE" }, data: { status: "LAPSED", activeKey: null, missedCount: { increment: 1 } } })).count === 1;
+        });
+        if (!done) continue;
+        lapsed += 1;
+        await this.sendSubscriptionNotice(owner.customerEmail, `Tu membresía venció · ${store.name}`,
+          `Hola ${owner.customerName}, no recibimos la renovación de ${owner.itemName ?? "tu membresía"}. Tu membresía venció — puedes reactivarla cuando quieras desde tu cuenta en ${store.name}. No se hizo ningún cobro.`);
+      } catch (error) {
+        this.logger.error(`Membership lapse failed for invoice ${invoice.id}: ${(error as Error).message}`);
+      }
+    }
+    return { lapsed };
   }
 }
