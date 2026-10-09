@@ -57,6 +57,20 @@ describe('fixed YAPI product questions',()=>{
     expect(t.api.createProduct).toHaveBeenCalledWith('store-two',expect.objectContaining({fulfillmentType:'MEMBERSHIP',membershipPeriods:[{months:1,amount:5000},{months:12,amount:48000}],amount:5000,stock:null}));
     expect(t.api.createProduct.mock.calls[0][1]).not.toHaveProperty('variants');
   });
+  it('hides Opciones and Stock from a membership, even through the history and a ticked box',async()=>{
+    const t=setup();const dialog=t.guide.element;
+    t.fill('name','Club');t.next();t.next();t.fill('price','10');t.next();t.next();t.next();
+    while(t.step()!=='Paso 6 de 8')t.next();
+    t.field('isBox').checked=true;t.field('isBox').dispatchEvent(new Event('change'));
+    dialog.querySelector<HTMLButtonElement>('[data-answer-step="3"]')!.click();expect(t.step()).toBe('Paso 3 de 8');
+    dialog.querySelector<HTMLInputElement>('[name=productType][value=MEMBERSHIP]')!.click();
+    dialog.querySelector<HTMLInputElement>('[name=periodPrice]')!.value='50';
+    t.next();t.next();t.next();expect(t.step()).toBe('Paso 8 de 8');
+    const labels=[...dialog.querySelectorAll('[data-answer-step] small')].map(el=>el.textContent);
+    expect(labels).not.toContain('Opciones');expect(labels).not.toContain('Stock');
+    t.next();await vi.waitFor(()=>expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.createProduct.mock.calls[0][1]).not.toHaveProperty('extras');
+  });
   it('still asks for a price on a normal product',()=>{
     const t=setup();t.fill('name','Suéter');t.next();t.next();t.fill('price','');t.next();
     expect(t.step()).toBe('Paso 3 de 8');
@@ -75,6 +89,35 @@ it('edits the selected product while preserving photos and unchanged variant sto
   expect(input.variants.map((variant:any)=>variant.id)).toEqual(['blue-s','white-s']);
   expect(input.variants.every((variant:any)=>!('stock' in variant))).toBe(true);
   expect(guide.hasChanges).toBe(false);
+});
+
+describe('editing memberships',()=>{
+  const member={id:'m1',name:'Club',amount:5000,stock:null,fulfillmentType:'MEMBERSHIP',membershipPeriods:[{id:'a',months:1,amount:5000},{id:'b',months:12,amount:48000}]};
+  const open=(startAt?:any)=>{
+    const api={updateProduct:vi.fn().mockResolvedValue({id:'m1'}),createProduct:vi.fn(),upload:vi.fn(),suggestProductHighlights:vi.fn().mockResolvedValue({highlights:[]})},saved=vi.fn();
+    const guide=createProductForm(api as unknown as MerchantStudioApi,'store-b',saved,()=>{},member,startAt);document.body.append(guide.element);
+    const next=()=>guide.element.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+    return {api,saved,guide,next,step:()=>guide.element.querySelector('[data-product-step]')!.textContent};
+  };
+  it('prefills the radio and periods, and saves them with updateProduct',async()=>{
+    const t=open();const el=t.guide.element;
+    expect(el.querySelector<HTMLInputElement>('[name=productType][value=MEMBERSHIP]')!.checked).toBe(true);
+    expect([...el.querySelectorAll<HTMLInputElement>('[name=periodPrice]')].map(i=>i.value)).toEqual(['50.00','480.00']);
+    for(let i=0;i<8;i++)t.next();
+    await vi.waitFor(()=>expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.updateProduct).toHaveBeenCalledWith('store-b','m1',expect.objectContaining({fulfillmentType:'MEMBERSHIP',membershipPeriods:[{months:1,amount:5000},{months:12,amount:48000}]}));
+  });
+  it('never opens a membership at the stock step',()=>{
+    expect(open('stock').step()).toBe('Paso 8 de 8');
+  });
+  it('switches to a normal product with the typed price',async()=>{
+    const t=open();const el=t.guide.element;
+    el.querySelector<HTMLInputElement>('[name=productType][value=PHYSICAL]')!.click();
+    const price=el.querySelector<HTMLInputElement>('[name=price]')!;price.value='75';
+    for(let i=0;i<8;i++)t.next();
+    await vi.waitFor(()=>expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.updateProduct).toHaveBeenCalledWith('store-b','m1',expect.objectContaining({fulfillmentType:'PHYSICAL',amount:7500}));
+  });
 });
 
 describe('owner-friendly options editor', () => {

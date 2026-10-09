@@ -306,11 +306,13 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     drawHighlights();
   }
   function updateStep() {
+    // A membership has no options or stock questions, however the step was reached.
+    if (isMembership() && (step === 6 || step === 7)) step = 8;
     dialog.querySelectorAll<HTMLElement>('[data-guide-step]').forEach(section => { section.hidden = Number(section.dataset.guideStep) !== step; });
     dialog.querySelector('[data-product-step]')!.textContent = `Paso ${step} de 8`;
     dialog.querySelector('[data-product-question]')!.textContent = questions[step - 1];
     dialog.querySelectorAll('.product-step-track span').forEach((el, index) => el.classList.toggle('is-current', index < step));
-    dialog.querySelector('[data-product-history]')!.innerHTML = answers().slice(0, Math.min(step - 1, 7)).map((answer, index) => `<button type="button" data-answer-step="${index + 1}"><small>${['Nombre','Descripción','Precio','Destacados','Fotos','Opciones','Stock'][index]}</small><span>${escape(answer)}</span><span aria-hidden="true">↗</span></button>`).join('');
+    dialog.querySelector('[data-product-history]')!.innerHTML = answers().slice(0, isMembership() ? Math.min(step - 1, 5) : Math.min(step - 1, 7)).map((answer, index) => `<button type="button" data-answer-step="${index + 1}"><small>${['Nombre','Descripción','Precio','Destacados','Fotos','Opciones','Stock'][index]}</small><span>${escape(answer)}</span><span aria-hidden="true">↗</span></button>`).join('');
     dialog.querySelectorAll<HTMLButtonElement>('[data-answer-step]').forEach(button => button.onclick = () => { if (!busy) { step = Number(button.dataset.answerStep); updateStep(); } });
     if (step === 8) {
       const variants = optionsToggle.checked ? optionEditor.values() : [];
@@ -442,7 +444,8 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       delete (input as { variants?: unknown }).variants;
     } else if (initial?.fulfillmentType === 'MEMBERSHIP') Object.assign(input, { fulfillmentType: 'PHYSICAL' });
     const pickCount = Number(boxPickInput.value), groupName = boxGroupInput.value.trim();
-    if (boxToggle.checked) Object.assign(input, { extras: [...selectedBox].map(productId => ({
+    if (isMembership()) { /* memberships carry no extras */ }
+    else if (boxToggle.checked) Object.assign(input, { extras: [...selectedBox].map(productId => ({
       ...(savedBox.find(extra => extra.productId === productId)?.id ? { id: savedBox.find(extra => extra.productId === productId)!.id } : {}),
       name: boxChosen().find(item => item.id === productId)?.name || savedBox.find(extra => extra.productId === productId)?.name || 'Producto',
       amount: 0, groupName, freeAllowance: 0, pickCount, productId,
