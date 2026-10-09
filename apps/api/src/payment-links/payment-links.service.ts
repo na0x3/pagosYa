@@ -16,6 +16,7 @@ import { ImportProductImagesDto } from "./dto/import-product-images.dto";
 import { SiatCatalogService } from "../invoicing/siat-catalog.service";
 import { ScheduleProductDiscountsDto } from "./dto/schedule-product-discounts.dto";
 import { RemoveProductSubscriptionsDto, UpdateProductSubscriptionsDto } from "./dto/update-product-subscriptions.dto";
+import { cheapestPeriod, MEMBERSHIP_PRODUCT_FIELDS, membershipRequest, syncMembershipPeriods } from "./membership-periods";
 import { applyProductSubscriptionOperations, validateProductSubscriptions, validateRemovedSubscriptions } from "./product-subscriptions";
 
 const extraIdPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
@@ -464,11 +465,11 @@ export class PaymentLinksService {
       }
     }
     await this.validateFiscalMapping(merchantId, dto);
+    const membershipPeriods = dto.fulfillmentType === "MEMBERSHIP" ? membershipRequest(dto, true)! : null;
     const variants = this.normalizeVariants(dto.variants);
     const extras = this.normalizeExtras(dto.extras, null, await this.linkedBoxProducts(storeId, null, dto.extras));
     const discount = this.normalizeDiscountSchedule(dto);
-    const created = await this.prisma.paymentLink.create({
-      data: {
+    const data: Prisma.PaymentLinkUncheckedCreateInput = {
         storeId,
         categoryId: dto.categoryId,
         name: dto.name,
@@ -494,8 +495,14 @@ export class PaymentLinksService {
         actividadEconomica: dto.actividadEconomica,
         codigoProductoSin: dto.codigoProductoSin,
         unidadMedida: dto.unidadMedida,
-      },
-    });
+    };
+    const created = membershipPeriods
+      ? await this.prisma.$transaction(async (tx) => {
+        const row = await tx.paymentLink.create({ data: { ...data, ...MEMBERSHIP_PRODUCT_FIELDS, amount: cheapestPeriod(membershipPeriods) } });
+        await syncMembershipPeriods(tx, row.id, membershipPeriods);
+        return row;
+      })
+      : await this.prisma.paymentLink.create({ data });
     await this.syncSharedExtraInventory(storeId, extras);
     // The long product page is written in the background; the merchant's save never waits for YAPI.
     void this.pageWriter?.fill(storeId, created.id, 'auto').catch(error => this.logger.warn(JSON.stringify({ event: 'product_page_failed', storeId, productId: created.id, reason: (error as Error).message.slice(0, 200) })));
@@ -504,7 +511,10 @@ export class PaymentLinksService {
 
   async listForStore(merchantId: string, storeId: string) {
     await this.ownedStoreOrThrow(merchantId, storeId);
-    return this.prisma.paymentLink.findMany({ where: { storeId }, orderBy: { createdAt: "desc" } });
+    return this.prisma.paymentLink.findMany({
+      where: { storeId }, orderBy: { createdAt: "desc" },
+      include: { membershipPeriods: { where: { archivedAt: null }, orderBy: { position: "asc" }, select: { id: true, months: true, amount: true, position: true } } },
+    });
   }
 
   async scheduleDiscounts(merchantId: string, storeId: string, dto: ScheduleProductDiscountsDto) {
@@ -899,6 +909,14 @@ export class PaymentLinksService {
     await this.ownedStoreOrThrow(merchantId, storeId);
     const link = await this.prisma.paymentLink.findFirst({ where: { id, storeId } });
     if (!link) throw new NotFoundException("Payment link not found");
+    const targetType = dto.fulfillmentType ?? link.fulfillmentType;
+    if (targetType !== link.fulfillmentType) {
+      if (link.fulfillmentType === "DIGITAL") throw new BadRequestException("Archiva el producto digital para conservar los archivos de pedidos pagados.");
+      if (link.fulfillmentType === "MEMBERSHIP" && await this.prisma.customerSubscription.count({ where: { paymentLinkId: id, membershipPeriodId: { not: null } } })) {
+        throw new BadRequestException("Esta membresía ya tiene miembros; no puede cambiar de tipo.");
+      }
+    }
+    const membershipPeriods = targetType === "MEMBERSHIP" ? membershipRequest(dto, link.fulfillmentType !== "MEMBERSHIP") : null;
     if (dto.categoryId) await this.ownedCategoryOrThrow(storeId, dto.categoryId);
     if (dto.recommendedProductIds !== undefined) {
       if (dto.recommendedProductIds.includes(id)) {
@@ -928,9 +946,7 @@ export class PaymentLinksService {
     }
     // Explicit-field spread, not `{...dto}` — an edit call that omits a field (e.g. no
     // new photo) must leave it untouched, not clobber it to undefined.
-    const updated = await this.prisma.paymentLink.update({
-      where: { id },
-      data: {
+    const data: Prisma.PaymentLinkUncheckedUpdateInput = {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.imageUrls !== undefined && { imageUrls: dto.imageUrls }),
@@ -961,8 +977,14 @@ export class PaymentLinksService {
         ...(dto.actividadEconomica !== undefined && { actividadEconomica: dto.actividadEconomica }),
         ...(dto.codigoProductoSin !== undefined && { codigoProductoSin: dto.codigoProductoSin }),
         ...(dto.unidadMedida !== undefined && { unidadMedida: dto.unidadMedida }),
-      },
-    });
+    };
+    const updated = targetType === "MEMBERSHIP"
+      ? await this.prisma.$transaction(async (tx) => {
+        if (membershipPeriods) await syncMembershipPeriods(tx, id, membershipPeriods);
+        const active = membershipPeriods ?? (await tx.membershipPeriod.findMany({ where: { paymentLinkId: id, archivedAt: null } }));
+        return tx.paymentLink.update({ where: { id }, data: { ...data, ...MEMBERSHIP_PRODUCT_FIELDS, ...(active.length ? { amount: cheapestPeriod(active) } : {}) } });
+      })
+      : await this.prisma.paymentLink.update({ where: { id }, data: { ...data, ...(dto.fulfillmentType === "PHYSICAL" && link.fulfillmentType === "MEMBERSHIP" ? { fulfillmentType: "PHYSICAL" } : {}) } });
     if (extras) await this.syncSharedExtraInventory(storeId, extras);
     return updated;
   }

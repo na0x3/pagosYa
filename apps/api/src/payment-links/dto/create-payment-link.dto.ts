@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
@@ -222,6 +223,16 @@ export class ProductExtraDto {
   stock?: number;
 }
 
+export class MembershipPeriodDto {
+  @ApiProperty({ enum: [1, 3, 6, 12], description: "Length of one period in months." })
+  @IsInt() @IsIn([1, 3, 6, 12])
+  months!: number;
+
+  @ApiProperty({ description: "Price of one period in minor units (centavos).", example: 5000 })
+  @IsInt() @Min(1) @Max(2147483647)
+  amount!: number;
+}
+
 export class CreatePaymentLinkDto {
   @IsOptional() @IsInt() @Min(0) @Max(100000000) shippingWeightGrams?: number;
   @ApiProperty({ example: "Corte de cabello" })
@@ -414,4 +425,13 @@ export class CreatePaymentLinkDto {
   @IsInt()
   @IsPositive()
   unidadMedida?: number;
+
+  @ApiPropertyOptional({ enum: ["PHYSICAL", "MEMBERSHIP"], description: "MEMBERSHIP sells renewable periods (spec 2026-10-09). Digital products are set by uploading a file." })
+  @IsOptional() @IsIn(["PHYSICAL", "MEMBERSHIP"])
+  fulfillmentType?: "PHYSICAL" | "MEMBERSHIP";
+
+  @ApiPropertyOptional({ type: [MembershipPeriodDto], description: "Required for memberships: 1–4 distinct lengths." })
+  @IsOptional() @IsArray() @ArrayMinSize(1) @ArrayMaxSize(4)
+  @ValidateNested({ each: true }) @Type(() => MembershipPeriodDto)
+  membershipPeriods?: MembershipPeriodDto[];
 }

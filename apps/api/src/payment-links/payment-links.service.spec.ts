@@ -30,6 +30,8 @@ function makeService(pageWriter?: { fill: jest.Mock }) {
     integrationConnection: { findFirst: jest.fn() },
     integrationProductMapping: { create: jest.fn().mockImplementation(({ data }) => ({ id: `mapping_${data.externalSku}`, ...data })) },
     mediaAsset: { findMany: jest.fn().mockResolvedValue([]) },
+    membershipPeriod: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    customerSubscription: { count: jest.fn().mockResolvedValue(0) },
     $executeRaw: jest.fn().mockResolvedValue(1),
   };
   Object.assign(prisma, {
@@ -779,5 +781,35 @@ describe("PaymentLinksService long product page", () => {
       expect(created.id).toBe("link_bolso");
       expect(pageWriter.fill).toHaveBeenCalledWith("store_1", "link_bolso", "auto");
     }
+  });
+});
+
+describe("membership products", () => {
+  it("creates a membership with its periods and the cheapest period as the product price", async () => {
+    const { service, prisma } = makeService();
+    await service.create("merchant_1", "store_1", { name: "Club del café", amount: 0, fulfillmentType: "MEMBERSHIP", membershipPeriods: [{ months: 12, amount: 48000 }, { months: 1, amount: 5000 }] } as never);
+    expect(prisma.paymentLink.create).toHaveBeenCalledWith({ data: expect.objectContaining({ fulfillmentType: "MEMBERSHIP", amount: 5000, stock: null, variants: [], extras: [] }) });
+    expect(prisma.membershipPeriod.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a membership without periods, or with options", async () => {
+    const { service } = makeService();
+    await expect(service.create("merchant_1", "store_1", { name: "Club", amount: 0, fulfillmentType: "MEMBERSHIP" } as never)).rejects.toThrow("Indica de uno a cuatro períodos");
+    await expect(service.create("merchant_1", "store_1", { name: "Club", amount: 0, fulfillmentType: "MEMBERSHIP", membershipPeriods: [{ months: 1, amount: 5000 }], variants: [{ name: "A", amount: 1 }] } as never)).rejects.toThrow("Las membresías no tienen opciones ni extras.");
+  });
+
+  it("refuses to change the type of a membership that has members", async () => {
+    const { service, prisma } = makeService();
+    prisma.paymentLink.findFirst.mockResolvedValue({ id: "p1", storeId: "store_1", fulfillmentType: "MEMBERSHIP", variants: [], extras: [], imageUrls: [], imagePositions: [], contentBlocks: [] });
+    prisma.customerSubscription.count.mockResolvedValue(3);
+    await expect(service.update("merchant_1", "store_1", "p1", { fulfillmentType: "PHYSICAL" } as never)).rejects.toThrow("Esta membresía ya tiene miembros");
+  });
+
+  it("resyncs periods and the shown price on update", async () => {
+    const { service, prisma } = makeService();
+    prisma.paymentLink.findFirst.mockResolvedValue({ id: "p1", storeId: "store_1", fulfillmentType: "MEMBERSHIP", variants: [], extras: [], imageUrls: [], imagePositions: [], contentBlocks: [] });
+    await service.update("merchant_1", "store_1", "p1", { membershipPeriods: [{ months: 3, amount: 13500 }] } as never);
+    expect(prisma.paymentLink.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ amount: 13500 }) }));
+    expect(prisma.membershipPeriod.create).toHaveBeenCalledWith({ data: { paymentLinkId: "p1", months: 3, amount: 13500, position: 0 } });
   });
 });
