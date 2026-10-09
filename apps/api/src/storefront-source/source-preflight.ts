@@ -76,9 +76,10 @@ const masksPageWideOverflow = (content: string) => {
  */
 export function validateSourcePreflight(
   files: SourceProjectFileDto[],
-  imageUse: { requiredImagePaths?: string[]; catalogImagePaths?: string[] } = {},
+  imageUse: { requiredImagePaths?: string[]; catalogImagePaths?: string[]; platformPages?: string[] } = {},
 ): { unusedImagePaths: string[] } {
-  const paths = new Set(files.map(file => file.path));
+  // platformPages: pages added after this check (standard and commerce pages), so a link to one is not broken.
+  const paths = new Set([...files.map(file => file.path), ...(imageUse.platformPages ?? [])]);
   const pages = htmlFiles(files);
   const findPath = (from: string, raw: string) => {
     const target = cleanReference(raw);

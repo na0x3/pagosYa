@@ -102,4 +102,12 @@ describe('links to pages the platform adds after the repair', () => {
     expect(platformSuppliedPages('portfolio')).not.toContain('productos.html');
     expect(platformSuppliedPages('portfolio')).toContain('nosotros.html');
   });
+
+  it('passes the preflight once the platform pages are known, and still flags a page nobody supplies', () => {
+    const diagnostic = (run: () => unknown) => { try { run(); return ''; } catch (error) { return (error as { diagnostic?: string }).diagnostic ?? String(error); } };
+    const files = [file('index.html', '<h1>Huerta Viva</h1><a href="nosotros.html">Nosotros</a><a href="productos.html">Catálogo</a>'), file('styles.css', 'a{color:red}')];
+    expect(diagnostic(() => validateSourcePreflight(files))).toContain('broken internal link nosotros.html');
+    expect(diagnostic(() => validateSourcePreflight(files, { platformPages: platformSuppliedPages('shop') }))).toBe('');
+    expect(diagnostic(() => validateSourcePreflight([file('index.html', '<h1>x</h1><a href="como-funciona.html">x</a>')], { platformPages: platformSuppliedPages('shop') }))).toContain('broken internal link como-funciona.html');
+  });
 });

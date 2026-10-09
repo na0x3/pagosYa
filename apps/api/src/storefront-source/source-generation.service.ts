@@ -785,6 +785,7 @@ export class SourceGenerationService {
           preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...motifFiles, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));
         }
         const preflight = validateSourcePreflight(preflightFiles, {
+          platformPages: platformSuppliedPages(sitePurpose),
           requiredImagePaths: requestsImageContent(dto.instruction) ? assetLegend.filter(asset => !sourceVideo(asset.path) && imageUses.some(use => use.url === asset.original && !['reference', 'unused', 'unknown'].includes(use.role))).map(asset => asset.path) : [],
           catalogImagePaths: [
             ...data.items.flatMap(item => item.imageUrls),
