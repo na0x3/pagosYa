@@ -227,7 +227,7 @@ export class StoreCustomersService {
   async subscriptions(me: CustomerProfile) {
     if (!me.emailVerifiedAt) throw new UnauthorizedException('Confirma tu correo para ver tus suscripciones');
     return this.prisma.customerSubscription.findMany({
-      where: { storeId: me.storeId, customerEmail: { equals: me.email, mode: 'insensitive' } },
+      where: { storeId: me.storeId, membershipPeriodId: null, customerEmail: { equals: me.email, mode: 'insensitive' } },
       orderBy: { startedAt: 'desc' }, take: 50,
       select: { id: true, status: true, itemName: true, quantity: true, cadence: true, startedAt: true, nextBillingAt: true, canceledAt: true },
     });

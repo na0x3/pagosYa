@@ -6,7 +6,8 @@ import { StoreCustomersService } from "../store-customers/store-customers.servic
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { findActiveStoreBySlug } from "../stores/active-store";
 import { paymentCheckoutUrl } from "../operations/operations-helpers";
-import { blocksRejoin, MEMBERSHIP_CONSENT_TEXT, MEMBERSHIP_STATE_LABEL, membershipState, periodLabel, type MembershipState } from "./membership-rules";
+import { blocksRejoin, MEMBERSHIP_CONSENT_TEXT, MEMBERSHIP_STATE_LABEL, membershipKey, membershipState, periodLabel, type MembershipState } from "./membership-rules";
+import { SubscriptionsService } from "../operations/subscriptions.service";
 import type { JoinMembershipDto } from "./dto/join-membership.dto";
 
 export type MemberView = {
@@ -25,6 +26,7 @@ export class MembershipsService {
     private readonly customers: StoreCustomersService,
     private readonly paymentIntents: PaymentIntentsService,
     private readonly config: ConfigService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async startJoin(slug: string, token: string, dto: JoinMembershipDto): Promise<{ checkoutUrl: string }> {
@@ -85,5 +87,37 @@ export class MembershipsService {
         renewalUrl: payable ? paymentCheckoutUrl(this.config, intent!.clientSecret) : null,
       };
     });
+  }
+
+  async act(slug: string, token: string, id: string, action: "cancel" | "resume" | "period", periodId?: string): Promise<MemberView> {
+    const me = await this.customers.authenticate(slug, token);
+    const store = await findActiveStoreBySlug(this.prisma, slug);
+    const row = await this.prisma.customerSubscription.findFirst({ where: { id, storeId: store.id, storeCustomerId: me.id, membershipPeriodId: { not: null } } });
+    if (!row) throw new NotFoundException("Membresía no encontrada");
+    const now = new Date();
+    if (action === "cancel") {
+      if (row.status !== "ACTIVE") throw new BadRequestException("Esta membresía ya no se renueva.");
+      const precheck = await this.subscriptions.precheckOpenRenewal(row.id); // bank call, before the transaction
+      await this.prisma.$transaction(async (tx) => {
+        await this.subscriptions.cancelOpenRenewal(tx, row.id, precheck);
+        await tx.customerSubscription.update({ where: { id: row.id }, data: { status: "CANCELED", activeKey: null, canceledAt: now } });
+      });
+    } else if (action === "resume") {
+      if (row.status !== "CANCELED") throw new BadRequestException("Solo puedes reanudar una membresía cancelada.");
+      if (!row.accessUntil || row.accessUntil <= now) throw new BadRequestException("Tu acceso ya terminó; vuelve a hacerte miembro.");
+      const key = membershipKey(store.id, row.paymentLinkId!, me.id);
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "StoreCustomer" WHERE id = ${me.id} FOR UPDATE`;
+        if (await tx.customerSubscription.findFirst({ where: { activeKey: key, id: { not: row.id } } })) throw new ConflictException("Ya tienes esta membresía activa.");
+        await tx.subscriptionInvoice.updateMany({ where: { subscriptionId: row.id, periodStart: row.accessUntil!, status: "SKIPPED" }, data: { status: "DUE", paymentIntentId: null, orderId: null } });
+        await tx.customerSubscription.update({ where: { id: row.id }, data: { status: "ACTIVE", activeKey: key, canceledAt: null, nextBillingAt: row.accessUntil! } });
+      });
+    } else {
+      if (row.status !== "ACTIVE") throw new BadRequestException("Solo puedes cambiar el período de una membresía activa.");
+      const period = periodId ? await this.prisma.membershipPeriod.findFirst({ where: { id: periodId, paymentLinkId: row.paymentLinkId!, archivedAt: null } }) : null;
+      if (!period) throw new BadRequestException("Elige un período disponible.");
+      await this.prisma.customerSubscription.update({ where: { id: row.id }, data: { pendingPeriodId: period.id === row.membershipPeriodId ? null : period.id } });
+    }
+    return (await this.list(slug, token)).find(view => view.id === row.id)!;
   }
 }

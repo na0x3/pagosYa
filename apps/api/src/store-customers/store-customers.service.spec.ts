@@ -253,6 +253,14 @@ describe('StoreCustomersService', () => {
       const me = await ctx.service.authenticate('cafe', session.token);
       expect((await ctx.service.subscriptions(me)).map((s: any) => s.id)).toEqual(['sub1']);
     });
+
+    it('leaves memberships out of the plain subscriptions list', async () => {
+      const ctx = setup({ subscriptions: [{ id: 'sub1', storeId: 's-cafe', customerEmail: 'ana@example.com', status: 'ACTIVE' }] });
+      const session = await account(ctx);
+      const me = await ctx.service.authenticate('cafe', session.token);
+      await ctx.service.subscriptions(me);
+      expect(ctx.prisma.customerSubscription.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ membershipPeriodId: null }) }));
+    });
   });
 
   describe('export and delete', () => {

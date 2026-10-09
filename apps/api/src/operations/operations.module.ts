@@ -22,6 +22,6 @@ import { SubscriptionManageController } from "./subscription-manage.controller";
   imports: [AuthModule, DashboardModule, ConsumerModule, PaymentIntentsModule],
   controllers: [OperationsController, IntegrationsInboundController, CalendarOauthController, ConsumerOperationsController, PublicAppointmentsController, SubscribersController, SubscriptionManageController],
   providers: [OperationsService, SubscriptionsService, SubscribersService, IntegrationsService, AppointmentsService, GoogleCalendarService, OperationsWorker],
-  exports: [OperationsService],
+  exports: [OperationsService, SubscriptionsService],
 })
 export class OperationsModule {}
