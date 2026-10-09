@@ -104,7 +104,7 @@ describe("Product subscription offers", () => {
     const { service, prisma } = setup();
     expect(await service.listPublicSubscriptions("coffee", "p1")).toEqual([]);
     expect(prisma.paymentLink.findFirst).toHaveBeenCalledWith({
-      where: { id: "p1", status: "ACTIVE", fulfillmentType: { not: "DIGITAL" }, store: { slug: "coffee", status: "ACTIVE", sourcePublicationPaused: false, subscriptionsEnabled: true } },
+      where: { id: "p1", status: "ACTIVE", fulfillmentType: { notIn: ["DIGITAL", "MEMBERSHIP"] }, store: { slug: "coffee", status: "ACTIVE", sourcePublicationPaused: false, subscriptionsEnabled: true } },
       select: { subscriptionOptions: { orderBy: { cadence: "asc" }, select: { id: true, paymentLinkId: true, cadence: true, discountPercent: true } } },
     });
     await service.updateSubscriptions("m1", "s1", "p1", { options: [weekly] });
@@ -113,12 +113,19 @@ describe("Product subscription offers", () => {
     await expect(service.listPublicSubscriptions("hidden", "p1")).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it("refuses Subscribe & Save options on a membership product", async () => {
+    const { service, prisma } = setup();
+    prisma.paymentLink.findFirst.mockResolvedValue({ fulfillmentType: "MEMBERSHIP" });
+    await expect(service.updateSubscriptions("m1", "s1", "club", { options: [weekly] })).rejects.toThrow("Las membresías ya se renuevan por período");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("serves public offers only for stores with the switch on", async () => {
     const { service, prisma } = setup();
     prisma.paymentLink.findFirst.mockResolvedValue(null);
     await expect(service.listPublicSubscriptions("cafe", "p1")).rejects.toThrow("Este producto ya no está disponible");
     expect(prisma.paymentLink.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ fulfillmentType: { not: "DIGITAL" }, store: expect.objectContaining({ subscriptionsEnabled: true }) }),
+      where: expect.objectContaining({ fulfillmentType: { notIn: ["DIGITAL", "MEMBERSHIP"] }, store: expect.objectContaining({ subscriptionsEnabled: true }) }),
     }));
   });
 

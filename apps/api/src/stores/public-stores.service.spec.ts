@@ -49,6 +49,20 @@ describe('subscription offers', () => {
     expect(result.items.find((item: { id: string }) => item.id === 'p2')!.subscriptionOptions).toEqual([]);
   });
 
+  it("publishes a membership's active periods and never subscription options for it", async () => {
+    const { service, prisma } = setup();
+    prisma.store.findUnique.mockResolvedValue({ ...storeRow, subscriptionsEnabled: true });
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { ...productRow, id: 'club', fulfillmentType: 'MEMBERSHIP', membershipPeriods: [{ id: 'm1', months: 1, amount: 5000 }], subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 5 }] },
+      { ...productRow, id: 'p1' },
+    ]);
+    const result = await service.getStorePublic(storeRow.slug);
+    const club: any = result.items.find((item: { id: string }) => item.id === 'club');
+    expect(club.membershipPeriods).toEqual([{ id: 'm1', months: 1, amount: 5000 }]);
+    expect(club.subscriptionOptions).toEqual([]);
+    expect((result.items.find((item: { id: string }) => item.id === 'p1') as any).membershipPeriods).toEqual([]);
+  });
+
   it('hides every offer while the switch is off', async () => {
     const { service, prisma } = setup();
     prisma.store.findUnique.mockResolvedValue({ ...storeRow, subscriptionsEnabled: false });

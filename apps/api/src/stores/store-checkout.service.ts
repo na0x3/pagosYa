@@ -77,6 +77,7 @@ export class StoreCheckoutService {
     if (links.length !== quantityByLinkId.size) {
       throw new BadRequestException("Uno o más productos del carrito ya no están disponibles");
     }
+    if (links.some(link => link.fulfillmentType === "MEMBERSHIP")) throw new BadRequestException("Las membresías se compran con «Hacerme miembro», no en el carrito.");
 
     const subscriptionItems = dto.items.filter(item => item.subscriptionCadence);
     if (subscriptionItems.length && !store.subscriptionsEnabled) throw new BadRequestException("Esta tienda no ofrece suscripciones.");

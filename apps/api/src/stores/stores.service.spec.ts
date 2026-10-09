@@ -367,6 +367,20 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     expect(paymentIntents.create).not.toHaveBeenCalled();
   });
 
+  it("refuses a membership product in a cart, even from a saved cart", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { id: "club", storeId: "store_1", status: "ACTIVE", fulfillmentType: "MEMBERSHIP", name: "Club", amount: 5000, currency: "BOB", variants: [], extras: [], stock: null },
+    ]);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "club", quantity: 1 }] } as never)).rejects.toThrow(
+      "Las membresías se compran con «Hacerme miembro», no en el carrito.",
+    );
+  });
+
   it("rejects a cart that asks for more than the tracked stock", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);

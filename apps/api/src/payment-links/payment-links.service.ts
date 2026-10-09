@@ -550,6 +550,8 @@ export class PaymentLinksService {
 
   async updateSubscriptions(merchantId: string, storeId: string, id: string, dto: UpdateProductSubscriptionsDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
+    const product = await this.prisma.paymentLink.findFirst({ where: { id, storeId }, select: { fulfillmentType: true } });
+    if (product?.fulfillmentType === "MEMBERSHIP") throw new BadRequestException("Las membresías ya se renuevan por período; no usan Suscríbete y ahorra.");
     const options = validateProductSubscriptions(dto);
     return this.prisma.$transaction(tx => applyProductSubscriptionOperations(tx, storeId, id,
       options.map(option => ({ action: "upsert", ...option }))));
@@ -565,7 +567,7 @@ export class PaymentLinksService {
   /** Same active-store/publication checks as StoresService.findActiveBySlugPublic. */
   async listPublicSubscriptions(slug: string, id: string) {
     const product = await this.prisma.paymentLink.findFirst({
-      where: { id, status: PaymentLinkStatus.ACTIVE, fulfillmentType: { not: "DIGITAL" }, store: { slug, status: "ACTIVE", sourcePublicationPaused: false, subscriptionsEnabled: true } },
+      where: { id, status: PaymentLinkStatus.ACTIVE, fulfillmentType: { notIn: ["DIGITAL", "MEMBERSHIP"] }, store: { slug, status: "ACTIVE", sourcePublicationPaused: false, subscriptionsEnabled: true } },
       select: { subscriptionOptions: { orderBy: { cadence: "asc" }, select: {
         id: true, paymentLinkId: true, cadence: true, discountPercent: true,
       } } },

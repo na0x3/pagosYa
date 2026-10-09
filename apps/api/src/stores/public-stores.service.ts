@@ -186,7 +186,10 @@ export class PublicStoresService implements OnModuleDestroy {
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
-        include: { subscriptionOptions: { orderBy: { cadence: "asc" }, select: { cadence: true, discountPercent: true } } },
+        include: {
+          subscriptionOptions: { orderBy: { cadence: "asc" }, select: { cadence: true, discountPercent: true } },
+          membershipPeriods: { where: { archivedAt: null }, orderBy: { position: "asc" }, select: { id: true, months: true, amount: true } },
+        },
       }),
       this.prisma.category.findMany({ where: { storeId: store.id }, orderBy: { sortOrder: "asc" } }),
       this.prisma.storeLink.findMany({ where: { storeId: store.id }, orderBy: { sortOrder: "asc" } }),
@@ -378,7 +381,8 @@ export class PublicStoresService implements OnModuleDestroy {
         discountStartsAt: item.discountStartsAt?.toISOString() ?? null,
         discountEndsAt: item.discountEndsAt?.toISOString() ?? null,
         soldCount: soldByProduct.get(item.id) ?? 0,
-        subscriptionOptions: store.subscriptionsEnabled && item.fulfillmentType !== "DIGITAL" ? item.subscriptionOptions : [],
+        subscriptionOptions: store.subscriptionsEnabled && item.fulfillmentType !== "DIGITAL" && item.fulfillmentType !== "MEMBERSHIP" ? item.subscriptionOptions : [],
+        membershipPeriods: item.fulfillmentType === "MEMBERSHIP" ? item.membershipPeriods : [],
       })),
     };
   }
