@@ -7,11 +7,12 @@ import './source-library.css';
 import '@pagosya/variant-editor';
 import '@pagosya/variant-editor/style.css';
 import type { VariantInput, VariantDraft } from '@pagosya/variant-editor';
+import { membershipPeriodsHtml, parseMembershipPeriods, periodsSummary, readMembershipRows, type MembershipPeriodDraft } from './membership-periods-editor';
 import { mountContentBlocksEditor, type ContentBlockInput } from './product-content-blocks-editor';
 
 export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
 type BoxChoice = { id: string; name: string; imageUrls?: string[] };
-export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[]; contentBlocks?: ContentBlockInput[] } & ProductFiscalMapping;
+export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[]; contentBlocks?: ContentBlockInput[]; fulfillmentType?: string; membershipPeriods?: Array<{ id: string; months: number; amount: number }> } & ProductFiscalMapping;
 export type ProductSpecification = { label: string; value: string };
 
 /** "Nombre: valor" lines to specification rows, or a message for the first invalid line. */
@@ -58,7 +59,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <p class="product-yapi-question" data-product-question aria-live="polite"></p>
       <section data-guide-step="1"><label>Nombre del producto<input name="name" required maxlength="120" autocomplete="off" placeholder="Ej. Suéter Merino"></label></section>
       <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
-      <section data-guide-step="3" hidden><label>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label></section>
+      <section data-guide-step="3" hidden><fieldset class="product-type"><legend>Tipo</legend><label><input type="radio" name="productType" value="PHYSICAL" checked> Producto</label><label><input type="radio" name="productType" value="MEMBERSHIP"> Membresía</label></fieldset><label data-price-field>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label><div data-membership-periods hidden></div><p class="product-step-help" data-membership-help hidden>Tus miembros eligen un período y reciben un enlace para pagar cada renovación. No se cobra nada automáticamente.</p></section>
       <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 6 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p></section>
       <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div>${initial?.id ? '<p class="product-page-regenerate"><button type="button" data-page-regenerate>Regenerar con YAPI</button> <span data-page-regenerate-status role="status"></span></p>' : ''}</section>
       <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
@@ -83,6 +84,35 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   const back = dialog.querySelector<HTMLButtonElement>('[data-product-back]')!;
   const nameInput = form.elements.namedItem('name') as HTMLInputElement;
   const priceInput = form.elements.namedItem('price') as HTMLInputElement;
+  const typeInputs = dialog.querySelectorAll<HTMLInputElement>('[name=productType]');
+  const periodsHost = dialog.querySelector<HTMLElement>('[data-membership-periods]')!;
+  let periodRows: MembershipPeriodDraft[] = initial?.membershipPeriods?.length
+    ? initial.membershipPeriods.map(period => ({ months: period.months as MembershipPeriodDraft['months'], price: (period.amount / 100).toFixed(2) }))
+    : [{ months: 1, price: '' }];
+  const isMembership = () => dialog.querySelector<HTMLInputElement>('[name=productType]:checked')?.value === 'MEMBERSHIP';
+  function drawPeriods() { periodsHost.innerHTML = membershipPeriodsHtml(periodRows); }
+  function applyType() {
+    const membership = isMembership();
+    dialog.querySelector<HTMLElement>('[data-price-field]')!.hidden = membership;
+    priceInput.required = !membership;
+    periodsHost.hidden = !membership;
+    dialog.querySelector<HTMLElement>('[data-membership-help]')!.hidden = !membership;
+    if (membership) drawPeriods();
+  }
+  typeInputs.forEach(input => input.addEventListener('change', applyType));
+  periodsHost.addEventListener('click', event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-period-add],[data-period-remove]');
+    if (!button || busy) return;
+    periodRows = readMembershipRows(periodsHost);
+    if (button.hasAttribute('data-period-add')) {
+      const free = ([1, 3, 6, 12] as const).find(months => !periodRows.some(row => row.months === months));
+      if (free) periodRows.push({ months: free, price: '' });
+    } else periodRows.splice(Number(button.dataset.periodRemove), 1);
+    drawPeriods();
+  });
+  if (initial?.fulfillmentType === 'MEMBERSHIP') typeInputs.forEach(input => { input.checked = input.value === 'MEMBERSHIP'; });
+  if (initial?.fulfillmentType === 'DIGITAL') typeInputs.forEach(input => { input.disabled = true; });
+  applyType();
   const status = dialog.querySelector<HTMLElement>('[data-product-status]')!;
   const error = dialog.querySelector<HTMLElement>('[data-product-error]')!;
   const picker = form.elements.namedItem('photos') as HTMLInputElement;
@@ -229,7 +259,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   const questions = ['¿Cómo se llama tu producto?', '¿Qué debería saber el cliente sobre este producto?', '¿Cuál es su precio de venta?', '¿Qué quieres destacar de este producto?', '¿Qué fotos quieres mostrar?', '¿El cliente puede elegir talla, color u otras opciones?', '¿Cuántas unidades tienes disponibles?', 'Todo listo. Revisa tus respuestas antes de guardar.'];
   function answers() {
     syncBoxSelection();
-    return [nameInput.value.trim(), (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || 'Sin descripción', `Bs ${Number(priceInput.value).toFixed(2)}`, highlights.length ? `${highlights.length} destacados` : 'Sin destacados', `${photos.length} fotos`, optionsToggle.checked ? 'Con opciones y stock por combinación' : boxToggle.checked ? `Caja: el cliente elige ${boxPickInput.value || '?'} entre ${selectedBox.size} productos` : 'Sin opciones', optionsToggle.checked ? 'Stock por combinación' : stockInput.value === '' ? 'Sin límite' : `${stockInput.value} unidades`];
+    return [nameInput.value.trim(), (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || 'Sin descripción', isMembership() ? periodsSummary(readMembershipRows(periodsHost)) : `Bs ${Number(priceInput.value).toFixed(2)}`, highlights.length ? `${highlights.length} destacados` : 'Sin destacados', `${photos.length} fotos`, optionsToggle.checked ? 'Con opciones y stock por combinación' : boxToggle.checked ? `Caja: el cliente elige ${boxPickInput.value || '?'} entre ${selectedBox.size} productos` : 'Sin opciones', optionsToggle.checked ? 'Stock por combinación' : stockInput.value === '' ? 'Sin límite' : `${stockInput.value} unidades`];
   }
   const highlightRows = () => dialog.querySelector('[data-highlight-rows]')!;
   const highlightStatus = () => dialog.querySelector('[data-highlight-status]')!;
@@ -293,8 +323,13 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     dialog.querySelector<HTMLElement>(`[data-guide-step="${step}"] input, [data-guide-step="${step}"] textarea`)?.focus();
   }
   function validateStep() {
-    const fields = dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`[data-guide-step="${step}"] input:not([type=file]), [data-guide-step="${step}"] textarea`);
-    for (const field of fields) if (!field.disabled && !field.reportValidity()) return false;
+    const fields = dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`[data-guide-step="${step}"] input:not([type=file]):not([type=radio]), [data-guide-step="${step}"] textarea`);
+    for (const field of fields) { if (field.closest('[hidden]')) continue; if (!field.disabled && !field.reportValidity()) return false; }
+    if (step === 3 && isMembership()) {
+      periodRows = readMembershipRows(periodsHost);
+      const { problem } = parseMembershipPeriods(periodRows);
+      if (problem) { showError(problem); return false; }
+    }
     if (step === 1 && !nameInput.value.trim()) { showError('Escribe el nombre del producto.'); return false; }
     if (step === 2) {
       const { problem } = parseSpecificationLines((form.elements.namedItem('specifications') as HTMLTextAreaElement).value);
@@ -316,7 +351,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     }
     return true;
   }
-  back.addEventListener('click', () => { if (busy) return; if (step > 1) { step--; updateStep(); } else onClose(); });
+  back.addEventListener('click', () => { if (busy) return; if (step > 1) { step--; if (isMembership() && (step === 6 || step === 7)) step = 5; updateStep(); } else onClose(); });
   nameInput.addEventListener('input', () => { submit.disabled = busy || !nameInput.value.trim(); });
   function drawPhotos() {
     optionEditor.refreshPhotos();
@@ -386,7 +421,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     event.preventDefault();
     if (busy) return;
     if (!validateStep()) return;
-    if (step < 8) { step++; updateStep(); return; }
+    if (step < 8) { step++; if (isMembership() && (step === 6 || step === 7)) step = 8; updateStep(); return; }
     const data = new FormData(form);
     const name = String(data.get('name') || '').trim();
     if (!name) { showError('Escribe el nombre del producto.'); (form.elements.namedItem('name') as HTMLInputElement).focus(); return; }
@@ -400,6 +435,12 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       }
     } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las combinaciones.'); return; }
     const input = { name, description: String(data.get('description') || '').trim() || null, amount: variants ? Math.min(...variants.map(v => v.amount)) : Math.round(Number(data.get('price')) * 100), currency: initial?.currency || 'BOB', stock: variants ? initial && variants.some(v => v.stock === undefined) ? initial.stock ?? null : variants.some(v => v.stock == null) ? null : variants.reduce((n, v) => n + v.stock!, 0) : data.get('stock') === '' ? null : Number(data.get('stock')), imageUrls: [] as string[], ...(variants ? { variants } : {}), ...(contentBlocks.length || initial?.contentBlocks?.length ? { contentBlocks } : {}) };
+    if (isMembership()) {
+      const { periods, problem } = parseMembershipPeriods(readMembershipRows(periodsHost));
+      if (problem) { showError(problem); step = 3; updateStep(); return; }
+      Object.assign(input, { fulfillmentType: 'MEMBERSHIP', membershipPeriods: periods, amount: Math.min(...periods.map(period => period.amount)), stock: null });
+      delete (input as { variants?: unknown }).variants;
+    } else if (initial?.fulfillmentType === 'MEMBERSHIP') Object.assign(input, { fulfillmentType: 'PHYSICAL' });
     const pickCount = Number(boxPickInput.value), groupName = boxGroupInput.value.trim();
     if (boxToggle.checked) Object.assign(input, { extras: [...selectedBox].map(productId => ({
       ...(savedBox.find(extra => extra.productId === productId)?.id ? { id: savedBox.find(extra => extra.productId === productId)!.id } : {}),
@@ -428,7 +469,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       if (input.contentBlocks) input.contentBlocks = input.contentBlocks.map(block => mapBlockPhotos(block, uploaded));
       status.textContent = 'Guardando producto…';
       if (initial) {
-        const update: Partial<typeof input> = {...input, variants: variants || []};
+        const update: Partial<typeof input> = isMembership() ? { ...input } : { ...input, variants: variants || [] };
         if (stockInput.value === (initial.stock == null ? '' : String(initial.stock))) delete update.stock;
         await api.updateProduct(storeId, initial.id, update);
       }

@@ -41,6 +41,26 @@ describe('fixed YAPI product questions',()=>{
     t.next();t.next();t.next();await vi.waitFor(()=>expect(t.saved).toHaveBeenCalledOnce());
     const data=t.api.createProduct.mock.calls[0][1];expect(data.stock).toBe(3);expect(data.variants.map((v:any)=>v.stock)).toEqual([3,0]);
   });
+  it('creates a membership with its periods and skips options and stock',async()=>{
+    const t=setup();const dialog=t.guide.element;
+    t.fill('name','Club del café');t.next();t.next();
+    dialog.querySelector<HTMLInputElement>('[name=productType][value=MEMBERSHIP]')!.click();
+    dialog.querySelector<HTMLInputElement>('[name=periodPrice]')!.value='50';
+    dialog.querySelector<HTMLButtonElement>('[data-period-add]')!.click();
+    const rows=dialog.querySelectorAll('[data-period-row]');
+    rows[1].querySelector<HTMLSelectElement>('[name=periodMonths]')!.value='12';
+    rows[1].querySelector<HTMLInputElement>('[name=periodPrice]')!.value='480';
+    t.next();t.next();t.next();
+    expect(t.step()).toBe('Paso 8 de 8');
+    t.next();
+    await vi.waitFor(()=>expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.createProduct).toHaveBeenCalledWith('store-two',expect.objectContaining({fulfillmentType:'MEMBERSHIP',membershipPeriods:[{months:1,amount:5000},{months:12,amount:48000}],amount:5000,stock:null}));
+    expect(t.api.createProduct.mock.calls[0][1]).not.toHaveProperty('variants');
+  });
+  it('still asks for a price on a normal product',()=>{
+    const t=setup();t.fill('name','Suéter');t.next();t.next();t.fill('price','');t.next();
+    expect(t.step()).toBe('Paso 3 de 8');
+  });
 });
 
 it('edits the selected product while preserving photos and unchanged variant stock',async()=>{
