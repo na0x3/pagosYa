@@ -276,7 +276,7 @@ export class SubscribersService {
         amount: terms?.amount ?? 0, currency: terms?.currency ?? "BOB",
         nextBillingAt: subscription.nextBillingAt.toISOString(), status: subscription.status,
         displayStatus: (subscription.status === "ACTIVE" && pending ? "PENDING_PAYMENT" : subscription.status) as "ACTIVE" | "PAUSED" | "CANCELED" | "PENDING_PAYMENT",
-        lastPaidAt: lastPaid?.paidAt?.toISOString() ?? null,
+        lastPaidAt: lastPaid?.paidAt?.toISOString() ?? (subscription.membershipPeriodId ? subscription.consentAt?.toISOString() ?? null : null),
         livemode: live.has(subscription.id),
         ...(subscription.membershipPeriodId ? (() => {
           const state = membershipState(subscription, graceDays, now);
@@ -289,12 +289,13 @@ export class SubscribersService {
 
   async resend(merchantId: string, storeId: string, id: string) {
     const subscription = await this.owned(merchantId, storeId, id);
-    if (subscription.status !== "ACTIVE") throw new BadRequestException("Solo puedes reenviar el enlace de una suscripción activa");
+    const member = !!subscription.membershipPeriodId;
+    if (subscription.status !== "ACTIVE") throw new BadRequestException(member ? "Esta membresía ya no se renueva; el miembro puede reactivarla desde su cuenta." : "Solo puedes reenviar el enlace de una suscripción activa");
     const open = await this.prisma.subscriptionInvoice.findFirst({ where: { subscriptionId: subscription.id, status: "DUE" }, orderBy: { periodStart: "desc" } });
-    if (!open) throw new NotFoundException("No hay una entrega pendiente de pago");
+    if (!open) throw new NotFoundException(member ? "No hay una renovación pendiente de pago" : "No hay una entrega pendiente de pago");
     const result = await this.subscriptions.remindSubscriptionInvoice(merchantId, storeId, open.id, false);
     if (result.blocked || !result.checkoutUrl) throw new ConflictException(result.blocked === "paid" ? "El pago ya se recibió en el banco; actualiza la lista en unos minutos." : "No pudimos confirmar el estado del QR con el banco; intenta de nuevo más tarde.");
     const item = subscription.itemName ?? "tu suscripción";
-    return { checkoutUrl: result.checkoutUrl, sent: result.sent, whatsappText: `Hola ${subscription.customerName}, tu pedido de ${item} está listo. Págalo con un toque: ${result.checkoutUrl}` };
+    return { checkoutUrl: result.checkoutUrl, sent: result.sent, whatsappText: member ? `Hola ${subscription.customerName}, renueva tu membresía ${subscription.itemName ?? "tu membresía"} con un toque: ${result.checkoutUrl}` : `Hola ${subscription.customerName}, tu pedido de ${item} está listo. Págalo con un toque: ${result.checkoutUrl}` };
   }
 }

@@ -296,6 +296,32 @@ describe("SubscribersService", () => {
       await expect(service.act("merchant_1", "store_1", "sub_m", "pause")).rejects.toThrow("Las membresías solo se pueden cancelar desde aquí.");
     });
 
+    it("falls back to consentAt for a member's last payment", async () => {
+      const { prisma, service } = setup();
+      const consentAt = new Date("2026-09-01T10:00:00Z");
+      prisma.customerSubscription.findMany.mockResolvedValue([{ ...member, consentAt }]);
+      prisma.membershipPeriod.findMany.mockResolvedValue([{ id: "m12", months: 12, amount: 48000 }]);
+      const { items } = await service.list("merchant_1", "store_1", { kind: "membership" } as never);
+      expect(items[0].lastPaidAt).toBe(consentAt.toISOString());
+    });
+
+    it("resends a member renewal link with membership copy", async () => {
+      const { prisma, subscriptions, service } = setup();
+      prisma.customerSubscription.findFirst.mockResolvedValue(member);
+      prisma.subscriptionInvoice.findFirst.mockResolvedValue({ id: "inv_1", status: "DUE" });
+      subscriptions.remindSubscriptionInvoice.mockResolvedValue({ checkoutUrl: "https://pay/x", sent: true });
+      const result = await service.resend("merchant_1", "store_1", "sub_m");
+      expect(result.whatsappText).toBe("Hola Ana, renueva tu membresía Club del café con un toque: https://pay/x");
+    });
+
+    it("uses membership errors when resending", async () => {
+      const { prisma, service } = setup();
+      prisma.customerSubscription.findFirst.mockResolvedValue(member);
+      await expect(service.resend("merchant_1", "store_1", "sub_m")).rejects.toThrow("No hay una renovación pendiente de pago");
+      prisma.customerSubscription.findFirst.mockResolvedValue({ ...member, status: "CANCELED" });
+      await expect(service.resend("merchant_1", "store_1", "sub_m")).rejects.toThrow("Esta membresía ya no se renueva; el miembro puede reactivarla desde su cuenta.");
+    });
+
     it("saves the grace days", async () => {
       const { prisma, service } = setup();
       await service.setEnabled("merchant_1", "store_1", true, 10);
