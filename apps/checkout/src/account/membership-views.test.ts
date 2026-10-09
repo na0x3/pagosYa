@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { joinHtml, membershipPurchaseHtml, membershipsHtml, rememberJoin, takePendingJoin } from './membership-views';
+import { joinHtml, membershipFromPrice, membershipPurchaseHtml, membershipsHtml, rememberJoin, takePendingJoin } from './membership-views';
+import { formatAmount } from '../ui/html';
 
 const context = { slug: 'cafe', storeName: 'Café Norte', signedIn: true };
 const club = { id: 'club', name: 'Club del café', currency: 'BOB', fulfillmentType: 'MEMBERSHIP', membershipPeriods: [{ id: 'm1', months: 1, amount: 5000 }, { id: 'm12', months: 12, amount: 48000 }] } as any;
@@ -76,5 +77,18 @@ describe('membershipPurchaseHtml', () => {
     const html = membershipPurchaseHtml('cafe', club);
     expect(html).toContain('action="/cuenta/cafe/unirme"');
     expect(html.match(/name="periodo"/g)).toHaveLength(2);
+  });
+});
+
+describe('membershipFromPrice', () => {
+  it('reads as a recurring price from the cheapest period', () => {
+    expect(membershipFromPrice(club)).toBe(`Desde ${formatAmount(5000, 'BOB')} / mes`);
+  });
+  it('picks the cheapest period whatever the order', () => {
+    const yearlyFirst = { ...club, membershipPeriods: [{ id: 'm12', months: 12, amount: 48000 }, { id: 'm3', months: 3, amount: 14000 }] };
+    expect(membershipFromPrice(yearlyFirst)).toBe(`Desde ${formatAmount(14000, 'BOB')} / 3 meses`);
+  });
+  it('is empty without periods', () => {
+    expect(membershipFromPrice({ ...club, membershipPeriods: [] })).toBe('');
   });
 });

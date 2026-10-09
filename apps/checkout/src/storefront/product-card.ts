@@ -4,6 +4,7 @@ import { StoreItem, assetUrl } from "../api";
 import { state } from "../state";
 import { itemVariants, selectedVariantFor, selectedExtrasFor, cart, optionStock, itemExtras, productStockLimit, productCartQuantity, optionCartQuantity, productConfigurationComplete, activeProductDiscount, discountRemainingLabel, stockStatus, remainingStock, discountedProductAmount, extrasCourtesyCopy, extraDisplayAmount, salePriceHtml, selectedUnitAmount, originalSelectedUnitAmount } from "../cart/cart";
 import { productPageUrl } from "./routes";
+import { membershipFromPrice } from "../account/membership-views";
 import { escapeHtml, initials, formatAmount } from "../ui/html";
 import { productImagePosition } from "./catalog";
 import { ICON_ARROW_LEFT, ICON_ARROW_RIGHT } from "../ui/icons";
@@ -101,11 +102,11 @@ export function renderProductCard(
         ${variantsHtml}
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note">Completa las opciones requeridas para agregar.</div>` : ""}
-        <div class="store-item-price">${salePriceHtml(item, selectedUnitAmount(item, selectedVariant, selectedExtras), originalSelectedUnitAmount(item, selectedVariant, selectedExtras), "store-item-current-price")}${stockNote}</div>
+        <div class="store-item-price">${item.fulfillmentType === "MEMBERSHIP" ? `<span class="store-item-current-price">${escapeHtml(membershipFromPrice(item))}</span>` : `${salePriceHtml(item, selectedUnitAmount(item, selectedVariant, selectedExtras), originalSelectedUnitAmount(item, selectedVariant, selectedExtras), "store-item-current-price")}${stockNote}`}</div>
       </div>
       ${
         item.fulfillmentType === "MEMBERSHIP"
-          ? `<a class="primary product-page-link" href="${escapeHtml(detailUrl)}">Hacerme miembro</a>`
+          ? `<a class="store-item-join product-page-link" href="${escapeHtml(detailUrl)}">Hacerme miembro</a>`
           : soldOut
           ? ""
           : `<div class="qty-stepper">

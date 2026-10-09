@@ -9,7 +9,7 @@ import { app } from "../ui/app";
 import { itemVariants, selectedVariantFor, selectedExtrasFor, optionStock, cart, itemExtras, productStockLimit, productCartQuantity, optionCartQuantity, productConfigurationComplete, selectedProductImageByItem, stockStatus, remainingStock, activeProductDiscount, discountRemainingLabel, discountedProductAmount, selectedOptionsByItem, selectedExtraIdsByItem, extraDisplayAmount, salePriceHtml, selectedUnitAmount, originalSelectedUnitAmount, selectedVariantByItem, saveCart } from "../cart/cart";
 import { categoryIdFromLocation, categoryPageUrl, storeCatalogUrl, productPageUrl } from "./routes";
 import { productImagePosition } from "./catalog";
-import { membershipPurchaseHtml } from "../account/membership-views";
+import { membershipFromPrice, membershipPurchaseHtml } from "../account/membership-views";
 import { escapeHtml, initials, formatAmount } from "../ui/html";
 import { ICON_ARROW_LEFT, ICON_ARROW_RIGHT, ICON_LOCK, ICON_WHATSAPP, ICON_EXTERNAL } from "../ui/icons";
 import { applyStoreTheme } from "./theme";
@@ -209,7 +209,9 @@ export function renderProductPage(slug: string, store: Store, productId: string)
         return `<label><input type="checkbox" class="product-detail-extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some(selected => selected.id === extra.id) ? 'checked' : ''} ${extra.available ? '' : 'disabled'}><span><strong>${escapeHtml(extra.name)}</strong>${extra.required ? '<small>Requerido</small>' : ''}${extra.available ? '' : '<small>Agotado</small>'}</span><b>${displayAmount === 0 ? 'Incluido' : `+${formatAmount(displayAmount, item.currency)}`}</b></label>`;
       }).join('')}</div></fieldset>`;
   }).join('');
-  const priceHtml = `${variants.length && !selectedVariant ? '<span class="product-detail-from">Desde </span>' : ''}${salePriceHtml(item, selectedUnitAmount(item, startingVariant, selectedExtras), originalSelectedUnitAmount(item, startingVariant, selectedExtras), 'product-detail-price')}`;
+  const priceHtml = item.fulfillmentType === "MEMBERSHIP"
+    ? `<span class="product-detail-price">${escapeHtml(membershipFromPrice(item))}</span>`
+    : `${variants.length && !selectedVariant ? '<span class="product-detail-from">Desde </span>' : ''}${salePriceHtml(item, selectedUnitAmount(item, startingVariant, selectedExtras), originalSelectedUnitAmount(item, startingVariant, selectedExtras), 'product-detail-price')}`;
   const selectionLabels = [...(selectedVariant?.options?.map(option => option.value) || (selectedVariant ? [selectedVariant.name] : [])), ...(selectedExtras.length ? pickedExtrasLabel(selectedExtras, "\u0000").split("\u0000") : [])];
   const deliveryLocations = (store.locations || []).filter(location => location.pickupEnabled || location.deliveryEnabled);
 

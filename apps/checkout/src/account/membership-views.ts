@@ -6,6 +6,7 @@ import type { MemberView } from "./account-api";
 const CONSENT = "Cada período te enviaremos un enlace para pagar; no se cobra nada automáticamente.";
 const LABEL: Record<number, string> = { 1: "Mensual", 3: "Trimestral", 6: "Semestral", 12: "Anual" };
 const label = (months: number) => LABEL[months] ?? `Cada ${months} meses`;
+const SUFFIX: Record<number, string> = { 1: "/ mes", 3: "/ 3 meses", 6: "/ 6 meses", 12: "/ año" };
 type Context = { slug: string; storeName: string; signedIn: boolean; preview?: boolean };
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-BO", { day: "numeric", month: "long", year: "numeric" }) : "");
 const joinPath = (slug: string, productId: string, periodId: string) => `/cuenta/${encodeURIComponent(slug)}/unirme?producto=${encodeURIComponent(productId)}&periodo=${encodeURIComponent(periodId)}`;
@@ -67,8 +68,16 @@ export function membershipsHtml(context: Context, rows: MemberView[]): string {
   return `<h1>Mis membresías</h1><ul class="account__list">${rows.map(item).join("")}</ul><p class="faint">${escapeHtml(CONSENT)}</p>`;
 }
 
+/** Card price for a membership: the cheapest period, read as recurring ("Desde 50.00 BOB / mes"). */
+export function membershipFromPrice(product: StoreItem): string {
+  const periods = product.membershipPeriods ?? [];
+  if (!periods.length) return "";
+  const cheapest = periods.reduce((best, period) => (period.amount < best.amount ? period : best));
+  return `Desde ${formatAmount(cheapest.amount, product.currency)} ${SUFFIX[cheapest.months] ?? `/ ${cheapest.months} meses`}`;
+}
+
 export function membershipPurchaseHtml(slug: string, product: StoreItem): string {
   const periods = product.membershipPeriods ?? [];
   if (!periods.length) return "";
-  return `<form class="product-detail-purchase" data-membership-purchase action="/cuenta/${encodeURIComponent(slug)}/unirme" method="get"><input type="hidden" name="producto" value="${escapeHtml(product.id)}"><fieldset><legend>Elige tu período</legend>${periods.map((period, index) => `<label><input type="radio" name="periodo" value="${escapeHtml(period.id)}"${index ? "" : " checked"}> ${escapeHtml(label(period.months))} · <strong>${escapeHtml(formatAmount(period.amount, product.currency))}</strong></label>`).join("")}</fieldset><button type="submit" class="primary">Hacerme miembro</button><p class="faint">${escapeHtml(CONSENT)}</p></form>`;
+  return `<form class="product-detail-purchase" data-membership-purchase action="/cuenta/${encodeURIComponent(slug)}/unirme" method="get"><input type="hidden" name="producto" value="${escapeHtml(product.id)}"><fieldset class="membership-periods"><legend>Elige tu período</legend>${periods.map((period, index) => `<label><input type="radio" name="periodo" value="${escapeHtml(period.id)}"${index ? "" : " checked"}><span>${escapeHtml(label(period.months))}</span><strong>${escapeHtml(formatAmount(period.amount, product.currency))}</strong></label>`).join("")}</fieldset><button type="submit" class="primary">Hacerme miembro</button><p class="faint">${escapeHtml(CONSENT)}</p></form>`;
 }
