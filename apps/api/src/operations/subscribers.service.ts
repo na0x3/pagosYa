@@ -8,6 +8,7 @@ import { DEVELOPMENT_ORDER_TRACKING_SECRET, SubscriptionsService } from "./subsc
 import { isLiveOrigin, originLivemodes } from "./subscription-origin";
 import { readSubscriptionManageToken } from "./subscription-manage-token";
 import { advanceBillingDate, cadenceLabel, isCadence, monthlyFactor, REPRICE_NOTICE_DAYS, subscriptionConsentText, subscriptionPrices, subscriptionTerms } from "./subscription-pricing";
+import { membershipState, membershipTermsPeriod, MEMBERSHIP_STATE_LABEL, periodLabel } from "../memberships/membership-rules";
 import type { ListSubscribersQuery, PublicSubscriptionActionDto } from "./dto/subscribers.dto";
 
 const STATE_CHANGED = "El estado de la suscripción cambió; actualiza la página e inténtalo de nuevo.";
@@ -34,12 +35,14 @@ export class SubscribersService {
   }
 
   private async terms(subscription: CustomerSubscription) {
+    if (subscription.membershipPeriodId) return subscriptionTerms(subscription, null, new Date(), membershipTermsPeriod(subscription, await this.subscriptions.membershipPeriodsFor([subscription])));
     const plan = subscription.planId ? await this.prisma.subscriptionPlan.findFirst({ where: { id: subscription.planId, storeId: subscription.storeId } }) : null;
     return subscriptionTerms(subscription, plan);
   }
 
   /** One state machine for the dashboard and the public page. */
   private async apply(subscription: CustomerSubscription, action: Action): Promise<CustomerSubscription> {
+    if (subscription.membershipPeriodId && action !== "cancel") throw new BadRequestException("Las membresías solo se pueden cancelar desde aquí.");
     const terms = await this.terms(subscription);
     if (!terms) throw new BadRequestException("Esta suscripción no se puede modificar");
     if (subscription.status === "CANCELED") throw new BadRequestException("Esta suscripción ya fue cancelada");
@@ -92,11 +95,12 @@ export class SubscribersService {
     return (await this.rows([updated]))[0];
   }
 
-  async setEnabled(merchantId: string, storeId: string, enabled: boolean) {
+  async setEnabled(merchantId: string, storeId: string, enabled: boolean, membershipGraceDays?: number) {
     await ownedStore(this.prisma, merchantId, storeId);
-    await this.prisma.store.update({ where: { id: storeId }, data: { subscriptionsEnabled: enabled } });
-    const activeSubscribers = await this.prisma.customerSubscription.count({ where: { storeId, paymentLinkId: { not: null }, status: { in: ["ACTIVE", "PAUSED"] } } });
-    return { enabled, activeSubscribers };
+    await this.prisma.store.update({ where: { id: storeId }, data: { subscriptionsEnabled: enabled, ...(membershipGraceDays !== undefined ? { membershipGraceDays } : {}) } });
+    const activeSubscribers = await this.prisma.customerSubscription.count({ where: { storeId, paymentLinkId: { not: null }, membershipPeriodId: null, status: { in: ["ACTIVE", "PAUSED"] } } });
+    const store = await this.prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { membershipGraceDays: true } });
+    return { enabled, activeSubscribers, membershipGraceDays: store.membershipGraceDays };
   }
 
   async reprice(merchantId: string, storeId: string, productId: string) {
@@ -190,24 +194,25 @@ export class SubscribersService {
   }
 
   async list(merchantId: string, storeId: string, query: ListSubscribersQuery) {
-    await ownedStore(this.prisma, merchantId, storeId);
+    const store = await ownedStore(this.prisma, merchantId, storeId);
     const now = new Date();
     const where: Prisma.CustomerSubscriptionWhereInput = {
       storeId,
+      ...(query.kind === "membership" ? { membershipPeriodId: { not: null } } : { membershipPeriodId: null }),
       ...(query.status === "PENDING" ? { status: "ACTIVE", id: { in: (await this.prisma.subscriptionInvoice.findMany({ where: { storeId, status: "DUE", dueAt: { lte: now } }, select: { subscriptionId: true } })).map(row => row.subscriptionId) } }
         : query.status ? { status: query.status } : {}),
       ...(query.productId ? { paymentLinkId: query.productId } : {}),
       ...(query.q ? { OR: [{ customerName: { contains: query.q, mode: "insensitive" } }, { customerEmail: { contains: query.q, mode: "insensitive" } }] } : {}),
     };
     const page = await this.prisma.customerSubscription.findMany({ where, orderBy: [{ nextBillingAt: "asc" }, { id: "asc" }], take: 51, ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}) });
-    const items = await this.rows(page.slice(0, 50));
+    const items = await this.rows(page.slice(0, 50), store.membershipGraceDays);
     return { items, nextCursor: page.length > 50 ? page[49].id : null };
   }
 
   async summary(merchantId: string, storeId: string) {
     const store = await ownedStore(this.prisma, merchantId, storeId);
     const now = new Date();
-    const active = await this.prisma.customerSubscription.findMany({ where: { storeId, status: "ACTIVE" } });
+    const active = await this.prisma.customerSubscription.findMany({ where: { storeId, status: "ACTIVE", membershipPeriodId: null } });
     const live = await this.liveIds(active);
     const liveActive = active.filter(subscription => live.has(subscription.id));
     let monthlyRecurring = 0;
@@ -217,6 +222,15 @@ export class SubscribersService {
       if (!terms) continue;
       currency = terms.currency;
       monthlyRecurring += Math.round(terms.amount * monthlyFactor(terms.interval, terms.count));
+    }
+    const memberRows = await this.prisma.customerSubscription.findMany({ where: { storeId, status: "ACTIVE", membershipPeriodId: { not: null } } });
+    const liveMembers = await this.liveIds(memberRows);
+    const memberPeriods = await this.subscriptions.membershipPeriodsFor(memberRows);
+    let memberMonthly = 0;
+    for (const row of memberRows) {
+      if (!liveMembers.has(row.id)) continue;
+      const months = memberPeriods.get(row.membershipPeriodId!)?.months;
+      if (months && row.unitAmount) memberMonthly += Math.round(row.unitAmount / months);
     }
     const weekAhead = new Date(now.getTime() + 7 * DAY_MS);
     const since = new Date(now.getTime() - 30 * DAY_MS);
@@ -229,6 +243,8 @@ export class SubscribersService {
       renewalsThisWeek: liveActive.filter(subscription => subscription.nextBillingAt >= now && subscription.nextBillingAt <= weekAhead).length,
       renewalPayRate: paid + missed ? paid / (paid + missed) : null,
       enabled: store.subscriptionsEnabled,
+      members: { active: memberRows.filter(row => liveMembers.has(row.id)).length, monthlyRecurring: memberMonthly, currency },
+      membershipGraceDays: store.membershipGraceDays,
     };
   }
 
@@ -238,8 +254,9 @@ export class SubscribersService {
     return new Set(subscriptions.filter(subscription => isLiveOrigin(subscription, origins)).map(subscription => subscription.id));
   }
 
-  private async rows(subscriptions: CustomerSubscription[]) {
+  private async rows(subscriptions: CustomerSubscription[], graceDays = 7) {
     const now = new Date();
+    const periods = await this.subscriptions.membershipPeriodsFor(subscriptions);
     const live = await this.liveIds(subscriptions);
     const planIds = [...new Set(subscriptions.map(subscription => subscription.planId).filter((id): id is string => !!id))];
     const plans = planIds.length ? await this.prisma.subscriptionPlan.findMany({ where: { id: { in: planIds } } }) : [];
@@ -247,7 +264,7 @@ export class SubscribersService {
     const invoices = ids.length ? await this.prisma.subscriptionInvoice.findMany({ where: { subscriptionId: { in: ids }, status: { in: ["DUE", "PAID"] } }, orderBy: { periodStart: "desc" } }) : [];
     return subscriptions.map(subscription => {
       const plan = plans.find(entry => entry.id === subscription.planId) ?? null;
-      const terms = subscriptionTerms(subscription, plan, now);
+      const terms = subscription.membershipPeriodId ? subscriptionTerms(subscription, null, now, membershipTermsPeriod(subscription, periods)) : subscriptionTerms(subscription, plan, now);
       const pending = invoices.some(invoice => invoice.subscriptionId === subscription.id && invoice.status === "DUE" && invoice.dueAt <= now);
       const lastPaid = invoices.find(invoice => invoice.subscriptionId === subscription.id && invoice.status === "PAID");
       const cadence = isCadence(subscription.cadence) ? subscription.cadence : null;
@@ -261,6 +278,11 @@ export class SubscribersService {
         displayStatus: (subscription.status === "ACTIVE" && pending ? "PENDING_PAYMENT" : subscription.status) as "ACTIVE" | "PAUSED" | "CANCELED" | "PENDING_PAYMENT",
         lastPaidAt: lastPaid?.paidAt?.toISOString() ?? null,
         livemode: live.has(subscription.id),
+        ...(subscription.membershipPeriodId ? (() => {
+          const state = membershipState(subscription, graceDays, now);
+          const months = periods.get(subscription.membershipPeriodId!)?.months ?? 1;
+          return { kind: "membership" as const, periodLabel: periodLabel(months), cadenceLabel: periodLabel(months), accessUntil: subscription.accessUntil?.toISOString() ?? null, membershipState: state, membershipStateLabel: MEMBERSHIP_STATE_LABEL[state] };
+        })() : {}),
       };
     });
   }

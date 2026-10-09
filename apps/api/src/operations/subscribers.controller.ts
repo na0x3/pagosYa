@@ -14,7 +14,7 @@ export class SubscribersController {
   constructor(private readonly subscribers: SubscribersService) {}
   @Get() list(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Query() query: ListSubscribersQuery) { return this.subscribers.list(req.merchant.id, storeId, query); }
   @Get("summary") summary(@Req() req: MerchantRequest, @Param("storeId") storeId: string) { return this.subscribers.summary(req.merchant.id, storeId); }
-  @Put("settings") settings(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: SubscriptionSettingsDto) { return this.subscribers.setEnabled(req.merchant.id, storeId, dto.enabled); }
+  @Put("settings") settings(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: SubscriptionSettingsDto) { return this.subscribers.setEnabled(req.merchant.id, storeId, dto.enabled, dto.membershipGraceDays); }
   @Post("products/:productId/reprice") reprice(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("productId") productId: string) { return this.subscribers.reprice(req.merchant.id, storeId, productId); }
   @Patch(":id") act(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: SubscriberActionDto) { return this.subscribers.act(req.merchant.id, storeId, id, dto.action); }
   @Post(":id/resend") resend(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string) { return this.subscribers.resend(req.merchant.id, storeId, id); }

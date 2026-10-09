@@ -11,7 +11,7 @@ const productSubscription = {
 
 function setup() {
   const prisma: any = {
-    store: { findFirst: jest.fn().mockResolvedValue({ id: "store_1", merchantId: "merchant_1", name: "Café Norte", status: "ACTIVE", subscriptionsEnabled: true }), findUnique: jest.fn().mockResolvedValue({ name: "Café Norte" }), update: jest.fn() },
+    store: { findFirst: jest.fn().mockResolvedValue({ id: "store_1", merchantId: "merchant_1", name: "Café Norte", status: "ACTIVE", subscriptionsEnabled: true, membershipGraceDays: 7 }), findUnique: jest.fn().mockResolvedValue({ name: "Café Norte" }), findUniqueOrThrow: jest.fn().mockResolvedValue({ membershipGraceDays: 7 }), update: jest.fn() },
     customerSubscription: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(productSubscription), findUnique: jest.fn().mockResolvedValue(productSubscription), findUniqueOrThrow: jest.fn().mockResolvedValue(productSubscription), update: jest.fn().mockResolvedValue(productSubscription), updateMany: jest.fn().mockResolvedValue({ count: 1 }), count: jest.fn().mockResolvedValue(0) },
     subscriptionPlan: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     subscriptionInvoice: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
@@ -19,6 +19,7 @@ function setup() {
     paymentLink: { findFirst: jest.fn().mockResolvedValue({ id: "p1", amount: 8000, variants: [], extras: [], status: "ACTIVE" }) },
     paymentIntent: { findUnique: jest.fn() },
     storeOrder: { findMany: jest.fn().mockResolvedValue([{ id: "order_1", paymentIntent: { livemode: true } }]) },
+    membershipPeriod: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((callback: (tx: unknown) => unknown) => callback(prisma));
@@ -29,6 +30,7 @@ function setup() {
     sendSubscriptionNotice: jest.fn().mockImplementation((to: string, subject: string, body: string) => email.send({ to, subject, body }).then(() => true)),
     manageUrl: jest.fn().mockReturnValue("https://pagar.test/suscripcion/x"),
     remindSubscriptionInvoice: jest.fn(),
+    membershipPeriodsFor: jest.fn().mockImplementation(async (rows: any[]) => new Map((await prisma.membershipPeriod.findMany({ rows })).map((row: any) => [row.id, { months: row.months, amount: row.amount }]))),
   };
   const config = { get: (key: string) => (key === "app.orderTrackingSecret" ? "s" : "http://localhost:5174") };
   return { prisma, email, subscriptions, service: new SubscribersService(prisma, subscriptions, config as never) };
@@ -255,7 +257,49 @@ describe("SubscribersService", () => {
   it("turns the switch off and reports who keeps renewing", async () => {
     const { prisma, service } = setup();
     prisma.customerSubscription.count.mockResolvedValue(4);
-    await expect(service.setEnabled("merchant_1", "store_1", false)).resolves.toEqual({ enabled: false, activeSubscribers: 4 });
+    await expect(service.setEnabled("merchant_1", "store_1", false)).resolves.toEqual({ enabled: false, activeSubscribers: 4, membershipGraceDays: 7 });
     expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { subscriptionsEnabled: false } });
+  });
+
+  describe("members", () => {
+    const member = { id: "sub_m", merchantId: "merchant_1", storeId: "store_1", planId: null, paymentLinkId: "club", membershipPeriodId: "m12", pendingPeriodId: null, unitAmount: 48000, quantity: 1, currency: "BOB", itemName: "Club del café", status: "ACTIVE", accessUntil: new Date(Date.now() + 40 * 86400000), nextBillingAt: new Date(Date.now() + 40 * 86400000), customerName: "Ana", customerEmail: "ana@mail.com", customerPhone: null, cadence: null, sourceOrderId: "order_1" };
+
+    it("lists only memberships with kind=membership, and only subscriptions otherwise", async () => {
+      const { prisma, service } = setup();
+      prisma.customerSubscription.findMany.mockResolvedValue([]);
+      await service.list("merchant_1", "store_1", { kind: "membership" } as never);
+      expect(prisma.customerSubscription.findMany.mock.calls.at(-1)[0].where).toEqual(expect.objectContaining({ membershipPeriodId: { not: null } }));
+      await service.list("merchant_1", "store_1", {} as never);
+      expect(prisma.customerSubscription.findMany.mock.calls.at(-1)[0].where).toEqual(expect.objectContaining({ membershipPeriodId: null }));
+    });
+
+    it("shows the period, activa hasta and state for a member row", async () => {
+      const { prisma, service } = setup();
+      prisma.customerSubscription.findMany.mockResolvedValue([member]);
+      prisma.membershipPeriod.findMany.mockResolvedValue([{ id: "m12", months: 12, amount: 48000 }]);
+      const { items } = await service.list("merchant_1", "store_1", { kind: "membership" } as never);
+      expect(items[0]).toEqual(expect.objectContaining({ kind: "membership", periodLabel: "Anual", membershipState: "ACTIVE", membershipStateLabel: "Activa", amount: 48000 }));
+    });
+
+    it("counts members and their monthly-equivalent revenue apart from subscriptions", async () => {
+      const { prisma, service } = setup();
+      prisma.customerSubscription.findMany.mockImplementation(async ({ where }: any) => (where.membershipPeriodId ? [member] : []));
+      prisma.membershipPeriod.findMany.mockResolvedValue([{ id: "m12", months: 12, amount: 48000 }]);
+      const summary = await service.summary("merchant_1", "store_1");
+      expect(summary.members).toEqual({ active: 1, monthlyRecurring: 4000, currency: "BOB" });
+      expect(summary.membershipGraceDays).toBe(7);
+    });
+
+    it("lets the owner only cancel a membership", async () => {
+      const { prisma, service } = setup();
+      prisma.customerSubscription.findFirst.mockResolvedValue(member);
+      await expect(service.act("merchant_1", "store_1", "sub_m", "pause")).rejects.toThrow("Las membresías solo se pueden cancelar desde aquí.");
+    });
+
+    it("saves the grace days", async () => {
+      const { prisma, service } = setup();
+      await service.setEnabled("merchant_1", "store_1", true, 10);
+      expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { subscriptionsEnabled: true, membershipGraceDays: 10 } });
+    });
   });
 });
