@@ -972,6 +972,18 @@ describe('Independent source generation',()=>{
     expect(prompt).toContain('Required first-creation files: index.html, product.html, checkout.html');
     expect(prompt).toContain('The form is opt-in');
   });
+  it('tells the author how membership products render', async () => {
+    const generated = {design: design(), label:'Café', files:[...files(),
+      {path:'product.html',content:'<link rel="stylesheet" href="styles.css"><header class="brand">Café</header><main data-pagosya-product-page></main><script src="config.js"></script><script src="commerce.js"></script><script src="site.js"></script>'},
+      {path:'checkout.html',content:'<link rel="stylesheet" href="styles.css"><header class="brand">Café</header><main data-pagosya-checkout-page></main><script src="config.js"></script><script src="commerce.js"></script><script src="site.js"></script>'}]};
+    const fetchMock = jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(generated)}]}]})));
+    const {service}=setup();
+    await service.generate('m','s',input);
+    const promptText = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content.filter((c: any) => c.type === 'input_text').map((c: any) => c.text).join('\n');
+    expect(promptText).toContain('A membership product (fulfillmentType MEMBERSHIP) renders product-detail__membership');
+    expect(promptText).toContain('never add a cart button for it');
+    expect(promptText).not.toMatch(/cobro automático|automatic(ally)? charg/i);
+  });
   it('denies foreign assets before reading their bytes or contacting the model',async()=>{
     const fetchMock=jest.spyOn(globalThis,'fetch');const {service,uploads}=setup();await expect(service.generate('m','s',{...input,assetUrls:['/v1/uploads/abc-123.png']})).rejects.toThrow('no pertenece');expect(uploads.getBuffer).not.toHaveBeenCalled();expect(fetchMock).not.toHaveBeenCalled();
   });
