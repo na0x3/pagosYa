@@ -1,19 +1,48 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { joinHtml, membershipPurchaseHtml, membershipsHtml, rememberJoin, takePendingJoin } from './membership-views';
 
 const context = { slug: 'cafe', storeName: 'Café Norte', signedIn: true };
 const club = { id: 'club', name: 'Club del café', currency: 'BOB', fulfillmentType: 'MEMBERSHIP', membershipPeriods: [{ id: 'm1', months: 1, amount: 5000 }, { id: 'm12', months: 12, amount: 48000 }] } as any;
 
 describe('pending join', () => {
-  beforeEach(() => sessionStorage.clear());
-  it('survives sign-in, registration and email confirmation, and is read once', () => {
+  beforeEach(() => { localStorage.clear(); sessionStorage.clear(); vi.useRealTimers(); });
+  it('survives another tab (localStorage, not sessionStorage)', () => {
     rememberJoin('cafe', '?producto=club&periodo=m12');
+    expect(sessionStorage.length).toBe(0);
+    expect(localStorage.getItem('pagosya:join:cafe')).toContain('club');
     expect(takePendingJoin('cafe')).toBe('?producto=club&periodo=m12');
+  });
+  it('is read once', () => {
+    rememberJoin('cafe', '?producto=club&periodo=m12');
+    takePendingJoin('cafe');
     expect(takePendingJoin('cafe')).toBeNull();
   });
-  it('ignores anything that is not a membership query', () => {
-    rememberJoin('cafe', 'javascript:alert(1)');
+  it('expires after one hour', () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-09T10:00:00Z'));
+    rememberJoin('cafe', '?producto=club&periodo=m12');
+    vi.setSystemTime(new Date('2026-10-09T11:00:01Z'));
+    expect(takePendingJoin('cafe')).toBeNull();
+    expect(localStorage.getItem('pagosya:join:cafe')).toBeNull();
+  });
+  it('still returns it within the hour', () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-09T10:00:00Z'));
+    rememberJoin('cafe', '?producto=club&periodo=m12');
+    vi.setSystemTime(new Date('2026-10-09T10:59:00Z'));
+    expect(takePendingJoin('cafe')).toBe('?producto=club&periodo=m12');
+  });
+  it('tolerates extra params and stores the canonical query', () => {
+    rememberJoin('cafe', '?utm_source=x&periodo=m12&account_embed=1&producto=club');
+    expect(takePendingJoin('cafe')).toBe('?producto=club&periodo=m12');
+  });
+  it('refuses invalid values', () => {
+    for (const q of ['javascript:alert(1)', '?producto=club', '?producto=a%20b&periodo=m1', '?producto=club&periodo=' + 'x'.repeat(41)]) {
+      rememberJoin('cafe', q);
+      expect(localStorage.getItem('pagosya:join:cafe')).toBeNull();
+    }
+  });
+  it('drops a tampered stored value', () => {
+    localStorage.setItem('pagosya:join:cafe', JSON.stringify({ query: '?producto=<x>&periodo=m1', at: Date.now() }));
     expect(takePendingJoin('cafe')).toBeNull();
   });
 });

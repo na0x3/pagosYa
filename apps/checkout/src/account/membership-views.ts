@@ -10,17 +10,26 @@ type Context = { slug: string; storeName: string; signedIn: boolean; preview?: b
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-BO", { day: "numeric", month: "long", year: "numeric" }) : "");
 const joinPath = (slug: string, productId: string, periodId: string) => `/cuenta/${encodeURIComponent(slug)}/unirme?producto=${encodeURIComponent(productId)}&periodo=${encodeURIComponent(periodId)}`;
 const JOIN_QUERY = /^\?producto=[\w-]{1,40}&periodo=[\w-]{1,40}$/;
+const ID = /^[\w-]{1,40}$/;
+const JOIN_TTL_MS = 60 * 60 * 1000;
 const key = (slug: string) => `pagosya:join:${slug}`;
 
-export function rememberJoin(slug: string, query: string) {
-  if (!JOIN_QUERY.test(query)) return;
-  try { sessionStorage.setItem(key(slug), query); } catch {}
+/** Kept in localStorage (not sessionStorage): the confirmation email opens in a new tab. */
+export function rememberJoin(slug: string, search: string) {
+  const params = new URLSearchParams(search);
+  const product = params.get("producto") ?? "", period = params.get("periodo") ?? "";
+  if (!ID.test(product) || !ID.test(period)) return;
+  try { localStorage.setItem(key(slug), JSON.stringify({ query: `?producto=${encodeURIComponent(product)}&periodo=${encodeURIComponent(period)}`, at: Date.now() })); } catch {}
 }
 export function takePendingJoin(slug: string): string | null {
   try {
-    const value = sessionStorage.getItem(key(slug));
-    sessionStorage.removeItem(key(slug));
-    return value && JOIN_QUERY.test(value) ? value : null;
+    const raw = localStorage.getItem(key(slug));
+    localStorage.removeItem(key(slug));
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { query?: unknown; at?: unknown };
+    if (typeof saved.query !== "string" || typeof saved.at !== "number") return null;
+    if (Date.now() - saved.at > JOIN_TTL_MS || saved.at > Date.now() + 60_000) return null;
+    return JOIN_QUERY.test(saved.query) ? saved.query : null;
   } catch { return null; }
 }
 
