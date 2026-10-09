@@ -68,3 +68,12 @@ describe("subscriptionTerms", () => {
     expect(subscriptionTerms({ planId: null, paymentLinkId: "p1", cadence: null, unitAmount: null }, null, now)).toBeNull();
   });
 });
+
+describe("advanceBillingDate month ends", () => {
+  it("clamps to the last day of the target month instead of overflowing", () => {
+    expect(advanceBillingDate(new Date("2027-01-31T15:00:00Z"), "MONTHLY", 1)).toEqual(new Date("2027-02-28T15:00:00Z"));
+    expect(advanceBillingDate(new Date("2026-08-31T15:00:00Z"), "MONTHLY", 3)).toEqual(new Date("2026-11-30T15:00:00Z"));
+    expect(advanceBillingDate(new Date("2028-02-29T15:00:00Z"), "YEARLY", 1)).toEqual(new Date("2029-02-28T15:00:00Z"));
+    expect(advanceBillingDate(new Date("2026-10-01T15:00:00Z"), "MONTHLY", 1)).toEqual(new Date("2026-11-01T15:00:00Z"));
+  });
+});

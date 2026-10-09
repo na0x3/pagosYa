@@ -22,9 +22,14 @@ export function cadenceInterval(cadence: Cadence): { interval: "WEEKLY" | "MONTH
 
 export function advanceBillingDate(date: Date, interval: string, count: number): Date {
   const next = new Date(date);
-  if (interval === "WEEKLY") next.setUTCDate(next.getUTCDate() + count * 7);
-  else if (interval === "YEARLY") next.setUTCFullYear(next.getUTCFullYear() + count);
-  else next.setUTCMonth(next.getUTCMonth() + count);
+  if (interval === "WEEKLY") { next.setUTCDate(next.getUTCDate() + count * 7); return next; }
+  const months = interval === "YEARLY" ? count * 12 : count;
+  // 31 January + 1 month is the last day of February, never 3 March.
+  const day = next.getUTCDate();
+  next.setUTCDate(1);
+  next.setUTCMonth(next.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+  next.setUTCDate(Math.min(day, lastDay));
   return next;
 }
 
