@@ -99,7 +99,8 @@ export async function startGateway(session, fetchImpl = fetch, observe) {
       stage = 'connection';
       const upstream = await fetchImpl('https://api.openai.com/v1/responses', {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body), signal: AbortSignal.any([controller.signal, AbortSignal.timeout(240_000)]),
+        // A whole-store authoring call runs ~250s on average and the API allows it 900s; 240s cut every one off.
+        body: JSON.stringify(body), signal: AbortSignal.any([controller.signal, AbortSignal.timeout(600_000)]),
       });
       stage = 'stream';
       const result = await completedResponse(upstream, observe);
