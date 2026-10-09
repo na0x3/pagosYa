@@ -80,7 +80,7 @@ import { SOURCE_MOTION_PERSONALITY_DIRECTION, sourceMotionPersonalityLine } from
 import { buildSourceVisualSystem, savedSourceVisualSystem, sourceProductPageStyle, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
 import { validateSourcePreflight } from './source-preflight';
-import { repairSourceContracts } from './source-autorepair';
+import { platformSuppliedPages, repairSourceContracts } from './source-autorepair';
 import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { applySourceKitCss, SOURCE_KIT_CSS_DIRECTION, SOURCE_KIT_CSS_DIRECTION_NEXT, SOURCE_KIT_CSS_PATH } from './source-kit-css';
@@ -768,7 +768,8 @@ export class SourceGenerationService {
         // round-trip on a missing alt attribute helps nobody, and the model's
         // second answer would not be better informed than ours.
         const contractRepair = repairSourceContracts(generated.files, {
-          knownPaths: new Set(preflightFiles.map(file => file.path)),
+          // Standard and commerce pages are added after this repair; a link to one is live, not dead.
+          knownPaths: new Set([...preflightFiles.map(file => file.path), ...platformSuppliedPages(sitePurpose)]),
           // The merchant's own description of the photo, resolved through the
           // legend that maps a bundled path back to its upload.
           altFor: source => {

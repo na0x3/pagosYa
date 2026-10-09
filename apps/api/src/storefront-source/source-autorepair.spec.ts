@@ -1,4 +1,4 @@
-import { repairSourceContracts } from './source-autorepair';
+import { platformSuppliedPages, repairSourceContracts } from './source-autorepair';
 import { validateSourcePreflight } from './source-preflight';
 
 const file = (path: string, content: string) => ({ path, content });
@@ -78,5 +78,28 @@ describe('source contract auto-repair', () => {
     expect(repairs.length).toBeGreaterThan(0);
     // No second model attempt, no credits, no red box.
     expect(() => validateSourcePreflight(files)).not.toThrow();
+  });
+});
+
+describe('links to pages the platform adds after the repair', () => {
+  // Huerta Viva (2026-10-09): every header and footer link lost its href because nosotros.html, faq.html,
+  // contacto.html and productos.html are added after this repair, so they looked dead when it ran.
+  const nav = '<nav><a href="index.html">Inicio</a><a href="productos.html">Catálogo</a><a href="nosotros.html">Nosotros</a><a href="faq.html">Preguntas frecuentes</a><a href="contacto.html">Contacto</a><a href="como-funciona.html">Cómo funciona</a></nav>';
+  const generated = [file('index.html', nav), file('styles.css', 'a{color:red}')];
+
+  it('keeps links to standard and commerce pages of a shop', () => {
+    const { files } = repairSourceContracts(generated, { knownPaths: new Set([...generated.map(entry => entry.path), ...platformSuppliedPages('shop')]) });
+    for (const page of ['productos.html', 'nosotros.html', 'faq.html', 'contacto.html']) expect(files[0].content).toContain(`href="${page}"`);
+  });
+
+  it('still removes a link to a page nobody will supply', () => {
+    const { files, repairs } = repairSourceContracts(generated, { knownPaths: new Set([...generated.map(entry => entry.path), ...platformSuppliedPages('shop')]) });
+    expect(files[0].content).toMatch(/<a\s*>Cómo funciona<\/a>/);
+    expect(repairs).toEqual(['index.html: removed broken link to como-funciona.html']);
+  });
+
+  it('does not promise the commerce pages to a site that is not a shop', () => {
+    expect(platformSuppliedPages('portfolio')).not.toContain('productos.html');
+    expect(platformSuppliedPages('portfolio')).toContain('nosotros.html');
   });
 });
