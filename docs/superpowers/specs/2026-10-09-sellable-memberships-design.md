@@ -42,7 +42,7 @@ Store setting under Suscripciones: "Días de gracia para renovar", integer 0–3
   - `accessUntil DateTime?` — "activa hasta"; the member has access while `now < accessUntil + graceDays` and status is not `LAPSED`.
   - `pendingPeriodId String?` — period switch to apply at the next renewal.
   - Status value `LAPSED` ("Vencida") joins `ACTIVE`, `PAUSED`, `CANCELED`.
-- `activeKey` for memberships: `membership:<storeId>:<paymentLinkId>:<storeCustomerId>`, cleared on lapse and when a canceled membership ends, so there is one active membership per account per product.
+- `activeKey` for memberships: `membership:<storeId>:<paymentLinkId>:<storeCustomerId>` while `ACTIVE`, cleared on cancel and lapse. Enrollment locks the buyer's `StoreCustomer` row, so two payments for the same account are serialized and the second becomes a recorded duplicate instead of a unique-key error.
 
 The migration is written by the implementer and applied by the owner; no agent runs `prisma migrate`/`diff`/`reset` against the dev DB.
 
@@ -59,7 +59,7 @@ Membership products appear on cards and on their own page like any product, with
 3. **Review** — membership, period (changeable), price, and the consent line: *"Cada período te enviaremos un enlace para pagar; no se cobra nada automáticamente."*
 4. **Pay** — QR or card as today. No delivery step.
 
-Email verification is not required to join: the membership is linked by `storeCustomerId`, not by email match.
+Store sign-in already requires a confirmed email, so a brand-new account confirms its email (existing link) and then returns to the membership checkout. The membership is linked by `storeCustomerId`, not by email match.
 
 ### After payment
 The membership becomes `ACTIVE` with `accessUntil = paidAt + period`, `nextBillingAt = accessUntil`, locked `unitAmount` = the period's price at that moment. The buyer sees a confirmation page and receives a welcome email with "activa hasta".
@@ -76,13 +76,13 @@ Lists each membership: name, period, status (Activa / En gracia / Vencida / Canc
 
 Memberships run on the existing renewal engine (`SubscriptionInvoice` + payment links) with a membership branch:
 
-- **Notice:** 5 days before `accessUntil` the engine creates the renewal invoice (amount = locked price, or the pending period's current price if a switch is pending) and emails the pay link: *"Tu membresía vence el <fecha> · Bs X · Pagar"*.
-- **Reminders:** on the due date (`accessUntil`), and a last one 2 days before grace ends (skipped when grace < 3 days).
-- **Paid:** `accessUntil` advances one period **from the old `accessUntil`**, not from the payment date; `nextBillingAt` follows it; `missedCount` resets. A pending switch is applied: `membershipPeriodId = pendingPeriodId`, new `unitAmount`, `pendingPeriodId = null`. The payment is recorded as a paid `StoreOrder` with no fulfillment (like a digital order) so it appears in sales, receipts and finance.
+- **Notice:** 5 days before `accessUntil` the engine creates the renewal invoice and emails the pay link: *"Tu membresía vence el <fecha> · Bs X · Pagar"*. If a switch is pending it is applied here, as the existing price-change mechanism does: the invoice uses the new period's current price and length, and `membershipPeriodId`, `unitAmount` and `pendingPeriodId` are updated in the same transaction.
+- **Reminders:** the existing schedule — on the due date (`accessUntil`) and a last one 3 days later; none once the membership has lapsed.
+- **Paid:** `accessUntil` advances one period **from the old `accessUntil`**, not from the payment date; `missedCount` resets. The payment is recorded as a paid `StoreOrder` with no fulfillment (like a digital order) so it appears in sales, receipts and finance.
 - **Missed:** when `accessUntil + graceDays` passes unpaid, the invoice becomes `MISSED`, its payment intent and order are canceled (the link closes), the membership becomes `LAPSED`, `activeKey` is cleared, and the buyer gets a "Tu membresía venció — puedes reactivarla cuando quieras" email.
 - **Reactivation:** a new membership checkout payment reuses the same `CustomerSubscription` row (history stays together): status `ACTIVE`, new `activeKey`, `accessUntil = paidAt + period`.
 - **Owner archives the membership product:** no further renewals; members keep access until `accessUntil`, then become `CANCELED`; members get a notice.
-- **Cancel** (buyer or owner): renewals stop immediately, any open renewal is skipped, `canceledAt` set; access continues until `accessUntil`. A daily sweep clears `activeKey` on canceled memberships whose `accessUntil` has passed.
+- **Cancel** (buyer or owner): renewals stop immediately, any open renewal is skipped, `canceledAt` set; access continues until `accessUntil`. `activeKey` is cleared on cancel (existing behaviour); the "already a member" check reads `status` and `accessUntil`, so no sweep is needed.
 
 The buyer-facing status is derived: `ACTIVE` and `now < accessUntil` → Activa; `ACTIVE` and within grace → En gracia; `LAPSED` → Vencida; `CANCELED` → Cancelada (showing "activa hasta" while `now < accessUntil`).
 
