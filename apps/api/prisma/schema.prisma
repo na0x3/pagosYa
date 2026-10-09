@@ -712,6 +712,8 @@ model Store {
   bundles                      StoreBundle[]
   bundlesEnabled               Boolean                          @default(false)
   subscriptionsEnabled         Boolean                          @default(false)
+  // Days a membership stays usable after an unpaid renewal before it lapses (0–30).
+  membershipGraceDays     Int      @default(7)
   shippingEnabled              Boolean                          @default(false)
   shippingPickupEnabled        Boolean                          @default(true)
   shippingCarriersEnabled      Boolean                          @default(false)
@@ -1542,6 +1544,8 @@ model CollectionProduct {
 // A product within a Store's catalog.
 model PaymentLink {
   subscriptionOptions   ProductSubscriptionOption[]
+  membershipPeriods     MembershipPeriod[]
+  // PHYSICAL | DIGITAL | MEMBERSHIP (spec 2026-10-09-sellable-memberships-design).
   fulfillmentType       String                      @default("PHYSICAL")
   digitalAssets         DigitalAsset[]
   collectionProducts    CollectionProduct[]
@@ -1639,6 +1643,23 @@ model ProductSubscriptionOption {
   updatedAt       DateTime                   @updatedAt
 
   @@unique([paymentLinkId, cadence])
+}
+
+// One purchasable length of a membership product (spec 2026-10-09). Price changes apply to new members only;
+// a removed period that members ever used is archived, not deleted.
+model MembershipPeriod {
+  id            String      @id @default(cuid())
+  paymentLinkId String
+  paymentLink   PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  months        Int
+  amount        Int
+  position      Int         @default(0)
+  archivedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([paymentLinkId, months])
+  @@index([paymentLinkId, archivedAt])
 }
 
 // Persisted checkout totals keep storefront sorting and finance summaries
@@ -2260,6 +2281,13 @@ model CustomerSubscription {
   consentAt          DateTime?
   missedCount        Int                         @default(0)
   pausedAt           DateTime?
+  // Memberships (spec 2026-10-09): non-null membershipPeriodId marks a membership row.
+  membershipPeriodId String?
+  storeCustomerId    String?
+  // "Activa hasta": paid access ends here; grace days are added on top while status is ACTIVE.
+  accessUntil        DateTime?
+  // Period switch applied when the next renewal is created.
+  pendingPeriodId    String?
   createdAt          DateTime                    @default(now())
   updatedAt          DateTime                    @updatedAt
 
@@ -2267,6 +2295,8 @@ model CustomerSubscription {
   @@index([planId, status])
   @@index([paymentLinkId, status])
   @@index([sourceOrderId])
+  @@index([storeCustomerId, paymentLinkId])
+  @@index([storeId, membershipPeriodId, status])
 }
 
 model SubscriptionInvoice {
