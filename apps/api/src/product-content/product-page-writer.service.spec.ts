@@ -21,6 +21,15 @@ describe('ProductPageWriterService', () => {
     expect(data.contentBlocks[0]).toEqual(expect.objectContaining({ type: 'story', origin: 'yapi' }));
     expect(usage.record).toHaveBeenCalledWith('s1', 'product-page', expect.any(String), expect.anything(), expect.any(Number), 'ok');
   });
+  it('sends the photos in a user message: the API rejects images in a developer message (invalid_value)', async () => {
+    const { service, fetchMock } = setup(product({ imageUrls: ['/v1/uploads/caja.jpg'] }));
+    await service.fill('s1', 'p1', 'auto');
+    const input = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input;
+    expect(input[0].role).toBe('developer');
+    expect(input[0].content.every((part: { type: string }) => part.type === 'input_text')).toBe(true);
+    expect(input[1].role).toBe('user');
+    expect(input[1].content.some((part: { type: string }) => part.type === 'input_image')).toBe(true);
+  });
   it('skips a product the merchant already filled, without calling the model', async () => {
     const { service, prisma, fetchMock } = setup(product({ contentBlocks: [{ id: 'blk_aaaaaaaaaaaa', type: 'story', problem: 'p', tried: 't', solution: 's' }] }));
     expect(await service.fill('s1', 'p1', 'auto')).toBe('skipped');
