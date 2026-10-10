@@ -29,6 +29,12 @@ export const SOURCE_LAYOUT_BASELINE = `${SOURCE_LAYOUT_BASELINE_MARKER}
 :where(h1, h2) {
   overflow-wrap: break-word;
 }
+/* On a phone a word wider than the screen must still break: break-word would scroll the page sideways. */
+@media (max-width: 767px) {
+  :where(h1, h2) {
+    overflow-wrap: anywhere;
+  }
+}
 :where(input, select, textarea, button) {
   max-width: 100%;
   font: inherit;

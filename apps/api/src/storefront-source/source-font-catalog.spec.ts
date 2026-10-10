@@ -53,6 +53,11 @@ describe('font catalogue', () => {
     for (const font of SOURCE_FONT_CATALOG.slice(30)) expect(readFileSync(kitPath('fonts', font.file)).length).toBeLessThan(600_000);
   });
 
+  it('offers for body text only families that ship a regular weight', () => {
+    const covers400 = (weights: string) => { const [low, high = low] = weights.split('–').map(Number); return low <= 400 && 400 <= high; };
+    for (const font of SOURCE_FONT_CATALOG.filter(font => font.role !== 'display')) expect([font.id, covers400(font.weights)]).toEqual([font.id, true]);
+  });
+
   it('has themed faces a business story can call for', () => {
     const personalities = new Set(SOURCE_FONT_CATALOG.flatMap(font => font.personality));
     for (const kind of ['typewriter', 'stencil', 'techno', 'script', 'handwritten', 'chunky', 'neon', 'fashion', 'brutal', 'sports']) expect(personalities).toContain(kind);

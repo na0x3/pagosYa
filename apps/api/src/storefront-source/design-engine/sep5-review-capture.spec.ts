@@ -84,3 +84,17 @@ it('lets a big headline widen its content-sized column instead of splitting a wo
   const { facts } = await captureSep5Draft(snapshot);
   expect(facts.find(fact => fact.width === 1280)!.brokenWords).toEqual([]);
 });
+
+// Review 2026-10-10: break-word kept long words out of min-content, so a phone page scrolled sideways.
+it('never lets a long headline word make a phone page scroll sideways', async () => {
+  const snapshot = await store(completeHeader, '', '<section class="solo"><h1>Electrodomésticos</h1></section>', '.solo{display:grid}.solo h1{font:700 64px/1 sans-serif;margin:0}');
+  const { facts } = await captureSep5Draft(snapshot);
+  expect(facts.find(fact => fact.width === 390)!.pageWidth).toBeLessThanOrEqual(392);
+});
+
+// A visually hidden heading is 1px wide: every word "breaks", and asking the model to widen it would un-hide it.
+it('ignores visually hidden headings when measuring broken words', async () => {
+  const snapshot = await store(completeHeader, '', '<h3 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Productos destacados de temporada</h3>', 'body{margin:0}');
+  const { facts } = await captureSep5Draft(snapshot);
+  expect(facts.every(fact => fact.brokenWords.length === 0)).toBe(true);
+});

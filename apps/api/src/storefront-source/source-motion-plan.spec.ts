@@ -39,3 +39,14 @@ describe('motion choreography scope', () => {
     expect(prompt).not.toContain('@pagosya/ui');
   });
 });
+
+describe('motion plan consistency', () => {
+  it('drops the two-moment wording, and keeps a local motion edit to what was asked', () => {
+    const fresh = sourceMotionPlan({ creative: true, instruction: '', motion: 'auto', react: false });
+    expect(fresh).not.toContain('two different scroll moments');
+    const edit = sourceMotionPlan({ creative: false, instruction: 'Agrega paralaje a la foto', motion: 'auto', react: false });
+    expect(edit).toContain('Implement only the currently requested motion');
+    expect(edit).not.toContain('most story sections');
+    expect(edit).not.toMatch(/marquee band/i);
+  });
+});

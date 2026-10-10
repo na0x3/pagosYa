@@ -44,7 +44,7 @@ const FONTS = [
   { id: 'stardos-stencil', family: 'Stardos Stencil', role: 'display', personality: ['stencil', 'serif', 'crate'], weights: '700' },
   { id: 'staatliches', family: 'Staatliches', role: 'display', personality: ['sports', 'condensed', 'workwear'], weights: '400' },
   { id: 'teko', family: 'Teko', role: 'display', personality: ['sports', 'condensed', 'athletic'], weights: '300–700' },
-  { id: 'barlow-condensed', family: 'Barlow Condensed', role: 'both', personality: ['sports', 'condensed', 'signage'], weights: '700' },
+  { id: 'barlow-condensed', family: 'Barlow Condensed', role: 'display', personality: ['sports', 'condensed', 'signage'], weights: '700' },
   { id: 'orbitron', family: 'Orbitron', role: 'display', personality: ['techno', 'geometric', 'futuristic'], weights: '400–900' },
   { id: 'audiowide', family: 'Audiowide', role: 'display', personality: ['techno', 'retro-future', 'wide'], weights: '400' },
   { id: 'michroma', family: 'Michroma', role: 'display', personality: ['techno', 'extended', 'precise'], weights: '400' },

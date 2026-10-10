@@ -67,9 +67,11 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           // A word whose own line boxes sit on two lines was split mid-word: a heading squeezed into a narrow column.
           brokenWords: (() => {
             const broken: string[] = [];
-            for (const heading of Array.from(document.querySelectorAll('h1,h2,h3'))) {
+            // h1/h2 only: the baseline lets smaller headings break anywhere by design. A box under 2px is visually hidden text.
+            for (const heading of Array.from(document.querySelectorAll('h1,h2'))) {
+              if (broken.length >= 3) break;
               const box = heading.getBoundingClientRect();
-              if (!box.width || !box.height) continue;
+              if (box.width < 2 || box.height < 2) continue;
               const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
               for (let node = walker.nextNode(); node && broken.length < 3; node = walker.nextNode()) {
                 for (const match of (node.textContent || '').matchAll(/[\p{L}\p{N}]{4,}/gu)) {

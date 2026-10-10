@@ -59,3 +59,10 @@ describe('sourceAsksForRestraint', () => {
       expect(sourceAsksForRestraint(text)).toBe(false);
   });
 });
+
+describe('sourceAsksForRestraint, beyond the words themselves', () => {
+  it('does not hear restraint in a negation, a business name, a product word or an explicit request for colour', () => {
+    for (const text of ['Nada minimalista, quiero mucho color', 'no lo hagas minimalista', 'Que no sea sobrio', 'Café Tranquilo, colores fuertes', 'Tienda para Joyería Serena', 'Productos de limpieza Limpia Ya', 'Detergentes limpios', 'Clean beauty skincare con colores vivos'])
+      expect(sourceAsksForRestraint(text)).toBe(false);
+  });
+});

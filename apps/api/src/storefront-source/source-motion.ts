@@ -15,10 +15,29 @@ export function requestedSourceMotion(instruction: string): SourceMotionMode | u
   if (/\b(?:mas|more)\s+(?:animaciones|animados?|animadas?|animations|animated|movimiento|motion)\b/.test(task)) return 'expressive';
   return undefined;
 }
-/** A merchant asking for a minimal, sober or quiet look; bold is the default otherwise (owner 2026-10-10). */
+/** A merchant asking for a minimal, sober or quiet look; bold is the default otherwise (owner 2026-10-10).
+ *  Negated words ("nada minimalista"), business and product names ("Café Tranquilo", "detergentes limpios") and an explicit
+ *  request for colour do not count. */
+const RESTRAINT = /^(?:minimal\w*|sobri[oa]s?|sobriedad|discret[oa]s?|sutil(?:es)?|quiet|understated|subtle|muted)$/;
+/** Words that are also business and product names: they count only beside a design noun ("diseño limpio"). */
+const SOFT_RESTRAINT = /^(?:limpi[oa]s?|tranquil[oa]s?|calmad[oa]s?|clean|calm)$/;
+const DESIGN_NOUN = /^(?:diseno|estilo|look|tienda|sitio|web|pagina|colores?|ambiente|aspecto|paleta|design|style|site|store)$/;
+const NEGATION = /^(?:no|nada|sin|ni|nunca|not|never|dont|without)$/;
+const LOUD = /(?:mucho color|muy colorid|colorid[oa]s?|llamativ\w*|atrevid\w*|vibrante\w*|colores (?:fuertes|vivos|intensos)|\bbold\b|colorful)/g;
 export function sourceAsksForRestraint(text: string): boolean {
-  const task = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  return /\b(?:minimal\w*|sobri[oa]s?|sobriedad|limpi[oa]s?|discret[oa]s?|tranquil[oa]s?|calmad[oa]s?|serena?s?|sutil(?:es)?|quiet|understated|subtle|clean|muted|sin colores fuertes|poco color)\b/.test(task);
+  const task = text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, '');
+  const words = task.split(/[^a-z0-9]+/).filter(Boolean);
+  const negatedAt = (index: number) => words.slice(Math.max(0, index - 3), index).some(word => NEGATION.test(word));
+  for (const match of task.matchAll(LOUD)) {
+    const before = task.slice(0, match.index).split(/[^a-z0-9]+/).filter(Boolean).slice(-3);
+    if (!before.some(word => NEGATION.test(word))) return false;
+  }
+  if (/\b(?:sin colores fuertes|poco color)\b/.test(task)) return true;
+  return words.some((word, index) => {
+    if (negatedAt(index)) return false;
+    if (RESTRAINT.test(word)) return true;
+    return SOFT_RESTRAINT.test(word) && words.slice(Math.max(0, index - 2), index + 3).some(near => DESIGN_NOUN.test(near));
+  });
 }
 const configPattern = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
 function readConfig(files: SourceProjectFileDto[]) {
