@@ -6,7 +6,7 @@ import { STORE_KNOWLEDGE_RULES, type StoreKnowledge } from '../store-knowledge/s
 import { SOURCE_PRODUCT_OPTIONS } from './source-product-options';
 import { SOURCE_CONVERSATION_TIMEOUT_MS, SourceConversationFailure, safeConversationDiagnostic, type ConversationDiagnostic } from './source-conversation-failure';
 import { sourceVideo, MAX_SOURCE_VIDEO_BYTES } from './source-media';
-import { sourceProvider, sourceProviderBody } from './source-provider';
+import { sourceProvider } from './source-provider';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
@@ -125,7 +125,7 @@ export class SourceConversationService {
   async decide(merchantId: string, input: ConversationInput): Promise<SourceConversationDecision> {
     const model = sourceConversationModel(input.model, this.config.get<string>('app.openAi.conversationModel'));
     if (input.productPhoto && (input.assetUrls.length !== 1 || sourceVideo(input.assetUrls[0]))) throw new BadRequestException('Selecciona una sola foto de producto.');
-    const provider = sourceProvider(this.config, model, input.assetUrls.some(url => !sourceVideo(url)) || sourceWebsiteReferenceCaptures(input.draft.websiteReferences || []).length > 0);
+    const provider = sourceProvider(this.config, model);
     const { apiKey } = provider;
     // Saved image annotations are context, not a new batch of uploads.
     const urls = [...new Set(input.assetUrls)];
@@ -198,7 +198,7 @@ export class SourceConversationService {
       try {
         const response = await fetch(provider.endpoint, {
           method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, signal,
-          body: JSON.stringify(sourceProviderBody({
+          body: JSON.stringify({
             model, store: false, prompt_cache_key: sourcePromptCacheKey('conversation', instructions, input.storeId || merchantId),
             ...(explicitCache ? { prompt_cache_options: { mode: 'explicit', ttl: '30m' } } : {}),
             instructions,
@@ -210,7 +210,7 @@ export class SourceConversationService {
             ] }],
             text: { format: { type: 'json_schema', name: 'source_conversation', strict: true, schema } },
             reasoning: { effort: 'low' }, max_output_tokens: allocation?.outputTokens ?? 5000,
-          })),
+          }),
         });
         httpStatus = response.status; requestId = response.headers?.get('x-request-id') || undefined;
         const body = await response.json() as any; responseBody = body; allocation?.settle(body?.usage);

@@ -77,7 +77,7 @@ try {
         cwd: fileURLToPath(new URL('../apps/api/', import.meta.url)), stdio: 'inherit', detached: process.platform !== 'win32',
         env: { ...process.env, NODE_ENV: 'development',
           YAPI_CHATGPT_PLAN_URL: gateway.url, YAPI_CHATGPT_PLAN_SECRET: gateway.secret,
-          OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', DEEPSEEK_API_KEY: '',
+          OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '',
           CHECKOUT_ORIGIN: 'http://localhost:5175' },
       });
       child.once('error', error => { console.error(error.message); void stop(1); });
@@ -86,13 +86,13 @@ try {
     } else {
       await ensureApiStopped();
       gateway = await startGateway(session);
-      console.log('Yapi Local: ChatGPT plan for store generation. Paid OpenAI, Claude, DeepSeek and image generation are disabled.');
+      console.log('Yapi Local: ChatGPT plan for store generation. Paid OpenAI, Claude and image generation are disabled.');
       console.log('Use a GPT model listed by pnpm chatgpt:models. Allowance: https://chatgpt.com/settings/usage');
       child = spawn(process.execPath, ['scripts/dev.mjs', ...(process.argv.includes('--skip-setup') ? ['--skip-setup'] : [])], {
         cwd: root, stdio: 'inherit', detached: process.platform !== 'win32',
         env: { ...process.env, NODE_ENV: 'development',
           YAPI_CHATGPT_PLAN_URL: gateway.url, YAPI_CHATGPT_PLAN_SECRET: gateway.secret,
-          OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', DEEPSEEK_API_KEY: '',
+          OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '',
           CHECKOUT_ORIGIN: 'http://localhost:5175' },
       });
       child.once('error', error => { console.error(error.message); void stop(1); });

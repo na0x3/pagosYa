@@ -25,14 +25,13 @@ beforeEach(() => { fetchMock = jest.fn(); global.fetch = fetchMock; });
 afterEach(() => { global.fetch = originalFetch; });
 
 describe('Source conversation interpretation', () => {
-  it('accepts owned MP4 with a text-only model without treating it as image pixels', async () => {
-    const { service, prisma, uploads, config } = setup();
+  it('accepts owned MP4 without treating it as image pixels', async () => {
+    const { service, prisma, uploads } = setup();
     const url = '/v1/uploads/abc.mp4';
     prisma.mediaAsset.findMany.mockResolvedValue([{ url }]); uploads.getBuffer.mockResolvedValue(Buffer.alloc(3_000_000));
-    config.get.mockImplementation((key: string) => key === 'app.deepSeek.apiKey' ? 'test-key' : key === 'app.deepSeek.enabled');
     const use = { url, role: 'background', description: 'Video de portada' };
     respond({ ...reply(), imageUses: [use] });
-    const result = await service.decide('merchant', { ...input(), model: 'deepseek-v4-flash', assetUrls: [url], messages: [{ role: 'USER', content: 'Pon este video en portada', metadata: { assetUrls: [url] } }] });
+    const result = await service.decide('merchant', { ...input(), assetUrls: [url], messages: [{ role: 'USER', content: 'Pon este video en portada', metadata: { assetUrls: [url] } }] });
     expect(result.imageUses).toEqual([use]);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.input[0].content.some((part: any) => part.type === 'input_image')).toBe(false);
@@ -66,34 +65,6 @@ describe('Source conversation interpretation', () => {
     expect(body.input[0].content).toContainEqual({ type: 'input_image', image_url: image, detail: 'auto' });
     expect(body.input[0].content.filter((part: any) => part.type === 'input_text').map((part: any) => part.text).join('')).not.toContain('cGl4ZWxz');
     expect(JSON.parse(body.input[0].content[2].text).availableImageUrls).toEqual([]);
-  });
-  it('uses the selected DeepSeek model for chat with OpenAI disabled', async () => {
-    const { service, config } = setup();
-    config.get.mockImplementation((key: string) => key === 'app.deepSeek.apiKey' ? 'deepseek-test-key' : key === 'app.deepSeek.enabled');
-    respond({ ...reply(), imageUses: [] });
-    await service.decide('merchant', { ...input(), model: 'deepseek-v4-flash', assetUrls: [] });
-    expect(fetchMock.mock.calls[0][0]).toBe('https://api.deepseek.com/responses');
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.model).toBe('deepseek-v4-flash');
-    expect(body.instructions).toContain('JSON');
-    expect(body.instructions).toContain(SOURCE_LOCATION_INSTRUCTIONS);
-    expect(body.prompt_cache_key).toBeUndefined();
-  });
-  it('requires vision for attached images before any paid call, then sends pixels to DeepSeek vision', async () => {
-    const { service, config } = setup();
-    config.get.mockImplementation((key: string) => key === 'app.deepSeek.apiKey' ? 'deepseek-test-key' : undefined);
-    await expect(service.decide('merchant', { ...input(), model: 'deepseek-v4-pro' })).rejects.toThrow('Flash Vision');
-    expect(fetchMock).not.toHaveBeenCalled();
-    respond(reply());
-    await service.decide('merchant', { ...input(), model: 'deepseek-v4-flash-vision-exp' });
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.input[0].content.some((part: any) => part.image_url?.startsWith('data:image/png;base64,'))).toBe(true);
-  });
-  it('does not retry DeepSeek balance exhaustion', async () => {
-    const { service } = setup();
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 402, json: async () => ({ error: { message: 'Insufficient Balance' } }) });
-    await expect(service.decide('merchant', { ...input(), assetUrls: [], model: 'deepseek-v4-flash' })).rejects.toThrow('agotó su saldo en DeepSeek');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it('sends the existing site inventory even when there are no new attachments', async () => {
     const { service } = setup();

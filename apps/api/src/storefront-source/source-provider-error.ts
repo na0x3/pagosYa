@@ -18,7 +18,7 @@ export function checkSourceProviderQuota(status: number, body: any, provider = '
       : typeof code === 'string' && code.startsWith('chatgpt_stream_') ? 'La respuesta de ChatGPT se interrumpió antes de completarse.' : null;
     if (detail) throw new ServiceUnavailableException(`YAPI no pudo continuar: ${detail} No se cambió a una API de pago. Tu sitio sigue guardado.`);
   }
-  if ((provider === 'DeepSeek' && status === 402) || status === 429 && (body?.error?.code === 'credit_balance_exhausted'
+  if (status === 429 && (body?.error?.code === 'credit_balance_exhausted'
     || body?.error?.code === 'insufficient_quota' || body?.error?.type === 'insufficient_quota')) {
     throw new SourceProviderQuotaException(provider);
   }

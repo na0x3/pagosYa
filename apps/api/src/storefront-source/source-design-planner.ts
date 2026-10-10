@@ -7,7 +7,6 @@ import { SOURCE_DNA_DIRECTION } from './source-dna';
 import { sourceSitePurposePrompt, type SourceSitePurpose } from './source-site-purpose';
 import { SOURCE_COMPOSITION_PLANNING } from './source-composition-registry';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
-import { sourceProviderBody, isDeepSeek } from './source-provider';
 import { sourceResponseJson } from './source-response';
 import { sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-generation-policy';
 import { SourceRequestBudget } from './source-request-budget';
@@ -45,15 +44,15 @@ export class SourceDesignPlanner {
     let repair = '';
     for (let index = 0; index < 2; index++) {
       const allocation = input.budget.reserve(input.model, Math.ceil((prompt.length + input.context.length + repair.length) / 2) + input.images.length * 1500, 7200, 1000);
-      const attempt: DesignPlanningAttempt = { model: input.model, phase: 'design', durationMs: 0, status: 'FAILED', usage: null, reasoningEffort: isDeepSeek(input.model) ? 'none' : 'low' };
+      const attempt: DesignPlanningAttempt = { model: input.model, phase: 'design', durationMs: 0, status: 'FAILED', usage: null, reasoningEffort: 'low' };
       input.attempts.push(attempt);
       const started = Date.now();
       let body: any;
       try {
         const response = await fetch(input.provider.endpoint, { method: 'POST', headers: { Authorization: `Bearer ${input.apiKey}`, 'Content-Type': 'application/json' }, signal: input.signal,
-          body: JSON.stringify(sourceProviderBody({ model: input.model, store: false, service_tier: 'default', prompt_cache_key: sourcePromptCacheKey('design', prompt, input.context.slice(0, 64)), ...(isDeepSeek(input.model) ? {} : { prompt_cache_options: { mode: 'explicit', ttl: '30m' } }), input: [{ role: 'user', content: [{ type: 'input_text', text: prompt, ...(isDeepSeek(input.model) ? {} : { prompt_cache_breakpoint: { mode: 'explicit' } }) }, { type: 'input_text', text: input.context + repair }, ...input.images] }], reasoning: { effort: attempt.reasoningEffort }, max_output_tokens: allocation.outputTokens,
+          body: JSON.stringify({ model: input.model, store: false, service_tier: 'default', prompt_cache_key: sourcePromptCacheKey('design', prompt, input.context.slice(0, 64)), prompt_cache_options: { mode: 'explicit', ttl: '30m' }, input: [{ role: 'user', content: [{ type: 'input_text', text: prompt, prompt_cache_breakpoint: { mode: 'explicit' } }, { type: 'input_text', text: input.context + repair }, ...input.images] }], reasoning: { effort: attempt.reasoningEffort }, max_output_tokens: allocation.outputTokens,
             text: { format: { type: 'json_schema', name: 'storefront_concepts', strict: true, schema: { type: 'object', additionalProperties: false, required: ['concepts', 'selection'], properties: { concepts: conceptsSchema, selection: { type: 'object', additionalProperties: false, required: ['index', 'rationale'], properties: { index: { type: 'integer', minimum: 0, maximum: 2 }, rationale: { type: 'string', minLength: 1, maxLength: 400 } } } } } } },
-          })),
+          }),
         });
         body = await response.json().catch(() => null);
         allocation.settle(body?.usage);

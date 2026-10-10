@@ -38,7 +38,7 @@ import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
 import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
-import { sourceProvider, sourceProviderBody, isDeepSeek, isClaude, sourceSeesImages } from './source-provider';
+import { sourceProvider, isClaude } from './source-provider';
 import { withSavedLogo } from './source-saved-logo';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 
@@ -338,8 +338,8 @@ export class SourceGenerationService {
     const claude = isClaude(plan.model);
     const agentProvider = claude ? sourceProvider(this.config, plan.model) : null;
     // A store designed from scratch always carries its saved logo; the merchant no longer has to attach it again.
-    // Never on a repair candidate, and never for a model that cannot see images.
-    const fromScratch = (!execution?.candidate || execution.evaluate === true) && (dto.revision === 0 || execution?.redesign === true || sourceRedesignRequested(dto.instruction)) && sourceSeesImages(claude ? CLAUDE_COMPANION_MODEL : plan.model);
+    // Never on a repair candidate.
+    const fromScratch = (!execution?.candidate || execution.evaluate === true) && (dto.revision === 0 || execution?.redesign === true || sourceRedesignRequested(dto.instruction));
     const savedLogo = fromScratch ? (await this.prisma.store.findFirst({ where: { id: storeId }, select: { logoUrl: true } }))?.logoUrl : null;
     const logoOwned = savedLogo ? Boolean(await this.prisma.mediaAsset.findFirst({ where: { merchantId, url: savedLogo }, select: { url: true } })) : false;
     // A saved logo the generator could not bundle (missing, or over the 2 MB image limit) is left out, never a failed build.
@@ -348,7 +348,7 @@ export class SourceGenerationService {
     const withLogo = withSavedLogo({ assetUrls: [...new Set(dto.assetUrls || [])], imageUses, logoUrl: savedLogo, fromScratch, owned: logoUsable });
     dto = { ...dto, assetUrls: withLogo.assetUrls };
     imageUses = withLogo.imageUses;
-    const provider = sourceProvider(this.config, claude ? CLAUDE_COMPANION_MODEL : plan.model, !!dto.assetUrls?.some(url => !sourceVideo(url)) || !!execution?.referenceCaptures?.length);
+    const provider = sourceProvider(this.config, claude ? CLAUDE_COMPANION_MODEL : plan.model);
     const { apiKey } = provider;
     const brand = await this.brands?.get(merchantId, storeId);
     const publicStore = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
@@ -429,15 +429,13 @@ export class SourceGenerationService {
     const motion = execution?.candidate ? sourceMotionMode((previous?.snapshot as any)?.files) : requestedSourceMotion(dto.instruction) ?? dto.motion ?? sourceMotionMode((previous?.snapshot as any)?.files);
     const scrollFeel = execution?.candidate ? sourceScrollFeel((previous?.snapshot as any)?.files) : dto.scrollFeel ?? sourceScrollFeel((previous?.snapshot as any)?.files);
     const retainedAssets: SourceProjectFileDto[] = (previous?.snapshot as any)?.files?.filter((f: SourceProjectFileDto) => f.path.startsWith("assets/")) || [];
-    if (!plan.model.startsWith('deepseek-') || plan.model === 'deepseek-v4-flash-vision-exp') {
-      const inventory = sourceAssetInventory((previous?.snapshot as any)?.files || []);
-      const candidates = retainedAssets.filter(f => !f.path.startsWith('assets/creative/') && f.encoding === 'base64' && /\.(png|jpe?g|webp)$/i.test(f.path) && !visionAssetPaths.includes(f.path) && inventory.find(a => a.path === f.path)?.role !== 'unused')
-        .sort((a, b) => Number(dto.instruction.includes(b.path)) - Number(dto.instruction.includes(a.path)));
-      for (const file of candidates.slice(0, 6 - images.length)) {
-        const ext = file.path.split('.').at(-1)!.toLowerCase();
-        images.push({ type: 'input_image', image_url: `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${file.content}`, detail: 'auto' });
-        visionAssetPaths.push(file.path);
-      }
+    const inventory = sourceAssetInventory((previous?.snapshot as any)?.files || []);
+    const candidates = retainedAssets.filter(f => !f.path.startsWith('assets/creative/') && f.encoding === 'base64' && /\.(png|jpe?g|webp)$/i.test(f.path) && !visionAssetPaths.includes(f.path) && inventory.find(a => a.path === f.path)?.role !== 'unused')
+      .sort((a, b) => Number(dto.instruction.includes(b.path)) - Number(dto.instruction.includes(a.path)));
+    for (const file of candidates.slice(0, 6 - images.length)) {
+      const ext = file.path.split('.').at(-1)!.toLowerCase();
+      images.push({ type: 'input_image', image_url: `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${file.content}`, detail: 'auto' });
+      visionAssetPaths.push(file.path);
     }
     // Product photos can be uploaded after the site's original revision. Hydrate
     // current catalog media too, so the isolated preview does not depend on an
@@ -462,8 +460,8 @@ export class SourceGenerationService {
     const sep5SelfReview = sep5Author && this.config.get<boolean>('app.sep5SelfReview') === true;
     // An evaluation candidate builds a store with no saved design the way a first build would, so it reaches the planner.
     const useNext = !sep5Author && (isNextSource(previousFiles) || (!execution?.candidate || execution.evaluate === true) && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign));
-    // The tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) builds component stores; candidates and DeepSeek keep the single call.
-    const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && !isDeepSeek(plan.model) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
+    // The tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) builds component stores; candidates keep the single call.
+    const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
     const migrating = useNext && !!previous && !isNextSource(previousFiles);
     const editExisting = !!previous && !migrating;
     const oldFiles = previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path));
@@ -481,7 +479,7 @@ export class SourceGenerationService {
     // Merchant photos retain priority. Optional library thumbnails use only spare
     // vision slots and are labelled separately so they cannot become product photos.
     const creativeThumbnails: string[] = [];
-    if ((creative || /illustrat|ilustra|sticker|artwork|pegatina|calcomania|cutout|collage/i.test(dto.instruction)) && (!plan.model.startsWith('deepseek-') || plan.model === 'deepseek-v4-flash-vision-exp')) {
+    if (creative || /illustrat|ilustra|sticker|artwork|pegatina|calcomania|cutout|collage/i.test(dto.instruction)) {
       for (const asset of artworkMatches.filter(asset => asset.path.endsWith('.png')).slice(0, Math.min(2, 6 - images.length))) {
         const file = creativeAssetFile(asset);
         images.push({ type: 'input_image', image_url: `data:image/png;base64,${file.content}`, detail: 'auto' });
@@ -844,7 +842,7 @@ export class SourceGenerationService {
               // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
               // and this one writes the entire store.
               const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } })) });
+                body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
               body = await response.json().catch(() => null);
             } finally { allocation.settle(body?.usage); }
           } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
@@ -974,7 +972,7 @@ export class SourceGenerationService {
               const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 1000, phase === 'author' ? 18000 : 3500, 500);
               try {
                 const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                  body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: instructions + (retry ? '\nPrevious output failed validation. Use only declared enum values and complete the required fields.' : ''), input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...(phase === 'critic' ? [] : images)] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: phase === 'author' ? 'high' : 'low' }, text: { format: { type: 'json_schema', name: `website_${phase}`, strict: true, schema } } })) });
+                  body: JSON.stringify({ model, store: false, instructions: instructions + (retry ? '\nPrevious output failed validation. Use only declared enum values and complete the required fields.' : ''), input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...(phase === 'critic' ? [] : images)] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: phase === 'author' ? 'high' : 'low' }, text: { format: { type: 'json_schema', name: `website_${phase}`, strict: true, schema } } }) });
                 stageBody = await response.json().catch(() => null);
                 if (!response.ok) throw new Error('Design provider unavailable');
               } finally { allocation.settle(stageBody?.usage); }
@@ -1029,7 +1027,7 @@ export class SourceGenerationService {
           const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 2000, 12_000, 500);
           try {
             const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...images] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+              body: JSON.stringify({ model, store: false, instructions: 'Diseña el boceto de la tienda como JSON estricto según el esquema. Usa solo las fotos y fuentes listadas.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...images] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } }) });
             httpStatus = response.status;
             body = await response.json().catch(() => null);
           } finally { allocation.settle(body?.usage); }
@@ -1101,7 +1099,7 @@ export class SourceGenerationService {
           const allocation = budget.reserve(model, Math.ceil(prompt.length / 3) + 2000, 12_000, 500);
           try {
             const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(chatgptPlan ? 180_000 : 60_000)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify(sourceProviderBody({ model, store: false, instructions: 'Edita el boceto según el pedido y devuelve el boceto completo como JSON estricto según el esquema.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } })) });
+              body: JSON.stringify({ model, store: false, instructions: 'Edita el boceto según el pedido y devuelve el boceto completo como JSON estricto según el esquema.', input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'store_sketch', strict: true, schema: SKETCH_JSON_SCHEMA } } }) });
             httpStatus = response.status;
             body = await response.json().catch(() => null);
           } finally { allocation.settle(body?.usage); }
@@ -1181,7 +1179,7 @@ export class SourceGenerationService {
           ...((isNew || redesign) ? { reviewComposition: async (input: Parameters<typeof reviewSourceComposition>[0]) => {
             // The existing vision-capable planning provider reviews independently of the writing transcript.
             const reviewModel = model;
-            const review = await reviewSourceComposition(input, { model: reviewModel, provider: sourceProvider(this.config, reviewModel, true), budget,
+            const review = await reviewSourceComposition(input, { model: reviewModel, provider: sourceProvider(this.config, reviewModel), budget,
               direction: committedDesign?.concepts[committedDesign.selected],
               record: async (body, durationMs, status) => {
                 attempts.push({ model: reviewModel, phase: 'visual', durationMs, status, usage: sourceUsage(reviewModel, body?.usage), tools: ['composition_review'] });
@@ -1293,14 +1291,14 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         const maxOutputTokens = allocation.outputTokens;
         const outputGuidance = `\nActual output allowance for THIS attempt: ${maxOutputTokens} tokens including reasoning. Keep the final JSON under approximately ${Math.floor(maxOutputTokens * .65)} tokens. Prefer short search anchors plus appends, and do not repeat existing CSS/JS. Finish every requested change compactly; never start a large file replacement that cannot fit. For repairs return a new COMPLETE compact decision, not a continuation of truncated JSON.`;
         const attemptStarted = Date.now();
-        const attempt: (typeof attempts)[number] = { model, phase: 'source', durationMs: 0, status: 'FAILED', usage: null, reasoningEffort: index && !isDeepSeek(model) ? 'medium' : plan.reasoningEffort };
+        const attempt: (typeof attempts)[number] = { model, phase: 'source', durationMs: 0, status: 'FAILED', usage: null, reasoningEffort: index ? 'medium' : plan.reasoningEffort };
         attempts.push(attempt);
         let response: Response;
         try {
           execution?.onDispatch?.();
           response = await fetch(provider.endpoint, {
             method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(sourceProviderBody({ model, store: false, prompt_cache_options: { mode: 'explicit', ttl: '30m' }, prompt_cache_key: sourcePromptCacheKey('source', attemptStable, storeId), service_tier: 'default', input: [{ role: 'user', content: [{ type: 'input_text', text: attemptStable, prompt_cache_breakpoint: { mode: 'explicit' } }, { type: 'input_text', text: attemptTask + outputGuidance }, ...attemptImages] }], text: { format: { type: 'json_schema', name: 'independent_storefront', strict: true, schema: attemptSchema } }, reasoning: { effort: attempt.reasoningEffort }, max_output_tokens: maxOutputTokens })), signal,
+            body: JSON.stringify({ model, store: false, prompt_cache_options: { mode: 'explicit', ttl: '30m' }, prompt_cache_key: sourcePromptCacheKey('source', attemptStable, storeId), service_tier: 'default', input: [{ role: 'user', content: [{ type: 'input_text', text: attemptStable, prompt_cache_breakpoint: { mode: 'explicit' } }, { type: 'input_text', text: attemptTask + outputGuidance }, ...attemptImages] }], text: { format: { type: 'json_schema', name: 'independent_storefront', strict: true, schema: attemptSchema } }, reasoning: { effort: attempt.reasoningEffort }, max_output_tokens: maxOutputTokens }), signal,
           });
         } catch { await this.metering?.record(storeId, index ? 'source-repair' : 'source-generation', model, null, Date.now() - attemptStarted, 'FAILED'); throw new BadGatewayException('La generación no respondió. Tu revisión anterior sigue guardada. No consumió créditos YAPI; la llamada API puede tener costo.'); }
         finally { attempt.durationMs = Date.now() - attemptStarted; }

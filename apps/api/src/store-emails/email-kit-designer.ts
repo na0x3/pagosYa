@@ -1,5 +1,4 @@
 import { BadGatewayException } from '@nestjs/common';
-import { sourceProviderBody } from '../storefront-source/source-provider';
 import { sourceResponseJson } from '../storefront-source/source-response';
 import type { SourceRequestBudget } from '../storefront-source/source-request-budget';
 import { EMAIL_COPY_FIELDS, EMAIL_TYPES, type RawEmailKit } from './email-kit-contract';
@@ -65,9 +64,9 @@ export async function designEmailKit(input: DesignInput, deps: {
     const response = await (deps.fetchImpl ?? fetch)(deps.provider.endpoint, {
       method: 'POST', signal: AbortSignal.timeout(180_000),
       headers: { Authorization: `Bearer ${deps.provider.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(sourceProviderBody({ model: EMAIL_KIT_MODEL, store: false, instructions: 'Diseña el kit de correos de la tienda como JSON estricto según el esquema.',
+      body: JSON.stringify({ model: EMAIL_KIT_MODEL, store: false, instructions: 'Diseña el kit de correos de la tienda como JSON estricto según el esquema.',
         input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: reservation.outputTokens,
-        reasoning: { effort: 'medium' }, text: { format: { type: 'json_schema', name: 'email_kit', strict: true, schema: SCHEMA } } })),
+        reasoning: { effort: 'medium' }, text: { format: { type: 'json_schema', name: 'email_kit', strict: true, schema: SCHEMA } } }),
     });
     body = await response.json().catch(() => ({}));
     if (!response.ok) throw new BadGatewayException(FAILED);

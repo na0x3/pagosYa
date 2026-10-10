@@ -4,18 +4,10 @@ import { plainToInstance } from 'class-transformer';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
 
 describe('Source model routing and credit budgets', () => {
-  it('prices DeepSeek with conservative peak rates, caching and no OpenAI premiums', () => {
-    const usage = { input_tokens: 300000, input_tokens_details: { cached_tokens: 100000, cache_write_tokens: 200000 }, output_tokens: 1000 };
-    expect(sourceUsage('deepseek-v4-flash', usage)?.providerMicroUsd).toBe(90720);
-    expect(sourceUsage('deepseek-v4-pro', usage)?.providerMicroUsd).toBe(272360);
-    expect(sourceUsage('deepseek-v4-flash-vision-exp', usage)).toEqual(sourceUsage('deepseek-v4-flash', usage));
-    const plan = sourceGenerationPlan('deepseek-v4-flash', 1, 'Fix checkout');
-    expect(plan.model).toBe('deepseek-v4-flash');
-    expect(sourceOutputBudget(plan, 300000, 15)).toBe(10000);
-  });
-  it('accepts the DeepSeek choices at the API boundary', async () => {
+  it('rejects the removed DeepSeek choices at the API boundary', async () => {
     for (const model of ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-v4-flash-vision-exp']) {
-      expect(await validate(plainToInstance(SendSourceMessageDto, { revision: 0, instruction: 'Crea una tienda', model }))).toHaveLength(0);
+      expect(await validate(plainToInstance(SendSourceMessageDto, { revision: 0, instruction: 'Crea una tienda', model }))).not.toHaveLength(0);
+      expect(() => sourceGenerationPlan(model as any, 0, 'Crea una tienda')).toThrow('Selecciona un modelo disponible.');
     }
   });
   it('routes on the current request, rather than old conversation mentioning checkout', () => {
@@ -62,9 +54,6 @@ describe('cost controls', () => {
   it('keeps chat off code-generation models whatever the merchant picked for building', () => {
     expect(sourceConversationModel('gpt-5.6-sol', undefined)).toBe('gpt-5.6-luna');
     expect(sourceConversationModel('gpt-5.6-terra', undefined)).toBe('gpt-5.6-luna');
-    expect(sourceConversationModel('deepseek-v4-pro', undefined)).toBe('deepseek-v4-flash');
-    // The provider the merchant chose is preserved: an operator may hold one key.
-    expect(sourceConversationModel('deepseek-v4-flash-vision-exp', undefined)).toBe('deepseek-v4-flash-vision-exp');
     expect(sourceConversationModel('auto', 'gpt-5.6-sol')).toBe('gpt-5.6-luna');
     expect(sourceConversationModel(undefined, undefined)).toBe('gpt-5.6-luna');
     // An operator-configured model outside the priced table is left untouched.

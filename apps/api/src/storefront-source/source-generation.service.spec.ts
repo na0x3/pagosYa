@@ -696,42 +696,6 @@ describe('Independent source generation',()=>{
     const prompt = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input.map((part: any) => part.content.map((c: any) => c.text).join('')).join('');
     expect(prompt).toContain('"styles.css"');
   });
-  it('generates and repairs entirely through DeepSeek with only its key configured', async () => {
-    const { service, config, projects } = setup();
-    config.get.mockImplementation((key: string) => ({ 'app.deepSeek.apiKey': 'deepseek-test-key', 'app.openAi.enabled': false, 'app.environment': 'test', 'app.sourceFramework': 'static', 'app.checkoutOrigin': 'http://localhost:5174' }[key]));
-    const fetchMock = jest.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, usage: { input_tokens: 1000, output_tokens: 1000 } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 1000 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'DeepSeek site', files: files() }) }] }] })));
-    const result = await service.generate('m', 's', { ...input, model: 'deepseek-v4-flash' });
-    expect(projects.save).toHaveBeenCalledTimes(1);
-    expect(result.generation.attempts.map(a => a.model)).toEqual(['deepseek-v4-flash', 'deepseek-v4-flash']);
-    for (const [url, options] of fetchMock.mock.calls) {
-      expect(url).toBe('https://api.deepseek.com/responses');
-      expect(options!.headers).toMatchObject({ Authorization: 'Bearer deepseek-test-key' });
-      const body = JSON.parse(options!.body as string);
-      expect(body.model).toBe('deepseek-v4-flash');
-      expect(body.reasoning.effort).toBe('none');
-      expect(body.text.format.schema.required).toContain('files');
-      expect(body.text.format.strict).toBeUndefined();
-      expect(body.prompt_cache_options).toBeUndefined();
-      expect(body.input[0].content[0].prompt_cache_breakpoint).toBeUndefined();
-    }
-  });
-  it('stops on DeepSeek balance exhaustion without a second call or OpenAI fallback', async () => {
-    const { service, config, projects } = setup();
-    const get = config.get.getMockImplementation();
-    config.get.mockImplementation((key: string) => key === 'app.deepSeek.apiKey' ? 'deepseek-test-key' : get(key));
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: { message: 'Insufficient Balance' } }), { status: 402 }));
-    await expect(service.generate('m', 's', { ...input, model: 'deepseek-v4-pro' })).rejects.toThrow('agotó su saldo en DeepSeek');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(projects.save).not.toHaveBeenCalled();
-  });
-  it('does not spend OpenAI credits when the selected DeepSeek key is missing', async () => {
-    const { service } = setup();
-    const fetchMock = jest.spyOn(globalThis, 'fetch');
-    await expect(service.generate('m', 's', { ...input, model: 'deepseek-v4-flash' })).rejects.toThrow('DEEPSEEK_API_KEY');
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
   it('tells a truncated-response repair its actual allowance and records the provider reason', async () => {
     const { service } = setup();
     const fetchMock = jest.spyOn(globalThis, 'fetch')

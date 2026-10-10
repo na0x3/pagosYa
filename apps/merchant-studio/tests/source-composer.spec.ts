@@ -18,7 +18,7 @@ function deferred() {
   return {promise,resolve};
 }
 
-test('DeepSeek selection persists across reload and is sent with the request budget', async ({page}) => {
+test('A model selection persists across reload and is sent with the request budget', async ({page}) => {
   const sent: any[] = [];
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
   await page.route('**/api/v1/**', async route => {
@@ -34,13 +34,13 @@ test('DeepSeek selection persists across reload and is sent with the request bud
     await route.fulfill({json:finishedChatJob(body)});
   });
   await page.goto('/?source=1');
-  await page.getByRole('combobox', {name:'Modelo',exact:true}).selectOption('deepseek-v4-flash');
+  await page.getByRole('combobox', {name:'Modelo',exact:true}).selectOption('gpt-5.6-luna');
   await page.reload();
-  await expect(page.getByRole('combobox', {name:'Modelo',exact:true})).toHaveValue('deepseek-v4-flash');
+  await expect(page.getByRole('combobox', {name:'Modelo',exact:true})).toHaveValue('gpt-5.6-luna');
   await page.getByRole('textbox', {name:'Indicación para YAPI'}).fill('Crea mi café');
   await page.getByRole('button', {name:'Enviar a YAPI'}).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({model:'deepseek-v4-flash',maxCredits:200});
+  expect(sent[0]).toMatchObject({model:'gpt-5.6-luna',maxCredits:200});
 });
 
 test('sending text and a photo clears the composer during upload and AI work, including rerenders', async ({page}) => {

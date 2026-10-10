@@ -1,5 +1,5 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { isClaude, sourceProvider, sourceSeesImages } from './source-provider';
+import { isClaude, sourceProvider } from './source-provider';
 import { SOURCE_MODELS, sourceConversationModel } from './source-generation-policy';
 
 const config = (values: Record<string, unknown>) => ({ get: (key: string) => values[key] }) as any;
@@ -10,8 +10,7 @@ describe('local ChatGPT plan', () => {
     expect(sourceProvider(config(values), 'gpt-5.6-sol')).toEqual({ name: 'ChatGPT plan', apiKey: 'local-only', endpoint: values['app.chatgptPlan'].url });
   });
   it('rejects paid providers and production instead of falling back', () => {
-    expect(() => sourceProvider(config(values), 'claude-sonnet-5')).toThrow('desactivados');
-    expect(() => sourceProvider(config(values), 'deepseek-v4-flash')).toThrow('desactivados');
+    expect(() => sourceProvider(config(values), 'claude-sonnet-5')).toThrow('desactivado');
     expect(() => sourceProvider(config({ ...values, 'app.environment': 'production' }), 'gpt-5.6-sol')).toThrow('desarrollo local');
   });
 });
@@ -31,11 +30,5 @@ describe('Claude models', () => {
   });
   it('keep the conversation on the economical OpenAI model the chat is built for', () => {
     expect(sourceConversationModel('claude-opus-5-5' as any, undefined)).toBe('gpt-5.6-luna');
-  });
-});
-
-describe('sourceSeesImages', () => {
-  it('is false only for DeepSeek models without vision, which reject images', () => {
-    expect(['gpt-5.5', 'claude-opus-5-5', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro'].map(sourceSeesImages)).toEqual([true, true, true, false]);
   });
 });

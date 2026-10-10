@@ -1,5 +1,4 @@
 import type { SourceRequestBudget } from '../source-request-budget';
-import { sourceProviderBody } from '../source-provider';
 import { checkSourceProviderQuota } from '../source-provider-error';
 import type { AgentModel } from './agent-loop';
 
@@ -33,7 +32,7 @@ export function openAiAgentModel(input: { endpoint: string; apiKey: string; mode
       response = await fetchImpl(input.endpoint, {
         method: 'POST', signal: input.signal,
         headers: { Authorization: `Bearer ${input.apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(sourceProviderBody({ model: input.model, instructions, input: transcript, tools, tool_choice: 'auto', parallel_tool_calls: false, reasoning: { effort: input.reasoningEffort }, max_output_tokens: reserved.outputTokens, store: false, include: ['reasoning.encrypted_content'], ...(input.promptCacheKey ? { prompt_cache_key: input.promptCacheKey } : {}) })),
+        body: JSON.stringify({ model: input.model, instructions, input: transcript, tools, tool_choice: 'auto', parallel_tool_calls: false, reasoning: { effort: input.reasoningEffort }, max_output_tokens: reserved.outputTokens, store: false, include: ['reasoning.encrypted_content'], ...(input.promptCacheKey ? { prompt_cache_key: input.promptCacheKey } : {}) }),
       });
       body = await response.json().catch(() => null);
     } catch (error) {

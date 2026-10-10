@@ -1,4 +1,3 @@
-import { isDeepSeek } from './source-provider';
 import { BadRequestException } from '@nestjs/common';
 import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceUsage, type SourceModel } from './source-generation-policy';
 
@@ -15,7 +14,7 @@ export class SourceRequestBudget {
     const pricedModel = model as SourceModel;
     const input = Math.ceil(inputTokens);
     const cost = (output: number) => sourceUsage(pricedModel, { input_tokens: input, input_tokens_details: { cache_write_tokens: input }, output_tokens: output })!.providerMicroUsd;
-    const outputRate = SOURCE_MODELS[pricedModel].output * (!isDeepSeek(model) && input > 272000 ? 1.5 : 1);
+    const outputRate = SOURCE_MODELS[pricedModel].output * (input > 272000 ? 1.5 : 1);
     const available = this.unmetered ? Infinity : this.maxCredits * CREDIT_MICRO_USD - this.spent;
     const outputTokens = Math.min(requestedOutput, Math.floor((available - cost(0)) / outputRate));
     if (outputTokens < minimumOutput) throw new BadRequestException('El límite restante no alcanza para continuar. Tu sitio sigue guardado. Puedes reducir el alcance del cambio o aumentar el límite; los intentos anteriores pueden tener costo API.');

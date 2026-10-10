@@ -38,11 +38,6 @@ it('does not make a paid call when capture fails or the revision is stale', asyn
   await expect(service.review('m', 's', input)).rejects.toThrow('revisión actual');
   expect(fetchMock).not.toHaveBeenCalled();
 });
-it('rejects non-vision providers before capture and does not silently switch provider', async () => {
-  const { service } = setup();
-  await expect(service.review('m', 's', { ...input, model: 'deepseek-v4-pro' })).rejects.toThrow('Vision');
-  expect(capture).not.toHaveBeenCalled();
-});
 it('rejects malformed model findings and records failed usage', async () => {
   const { service, prisma, usage } = setup();
   jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ ...valid, findings: [{ ...valid.findings[0], severity: 'invented' }] }) }] }] }) } as any);

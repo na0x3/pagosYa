@@ -1,4 +1,3 @@
-import { isDeepSeek } from './source-provider';
 import { BadRequestException } from '@nestjs/common';
 
 // Standard API prices checked 2026-09-06. Credits are usage units, not a prepaid wallet.
@@ -7,11 +6,6 @@ export const SOURCE_MODELS = {
   'gpt-5.6-luna': { label: 'GPT-5.6 Luna', input: 0.2, cached: 0.02, output: 1.2 },
   'gpt-5.6-terra': { label: 'GPT-5.6 Terra', input: 2, cached: 0.2, output: 12 },
   'gpt-5.6-sol': { label: 'GPT-5.6 Sol', input: 4, cached: 0.4, output: 20 },
-  // Peak rates checked 2026-09-09: https://api-docs.deepseek.com/quick_start/pricing/
-  // Conservative estimate: off-peak invoices may be lower. No OpenAI long-context/cache-write premiums.
-  'deepseek-v4-flash': { label: 'DeepSeek Flash', input: 0.44, cached: 0.014, output: 1.32 },
-  'deepseek-v4-pro': { label: 'DeepSeek Pro', input: 1.32, cached: 0.044, output: 3.96 },
-  'deepseek-v4-flash-vision-exp': { label: 'DeepSeek Flash Vision (experimental)', input: 0.44, cached: 0.014, output: 1.32 },
   // Claude (Anthropic) per-million-token list prices — VERIFY against anthropic.com/pricing before production.
   // Cache reads bill at 0.1× input; cache writes at 1.25× (sourceUsage adds the .25).
   'claude-opus-5-5': { label: 'Claude Opus 5.5', input: 5, cached: 0.5, output: 25 },
@@ -41,9 +35,7 @@ export function sourceGenerationPlan(choice: SourceModelChoice = 'auto', revisio
   const complex = redesign || scope.operations > 1 || scope.surfaces.length > 1 || scope.capabilities.some(capability => capability !== 'cosmetic');
   const simple = revision > 0 && scope.operations === 1 && scope.capabilities.length === 1 && scope.capabilities[0] === 'cosmetic' && !complex;
   const model: SourceModel = choice === 'auto' ? complex && revision > 0 ? 'gpt-5.6-sol' : simple ? 'gpt-5.6-luna' : 'gpt-5.6-terra' : choice;
-  // DeepSeek low thinking consumed 7.8–9.6k of a 12k allowance in live tests.
-  // Code generation uses non-thinking mode; chat still uses low reasoning.
-  return { requestedModel: choice, model, reasoningEffort: isDeepSeek(model) ? 'none' as const : simple ? 'low' as const : 'medium' as const,
+  return { requestedModel: choice, model, reasoningEffort: simple ? 'low' as const : 'medium' as const,
     maxOutputTokens: revision === 0 ? 12000 : simple ? 4000 : 10000,
     reason: choice !== 'auto' ? 'Modelo elegido por ti.' : complex && revision > 0 ? 'Cambio de funcionalidad.' : simple ? 'Ajuste puntual.' : 'Diseño y composición del sitio.' };
 }
@@ -53,9 +45,9 @@ export function sourceUsage(model: SourceModel, raw: any) {
   if (!integer(raw?.input_tokens) || !integer(raw?.output_tokens)) return null;
   const inputTokens = raw.input_tokens as number, outputTokens = raw.output_tokens as number;
   const cachedInputTokens = Math.min(inputTokens, integer(raw.input_tokens_details?.cached_tokens) ? raw.input_tokens_details.cached_tokens : 0);
-  const cacheWriteTokens = isDeepSeek(model) ? 0 : Math.min(inputTokens - cachedInputTokens, integer(raw.input_tokens_details?.cache_write_tokens) ? raw.input_tokens_details.cache_write_tokens : 0);
+  const cacheWriteTokens = Math.min(inputTokens - cachedInputTokens, integer(raw.input_tokens_details?.cache_write_tokens) ? raw.input_tokens_details.cache_write_tokens : 0);
   const rates = SOURCE_MODELS[model];
-  const long = !isDeepSeek(model) && !model.startsWith('claude-') && inputTokens > 272000;
+  const long = !model.startsWith('claude-') && inputTokens > 272000;
   const providerMicroUsd = Math.ceil(((inputTokens - cachedInputTokens + cacheWriteTokens * .25) * rates.input + cachedInputTokens * rates.cached) * (long ? 2 : 1) + outputTokens * rates.output * (long ? 1.5 : 1));
   return { inputTokens, cachedInputTokens, outputTokens, providerMicroUsd, ...(cacheWriteTokens ? { cacheWriteTokens } : {}) };
 }
@@ -73,7 +65,7 @@ export function sourceGenerationEstimate(plan: ReturnType<typeof sourceGeneratio
 export function sourceOutputBudget(plan: ReturnType<typeof sourceGenerationPlan>, estimatedInputTokens: number, maxCredits = DEFAULT_MAX_CREDITS) {
   if (!Number.isInteger(maxCredits) || maxCredits < 1 || maxCredits > 500) throw new BadRequestException('El límite debe ser de 1 a 500 créditos.');
   const inputCost = sourceUsage(plan.model, { input_tokens: estimatedInputTokens, input_tokens_details: { cache_write_tokens: estimatedInputTokens }, output_tokens: 0 })!.providerMicroUsd;
-  const rate = SOURCE_MODELS[plan.model].output * (!isDeepSeek(plan.model) && estimatedInputTokens > 272000 ? 1.5 : 1);
+  const rate = SOURCE_MODELS[plan.model].output * (estimatedInputTokens > 272000 ? 1.5 : 1);
   const tokens = Math.min(plan.maxOutputTokens, Math.floor((maxCredits * CREDIT_MICRO_USD - inputCost) / rate));
   if (tokens < Math.min(plan.maxOutputTokens, 2000)) throw new BadRequestException('El límite no alcanza para esta solicitud. Elige otro modelo o aumenta los créditos.');
   return tokens;
@@ -107,18 +99,11 @@ export function sourcePromptCacheKey(scope: string, prefix: string, spread = '')
  * whatever model the merchant picked for generation -- so a premium pick silently
  * repriced every conversation turn too. Conversation is also input-heavy (roughly
  * twenty times more input than output), so the input rate is what matters.
- *
- * The cap stays inside the merchant's chosen provider: an operator may have only
- * one API key configured, and DeepSeek's vision variant must survive so image
- * requests keep failing the same explicit way instead of a different one.
  */
 const CONVERSATION_MODEL_CAP: Record<SourceModel, SourceModel> = {
   'gpt-5.6-sol': 'gpt-5.6-luna',
   'gpt-5.6-terra': 'gpt-5.6-luna',
   'gpt-5.6-luna': 'gpt-5.6-luna',
-  'deepseek-v4-pro': 'deepseek-v4-flash',
-  'deepseek-v4-flash': 'deepseek-v4-flash',
-  'deepseek-v4-flash-vision-exp': 'deepseek-v4-flash-vision-exp',
   // The chat's conversation step is built for OpenAI's format; Claude choices keep it on the economical OpenAI model.
   'claude-opus-5-5': 'gpt-5.6-luna',
   'claude-sonnet-5': 'gpt-5.6-luna',

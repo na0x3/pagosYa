@@ -169,10 +169,10 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     const { service, dialogue, generation } = setup();
     generation.generate.mockRejectedValueOnce(new Error('source validation failed'));
     await expect(service.send('m', 's', request)).rejects.toThrow('source validation failed');
-    await service.send('m', 's', { ...request, model: 'deepseek-v4-flash' });
+    await service.send('m', 's', { ...request, model: 'claude-sonnet-5' });
     expect(dialogue.decide).toHaveBeenCalledTimes(2);
-    expect(dialogue.decide.mock.calls[1][1].model).toBe('deepseek-v4-flash');
-    expect(generation.generate.mock.calls[1][2].model).toBe('deepseek-v4-flash');
+    expect(dialogue.decide.mock.calls[1][1].model).toBe('claude-sonnet-5');
+    expect(generation.generate.mock.calls[1][2].model).toBe('claude-sonnet-5');
   });
   it('gives interpretation saved page/assets and shares its budget with generation', async () => {
     const { service, projects, dialogue, generation } = setup();
@@ -821,7 +821,7 @@ describe('final review fixes', () => {
   it('runs the free adaptation on Terra as a scoped palette-and-copy request, never a redesign', async () => {
     const { service, generation } = firstShop(withCards());
     generation.generate.mockResolvedValue({ revision: 2, label: 'x' });
-    await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Tostado', templateId: 'tostado', model: 'deepseek-v4-flash' });
+    await service.send('m', 's', { ...request, revision: 0, instruction: 'Usar Tostado', templateId: 'tostado', model: 'gpt-5.6-sol' });
     const dto = generation.generate.mock.calls[0][2];
     expect(dto.model).toBe('gpt-5.6-terra');
     expect(dto.instruction).toContain('Pedido actual del comercio:');

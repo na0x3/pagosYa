@@ -2,7 +2,6 @@ import { BadGatewayException } from '@nestjs/common';
 import type { AgentCompositionReview, AgentCompositionReviewInput } from './agent/agent-tools';
 import type { SourceModel } from './source-generation-policy';
 import type { SourceRequestBudget } from './source-request-budget';
-import { sourceProviderBody } from './source-provider';
 import { sourceResponseJson } from './source-response';
 
 const schema = { type: 'object', additionalProperties: false, required: ['summary', 'findings'], properties: {
@@ -45,10 +44,10 @@ export async function reviewSourceComposition(input: AgentCompositionReviewInput
     const response = await (options.fetchImpl ?? fetch)(options.provider.endpoint, { method: 'POST',
       signal: AbortSignal.any([AbortSignal.timeout(45_000), ...(input.signal ? [input.signal] : [])]),
       headers: { Authorization: `Bearer ${options.provider.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(sourceProviderBody({ model: options.model, store: false, instructions,
+      body: JSON.stringify({ model: options.model, store: false, instructions,
         input: [{ role: 'user', content: [{ type: 'input_text', text: context }, ...input.captures.flatMap(({ image, ...capture }) => [{ type: 'input_text', text: JSON.stringify(capture) }, { type: 'input_image', image_url: image, detail: 'high' }])] }],
         max_output_tokens: reservation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'composition_review', strict: true, schema } },
-      })),
+      }),
     });
     body = await response.json();
     if (!response.ok) throw new BadGatewayException('No se completó la revisión de composición.');

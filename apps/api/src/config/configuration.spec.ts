@@ -1,11 +1,11 @@
 import configuration, { emailTestRecipient } from "./configuration";
 
 describe('local ChatGPT plan configuration', () => {
-  const keys = ['NODE_ENV', 'YAPI_CHATGPT_PLAN_URL', 'YAPI_CHATGPT_PLAN_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY'];
+  const keys = ['NODE_ENV', 'YAPI_CHATGPT_PLAN_URL', 'YAPI_CHATGPT_PLAN_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'];
   let original: Record<string, string | undefined>;
   beforeEach(() => {
     original = Object.fromEntries(keys.map(key => [key, process.env[key]]));
-    Object.assign(process.env, { NODE_ENV: 'development', YAPI_CHATGPT_PLAN_URL: 'http://127.0.0.1:54321/v1/responses', YAPI_CHATGPT_PLAN_SECRET: 'test-local-secret', OPENAI_API_KEY: 'paid-openai', ANTHROPIC_API_KEY: 'paid-claude', DEEPSEEK_API_KEY: 'paid-deepseek' });
+    Object.assign(process.env, { NODE_ENV: 'development', YAPI_CHATGPT_PLAN_URL: 'http://127.0.0.1:54321/v1/responses', YAPI_CHATGPT_PLAN_SECRET: 'test-local-secret', OPENAI_API_KEY: 'paid-openai', ANTHROPIC_API_KEY: 'paid-claude' });
   });
   afterEach(() => {
     for (const key of keys) { if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key]; }
@@ -14,8 +14,6 @@ describe('local ChatGPT plan configuration', () => {
     const { app } = configuration();
     expect(app.openAi.apiKey).toBe('');
     expect(app.anthropic.apiKey).toBe('');
-    expect(app.deepSeek.apiKey).toBe('');
-    expect(app.deepSeek.enabled).toBe(false);
     expect(app.chatgptPlan?.secret).toBe('test-local-secret');
     expect(process.env.OPENAI_API_KEY).toBe('paid-openai');
   });

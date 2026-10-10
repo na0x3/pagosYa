@@ -64,7 +64,6 @@ async function main() {
   };
   const config: any = { get: (name: string) => ({
     'app.openAi.apiKey': process.env.OPENAI_API_KEY, 'app.openAi.enabled': true,
-    'app.deepSeek.apiKey': '', 'app.deepSeek.enabled': false,
     'app.environment': 'test', 'app.checkoutOrigin': 'http://localhost:5175', 'app.port': 3001,
     'app.sourceFramework': 'next',
     // The authored path, in both runs. --no-motion drops only the choreography paragraph, so the

@@ -125,7 +125,6 @@ export interface AppConfig {
     secretAccessKey: string;
     forcePathStyle: boolean;
   };
-  deepSeek: { apiKey: string; enabled: boolean };
   /** Local-only authenticated bridge; never carries the user's OAuth tokens. */
   chatgptPlan?: { url: string; secret: string };
   /**
@@ -404,7 +403,6 @@ export default (): { app: AppConfig } => {
     chatgptPlan,
     sep5Author,
     sep5SelfReview,
-    deepSeek: { apiKey: chatgptPlan ? '' : process.env.DEEPSEEK_API_KEY ?? "", enabled: !chatgptPlan && process.env.DEEPSEEK_ENABLED !== "false" },
     anthropic: { apiKey: chatgptPlan ? '' : process.env.ANTHROPIC_API_KEY ?? "" },
     openAi: {
       apiKey: chatgptPlan ? '' : process.env.OPENAI_API_KEY ?? "",

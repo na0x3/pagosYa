@@ -18,7 +18,7 @@ import { kitPath } from '@pagosya/storefront-kit';
 const args = process.argv.slice(2);
 const option = (key: string, fallback: string) => { const index = args.indexOf(key); return index < 0 ? fallback : args[index + 1]; };
 const output = resolve(option('--out', '../../tmp/source-benchmark'));
-const models = option('--models', 'gpt-5.6-terra,deepseek-v4-flash').split(',') as SourceModelChoice[];
+const models = option('--models', 'gpt-5.6-terra,gpt-5.6-luna').split(',') as SourceModelChoice[];
 const requestedCases = option('--cases', 'cafe').split(',');
 const repeats = Number(option('--repeats', '1'));
 const maxCredits = Number(option('--max-credits', '25'));
@@ -63,8 +63,7 @@ if (boundedSmoke && (models.length !== 1 || repeats !== 1 || phases.length !== 1
 if (args.includes('--dry-run')) { console.log(JSON.stringify(preflight, null, 2)); process.exit(0); }
 if (!args.includes('--recheck')) {
   for (const model of models) {
-    const key = model.startsWith('deepseek-') ? 'DEEPSEEK_API_KEY' : 'OPENAI_API_KEY';
-    if (!process.env[key]) throw new Error(`${key} is required for ${model}. No generation was started.`);
+    if (!process.env.OPENAI_API_KEY) throw new Error(`OPENAI_API_KEY is required for ${model}. No generation was started.`);
   }
   console.log(JSON.stringify(preflight));
 }
@@ -125,7 +124,7 @@ async function main() {
           const version = { revision: versions.length + 1, label: input.label, snapshot }; versions.push(version);
           await prisma.storeSourceGeneration.updateMany({ where: { id: generation.id }, data: generation.data }); return version;
         } };
-      const config: any = { get: (name: string) => ({ 'app.openAi.apiKey': process.env.OPENAI_API_KEY, 'app.openAi.enabled': true, 'app.deepSeek.apiKey': process.env.DEEPSEEK_API_KEY, 'app.deepSeek.enabled': true, 'app.environment': 'test', 'app.checkoutOrigin': origin, 'app.port': 3001, 'app.sourceFramework': 'next' } as any)[name] };
+      const config: any = { get: (name: string) => ({ 'app.openAi.apiKey': process.env.OPENAI_API_KEY, 'app.openAi.enabled': true, 'app.environment': 'test', 'app.checkoutOrigin': origin, 'app.port': 3001, 'app.sourceFramework': 'next' } as any)[name] };
       class BenchmarkGenerator extends SourceGenerationService {
         protected exploreDesign() { return cycleConcepts ? sourceDesignExploration((repeat - 1) % 3) : super.exploreDesign(); }
         protected narrativePlanning() { return arm === 'story'; }
@@ -142,7 +141,7 @@ async function main() {
         }
         if (phase === 'edit' && !versions.length) break;
         const started = Date.now();
-        const result: any = { arm, generatorDigest, requestedConcept: cycleConcepts ? (repeat - 1) % 3 : null, costBasis: model.startsWith('deepseek-') ? 'DeepSeek peak-rate estimate; off-peak invoice may be lower' : 'OpenAI standard-rate estimate', maxCredits, case: business.id, requestedModel: model, repeat, phase, usable: false, generationMs: null, timeToUsableMs: null, providerMicroUsd: null, credits: 0, attempts: [], visualReview: 'pending', screenshots: [] };
+        const result: any = { arm, generatorDigest, requestedConcept: cycleConcepts ? (repeat - 1) % 3 : null, costBasis: 'OpenAI standard-rate estimate', maxCredits, case: business.id, requestedModel: model, repeat, phase, usable: false, generationMs: null, timeToUsableMs: null, providerMicroUsd: null, credits: 0, attempts: [], visualReview: 'pending', screenshots: [] };
         const context = await browser.newContext({ viewport: { width: 1280, height: 844 }, serviceWorkers: 'block' });
         // Generated code runs only in a disposable browser. All outbound requests are blocked.
         await context.route('**/*', (route: any) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -300,7 +299,7 @@ async function main() {
   await writeFile(join(output, replay ? 'VERIFICATION.md' : 'REPORT.md'), lines.join('\n') + '\n');
   const escape = (value: unknown) => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
   const relativeImage = (path: string) => path.slice(output.length + 1).split('/').map(encodeURIComponent).join('/');
-  await writeFile(join(output, replay ? 'verification.html' : 'comparison.html'), `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Storefront design comparison</title><style>body{font:16px system-ui;margin:32px;background:#f5f3ef;color:#212121}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}article{background:white;padding:20px;border:1px solid #ddd}img{width:100%;height:auto;border:1px solid #eee}p{line-height:1.5}summary{cursor:pointer}small{color:#555}</style><h1>Generated storefront comparison</h1><p>Synthetic café/store · simulated checkout · estimated API cost including repairs. DeepSeek uses conservative peak rates. This sample is not a ranking.</p><p>Review: brief fidelity, typography, layout, useful content, mobile usability, and preservation of design after the title edit. Scores are intentionally left for review.</p><main>${results.map(r => `<article><h2>${escape(r.case)} · concept ${r.design?.selected ?? "unknown"} · ${escape(r.phase)}</h2><p>${escape(r.case)} · ${r.usable ? 'Automated checks passed' : 'Needs review'} · API estimate: ${r.providerMicroUsd === null ? 'unknown' : '$' + (r.providerMicroUsd / 1e6).toFixed(4)} · elapsed ${(r.elapsedMs / 1000).toFixed(1)}s</p>${r.error ? `<p>${escape(r.error)}</p>` : ''}${r.screenshots.map((path: string) => `<details open><summary>${escape(path.split('/').at(-1))}</summary><a href="${relativeImage(path)}"><img loading="lazy" src="${relativeImage(path)}" alt="${escape(r.requestedModel)} ${escape(r.phase)} screenshot"></a></details>`).join('')}</article>`).join('')}</main></html>`);
+  await writeFile(join(output, replay ? 'verification.html' : 'comparison.html'), `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Storefront design comparison</title><style>body{font:16px system-ui;margin:32px;background:#f5f3ef;color:#212121}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}article{background:white;padding:20px;border:1px solid #ddd}img{width:100%;height:auto;border:1px solid #eee}p{line-height:1.5}summary{cursor:pointer}small{color:#555}</style><h1>Generated storefront comparison</h1><p>Synthetic café/store · simulated checkout · estimated API cost including repairs. This sample is not a ranking.</p><p>Review: brief fidelity, typography, layout, useful content, mobile usability, and preservation of design after the title edit. Scores are intentionally left for review.</p><main>${results.map(r => `<article><h2>${escape(r.case)} · concept ${r.design?.selected ?? "unknown"} · ${escape(r.phase)}</h2><p>${escape(r.case)} · ${r.usable ? 'Automated checks passed' : 'Needs review'} · API estimate: ${r.providerMicroUsd === null ? 'unknown' : '$' + (r.providerMicroUsd / 1e6).toFixed(4)} · elapsed ${(r.elapsedMs / 1000).toFixed(1)}s</p>${r.error ? `<p>${escape(r.error)}</p>` : ''}${r.screenshots.map((path: string) => `<details open><summary>${escape(path.split('/').at(-1))}</summary><a href="${relativeImage(path)}"><img loading="lazy" src="${relativeImage(path)}" alt="${escape(r.requestedModel)} ${escape(r.phase)} screenshot"></a></details>`).join('')}</article>`).join('')}</main></html>`);
   console.log(`Results: ${join(output, replay ? 'VERIFICATION.md' : 'REPORT.md')}`);
 }
 main().catch(error => { server.close(); console.error(error.message); process.exitCode = 1; });
