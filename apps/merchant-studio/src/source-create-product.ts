@@ -12,7 +12,7 @@ import { mountContentBlocksEditor, type ContentBlockInput } from './product-cont
 
 export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
 type BoxChoice = { id: string; name: string; imageUrls?: string[] };
-export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[]; contentBlocks?: ContentBlockInput[]; fulfillmentType?: string; membershipPeriods?: Array<{ id: string; months: number; amount: number }> } & ProductFiscalMapping;
+export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; badge?: string | null; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[]; contentBlocks?: ContentBlockInput[]; fulfillmentType?: string; membershipPeriods?: Array<{ id: string; months: number; amount: number }> } & ProductFiscalMapping;
 export type ProductSpecification = { label: string; value: string };
 
 /** "Nombre: valor" lines to specification rows, or a message for the first invalid line. */
@@ -60,7 +60,14 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <section data-guide-step="1"><label>Nombre del producto<input name="name" required maxlength="120" autocomplete="off" placeholder="Ej. Suéter Merino"></label></section>
       <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
       <section data-guide-step="3" hidden><fieldset class="product-type"><legend>Tipo</legend><label><input type="radio" name="productType" value="PHYSICAL" checked> Producto</label><label><input type="radio" name="productType" value="MEMBERSHIP"> Membresía</label></fieldset><label data-price-field>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label><div data-membership-periods hidden></div><p class="product-step-help" data-membership-help hidden>Tus miembros eligen un período y reciben un enlace para pagar cada renovación. No se cobra nada automáticamente.</p></section>
-      <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 6 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p></section>
+      <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 6 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p>
+        <fieldset class="product-badge" data-product-badge><legend>Insignia en la foto</legend>
+          <label><input type="radio" name="badgeMode" value="auto" checked> Automática</label>
+          <label><input type="radio" name="badgeMode" value="none"> Ninguna</label>
+          <label><input type="radio" name="badgeMode" value="custom"> Personalizada</label>
+          <label data-badge-text hidden>Texto de la insignia<input name="badgeText" maxlength="20" pattern=".*\\S.*" title="Escribe al menos una letra" autocomplete="off" placeholder="Ej. Edición limitada"><small data-badge-count aria-live="polite">0/20</small></label>
+          <p class="product-step-help">Automática muestra «Más vendido», el descuento o «Nuevo» solo cuando es verdad.</p>
+        </fieldset></section>
       <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div>${initial?.id ? '<p class="product-page-regenerate"><button type="button" data-page-regenerate>Regenerar con YAPI</button> <span data-page-regenerate-status role="status"></span></p>' : ''}</section>
       <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
       <section data-guide-step="7" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
@@ -86,6 +93,14 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   const priceInput = form.elements.namedItem('price') as HTMLInputElement;
   const typeInputs = dialog.querySelectorAll<HTMLInputElement>('[name=productType]');
   const periodsHost = dialog.querySelector<HTMLElement>('[data-membership-periods]')!;
+  // Photo badge (spec 2026-10-10): null = Automática, '' = Ninguna, else the merchant's own text.
+  const badgeText = form.querySelector<HTMLInputElement>('[name="badgeText"]')!;
+  const badgeBox = form.querySelector<HTMLElement>('[data-badge-text]')!;
+  const badgeCount = form.querySelector<HTMLElement>('[data-badge-count]')!;
+  const badgeMode = () => (form.querySelector<HTMLInputElement>('[name="badgeMode"]:checked')?.value ?? 'auto') as 'auto' | 'none' | 'custom';
+  const syncBadge = () => { const custom = badgeMode() === 'custom'; badgeBox.hidden = !custom; badgeText.required = custom; badgeCount.textContent = `${badgeText.value.length}/20`; };
+  form.addEventListener('change', event => { if ((event.target as HTMLInputElement).name === 'badgeMode') syncBadge(); });
+  badgeText.addEventListener('input', syncBadge);
   let periodRows: MembershipPeriodDraft[] = initial?.membershipPeriods?.length
     ? initial.membershipPeriods.map(period => ({ months: period.months as MembershipPeriodDraft['months'], price: (period.amount / 100).toFixed(2) }))
     : [{ months: 1, price: '' }];
@@ -221,11 +236,15 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     optionsToggle.checked = Boolean(initial.variants?.length); optionsHost.hidden = !optionsToggle.checked;
     highlights.push(...(initial.highlights || []).map(row => ({ ...row })));
     highlightsAsked = highlights.length > 0;
+    const prefill = initial.badge == null ? 'auto' : initial.badge === '' ? 'none' : 'custom';
+    form.querySelector<HTMLInputElement>(`[name="badgeMode"][value="${prefill}"]`)!.checked = true;
+    if (prefill === 'custom') badgeText.value = initial.badge!;
     stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked;
     dialog.querySelector<HTMLElement>('[data-variant-stock]')!.hidden = !optionsToggle.checked;
     [...new Set([...(initial.imageUrls || []), ...(initial.variants || []).flatMap(v => v.imageUrls?.length ? v.imageUrls : [v.imageUrl]).filter((url): url is string => Boolean(url))])].forEach(url => photos.push({preview: /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url, url}));
     dialog.querySelector('#product-create-title')!.textContent = 'Editar producto';
   }
+  syncBadge();
   let optionDrafts: VariantDraft[] = initial?.variants?.map(v => ({ ...v, amount: String(v.amount / 100), stock: v.stock == null ? '' : String(v.stock), imageUrl: v.imageUrl ? uploadedPreview(v.imageUrl) : undefined, imageUrls: (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).map(uploadedPreview) })) || [];
   const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: optionDrafts, onChange: rows => { optionDrafts = rows; }, basePrice: () => priceInput.value, photos: () => photos.map(p => p.preview) });
   const mountBlocks = (blocks: ContentBlockInput[]) => mountContentBlocksEditor(dialog.querySelector<HTMLElement>('[data-product-content-blocks]')!, {
@@ -461,6 +480,9 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     }
     const approved = highlights.map(row => ({ icon: row.icon, label: row.label.trim(), ...(row.detail?.trim() ? { detail: row.detail.trim() } : {}), ...(row.origin === 'yapi' ? { origin: 'yapi' as const } : {}) })).filter(row => row.label).slice(0, 6);
     if (approved.length || initial?.highlights?.length) Object.assign(input, { highlights: approved });
+    const mode = badgeMode(), badge = mode === 'auto' ? null : mode === 'none' ? '' : badgeText.value.trim();
+    // A new product stays automatic by default; an edit whose record never carried a badge must not clear one it cannot see.
+    if (badge !== null || initial?.badge !== undefined) Object.assign(input, { badge });
     setBusy(true); showError(''); status.textContent = photos.length ? 'Subiendo fotos…' : 'Guardando producto…';
     void (async () => {
       for (const photo of photos) {

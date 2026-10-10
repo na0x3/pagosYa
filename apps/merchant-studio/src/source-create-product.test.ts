@@ -449,3 +449,58 @@ describe('SIN classification for electronic invoices', () => {
     expect(t.$<HTMLInputElement>('[name="codigoProducto"]').value).toBe('NIKE-AM90');
   });
 });
+
+describe('photo badge', () => {
+  const editWith = (badge: string | null) => {
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p1' }), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', saved, () => {}, { id: 'p1', name: 'Café', amount: 3799, stock: null, imageUrls: [], badge });
+    document.body.append(guide.element);
+    const save = async () => {
+      for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+      return api.updateProduct.mock.calls[0][2];
+    };
+    const mode = (value: string) => { const radio = guide.element.querySelector<HTMLInputElement>(`[name="badgeMode"][value="${value}"]`)!; radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); };
+    const checked = () => guide.element.querySelector<HTMLInputElement>('[name="badgeMode"]:checked')!.value;
+    const text = guide.element.querySelector<HTMLInputElement>('[name="badgeText"]')!;
+    return { guide, save, mode, checked, text };
+  };
+
+  it('prefills the three states from the saved product', () => {
+    expect(editWith(null).checked()).toBe('auto');
+    expect(editWith('').checked()).toBe('none');
+    const own = editWith('Favorito');
+    expect(own.checked()).toBe('custom');
+    expect(own.text.value).toBe('Favorito');
+    // The guide opens on step 1, so only the badge's own text box is checked for visibility.
+    expect(own.text.closest<HTMLElement>('[data-badge-text]')!.hidden).toBe(false);
+    expect(editWith(null).text.closest<HTMLElement>('[data-badge-text]')!.hidden).toBe(true);
+  });
+
+  it('saves automatic as null, none as an empty string and custom as trimmed text', async () => {
+    expect(await editWith('Favorito').save()).toMatchObject({ badge: 'Favorito' });
+    document.body.replaceChildren();
+    const none = editWith(null); none.mode('none');
+    expect(await none.save()).toMatchObject({ badge: '' });
+    document.body.replaceChildren();
+    const auto = editWith('Favorito'); auto.mode('auto');
+    expect(await auto.save()).toMatchObject({ badge: null });
+  });
+
+  it('caps the text at 20 characters and counts them', () => {
+    const own = editWith(null); own.mode('custom');
+    expect(own.text.maxLength).toBe(20);
+    own.text.value = 'Edición limitada'; own.text.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(own.guide.element.querySelector('[data-badge-count]')!.textContent).toBe('16/20');
+  });
+});
+
+it('refuses a custom badge made only of spaces', () => {
+  const api = { updateProduct: vi.fn(), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) };
+  const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', vi.fn(), () => {}, { id: 'p1', name: 'Café', amount: 3799, stock: null, imageUrls: [], badge: 'Favorito' });
+  const text = guide.element.querySelector<HTMLInputElement>('[name="badgeText"]')!;
+  text.value = '   ';
+  expect(text.checkValidity()).toBe(false);
+  text.value = 'Nuevo';
+  expect(text.checkValidity()).toBe(true);
+});
