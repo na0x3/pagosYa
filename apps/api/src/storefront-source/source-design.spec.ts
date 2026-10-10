@@ -257,7 +257,7 @@ describe('design DNA in concepts', () => {
   it('gives every planned concept a DNA, and leaves a saved design without one untouched', () => {
     expect(validateSourceDesign(planned(), 1, true).concepts.every(concept => concept.dna)).toBe(true);
     expect(validateSourceDesign(proposal(), 1).concepts.some(concept => 'dna' in concept)).toBe(false);
-    expect(SOURCE_PRODUCT_PAGE_STYLES).toEqual(['editorial', 'dense', 'image-led', 'story-led']);
+    expect(SOURCE_PRODUCT_PAGE_STYLES).toEqual(['editorial', 'dense', 'image-led', 'story-led', 'conversion']);
   });
 });
 
