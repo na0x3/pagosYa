@@ -1,5 +1,5 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { isClaude, sourceProvider } from './source-provider';
+import { isClaude, sourceProvider, sourceSeesImages } from './source-provider';
 import { SOURCE_MODELS, sourceConversationModel } from './source-generation-policy';
 
 const config = (values: Record<string, unknown>) => ({ get: (key: string) => values[key] }) as any;
@@ -31,5 +31,11 @@ describe('Claude models', () => {
   });
   it('keep the conversation on the economical OpenAI model the chat is built for', () => {
     expect(sourceConversationModel('claude-opus-5-5' as any, undefined)).toBe('gpt-5.6-luna');
+  });
+});
+
+describe('sourceSeesImages', () => {
+  it('is false only for DeepSeek models without vision, which reject images', () => {
+    expect(['gpt-5.5', 'claude-opus-5-5', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro'].map(sourceSeesImages)).toEqual([true, true, true, false]);
   });
 });

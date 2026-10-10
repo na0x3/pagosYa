@@ -38,7 +38,8 @@ import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
 import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
-import { sourceProvider, sourceProviderBody, isDeepSeek, isClaude } from './source-provider';
+import { sourceProvider, sourceProviderBody, isDeepSeek, isClaude, sourceSeesImages } from './source-provider';
+import { withSavedLogo } from './source-saved-logo';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 
 /** The OpenAI model that runs the parts Claude does not (design planning, the single-call fallback). */
@@ -336,6 +337,14 @@ export class SourceGenerationService {
     // Claude runs only the tool-using agent; the design planner and any single-call fallback keep an OpenAI companion.
     const claude = isClaude(plan.model);
     const agentProvider = claude ? sourceProvider(this.config, plan.model) : null;
+    // A store designed from scratch always carries its saved logo; the merchant no longer has to attach it again.
+    // Never on a repair candidate, and never for a model that cannot see images.
+    const fromScratch = (!execution?.candidate || execution.evaluate === true) && (dto.revision === 0 || execution?.redesign === true || sourceRedesignRequested(dto.instruction)) && sourceSeesImages(claude ? CLAUDE_COMPANION_MODEL : plan.model);
+    const savedLogo = fromScratch ? (await this.prisma.store.findFirst({ where: { id: storeId }, select: { logoUrl: true } }))?.logoUrl : null;
+    const logoOwned = savedLogo ? Boolean(await this.prisma.mediaAsset.findFirst({ where: { merchantId, url: savedLogo }, select: { url: true } })) : false;
+    const withLogo = withSavedLogo({ assetUrls: [...new Set(dto.assetUrls || [])], imageUses, logoUrl: savedLogo, fromScratch, owned: logoOwned });
+    dto = { ...dto, assetUrls: withLogo.assetUrls };
+    imageUses = withLogo.imageUses;
     const provider = sourceProvider(this.config, claude ? CLAUDE_COMPANION_MODEL : plan.model, !!dto.assetUrls?.some(url => !sourceVideo(url)) || !!execution?.referenceCaptures?.length);
     const { apiKey } = provider;
     const brand = await this.brands?.get(merchantId, storeId);

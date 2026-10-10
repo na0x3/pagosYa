@@ -3,6 +3,8 @@ import type { ConfigService } from '@nestjs/config';
 import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
 
 export const isDeepSeek = (model: string) => model.startsWith('deepseek-');
+/** DeepSeek's text models reject images; every other provider's models can see them. */
+export const sourceSeesImages = (model: string) => !isDeepSeek(model) || model === 'deepseek-v4-flash-vision-exp';
 /** Claude models run only on YAPI's agent engine (Anthropic Messages API with tools). */
 export const isClaude = (model: string) => model.startsWith('claude-');
 
@@ -22,7 +24,7 @@ export function sourceProvider(config: ConfigService, model: string, hasImages =
   if (!apiKey || config.get<boolean>(`app.${namespace}.enabled`) === false) {
     throw new ServiceUnavailableException(`La integración no está configurada. Configura ${deepSeek ? 'DEEPSEEK_API_KEY' : 'OPENAI_API_KEY'} en el servidor para usar ${name}. Tu sitio sigue guardado.`);
   }
-  if (deepSeek && hasImages && model !== 'deepseek-v4-flash-vision-exp') {
+  if (hasImages && !sourceSeesImages(model)) {
     throw new BadRequestException('Esta solicitud incluye imágenes. Selecciona DeepSeek Flash Vision para que la IA pueda verlas.');
   }
   return { name, apiKey, endpoint: deepSeek ? 'https://api.deepseek.com/responses' : 'https://api.openai.com/v1/responses' };

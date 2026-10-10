@@ -320,6 +320,28 @@ describe('Independent source generation',()=>{
     expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CANDIDATE', activeStoreId: null }) }));
   });
 
+  it("a new store carries the merchant's saved logo, marked as the logo, without being attached again", async () => {
+    const { service, prisma, uploads, projects } = setup();
+    const logo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-00000000000a.png';
+    prisma.store.findFirst.mockResolvedValue({ slug: 'cafe', logoUrl: logo });
+    prisma.mediaAsset.findFirst = jest.fn().mockResolvedValue({ url: logo });
+    prisma.mediaAsset.findMany.mockResolvedValue([{ url: logo, kind: 'ORIGINAL', parentAsset: null }]);
+    uploads.getBuffer.mockResolvedValue(Buffer.from('logo image'));
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Store', files: files() }) }] }] })));
+    await service.generate('m', 's', input);
+    const manifest = JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'visual-assets.json').content);
+    expect(manifest.assets.map((a: any) => a.role)).toEqual(['logo']);
+  });
+
+  it("skips a saved logo that is not one of the merchant's uploads instead of failing the build", async () => {
+    const { service, prisma, projects } = setup();
+    prisma.store.findFirst.mockResolvedValue({ slug: 'cafe', logoUrl: '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-00000000000b.png' });
+    prisma.mediaAsset.findFirst = jest.fn().mockResolvedValue(null);
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Store', files: files() }) }] }] })));
+    await service.generate('m', 's', input);
+    expect(projects.save).toHaveBeenCalled();
+  });
+
   it('records what each bundled photograph is, so a card can prefer the scene of a product over its packshot', async () => {
     const { service, prisma, stores, uploads, projects } = setup();
     const pack = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg', scene = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000002.jpg';
