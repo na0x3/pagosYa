@@ -18,6 +18,17 @@ describe('storeIdentity', () => {
     expect(storeIdentity(css(':root{--brand-foreground:#123456;--store-foreground:#654321}'))).toMatchObject({ ink: '#654321' });
     expect(storeIdentity(css(':root{--store-foreground:var(--x);--ink:#272820}'))).toMatchObject({ ink: '#272820' });
   });
+  it('resolves a colour token that names another hex token, as the templates write them', () => {
+    const css = ':root{--ri-forest:#1f3d2b;--ri-paper:#f3ecdc;--store-background:var(--ri-forest);--store-foreground:var( --ri-paper )}';
+    expect(storeIdentity([{ path: 'styles.css', content: css }])).toMatchObject({ ink: '#f3ecdc', ground: '#1f3d2b' });
+    expect(storeIdentity([{ path: 'styles.css', content: ':root{--store-background:var(--missing, #222222);--store-foreground:#eeeeee}' }])).toMatchObject({ ground: '#222222' });
+  });
+  it('never draws ink the eye cannot tell from the ground', () => {
+    const mixed = storeIdentity([{ path: 'styles.css', content: ':root{--store-background:#0b0b0b;--store-foreground:color-mix(in srgb, white 90%, black)}' }]);
+    expect(mixed).toMatchObject({ ink: '#ffffff', ground: '#0b0b0b' });
+    const pale = storeIdentity([{ path: 'styles.css', content: ':root{--store-background:#fafafa;--store-foreground:#f0f0f0}' }]);
+    expect(pale).toMatchObject({ ink: '#111111', ground: '#fafafa' });
+  });
   it('falls back to the defaults with no files, a broken design file, or base64 css', () => {
     expect(storeIdentity([])).toEqual(DEFAULT_IDENTITY);
     expect(storeIdentity([{ path: 'design-direction.json', content: '{' }])).toEqual(DEFAULT_IDENTITY);

@@ -342,7 +342,10 @@ export class SourceGenerationService {
     const fromScratch = (!execution?.candidate || execution.evaluate === true) && (dto.revision === 0 || execution?.redesign === true || sourceRedesignRequested(dto.instruction)) && sourceSeesImages(claude ? CLAUDE_COMPANION_MODEL : plan.model);
     const savedLogo = fromScratch ? (await this.prisma.store.findFirst({ where: { id: storeId }, select: { logoUrl: true } }))?.logoUrl : null;
     const logoOwned = savedLogo ? Boolean(await this.prisma.mediaAsset.findFirst({ where: { merchantId, url: savedLogo }, select: { url: true } })) : false;
-    const withLogo = withSavedLogo({ assetUrls: [...new Set(dto.assetUrls || [])], imageUses, logoUrl: savedLogo, fromScratch, owned: logoOwned });
+    // A saved logo the generator could not bundle (missing, or over the 2 MB image limit) is left out, never a failed build.
+    const logoBytes = logoOwned ? await this.uploads.getBuffer(savedLogo!.split('/').at(-1)!).catch(() => null) : null;
+    const logoUsable = Boolean(logoBytes && logoBytes.length <= 2_000_000);
+    const withLogo = withSavedLogo({ assetUrls: [...new Set(dto.assetUrls || [])], imageUses, logoUrl: savedLogo, fromScratch, owned: logoUsable });
     dto = { ...dto, assetUrls: withLogo.assetUrls };
     imageUses = withLogo.imageUses;
     const provider = sourceProvider(this.config, claude ? CLAUDE_COMPANION_MODEL : plan.model, !!dto.assetUrls?.some(url => !sourceVideo(url)) || !!execution?.referenceCaptures?.length);

@@ -342,6 +342,22 @@ describe('Independent source generation',()=>{
     expect(projects.save).toHaveBeenCalled();
   });
 
+  it('skips a saved logo that is too large to bundle or missing from storage, and the build still saves', async () => {
+    for (const bytes of [Buffer.alloc(2_000_001), null]) {
+      const { service, prisma, uploads, projects } = setup();
+      const logo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-00000000000c.png';
+      prisma.store.findFirst.mockResolvedValue({ slug: 'cafe', logoUrl: logo });
+      prisma.mediaAsset.findFirst = jest.fn().mockResolvedValue({ url: logo });
+      prisma.mediaAsset.findMany.mockResolvedValue([{ url: logo, kind: 'ORIGINAL', parentAsset: null }]);
+      uploads.getBuffer.mockResolvedValue(bytes);
+      const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Store', files: files() }) }] }] })));
+      await service.generate('m', 's', input);
+      const manifest = JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'visual-assets.json')?.content || '{"assets":[]}');
+      expect(manifest.assets).toEqual([]);
+      fetchSpy.mockRestore();
+    }
+  });
+
   it('records what each bundled photograph is, so a card can prefer the scene of a product over its packshot', async () => {
     const { service, prisma, stores, uploads, projects } = setup();
     const pack = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg', scene = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000002.jpg';

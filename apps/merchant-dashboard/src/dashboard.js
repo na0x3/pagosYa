@@ -1451,7 +1451,6 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     try {
       const { body, warning } = await createStoreBody(data.name, form.querySelector("#createStoreLogo")?.files?.[0], uploadFile);
       const store = await api("/stores", { method: "POST", body: JSON.stringify(body) });
-      if (warning) errorEl.textContent = warning;
       form.reset();
       lastStores = [store, ...lastStores.filter(existing => existing.id !== store.id)];
       document.getElementById("createStoreDialog").close();
@@ -1459,6 +1458,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       await refresh();
       history.pushState(null, "", "#dashboard-workspace");
       setDashboardView("workspace");
+      // refresh() clears the error line, so a logo that did not upload is reported once the new store is showing.
+      if (warning) errorEl.textContent = warning;
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
       const createError = document.getElementById("createStoreError");

@@ -18,3 +18,13 @@ test("a failed or oversized upload never blocks creating the store", async () =>
   assert.deepEqual(big.body, { name: "Eje" });
   assert.match(big.warning, /8 MB/);
 });
+
+test("the logo warning is shown after the dashboard refreshes, which clears the error line", async () => {
+  const { readFileSync } = await import("node:fs");
+  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const handler = dashboard.slice(dashboard.indexOf('getElementById("createStoreForm").addEventListener("submit"'));
+  const body = handler.slice(0, handler.indexOf("\n  });\n"));
+  const shown = body.indexOf("errorEl.textContent = warning");
+  assert.ok(shown > 0);
+  assert.ok(shown > body.lastIndexOf("await refresh()"), "refresh() clears errorEl, so the warning must be written after it");
+});

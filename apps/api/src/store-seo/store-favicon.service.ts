@@ -34,7 +34,7 @@ export class StoreFaviconService {
     return { body, etag: etagOf(key) };
   }
 
-  private key(store: FaviconStore) { return `${store.id}|${store.logoUrl ?? ''}|${store.publishedSourceRevision ?? 0}`; }
+  private key(store: FaviconStore) { return `${store.id}|${store.name}|${store.logoUrl ?? ''}|${store.publishedSourceRevision ?? 0}`; }
 
   private async store(slug: string): Promise<FaviconStore> {
     const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, name: true, logoUrl: true, publishedSourceRevision: true } });
