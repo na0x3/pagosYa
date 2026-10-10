@@ -27,7 +27,8 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
 export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?: AbortSignal): Promise<{ shots: Sep5ReviewShot[]; facts: Sep5HeaderFacts[] }> {
   const shots: Sep5ReviewShot[] = [], facts: Sep5HeaderFacts[] = [];
   await withVisualSandbox(snapshot, sourceVisualState(snapshot, 'index.html', undefined, true).query, signal, false, async context => {
-    for (const width of [1280, 390] as const) {
+    // 1024 is measured, not photographed: a heading sized for 1280 can split a word at a laptop width.
+    for (const width of [1280, 1024, 390] as const) {
       signal?.throwIfAborted();
       const page = await context.newPage();
       const errors: string[] = [];
@@ -39,7 +40,7 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
       await page.evaluate(async () => { await document.fonts.ready; });
       await page.waitForTimeout(1000);
       const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-      for (const y of [...new Set([0, Math.max(0, Math.round((pageHeight - 844) / 2)), Math.max(0, pageHeight - 844)])]) {
+      if (width !== 1024) for (const y of [...new Set([0, Math.max(0, Math.round((pageHeight - 844) / 2)), Math.max(0, pageHeight - 844)])]) {
         await page.evaluate(offset => window.scrollTo(0, offset), y);
         await page.waitForTimeout(700);
         await page.evaluate(async () => { await Promise.all(Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }).map(i => i.decode().catch(() => {}))); });

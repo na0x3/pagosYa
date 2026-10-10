@@ -4,14 +4,16 @@ import { readFile } from 'node:fs/promises';
 import { kitPath } from '@pagosya/storefront-kit';
 import { captureSep5Draft, sep5MeasuredFacts } from './sep5-review-capture';
 import { sourceProjectSnapshot } from '../source-project';
+import { applySourceLayoutBaseline } from '../source-layout-baseline';
 
 const brief = { businessType: 'Test', audience: 'Test', primaryAction: 'Comprar', visualDirection: 'Simple' };
 const config = 'window.PAGOSYA_CONFIG = ' + JSON.stringify({ slug: 'test', apiBaseUrl: 'https://preview.invalid', checkoutOrigin: 'https://preview.invalid', productPage: 'product.html', checkoutPage: 'checkout.html', demo: true, data: { storeName: 'Test', items: [{ id: 'p1', name: 'Clase suelta', amount: 9000, currency: 'BOB', stock: 10, imageUrls: [], variants: [] }] } }) + ';';
-const store = async (header: string, footer: string, main = '') => sourceProjectSnapshot({ revision: 1, label: 'Draft', brief, files: [
+const store = async (header: string, footer: string, main = '', css = '') => sourceProjectSnapshot({ revision: 1, label: 'Draft', brief, files: [
   { path: 'commerce.js', content: await readFile(kitPath('commerce.js'), 'utf8') },
   { path: 'config.js', content: config },
+  ...(css ? applySourceLayoutBaseline([{ path: 'styles.css', content: css }]) : []),
   { path: 'package.json', content: '{"name":"test","scripts":{"build":"node build.mjs"}}' }, { path: 'README.md', content: '# Test' },
-  { path: 'index.html', content: `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><header>${header}</header><main>${main}<div data-pagosya-catalog></div><aside data-pagosya-cart></aside><p data-pagosya-status></p></main><footer>${footer}</footer><script src="config.js" defer></script><script src="commerce.js" defer></script>` },
+  { path: 'index.html', content: `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${css ? '<link rel="stylesheet" href="styles.css">' : ''}<header>${header}</header><main>${main}<div data-pagosya-catalog></div><aside data-pagosya-cart></aside><p data-pagosya-status></p></main><footer>${footer}</footer><script src="config.js" defer></script><script src="commerce.js" defer></script>` },
 ] });
 
 // The footer's information slot links account and search on every store, so only the header counts.
@@ -22,6 +24,7 @@ it('reports a header without search or account even when the footer has both', a
   expect(shots.every(shot => shot.image.startsWith('data:image/jpeg;base64,'))).toBe(true);
   expect(facts).toEqual([
     expect.objectContaining({ width: 1280, search: false, account: false, cart: true }),
+    expect.objectContaining({ width: 1024, search: false, account: false, cart: true }),
     expect.objectContaining({ width: 390, search: false, account: false, cart: true }),
   ]);
   expect(sep5MeasuredFacts(facts)).toEqual(expect.arrayContaining([
@@ -61,4 +64,23 @@ it('tells the model which words a heading breaks', () => {
   expect(sep5MeasuredFacts([{ width: 1280, pageWidth: 1280, missingImages: 0, search: true, account: true, cart: true, brokenWords: ['próxima', 'secuencia'], errors: [] }])).toEqual([
     '1280px: un título corta la palabra «próxima», «secuencia» a mitad de línea; dale ancho para que salte solo entre palabras.',
   ]);
+});
+
+// Pulso Pilates 2026-10-10: its hero split "movimient / o" only around 1000-1100px, the studio preview's width,
+// while it fit at both widths the review photographed.
+it('measures headings at a laptop width too, where a heading can break that fits at 1280 and 390', async () => {
+  const snapshot = await store(completeHeader, '', '<h2 class="squeeze">La próxima secuencia empieza aquí.</h2>', 'h2{font:400 90px/1 serif;margin:0}@media (min-width:1000px) and (max-width:1100px){.squeeze{width:170px}}');
+  const { shots, facts } = await captureSep5Draft(snapshot);
+  expect(shots.map(shot => shot.width)).not.toContain(1024);
+  expect(facts.map(fact => fact.width)).toEqual([1280, 1024, 390]);
+  expect(facts.find(fact => fact.width === 1024)!.brokenWords.length).toBeGreaterThan(0);
+  expect(facts.filter(fact => fact.width !== 1024).every(fact => fact.brokenWords.length === 0)).toBe(true);
+});
+
+// The platform's safety stylesheet let any heading break between two letters, so a content-sized column squeezed a
+// big headline instead of growing to its longest word.
+it('lets a big headline widen its content-sized column instead of splitting a word', async () => {
+  const snapshot = await store(completeHeader, '', '<section class="hero"><h1>El movimiento encuentra su pulso.</h1><div class="photo"></div></section>', '.hero{display:grid;grid-template-columns:1fr 1fr;width:900px}.hero h1{font:700 106px/.9 serif;margin:0}.photo{min-height:200px;background:#ccc}');
+  const { facts } = await captureSep5Draft(snapshot);
+  expect(facts.find(fact => fact.width === 1280)!.brokenWords).toEqual([]);
 });

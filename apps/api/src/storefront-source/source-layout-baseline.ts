@@ -23,8 +23,11 @@ export const SOURCE_LAYOUT_BASELINE = `${SOURCE_LAYOUT_BASELINE_MARKER}
 :where(img, video, canvas) {
   height: auto;
 }
-:where(h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, figcaption, a, button, label) {
+:where(h3, h4, h5, h6, p, li, dt, dd, blockquote, figcaption, a, button, label) {
   overflow-wrap: anywhere;
+}
+:where(h1, h2) {
+  overflow-wrap: break-word;
 }
 :where(input, select, textarea, button) {
   max-width: 100%;
