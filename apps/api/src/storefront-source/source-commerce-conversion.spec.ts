@@ -108,6 +108,9 @@ describe('conversion product page style', () => {
     const noPhoto = await page({ style: 'conversion', items: [product({ imageUrls: [], highlights: rows(3) })] });
     expect(noPhoto.q('.product-detail__tiles')).toBeNull();
     expect(noPhoto.all('.product-detail__checks li')).toHaveLength(3);
+    const checks = noPhoto.q('.product-detail__checks');
+    expect(noPhoto.q('.product-detail__pricing').compareDocumentPosition(checks) & 4).toBeTruthy();
+    expect(checks.compareDocumentPosition(noPhoto.q('.product-detail__buy')) & 4).toBeTruthy();
     const none = await page({ style: 'conversion' });
     expect(none.q('.product-detail__tiles, .product-detail__checks')).toBeNull();
   });
@@ -148,5 +151,10 @@ describe('conversion product page style', () => {
     const tpl = '<template data-pagosya-product-page-template><article><div data-product-slot="gallery"></div><div data-product-slot="title"></div><div data-product-slot="pricing"></div><div data-product-slot="buy"></div></article></template>';
     const { q } = await page({ style: 'editorial', template: tpl, items: [product({ highlights: rows(2) })] });
     expect(q('.product-detail__highlights')).not.toBeNull();
+  });
+
+  it('keeps the tiles a direct child of the gallery with a strip gallery', async () => {
+    const { all } = await page({ style: 'conversion', gallery: 'strip', items: [product({ imageUrls: ['https://shop.test/a.jpg', 'https://shop.test/b.jpg'], highlights: rows(3) })] });
+    expect(all('.product-detail__gallery > .product-detail__tiles li')).toHaveLength(3);
   });
 });

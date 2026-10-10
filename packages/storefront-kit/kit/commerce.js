@@ -643,6 +643,10 @@
     [data-pagosya-product][data-style] .product-detail__buy-total{white-space:nowrap;font-variant-numeric:tabular-nums}
     [data-pagosya-product][data-style=editorial] .product-detail__buy-total{display:none}
     [data-pagosya-product][data-style=conversion] .product-detail__buy-total{display:inline}
+    [data-pagosya-product][data-style=conversion] .product-detail__buy{white-space:normal;text-wrap:balance}
+    [data-pagosya-product][data-style=conversion] .product-detail__gallery:has(>.product-detail__tiles)>:is(.product-detail__stage,.product-detail__thumbnails){grid-column:1}
+    [data-pagosya-product][data-style=conversion] .product-detail__gallery:has(>.product-detail__tiles)>.product-detail__tiles{grid-column:2;grid-row:1/span 2}
+    @media(max-width:480px){[data-pagosya-product][data-style=conversion] .product-detail__purchase{grid-template-columns:minmax(0,1fr)}[data-pagosya-product][data-style=conversion] .product-detail__quantity{justify-self:start;width:136px}}
     [data-pagosya-product][data-style=conversion] .product-detail__buy-total:not(:empty)::before{content:"·";margin:0 10px}
     [data-pagosya-product][data-style=conversion] .product-detail__gallery:has(>.product-detail__tiles){display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:12px;align-items:start;background:none}
     [data-pagosya-product] .product-detail__tiles{display:grid;gap:12px;margin:0;padding:0;list-style:none}
@@ -1633,6 +1637,7 @@
     gallery.toggleAttribute('data-rail', images.length > 1);
     selectedImage = 0;
     showImage(0);
+    watchHighlights();
   }
   function openProduct(id, trigger) {
     const p = products().find(p => p.id === id);
@@ -1658,7 +1663,7 @@
     if (fullProductPage && (!images.length || style === 'dense' || style === 'story-led') && !detail.hasAttribute('data-page-template')) {
       // Mobile reads identity, purchase, then details; desktop places the purchase panel beside both.
       const copy = detail.querySelector('.product-detail__copy'), [summary, buybox, details] = ['summary', 'buybox', 'details'].map(name => Object.assign(document.createElement('div'), { className: 'product-detail__' + name }));
-      for (const child of [...copy.children]) (child.matches('.product-detail__pricing,.product-detail__options,.product-detail__box,.product-detail__subscription,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
+      for (const child of [...copy.children]) (child.matches('.product-detail__pricing,.product-detail__checks,.product-detail__options,.product-detail__box,.product-detail__subscription,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
       if (style === 'story-led') {
         detail.querySelector('.product-detail__layout').prepend(summary);
