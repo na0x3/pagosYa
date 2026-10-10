@@ -132,3 +132,14 @@ layout, not a skin.
   visible in `conversion`; parts placed in templates with and without slots; a sketch store keeps highlights.
 - Real browser, one dev store switched to `conversion`: 390 px and 1440 px screenshots — tiles beside the photo,
   checks, price in the button, badge on page and cards, no horizontal scroll at 320 px.
+
+## Planning notes (2026-10-10, while writing the plan)
+
+- The badge and the tile column render inside the gallery part (`.product-detail__stage` / `.product-detail__gallery`),
+  so every template with a gallery slot keeps them; only `checks` gets a new `PRODUCT_PARTS` entry. This replaces
+  "a new `PRODUCT_PARTS` entry" for the badge and "`tiles` follows the gallery" above.
+- `topSellerId` travels in the public store payload (`getStorePublic`) instead of `publicContent`: catalog cards need
+  it and the content endpoint is only loaded on product pages.
+- "Paid" uses the Store Brain's rule, `StoreOrder.status in PAID_STATUSES`, not `paymentIntent.status`.
+- Studio preview reads the same payload, so it shows the real badge (including a real "Más vendido"); no sample.
+- A highlight with an icon the kit doesn't know is skipped (today's behaviour), not drawn with a fallback icon.
