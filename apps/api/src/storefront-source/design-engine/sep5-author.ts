@@ -43,6 +43,9 @@ export function sep5AuthorPrompt(input: {
   /** Appends SEP5_STORE_SHELL. The pinned contract asks only for catalog, cart and status, so authored stores
    *  shipped without a way to sign in or search; absent, the prompt stays byte-identical to September 5. */
   storeShell?: boolean;
+  /** The planner concept's signature (spec 2026-10-09), from sourceSignatureAuthorDirection. Absent or blank,
+   *  the prompt stays byte-identical to September 5. */
+  signature?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -54,6 +57,7 @@ export function sep5AuthorPrompt(input: {
     'Runtime classes to style: menu-item, menu-item__image, menu-item__copy h3/p, menu-item__price, menu-add, sold-out, order-items, order-empty, order-item, quantity button/output, order-field select, order-total, order-note, checkout-button, catalog-empty. data-category buttons need visible pressed state. Use comfortable reading sizes, 44px controls, clear keyboard focus, responsive mobile order and reduced-motion support. Do not hide content before JS. Avoid empty decorative cards, generic badges, fake rating stars and unnecessary motion. Typography and image crops must feel deliberate.',
     "If assets are unavailable use the business's public product images or a deliberate typography-led composition; never invent a URL. For an edit, preserve unrelated copy, navigation, and design decisions. Return the whole project, not a diff. Keep code concise enough for 18000 output tokens.",
     ...(input.storeShell ? [SEP5_STORE_SHELL] : []),
+    ...(input.signature?.trim() ? [input.signature.trim()] : []),
     // Last, so it is the most specific instruction the model reads. The pinned contract above warns against
     // "unnecessary motion", which read alone is why nine authored stores produced one @keyframes rule between
     // them; the closing clause settles which of the two paragraphs governs, and reads correctly for 'off' too.

@@ -116,3 +116,16 @@ it('shows the model its own draft and what the browser measured', () => {
   expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: [], files: [] }).success).toBe(true);
   expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: ['a', 'b', 'c', 'd', 'e', 'f', 'g'], files: [] }).success).toBe(false);
 });
+
+// Sep-5 never read the planner, so a concept's signature (spec 2026-10-09) reached only the agent builder. It is
+// appended like the choreography: after the pinned paragraphs, before the motion plan so motion stays last.
+it('appends the signature when there is one, and keeps September 5 intact when there is not', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  const signature = 'SIGNATURE. When the selected concept has a signature it is your through-line.\nSignature to carry: la imprenta.';
+  const withSignature = sep5AuthorPrompt({ ...base, signature, motionPlan: 'MOTION CHOREOGRAPHY: x' });
+  expect(withSignature).toContain('Signature to carry: la imprenta.');
+  expect(withSignature.indexOf('Signature to carry')).toBeLessThan(withSignature.indexOf('MOTION CHOREOGRAPHY'));
+  expect(withSignature.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
+  expect(sep5ReviewPrompt({ ...base, signature, draft: [], measured: [] })).toContain('Signature to carry: la imprenta.');
+  expect(sep5AuthorPrompt({ ...base, signature: '  ' })).toBe(sep5AuthorPrompt(base));
+});

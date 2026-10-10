@@ -66,4 +66,10 @@ export const SOURCE_SIGNATURE_PLANNING = `SIGNATURE. Before choosing a layout, f
 
 export const SOURCE_SIGNATURE_BUILDING = `SIGNATURE. When the selected concept has a signature it is your through-line: build its device, use its vocabulary where it reads naturally in navigation and section titles, and let it reappear in the sections it names. It is direction, not a checklist; adapt it when a section or the merchant's words call for something else. A section does not need a heading when its content or device opens it better.`;
 
+/** The signature for a builder that writes the whole store in one call (Sep-5): the building direction and the concept's own signature. Empty when off or absent. */
+export function sourceSignatureAuthorDirection(concept: { signature?: SourceSignature } | undefined, enabled: boolean): string {
+  const line = sourceSignatureTaskLine(concept, enabled);
+  return line ? `${SOURCE_SIGNATURE_BUILDING}${line}` : '';
+}
+
 export const SOURCE_TELLS_SELF_CHECK = `While you look at those screenshots, weigh the habits that make generated sites look generated: the same fade or blur reveal on every section; a marquee added by reflex; a small label above every heading; three equal cards with icons in tinted circles; a centred hero with a "★ 5.0" pill badge; Inter or Playfair as the default instead of a choice; everything inside rounded cards with soft shadows; every section the same width and spacing; empty copy words (Descubre, Eleva, Vive la experiencia, Discover, Elevate, Experience). If one is there because it was the easy default rather than the concept's choice, change it and verify again; if the concept earned it, keep it and name it in finish.tellsKept (for example "marquesina: es el programa del circo"). This is your judgement, not a requirement: it never blocks finishing.`;

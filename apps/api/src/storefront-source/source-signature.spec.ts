@@ -1,4 +1,4 @@
-import { fitProse, normalizeSourceSignature, sourceSignatureTaskLine, SOURCE_SIGNATURE_SCHEMA, SOURCE_SIGNATURE_PLANNING, SOURCE_SIGNATURE_BUILDING, SOURCE_TELLS_SELF_CHECK } from './source-signature';
+import { fitProse, normalizeSourceSignature, sourceSignatureAuthorDirection, sourceSignatureTaskLine, SOURCE_SIGNATURE_SCHEMA, SOURCE_SIGNATURE_PLANNING, SOURCE_SIGNATURE_BUILDING, SOURCE_TELLS_SELF_CHECK } from './source-signature';
 
 const good = () => ({ idea: 'Un café de día que de noche es bar de vinilos: la tienda es un disco con dos caras.', source: 'El dueño pone vinilos después de las 20:00.', vocabulary: ['Tracklist', 'Cara A', 'Cara B'], device: 'Un disco que gira dibujado en CSS y etiquetas Cara A/B.', carries: ['opening', 'menu'] });
 
@@ -54,6 +54,13 @@ describe('signature prompt text and schema', () => {
     expect(sourceSignatureTaskLine({ signature: good() }, false)).toBe('');
     expect(sourceSignatureTaskLine({}, true)).toBe('');
     expect(sourceSignatureTaskLine(undefined, true)).toBe('');
+  });
+  it('gives a whole-store author the building direction and the signature, or nothing', () => {
+    const direction = sourceSignatureAuthorDirection({ signature: good() }, true);
+    expect(direction.startsWith(SOURCE_SIGNATURE_BUILDING)).toBe(true);
+    expect(direction).toContain('Cara A · Cara B');
+    expect(sourceSignatureAuthorDirection({ signature: good() }, false)).toBe('');
+    expect(sourceSignatureAuthorDirection({}, true)).toBe('');
   });
   it('keeps fitProse behaviour', () => {
     expect(fitProse('Primera frase. Segunda parte larga', 20)).toBe('Primera frase.');

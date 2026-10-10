@@ -1,5 +1,5 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
-import { sourceSignatureTaskLine } from './source-signature';
+import { sourceSignatureAuthorDirection, sourceSignatureTaskLine } from './source-signature';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
@@ -818,7 +818,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file.path)), motionPlan, storeShell: true };
+        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file.path)), motionPlan, storeShell: true, signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn) };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
