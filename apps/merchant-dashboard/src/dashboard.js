@@ -1,5 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { profileInitials } from "/src/profile-initials.mjs";
+import { createStoreBody } from "/src/create-store.mjs";
 import { debtAmountInCents, parseDebtCollectionRows, parseDebtCsv } from "/src/debt-csv.mjs";
 import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
@@ -1448,7 +1449,9 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (!canLeaveMerchantStudio()) return;
     setButtonBusy(submit, true, "Creando…");
     try {
-      const store = await api("/stores", { method: "POST", body: JSON.stringify({ name: data.name }) });
+      const { body, warning } = await createStoreBody(data.name, form.querySelector("#createStoreLogo")?.files?.[0], uploadFile);
+      const store = await api("/stores", { method: "POST", body: JSON.stringify(body) });
+      if (warning) errorEl.textContent = warning;
       form.reset();
       lastStores = [store, ...lastStores.filter(existing => existing.id !== store.id)];
       document.getElementById("createStoreDialog").close();
