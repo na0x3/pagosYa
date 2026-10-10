@@ -76,7 +76,7 @@
 .product-create-panel .product-fiscal summary { cursor: pointer; font-weight: 600; font-size: 15px; }
 .product-create-panel .product-fiscal select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #dedede; border-radius: 10px; background: white; font: inherit; }
 .product-create-panel .product-fiscal [data-fiscal-status]:empty { display: none; }
-.product-create-panel .product-badge { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; margin-top: 22px; }
+.product-create-panel .product-badge { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 22px; }
 .product-create-panel .product-badge legend { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
 .product-create-panel .product-badge label:has(input[type=radio]) { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 12px; border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; cursor: pointer; }
 .product-create-panel .product-badge label:has(input:checked) { border-color: currentColor; font-weight: 600; }
