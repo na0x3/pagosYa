@@ -12,7 +12,22 @@ describe('motion choreography scope', () => {
     const prompt = sourceMotionPlan({ ...base, creative: true, instruction: '', motion: 'auto' });
     expect(prompt).not.toMatch(/BrandEntrance|PageEntrance|SignatureStrokeEntrance|merchant name/);
     expect(prompt).toContain('Never add a full-screen opening');
-    expect(prompt).toContain('two different scroll effects');
+    expect(prompt).toContain('most story sections');
+  });
+  it('makes bold motion the default: no two-scene cap, marquee bands welcome when they respect reduced motion', () => {
+    for (const react of [true, false]) {
+      const prompt = sourceMotionPlan({ ...base, creative: true, instruction: '', motion: 'auto', react });
+      expect(prompt).not.toMatch(/At most two scroll scenes/i);
+      expect(prompt).not.toContain('decorative infinite loops without a pause control');
+      expect(prompt).toMatch(/marquee band/i);
+      expect(prompt).toContain('prefers-reduced-motion');
+      expect(prompt).toMatch(/pauses on hover and focus/);
+    }
+  });
+  it('keeps subtle motion restrained: no looping bands', () => {
+    const prompt = sourceMotionPlan({ ...base, creative: true, instruction: '', motion: 'subtle' });
+    expect(prompt).not.toMatch(/marquee band[^.]*welcome/i);
+    expect(prompt).toContain('no looping bands');
   });
   it('honors off and subtle modes over an ambitious brief', () => {
     expect(sourceMotionPlan({ ...base, creative: true, instruction: 'Expressive brand', motion: 'off' })).not.toContain('PageEntrance');

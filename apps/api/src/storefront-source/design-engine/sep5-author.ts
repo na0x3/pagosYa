@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { extractSep5 } from './sep5-extract';
 import { sep5CreativePlan, type Sep5Translation } from './sep5-plan';
+import { sourceAsksForRestraint, type SourceMotionMode } from '../source-motion';
 
 /**
  * The Sep-5 generator as a plan source.
@@ -46,6 +47,9 @@ export function sep5AuthorPrompt(input: {
   /** The planner concept's signature (spec 2026-10-09), from sourceSignatureAuthorDirection. Absent or blank,
    *  the prompt stays byte-identical to September 5. */
   signature?: string;
+  /** Appends SEP5_BOLD_DEFAULT for a fresh design the merchant did not ask to keep quiet (owner 2026-10-10).
+   *  Absent or false, the prompt stays byte-identical to September 5. */
+  boldDefault?: boolean;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -58,6 +62,7 @@ export function sep5AuthorPrompt(input: {
     "If assets are unavailable use the business's public product images or a deliberate typography-led composition; never invent a URL. For an edit, preserve unrelated copy, navigation, and design decisions. Return the whole project, not a diff. Keep code concise enough for 18000 output tokens.",
     ...(input.storeShell ? [SEP5_STORE_SHELL] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
+    ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
     // Last, so it is the most specific instruction the model reads. The pinned contract above warns against
     // "unnecessary motion", which read alone is why nine authored stores produced one @keyframes rule between
     // them; the closing clause settles which of the two paragraphs governs, and reads correctly for 'off' too.
@@ -65,6 +70,21 @@ export function sep5AuthorPrompt(input: {
       ? [`${input.motionPlan.trim()}\nMotion follows the choreography above; the contract's "unnecessary motion" means decoration that belongs to no concept, and never overrides it.`]
       : []),
   ].join('\n\n');
+}
+
+/**
+ * Why every authored store came out as image | text bands on one muted palette with almost no motion: nothing in
+ * the pinned contract asked for more, and calm is the safe reading of most briefs. Bold is now the default; a
+ * merchant who asks for minimal, sober or quiet does not get this paragraph.
+ */
+export const SEP5_BOLD_DEFAULT = 'BOLD BY DEFAULT: Make this store visually bold. Build the page from colour fields: alternate section backgrounds drawn from the palette and include at least one strong or dark full-width band, not one pale paper colour throughout. Set display type large and heavy where the font allows. Give the page one memorable device taken from this business, such as a rotated sticker or badge, photographs that overlap, a marquee band of its own words or an oversized row of real numbers. A photograph beside a text block is one section shape among many; a page made only of image | text splits reads as a template, so mix in other shapes: a full-colour band with giant type, a marquee, an overlapping collage, a horizontal image strip, a row of figures. Large type still wraps between words: no heading may break a word in the middle, and nothing overflows at 320px.';
+
+/** Bold for a fresh design (new store or redesign) unless the merchant chose subtle or no motion, or asked for a quiet look. */
+export function sep5BoldDefault(input: { creative: boolean; motion: SourceMotionMode; instruction: string; brief: unknown }): boolean {
+  if (!input.creative || input.motion === 'subtle' || input.motion === 'off') return false;
+  const direction = (input.brief as { visualDirection?: unknown } | null)?.visualDirection;
+  const request = input.instruction.split('Pedido actual del comercio:').at(-1)!;
+  return !sourceAsksForRestraint(`${request}\n${typeof direction === 'string' ? direction : ''}`);
 }
 
 /**

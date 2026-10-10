@@ -15,6 +15,11 @@ export function requestedSourceMotion(instruction: string): SourceMotionMode | u
   if (/\b(?:mas|more)\s+(?:animaciones|animados?|animadas?|animations|animated|movimiento|motion)\b/.test(task)) return 'expressive';
   return undefined;
 }
+/** A merchant asking for a minimal, sober or quiet look; bold is the default otherwise (owner 2026-10-10). */
+export function sourceAsksForRestraint(text: string): boolean {
+  const task = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return /\b(?:minimal\w*|sobri[oa]s?|sobriedad|limpi[oa]s?|discret[oa]s?|tranquil[oa]s?|calmad[oa]s?|serena?s?|sutil(?:es)?|quiet|understated|subtle|clean|muted|sin colores fuertes|poco color)\b/.test(task);
+}
 const configPattern = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
 function readConfig(files: SourceProjectFileDto[]) {
   const match = files.find(f => f.path === 'config.js')?.content.match(configPattern);

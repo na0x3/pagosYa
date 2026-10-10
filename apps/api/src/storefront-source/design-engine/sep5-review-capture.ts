@@ -4,7 +4,7 @@ import { sourceVisualState } from '../source-visual-state';
 import type { SourceProjectSnapshot } from '../source-project';
 
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
-export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; errors: string[] };
+export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[] };
 
 /** What the browser can say for certain, in the Spanish the merchant's notes are written in. */
 export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
@@ -14,6 +14,7 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
     ...(fact.search ? [] : [`${fact.width}px: no hay enlace a buscar.html fuera del pie de página.`]),
     ...(fact.account ? [] : [`${fact.width}px: no hay enlace data-pagosya-account fuera del pie de página.`]),
     ...(fact.cart ? [] : [`${fact.width}px: no hay botón de carrito con [data-cart-count].`]),
+    ...(fact.brokenWords.length ? [`${fact.width}px: un título corta la palabra ${fact.brokenWords.map(word => `«${word}»`).join(', ')} a mitad de línea; dale ancho para que salte solo entre palabras.`] : []),
     ...fact.errors.map(error => `${fact.width}px: error de JavaScript: ${error}`),
   ]);
 }
@@ -62,6 +63,24 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           search: outsideFooter('a[href$="buscar.html"],form[role=search],input[type=search]'),
           account: outsideFooter('a[data-pagosya-account]'),
           cart: outsideFooter('[data-cart-count]'),
+          // A word whose own line boxes sit on two lines was split mid-word: a heading squeezed into a narrow column.
+          brokenWords: (() => {
+            const broken: string[] = [];
+            for (const heading of Array.from(document.querySelectorAll('h1,h2,h3'))) {
+              const box = heading.getBoundingClientRect();
+              if (!box.width || !box.height) continue;
+              const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+              for (let node = walker.nextNode(); node && broken.length < 3; node = walker.nextNode()) {
+                for (const match of (node.textContent || '').matchAll(/[\p{L}\p{N}]{4,}/gu)) {
+                  const range = document.createRange();
+                  range.setStart(node, match.index!); range.setEnd(node, match.index! + match[0].length);
+                  const lines = new Set(Array.from(range.getClientRects()).filter(rect => rect.width > 0).map(rect => Math.round(rect.top)));
+                  if (lines.size > 1 && !broken.includes(match[0])) broken.push(match[0]);
+                }
+              }
+            }
+            return broken;
+          })(),
         };
       });
       facts.push({ width, ...header, errors });

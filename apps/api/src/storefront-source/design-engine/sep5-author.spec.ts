@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL } from './sep5-author';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_BOLD_DEFAULT, sep5BoldDefault } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -128,4 +128,33 @@ it('appends the signature when there is one, and keeps September 5 intact when t
   expect(withSignature.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
   expect(sep5ReviewPrompt({ ...base, signature, draft: [], measured: [] })).toContain('Signature to carry: la imprenta.');
   expect(sep5AuthorPrompt({ ...base, signature: '  ' })).toBe(sep5AuthorPrompt(base));
+});
+
+// Bold is the default for a fresh design (owner 2026-10-10): colour fields, varied section shapes, one brand device.
+// Appended like the signature, before the motion plan so motion stays last; absent, September 5 stays intact.
+it('asks for a bold store when told to, before the choreography, and keeps September 5 intact when not', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  const bold = sep5AuthorPrompt({ ...base, boldDefault: true, motionPlan: 'MOTION CHOREOGRAPHY: x' });
+  expect(bold).toContain(SEP5_BOLD_DEFAULT);
+  expect(SEP5_BOLD_DEFAULT).toMatch(/colour fields/);
+  expect(SEP5_BOLD_DEFAULT).toMatch(/marquee/);
+  expect(SEP5_BOLD_DEFAULT).toMatch(/image \| text/);
+  expect(SEP5_BOLD_DEFAULT).toMatch(/break a word in the middle/);
+  expect(bold.indexOf(SEP5_BOLD_DEFAULT)).toBeLessThan(bold.indexOf('MOTION CHOREOGRAPHY'));
+  expect(bold.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
+  expect(sep5ReviewPrompt({ ...base, boldDefault: true, draft: [], measured: [] })).toContain(SEP5_BOLD_DEFAULT);
+  expect(sep5AuthorPrompt({ ...base, boldDefault: false })).toBe(sep5AuthorPrompt(base));
+});
+
+it('is bold for a fresh design unless motion is subtle or off or the merchant asked for a quiet look', () => {
+  const fresh = { creative: true, motion: 'auto' as const, instruction: 'Crea mi tienda', brief: { visualDirection: 'Studio de pilates en Bolivia' } };
+  expect(sep5BoldDefault(fresh)).toBe(true);
+  expect(sep5BoldDefault({ ...fresh, motion: 'expressive' })).toBe(true);
+  expect(sep5BoldDefault({ ...fresh, creative: false })).toBe(false);
+  expect(sep5BoldDefault({ ...fresh, motion: 'subtle' })).toBe(false);
+  expect(sep5BoldDefault({ ...fresh, motion: 'off' })).toBe(false);
+  expect(sep5BoldDefault({ ...fresh, instruction: 'Quiero algo minimalista' })).toBe(false);
+  expect(sep5BoldDefault({ ...fresh, brief: { visualDirection: 'Sobria y elegante' } })).toBe(false);
+  expect(sep5BoldDefault({ ...fresh, brief: null })).toBe(true);
+  expect(sep5BoldDefault({ ...fresh, instruction: 'YAPI: te propongo algo limpio.\nPedido actual del comercio:\nHazla con mucho color' })).toBe(true);
 });

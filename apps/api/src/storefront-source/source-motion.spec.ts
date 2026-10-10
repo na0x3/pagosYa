@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion, withSourceMotion, withSourceMotionSettings } from './source-motion';
+import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion, withSourceMotion, withSourceMotionSettings, sourceAsksForRestraint } from './source-motion';
 
 describe('source motion revisions', () => {
   it('interprets explicit motion changes without taking unrelated negatives or history as motion instructions', () => {
@@ -46,5 +46,16 @@ describe('source motion revisions', () => {
     await expect(withSourceMotion(files.map(f => f.path === 'config.js' ? { ...f, content: 'window.PAGOSYA_CONFIG = (() => { throw new Error("executed") })()' } : f), 'off')).rejects.toThrow(BadRequestException);
     await expect(withSourceMotion(files.filter(f => f.path !== 'commerce.js'), 'subtle')).rejects.toThrow(BadRequestException);
     await expect(withSourceMotionSettings(files, { motion: 'auto', scrollFeel: 'elastic' as any })).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('sourceAsksForRestraint', () => {
+  it('hears a merchant asking for a minimal, sober or quiet look, in Spanish or English', () => {
+    for (const text of ['Quiero algo minimalista', 'una tienda sobria y elegante', 'Diseño limpio y discreto', 'muy tranquilo, sin colores fuertes', 'keep it minimal', 'a quiet, understated store'])
+      expect(sourceAsksForRestraint(text)).toBe(true);
+  });
+  it('does not mistake an ordinary brief for a request for restraint', () => {
+    for (const text of ['Crear una tienda para el studio de pilates DEFS en Bolivia', 'Cafetería con mucho color', 'Tienda de ropa urbana', ''])
+      expect(sourceAsksForRestraint(text)).toBe(false);
   });
 });

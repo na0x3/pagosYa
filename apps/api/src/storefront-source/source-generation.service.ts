@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, SEP5_REVIEW_RESPONSE_SCHEMA } from './design-engine/sep5-author';
+import { sep5AuthorPrompt, sep5BoldDefault, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, SEP5_REVIEW_RESPONSE_SCHEMA } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
 import { STATIC_STANDARD_PAGE_PATHS, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
@@ -828,7 +828,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file.path)), motionPlan, storeShell: true, signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn) };
+        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file.path)), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief }), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn) };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
@@ -870,7 +870,7 @@ export class SourceGenerationService {
         attempt.status = 'COMPLETED';
         // `motion` says whether the choreography was actually sent, so a store that came out static can be
         // told apart from a run that was never asked for movement.
-        this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none' }));
+        this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none', bold: authorInput.boldDefault }));
         generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${owner.slug}`, files: authored.data.files };
         // The Sep-5 run validated only the project contract (apps/api/sep5-run.mjs). The presentation and
         // visual-system contracts were written later, against engine output; holding authored source to them

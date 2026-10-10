@@ -7,11 +7,11 @@ import { sourceProjectSnapshot } from '../source-project';
 
 const brief = { businessType: 'Test', audience: 'Test', primaryAction: 'Comprar', visualDirection: 'Simple' };
 const config = 'window.PAGOSYA_CONFIG = ' + JSON.stringify({ slug: 'test', apiBaseUrl: 'https://preview.invalid', checkoutOrigin: 'https://preview.invalid', productPage: 'product.html', checkoutPage: 'checkout.html', demo: true, data: { storeName: 'Test', items: [{ id: 'p1', name: 'Clase suelta', amount: 9000, currency: 'BOB', stock: 10, imageUrls: [], variants: [] }] } }) + ';';
-const store = async (header: string, footer: string) => sourceProjectSnapshot({ revision: 1, label: 'Draft', brief, files: [
+const store = async (header: string, footer: string, main = '') => sourceProjectSnapshot({ revision: 1, label: 'Draft', brief, files: [
   { path: 'commerce.js', content: await readFile(kitPath('commerce.js'), 'utf8') },
   { path: 'config.js', content: config },
   { path: 'package.json', content: '{"name":"test","scripts":{"build":"node build.mjs"}}' }, { path: 'README.md', content: '# Test' },
-  { path: 'index.html', content: `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><header>${header}</header><main><div data-pagosya-catalog></div><aside data-pagosya-cart></aside><p data-pagosya-status></p></main><footer>${footer}</footer><script src="config.js" defer></script><script src="commerce.js" defer></script>` },
+  { path: 'index.html', content: `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><header>${header}</header><main>${main}<div data-pagosya-catalog></div><aside data-pagosya-cart></aside><p data-pagosya-status></p></main><footer>${footer}</footer><script src="config.js" defer></script><script src="commerce.js" defer></script>` },
 ] });
 
 // The footer's information slot links account and search on every store, so only the header counts.
@@ -37,9 +37,28 @@ it('says nothing about a complete header', async () => {
 });
 
 it('words overflow, broken images and script errors for the model', () => {
-  expect(sep5MeasuredFacts([{ width: 390, pageWidth: 512, missingImages: 2, search: true, account: true, cart: true, errors: ['x is not defined'] }])).toEqual([
+  expect(sep5MeasuredFacts([{ width: 390, pageWidth: 512, missingImages: 2, search: true, account: true, cart: true, brokenWords: [], errors: ['x is not defined'] }])).toEqual([
     '390px: la página es más ancha que la pantalla (512px).',
     '390px: 2 imagen(es) visibles no cargaron.',
     '390px: error de JavaScript: x is not defined',
+  ]);
+});
+
+const completeHeader = '<a href="index.html">Eje</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
+
+// Owner 2026-10-10: a 90px serif heading squeezed into a 170px label column read "próxi / ma", "secue / ncia".
+it('reports a heading that breaks a word in the middle, and not one that wraps between words', async () => {
+  const squeezed = await store(completeHeader, '', '<h2 style="width:170px;font:400 90px/1 serif;overflow-wrap:anywhere;margin:0">La próxima secuencia empieza aquí.</h2>');
+  const { facts } = await captureSep5Draft(squeezed);
+  expect(facts[0].brokenWords.length).toBeGreaterThan(0);
+  expect(facts[0].brokenWords.every(word => 'La próxima secuencia empieza aquí.'.includes(word))).toBe(true);
+  expect(sep5MeasuredFacts(facts).some(fact => fact.startsWith('1280px: un título corta la palabra'))).toBe(true);
+  const roomy = await store(completeHeader, '', '<h2 style="width:900px;font:400 90px/1 serif;overflow-wrap:anywhere;margin:0">La próxima secuencia empieza aquí.</h2>');
+  expect((await captureSep5Draft(roomy)).facts[0].brokenWords).toEqual([]);
+});
+
+it('tells the model which words a heading breaks', () => {
+  expect(sep5MeasuredFacts([{ width: 1280, pageWidth: 1280, missingImages: 0, search: true, account: true, cart: true, brokenWords: ['próxima', 'secuencia'], errors: [] }])).toEqual([
+    '1280px: un título corta la palabra «próxima», «secuencia» a mitad de línea; dale ancho para que salte solo entre palabras.',
   ]);
 });

@@ -395,3 +395,15 @@ describe('signature in concepts', () => {
     expect(beat).toEqual({ type: 'string', minLength: 0, maxLength: 100 });
   });
 });
+
+// Owner 2026-10-10: bold is the default; restraint is what a merchant asks for, not where every concept starts.
+it('starts concepts bold and keeps the restrained system for merchants who ask for it', () => {
+  expect(SOURCE_TYPE_ROLE_DIRECTION).not.toContain('A restrained default uses one ink');
+  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('When the merchant asks for a minimal or sober look, use one ink');
+  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('Default display titles to a bold scale');
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('alternate section backgrounds');
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('strong or dark full-width');
+  expect(SOURCE_RHYTHM_DIRECTION).not.toContain('Use one hairline per store,');
+  expect(SOURCE_DESIGN_CONTRACT).not.toContain('A restrained concept may use native scrolling and zero scenes');
+  expect(SOURCE_DESIGN_CONTRACT).toContain('Default to expressive motion with two scenes');
+});
