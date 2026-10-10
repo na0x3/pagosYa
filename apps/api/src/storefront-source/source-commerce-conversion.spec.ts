@@ -19,7 +19,7 @@ const windows: any[] = [];
 const errors: Error[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
-async function page({ items = [product()] as any[], style, settings = {}, fullPage = true, template = '' }: { items?: any[]; style?: string; settings?: Record<string, unknown>; fullPage?: boolean; template?: string } = {}) {
+async function page({ items = [product()] as any[], style, settings = {}, fullPage = true, template = '', gallery }: { items?: any[]; style?: string; settings?: Record<string, unknown>; fullPage?: boolean; template?: string; gallery?: string } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!error.message.includes('Could not parse CSS stylesheet')) errors.push(error); });
   const dom = new JSDOM(`<html><head></head><body>${template}<button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog></section><section data-pagosya-cart></section>${fullPage ? '<main data-pagosya-product-page></main>' : ''}<p data-pagosya-status></p></body></html>`,
@@ -35,6 +35,7 @@ async function page({ items = [product()] as any[], style, settings = {}, fullPa
   w.PAGOSYA_CONFIG = { slug: 'blume', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...(style ? { productPageStyle: style } : {}) };
   const quote = { subtotal: 3799, discountAmount: 0, amount: 3799, currency: 'BOB', shippingOptions: [] };
   w.fetch = jest.fn(async (url: string) => ({ ok: true, json: async () => url.endsWith('/store') ? data : quote }));
+  if (gallery) w.document.documentElement.setAttribute('data-dna-gallery', gallery);
   w.eval(commerce);
   await new Promise(resolve => setImmediate(resolve));
   const q = (selector: string) => w.document.querySelector(selector);
@@ -45,7 +46,7 @@ async function page({ items = [product()] as any[], style, settings = {}, fullPa
 describe('photo badge', () => {
   it('shows the merchant text on the photo and on the card, and nothing for "Ninguna"', async () => {
     const own = await page({ items: [product({ badge: 'Edición limitada' })] });
-    expect(own.q('.product-detail__stage .product-detail__badge')?.textContent).toBe('Edición limitada');
+    expect(own.q('.product-detail__gallery > .product-detail__badge')?.textContent).toBe('Edición limitada');
     expect(own.q('[data-pagosya-catalog] .menu-item__badge')?.textContent).toBe('Edición limitada');
     const none = await page({ items: [product({ badge: '', createdAt: new Date().toISOString() })], settings: { topSellerId: 'cafe' } });
     expect(none.q('.product-detail__badge')).toBeNull();
@@ -62,6 +63,12 @@ describe('photo badge', () => {
     expect(fresh.q('.product-detail__badge')?.textContent).toBe('Nuevo');
     const old = await page();
     expect(old.q('.product-detail__badge')).toBeNull();
+  });
+
+  it('keeps the badge on the gallery when the stage is hidden by a stacked gallery', async () => {
+    const stacked = await page({ gallery: 'stack', items: [product({ badge: 'Favorito', imageUrls: ['https://shop.test/a.jpg', 'https://shop.test/b.jpg'] })] });
+    expect(stacked.q('.product-detail__gallery > .product-detail__badge')?.textContent).toBe('Favorito');
+    expect(stacked.q('.product-detail__stage .product-detail__badge')).toBeNull();
   });
 
   it('never shows a discount badge for an expired discount', async () => {
