@@ -76,6 +76,9 @@ export interface AppConfig {
   yapiEngine: 'agent' | 'single';
   /** Sketch-first new stores: one structured call + deterministic assembly. Default on; YAPI_SKETCH_FIRST=off disables. */
   yapiSketchFirst: boolean;
+  /** Signature look: planner concepts carry a business-derived signature and the builder self-checks against vibecoded
+   *  tells (spec 2026-10-09). Default on; YAPI_SIGNATURE=off returns to the previous prompts and schema. */
+  yapiSignature: boolean;
   sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
@@ -396,6 +399,7 @@ export default (): { app: AppConfig } => {
     sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
     yapiEngine: process.env.YAPI_ENGINE === 'agent' || process.env.YAPI_ENGINE === 'single' ? process.env.YAPI_ENGINE : 'agent',
     yapiSketchFirst: process.env.YAPI_SKETCH_FIRST !== 'off',
+    yapiSignature: process.env.YAPI_SIGNATURE !== 'off',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
     sep5Author,

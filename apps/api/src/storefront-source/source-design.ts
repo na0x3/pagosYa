@@ -6,6 +6,7 @@ import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { SOURCE_VISUAL_ASSET_DIRECTION } from './source-visual-assets';
 import { SOURCE_SCROLL_FEELS, type SourceScrollFeel } from './source-motion';
+import { fitProse } from './source-signature';
 import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
 
 export const SOURCE_DESIGN_FILE = 'design-direction.json';
@@ -61,13 +62,6 @@ export function sourceDesignExploration(selected?: number) {
   return { selected };
 }
 
-function fitProse(text: string, max: number) {
-  const cut = text.slice(0, max);
-  const sentence = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
-  if (sentence >= max * 0.5) return cut.slice(0, sentence + 1).trim();
-  const word = cut.lastIndexOf(' ');
-  return (word >= max * 0.5 ? cut.slice(0, word) : cut).trim();
-}
 
 /** dnaOptions.seed (the store id) seeds field defaults per concept; repairs collects what was fixed in code. */
 export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[]; requireComposition?: boolean } = {}): SourceDesign {
