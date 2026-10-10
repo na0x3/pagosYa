@@ -3,6 +3,7 @@ import { SourceRequestBudget } from './source-request-budget';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
 import { SOURCE_DNA_DIRECTION, SOURCE_DNA_SCHEMA } from './source-dna';
 import { validDna } from './fixtures/dna';
+import { SOURCE_SIGNATURE_PLANNING } from './source-signature';
 
 const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
   composition: { family: 'menu-led', rationale: 'The cafe needs a clear menu for quick ordering.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Choose from the real menu.', sections: [{ id: 'menu', intent: 'Choose products and order.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Order' }] }] },
@@ -138,4 +139,40 @@ it('requires composition plans in new output while allowing one bounded repair',
   expect((await new SourceDesignPlanner().explore(input())).concepts[0].composition).toBeDefined();
   expect(mock).toHaveBeenCalledTimes(2);
   expect(JSON.parse(mock.mock.calls[0][1]!.body as string).text.format.schema.properties.concepts.items.required).toContain('composition');
+});
+
+
+const completed = (value: unknown) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }));
+
+describe('signature planning', () => {
+  it('asks for a signature on each concept by default and keeps the one returned', async () => {
+    const signature = { idea: 'El menú es un disco.', source: 'Noches de vinilo.', vocabulary: ['Cara A'], device: 'Un disco.', carries: ['menu', 'ghost'] };
+    const withSignature = concepts.map(concept => ({ ...concept, signature }));
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(completed({ concepts: withSignature, selection: { index: 2, rationale: 'Cafetería con vinilos.' } }));
+    const request = { ...input(), repairs: [] as string[] };
+    const result = await new SourceDesignPlanner().explore(request);
+    const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    const item = body.text.format.schema.properties.concepts.items;
+    expect(item.required).toContain('signature');
+    expect(item.properties.signature.required).toEqual(['idea', 'source', 'vocabulary', 'device', 'carries']);
+    expect(body.input[0].content[0].text).toContain(SOURCE_SIGNATURE_PLANNING);
+    expect(result.concepts[2].signature!.carries).toEqual(['menu']);
+    expect(request.repairs).toContain('concepts[2].signature.carries: kept 1 of 2 section IDs');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it('sends exactly the previous schema and prompt when the switch is off', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(completed({ concepts, selection: { index: 2, rationale: 'x' } }));
+    await new SourceDesignPlanner().explore({ ...input(), signature: false });
+    const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    const item = body.text.format.schema.properties.concepts.items;
+    expect(item.required).not.toContain('signature');
+    expect(item.properties).not.toHaveProperty('signature');
+    expect(body.input[0].content[0].text).not.toContain('SIGNATURE.');
+  });
+  it('accepts a plan whose model omitted the signature without spending the repair', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(completed({ concepts, selection: { index: 2, rationale: 'x' } }));
+    const result = await new SourceDesignPlanner().explore(input());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.concepts.some(concept => 'signature' in concept)).toBe(false);
+  });
 });
