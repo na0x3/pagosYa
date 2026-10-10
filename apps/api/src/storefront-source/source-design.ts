@@ -6,7 +6,7 @@ import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { SOURCE_VISUAL_ASSET_DIRECTION } from './source-visual-assets';
 import { SOURCE_SCROLL_FEELS, type SourceScrollFeel } from './source-motion';
-import { fitProse } from './source-signature';
+import { fitProse, normalizeSourceSignature, type SourceSignature } from './source-signature';
 import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
 
 export const SOURCE_DESIGN_FILE = 'design-direction.json';
@@ -27,7 +27,7 @@ export type SourceMotionChoreography = {
   mode: 'subtle' | 'expressive'; scrollFeel: SourceScrollFeel; entrance: typeof SOURCE_ENTRANCE_KINDS[number];
   scenes: Array<{ section: string; kind: typeof SOURCE_SCENE_KINDS[number]; intensity: 1 | 2 | 3 }>;
 };
-export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna; composition?: SourceCompositionPlan };
+export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna; composition?: SourceCompositionPlan; signature?: SourceSignature };
 export type SourceDesign = { concepts: SourceDesignConcept[]; selected: number; selection?: { source: 'planner' | 'forced'; rationale: string | null } };
 export const sourceDesignSchema = {
   type: 'object', additionalProperties: false, required: ['concepts', 'selected'], properties: {
@@ -43,7 +43,7 @@ export const sourceDesignSchema = {
         story: { type: 'object', additionalProperties: false, required: ['promise', 'eyebrow', 'headline', 'support', 'primaryAction', 'beats'], properties: {
           promise: { type: 'string', minLength: 1, maxLength: 140 }, eyebrow: { type: 'string', minLength: 0, maxLength: 40 }, headline: { type: 'string', minLength: 1, maxLength: 100 }, support: { type: 'string', minLength: 1, maxLength: 240 }, primaryAction: { type: 'string', minLength: 1, maxLength: 60 },
           beats: { type: 'array', minItems: 1, maxItems: 12, items: { type: 'object', additionalProperties: false, required: ['section', 'role', 'headline', 'media'], properties: {
-            section: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, role: { type: 'string', enum: [...SOURCE_STORY_ROLES] }, headline: { type: 'string', minLength: 1, maxLength: 100 }, media: { type: 'string', enum: [...SOURCE_STORY_MEDIA] },
+            section: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, role: { type: 'string', enum: [...SOURCE_STORY_ROLES] }, headline: { type: 'string', minLength: 0, maxLength: 100 }, media: { type: 'string', enum: [...SOURCE_STORY_MEDIA] },
           } } },
         } },
         motion: { type: 'object', additionalProperties: false, required: ['mode', 'scrollFeel', 'entrance', 'scenes'], properties: {
@@ -91,11 +91,19 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       if (!result.layout) return fail(`concepts[${index}].composition requires layout.`);
       result.composition = validateSourceCompositionPlan(concept.composition, result.layout.sections);
     }
+    // The signature is direction, never a reason to reject three finished concepts: repaired in code and reported.
+    if (concept.signature !== undefined) {
+      const normalized = normalizeSourceSignature(concept.signature, result.layout?.sections, `concepts[${index}]`);
+      if (normalized.signature) result.signature = normalized.signature;
+      dnaOptions.repairs?.push(...normalized.repairs);
+    }
     const story = concept.story;
     const choreography = concept.motion;
     if (requireNarrative || story !== undefined || choreography !== undefined) {
       if (!result.layout || !story || !choreography) return fail(`concepts[${index}]: story, motion y layout deben planearse juntos.`);
       const short = (text: unknown, max: number) => typeof text === 'string' && text.trim().length > 0 && text.trim().length <= max;
+      // A beat may open with its content or device instead of a heading (spec 2026-10-09): empty or absent is valid.
+      const optionalShort = (text: unknown, max: number) => text === undefined || (typeof text === 'string' && text.trim().length <= max);
       // The eyebrow is optional: an empty (or, in older plans, absent) one is the default, not a slip.
       const eyebrow = story.eyebrow ?? '';
       if (!short(story.promise, 140) || typeof eyebrow !== 'string' || eyebrow.trim().length > 40 || !short(story.headline, 100) || !short(story.support, 240) || !short(story.primaryAction, 60)
@@ -103,7 +111,7 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       const beatSections = story.beats.map((beat: any) => beat?.section);
       const exactStory = JSON.stringify(beatSections) === JSON.stringify(result.layout.sections);
       const savedSubset = beatSections.every((section: string, beatIndex: number) => result.layout!.sections.indexOf(section) > (beatIndex ? result.layout!.sections.indexOf(beatSections[beatIndex - 1]) : -1));
-      if (story.beats.some((beat: any) => !result.layout!.sections.includes(beat?.section) || !SOURCE_STORY_ROLES.includes(beat?.role) || !SOURCE_STORY_MEDIA.includes(beat?.media) || !short(beat?.headline, 100))
+      if (story.beats.some((beat: any) => !result.layout!.sections.includes(beat?.section) || !SOURCE_STORY_ROLES.includes(beat?.role) || !SOURCE_STORY_MEDIA.includes(beat?.media) || !optionalShort(beat?.headline, 100))
         || (requireNarrative ? !exactStory : !savedSubset)) return fail(`concepts[${index}].story.beats: usa cada section en el orden del layout con roles, titulares y medios válidos.`);
       const offerBeat = story.beats.find((beat: any) => beat.section === result.layout!.catalogSection);
       if (!offerBeat) return fail(`concepts[${index}].story: incluye un beat para la sección del catálogo.`);
@@ -116,7 +124,7 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel)
         || !Array.isArray(scenes) || scenes.length > 2 || scenes.some((scene: any) => !result.layout!.sections.includes(scene?.section) || !SOURCE_SCENE_KINDS.includes(scene?.kind) || ![1, 2, 3].includes(scene?.intensity))
         || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa hasta dos escenas en sections distintas.`);
-      result.story = { promise: story.promise.trim(), eyebrow: eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: beat.headline.trim(), media: beat.media })) };
+      result.story = { promise: story.promise.trim(), eyebrow: eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: String(beat.headline ?? '').trim(), media: beat.media })) };
       result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: 'none', scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
     }
     // Planned concepts always carry a DNA; saved ones only when they already had it, so old revisions stay byte-equal.

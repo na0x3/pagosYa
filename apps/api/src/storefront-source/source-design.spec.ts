@@ -346,3 +346,52 @@ it('enforces planned custom page sections and refuses to silently adopt unplanne
   expect(() => validateSourceDesignImplementation(design, [home, { path: 'craft.html', content: '<main><section id="process">The process</section></main>' }])).not.toThrow();
   expect(adoptTrailingDesignSections(design, home.content.replace('</main>', '<section id="photos"></section></main>'))).toEqual(design);
 });
+
+describe('signature in concepts', () => {
+  const narrativeProposal = () => {
+    const value = proposal() as any;
+    for (const concept of value.concepts) {
+      concept.layout = { sections: ['opening', 'menu', 'visit'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };
+      concept.story = { promise: 'A clear reason to visit', eyebrow: '', headline: `${concept.name} para compartir hoy`, support: 'Una propuesta breve, clara y basada en los datos del negocio.', primaryAction: 'Ver menú', beats: [
+        { section: 'opening', role: 'opening', headline: 'Empieza por una pausa', media: 'hero' },
+        { section: 'menu', role: 'offer', headline: 'Elige algo rico', media: 'product' },
+        { section: 'visit', role: 'action', headline: 'Encuentra tu momento', media: 'none' },
+      ] };
+      concept.motion = { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [] };
+    }
+    return value;
+  };
+  const signature = { idea: 'La tienda es un disco con dos caras.', source: 'Vinilos después de las 20:00.', vocabulary: ['Cara A', 'Cara B'], device: 'Un disco que gira.', carries: ['opening', 'visit'] };
+
+  it('keeps a valid signature on the concept', () => {
+    const value = narrativeProposal(); value.concepts[1].signature = signature;
+    expect(validateSourceDesign(value, 1, true, true).concepts[1].signature).toEqual(signature);
+  });
+  it('repairs a broken signature, reports it and still accepts the plan', () => {
+    const value = narrativeProposal(); value.concepts[1].signature = { ...signature, carries: ['ghost', 'opening'] };
+    value.concepts[2].signature = { ...signature, idea: '' };
+    const repairs: string[] = [];
+    const checked = validateSourceDesign(value, 1, true, true, { repairs });
+    expect(checked.concepts[1].signature!.carries).toEqual(['opening']);
+    expect('signature' in checked.concepts[2]).toBe(false);
+    expect(repairs).toEqual(expect.arrayContaining(['concepts[1].signature.carries: kept 1 of 2 section IDs', 'concepts[2].signature: no idea, dropped']));
+  });
+  it('adds no signature key to a concept without one, so saved designs round-trip unchanged', () => {
+    const value = narrativeProposal();
+    const checked = validateSourceDesign(value, 1, true, true);
+    expect(checked.concepts.some(concept => 'signature' in concept)).toBe(false);
+    expect(JSON.stringify(validateSourceDesign(JSON.parse(JSON.stringify(checked)), 1, false, false))).toBe(JSON.stringify(checked));
+  });
+  it('accepts a beat that opens without a headline', () => {
+    const value = narrativeProposal(); value.concepts[1].story.beats[2].headline = '';
+    expect(validateSourceDesign(value, 1, true, true).concepts[1].story!.beats[2].headline).toBe('');
+    delete value.concepts[1].story.beats[2].headline;
+    expect(validateSourceDesign(value, 1, true, true).concepts[1].story!.beats[2].headline).toBe('');
+    value.concepts[1].story.beats[2].headline = 'x'.repeat(101);
+    expect(() => validateSourceDesign(value, 1, true, true)).toThrow('story.beats');
+  });
+  it('lets the schema send an empty beat headline', () => {
+    const beat = (sourceDesignSchema.properties.concepts.items.properties as any).story.properties.beats.items.properties.headline;
+    expect(beat).toEqual({ type: 'string', minLength: 0, maxLength: 100 });
+  });
+});
