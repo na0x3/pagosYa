@@ -22,3 +22,9 @@ it('accepts nested pages that resolve scripts to the shared root files', () => {
   snapshot.files.at(-1).content = snapshot.files.at(-1).content.replace('../commerce.js', 'commerce.js');
   expect(() => assertSourceCommerceContract(snapshot)).toThrow();
 });
+it("does not ask the buyer's order email to load the storefront scripts", () => {
+  const snapshot = source(); snapshot.files.push({ path: 'emails/order-confirmation.html', content: '<table><tr><td data-order-greeting>Hola</td></tr></table>' });
+  expect(() => assertSourceCommerceContract(snapshot)).not.toThrow();
+  snapshot.files.push({ path: 'emails/other.html', content: '<p>x</p>' });
+  expect(() => assertSourceCommerceContract(snapshot)).toThrow('emails/other.html');
+});

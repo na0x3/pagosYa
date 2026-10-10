@@ -3,6 +3,7 @@ import { validateSourcePriceClaims } from './source-price-claims';
 import { isNextSource, nextSourceFile, nextPageMarkup, validateNextSources } from './source-next';
 import { BadRequestException } from '@nestjs/common';
 import type { SourceProjectSnapshot } from './source-project';
+import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 
 /** Structural publishing gate. The isolated browser checker verifies actual behavior. */
 export function assertSourceCommerceContract(snapshot: SourceProjectSnapshot) {
@@ -24,7 +25,8 @@ export function assertSourceCommerceContract(snapshot: SourceProjectSnapshot) {
   if (purpose === 'shop' && !/<(?:button|a)\b[^>]*(?:\bdata-cart-open(?:\s|=|>)|href\s*=\s*["']#(?:pedido|carrito|cart)["'])/i.test(home)) throw new BadRequestException('Añade un botón Pedido con data-cart-open para abrir el carrito.');
   if (purpose !== 'shop' && !/<[^>]+\bdata-pagosya-contact(?:\s|=|>)/i.test(home)) throw new BadRequestException('La página inicial necesita el espacio de contacto compartido.');
   for (const [path, source] of files) {
-    if (!path.endsWith('.html')) continue;
+    // The buyer's order email is read in a mail client, where the storefront runtime never loads.
+    if (!path.endsWith('.html') || path === ORDER_EMAIL_TEMPLATE_PATH) continue;
     const html = clean(source);
     const scripts = [...html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)].map(match => {
       try { return new URL(match[1], `https://source.invalid/${path}`).href; } catch { return ''; }
