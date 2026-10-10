@@ -55,8 +55,8 @@ const PRODUCT_PRESETS: Record<string, { label: string; params: Omit<SketchProduc
   playful: { label: 'Juguetona · regalos', params: { swatch: 'photo', gallery: 'mosaic', blocks: 'tape', divider: 'dashed', enter: 'pop', media: 'right' } },
   craft: { label: 'Artesanal · comida', params: { swatch: 'photo', gallery: 'rail', blocks: 'tape', divider: 'dashed', enter: 'fade-up', media: 'left' } },
 };
-const PRODUCT_CONTROLS: Array<{ key: 'layout' | 'swatch' | 'gallery' | 'blocks' | 'divider' | 'enter' | 'media'; label: string; values: string[]; names: string[] }> = [
-  { key: 'layout', label: 'Composición', values: ['editorial', 'dense', 'image-led', 'story-led'], names: ['Editorial', 'Detallada', 'Foto grande', 'Historia'] },
+export const PRODUCT_CONTROLS: Array<{ key: 'layout' | 'swatch' | 'gallery' | 'blocks' | 'divider' | 'enter' | 'media'; label: string; values: string[]; names: string[] }> = [
+  { key: 'layout', label: 'Composición', values: ['editorial', 'dense', 'image-led', 'story-led', 'conversion'], names: ['Editorial', 'Detallada', 'Foto grande', 'Historia', 'Conversión'] },
   { key: 'media', label: 'Foto', values: ['left', 'right'], names: ['Izquierda', 'Derecha'] },
   { key: 'swatch', label: 'Opciones', values: ['pill', 'circle', 'square', 'label', 'photo'], names: ['Píldora', 'Círculo', 'Cuadrado', 'Etiqueta', 'Foto'] },
   { key: 'gallery', label: 'Galería', values: ['rail', 'strip', 'stack', 'mosaic'], names: ['Riel', 'Tira', 'Pila', 'Mosaico'] },

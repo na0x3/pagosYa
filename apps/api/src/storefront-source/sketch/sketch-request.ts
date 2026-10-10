@@ -2,6 +2,7 @@ import { sectionCompositions, SKETCH_COMPONENT_REGISTRY } from '@pagosya/shared-
 import { structuredOutputSchema } from '../design-engine/structured-output';
 import { CONTENT_GENERATION_GUIDE } from '../design-engine/design-prompts';
 import { SOURCE_FONT_CATALOG, SOURCE_FONT_IDS } from '../source-font-catalog';
+import { SOURCE_PRODUCT_PAGE_STYLES } from '../source-dna';
 import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { drawSketchDirection, type SketchDirection } from './sketch-direction';
@@ -42,7 +43,7 @@ export const SKETCH_JSON_SCHEMA = {
       required: Object.keys(SKETCH_STYLE_OPTIONS) },
     product: { type: 'object', additionalProperties: false, properties: {
       preset: { type: 'string', enum: [...PRESET_IDS] },
-      layout: { type: 'string', enum: ['editorial', 'dense', 'image-led', 'story-led'] },
+      layout: { type: 'string', enum: [...SOURCE_PRODUCT_PAGE_STYLES] },
       media: { type: 'string', enum: ['left', 'right'] },
       assurances: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: string, detail: string }, required: ['icon', 'title', 'detail'] } },
     }, required: ['preset', 'layout', 'media', 'assurances'] },
@@ -134,7 +135,7 @@ export function sketchPrompt(input: { storeName: string; purpose: 'shop' | 'serv
     'Kickers, stickers y cajas son opcionales: no llenes todas las bandas de adornos. La densidad y la escala obedecen la dirección de marca. Las secciones deben contar cosas distintas.',
     `Fuentes disponibles (ids exactos): ${SOURCE_FONT_IDS.join(', ')}. Personalidades: ${SOURCE_FONT_CATALOG.slice(0, 12).map(font => `${font.id}=${font.personality.join('/')}`).join('; ')}.`,
     `account es la página de ingreso y registro de clientes (el formulario lo pone la plataforma): kicker y title con la voz de la marca (ej. "Bienvenido de vuelta al laboratorio"), lead de una línea, 3 perks con ícono Lucide y texto corto y honesto (seguir pedidos, guardar direcciones, ofertas primero), layout split o center, photo de las disponibles o "".`,
-    `product elige la ficha de producto (la dibuja la plataforma). preset es su piel: ${PRESET_IDS.map(id => `${id} (${PRODUCT_CARD_PRESETS[id].when})`).join('; ')}; elige el que mejor le quede a lo que vende ESTA tienda, plain solo si ninguno encaja. layout es su composición: editorial (equilibrada), dense (especificaciones al lado de la compra), image-led (galería dominante), story-led (texto e historia DEBAJO de la foto). media pone la foto a la izquierda o a la derecha en escritorio: varía entre tiendas, no uses siempre left. product.assurances: 0-3 garantías REALES y cortas de esta tienda para la ficha (title ≤40, detail ≤80, icon de la lista), p. ej. "Horneado del día · salimos del horno a las 7am". Solo hechos que el comercio pueda cumplir: nada de envíos gratis, plazos o certificaciones inventadas, y nunca menciones pagosYa ni "pago seguro" (la entrega y el pago los añade la plataforma sola). Déjalo [] si no hay nada honesto que decir.`,
+    `product elige la ficha de producto (la dibuja la plataforma). preset es su piel: ${PRESET_IDS.map(id => `${id} (${PRODUCT_CARD_PRESETS[id].when})`).join('; ')}; elige el que mejor le quede a lo que vende ESTA tienda, plain solo si ninguno encaja. layout es su composición: editorial (equilibrada), dense (especificaciones al lado de la compra), image-led (galería dominante), story-led (texto e historia DEBAJO de la foto), conversion (comida y bebida, suplementos, belleza y cuidado personal, gadgets: la foto con una columna de 3 íconos de beneficios al lado, beneficios con ✓ antes del botón y el precio dentro del botón; úsala por defecto en esos rubros). media pone la foto a la izquierda o a la derecha en escritorio: varía entre tiendas, no uses siempre left. product.assurances: 0-3 garantías REALES y cortas de esta tienda para la ficha (title ≤40, detail ≤80, icon de la lista), p. ej. "Horneado del día · salimos del horno a las 7am". Solo hechos que el comercio pueda cumplir: nada de envíos gratis, plazos o certificaciones inventadas, y nunca menciones pagosYa ni "pago seguro" (la entrega y el pago los añade la plataforma sola). Déjalo [] si no hay nada honesto que decir.`,
     `Íconos: el bloque steps lleva un ícono Lucide por paso (cualquier nombre de lucide.dev, ej.: ${SOURCE_ICON_NAMES.slice(0, 24).join(', ')}).`,
     'Colores en hex #rrggbb con buen contraste. Textos en el idioma solicitado por el comercio, español por defecto; honestos, sin inventar precios ni promesas.',
   ].join('\n');

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { bocetoRevealY, createBocetoPanel, DEFAULT_STYLE, STYLE_CONTROLS } from './source-boceto';
+import { bocetoRevealY, createBocetoPanel, DEFAULT_STYLE, PRODUCT_CONTROLS, STYLE_CONTROLS } from './source-boceto';
 import { DEFAULT_SKETCH_STYLE, SKETCH_STYLE_OPTIONS } from '../../api/src/storefront-source/sketch/sketch-schema';
 import { ApiError, MerchantStudioApi } from './api';
 import { sketchComponents } from '@pagosya/shared-types';
@@ -1096,4 +1096,10 @@ it('keeps layers inside the right inspector when Studio retains YAPI on the left
   panel.remoteSelect('intro');
   expect(host.querySelector('.bct-props')).not.toBeNull();
   expect(host.querySelector('.bct-panel .bct-layers--inline')).not.toBeNull();
+});
+
+it('offers Conversión as a fifth product page composition', () => {
+  const layout = PRODUCT_CONTROLS.find(control => control.key === 'layout')!;
+  expect(layout.values).toEqual(['editorial', 'dense', 'image-led', 'story-led', 'conversion']);
+  expect(layout.names[layout.values.indexOf('conversion')]).toBe('Conversión');
 });

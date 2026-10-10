@@ -224,3 +224,9 @@ describe('the page grammar the model is told about', () => {
     expect(item.required).toContain('href');
   });
 });
+
+it('offers the conversion product page to the boceto model and says when to use it', () => {
+  expect(JSON.stringify(SKETCH_JSON_SCHEMA)).toContain('"conversion"');
+  const prompt = sketchPrompt({ storeName: 'salv', purpose: 'shop', instruction: 'x', brief: {}, photos: [], catalogue: catalogueDigest([]), structure });
+  expect(prompt).toMatch(/conversion \(comida y bebida, suplementos, belleza/);
+});

@@ -152,3 +152,10 @@ it('uses the authored navigation label and falls back to the default', () => {
   expect(navLinks).not.toContain('Productos');
   expect(navLinks).toContain('Nosotros');
 });
+
+it('gives sketch stores a slot for highlights and checks between price and button', () => {
+  const product = assembleSketch(full, ctx).find(f => f.path === 'components/product.tsx')!.content;
+  expect(product).toContain('name="highlights"');
+  expect(product.indexOf('name="pricing"')).toBeLessThan(product.indexOf('name="checks"'));
+  expect(product.indexOf('name="checks"')).toBeLessThan(product.indexOf('name="buy"'));
+});

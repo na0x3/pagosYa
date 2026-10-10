@@ -94,7 +94,9 @@ export default function Product() {
             <KitSlot kind="product" name="title" className="skb-pdp__title" />
             <KitSlot kind="product" name="rating" />
             <KitSlot kind="product" name="pricing" className="skb-pdp__price" />
+            <KitSlot kind="product" name="checks" className="skb-pdp__checks" />
             <KitSlot kind="product" name="description" className="skb-pdp__desc" />
+            <KitSlot kind="product" name="highlights" className="skb-pdp__highlights" />
             <KitSlot kind="product" name="buy" className="skb-pdp__buy" />
             <KitSlot kind="product" name="delivery" />
             <KitSlot kind="product" name="info" />

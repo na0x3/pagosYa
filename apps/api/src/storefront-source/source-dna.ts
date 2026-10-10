@@ -4,7 +4,7 @@
 import { SOURCE_FONT_IDS, SOURCE_FONT_SEED_IDS } from './source-font-catalog';
 import { sanitizeProductThemeCss } from './product-theme-css';
 import { productCardDirection, productCommerceDirection } from './source-product-card-presets';
-export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
+export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led', 'conversion'] as const;
 export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
 /** The self-hosted fonts in the kit, from the one catalogue (source-font-catalog.ts). */
 export const SOURCE_DNA_FONTS = SOURCE_FONT_IDS;

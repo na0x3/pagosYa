@@ -84,7 +84,7 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       // The section order is the composition the model actually planned; a contradicting flag is the slip.
       // An intro before the catalog is by definition a standalone intro, so the flag follows the order.
       const standaloneIntro = layout.standaloneIntro || layout.sections[0] !== layout.catalogSection;
-      if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa editorial, dense, image-led o story-led.`);
+      if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa ${SOURCE_PRODUCT_PAGE_STYLES.join(', ')}.`);
       result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
     }
     if (dnaOptions.requireComposition || concept.composition !== undefined) {
