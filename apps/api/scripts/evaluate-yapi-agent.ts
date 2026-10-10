@@ -1,7 +1,7 @@
 /**
  * Compares the agent and single YAPI engines on real builds. Spends real provider money; never saves or publishes
  * (each run is a candidate generation that returns the snapshot instead of storing it).
- * Usage (ts-node keeps the decorator metadata Nest needs): npx ts-node --transpile-only scripts/evaluate-yapi-agent.ts --merchant <id> --store <id> --engine agent|single --runs 3 [--credits 200] --instruction "…" --i-accept-costs
+ * Usage (ts-node keeps the decorator metadata Nest needs): npx ts-node --transpile-only scripts/evaluate-yapi-agent.ts --merchant <id> --store <id> --engine agent|single --runs 3 [--credits 200] [--brief brief.json, for a store with no saved design] --instruction "…" --i-accept-costs
  */
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
@@ -73,7 +73,8 @@ async function main() {
   const fixture = arg('fixture') ? JSON.parse(readFileSync(arg('fixture')!, 'utf8')) : null;
   for (const task of suite) for (let run = 1; run <= runs; run++) {
     const current = await projects.current(merchantId, storeId);
-    const snapshot = fixture || (await projects.version(merchantId, storeId, current.revision) as any).snapshot;
+    // A store with no saved design is built from scratch, as its first YAPI build would be; --brief <file.json> supplies its brief.
+    const snapshot = fixture || (current.revision ? (await projects.version(merchantId, storeId, current.revision) as any).snapshot : { brief: JSON.parse(readFileSync(arg('brief') ?? '', 'utf8')), files: [] });
     const brief = snapshot.brief;
     const started = Date.now();
     let attempts: any[] = [];
@@ -109,6 +110,8 @@ async function main() {
       if (shot && result.candidate) writeFileSync(shot.replace(/(\.jpe?g)?$/i, `-${run}.jpg`), Buffer.from((await captureAgentDraft(result.candidate, 1280)).image.split(',')[1], 'base64'));
       console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {
+      // The merchant message hides the cause; each attempt's own reason names the check that failed.
+      for (const attempt of attempts) console.log(`  intento ${attempt.phase ?? '?'} ${attempt.model} ${attempt.status}${attempt.failureReason ? `: ${attempt.failureReason}` : ''}`);
       rows.push({ task:task.id, run, status: 'failed', seconds: Math.round((Date.now() - started) / 1000), credits: 0, modelCalls: attempts.filter(a=>a.phase==='agent').length, diagnostics: attempts.flatMap(a=>a.diagnostics||[]), error: (error as Error).message.slice(0, 160) });
     }
     if (arg('out')) writeFileSync(arg('out')!, JSON.stringify({ engine, providerMode:config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'api', rows },null,2), {mode:0o600});

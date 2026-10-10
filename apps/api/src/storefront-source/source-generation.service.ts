@@ -448,7 +448,8 @@ export class SourceGenerationService {
     // re-rendered from a plan. A store already born in Next keeps its framework; see docs/SEP5_AUTHORED_PLAN.md.
     const sep5Author = this.config.get<boolean>('app.sep5Author') === true && !execution?.candidate && !isNextSource(previousFiles) && (!previous || redesign);
     const sep5SelfReview = sep5Author && this.config.get<boolean>('app.sep5SelfReview') === true;
-    const useNext = !sep5Author && (isNextSource(previousFiles) || !execution?.candidate && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign));
+    // An evaluation candidate builds a store with no saved design the way a first build would, so it reaches the planner.
+    const useNext = !sep5Author && (isNextSource(previousFiles) || (!execution?.candidate || execution.evaluate === true) && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign));
     // The tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) builds component stores; candidates and DeepSeek keep the single call.
     const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && !isDeepSeek(plan.model) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
     const migrating = useNext && !!previous && !isNextSource(previousFiles);
