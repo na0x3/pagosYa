@@ -147,7 +147,7 @@ export function buildStoreKnowledge(input: StoreKnowledgeInput): StoreKnowledge 
   };
 }
 
-const PAID_STATUSES = ['PAID', 'PREPARING', 'READY_FOR_PICKUP', 'SHIPPED', 'DELIVERED'] as const;
+export const PAID_STATUSES = ['PAID', 'PREPARING', 'READY_FOR_PICKUP', 'SHIPPED', 'DELIVERED'] as const;
 
 export async function loadStoreKnowledge(prisma: PrismaService, merchantId: string, storeId: string, now = new Date()): Promise<StoreKnowledge | null> {
   const store = await prisma.store.findFirst({ where: { id: storeId, merchantId }, select: {

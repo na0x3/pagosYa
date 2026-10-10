@@ -23,6 +23,7 @@ function setup() {
     appointmentServiceOffering: { findMany: jest.fn().mockResolvedValue([]) },
     collection: { findMany: jest.fn().mockResolvedValue([]) },
     storeBundle: { findMany: jest.fn().mockResolvedValue([]) },
+    storeOrder: { findMany: jest.fn().mockResolvedValue([]) },
   };
   return { prisma, service: new PublicStoresService(prisma) };
 }
@@ -126,5 +127,21 @@ describe('photo badge data', () => {
     expect(result.items.map((item: any) => [item.id, item.badge, item.createdAt])).toEqual([
       ['p1', 'Edición limitada', createdAt.toISOString()], ['p2', null, createdAt.toISOString()], ['p3', '', createdAt.toISOString()],
     ]);
+  });
+});
+
+describe('top seller badge', () => {
+  it('asks only for paid orders of the last 90 days and publishes the winner', async () => {
+    const { service, prisma } = setup();
+    const lines = (id: string) => ({ items: [{ paymentLinkId: id, quantity: 1 }] });
+    prisma.storeOrder.findMany.mockResolvedValue([lines('p1'), lines('p1'), lines('p2'), lines('p1'), lines('p3')]);
+    const before = Date.now();
+    const result = await service.getStorePublic(storeRow.slug);
+    expect(result.topSellerId).toBe('p1');
+    const where = prisma.storeOrder.findMany.mock.calls[0][0].where;
+    expect(where.storeId).toBe(storeRow.id);
+    expect(where.status.in).toEqual(expect.arrayContaining(['PAID', 'DELIVERED']));
+    expect(where.status.in).not.toContain('PENDING');
+    expect(before - where.createdAt.gte.getTime()).toBeGreaterThanOrEqual(90 * 86_400_000 - 1000);
   });
 });

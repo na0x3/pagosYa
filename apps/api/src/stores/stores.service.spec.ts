@@ -9,7 +9,7 @@ function makeFakePrisma() {
     paymentLink: { findMany: jest.fn(), groupBy: jest.fn().mockResolvedValue([]), update: jest.fn() },
     storeLead: { create: jest.fn().mockResolvedValue({ id: "lead_1" }) },
     storeNewsletterSubscriber: { upsert: jest.fn().mockResolvedValue({ id: "subscriber_1" }) },
-    storeOrder: { create: jest.fn().mockResolvedValue({ id: "order_1" }) },
+    storeOrder: { create: jest.fn().mockResolvedValue({ id: "order_1" }), findMany: jest.fn().mockResolvedValue([]) },
     category: { findMany: jest.fn().mockResolvedValue([]) },
     storeLink: {
       findMany: jest.fn().mockResolvedValue([]),

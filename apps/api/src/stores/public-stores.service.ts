@@ -8,6 +8,8 @@ import { storePolicies } from "./store-presentation";
 import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperiences, readStoreAnimations, readStoreContentOrder } from "./store-presentation";
 import { readProductExtras, readStringArray, readProductVariants } from "./product-pricing";
 import { publishedStoreLook } from "./store-dna";
+import { PAID_STATUSES } from "../store-knowledge/store-knowledge";
+import { topSellerId, TOP_SELLER_WINDOW_DAYS } from "./top-seller";
 
 /** What shoppers read: a published store with its catalog, the store directory, newsletter sign-ups, and batched view counting. */
 @Injectable()
@@ -182,7 +184,7 @@ export class PublicStoresService implements OnModuleDestroy {
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
     const trackView = !options.ownerMerchantId && options.trackView !== false;
-    const [items, categories, links, productStats, appointmentOfferings, collections, look] = await Promise.all([
+    const [items, categories, links, productStats, appointmentOfferings, collections, look, paidOrders] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
@@ -206,6 +208,10 @@ export class PublicStoresService implements OnModuleDestroy {
       }),
       // The hosted order confirmation takes the store's button form, radius and confirmation motif from the published config.
       publishedStoreLook(this.prisma, store.id, store.publishedSourceRevision),
+      this.prisma.storeOrder.findMany({
+        where: { storeId: store.id, status: { in: [...PAID_STATUSES] }, createdAt: { gte: new Date(Date.now() - TOP_SELLER_WINDOW_DAYS * 86_400_000) } },
+        select: { items: true }, take: 5000,
+      }),
     ]);
     if (trackView) this.queueStoreView(store.id);
 
@@ -313,6 +319,7 @@ export class PublicStoresService implements OnModuleDestroy {
       cartRecommendationsEnabled: store.cartRecommendationsEnabled,
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
       bundles,
+      topSellerId: topSellerId(paidOrders),
       showLowStockToCustomers: store.showLowStockToCustomers,
       policies: storePolicies(store.policies),
       appointmentOfferings,

@@ -46,6 +46,7 @@ function setup() {
     category: { findMany: jest.fn(async () => []) },
     storeLink: { findMany: jest.fn(async () => []) },
     storeProductStat: { findMany: jest.fn(async () => []) },
+    storeOrder: { findMany: jest.fn(async () => []) },
     appointmentServiceOffering: { findMany: jest.fn(async () => []) },
     collection: { findMany: jest.fn(async () => []) },
     customDomain: { findUnique: jest.fn(async () => ({ hostname: 'nueva.example', status: 'ACTIVE', store: row })) },
