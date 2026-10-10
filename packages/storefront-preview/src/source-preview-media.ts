@@ -86,7 +86,10 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
       // Box choices show the photo of the product they stand for.
       if (Array.isArray(item.contentBlocks)) for (const block of item.contentBlocks) {
         if (!block || typeof block !== 'object') continue;
-        for (const key of ['imageUrl', 'beforeUrl', 'afterUrl']) if (typeof block[key] === 'string') tasks.push(async () => { block[key] = await image(block[key]); });
+        // YAPI's details block keeps its photos one level down, in items.
+        for (const holder of [block, ...(Array.isArray(block.items) ? block.items : [])]) if (holder && typeof holder === 'object') {
+          for (const key of ['imageUrl', 'beforeUrl', 'afterUrl']) if (typeof holder[key] === 'string') tasks.push(async () => { holder[key] = await image(holder[key]); });
+        }
       }
       if (Array.isArray(item.extras)) for (const extra of item.extras) {
         if (extra && typeof extra.imageUrl === 'string') tasks.push(async () => { extra.imageUrl = await image(extra.imageUrl); });
@@ -123,7 +126,9 @@ export function hostedCatalogImages(apiBaseUrl: string) {
         if (Array.isArray(variant.imageUrls)) variant.imageUrls = variant.imageUrls.map(image);
       }
       for (const block of Array.isArray(item.contentBlocks) ? item.contentBlocks : []) if (block && typeof block === 'object') {
-        for (const key of ['imageUrl', 'beforeUrl', 'afterUrl']) if (typeof block[key] === 'string') block[key] = image(block[key]);
+        for (const holder of [block, ...(Array.isArray(block.items) ? block.items : [])]) if (holder && typeof holder === 'object') {
+          for (const key of ['imageUrl', 'beforeUrl', 'afterUrl']) if (typeof holder[key] === 'string') holder[key] = image(holder[key]);
+        }
       }
       for (const extra of Array.isArray(item.extras) ? item.extras : []) if (extra && typeof extra.imageUrl === 'string') extra.imageUrl = image(extra.imageUrl);
     }

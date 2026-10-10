@@ -37,3 +37,22 @@ it('hydrates a valid catalog upload larger than the historical attachment limit'
   expect(await sharp(Buffer.from(assets[0].content, 'base64')).metadata()).toMatchObject({ format: 'webp', width: 1400, height: 1000 });
   expect(legend).toEqual([{ original: '/v1/uploads/aa.png', path: assets[0].path }]);
 });
+
+it('bundles the photos inside product content blocks, so the preview never shows a broken block image', async () => {
+  const assets: SourceProjectFileDto[] = [];
+  const items = [{ imageUrls: ['/v1/uploads/aa.jpg'], contentBlocks: [
+    { type: 'details', items: [{ imageUrl: '/v1/uploads/aa.jpg', title: 'Selección', text: 'x', alt: 'Mercado' }, { imageUrl: '/v1/uploads/cc.jpg', title: 'Otra', text: 'y', alt: 'Otra' }] },
+    { type: 'media', imageUrl: '/v1/uploads/bb.jpg', alt: 'Foto' },
+    { type: 'compare', beforeUrl: '/v1/uploads/bb.jpg', afterUrl: 'https://foreign.test/v1/uploads/dd.jpg', alt: 'Antes y después' },
+    { type: 'features', items: [{ icon: 'leaf', label: 'Fresco' }] },
+  ] }];
+  const read = jest.fn(async (path: string) => Buffer.from(path));
+  await bundleSourceCatalogMedia(items, origin, [], assets, read);
+  const [details, media, compare, features] = items[0].contentBlocks as any[];
+  expect(details.items.map((item: any) => item.imageUrl)).toEqual([items[0].imageUrls[0], expect.stringMatching(/^assets\/image-/)]);
+  expect(media.imageUrl).toMatch(/^assets\/image-/);
+  expect(compare.beforeUrl).toBe(media.imageUrl);
+  expect(compare.afterUrl).toBe('https://foreign.test/v1/uploads/dd.jpg');
+  expect(features.items).toEqual([{ icon: 'leaf', label: 'Fresco' }]);
+  expect(assets).toHaveLength(3);
+});

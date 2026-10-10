@@ -4,7 +4,7 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 
 /** Hydrate only the current store's catalog upload URLs; never fetch arbitrary URLs. */
 export async function bundleSourceCatalogMedia(
-  items: Array<{ imageUrls: string[]; variants?: Array<{ imageUrl?: string | null }> }>,
+  items: Array<{ imageUrls: string[]; variants?: Array<{ imageUrl?: string | null }>; contentBlocks?: unknown }>,
   apiUrl: URL,
   retained: SourceProjectFileDto[],
   assets: SourceProjectFileDto[],
@@ -60,5 +60,11 @@ export async function bundleSourceCatalogMedia(
   for (const item of items) {
     for (let i = 0; i < item.imageUrls.length; i++) item.imageUrls[i] = await hydrate(item.imageUrls[i]);
     for (const variant of item.variants || []) if (variant.imageUrl) variant.imageUrl = await hydrate(variant.imageUrl);
+    // Content blocks (media, before/after, YAPI's details) carry their own photos; usually the product's, so they reuse its asset.
+    for (const block of Array.isArray(item.contentBlocks) ? item.contentBlocks : []) {
+      for (const holder of [block, ...(Array.isArray(block?.items) ? block.items : [])]) {
+        for (const key of ['imageUrl', 'beforeUrl', 'afterUrl'] as const) if (typeof holder?.[key] === 'string' && holder[key]) holder[key] = await hydrate(holder[key]);
+      }
+    }
   }
 }

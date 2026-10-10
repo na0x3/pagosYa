@@ -12,15 +12,18 @@ describe('preview variant photography', () => {
     });
     vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(new Response(new Blob([url], { type: 'image/jpeg' }), { headers: { 'content-type': 'image/jpeg' } }))));
     const a = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg', b = '/v1/uploads/bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
-    const data = { items: [{ variants: [{ imageUrl: a, imageUrls: [a, b] }], contentBlocks: [{ type: 'media', imageUrl: a }, { type: 'compare', beforeUrl: a, afterUrl: b }] }] };
+    const data = { items: [{ variants: [{ imageUrl: a, imageUrls: [a, b] }], contentBlocks: [{ type: 'media', imageUrl: a }, { type: 'compare', beforeUrl: a, afterUrl: b }, { type: 'details', items: [{ imageUrl: b, title: 'Mercado', alt: 'Mercado' }] }] }] };
     const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data })};` }] } as SourceSnapshot);
     const item = JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, '')).data.items[0];
     expect(item.contentBlocks[0].imageUrl).toBe('data:http://localhost:3001' + a);
     expect(item.contentBlocks[1]).toMatchObject({ beforeUrl: 'data:http://localhost:3001' + a, afterUrl: 'data:http://localhost:3001' + b });
+    // YAPI's long product page keeps its photos one level down, in details items.
+    expect(item.contentBlocks[2].items[0].imageUrl).toBe('data:http://localhost:3001' + b);
     const hosted = hostedCatalogImages('https://api.test/v1').rewrite(data).items[0];
     expect(hosted.variants[0].imageUrls).toEqual(['https://api.test' + a, 'https://api.test' + b]);
     expect(hosted.contentBlocks[0].imageUrl).toBe('https://api.test' + a);
     expect(hosted.contentBlocks[1]).toMatchObject({ beforeUrl: 'https://api.test' + a, afterUrl: 'https://api.test' + b });
+    expect(hosted.contentBlocks[2].items?.[0]?.imageUrl).toBe('https://api.test' + b);
   });
   // A template's photo slots are string literals in its compiled components, not catalog data; the sandbox cannot
   // fetch them, so a template applied to a store showed its hero as a broken image.
