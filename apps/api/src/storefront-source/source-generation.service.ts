@@ -112,7 +112,7 @@ import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
 import { kitPath } from '@pagosya/storefront-kit';
 import { AgentWorkspace } from './agent/agent-workspace';
-import { AgentToolbox, type AgentStep } from './agent/agent-tools';
+import { AgentToolbox, recordTellsKept, type AgentStep } from './agent/agent-tools';
 import { applyProductThemeToDesign, instructionConcernsProductCard, productThemeRuntime, resolveProductTheme, sanitizeProductAssurances } from './product-theme';
 import { runAgent, AGENT_LIMITS, agentLimits, agentRunHeadroom, agentWallWithin, abortedByTimeout } from './agent/agent-loop';
 import { sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
@@ -1239,6 +1239,7 @@ export class SourceGenerationService {
         if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? (abortedByTimeout(signal) ? ' porque se acabó el tiempo de esta solicitud' : ' porque se canceló') : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : outcome.reason === 'loop' ? ' porque se quedó repitiendo la misma acción' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
         if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme && toolbox.pendingMotifPack === undefined && !Object.keys(toolbox.pendingPolicies).length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
         autoRepairs.push(...toolbox.repairs);
+        if (signatureOn) recordTellsKept(attempts, toolbox.tellsKept);
         agentTheme = toolbox.pendingTheme;
         agentAccountTheme = toolbox.pendingAccountTheme;
         agentMotifPack = toolbox.pendingMotifPack;

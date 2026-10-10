@@ -2,7 +2,7 @@ import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
-import { AgentToolbox, AGENT_TOOLS } from './agent-tools';
+import { AgentToolbox, AGENT_TOOLS, recordTellsKept } from './agent-tools';
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
@@ -35,6 +35,27 @@ describe('AgentToolbox', () => {
     await box.run('verify', '{}');
     expect((await box.run('finish', finish)).output).toBe('ok');
     expect(box.finished).toEqual({ summary: 'Cambié el título', sections: ['Portada'] });
+  });
+  it('keeps the tells the builder chose to keep, bounded, without changing finished', async () => {
+    const box = toolbox();
+    // Reach a clean, verified draft exactly as 'refuses finish until a clean verify ran after the last edit' does.
+    await box.run('edit_file', edit('Un respiro', 'Tu calma'));
+    await box.run('verify', '{}');
+    const tells = ['marquesina: es el programa del circo', '', 'x'.repeat(200), 'a', 'b', 'c', 'd', 'e', 'f'];
+    expect((await box.run('finish', JSON.stringify({ summary: 'Cambié el título', sections: ['Portada'], status: 'completed', remaining: [], tellsKept: tells }))).output).toBe('ok');
+    expect(box.finished).toEqual({ summary: 'Cambié el título', sections: ['Portada'] });
+    expect(box.tellsKept).toEqual(['marquesina: es el programa del circo', 'x'.repeat(120), 'a', 'b', 'c', 'd']);
+  });
+  it('finishes without tellsKept exactly as before', async () => {
+    const box = toolbox();
+    await box.run('edit_file', edit('Un respiro', 'Tu calma'));
+    await box.run('verify', '{}');
+    expect((await box.run('finish', finish)).output).toBe('ok');
+    expect(box.tellsKept).toEqual([]);
+  });
+  it('declares tellsKept on the finish tool', () => {
+    const tool = AGENT_TOOLS.find(t => t.name === 'finish')!;
+    expect((tool.parameters as any).properties.tellsKept).toEqual({ type: 'array', items: { type: 'string' } });
   });
   it('invalidates verified drafts after a batch and rejects malformed batches without changing files', async () => {
     const box = toolbox();
@@ -118,5 +139,16 @@ describe('set_account_theme', () => {
     const tools = box('cambia el footer', false);
     expect((await tools.run('set_account_theme', JSON.stringify({ layout: 'panel', photo: null, css: null }))).output).toContain('no cambia la cuenta');
     expect(tools.pendingAccountTheme).toBeNull();
+  });
+});
+
+describe('recordTellsKept', () => {
+  it('puts the tells on the last agent attempt only, and does nothing when empty', () => {
+    const attempts: Array<{ phase?: string; tellsKept?: string[] }> = [{ phase: 'design' }, { phase: 'agent' }, { phase: 'agent' }, { phase: 'review' }];
+    recordTellsKept(attempts, []);
+    expect(attempts.some(a => a.tellsKept)).toBe(false);
+    recordTellsKept(attempts, ['marquesina: circo']);
+    expect(attempts[2].tellsKept).toEqual(['marquesina: circo']);
+    expect(attempts[1].tellsKept).toBeUndefined();
   });
 });

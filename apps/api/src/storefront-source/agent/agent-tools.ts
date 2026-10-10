@@ -42,6 +42,13 @@ export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceP
   checkAccountTheme?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<ThemeCheckFailure[]>;
 };
 
+/** Writes the builder's kept tells onto the run's last agent attempt, which is persisted with the generation. */
+export function recordTellsKept(attempts: Array<{ phase?: string; tellsKept?: string[] }>, tells: string[]) {
+  if (!tells.length) return;
+  const last = [...attempts].reverse().find(attempt => attempt.phase === 'agent');
+  if (last) last.tellsKept = tells;
+}
+
 const object = (properties: Record<string, object>) => ({ type: 'object', additionalProperties: false, properties, required: Object.keys(properties) });
 const text = { type: 'string' };
 const nullableEnum = (values: readonly string[]) => ({ type: ['string', 'null'], enum: [...values, null] });
@@ -68,7 +75,7 @@ export const AGENT_TOOLS = [
     assurances: { type: ['array', 'null'], description: 'Hasta 3 garantías REALES del comercio para la ficha (lidera la fila; la plataforma añade entrega y pago sola). [] las quita; null no cambia nada. Nunca inventes envíos, plazos ni certificaciones, ni menciones pagosYa.', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: { type: 'string', maxLength: 40 }, detail: { type: 'string', maxLength: 80 } }, required: ['icon', 'title', 'detail'] } },
     css: { type: ['string', 'null'], description: `CSS con guardas: hasta 20 reglas y 3000 caracteres. Partes permitidas: ${COSMETIC_PARTS.join(', ')}. Usa [data-part="nombre"]. price, buy, quantity y opciones de pago están protegidos: nunca los selecciones.` },
   }),
-  tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases) y la lista de secciones construidas.', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text } }),
+  tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases), la lista de secciones construidas y, si aplica, tellsKept (hábitos de sitio generado que mantuviste a propósito; puede ir vacío).', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text }, tellsKept: { type: 'array', items: text } }),
 ];
 const VIEW = { 1280: 'escritorio', 820: 'tablet', 390: 'celular' } as const;
 
@@ -77,6 +84,8 @@ export class AgentToolbox {
   /** hard: the findings include something that breaks the build or the page; otherwise they are opinions the service can ship past. */
   lastVerify: { version: number; clean: boolean; pageErrors?: boolean; hard?: boolean } | null = null;
   finished: { summary: string; sections: string[] } | null = null;
+  /** Spec 2026-10-09: the builder's own note on generated-site habits it kept on purpose. For evaluation only. */
+  tellsKept: string[] = [];
   requirements: AgentRequirement[] = [];
   evidence: RequirementEvidence[] = [];
   stopped: { status: 'partial' | 'blocked'; summary: string; remaining: string[] } | null = null;
@@ -403,6 +412,7 @@ export class AgentToolbox {
         if (!this.draftIsClean()) return { output: 'Antes de terminar, ejecuta verify sin problemas después del último cambio.' };
         // verify already ran the gate for this exact workspace version. Re-running it here could mutate checked source.
         this.finished = { summary: String(args.summary || '').slice(0, 600), sections: Array.isArray(args.sections) ? args.sections.map(String).map((s: string) => s.slice(0, 80)).slice(0, 20) : [] };
+        this.tellsKept = Array.isArray(args.tellsKept) ? args.tellsKept.map((tell: unknown) => String(tell).trim().slice(0, 120)).filter(Boolean).slice(0, 6) : [];
         step('finish', 'Terminó');
         return { output: 'ok' };
       }
