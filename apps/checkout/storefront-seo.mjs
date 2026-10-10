@@ -3,6 +3,8 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 const privateKeys = ['client_secret', 'publishable_key', 'recover', 'comeback', 'unsubscribe', 'source_owner', 'source_payment_preview', 'preview', 'source_preview'];
 export function applySeoDocument(html, document, noindex = false, privateUrl = false) {
   html = html.replace(/<title\b[^>]*>[^]*?<\/title>/gi, '').replace(/<meta\b[^>]*(?:name=["'](?:description|robots|twitter:[^"']+)["']|property=["']og:[^"']+["'])[^>]*>/gi, '').replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '');
+  // The template carries the pagosYa mark; a store page shows the store's own icon instead.
+  if (/<link\b[^>]*rel=["'](?:icon|apple-touch-icon)["']/i.test(document.head)) html = html.replace(/<link\b[^>]*rel=["'](?:shortcut icon|icon|apple-touch-icon)["'][^>]*>/gi, '');
   let head = noindex ? document.head.replace(/content="index, follow, max-image-preview:large"/, 'content="noindex, nofollow"') : document.head;
   // A recovery, comeback or checkout URL carries a secret in its query string, and every
   // analytics tag reports the current location to its provider. Drop the merchant's tags

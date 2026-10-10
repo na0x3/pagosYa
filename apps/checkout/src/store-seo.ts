@@ -19,6 +19,11 @@ export async function refreshStoreSeo(slug: string, productId?: string, page?: s
     const parsed = new DOMParser().parseFromString(`<html><head>${data.head}</head></html>`, 'text/html');
     document.head.querySelectorAll('title,meta[name="description"],meta[name="robots"],meta[property^="og:"],meta[name^="twitter:"],link[rel="canonical"],script[data-pagosya-seo]').forEach(el => el.remove());
     parsed.head.querySelectorAll('title,meta,link[rel="canonical"],script[type="application/ld+json"]').forEach(el => { el.setAttribute('data-pagosya-seo', ''); document.head.append(document.importNode(el, true)); });
+    const icons = parsed.head.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]');
+    if (icons.length) {
+      document.head.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(el => el.remove());
+      icons.forEach(el => document.head.append(document.importNode(el, true)));
+    }
     if (['recover', 'comeback', 'unsubscribe', 'client_secret', 'source_owner', 'publishable_key', 'source_payment_preview', 'preview', 'source_preview'].some(key => new URLSearchParams(location.search).has(key))) document.querySelector('meta[name=robots]')?.setAttribute('content', 'noindex, nofollow');
   } catch { if (current === sequence) lastRoute = ''; }
 }

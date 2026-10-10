@@ -261,3 +261,12 @@ test('old Shopify links on a custom domain 301 to the imported product and colle
     backend.closeAllConnections(); frontend.closeAllConnections(); backend.close(); frontend.close();
   }
 });
+
+test('a store head replaces the platform icon; a page without a store icon keeps it', () => {
+  const template = '<head><title>Checkout</title><link rel="icon" type="image/png" href="/logo-mark.png" /></head><div id="app"></div>';
+  const store = applySeoDocument(template, { head: '<title>Eje</title><link rel="icon" type="image/png" sizes="32x32" href="https://api.example/v1/stores/public/eje/favicon.png"><link rel="apple-touch-icon" href="https://api.example/v1/stores/public/eje/favicon.png?size=180">', body: '' });
+  assert.doesNotMatch(store, /logo-mark\.png/);
+  assert.equal((store.match(/rel="icon"/g) || []).length, 1);
+  const plain = applySeoDocument(template, { head: '<title>Eje</title>', body: '' });
+  assert.match(plain, /logo-mark\.png/);
+});
