@@ -1,7 +1,7 @@
 /** Design DNA (sub-project 2): the form, behaviour and placement choices that make one store unlike the next.
  * Colours are deliberately absent: the store's --store-* / --brand-* tokens stay their single source.
  * Nothing here imports source-design.ts, which imports this module (no evaluation-time cycle). */
-import { SOURCE_FONT_IDS } from './source-font-catalog';
+import { SOURCE_FONT_IDS, SOURCE_FONT_SEED_IDS } from './source-font-catalog';
 import { sanitizeProductThemeCss } from './product-theme-css';
 import { productCardDirection, productCommerceDirection } from './source-product-card-presets';
 export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led'] as const;
@@ -58,8 +58,10 @@ const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticke
 const FIXED_DEFAULTS: Record<string, string> = Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS.productCard).map(([key, values]) => [`productCard.${key}`, values[0]]));
 const FIELDS = Object.entries(SOURCE_DNA_ENUMS).flatMap(([group, keys]) => Object.entries(keys).map(([key, values]) => {
   const all = values as readonly string[], id = `${group}.${key}`;
-  const seeded = FIXED_DEFAULTS[id] ? [FIXED_DEFAULTS[id]] : all.filter(value => !(NOT_SEEDED[id] ?? []).includes(value));
-  return { group, key, name: RUNTIME_NAMES[id] ?? key, values: all, seeded, planner: FIXED_DEFAULTS[id] ? all : seeded };
+  const planned = all.filter(value => !(NOT_SEEDED[id] ?? []).includes(value));
+  // Fonts: the seed keeps to the original thirty so stores seeded before the themed faces keep their type; the planner sees every font.
+  const seeded = FIXED_DEFAULTS[id] ? [FIXED_DEFAULTS[id]] : group === 'type' && (key === 'display' || key === 'text') ? planned.filter(value => (SOURCE_FONT_SEED_IDS as readonly string[]).includes(value)) : planned;
+  return { group, key, name: RUNTIME_NAMES[id] ?? key, values: all, seeded, planner: FIXED_DEFAULTS[id] ? all : planned };
 }));
 export const SOURCE_DNA_RUNTIME_ENUMS: Record<string, readonly string[]> = Object.fromEntries(FIELDS.map(field => [field.name, field.values]));
 export type SourceRuntimeDna = { version: 1 } & Record<string, string | 1>;

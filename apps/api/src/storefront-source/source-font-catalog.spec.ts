@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import * as fontkit from 'fontkit';
 import { readdirSync, readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 import { SOURCE_FONT_CATALOG, SOURCE_FONT_IDS } from './source-font-catalog';
@@ -40,6 +41,21 @@ describe('font catalogue', () => {
     for (const kind of ['serif', 'grotesk', 'humanist', 'geometric', 'condensed', 'slab', 'mono', 'rounded', 'script-adjacent', 'wide']) expect(personalities).toContain(kind);
     for (const role of ['display', 'text', 'both'] as const) expect(SOURCE_FONT_CATALOG.some(font => font.role === role)).toBe(true);
     for (const font of SOURCE_FONT_CATALOG) expect(font.weights).toMatch(/^\d{3}(–\d{3,4})?$/);
+  });
+
+  it('covers Spanish in every font, and keeps every file light enough for a store', () => {
+    const missing: string[] = [];
+    for (const font of SOURCE_FONT_CATALOG) {
+      const face = fontkit.openSync(kitPath('fonts', font.file));
+      for (const char of 'áéíóúüñÁÉÍÓÚÜÑ¿¡') if (!face.hasGlyphForCodePoint(char.codePointAt(0)!)) missing.push(`${font.id} ${char}`);
+    }
+    expect(missing).toEqual([]);
+    for (const font of SOURCE_FONT_CATALOG.slice(30)) expect(readFileSync(kitPath('fonts', font.file)).length).toBeLessThan(600_000);
+  });
+
+  it('has themed faces a business story can call for', () => {
+    const personalities = new Set(SOURCE_FONT_CATALOG.flatMap(font => font.personality));
+    for (const kind of ['typewriter', 'stencil', 'techno', 'script', 'handwritten', 'chunky', 'neon', 'fashion', 'brutal', 'sports']) expect(personalities).toContain(kind);
   });
 
   it('is the one list the DNA enum and the prompt read', () => {

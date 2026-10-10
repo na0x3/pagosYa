@@ -37,9 +37,34 @@ const FONTS = [
   { id: 'nunito', family: 'Nunito', role: 'text', personality: ['rounded', 'humanist', 'soft'], weights: '200–1000' },
   { id: 'shrikhand', family: 'Shrikhand', role: 'display', personality: ['script-adjacent', 'retro', 'bold italic'], weights: '400' },
   { id: 'bodoni-moda', family: 'Bodoni Moda', role: 'display', personality: ['serif', 'didone', 'luxury'], weights: '400–900' },
+  // Themed faces (spec 2026-10-10 part B): type a business story can call for, not one more tasteful grotesk.
+  { id: 'courier-prime', family: 'Courier Prime', role: 'both', personality: ['typewriter', 'mono', 'literary'], weights: '400' },
+  { id: 'big-shoulders-stencil', family: 'Big Shoulders Stencil Display', role: 'display', personality: ['stencil', 'condensed', 'industrial'], weights: '100–900' },
+  { id: 'black-ops-one', family: 'Black Ops One', role: 'display', personality: ['stencil', 'military', 'heavy'], weights: '400' },
+  { id: 'stardos-stencil', family: 'Stardos Stencil', role: 'display', personality: ['stencil', 'serif', 'crate'], weights: '700' },
+  { id: 'staatliches', family: 'Staatliches', role: 'display', personality: ['sports', 'condensed', 'workwear'], weights: '400' },
+  { id: 'teko', family: 'Teko', role: 'display', personality: ['sports', 'condensed', 'athletic'], weights: '300–700' },
+  { id: 'barlow-condensed', family: 'Barlow Condensed', role: 'both', personality: ['sports', 'condensed', 'signage'], weights: '700' },
+  { id: 'orbitron', family: 'Orbitron', role: 'display', personality: ['techno', 'geometric', 'futuristic'], weights: '400–900' },
+  { id: 'audiowide', family: 'Audiowide', role: 'display', personality: ['techno', 'retro-future', 'wide'], weights: '400' },
+  { id: 'michroma', family: 'Michroma', role: 'display', personality: ['techno', 'extended', 'precise'], weights: '400' },
+  { id: 'pacifico', family: 'Pacifico', role: 'display', personality: ['script', 'surf', 'retro'], weights: '400' },
+  { id: 'caveat', family: 'Caveat', role: 'display', personality: ['handwritten', 'casual', 'note'], weights: '400–700' },
+  { id: 'kaushan-script', family: 'Kaushan Script', role: 'display', personality: ['script', 'brush', 'energetic'], weights: '400' },
+  { id: 'lobster', family: 'Lobster', role: 'display', personality: ['script', 'retro', 'diner'], weights: '400' },
+  { id: 'bungee', family: 'Bungee', role: 'display', personality: ['chunky', 'signage', 'urban'], weights: '400' },
+  { id: 'titan-one', family: 'Titan One', role: 'display', personality: ['chunky', 'playful', 'rounded'], weights: '400' },
+  { id: 'bowlby-one', family: 'Bowlby One', role: 'display', personality: ['chunky', 'heavy', 'poster'], weights: '400' },
+  { id: 'fredoka', family: 'Fredoka', role: 'both', personality: ['rounded', 'playful', 'friendly'], weights: '300–700' },
+  { id: 'monoton', family: 'Monoton', role: 'display', personality: ['neon', 'retro', 'inline'], weights: '400' },
+  { id: 'righteous', family: 'Righteous', role: 'display', personality: ['neon', 'retro', 'deco'], weights: '400' },
+  { id: 'abril-fatface', family: 'Abril Fatface', role: 'display', personality: ['fashion', 'didone', 'heavy'], weights: '400' },
+  { id: 'archivo-black', family: 'Archivo Black', role: 'display', personality: ['brutal', 'grotesk', 'heavy'], weights: '400' },
 ] as const satisfies readonly Entry[];
 
 export type SourceFontId = typeof FONTS[number]['id'];
 export type SourceFont = Entry & { id: SourceFontId; file: string };
 export const SOURCE_FONT_CATALOG: readonly SourceFont[] = FONTS.map(font => ({ ...font, file: `${font.id}.ttf` }));
 export const SOURCE_FONT_IDS: readonly SourceFontId[] = FONTS.map(font => font.id);
+/** The thirty fonts a seeded default may draw: themed faces joined later, and seeding them would restyle stores seeded before. */
+export const SOURCE_FONT_SEED_IDS: readonly SourceFontId[] = SOURCE_FONT_IDS.slice(0, SOURCE_FONT_IDS.indexOf('bodoni-moda') + 1);

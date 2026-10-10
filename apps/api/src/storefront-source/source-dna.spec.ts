@@ -203,3 +203,18 @@ describe('identity libraries (T2b) DNA values', () => {
     expect(seededForms[(seededForms.indexOf(splitForm) + 1) % seededForms.length]).toBe('pill');
   });
 });
+
+// Themed fonts (2026-10-10) joined the catalogue at its end. A store seeded before then must keep its fonts, so the
+// seed draws only from the original thirty; the planner may still choose any of them.
+describe('themed fonts in the DNA', () => {
+  it('never seeds a themed font, but lets the planner choose one', () => {
+    const themed = ['staatliches', 'courier-prime', 'monoton', 'archivo-black'];
+    const seeded = new Set(Array.from({ length: 500 }, (_, i) => defaultDna(`seed-${i}`)).flatMap(dna => [dna.type.display, dna.type.text]));
+    for (const id of themed) expect(seeded.has(id as any)).toBe(false);
+    const schema = SOURCE_DNA_SCHEMA as any;
+    for (const id of themed) {
+      expect(schema.properties.type.properties.display.enum).toContain(id);
+      expect(schema.properties.type.properties.text.enum).toContain(id);
+    }
+  });
+});
