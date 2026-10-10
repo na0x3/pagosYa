@@ -52,9 +52,10 @@ export class StoreSeoService {
       : c.pageUrl(sourcePage || 'index.html');
     const description = String(product?.description || (collection ? `Descubre ${collection.name} en ${c.store.name}.` : undefined) || page?.description || c.store.tagline || `Conoce los productos y las novedades de ${c.store.name}.`).slice(0, 300);
     const title = product ? `${product.name} · ${c.store.name}` : collection ? `${collection.name} · ${c.store.name}` : isCollectionRoute ? `Productos · ${c.store.name}` : page?.title || c.store.name;
+    const icon = `${this.apiBase()}/stores/public/${encodeURIComponent(slug)}/favicon.png`;
     const image = publicImage(product?.imageUrls?.[0] || c.store.bannerUrl || c.store.logoUrl, this.apiBase());
     const graph: any[] = [
-      { '@type': 'Organization', '@id': `${c.home}#business`, name: c.store.name, url: c.home, ...(c.store.logoUrl ? { logo: publicImage(c.store.logoUrl, this.apiBase()) } : {}) },
+      { '@type': 'Organization', '@id': `${c.home}#business`, name: c.store.name, url: c.home, logo: publicImage(c.store.logoUrl, this.apiBase()) ?? `${icon}?size=512` },
       { '@type': 'WebSite', '@id': `${c.home}#website`, name: c.store.name, url: c.home, publisher: { '@id': `${c.home}#business` } },
       { '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: c.store.name, item: c.home }, ...(product || sourcePage ? [{ '@type': 'ListItem', position: 2, name: product?.name || title, item: canonical }] : [])] },
     ];
@@ -70,7 +71,7 @@ export class StoreSeoService {
     // the one renderer in apps/checkout/storefront-seo.mjs. That renderer drops them again
     // on URLs carrying private keys, so a recovery or checkout link never hands its query
     // string to Google or Meta.
-    return { title, canonical, noindex: Boolean(!product && page?.noindex), head: seoHead({ title, description, canonical, image, graph, kind: product ? 'product' : 'website', noindex: !product && page?.noindex }) + verificationHead(installations) + extensionsHead(slug, installations), body, home: c.home };
+    return { title, canonical, noindex: Boolean(!product && page?.noindex), head: seoHead({ title, description, canonical, image, graph, kind: product ? 'product' : 'website', noindex: !product && page?.noindex, icon }) + verificationHead(installations) + extensionsHead(slug, installations), body, home: c.home };
   }
   async map(slug: string) {
     const c = await this.context(slug);

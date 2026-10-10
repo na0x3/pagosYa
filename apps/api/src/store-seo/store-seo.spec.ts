@@ -188,3 +188,10 @@ describe('account gate pages in the source SEO pass', () => {
     expect(sitemap).toContain('https://pay.test/s/marca');
   });
 });
+
+it('links the store favicon and its touch icon, escaped', () => {
+  const head = seoHead({ title: 'Eje', description: '', canonical: 'https://x.example/', graph: [], icon: 'https://api.example/v1/stores/public/a"b/favicon.png' });
+  expect(head).toContain('<link rel="icon" type="image/png" sizes="32x32" href="https://api.example/v1/stores/public/a&quot;b/favicon.png">');
+  expect(head).toContain('<link rel="apple-touch-icon" href="https://api.example/v1/stores/public/a&quot;b/favicon.png?size=180">');
+  expect(seoHead({ title: 'Eje', description: '', canonical: 'https://x.example/', graph: [] })).not.toContain('rel="icon"');
+});
