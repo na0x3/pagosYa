@@ -4,6 +4,7 @@ import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-referenc
 import { SOURCE_DNA_DIRECTION, SOURCE_DNA_SCHEMA } from './source-dna';
 import { validDna } from './fixtures/dna';
 import { SOURCE_SIGNATURE_PLANNING } from './source-signature';
+import { SOURCE_CONCEPT_ENERGY_DIRECTION } from './source-design';
 
 const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
   composition: { family: 'menu-led', rationale: 'The cafe needs a clear menu for quick ordering.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Choose from the real menu.', sections: [{ id: 'menu', intent: 'Choose products and order.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Order' }] }] },
@@ -175,4 +176,17 @@ describe('signature planning', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.concepts.some(concept => 'signature' in concept)).toBe(false);
   });
+});
+
+// Owner 2026-10-10: a pilates brief always came back "calm" because all three concepts were calm and the pick was the
+// safest brief fit. One concept is now high-energy, and the pick favours the strongest identity unless calm is asked for.
+it('asks for one high-energy concept and picks the strongest identity unless the merchant asked for calm', async () => {
+  const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts, selection: { index: 1, rationale: 'x' } }) }] }] })));
+  await new SourceDesignPlanner().explore(input()).catch(() => undefined);
+  const text = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text as string;
+  expect(text).toContain(SOURCE_CONCEPT_ENERGY_DIRECTION);
+  expect(SOURCE_CONCEPT_ENERGY_DIRECTION).toMatch(/snappy or playful/);
+  expect(SOURCE_CONCEPT_ENERGY_DIRECTION).toMatch(/strongest, most memorable identity/);
+  expect(SOURCE_CONCEPT_ENERGY_DIRECTION).toMatch(/calm, minimal or sober/);
+  expect(text).not.toContain('This is a brief-fit judgment, not a rendered visual quality score.');
 });
