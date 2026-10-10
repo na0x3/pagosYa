@@ -88,3 +88,65 @@ describe('photo badge', () => {
     expect(empty.q('[data-custom-product] [data-product-field="badge"]').hidden).toBe(true);
   });
 });
+
+describe('conversion product page style', () => {
+  it('puts three tiles beside the photo and the rest as checks between price and button', async () => {
+    const { q, all } = await page({ style: 'conversion', items: [product({ highlights: rows(6) })] });
+    expect(q('[data-pagosya-product-page]').dataset.style).toBe('conversion');
+    expect(all('.product-detail__gallery > .product-detail__tiles li').map(li => li.textContent)).toEqual(['Café de altura', 'Energía natural', 'Enfoque limpio']);
+    expect(all('.product-detail__checks li').map(li => li.textContent)).toEqual(['Fácil de digerir', 'Sin azúcar', 'Hecho en Bolivia']);
+    expect(q('.product-detail__highlights')).toBeNull();
+    const pricing = q('.product-detail__pricing'), checks = q('.product-detail__checks'), buy = q('.product-detail__buy');
+    expect(pricing.compareDocumentPosition(checks) & 4).toBeTruthy(); // checks follow the price
+    expect(checks.compareDocumentPosition(buy) & 4).toBeTruthy(); // the button follows the checks
+  });
+
+  it('has no tile column with fewer than three highlights or without a photo, and no empty containers', async () => {
+    const two = await page({ style: 'conversion', items: [product({ highlights: rows(2) })] });
+    expect(two.q('.product-detail__tiles')).toBeNull();
+    expect(two.all('.product-detail__checks li')).toHaveLength(2);
+    const noPhoto = await page({ style: 'conversion', items: [product({ imageUrls: [], highlights: rows(3) })] });
+    expect(noPhoto.q('.product-detail__tiles')).toBeNull();
+    expect(noPhoto.all('.product-detail__checks li')).toHaveLength(3);
+    const none = await page({ style: 'conversion' });
+    expect(none.q('.product-detail__tiles, .product-detail__checks')).toBeNull();
+  });
+
+  it('puts the real rating above the title and keeps the price inside the buy button', async () => {
+    const { q } = await page({ style: 'conversion', items: [product({ highlights: rows(3) })] });
+    const rating = q('[data-product-rating]'), title = q('#pagosya-product-title');
+    expect(rating.compareDocumentPosition(title) & 4).toBeTruthy(); // the title follows the rating
+    expect(q('.product-detail__buy [data-product-total]')).not.toBeNull();
+  });
+
+  it('keeps the tiles when a variant photo redraws the gallery', async () => {
+    const withColours = product({ highlights: rows(4), variants: [
+      { id: 'v1', name: 'Rojo', amount: 3799, stock: null, options: [{ name: 'Color', value: 'Rojo' }] },
+      { id: 'v2', name: 'Azul', amount: 3799, stock: null, options: [{ name: 'Color', value: 'Azul' }], imageUrl: 'https://shop.test/azul.jpg' },
+    ] });
+    const { all } = await page({ style: 'conversion', items: [withColours] });
+    all('[data-product-option="0"]').find(button => button.textContent === 'Azul').click();
+    await new Promise(resolve => setImmediate(resolve));
+    expect(all('.product-detail__gallery > .product-detail__tiles li')).toHaveLength(3);
+  });
+
+  it('keeps a sold-out product honest and still lists its benefits', async () => {
+    const { q, all } = await page({ style: 'conversion', items: [product({ stock: 0, highlights: rows(4) })] });
+    expect(q('.product-detail__copy').textContent).toContain('Agotado');
+    expect(all('.product-detail__checks li')).toHaveLength(1);
+  });
+
+  it('places checks after the price in a template without a checks slot, and in its own slot when there is one', async () => {
+    const tpl = (extra: string) => `<template data-pagosya-product-page-template><article><div data-product-slot="gallery"></div><div data-product-slot="title"></div><div data-product-slot="pricing"></div>${extra}<div data-product-slot="buy"></div></article></template>`;
+    const without = await page({ style: 'conversion', template: tpl(''), items: [product({ highlights: rows(5) })] });
+    expect(without.q('[data-product-slot="pricing"]').nextElementSibling.matches('.product-detail__checks')).toBe(true);
+    const own = await page({ style: 'conversion', template: tpl('<div data-product-slot="checks"></div>'), items: [product({ highlights: rows(5) })] });
+    expect(own.q('[data-product-slot="checks"] > .product-detail__checks')).not.toBeNull();
+  });
+
+  it('no longer drops highlights in a template without a highlights slot', async () => {
+    const tpl = '<template data-pagosya-product-page-template><article><div data-product-slot="gallery"></div><div data-product-slot="title"></div><div data-product-slot="pricing"></div><div data-product-slot="buy"></div></article></template>';
+    const { q } = await page({ style: 'editorial', template: tpl, items: [product({ highlights: rows(2) })] });
+    expect(q('.product-detail__highlights')).not.toBeNull();
+  });
+});
