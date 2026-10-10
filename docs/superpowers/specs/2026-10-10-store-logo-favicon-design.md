@@ -25,7 +25,7 @@ Non-goals: new fonts (part B), the style step (part C), and logos on the platfor
 
 ### 2. The typographic logo (no build changes)
 
-A pure function, `typographicLogo({ name, fontFile, ink, ground, mode })`, draws the store name with `fontkit` (already in the lockfile at 2.0.4; added as a direct API dependency) and returns an SVG made only of `<path>` elements. It needs no font to display and passes `source-svg-sanitize.ts`, which strips `<text>`.
+A pure function, `typographicLogo({ name, fontFile, ink, ground, mode })`, draws the store name with `fontkit` (already in the lockfile at 2.0.4; added as a direct API dependency) and returns an SVG made only of `<svg>`, `<rect>` and `<path>` elements, all within the allow-lists in `source-svg-sanitize.ts` (`MOTIF_SVG_ELEMENTS`, `MOTIF_SVG_ATTRIBUTES`). It needs no font to display. Variable fonts are drawn at weight 700 when they have a `wght` axis.
 
 - `mode: 'wordmark'`: the whole name on one line, sized to its own box.
 - `mode: 'mark'`: the first letter, centred in a square with the ground colour behind it, for favicons.
@@ -35,7 +35,7 @@ It's drawn on demand from the store's saved design, never during a build:
 | Input | Source, in order |
 |---|---|
 | font | the published revision's `design-direction.json`, selected concept's `dna.type.display` font file; else Bricolage Grotesque (`bricolage`) |
-| ink and ground | the published revision's authored CSS: first `--store-foreground` and `--store-background` values that are plain hex colours; else the confirmed brand colours; else `#111111` on `#ffffff` |
+| ink and ground | the published revision's authored CSS: first `--store-foreground` and `--store-background` values that are plain hex colours; else `#111111` on `#ffffff` |
 | case | `dna.type.case` (`upper` uppercases; others keep the name as typed) |
 
 If the font file is missing or drawing throws, the result is a plain square in the ground colour with the letter set in Bricolage Grotesque. A favicon request never fails because of a design.
@@ -47,17 +47,19 @@ The header is not changed: YAPI already sets the store name in the concept's dis
 New public routes in the store-SEO area (the same module that builds `<head>` for every store):
 
 - `GET /v1/stores/public/:slug/favicon.png?size=32|180|192|512` (default 32).
-- `GET /v1/stores/public/:slug/logo.svg`: the drawn wordmark, used as `Organization.logo` and the og:image fallback when the store has no uploaded logo.
+- `GET /v1/stores/public/:slug/logo.svg`: the drawn wordmark, for later parts (the style step, emails).
+
+When the store has no uploaded logo, the schema.org `Organization.logo` uses `favicon.png?size=512` (search engines and share cards don't accept SVG). `og:image` is unchanged.
 
 Favicon source, in order:
-1. **Uploaded logo** (`Store.logoUrl`): fitted with `sharp` into a square (`fit: contain`) on the ground colour, so tall or wide logos stay readable.
+1. **Uploaded logo** (`Store.logoUrl`, an `/v1/uploads/…` png, jpeg, webp or gif): fitted with `sharp` into a square (`fit: contain`) on the ground colour, so tall or wide logos stay readable.
 2. **Typographic mark** from section 2.
 3. **Fallback mark**: first letter of the store name in Bricolage Grotesque, `#111111` on `#ffffff`.
 
 Responses are PNG with `Cache-Control: public, max-age=3600` and an `ETag` built from (store id, `logoUrl`, published source revision, size). An in-memory cache, capped at 500 entries, keeps generated images keyed the same way. A logo change or a new publish changes the key.
 
 `seoHead()` (`store-seo.ts:28`) gains `<link rel="icon" type="image/png" sizes="32x32" href="…/favicon.png">` and `<link rel="apple-touch-icon" href="…/favicon.png?size=180">`. In the checkout app:
-- `apps/checkout/index.html:9`'s hard-coded pagosYa icon is removed from store pages, and `applySeoDocument` (`storefront-seo.mjs`) replaces any existing icon links with the store's.
+- `applySeoDocument` (`storefront-seo.mjs`) removes the template's icon links (the hard-coded pagosYa icon at `apps/checkout/index.html:9`) when the store head carries its own. Checkout pages that aren't store pages keep the pagosYa icon.
 - The in-page refresh (`apps/checkout/src/store-seo.ts`) copies `link[rel~=icon]` and `link[rel=apple-touch-icon]` along with title, meta and canonical, so the icon survives navigation.
 
 ## Error handling
@@ -68,7 +70,7 @@ Responses are PNG with `Cache-Control: public, max-age=3600` and an `ETag` built
 
 ## Testing
 
-- `typographicLogo`: returns only `<path>` elements; passes the SVG sanitizer unchanged; `upper` case uppercases; a missing font yields the fallback; the mark is square.
+- `typographicLogo`: uses only allow-listed elements and attributes; `upper` case uppercases; a missing font yields the fallback; the mark is square.
 - Favicon source order: uploaded logo, then typographic mark, then fallback; the ETag changes when `logoUrl` or the published revision changes.
 - Colour reading: picks hex `--store-foreground` / `--store-background`, and ignores `color-mix()` and variables.
 - `seoHead` includes both icon links; the checkout refresh keeps them.
