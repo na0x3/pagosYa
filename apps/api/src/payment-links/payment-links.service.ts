@@ -1,5 +1,6 @@
 import { normalizeProductVariants, type ProductVariant } from './product-variants';
 import { normalizeProductHighlights } from "./product-highlights";
+import { normalizeProductBadge } from "./product-badge";
 import { normalizeContentBlocks, readContentBlocks } from './product-content-blocks';
 import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from "@nestjs/common";
 import { ProductPageWriterService } from "../product-content/product-page-writer.service";
@@ -479,6 +480,7 @@ export class PaymentLinksService {
         tags: dto.tags ?? [],
         specifications: normalizeProductSpecifications(dto.specifications) as unknown as Prisma.InputJsonValue,
         highlights: normalizeProductHighlights(dto.highlights) as unknown as Prisma.InputJsonValue,
+        badge: normalizeProductBadge(dto.badge),
         contentBlocks: normalizeContentBlocks(dto.contentBlocks) as unknown as Prisma.InputJsonValue,
         recommendedProductIds: dto.recommendedProductIds ?? [],
         stock: variants.length ? this.totalVariantStock(variants) : dto.stock,
@@ -956,6 +958,7 @@ export class PaymentLinksService {
         ...(dto.tags !== undefined && { tags: dto.tags }),
         ...(dto.specifications !== undefined && { specifications: normalizeProductSpecifications(dto.specifications) as unknown as Prisma.InputJsonValue }),
         ...(dto.highlights !== undefined && { highlights: normalizeProductHighlights(dto.highlights) as unknown as Prisma.InputJsonValue }),
+        ...(dto.badge !== undefined && { badge: normalizeProductBadge(dto.badge) }),
         ...(dto.contentBlocks !== undefined && { contentBlocks: normalizeContentBlocks(dto.contentBlocks, readContentBlocks(link.contentBlocks)) as unknown as Prisma.InputJsonValue }),
         ...(dto.recommendedProductIds !== undefined && { recommendedProductIds: dto.recommendedProductIds }),
         ...(dto.shippingWeightGrams !== undefined && { shippingWeightGrams: dto.shippingWeightGrams }),

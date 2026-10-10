@@ -344,6 +344,8 @@ export class PublicStoresService implements OnModuleDestroy {
         tags: item.tags,
         specifications: Array.isArray(item.specifications) ? item.specifications : [],
         highlights: Array.isArray(item.highlights) ? item.highlights : [],
+        badge: typeof item.badge === 'string' ? item.badge : null,
+        createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : null,
         contentBlocks: readContentBlocks(item.contentBlocks),
         recommendedProductIds: item.recommendedProductIds,
         // null = unlimited/not tracked; 0 means genuinely sold out, both are

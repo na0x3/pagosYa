@@ -112,3 +112,19 @@ describe('storefront view flush timer', () => {
     expect((service as any).storeViewFlushTimer).toBeNull();
   });
 });
+
+describe('photo badge data', () => {
+  it('publishes the merchant badge and the creation date the kit needs for "Nuevo"', async () => {
+    const { service, prisma } = setup();
+    const createdAt = new Date('2026-10-01T12:00:00.000Z');
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { ...productRow, id: 'p1', badge: 'Edición limitada', createdAt },
+      { ...productRow, id: 'p2', badge: null, createdAt },
+      { ...productRow, id: 'p3', badge: '', createdAt },
+    ]);
+    const result = await service.getStorePublic(storeRow.slug);
+    expect(result.items.map((item: any) => [item.id, item.badge, item.createdAt])).toEqual([
+      ['p1', 'Edición limitada', createdAt.toISOString()], ['p2', null, createdAt.toISOString()], ['p3', '', createdAt.toISOString()],
+    ]);
+  });
+});

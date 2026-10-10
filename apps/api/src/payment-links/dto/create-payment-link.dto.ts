@@ -297,6 +297,12 @@ export class CreatePaymentLinkDto {
   @Type(() => ProductHighlightDto)
   highlights?: ProductHighlightDto[];
 
+  @ApiPropertyOptional({ description: "Photo badge: null = automatic, '' = none, or up to 20 characters.", nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  badge?: string | null;
+
   @IsOptional() @IsArray() @ArrayMaxSize(12) @ValidateNested({ each: true }) @Type(() => ContentBlockDto)
   contentBlocks?: ContentBlockDto[];
 
