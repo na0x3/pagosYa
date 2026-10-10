@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_BOLD_DEFAULT, sep5BoldDefault } from './sep5-author';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -157,4 +157,30 @@ it('is bold for a fresh design unless motion is subtle or off or the merchant as
   expect(sep5BoldDefault({ ...fresh, brief: { visualDirection: 'Sobria y elegante' } })).toBe(false);
   expect(sep5BoldDefault({ ...fresh, brief: null })).toBe(true);
   expect(sep5BoldDefault({ ...fresh, instruction: 'YAPI: te propongo algo limpio.\nPedido actual del comercio:\nHazla con mucho color' })).toBe(true);
+});
+
+it('names the concept fonts and how to load them, falling back to the default pair', () => {
+  const design = (display?: string, text?: string) => ({ selected: 0, concepts: [{ dna: { type: { display, text } } }] });
+  const direction = sep5FontDirection(design('big-shoulders-display', 'instrument'));
+  expect(direction).toMatch(/^TYPE: /);
+  expect(direction).toContain('Big Shoulders Display');
+  expect(direction).toContain('url("assets/big-shoulders-display.ttf")');
+  expect(direction).toContain('url("assets/instrument.ttf")');
+  expect(direction).toContain('Never load fonts from another site');
+  const fallback = sep5FontDirection(design('comic-sans', undefined));
+  expect(fallback).toContain('url("assets/bricolage.ttf")');
+  expect(fallback).toContain('url("assets/instrument.ttf")');
+  expect(sep5FontDirection(undefined)).toContain('url("assets/bricolage.ttf")');
+  const single = sep5FontDirection(design('rubik', 'rubik'));
+  expect(single.match(/src: url\("assets\/rubik\.ttf"\)/g)).toHaveLength(1);
+});
+
+it('asks for the fonts before the choreography, keeps them in the self-review, and keeps September 5 intact without them', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  const fonts = sep5FontDirection({ selected: 0, concepts: [{ dna: { type: { display: 'anton', text: 'manrope' } } }] });
+  const prompt = sep5AuthorPrompt({ ...base, fonts, motionPlan: 'MOTION CHOREOGRAPHY: x' });
+  expect(prompt.indexOf('TYPE: ')).toBeGreaterThan(-1);
+  expect(prompt.indexOf('TYPE: ')).toBeLessThan(prompt.indexOf('MOTION CHOREOGRAPHY'));
+  expect(sep5ReviewPrompt({ ...base, fonts, draft: [], measured: [] })).toContain('url("assets/anton.ttf")');
+  expect(sep5AuthorPrompt({ ...base, fonts: '  ' })).toBe(sep5AuthorPrompt(base));
 });

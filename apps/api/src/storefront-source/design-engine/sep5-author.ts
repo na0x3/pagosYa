@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { extractSep5 } from './sep5-extract';
 import { sep5CreativePlan, type Sep5Translation } from './sep5-plan';
 import { sourceAsksForRestraint, type SourceMotionMode } from '../source-motion';
+import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
+import { SOURCE_FONT_CHOICES } from '../source-fonts';
 
 /**
  * The Sep-5 generator as a plan source.
@@ -50,6 +52,8 @@ export function sep5AuthorPrompt(input: {
   /** Appends SEP5_BOLD_DEFAULT for a fresh design the merchant did not ask to keep quiet (owner 2026-10-10).
    *  Absent or false, the prompt stays byte-identical to September 5. */
   boldDefault?: boolean;
+  /** The selected concept's fonts (sep5FontDirection). Absent or blank, the prompt stays byte-identical to September 5. */
+  fonts?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -63,6 +67,7 @@ export function sep5AuthorPrompt(input: {
     ...(input.storeShell ? [SEP5_STORE_SHELL] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
+    ...(input.fonts?.trim() ? [input.fonts.trim()] : []),
     // Last, so it is the most specific instruction the model reads. The pinned contract above warns against
     // "unnecessary motion", which read alone is why nine authored stores produced one @keyframes rule between
     // them; the closing clause settles which of the two paragraphs governs, and reads correctly for 'off' too.
@@ -78,6 +83,20 @@ export function sep5AuthorPrompt(input: {
  * merchant who asks for minimal, sober or quiet does not get this paragraph.
  */
 export const SEP5_BOLD_DEFAULT = 'BOLD BY DEFAULT: Make this store visually bold. Build the page from colour fields: alternate section backgrounds drawn from the palette and include at least one strong or dark full-width band, not one pale paper colour throughout. Set display type large and heavy where the font allows. Give the page one memorable device taken from this business, such as a rotated sticker or badge, photographs that overlap, a marquee band of its own words or an oversized row of real numbers. A photograph beside a text block is one section shape among many; a page made only of image | text splits reads as a template, so mix in other shapes: a full-colour band with giant type, a marquee, an overlapping collage, a horizontal image strip, a row of figures. Large type still wraps between words: no heading may break a word in the middle, and nothing overflows at 320px.';
+
+/**
+ * Authored stores shipped Georgia and Arial: the planner chose a font and the author was never told it could load it
+ * (2026-10-10). The kit bundles any assets/<id>.ttf the CSS references, so naming the file is all that was missing.
+ */
+export function sep5FontDirection(design: { concepts: Array<{ dna?: { type?: { display?: string; text?: string } } }>; selected: number } | undefined): string {
+  const type = design?.concepts?.[design.selected]?.dna?.type;
+  const pick = (id: string | undefined, fallback: string) => SOURCE_FONT_CATALOG.find(font => font.id === id) ?? SOURCE_FONT_CATALOG.find(font => font.id === fallback)!;
+  const display = pick(type?.display, 'bricolage');
+  const text = pick(type?.text, 'instrument');
+  const faces = [...new Map([display, text].map(font => [font.id, font])).values()]
+    .map(font => `@font-face { font-family: "${font.family}"; src: url("assets/${font.id}.ttf") format("truetype"); font-display: swap; }`).join(' ');
+  return `TYPE: The selected concept sets display type in ${display.family} and text in ${text.family}. Load them exactly like this and use them for headings and body: ${faces} ${SOURCE_FONT_CHOICES} Never load fonts from another site.`;
+}
 
 /** Bold for a fresh design (new store or redesign) unless the merchant chose subtle or no motion, or asked for a quiet look. */
 export function sep5BoldDefault(input: { creative: boolean; motion: SourceMotionMode; instruction: string; brief: unknown }): boolean {
