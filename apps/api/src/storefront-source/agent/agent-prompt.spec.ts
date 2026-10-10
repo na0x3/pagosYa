@@ -1,6 +1,26 @@
 import { agentInstructions, agentOpening } from './agent-prompt';
 
 describe('agent instructions', () => {
+  it('gives new stores and redesigns the signature direction and the advisory tells check', () => {
+    const creative = agentInstructions('CONTRATOS', 'shop', true, true);
+    expect(creative).toContain('SIGNATURE. When the selected concept has a signature');
+    expect(creative).toContain('weigh the habits that make generated sites look generated');
+    expect(creative).toContain('it never blocks finishing');
+    const redesign = agentInstructions('CONTRATOS', 'service', false, true);
+    expect(redesign).toContain('SIGNATURE.');
+  });
+  it('leaves local edits exactly as before', () => {
+    const local = agentInstructions('CONTRATOS', 'shop', false, false);
+    expect(local).not.toContain('SIGNATURE.');
+    expect(local).not.toContain('look generated');
+  });
+  it('drops both additions when the switch is off', () => {
+    const off = agentInstructions('CONTRATOS', 'shop', true, true, 6, false);
+    expect(off).not.toContain('SIGNATURE.');
+    expect(off).not.toContain('look generated');
+    expect(off).toContain('REFERENCE-LED DESIGN');
+    expect(agentInstructions('CONTRATOS', 'shop', true, true, 12, false)).toContain('12 minutes');
+  });
   it('distinguishes technical checks from independent visual review and bounds scoped repairs without banning product grids', () => {
     const prompt = agentInstructions('CONTRATOS', 'shop', true, true);
     expect(prompt).toContain('it is not visual approval');
