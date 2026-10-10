@@ -22,8 +22,8 @@ describe('product highlight suggestions', () => {
 
   it('uses the local ChatGPT bridge when paid APIs are disabled, without falling back on failure', async () => {
     const overrides = { 'app.environment': 'development', 'app.chatgptPlan': { url: 'http://127.0.0.1:9999/responses', secret: 'local-bridge' }, 'app.openAi.apiKey': '', 'app.openAi.enabled': false };
-    const { service } = make({ highlights: [{ icon: 'gear', label: '20 litros', detail: null }] }, true, overrides);
-    await expect(service.suggest('m1', 's1', product)).resolves.toEqual({ highlights: [{ icon: 'gear', label: '20 litros' }] });
+    const { service } = make({ highlights: [{ icon: 'gear', label: 'Brazo ajustable', detail: null }] }, true, overrides);
+    await expect(service.suggest('m1', 's1', product)).resolves.toEqual({ highlights: [{ icon: 'gear', label: 'Brazo ajustable' }] });
     expect(global.fetch).toHaveBeenCalledWith(overrides['app.chatgptPlan'].url, expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer local-bridge' }) }));
     const failed = make(null, false, overrides);
     await expect(failed.service.suggest('m1', 's1', product)).rejects.toBeInstanceOf(BadGatewayException);
@@ -35,12 +35,12 @@ describe('product highlight suggestions', () => {
     const { service, usage } = make({ highlights: [
       { icon: 'plug', label: 'USB-C', detail: 'Cualquier cargador' },
       { icon: 'lamp', label: 'Inventado' },
-      { icon: 'gear', label: 'Brazo ajustable', detail: 'Tres articulaciones' },
+      { icon: 'gear', label: 'Brazo ajustable', detail: 'Acabado mate' },
     ] });
     const result = await service.suggest('m1', 's1', product);
     expect(result).toEqual({ highlights: [
       { icon: 'plug', label: 'USB-C', detail: 'Cualquier cargador' },
-      { icon: 'gear', label: 'Brazo ajustable', detail: 'Tres articulaciones' },
+      { icon: 'gear', label: 'Brazo ajustable', detail: 'Acabado mate' },
     ] });
     const request = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
     expect(request.model).toBe('gpt-5.6-sol');
@@ -58,6 +58,21 @@ describe('product highlight suggestions', () => {
     await expect(service.suggest('m1', 's1', product)).rejects.toThrow(/YAPI|destacados/i);
     expect(prisma.store.findFirst).toHaveBeenCalled();
     expect((prisma as any).paymentLink).toBeUndefined();
+  });
+
+  it('drops a suggestion whose number or promise is not in the product facts', async () => {
+    const { service } = make({ highlights: [
+      { icon: 'plug', label: 'USB-C', detail: 'Carga en 2 horas' },
+      { icon: 'shield', label: 'Garantía total', detail: null },
+      { icon: 'gear', label: 'Brazo ajustable', detail: null },
+    ] });
+    await expect(service.suggest('m1', 's1', product)).resolves.toEqual({ highlights: [{ icon: 'gear', label: 'Brazo ajustable' }] });
+  });
+
+  it('keeps a number the product itself states', async () => {
+    const { service } = make({ highlights: [{ icon: 'scoop', label: '20 g de proteína', detail: null }] });
+    await expect(service.suggest('m1', 's1', { name: 'Café proteico', description: 'Cada porción trae 20 g de proteína.' }))
+      .resolves.toEqual({ highlights: [{ icon: 'scoop', label: '20 g de proteína' }] });
   });
 
   it('returns nothing when the product has no facts to describe', async () => {

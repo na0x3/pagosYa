@@ -158,3 +158,11 @@ describe('conversion product page style', () => {
     expect(all('.product-detail__gallery > .product-detail__tiles li')).toHaveLength(3);
   });
 });
+
+it('draws every icon the API accepts', () => {
+  const source = readFileSync(join(__dirname, '../payment-links/product-highlights.ts'), 'utf8');
+  const list = source.slice(source.indexOf('PRODUCT_HIGHLIGHT_ICONS = ['), source.indexOf('] as const'));
+  const names = [...list.matchAll(/'([a-z-]+)'/g)].map(match => match[1]);
+  expect(names).toHaveLength(55);
+  for (const name of names) expect(commerce).toContain(`${name.includes('-') ? `'${name}'` : name}: { motion:`);
+});

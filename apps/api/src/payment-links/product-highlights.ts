@@ -14,6 +14,8 @@ export const PRODUCT_HIGHLIGHT_ICONS = [
   'cup', 'wheat', 'chef-hat', 'bottle',
   // Carry and climate
   'thermometer', 'laptop', 'backpack', 'umbrella',
+  // Wellness, beauty and gadgets (conversion pages, spec 2026-10-10)
+  'scoop', 'brain', 'moon', 'dumbbell', 'bean', 'bowl', 'pill', 'sprout', 'lotion', 'mirror', 'eye', 'headphones', 'camera', 'timer', 'glass',
   // General
   'shield', 'star', 'heart', 'recycle', 'check',
 ] as const;

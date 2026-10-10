@@ -7,6 +7,8 @@ export const PRODUCT_HIGHLIGHT_ICON_LABELS: Array<[string, string]> = [
   ['shirt', 'Prenda'], ['wash', 'Lavado'], ['sparkle', 'Brillo'], ['hand', 'Mano'], ['scissors', 'Tijeras'],
   ['cup', 'Taza'], ['wheat', 'Trigo'], ['chef-hat', 'Cocina'], ['bottle', 'Botella'],
   ['thermometer', 'Temperatura'], ['laptop', 'Laptop'], ['backpack', 'Mochila'], ['umbrella', 'Lluvia'],
+  ['scoop', 'Proteína'], ['brain', 'Mente'], ['moon', 'Descanso'], ['dumbbell', 'Ejercicio'], ['bean', 'Grano'], ['bowl', 'Plato'], ['pill', 'Suplemento'],
+  ['sprout', 'Natural'], ['lotion', 'Cuidado'], ['mirror', 'Belleza'], ['eye', 'Vista'], ['headphones', 'Sonido'], ['camera', 'Cámara'], ['timer', 'Rapidez'], ['glass', 'Bebida'],
   ['shield', 'Garantía'], ['star', 'Estrella'], ['heart', 'Favorito'], ['recycle', 'Reciclable'], ['check', 'Verificado'],
 ];
 export const PRODUCT_HIGHLIGHT_ICONS = PRODUCT_HIGHLIGHT_ICON_LABELS.map(([name]) => name);

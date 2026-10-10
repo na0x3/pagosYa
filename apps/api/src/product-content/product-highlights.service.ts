@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
 import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
 import { normalizeProductHighlights, PRODUCT_HIGHLIGHT_ICONS, type ProductHighlight } from '../payment-links/product-highlights';
+import { factClaims, factNumbers, keepsToFacts } from './product-page-writer';
 
 export type ProductHighlightRequest = {
   name: string;
@@ -90,7 +91,10 @@ export class ProductHighlightsService {
     const text = body.output?.flatMap((item) => item.content ?? []).find((item) => item.type === 'output_text')?.text;
     try {
       const parsed = JSON.parse(text ?? '{}') as { highlights?: Array<{ icon: string; label: string; detail?: string | null }> };
-      return { highlights: normalizeProductHighlights(parsed.highlights) };
+      const facts = { name: input.name, description: input.description, specifications: input.specifications, tags: input.tags };
+      const numbers = factNumbers(facts), claims = factClaims(facts);
+      // Same honesty rule as the long-page writer: a number or promise must already be in the product's own words.
+      return { highlights: normalizeProductHighlights(parsed.highlights).filter(row => keepsToFacts(`${row.label} ${row.detail ?? ''}`, numbers, claims)) };
     } catch {
       throw new BadGatewayException('YAPI devolvió destacados con un formato inesperado.');
     }
