@@ -14,6 +14,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import type { AgentRequirement } from '../src/storefront-source/agent/agent-task';
 import { captureAgentDraft } from '../src/storefront-source/agent/agent-capture';
 import { catalogueDigest, specificityReport, type StoreSketch } from '../src/storefront-source/sketch';
+import { SOURCE_DESIGN_FILE } from '../src/storefront-source/source-design';
+import { signatureTellReport } from '../src/storefront-source/source-signature-report';
 
 /** The product card theme in a candidate's config.js (null when it has no DNA). */
 function productThemeOf(candidate: any): { productCard: Record<string, string>; productCss: string } | null {
@@ -36,6 +38,14 @@ function specificityOf(candidate: any): { blocks: number; bands: number; grounde
     const data = JSON.parse(file('config.js')?.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] ?? '{}').data ?? {};
     return specificityReport(sketch, catalogueDigest(data.items, data.categories));
   } catch { return null; }
+}
+
+/** The selected concept's signature and the tells in the built source. REPORTING ONLY. */
+function tellsOf(candidate: any) {
+  const files = Array.isArray(candidate?.files) ? candidate.files : [];
+  let signature;
+  try { const design = JSON.parse(files.find((file: { path: string }) => file.path === SOURCE_DESIGN_FILE)?.content ?? 'null'); signature = design?.concepts?.[design.selected]?.signature; } catch { signature = undefined; }
+  return { signature, report: signatureTellReport(files, signature) };
 }
 
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : undefined; };
@@ -93,6 +103,9 @@ async function main() {
       // Whether the copy work landed: grounded bands over prose bands, plus any filler phrases. Reporting only.
       const specificity = specificityOf(result.candidate);
       if (specificity) console.log(`  especificidad: ${specificity.groundedBands}/${specificity.bands} bandas con producto real (${specificity.blocks} bloques, ${specificity.hits} menciones) · relleno: ${specificity.filler.length ? specificity.filler.join(' | ') : 'ninguno'}`);
+      const tells = tellsOf(result.candidate);
+      console.log(`  firma: ${tells.signature ? `${tells.signature.idea} · vocabulario en página ${tells.report.vocabularyFound.length}/${tells.signature.vocabulary.length}` : 'ninguna'}`);
+      console.log(`  señas: eyebrows ${tells.report.eyebrowSections} · marquesina ${tells.report.marquee ? 'sí' : 'no'} · reveal ${tells.report.topRevealClass ? `${tells.report.topRevealClass.name}×${tells.report.topRevealClass.uses}` : 'ninguno'} · fuentes ${tells.report.fonts.join(', ') || '—'} · mantuvo: ${attempts.flatMap((a: any) => a.tellsKept ?? []).join(' | ') || '—'}`);
       if (shot && result.candidate) writeFileSync(shot.replace(/(\.jpe?g)?$/i, `-${run}.jpg`), Buffer.from((await captureAgentDraft(result.candidate, 1280)).image.split(',')[1], 'base64'));
       console.log(`run ${run}: ${result.agent?.summary ?? result.label}\n  secciones: ${(result.agent?.sections ?? []).join(' · ')}\n  pasos: ${(result.agent?.steps ?? []).map((step: { label: string }) => step.label).join(' → ')}`);
     } catch (error) {
