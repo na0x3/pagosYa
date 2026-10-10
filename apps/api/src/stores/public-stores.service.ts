@@ -210,7 +210,7 @@ export class PublicStoresService implements OnModuleDestroy {
       publishedStoreLook(this.prisma, store.id, store.publishedSourceRevision),
       this.prisma.storeOrder.findMany({
         where: { storeId: store.id, status: { in: [...PAID_STATUSES] }, createdAt: { gte: new Date(Date.now() - TOP_SELLER_WINDOW_DAYS * 86_400_000) } },
-        select: { items: true }, take: 5000,
+        select: { items: true }, orderBy: { createdAt: 'desc' }, take: 5000,
       }),
     ]);
     if (trackView) this.queueStoreView(store.id);

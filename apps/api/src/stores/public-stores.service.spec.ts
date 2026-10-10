@@ -139,6 +139,9 @@ describe('top seller badge', () => {
     const result = await service.getStorePublic(storeRow.slug);
     expect(result.topSellerId).toBe('p1');
     const where = prisma.storeOrder.findMany.mock.calls[0][0].where;
+    const query = prisma.storeOrder.findMany.mock.calls[0][0];
+    expect(query.orderBy).toEqual({ createdAt: 'desc' });
+    expect(query.take).toBe(5000);
     expect(where.storeId).toBe(storeRow.id);
     expect(where.status.in).toEqual(expect.arrayContaining(['PAID', 'DELIVERED']));
     expect(where.status.in).not.toContain('PENDING');
