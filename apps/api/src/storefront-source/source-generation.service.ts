@@ -40,6 +40,7 @@ import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } f
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, isClaude } from './source-provider';
 import { withSavedLogo } from './source-saved-logo';
+import { isAuthorableSourcePath, sep5AuthorableFiles, sep5PreviousSource } from './source-authorable';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 
 /** The OpenAI model that runs the parts Claude does not (design planning, the single-call fallback). */
@@ -154,7 +155,7 @@ export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: 
   if (!Array.isArray(files) || files.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file?.path)).length > 24) throw new BadGatewayException("La generación no devolvió un proyecto válido.");
   if (purpose === 'shop') validateSourcePriceClaims(files);
   for (const file of files) {
-    if (!file || typeof file.content !== "string" || !(/^(?:pages\/)?[a-zA-Z0-9_-]+\.(html|css|js)$/.test(file.path) || file.path === SOURCE_KIT_CSS_PATH || file.path === ORDER_EMAIL_TEMPLATE_PATH || isSourceMotifFile(file.path)) || ["config.js", "commerce.js", "brand.css"].includes(file.path)) throw new BadGatewayException("La generación intentó cambiar un archivo reservado.");
+    if (!file || typeof file.content !== "string" || !isAuthorableSourcePath(file.path)) throw new BadGatewayException("La generación intentó cambiar un archivo reservado.");
     if (file.path.endsWith(".js")) {
       try { new Script(file.content, { filename: file.path }); } catch { throw new BadGatewayException(`Error de sintaxis en ${file.path}. Vuelve a generar.`); }
     }
@@ -828,7 +829,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: oldFiles.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file.path)), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief }), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn) };
+        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief }), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn) };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
@@ -871,7 +872,9 @@ export class SourceGenerationService {
         // `motion` says whether the choreography was actually sent, so a store that came out static can be
         // told apart from a run that was never asked for movement.
         this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none', bold: authorInput.boldDefault }));
-        generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${owner.slug}`, files: authored.data.files };
+        const authorable = sep5AuthorableFiles(authored.data.files);
+        if (authorable.dropped.length) autoRepairs.push(`dropped platform files the author returned: ${authorable.dropped.join(', ')}`);
+        generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${owner.slug}`, files: authorable.files };
         // The Sep-5 run validated only the project contract (apps/api/sep5-run.mjs). The presentation and
         // visual-system contracts were written later, against engine output; holding authored source to them
         // would reject the designs this path exists to reproduce. The project contract still applies.
@@ -903,7 +906,9 @@ export class SourceGenerationService {
             if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${review.responseStatus || 'sin estado'}${review.incompleteReason ? `: ${review.incompleteReason}` : ''})`);
             if (result.data.files.length) {
               if (!sep5ProjectIsUsable(result.data.files)) throw new Error('la revisión devolvió un proyecto sin catálogo, carrito o estilos');
-              generated = { label: result.data.label.slice(0, 120) || draft.generated.label, files: result.data.files };
+              const reviewed = sep5AuthorableFiles(result.data.files);
+              if (reviewed.dropped.length) autoRepairs.push(`dropped platform files the review returned: ${reviewed.dropped.join(', ')}`);
+              generated = { label: result.data.label.slice(0, 120) || draft.generated.label, files: reviewed.files };
               lenient = true;
               try { await acceptCandidate(); } finally { lenient = false; }
               autoRepairs.push(...result.data.notes.map(note => `Revisión visual: ${note.slice(0, 200)}`));
