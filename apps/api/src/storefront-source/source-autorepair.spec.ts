@@ -37,6 +37,27 @@ describe('source contract auto-repair', () => {
     expect(ambiguous.repairs).toEqual([]);
   });
 
+  // 2026-10-10: a whole authored draft was lost because the model wrote assets/image-86fa4da35b7.jpg for the
+  // bundled assets/image-86fa4da35b7b.jpg. One mistyped character in a 12-digit name is a slip, not a decision.
+  it('repoints an asset name the model mistyped by one character, in HTML and in CSS, when only one asset is that close', () => {
+    const knownPaths = new Set(['index.html', 'styles.css', 'assets/image-86fa4da35b7b.jpg', 'assets/image-b52b932266c7.jpg']);
+    const { files, repairs } = repairSourceContracts([
+      file('index.html', '<h1>Pulso</h1><img src="assets/image-86fa4da35b7.jpg" alt=""><img src="assets/image-b52b932266d7.jpg" alt="">'),
+      file('styles.css', '.hero{background:url("assets/image-b52b932266c7x.jpg") center/cover}'),
+    ], { knownPaths });
+    expect(files[0].content).toBe('<h1>Pulso</h1><img src="assets/image-86fa4da35b7b.jpg" alt=""><img src="assets/image-b52b932266c7.jpg" alt="">');
+    expect(files[1].content).toBe('.hero{background:url("assets/image-b52b932266c7.jpg") center/cover}');
+    expect(repairs).toHaveLength(3);
+    expect(validateSourcePreflight([...files, ...[...knownPaths].filter(path => path.startsWith('assets/')).map(path => file(path, 'x'))], {}).unusedImagePaths).toEqual([]);
+  });
+
+  it('leaves a mistyped asset name alone when two assets are equally close, or the extension differs', () => {
+    const knownPaths = new Set(['index.html', 'assets/image-aaaa1.jpg', 'assets/image-aaaa2.jpg', 'assets/photo-1234.png']);
+    const { files, repairs } = repairSourceContracts([file('index.html', '<img src="assets/image-aaaa.jpg" alt=""><img src="assets/photo-1234.jpg" alt="">')], { knownPaths });
+    expect(files[0].content).toBe('<img src="assets/image-aaaa.jpg" alt=""><img src="assets/photo-1234.jpg" alt="">');
+    expect(repairs).toEqual([]);
+  });
+
   it('drops a dead script tag but keeps scripts the storefront kit supplies at save time', () => {
     const { files } = repair([file('index.html', '<script src="missing.js"></script><script src="config.js"></script><script src="commerce.js"></script>')]);
     expect(files[0].content).not.toContain('missing.js');

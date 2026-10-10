@@ -58,6 +58,30 @@ function remapByBasename(target: string, knownPaths: Set<string>): string | null
   return matches.length === 1 ? matches[0] : null;
 }
 
+/** True when b is a with exactly one character inserted, deleted or replaced. */
+function oneEditApart(a: string, b: string): boolean {
+  if (a === b || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+
+/**
+ * A bundled asset name the model copied with one character dropped, doubled or changed
+ * (assets/image-86fa4da35b7.jpg for assets/image-86fa4da35b7b.jpg). Same folder, same
+ * extension and exactly one such asset, or no repair.
+ */
+function remapNearMiss(target: string, knownPaths: Set<string>): string | null {
+  if (!/(?:^|\/)assets\//i.test(target)) return null;
+  const extension = posix.extname(target).toLowerCase();
+  const stem = posix.basename(target, posix.extname(target));
+  const matches = [...knownPaths].filter(path => posix.dirname(path) === posix.dirname(target) && posix.extname(path).toLowerCase() === extension && oneEditApart(stem, posix.basename(path, posix.extname(path))));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+const remapDead = (target: string, knownPaths: Set<string>) => remapByBasename(target, knownPaths) ?? remapNearMiss(target, knownPaths);
+
 export function repairSourceContracts(files: SourceProjectFileDto[], context: RepairContext): RepairResult {
   const repairs: string[] = [];
   const { knownPaths } = context;
@@ -69,10 +93,23 @@ export function repairSourceContracts(files: SourceProjectFileDto[], context: Re
 
   const repaired = files.map(file => {
     if (/\.css$/i.test(file.path)) {
-      const content = stripRootOverflowMask(file.content);
-      if (content === file.content) return file;
-      repairs.push(`${file.path}: removed page-wide overflow-x masking`);
-      return { ...file, content };
+      let content = stripRootOverflowMask(file.content);
+      if (content !== file.content) repairs.push(`${file.path}: removed page-wide overflow-x masking`);
+      // A dead url(assets/…) that resolves to exactly one real asset. styles/globals.css is served from the
+      // site root, so its assets/ references resolve from there (the same rule source-preflight applies).
+      content = content.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi, (whole, quote: string, raw: string) => {
+        const target = cleanReference(raw);
+        if (!target || isExternal(target) || !/(?:^|\/)assets\//i.test(target)) return whole;
+        const from = file.path === 'styles/globals.css' ? 'index.css' : file.path;
+        const resolved = resolveLocal(from, target);
+        if (knownPaths.has(resolved)) return whole;
+        const remapped = remapDead(resolved, knownPaths);
+        if (!remapped) return whole;
+        const relative = posix.relative(posix.dirname(from), remapped) || remapped;
+        repairs.push(`${file.path}: repointed ${target} to ${relative}`);
+        return `url(${quote}${relative}${quote})`;
+      });
+      return content === file.content ? file : { ...file, content };
     }
     if (!/\.html$/i.test(file.path)) return file;
 
@@ -91,7 +128,7 @@ export function repairSourceContracts(files: SourceProjectFileDto[], context: Re
     html = html.replace(/\b(href|src)\s*=\s*(["'])([^"']+)\2/gi, (whole, attribute: string, quote: string, raw: string) => {
       const target = cleanReference(raw);
       if (!target || isExternal(target) || exists(file.path, raw)) return whole;
-      const remapped = remapByBasename(resolveLocal(file.path, target), knownPaths);
+      const remapped = remapDead(resolveLocal(file.path, target), knownPaths);
       if (!remapped) return whole;
       const relative = posix.relative(posix.dirname(file.path), remapped) || remapped;
       repairs.push(`${file.path}: repointed ${target} to ${relative}`);
