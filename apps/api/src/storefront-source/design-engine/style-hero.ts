@@ -3,6 +3,7 @@
  * colours; it is sanitised here and shown only in a script-less sandbox. A failed or unusable answer gets the template.
  */
 import { BadGatewayException } from '@nestjs/common';
+import { parseFragment, serialize, type DefaultTreeAdapterMap } from 'parse5';
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { sourceResponseJson } from '../source-response';
 import { sourceUsage, type SourceModel } from '../source-generation-policy';
@@ -17,32 +18,14 @@ const escape = (text: string) => text.replace(/[&<>"']/g, ch => ({ '&': '&amp;',
 const fontOf = (id: string) => SOURCE_FONT_CATALOG.find(font => font.id === id) ?? SOURCE_FONT_CATALOG.find(font => font.id === 'instrument')!;
 // Local paths only: the kit's assets/, uploads and inline images. Everything else is dropped.
 const LOCAL_URL = /^(assets\/[\w./-]+|\/v1\/uploads\/[\w.-]+|data:image\/(png|jpe?g|webp|svg\+xml)[;,])/i;
-const BLOCKED = 'script|iframe|object|embed|link|meta|base|form|frame|frameset|noscript|applet|animate|set|animatemotion|animatetransform|discard';
-const BLOCKED_OPEN = new RegExp(`<(${BLOCKED})\\b[^>]*>?`, 'gi');
-const BLOCKED_STRAYS = new RegExp(`<\\/?(${BLOCKED})\\b[^>]*>?`, 'gi');
-// The separator is a lookbehind so a kept attribute never hides the one glued to it (src="a"href="javascript:...").
-const URL_ATTRS = /(?<=[\s/"'])(src|href|xlink:href|srcset|poster|formaction|action|data|background|ping)\s*=\s*("([^"]*)"|'([^']*)'|[^\s>]*)/gi;
-const HANDLERS = /(?<=[\s/"'])on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi;
-
-// Drops <tag ...>body</tag> for blocked tags in one linear pass; an unclosed tag loses only its own tag (strays pass removes it).
-function stripBlockedPairs(html: string): string {
-  const closers = new Map<string, RegExp | null>();
-  let out = '', at = 0;
-  BLOCKED_OPEN.lastIndex = 0;
-  for (let m = BLOCKED_OPEN.exec(html); m; m = BLOCKED_OPEN.exec(html)) {
-    if (m.index < at) continue;
-    const name = m[1].toLowerCase();
-    if (!closers.has(name)) closers.set(name, new RegExp(`<\\/${name}\\s*>`, 'gi'));
-    const closer = closers.get(name);
-    let end = m.index + m[0].length;
-    if (closer) {
-      closer.lastIndex = end;
-      const close = closer.exec(html);
-      if (close) end = close.index + close[0].length; else closers.set(name, null);
-    }
-    out += html.slice(at, m.index); at = end; BLOCKED_OPEN.lastIndex = end;
-  }
-  return out + html.slice(at);
+const BLOCKED = new Set(['script', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'form', 'frame', 'frameset', 'noscript', 'template', 'animate', 'set', 'animatemotion', 'animatetransform', 'discard', 'foreignobject']);
+const URL_ATTRS = new Set(['src', 'href', 'xlink:href', 'srcset', 'poster', 'action', 'formaction', 'data', 'background', 'ping']);
+// Checked on DECODED text (attribute values, <style> bodies): anything that can spell a fetch or an escape.
+const LOCAL_CSS_URL = /^url\(\s*["']?(assets\/|\/v1\/uploads\/|data:image\/)/i;
+function cssIsUnsafe(text: string): boolean {
+  if (/[\\]|@import|expression\s*\(|image-set\s*\(|-moz-binding/i.test(text)) return true;
+  for (const m of text.matchAll(/url\(/gi)) if (!LOCAL_CSS_URL.test(text.slice(m.index!, m.index! + 80))) return true;
+  return false;
 }
 
 export function heroFontFaces(fonts: { display: string; text: string }): string {
@@ -50,45 +33,58 @@ export function heroFontFaces(fonts: { display: string; text: string }): string 
     .map(font => `@font-face{font-family:"${font.family}";src:url("assets/${font.id}.ttf") format("truetype");font-display:swap}`).join('');
 }
 
-function cleanOnce(html: string): string {
-  return stripBlockedPairs(html)
-    .replace(BLOCKED_STRAYS, '')
-    .replace(HANDLERS, '')
-    .replace(/@import[^;]*;?/gi, '')
-    .replace(/(image-set|expression)\s*\([^()]*\)/gi, 'none').replace(/-moz-binding\s*:[^;}"']*/gi, '')
-    .replace(/url\(\s*(["']?)([^"'()\s]*)\1\s*\)/gi, (match, _quote, url: string) => LOCAL_URL.test(url) ? match : 'none')
-    .replace(URL_ATTRS, (match, attr: string, raw: string, double?: string, single?: string) => {
-      const name = attr.toLowerCase(), value = (double ?? single ?? raw).trim();
-      if (name === 'href' && (value === '' || value.startsWith('#') || /^[\w-]+\.html$/.test(value))) return match;
-      // srcset holds several candidates; every one must be local.
-      const local = name === 'srcset' ? value.split(',').every(candidate => LOCAL_URL.test(candidate.trim())) : LOCAL_URL.test(value);
-      return local ? match : name === 'href' ? 'href="#"' : '';
+type Node = DefaultTreeAdapterMap['node'];
+
+// Rebuilds the tree from an allowlist; returns false when something cannot be proved harmless.
+function cleanNode(parent: { childNodes: Node[] }): boolean {
+  const kept: Node[] = [];
+  for (const node of parent.childNodes) {
+    if (node.nodeName === '#comment') continue;
+    if (node.nodeName === '#text') { kept.push(node); continue; }
+    const el = node as DefaultTreeAdapterMap['element'];
+    const tag = el.tagName.toLowerCase();
+    if (BLOCKED.has(tag) || !/^[a-z][a-z0-9:-]*$/.test(tag)) continue;
+    el.attrs = el.attrs.filter(attr => {
+      const name = (attr.prefix ? `${attr.prefix}:${attr.name}` : attr.name).toLowerCase(), value = attr.value.trim();
+      if (name.startsWith('on')) return false;
+      if (URL_ATTRS.has(name)) {
+        if (name === 'href' && (value === '' || value.startsWith('#') || /^[\w-]+\.html$/.test(value))) return true;
+        const local = name === 'srcset' ? value.split(',').every(candidate => LOCAL_URL.test(candidate.trim())) : LOCAL_URL.test(value);
+        if (!local) { if (name === 'href') attr.value = '#'; else return false; }
+        return true;
+      }
+      return !cssIsUnsafe(attr.value);
     });
-}
-
-// Fail closed on what the cleaning cannot prove harmless: CSS escapes or entities that can spell url(/@import, any
-// url( that is not a local file, and any absolute or protocol-relative URL left anywhere.
-function looksUnsafe(html: string): boolean {
-  const [, ...styles] = html.split(/<style\b[^>]*>/i);
-  for (const part of styles) {
-    const end = part.search(/<\/style/i);
-    if (end < 0 || part.slice(0, end).includes('\\')) return true;
+    if (tag === 'style') {
+      for (const child of el.childNodes) {
+        if (child.nodeName !== '#text') return false;
+        const text = child as DefaultTreeAdapterMap['textNode'];
+        if (text.value.includes('\\')) return false;
+        // Decoded, escape-free CSS: foreign url()s and @import become inert, anything stranger fails closed.
+        text.value = text.value.replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(["']?)([^"'()\s]*)\1\s*\)/gi, (match, _quote, url: string) => LOCAL_URL.test(url) ? match : 'none');
+        if (cssIsUnsafe(text.value)) return false;
+      }
+    }
+    if (!cleanNode(el)) return false;
+    kept.push(node);
   }
-  for (const m of html.matchAll(/(?<=[\s/"'])style\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi)) if (/[\\&]/.test(m[1] ?? m[2] ?? m[3] ?? '')) return true;
-  for (const m of html.matchAll(/url\(/gi)) if (!/^\(\s*["']?(assets\/|\/v1\/uploads\/|data:image\/)/i.test(html.slice(m.index!+3, m.index! + 60))) return true;
-  const inert = html.replace(/\sxmlns(:[\w-]+)?\s*=\s*("[^"]*"|'[^']*')/gi, '').replace(/data:image\/[^"')\s]*/gi, '');
-  return /\b(?:https?|ftp|wss?):/i.test(inert) || /(?:^|[\s"'(=,>])\/\/[^\s"'/]/.test(inert);
+  parent.childNodes = kept;
+  return true;
 }
 
+/** Parses with parse5 (which decodes entities the way a browser does) and rebuilds from an allowlist; null = unusable. */
 export function sanitizeHeroHtml(html: string): string | null {
   if (typeof html !== 'string' || !html.trim() || html.length > MAX_HERO) return null;
-  // Removing a tag can splice its neighbours into a new one (<scr<script>ipt>), so clean until nothing changes.
-  let out = html;
-  for (let pass = 0; pass < 8; pass++) { const next = cleanOnce(out); if (next === out) break; out = next; }
-  if (cleanOnce(out) !== out) return null;
-  if (looksUnsafe(out)) return null;
-  out = out.trim();
-  return out && /data-store-name/.test(out) ? out : null;
+  // A real hero has a few hundred tags; thousands only come from nesting bombs that make the parser slow.
+  if (html.split('<').length > 2500) return null;
+  try {
+    const fragment = parseFragment(html);
+    if (!cleanNode(fragment)) return null;
+    const out = serialize(fragment).trim();
+    const inert = out.replace(/\sxmlns(:[\w-]+)?\s*=\s*("[^"]*"|'[^']*')/gi, '').replace(/data:image\/[^"')\s]*/gi, '');
+    if (/\b(?:https?|ftp|wss?):/i.test(inert) || /(?:^|[\s"'(=,>])\/\/[^\s"'/]/.test(inert)) return null;
+    return out && /data-store-name/.test(out) ? out : null;
+  } catch { return null; }
 }
 
 export function templateHero(facts: HeroFacts): string {

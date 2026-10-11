@@ -39,7 +39,7 @@ it('sanitises pathological 40 KB inputs in under 200 ms', () => {
 
 it('fails closed on CSS that can hide an external fetch', () => {
   const wrap = (css: string) => `<div data-store-name></div><style>${css}</style>`;
-  for (const bad of [wrap('.a{background:\\75 rl(https://evil.test/a.png)}'), wrap('@\\69mport "https://evil.test/a.css";'), wrap('.a{background:url("https://evil.test/a)b.png")}'), '<div data-store-name></div><style>.a{background:url(https://evil.test/a.png}', '<div data-store-name style="background:&#117;rl(https://evil.test/a.png)"></div>', '<div data-store-name style="background:\\75rl(x)"></div>', '<div data-store-name><p>//evil.test/x</p></div>']) expect(sanitizeHeroHtml(bad)).toBeNull();
+  for (const bad of [wrap('.a{background:\\75 rl(https://evil.test/a.png)}'), wrap('@\\69mport "https://evil.test/a.css";'), wrap('.a{background:url("https://evil.test/a)b.png")}'), '<div data-store-name></div><style>.a{background:url(https://evil.test/a.png}', '<div data-store-name><p>//evil.test/x</p></div>']) expect(sanitizeHeroHtml(bad)).toBeNull();
   expect(sanitizeHeroHtml('<div data-store-name><a href="//evil.test/x">a</a></div>')).not.toMatch(/evil/);
   expect(sanitizeHeroHtml('<div data-store-name><svg xmlns="http://www.w3.org/2000/svg"></svg></div>')).not.toBeNull();
 });
@@ -55,6 +55,26 @@ it('rejects hostile palette values in the template hero', () => {
   expect(html).toContain('#ffffff');
   expect(html).toContain('#111111');
   expect(sanitizeHeroHtml(html)).not.toBeNull();
+});
+
+it('fails closed on entity- and escape-encoded fetches in SVG and attributes', () => {
+  for (const bad of ['<svg><style>.a{background:&#117;rl(&#47;&#47;evil.test/a.png)}</style></svg><div class="a">', '<svg><style>.b{background:&#92;75 rl(&#92;2f&#92;2f evil.test/b.png)}</style></svg>', '<svg><style>&#64;import "&#47;&#47;evil.test/x.css";</style></svg>', '<svg><rect cursor="\\75 rl(\\68 ttps://evil.test/c.png),auto"/></svg>', '<svg><rect mask="&#117;rl(&#47;&#47;evil.test/m.svg#m)"/></svg>', '<svg><rect fill="&#117;rl(&#47;&#47;evil.test/f.svg#g)"/></svg>']) {
+    const html = sanitizeHeroHtml('<div data-store-name></div>' + bad);
+    expect(html === null || !/evil|url\(|import/i.test(html)).toBe(true);
+  }
+});
+
+it('drops encoded style attributes', () => {
+  const html = sanitizeHeroHtml('<div data-store-name style="background:&#117;rl(https://evil.test/a.png)" class="a"></div><p style="background:\\75rl(x)">t</p>')!;
+  expect(html).not.toMatch(/style|evil/);
+});
+
+it('rejects unclosed style tags quickly', () => {
+  for (const unit of ['<style', '<style x', '<div>']) {
+    const started = Date.now();
+    sanitizeHeroHtml(unit.repeat(Math.ceil(39_000 / unit.length)));
+    expect(Date.now() - started).toBeLessThan(200);
+  }
 });
 
 it('rejects empty, oversized or nameless answers', () => {
