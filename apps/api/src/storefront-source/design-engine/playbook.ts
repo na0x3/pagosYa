@@ -152,6 +152,7 @@ export function playbookDirection(entry: PlaybookEntry, family: StyleFamily, opt
     `- It must show: ${entry.sections.filter(section => shown(section, evidence)).map(section => section.must).join('; ')}. Only real facts from the brief and the store data; never invent hours, addresses, dates, numbers or reviews.`,
     `- ${options.bold ? '' : PROFILE_LINE[entry.profile] + ' '}One content container 1140-1320px wide with 64-80px side margins; standard header (logo, 3-5 links, one action, cart); ${entry.footer}.`,
     `- Style family "${family.name}": ${family.radius} corners, ${family.photoShape} photos, fonts ${family.fonts.map(f => `${f.display} + ${f.text}`).join(' or ')}, buttons ${options.button ?? family.buttons.join(' or ')}${colours}.`,
+    ...(options.bold ? [] : ['- No novelty ornaments: no circular or rotating text badges, stamps, stickers, wavy or torn dividers, blobs or scribbles; separate sections with space, a hairline or a calm background change.']),
     '- Modern and professional details: a header that stays usable while scrolling, a footer with columns, small headings, line icons and the legal row on every page; consistent line icons (inline SVG, 1.5px stroke, currentColor) for contact, hours, location, delivery and features; never emoji.',
     `- Voice: ${entry.tone}.`,
   ].join('\n');

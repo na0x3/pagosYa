@@ -109,3 +109,10 @@ it('knows everyday words for each kind of business', () => {
   expect(detectKind('planes de almuerzos saludables a domicilio')).toBe('cafe-food');
   expect(detectKind('cuadros e impresiones de arte para tu casa')).toBe('crafts-home');
 });
+
+// Night run 2026-10-11: Heladería Nube shipped a circular text badge and a wavy divider, ornaments the owner rejected.
+it('rules out novelty ornaments on a professional build, not on a bold one', () => {
+  const entry = PLAYBOOK['bakery-sweets'], family = entry.families[0];
+  expect(playbookDirection(entry, family)).toMatch(/no circular or rotating text badges/);
+  expect(playbookDirection(entry, family, { bold: true })).not.toMatch(/no circular or rotating text badges/);
+});

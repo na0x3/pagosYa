@@ -4,7 +4,7 @@ import { sourceVisualState } from '../source-visual-state';
 import type { SourceProjectSnapshot } from '../source-project';
 
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
-export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string };
+export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string; priceOffset?: number };
 
 // Emoji presentation only: arrows, ticks and close glyphs (↗ ✔ ✖) are functional symbols, and a glyph inside a
 // button or a labelled control is an icon.
@@ -36,6 +36,7 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
     ...(fact.brokenWords.length ? [`${fact.width}px: un título corta la palabra ${fact.brokenWords.map(word => `«${word}»`).join(', ')} a mitad de línea; dale ancho para que salte solo entre palabras.`] : []),
     ...(fact.decorEmoji ? [`${fact.width}px: ${fact.decorEmoji} emoji usado(s) como decoración; reemplázalo(s) por una ilustración o quítalo(s).`] : []),
     ...(fact.fakeCircle ? [`${fact.width}px: ${fact.fakeCircle} texto(s) circular(es) hecho(s) con un span girado; un texto en círculo necesita un SVG con <textPath>, o quítalo.`] : []),
+    ...(fact.priceOffset ? [`${fact.width}px: en ${fact.priceOffset} tarjeta(s) de producto el precio no está alineado con el nombre (queda pegado al borde); da a .menu-item__price el mismo margen lateral que .menu-item__copy, o el relleno a la tarjeta entera.`] : []),
     ...(fact.overlaps?.length ? [`${fact.width}px: un texto se superpone a otro: ${fact.overlaps.join('; ')}.`] : []),
     ...fact.errors.map(error => `${fact.width}px: error de JavaScript: ${error}`),
   ]);
@@ -93,6 +94,8 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           pageText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 20000),
           // Design draw round 2 quality floor (inlined: the page cannot import the helpers above).
           decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
+          // The kit renders the price beside .menu-item__copy, not inside it: padding only the copy leaves the price on the card edge.
+          priceOffset: Array.from(document.querySelectorAll('.menu-item')).filter(card => { const name = card.querySelector('.menu-item__copy h3, .menu-item__copy h2'), price = card.querySelector('.menu-item__price'); if (!name || !price || !price.getBoundingClientRect().width) return false; return Math.abs(name.getBoundingClientRect().left - price.getBoundingClientRect().left) > 6; }).length,
           fakeCircle: (() => {
             const hits = Array.from(document.body.querySelectorAll('*')).filter(el => {
               if (el.closest('svg') || el.querySelector('textPath')) return false;
