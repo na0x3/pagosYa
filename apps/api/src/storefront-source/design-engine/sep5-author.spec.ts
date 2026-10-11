@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection } from './sep5-author';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -183,4 +183,27 @@ it('asks for the fonts before the choreography, keeps them in the self-review, a
   expect(prompt.indexOf('TYPE: ')).toBeLessThan(prompt.indexOf('MOTION CHOREOGRAPHY'));
   expect(sep5ReviewPrompt({ ...base, fonts, draft: [], measured: [] })).toContain('url("assets/anton.ttf")');
   expect(sep5AuthorPrompt({ ...base, fonts: '  ' })).toBe(sep5AuthorPrompt(base));
+});
+
+// Spec 2026-10-10 frame and hero draw: the ordered shell made every header identical.
+it('builds the drawn frame instead of the ordered shell, and stays byte-identical without one', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  const frame = 'FRAME AND HERO: test frame\n- Header: giant wordmark.';
+  const framed = sep5AuthorPrompt({ ...base, storeShell: true, frame, motionPlan: 'MOTION CHOREOGRAPHY: subtle.' });
+  expect(framed).toContain(frame);
+  expect(framed).toContain(SEP5_STORE_SHELL_FRAMED);
+  expect(framed).not.toContain(SEP5_STORE_SHELL);
+  expect(framed.indexOf(frame)).toBeLessThan(framed.indexOf('MOTION CHOREOGRAPHY'));
+  expect(SEP5_STORE_SHELL_FRAMED).toContain('href="buscar.html"');
+  expect(SEP5_STORE_SHELL_FRAMED).toContain('data-pagosya-account="login"');
+  expect(SEP5_STORE_SHELL_FRAMED).toContain('[data-cart-count]');
+  expect(SEP5_STORE_SHELL_FRAMED).toContain('data-pagosya-pages');
+  expect(sep5AuthorPrompt({ ...base, storeShell: true, frame: '  ' })).toBe(sep5AuthorPrompt({ ...base, storeShell: true }));
+  expect(sep5AuthorPrompt({ ...base, frame: '  ' })).toBe(sep5AuthorPrompt(base));
+});
+
+it('asks the self-review to check the drawn frame only when there is one', () => {
+  const input = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [], storeShell: true, draft: [], measured: [] };
+  expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).toMatch(/header and hero match FRAME AND HERO/);
+  expect(sep5ReviewPrompt(input)).not.toMatch(/FRAME AND HERO/);
 });
