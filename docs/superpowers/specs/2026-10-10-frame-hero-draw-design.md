@@ -128,3 +128,13 @@ cart, Buscar and Mi cuenta. Re-run the header table above over all stores.
 
 Body sections and their devices (marquee, eyebrow-above-every-heading, numbered lists), photo treatment, type
 pairing, and a Studio "Volver a tirar" button. The second round reuses `drawFrame`'s shape for the body.
+
+## Planning notes (2026-10-10, plan `docs/superpowers/plans/2026-10-10-frame-hero-draw.md`)
+
+- Edits carry `frame-draw.json` forward unchanged but do not resend the paragraph: the saved code already embodies
+  the frame, and "build exactly this structure" on a small edit invites a header rebuild. (Supersedes "Edits read
+  the saved draw back and pass the same paragraph" in §3.)
+- `full-bleed`, `split` and `offset-frame` heroes need at least one photo (`photos1`).
+- Merchant overrides are detected in the merchant's instruction only, never the business brief ("menú del día,
+  en el centro" is not a header request), with accent-safe whole-word matching.
+- The agent builder's frame check is the paragraph's last line; Sep-5 gets an explicit SELF-REVIEW sentence.
