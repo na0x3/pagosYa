@@ -214,7 +214,7 @@ test('list badge only for non-null, unfinished onboarding', () => {
 test('dashboard wiring: Salir refreshes the data, the list shows Sin terminar + Continuar, create offers the choice', () => {
   const src = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
   assert.match(src, /onExit: \(\) => \{ root\.hidden = true; root\.innerHTML = ""; void refresh\(\); \}/);
-  assert.match(src, /isUnfinishedStore\(store\) \? '<span class="store-card-status" data-status="draft">Sin terminar<\/span>'/);
+  assert.match(src, /isUnfinishedStore\(store, onboardingEnabled\) \? '<span class="store-card-status" data-status="draft">Sin terminar<\/span>'/);
   assert.match(src, /continue-store/);
   assert.match(src, /\/stores\/onboarding\?storeId=/);
   assert.match(src, /isUnfinishedStore\(store, onboardingEnabled\)/);
