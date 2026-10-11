@@ -100,3 +100,12 @@ it('asks for line icons and a modern footer, never emoji', () => {
   expect(text).toMatch(/line icons \(inline SVG/);
   expect(text).toMatch(/never emoji/);
 });
+
+it('knows everyday words for each kind of business', () => {
+  expect(detectKind('shampoos sólidos con ingredientes naturales para el cabello')).toBe('beauty');
+  expect(detectKind('cremas y jabones artesanales para el cuidado personal')).toBe('beauty');
+  expect(detectKind('vendemos salteñas, empanadas y té')).toBe('cafe-food');
+  expect(detectKind('chompas y ponchos de alpaca')).toBe('clothing');
+  expect(detectKind('planes de almuerzos saludables a domicilio')).toBe('cafe-food');
+  expect(detectKind('cuadros e impresiones de arte para tu casa')).toBe('crafts-home');
+});
