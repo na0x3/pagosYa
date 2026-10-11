@@ -2,6 +2,7 @@ export const SOURCE_PROGRESS_LABELS = {
   interpreting: 'Interpretando tu pedido',
   assets: 'Preparando los recursos del sitio',
   design: 'Definiendo la composición',
+  styles: 'Preparando tus estilos',
   building: 'Construyendo los cambios',
   validating: 'Comprobando el código y los recursos',
   repairing: 'Corrigiendo los problemas detectados',
