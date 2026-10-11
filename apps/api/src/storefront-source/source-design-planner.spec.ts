@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
 import { SourceRequestBudget } from './source-request-budget';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
@@ -218,6 +219,58 @@ describe('style slots', () => {
     const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.concepts.map(c => c.card!.slot)).toEqual([0, 2, 3]);
+  });
+
+  it('plans one concept for one lane: one-item schema, the one-concept wording and the lane\'s real slot on the card', async () => {
+    const one = styled()[2];
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: [one], selection: { index: 0, rationale: 'Fits' } }));
+    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: [{ slot: 2, mode: 'bold', direction: 'CONCEPT 3 of 4 (bold' }] });
+    const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect([body.text.format.schema.properties.concepts.minItems, body.text.format.schema.properties.concepts.maxItems]).toEqual([1, 1]);
+    expect(body.text.format.schema.properties.selection.properties.index.maximum).toBe(0);
+    const prompt = body.input[0].content[0].text as string;
+    expect(prompt).toContain('Return exactly one fully developed concept and NO source files: it is built on the CONCEPT below');
+    expect(prompt).toContain('CONCEPT 3 of 4 (bold');
+    expect(prompt).not.toContain('Return exactly four');
+    expect(prompt).not.toContain('Two are calm and two are bold');
+    expect(prompt).not.toContain(SOURCE_CONCEPT_ENERGY_DIRECTION);
+    expect(result.concepts).toHaveLength(1);
+    expect(result.concepts[0].card).toMatchObject({ slot: 2, mode: 'bold', name: 'Estilo 3' });
+    expect(result.selected).toBe(0);
+  });
+
+  it('plans two lanes at once with their own slots and a two-concept schema', async () => {
+    const value = styled();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: [value[1], value[3]], selection: { index: 1, rationale: 'Fits' } }));
+    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: [{ slot: 1, mode: 'calm', direction: 'CONCEPT 2 of 4 (calm' }, { slot: 3, mode: 'bold', direction: 'CONCEPT 4 of 4 (bold' }] });
+    const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(body.text.format.schema.properties.concepts.minItems).toBe(2);
+    expect(body.text.format.schema.properties.selection.properties.index.maximum).toBe(1);
+    expect(body.input[0].content[0].text).toContain('Return exactly 2 fully developed concepts');
+    expect(result.concepts.map(c => [c.card!.slot, c.card!.mode])).toEqual([[1, 'calm'], [3, 'bold']]);
+    expect(result.selected).toBe(1);
+  });
+
+  it('ignores more than four slots', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts, selection: { index: 2, rationale: 'r' } }));
+    await new SourceDesignPlanner().explore({ ...input(), styleSlots: [...slots, slots[0]] });
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text).toContain('Return exactly three fully developed concepts');
+  });
+
+  // Pinned before the lanes existed (2026-10-11): the three-concept and four-slot requests must not change by a byte.
+  // If a shared contract (fonts, DNA, composition text) changes on purpose, recompute these hashes from that commit.
+  it('sends the three-concept and four-slot prompts and schemas exactly as before the lanes', async () => {
+    const sha = (text: string) => createHash('sha256').update(text).digest('hex');
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+    await new SourceDesignPlanner().explore(input()).catch(() => undefined);
+    await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots }).catch(() => undefined);
+    await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots.map((slot, i) => ({ ...slot, slot: i })) }).catch(() => undefined);
+    const bodies = fetchMock.mock.calls.map(call => JSON.parse(call[1]!.body as string));
+    expect(bodies.map(body => [sha(body.input[0].content[0].text), sha(JSON.stringify(body.text)), body.max_output_tokens])).toEqual([
+      ['a739da39437bd77c7d98e8ad50bbc5ab155bef7cc3e302eca61b4cb8a9c9f31b', 'b70412e40c2da447e53ee27f5cebe9357c81849bfb3a9ea715c3dece87360e76', 7200],
+      ['5935e80c29d01cd810e1e891c7b98886ab82f572dde35664e2813c7031c79f04', '183e41cfbde35ed4188270f003284fbe15d4deeca0a3e1301ed55b8f253c6a3a', 7200],
+      ['5935e80c29d01cd810e1e891c7b98886ab82f572dde35664e2813c7031c79f04', '183e41cfbde35ed4188270f003284fbe15d4deeca0a3e1301ed55b8f253c6a3a', 7200],
+    ]);
   });
 
   it('keeps the three-concept prompt byte-identical without style slots', async () => {

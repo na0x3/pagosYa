@@ -29,7 +29,9 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
 }
 
 /** What the planner reads for one card: its slot, its mode, its drawn frame and design, and its playbook paragraph. */
-export function styleSlotDirection(slot: StyleSlot, playbook: string): string {
+/** `lane`: the slot is planned alone (spec 2026-10-11 speed-up), so its concept is the only one returned. */
+export function styleSlotDirection(slot: StyleSlot, playbook: string, options: { lane?: boolean } = {}): string {
   const mode = slot.mode === 'calm' ? 'calm: a normal, professionally made website of this kind' : 'bold: poster type, colour fields and one memorable device';
-  return [`CONCEPT ${slot.slot + 1} of 4 (${mode}). Build concepts[${slot.slot}] on exactly this; no other concept uses it:`, slot.paragraph, playbook].filter(text => text.trim()).join('\n');
+  const build = options.lane ? 'Build the one concept you return on exactly this; the other cards are planned separately:' : `Build concepts[${slot.slot}] on exactly this; no other concept uses it:`;
+  return [`CONCEPT ${slot.slot + 1} of 4 (${mode}). ${build}`, slot.paragraph, playbook].filter(text => text.trim()).join('\n');
 }

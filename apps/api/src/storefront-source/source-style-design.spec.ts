@@ -56,3 +56,22 @@ it('loads a saved design of two or four concepts, card included', () => {
   const two = { ...design, concepts: design.concepts.slice(0, 2), selected: 1 };
   expect(savedSourceDesign([{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(two) }])?.concepts).toHaveLength(2);
 });
+
+it('puts a lane\'s real slot on its card and maps the recommendation through it', () => {
+  const { design } = validateStyleDesign({ concepts: [concept('Counter')], selection: { index: 0, rationale: 'r' } }, ['bold'], { narrative: true, slots: [2] });
+  expect(design.concepts.map(c => [c.card!.slot, c.card!.mode])).toEqual([[2, 'bold']]);
+  expect(design.selected).toBe(0);
+  expect(design.selection?.rationale).toBe('r');
+});
+
+it('seeds DNA defaults by the real slot, like the four-concept plan', () => {
+  const broken = { ...concept('Counter'), dna: undefined };
+  const four = validateStyleDesign({ concepts: [concept('Menu'), concept('Window'), broken, concept('Studio')], selection: { index: 0, rationale: 'r' } }, modes, { narrative: true, seed: 'store-1' }).design;
+  const lane = validateStyleDesign({ concepts: [broken], selection: { index: 0, rationale: 'r' } }, ['bold'], { narrative: true, seed: 'store-1', slots: [2] }).design;
+  expect(lane.concepts[0].dna).toEqual(four.concepts[2].dna);
+});
+
+it('asks for as many concepts as there are lanes', () => {
+  const schema = styleConceptsSchema(structuredClone(sourceDesignSchema.properties.concepts), 1);
+  expect([schema.minItems, schema.maxItems]).toEqual([1, 1]);
+});

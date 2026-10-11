@@ -58,6 +58,10 @@ it('writes a slot direction that names the slot, its mode and its drawn frame', 
   expect(styleSlotDirection(calm, 'PLAYBOOK: calm')).toMatch(/^CONCEPT 1 of 4 \(calm/);
   expect(styleSlotDirection(bold, playbook)).toMatch(/^CONCEPT 3 of 4 \(bold/);
   expect(styleSlotDirection(bold, playbook)).toContain(bold.paragraph);
+  // A lane plans this slot alone: same frame and playbook, but its one concept is concepts[0].
+  expect(styleSlotDirection(bold, playbook, { lane: true })).toMatch(/^CONCEPT 3 of 4 \(bold: [^)]*\)\. Build the one concept you return on exactly this; the other cards are planned separately:/);
+  expect(styleSlotDirection(bold, playbook, { lane: true })).not.toContain('concepts[2]');
+  expect(styleSlotDirection(bold, playbook, { lane: true })).toContain(bold.paragraph);
   expect(playbook).toContain('fonts free from the self-hosted catalogue');
   expect(playbook).not.toContain(`${bold.family.fonts[0].display} + `);
 });
