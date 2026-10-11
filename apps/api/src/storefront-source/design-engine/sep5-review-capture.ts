@@ -6,10 +6,12 @@ import type { SourceProjectSnapshot } from '../source-project';
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
 export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[] };
 
-const EMOJI = /\p{Extended_Pictographic}/u;
+// Emoji presentation only: arrows, ticks and close glyphs (↗ ✔ ✖) are functional symbols, and a glyph inside a
+// button or a labelled control is an icon.
+const EMOJI = /\p{Emoji_Presentation}/u;
 /** Elements whose whole text is emoji: decoration, the clearest AI-site tell. Emoji inside a sentence is copy. */
 export function decorativeEmojiCount(doc: Document): number {
-  return Array.from(doc.body.querySelectorAll('*')).filter(el => el.children.length === 0 && EMOJI.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '')).length;
+  return Array.from(doc.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && EMOJI.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '')).length;
 }
 /** Circular stamp text (several "·" separators) in a round box without an SVG textPath: HTML cannot bend it. */
 export function fakeCircularTextCount(doc: Document, styleOf: (el: Element) => { radius: number; width: number; height: number }): number {
@@ -85,7 +87,7 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           account: outsideFooter('a[data-pagosya-account]'),
           cart: outsideFooter('[data-cart-count]'),
           // Design draw round 2 quality floor (inlined: the page cannot import the helpers above).
-          decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && /\p{Extended_Pictographic}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
+          decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
           fakeCircle: (() => {
             const hits = Array.from(document.body.querySelectorAll('*')).filter(el => {
               if (el.closest('svg') || el.querySelector('textPath')) return false;
@@ -97,14 +99,21 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
             return hits.filter(el => !hits.some(other => other !== el && other.contains(el))).length;
           })(),
           overlaps: (() => {
-            const leaves = Array.from(document.body.querySelectorAll('h1,h2,h3,p,a,button,li,span,strong,em')).filter(el => el.children.length === 0 && (el.textContent || '').trim().length > 2 && getComputedStyle(el).visibility !== 'hidden' && Number(getComputedStyle(el).opacity) > 0.2)
-              .map(el => ({ el, r: el.getBoundingClientRect() })).filter(item => item.r.width > 4 && item.r.height > 4).slice(0, 400);
+            // Line fragments, not bounding boxes: a wrapped <em> spans whole lines. Fixed and sticky bars float over
+            // the page by design, and checkVisibility sees an opacity:0 container that computed opacity does not.
+            const pinned = (el: Element) => { for (let node: Element | null = el; node && node !== document.body; node = node.parentElement) { const position = getComputedStyle(node).position; if (position === 'fixed' || position === 'sticky') return true; } return false; };
+            const visible = (el: Element) => typeof (el as any).checkVisibility === 'function' ? (el as any).checkVisibility({ opacityProperty: true, visibilityProperty: true }) : getComputedStyle(el).visibility !== 'hidden';
+            const leaves = Array.from(document.body.querySelectorAll('h1,h2,h3,p,a,button,li,span,strong,em')).filter(el => el.children.length === 0 && (el.textContent || '').trim().length > 2 && visible(el) && !pinned(el))
+              .map(el => ({ el, rects: Array.from(el.getClientRects()).filter(rect => rect.width > 4 && rect.height > 4) })).filter(item => item.rects.length).slice(0, 400);
             const out: string[] = [];
             for (let i = 0; i < leaves.length && out.length < 3; i++) for (let j = i + 1; j < leaves.length && out.length < 3; j++) {
               const a = leaves[i], b = leaves[j];
               if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
-              const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
-              if (w > 0 && h > 0 && w * h > 0.3 * Math.min(a.r.width * a.r.height, b.r.width * b.r.height)) out.push(`«${(a.el.textContent || '').trim().slice(0, 30)}» sobre «${(b.el.textContent || '').trim().slice(0, 30)}»`);
+              const hit = a.rects.some(ra => b.rects.some(rb => {
+                const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+                return w > 0 && h > 0 && w * h > 0.3 * Math.min(ra.width * ra.height, rb.width * rb.height);
+              }));
+              if (hit) out.push(`«${(a.el.textContent || '').trim().slice(0, 30)}» sobre «${(b.el.textContent || '').trim().slice(0, 30)}»`);
             }
             return out;
           })(),

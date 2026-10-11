@@ -1,4 +1,5 @@
-import { drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
+import { SOURCE_RHYTHM_DIRECTION } from '../source-design';
+import { designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const rich: FrameAvailable = { photos: 9, products: 9, facts: true };
@@ -221,5 +222,69 @@ describe('design draw round 2', () => {
     const off = frameForRun({ enabled: true, designEnabled: false, fresh: true, previous: [], recent: [], available: rich, request: 'x', random: seeded(4) });
     expect(off.paragraph.startsWith('FRAME AND HERO:')).toBe(true);
     expect('planner' in off || 'dna' in off || 'palette' in off).toBe(false);
+  });
+});
+
+// Round-2 final review fixes (2026-10-10).
+describe('design draw review fixes', () => {
+  const lum = (hex: string) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+  const savedDesign = { path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'overlay', cart: 'icon-dot', footer: 'quiet-line', hero: 'split', palette: 'cobalt-bone', angle: 'humour', structure: 'menu-board', photos: 'duotone', button: 'sticker', hover: 'tilt', category: 'café' }) };
+
+  it('keeps the drawn buttons and colour world on an ordinary edit', () => {
+    const edit = frameForRun({ enabled: true, designEnabled: true, fresh: false, previous: [savedDesign], recent: [], available: rich, request: 'cambia el teléfono del pie' });
+    expect(edit).toMatchObject({ file: savedDesign, paragraph: '', dna: { button: 'sticker', hover: 'tilt' } });
+    expect(edit.palette?.id).toBe('cobalt-bone');
+    expect(frameForRun({ enabled: true, designEnabled: true, brandColours: true, fresh: false, previous: [savedDesign], recent: [], available: rich, request: 'x' }).palette).toBeUndefined();
+  });
+
+  it('never draws a colour world over confirmed brand colours, in the prompts either', () => {
+    const run = frameForRun({ enabled: true, designEnabled: true, brandColours: true, category: 'café', fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(4) });
+    expect(run.palette).toBeUndefined();
+    expect(run.paragraph).not.toMatch(/Colour world/);
+    expect(run.planner ?? '').not.toMatch(/#[0-9a-f]{6}/i);
+    expect(parseFrameDraw(run.file!.content).palette).toBeUndefined();
+  });
+
+  it('reads real colour, button and photo wishes and ignores ordinary words', () => {
+    const cases: Array<[string, { palette: boolean; photos: boolean; button: boolean }]> = [
+      ['mi tienda en verde y blanco', { palette: true, photos: false, button: false }],
+      ['usa los colores de mi marca', { palette: true, photos: false, button: false }],
+      ['quiero el botón redondo', { palette: false, photos: false, button: true }],
+      ['fotos en blanco y negro', { palette: false, photos: true, button: false }],
+      ['con botones de WhatsApp', { palette: false, photos: false, button: false }],
+      ['con un tono cercano', { palette: false, photos: false, button: false }],
+      ['vendo poleras de varios colores', { palette: false, photos: false, button: false }],
+      ['agrega filtros por categoría', { palette: false, photos: false, button: false }],
+      ['quiero zapatos negros en el catálogo', { palette: false, photos: false, button: false }],
+    ];
+    for (const [text, expected] of cases) expect([text, designOverrides(text)]).toEqual([text, expected]);
+  });
+
+  it('gives the platform panels a readable surface in every colour world', () => {
+    for (const palette of PALETTES) {
+      const surface = paletteBrandCss(palette).match(/--brand-surface:\s*(#[0-9a-f]{6})/i)![1];
+      expect([palette.id, contrast(palette.ink, surface) >= 4.5]).toEqual([palette.id, true]);
+    }
+  });
+
+  it('decides brand.css: drawn palette unless confirmed colours, never a stale drawn block', () => {
+    const palette = PALETTES[0];
+    const stale = `${paletteBrandCss(PALETTES[3])}@font-face { font-family: 'Brand heading'; }\n`;
+    expect(designBrandCss({ palette, brandColours: false, confirmedCss: '', brandRevision: 0, previousBrand: stale })).toContain(palette.paper);
+    expect(designBrandCss({ palette, brandColours: true, confirmedCss: ':root{--brand-accent:#0a7a3d}', brandRevision: 2 })).toBe(':root{--brand-accent:#0a7a3d}');
+    const kept = designBrandCss({ brandColours: false, confirmedCss: '', brandRevision: 0, previousBrand: stale });
+    expect(kept).not.toContain(PALETTES[3].paper);
+    expect(kept).toContain('Brand heading');
+    expect(designBrandCss({ brandColours: false, confirmedCss: '', brandRevision: 3 })).toBe('/* No confirmed visual tokens. */\n');
+  });
+
+  it('keeps photo treatments off the platform catalog and product photos', () => {
+    const text = frameDirection({ header: 'side-rail', palette: 'cobalt-bone', photos: 'black-white' });
+    expect(text).toMatch(/never to the platform's catalog cards or product page/);
+  });
+
+  it('tells the planner a drawn colour world beats sampling the photos', () => {
+    expect(SOURCE_RHYTHM_DIRECTION).toMatch(/designDraw/);
   });
 });

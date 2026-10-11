@@ -14,7 +14,7 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { designCategory, frameForRun, frameFresh, frameInputs, paletteBrandCss } from './design-engine/frame-draw';
+import { designBrandCss, designCategory, frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -507,6 +507,7 @@ export class SourceGenerationService {
     const frame = frameForRun({
       enabled: frameEnabled,
       designEnabled: this.config.get<boolean>('app.yapiDesignDraw') === true,
+      brandColours: brandHasColours(brand?.data),
       category: designCategory(dto.brief),
       fresh: frameNow,
       previous: previousFiles,
@@ -1410,9 +1411,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     assets.push(...previousAssets.filter((f) => !assetPaths.has(f.path)));
     const previousBrand = (previous?.snapshot as any)?.files?.find((file: SourceProjectFileDto) => file.path === 'brand.css');
     // Confirmed brand colours win; otherwise a fresh design's drawn colour world becomes the brand tokens.
-    const paletteCss = frame.palette && !brandHasColours(brand?.data) ? paletteBrandCss(frame.palette) : '';
-    const confirmedCss = brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '';
-    const tokenCss = paletteCss ? `${paletteCss}${confirmedCss}` : brand && brand.revision > 0 ? confirmedCss || '/* No confirmed visual tokens. */\n' : previousBrand?.content || '';
+    // The rule lives in designBrandCss (tested): confirmed colours, else the drawn world, never a stale drawn block.
+    const tokenCss = designBrandCss({ palette: frame.palette, brandColours: brandHasColours(brand?.data), confirmedCss: brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '', brandRevision: brand?.revision ?? 0, previousBrand: previousBrand?.content });
     if (useNext) generated.files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(generated.files, sitePurpose)));
     if (tokenCss) {
       generated.files = generated.files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);

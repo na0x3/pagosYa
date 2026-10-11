@@ -134,3 +134,20 @@ it('measures the fake roundel and its emoji in a real browser', async () => {
   expect(facts[0].decorEmoji).toBe(1);
   expect(facts[0].fakeCircle).toBe(1);
 });
+
+it('leaves functional glyphs alone: arrows, ticks and close icons are not emoji decoration', () => {
+  expect(decorativeEmojiCount(html('<a href="#">Comprar <span>↗</span></a><button aria-label="Cerrar"><span>✖</span></button><li><span>✔</span> Retiro en tienda</li>'))).toBe(0);
+});
+
+it('reports text over text, but not wrapped inline text, a fixed bottom nav or a closed menu', async () => {
+  const header = '<a href="index.html">Eje</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
+  const ordinary = '<p style="width:300px">Hoy <em>tostamos un lote pequeño de café de los Yungas</em> y lo <strong>entregamos</strong> en tu puerta.</p>'
+    + '<nav style="position:fixed;bottom:12px;left:20px"><a href="#">Tienda</a> <a href="#">Carrito</a></nav>'
+    + '<div style="position:fixed;inset:0;opacity:0;pointer-events:none"><a href="#">Inicio del menú</a></div><h1>Un título que ocupa la pantalla</h1>'
+    + '<p style="height:2000px">Relleno</p>';
+  const clean = await captureSep5Draft(await store(header, '', ordinary, 'body{margin:0}'));
+  expect(clean.facts.flatMap(fact => fact.overlaps ?? [])).toEqual([]);
+  const piled = '<div style="position:relative;height:120px"><h2 style="position:absolute;top:0;left:0;margin:0">Una pausa con pulso</h2><p style="position:absolute;top:4px;left:8px;margin:0">Explorar la selección ahora</p></div>';
+  const bad = await captureSep5Draft(await store(header, '', piled, 'body{margin:0}'));
+  expect(bad.facts[0].overlaps?.length).toBeGreaterThan(0);
+});

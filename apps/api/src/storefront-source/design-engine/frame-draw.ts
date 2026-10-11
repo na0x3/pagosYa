@@ -93,7 +93,7 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
   if (!frameLines.length && !designLines.length) return '';
   if (!designLines.length) return ["FRAME AND HERO: This store's frame was drawn for it so stores never repeat each other. Build exactly this structure and style it entirely in the store's own language; type, colour, spacing and motion are yours.", ...frameLines, 'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
   return ["DESIGN DRAW: This store's design was drawn for it so stores never repeat each other, even two in the same business. Build exactly this and style it in the store's own language; fonts, spacing and motion are yours.", ...frameLines, ...designLines,
-    '- Quality: circular text only with an inline SVG <textPath>, never a rotated span; never use emoji as decoration; text never overlaps other text. Photo treatments apply to your own images, never inside the platform product page.',
+    '- Quality: circular text only with an inline SVG <textPath>, never a rotated span; never use emoji as decoration; text never overlaps other text. Photo treatments apply to your own images, never to the platform\'s catalog cards or product page, so shoppers see the real product colours.',
     'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
 }
 
@@ -128,11 +128,16 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
-    return saved ? { file: saved, paragraph: '' } : { paragraph: '' };
+    if (!saved) return { paragraph: '' };
+    if (!input.designEnabled) return { file: saved, paragraph: '' };
+    // An ordinary edit keeps what the fresh design drew: its buttons in the DNA and its colour world in brand.css.
+    const kept = parseFrameDraw(saved.content);
+    const keptPalette = input.brandColours ? undefined : PALETTES.find(entry => entry.id === kept.palette);
+    return { file: saved, paragraph: '', ...(kept.button && kept.hover ? { dna: { button: kept.button, hover: kept.hover } } : {}), ...(keptPalette ? { palette: keptPalette } : {}) };
   }
   // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
   const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
@@ -141,11 +146,17 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const frameOmit = frameOverrides(input.request);
   if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify(frame, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
   const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, input.category ?? '');
-  const designOmit = designOverrides(input.request);
+  // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
+  const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
   const draw = { ...frame, ...design, category: input.category ?? '' };
+  // Parts the merchant decided are not saved: they were never built, so they must not count in other stores' history.
+  const savedDraw: Record<string, string> = { ...draw };
+  if (designOmit.palette) delete savedDraw.palette;
+  if (designOmit.photos) delete savedDraw.photos;
+  if (designOmit.button) { delete savedDraw.button; delete savedDraw.hover; }
   const palette = designOmit.palette ? undefined : PALETTES.find(entry => entry.id === design.palette);
   return {
-    file: { path: FRAME_DRAW_FILE, content: JSON.stringify(draw, null, 2) + '\n' },
+    file: { path: FRAME_DRAW_FILE, content: JSON.stringify(savedDraw, null, 2) + '\n' },
     paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }),
     planner: plannerDirection(draw, { palette: designOmit.palette }),
     ...(designOmit.button ? {} : { dna: { button: design.button, hover: design.hover } }),
@@ -284,12 +295,22 @@ export function drawDesign(random: () => number, recent: Array<Partial<DesignDra
   return draw;
 }
 
-const PALETTE_WORDS = /(?<!\p{L})(colou?r(es)?|paleta|tonos?)(?!\p{L})/iu;
-const PHOTO_WORDS = /(?<!\p{L})(blanco y negro|filtros?|sepia|fotos naturales|sin filtro)(?!\p{L})/iu;
-const BUTTON_WORDS = /(?<!\p{L})botone?s?(?!\p{L})/iu;
-/** The merchant already decided: their words win over the dice for that part. */
+const COLOUR_NAMES = '(?:verde|blanco|negro|rojo|azul|amarillo|rosa|rosado|morado|violeta|naranja|gris|celeste|dorado|plateado|beige|crema|turquesa|lila|fucsia|marr[oó]n)';
+// "mis colores", "colores de (mi) marca", "paleta", or a colour named right after en/de color/fondo: "mi tienda en verde y blanco".
+// "zapatos negros", "varios colores" and "un tono cercano" are not colour decisions.
+const PALETTE_WISH = new RegExp(`(?<!\\p{L})(mis colores|colores de (mi |la )?marca|mi color|paleta)(?!\\p{L})|(?<!\\p{L})(en|de color|colou?r(es)?|fondo)\\s+${COLOUR_NAMES}(?!\\p{L})`, 'iu');
+const PHOTO_PHRASE = /(?<!\p{L})(fotos?|im[aá]gen(es)?)\s+en\s+blanco y negro(?!\p{L})/giu;
+const PHOTO_WISH = /(?<!\p{L})(blanco y negro|sepia)(?!\p{L})/iu;
+const PHOTO_CONTEXT = /(?<!\p{L})(fotos?|im[aá]gen(es)?)(?!\p{L})/iu;
+const PHOTO_FILTER = /(?<!\p{L})(filtros?|naturales|sin filtro)(?!\p{L})/iu;
+const BUTTON = /(?<!\p{L})bot[oó]n(es)?(?!\p{L})/iu;
+const BUTTON_SHAPE = /(?<!\p{L})(redond\w*|cuadrad\w*|p[ií]ldora|pill|bordes?|esquinas?|forma|estilo|grandes?|peque[nñ]\w*|rectangular\w*)(?!\p{L})/iu;
+/** The merchant already decided: their words win over the dice for that part. When unsure, keep the draw. */
 export function designOverrides(text: string): { palette: boolean; photos: boolean; button: boolean } {
-  return { palette: PALETTE_WORDS.test(text), photos: PHOTO_WORDS.test(text), button: BUTTON_WORDS.test(text) };
+  const photos = PHOTO_WISH.test(text) || (PHOTO_CONTEXT.test(text) && PHOTO_FILTER.test(text));
+  // "fotos en blanco y negro" is about photos, not the store's colours.
+  const palette = PALETTE_WISH.test(text.replace(PHOTO_PHRASE, ' '));
+  return { palette, photos, button: BUTTON.test(text) && BUTTON_SHAPE.test(text) };
 }
 
 const paletteLine = (palette: Palette) => `Colour world: ${palette.name}, ${palette.dark ? 'a dark page' : 'a light page'}: background ${palette.paper}, text ${palette.ink}, accent ${palette.accent}, second accent ${palette.accent2}. Do not take colours from the photos; style the photos to sit in this world.`;
@@ -303,9 +324,20 @@ export function plannerDirection(draw: Partial<DesignDraw>, omit: Partial<Record
 
 const luminance = (hex: string) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
 const ratio = (a: string, b: string) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+/** A hex `amount` of the way from `to` towards `from`: the platform's panels sit a shade off the page, never on an accent. */
+const mix = (from: string, to: string, amount: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(from.slice(i, i + 2), 16) * amount + parseInt(to.slice(i, i + 2), 16) * (1 - amount)).toString(16).padStart(2, '0')).join('');
+const DRAWN_BLOCK = /\/\* Drawn colour world[^*]*\*\/\n:root \{[^}]*\}\n/g;
+/** brand.css: confirmed colours win; otherwise the drawn colour world (fresh draw, or kept by an edit); a run with neither
+ *  keeps the previous file minus any stale drawn block. */
+export function designBrandCss(input: { palette?: Palette; brandColours: boolean; confirmedCss: string; brandRevision: number; previousBrand?: string }): string {
+  if (input.palette && !input.brandColours) return `${paletteBrandCss(input.palette)}${input.confirmedCss}`;
+  if (input.brandRevision > 0) return input.confirmedCss || '/* No confirmed visual tokens. */\n';
+  return (input.previousBrand || '').replace(DRAWN_BLOCK, '');
+}
+
 export function paletteBrandCss(palette: Palette): string {
   const onAccent = [palette.ink, palette.paper, '#111111', '#ffffff'].sort((a, b) => ratio(b, palette.accent) - ratio(a, palette.accent))[0];
-  return `/* Drawn colour world (spec 2026-10-10 design draw round 2): ${palette.name}. */\n:root {\n  --brand-background: ${palette.paper};\n  --brand-foreground: ${palette.ink};\n  --brand-accent: ${palette.accent};\n  --brand-accent-foreground: ${onAccent};\n  --brand-surface: ${palette.accent2};\n}\n`;
+  return `/* Drawn colour world (spec 2026-10-10 design draw round 2): ${palette.name}. */\n:root {\n  --brand-background: ${palette.paper};\n  --brand-foreground: ${palette.ink};\n  --brand-accent: ${palette.accent};\n  --brand-accent-foreground: ${onAccent};\n  --brand-surface: ${mix(palette.ink, palette.paper, 0.06)};\n}\n`;
 }
 
 export function designCategory(brief: unknown): string {
