@@ -251,3 +251,10 @@ describe('self-review as edits', () => {
     expect(sep5ReviewSchema.safeParse({ label: 'x', notes: [], edits: Array.from({ length: 21 }, () => ({ path: 'a', find: 'b', replace: 'c' })) }).success).toBe(false);
   });
 });
+
+it('keeps bold for merchants who ask when the playbook is on', () => {
+  const base = { creative: true, motion: 'expressive' as never, brief: {} };
+  expect(sep5BoldDefault({ ...base, instruction: 'Hazme la tienda', playbook: true })).toBe(false);
+  expect(sep5BoldDefault({ ...base, instruction: 'Pedido actual del comercio:\nhazla atrevida', playbook: true })).toBe(true);
+  expect(sep5BoldDefault({ ...base, instruction: 'Hazme la tienda' })).toBe(sep5BoldDefault({ ...base, instruction: 'Hazme la tienda', playbook: false }));
+});

@@ -1,5 +1,5 @@
 import { SOURCE_RHYTHM_DIRECTION } from '../source-design';
-import { designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
+import { asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const rich: FrameAvailable = { photos: 9, products: 9, facts: true };
@@ -287,4 +287,9 @@ describe('design draw review fixes', () => {
   it('tells the planner a drawn colour world beats sampling the photos', () => {
     expect(SOURCE_RHYTHM_DIRECTION).toMatch(/designDraw/);
   });
+});
+
+it('hears a merchant who asks for a bold store, and nobody else', () => {
+  for (const text of ['hazla atrevida', 'quiero un estilo póster', 'algo muy llamativo', 'diseño bold']) expect([text, asksForBold(text)]).toEqual([text, true]);
+  for (const text of ['Hazme la tienda de café', 'una tienda tranquila', 'ropa para niños']) expect([text, asksForBold(text)]).toEqual([text, false]);
 });

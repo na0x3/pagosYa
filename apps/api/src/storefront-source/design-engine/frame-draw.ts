@@ -104,6 +104,10 @@ const HERO_WORDS = /(?<!\p{L})(portada|hero|primera pantalla|banner principal)(?
 // "portada" in passing ("mis productos en la portada", a template rework's "composición de la portada") is not a hero decision.
 const HERO_CHOICE = /(?<!\p{L})(fotos?|im[aá]gen(es)?|videos?|texto|tipograf[ií]a|collage|slider|carrusel)(?!\p{L})/iu;
 /** The merchant already decided: their words win over the dice for that part. When unsure, keep the draw. */
+const BOLD_WORDS = /(?<!\p{L})(atrevid[oa]s?|audaz|audaces|llamativ[oa]s?|p[oó]ster|bold|rompedor[a]?|experimental)(?!\p{L})/iu;
+/** The merchant asked for a bold store: poster type and unconventional headers come back. */
+export function asksForBold(text: string): boolean { return BOLD_WORDS.test(text); }
+
 export function frameOverrides(text: string): { header: boolean; hero: boolean } {
   return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { asksForBold } from './frame-draw';
 import { extractSep5 } from './sep5-extract';
 import { sep5CreativePlan, type Sep5Translation } from './sep5-plan';
 import { sourceAsksForRestraint, type SourceMotionMode } from '../source-motion';
@@ -103,10 +104,12 @@ export function sep5FontDirection(design: { concepts: Array<{ dna?: { type?: { d
 }
 
 /** Bold for a fresh design (new store or redesign) unless the merchant chose subtle or no motion, or asked for a quiet look. */
-export function sep5BoldDefault(input: { creative: boolean; motion: SourceMotionMode; instruction: string; brief: unknown }): boolean {
+export function sep5BoldDefault(input: { creative: boolean; motion: SourceMotionMode; instruction: string; brief: unknown; playbook?: boolean }): boolean {
   if (!input.creative || input.motion === 'subtle' || input.motion === 'off') return false;
   const direction = (input.brief as { visualDirection?: unknown } | null)?.visualDirection;
   const request = input.instruction.split('Pedido actual del comercio:').at(-1)!;
+  // Professional by default (playbook spec 2026-10-11): bold only for a merchant who asks for it.
+  if (input.playbook) return asksForBold(request);
   return !sourceAsksForRestraint(`${request}\n${typeof direction === 'string' ? direction : ''}`);
 }
 
