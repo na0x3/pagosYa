@@ -1,4 +1,5 @@
-import { sanitizeHeroHtml, templateHero, heroFontFaces, writeStyleHero, type HeroFacts } from './style-hero';
+import { boldLayout, numbersIn, sanitizeHeroHtml, templateHero, heroFontFaces, writeStyleHero, type BoldLayout, type HeroFacts } from './style-hero';
+import { SIGNATURE_DEVICES, type SignatureDevice } from './style-draws';
 import { SourceRequestBudget } from '../source-request-budget';
 
 const facts: HeroFacts = { storeName: 'Café Buna', photoPath: 'assets/photo-1.webp', headline: 'Café de altura, tostado aquí', line: 'Granos de Caranavi.', action: 'Ver productos', palette: { paper: '#ffffff', ink: '#161616', accent: '#8f1d14', accent2: '#f4efe9' }, fonts: { display: 'outfit', text: 'outfit' }, mode: 'calm' };
@@ -238,21 +239,37 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
   const promptOf = (fetchMock: jest.SpyInstance) => sent(fetchMock)[0].input[0].content[0].text as string;
   afterEach(() => jest.useRealTimers());
 
-  it('asks the intense card for every Yungas device, in its own palette and words', async () => {
+  it('asks the intense card for its drawn header, hero and device at poster intensity, in its own palette and words', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
-    await writeStyleHero(base(bold));
+    await writeStyleHero(base({ ...bold, device: 'marquee' }));
     const prompt = promptOf(fetchMock);
     expect(prompt).toContain('This card is INTENSE');
-    expect(prompt).toMatch(/HEADER \(required\):[^\n]*side rail[^\n]*rotated/);
-    expect(prompt).toMatch(/PHOTO \(required\):[^\n]*thick frame[^\n]*rotated[^\n]*hard offset shadow/);
-    expect(prompt).toMatch(/STAMP \(required\):[^\n]*<textPath href="#/);
-    expect(prompt).toContain('TOSTADERO YUNGAS ·');
+    expect(prompt).toMatch(/HEADER AND HERO \(required\):[^\n]*this card's drawn header and hero[^\n]*poster intensity/);
+    // The reference store's recipe is no longer forced on every bold card.
+    expect(prompt).not.toMatch(/side rail|STAMP \(required\)|textPath|thick frame/i);
+    expect(prompt).toMatch(/SIGNATURE DEVICE \(required[^\n]*marquee band[^\n]*business's own words/);
     expect(prompt).toMatch(/never invent/i);
-    expect(prompt).toMatch(/HEADLINE \(required\):[^\n]*clamp\(64px[^\n]*140px\)[^\n]*line-height 0\.95 or less[^\n]*-0\.04em[^\n]*never break a word/);
+    expect(prompt).toMatch(/HEADLINE \(required\):[^\n]*clamp\(64px[^\n]*140px\)[^\n]*line-height 0\.95 or less[^\n]*-0\.04em[^\n]*never break a word[^\n]*step the size down on phones/);
     expect(prompt).toMatch(/EYEBROW \(required\):[^\n]*uppercase[^\n]*letter-spacing/);
     expect(prompt).toMatch(/BUTTON \(required\):[^\n]*(pill|block|split)[^\n]*arrow[^\n]*offset shadow[^\n]*#e5371f/);
     expect(prompt).toMatch(/COLOUR \(required\):[^\n]*colour field/);
+    expect(prompt).toContain('390px');
     expect(prompt).not.toContain('This card is calm');
+  });
+
+  it('names each drawn device in the bold prompt; the stamp device keeps its textPath recipe in the store\'s words', async () => {
+    const lines: string[] = [];
+    for (const device of Object.keys(SIGNATURE_DEVICES) as SignatureDevice[]) {
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+      await writeStyleHero(base({ ...bold, device }));
+      const line = promptOf(fetchMock).split('\n').find(text => text.startsWith('- SIGNATURE DEVICE'))!;
+      expect(line).toBeDefined();
+      lines.push(line);
+      if (device === 'stamp') { expect(line).toMatch(/<textPath href="#/); expect(line).toContain('TOSTADERO YUNGAS ·'); } else expect(line).not.toContain('textPath');
+      fetchMock.mockRestore();
+    }
+    // Every device asks for its own move.
+    expect(new Set(lines).size).toBe(Object.keys(SIGNATURE_DEVICES).length);
   });
 
   it('asks the intense card without a photo for a giant type collage on colour fields', async () => {
@@ -450,5 +467,119 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
     expect(templateHero({ ...calm, buttons: ['pill'] })).toMatch(/\.th-cta\{[^}]*background:#8f1d14[^}]*border-radius:999px/);
     expect(templateHero({ ...calm, buttons: ['block'], radius: 'square' })).toMatch(/\.th-cta\{[^}]*background:#8f1d14[^}]*border-radius:2px/);
     expect(sanitizeHeroHtml(outline)).not.toBeNull();
+  });
+});
+
+describe('bold card variety: three template layouts and a drawn device (2026-10-11)', () => {
+  const bold: HeroFacts = { storeName: 'Tostadero Yungas', photoPath: 'assets/photo-1.webp', eyebrow: 'Café de los Yungas', headline: 'Especialidades de altura', line: 'Tostado cada semana en La Paz.', action: 'Ver cafés', palette: { paper: '#f2b705', ink: '#111111', accent: '#e5371f', accent2: '#fff6d6' }, fonts: { display: 'archivo-black', text: 'instrument' }, mode: 'bold' };
+  const layouts: BoldLayout[] = ['rail', 'band', 'poster'];
+  const devices = Object.keys(SIGNATURE_DEVICES) as SignatureDevice[];
+  const LAYOUT_MARKUP: Record<BoldLayout, RegExp[]> = {
+    rail: [/class="ty-rail"/, /\.ty-name\{[^}]*writing-mode:vertical-rl/],
+    band: [/class="tb-word" data-store-name/, /class="tb-strip/, /class="xd-marquee"/],
+    poster: [/class="tp-a"/, /class="tp-b"/, /\.tp-a\{background:#e5371f/, /\.tp-b\{[^}]*background:#fff6d6/],
+  };
+  const DEVICE_MARKUP: Record<SignatureDevice, RegExp> = {
+    stamp: /<textPath href="#(ty|xd)-ring"/, marquee: /class="xd-marquee"[^>]*><div class="xd-track">/, stickers: /class="xd-stickers"/,
+    numbers: /class="xd-numbers"><span class="xd-num"><b>1\.800<\/b><small>msnm<\/small>/, 'torn-edge': /clip-path:polygon\(0 0,100% 0,[^)]*\)[\s\S]*class="[^"]*-torn/,
+    polaroids: /class="(ty|tb|tp)-pol(-card)?|class="tb-pc"/, ticket: /class="xd-ticket"/, 'outline-wordmark': /class="xd-ghost"[^>]*>TOSTADERO YUNGAS</,
+  };
+
+  it('takes the layout from the drawn header, then the drawn hero', () => {
+    expect(boldLayout({ header: 'side-rail', hero: 'collage' })).toBe('rail');
+    expect(boldLayout({ header: 'wordmark-band', hero: 'offset-frame' })).toBe('band');
+    expect(boldLayout({ header: 'overlay' })).toBe('poster');
+    expect(boldLayout({ header: 'bottom-pill' })).toBe('poster');
+    expect(boldLayout({ header: 'reveal', hero: 'statement-strip' })).toBe('band');
+    expect(boldLayout({ header: 'reveal', hero: 'type-only' })).toBe('poster');
+    expect(boldLayout({ header: 'reveal', hero: 'collage' })).toBe('poster');
+    expect(boldLayout({ header: 'reveal', hero: 'offset-frame' })).toBe('rail');
+    expect(boldLayout()).toBe('rail');
+    // The facts carry the frame; an explicit layout wins.
+    expect(templateHero({ ...bold, frame: { header: 'wordmark-band' } })).toContain('class="tb-word"');
+    expect(templateHero({ ...bold, frame: { header: 'overlay' } })).toContain('class="tp-a"');
+    expect(templateHero({ ...bold, frame: { header: 'wordmark-band' }, layout: 'rail' })).toContain('class="ty-rail"');
+  });
+
+  it('builds every layout with every device, with and without a photo: sanitised, its own markup and the device in it', () => {
+    const seen = new Set<string>();
+    for (const layout of layouts) for (const device of devices) for (const photoPath of [bold.photoPath, undefined]) {
+      const html = templateHero({ ...bold, layout, device, photoPath, numbers: [{ value: '1.800', label: 'msnm' }] });
+      const clean = sanitizeHeroHtml(html);
+      expect(clean).not.toBeNull();
+      for (const markup of LAYOUT_MARKUP[layout]) expect(html).toMatch(markup);
+      expect(html).toMatch(DEVICE_MARKUP[device]);
+      // The poster always carries a sticker over the seam, unless the device is the sticker cluster itself.
+      if (layout === 'poster') expect(html.includes('class="tp-sticker"')).toBe(device !== 'stickers');
+      // Never an invented number: the numbers device without real numbers becomes a marquee of the store's words.
+      if (device === 'numbers') expect(templateHero({ ...bold, layout, device, photoPath, line: 'Tostado cada semana en La Paz.' })).toMatch(/class="xd-marquee"/);
+      expect(html).toContain('data-store-name');
+      expect(html).toMatch(/box-shadow:6px 6px 0 #/);
+      seen.add(html.match(/<div class="(ty|tb|tp)"/)![1]);
+    }
+    expect(seen).toEqual(new Set(['ty', 'tb', 'tp']));
+  });
+
+  it('keeps the drawn photo treatment: the poster collage, the band strip, colour blocks or type without a photo', () => {
+    expect(templateHero({ ...bold, layout: 'poster', device: 'ticket' })).toMatch(/class="tp-collage"[\s\S]*tp-shot3/);
+    expect(templateHero({ ...bold, layout: 'poster', device: 'ticket', frame: { header: 'overlay', hero: 'type-only' } })).toContain('class="tp-words"');
+    expect(templateHero({ ...bold, layout: 'poster', device: 'ticket', frame: { header: 'bottom-pill' } })).toContain('class="tp-pill"');
+    expect(templateHero({ ...bold, layout: 'band', device: 'ticket' }).match(/class="tb-shot"/g)).toHaveLength(3);
+    expect(templateHero({ ...bold, layout: 'band', device: 'ticket', photoPath: undefined }).match(/class="tb-block"/g)).toHaveLength(3);
+  });
+
+  /** Every container-sized font rule of a template: [selector, cap, inset, divisor]. */
+  const cqiRules = (html: string) => [...html.matchAll(/([.\w# -]+)\{[^}]*?font-size:min\((\d+)px,calc\((?:\(100cqi - (\d+)px\)|100cqi)\/([\d.]+)\)\)/g)].map(m => ({ selector: m[1].trim(), cap: Number(m[2]), inset: Number(m[3] ?? 0), divisor: Number(m[4]) }));
+  const inlineRules = (html: string) => [...html.matchAll(/<span style="font-size:min\((\d+)px,calc\(100cqi\/([\d.]+)\)\)">([^<]*)<\/span>/g)].map(m => ({ cap: Number(m[1]), divisor: Number(m[2]), text: m[3] }));
+
+  it('sizes every giant word by its longest word, so nothing breaks or overflows at 390 and 1440, for "Tostadero Yungas" and "Especialidades"', () => {
+    for (const storeName of ['Tostadero Yungas', 'Especialidades']) for (const layout of layouts) for (const device of ['outline-wordmark', 'stamp'] as SignatureDevice[]) for (const photoPath of [bold.photoPath, undefined]) {
+      const html = templateHero({ ...bold, storeName, headline: 'Especialidades de altura', layout, device, photoPath });
+      const rules = cqiRules(html);
+      // Headlines in mixed case (0.66em a heavy letter), wordmarks and type fields in capitals (0.92em).
+      const longestOf = (text: string) => Math.max(...text.split(/\s+/).map(word => [...word].length));
+      const heading = rules.filter(rule => / h1$/.test(rule.selector));
+      const wordmark = rules.filter(rule => /(tb-word|ty-type|tp-words|xd-ghost)$/.test(rule.selector));
+      expect(heading.length).toBeGreaterThanOrEqual(2);
+      if (layout === 'band') expect(wordmark.some(rule => rule.selector.endsWith('tb-word'))).toBe(true);
+      // A 390px phone column, a 1280px and a 1440px desktop column, and the full 1440 width.
+      for (const width of [354, 501, 600, 1340]) {
+        for (const rule of heading) expect(Math.min(rule.cap, (width - rule.inset) / rule.divisor) * longestOf('Especialidades de altura') * 0.66).toBeLessThanOrEqual(width - rule.inset + 1e-9);
+        for (const rule of wordmark) expect(Math.min(rule.cap, (width - rule.inset) / rule.divisor) * longestOf(storeName) * 0.92).toBeLessThanOrEqual(width - rule.inset + 1e-9);
+        for (const rule of inlineRules(html)) expect(Math.min(rule.cap, width / rule.divisor) * longestOf(rule.text) * 0.92).toBeLessThanOrEqual(width + 1e-9);
+      }
+      // Giant type never breaks a word.
+      expect(html).toMatch(/h1\{[^}]*overflow-wrap:normal;word-break:normal;hyphens:manual/);
+      // Every container-sized rule sits in a size container.
+      expect(html).toMatch(/container-type:inline-size/);
+    }
+  });
+
+  it('reads real numbers from text, never phone numbers, stopwords or long digit runs', () => {
+    expect(numbersIn('Café de 1.800 msnm, abrimos a las 8:00 y tostamos desde 2015. WhatsApp 71234567')).toEqual([{ value: '1.800', label: 'msnm' }, { value: '8:00', label: '' }, { value: '2015', label: '' }]);
+    expect(numbersIn('Tostado cada semana en La Paz.')).toEqual([]);
+    expect(numbersIn('3 orígenes y 12 cafés')).toEqual([{ value: '3', label: 'orígenes' }, { value: '12', label: 'cafés' }]);
+  });
+});
+
+describe('calm template follows the drawn hero and header (2026-10-11)', () => {
+  const calm: HeroFacts = { ...facts, buttons: ['outline'], radius: 'soft' };
+  it('draws a photo split, a full-bleed photo, a facts panel or a line drawing, each sanitised', () => {
+    const split = templateHero({ ...calm, frame: { hero: 'split' } });
+    expect(split).toMatch(/class="th-main"><div><h1>[\s\S]*<img class="th-photo"/);
+    expect(templateHero({ ...calm, frame: { hero: 'full-bleed' } })).toContain('class="th-main th-bleed"');
+    expect(templateHero({ ...calm, frame: { hero: 'facts-panel' } })).toContain('class="th-panel"');
+    const drawing = templateHero({ ...calm, frame: { hero: 'illustration' } });
+    expect(drawing).toContain('class="th-draw"');
+    expect(drawing).not.toContain('<img class="th-photo"');
+    // No photo: the line drawing instead of an empty split.
+    expect(templateHero({ ...calm, photoPath: undefined, frame: { hero: 'split' } })).toContain('class="th-draw"');
+    for (const hero of ['split', 'full-bleed', 'facts-panel', 'illustration', 'catalog-lead']) for (const header of ['info-bar', 'centered-split', 'stacked', 'menu-button', 'shrinking'])
+      expect(sanitizeHeroHtml(templateHero({ ...calm, frame: { hero, header } }))).not.toBeNull();
+    expect(templateHero({ ...calm, frame: { header: 'info-bar' } })).toContain('class="th-info"');
+    expect(templateHero({ ...calm, frame: { header: 'centered-split' } })).toContain('th-bar th-split');
+    expect(templateHero({ ...calm, frame: { header: 'menu-button' } })).toContain('class="th-menu"');
+    // Without a drawn frame the calm template is unchanged.
+    expect(templateHero(calm)).toBe(templateHero({ ...calm, frame: {} }));
   });
 });

@@ -11,12 +11,32 @@ import type { SourceRequestBudget } from '../source-request-budget';
 import type { DesignPlanningAttempt } from '../source-design-planner';
 import type { SourceDesignConcept } from '../source-design';
 import { checkSourceProviderQuota, isProviderRejection, providerRetryPause } from '../source-provider-error';
+import type { SignatureDevice } from './style-draws';
 
 export type HeroFacts = { storeName: string; logoPath?: string; photoPath?: string; headline: string; line: string; action: string; palette: { paper: string; ink: string; accent: string; accent2: string }; fonts: { display: string; text: string }; mode: 'calm' | 'bold';
   /** The concept's eyebrow (story.eyebrow), shown uppercase and tracked above the intense card's headline. */
   eyebrow?: string;
   /** The calm card's playbook family: its button shapes (first = the template's) and its corner radius. */
-  buttons?: string[]; radius?: string };
+  buttons?: string[]; radius?: string;
+  /** The card's drawn header and hero (slot.draw): the template takes its layout from them. */
+  frame?: { header?: string; hero?: string };
+  /** The bold card's drawn signature device (slot.device); none = the circular stamp. */
+  device?: SignatureDevice;
+  /** The bold template's layout; derived from `frame` when absent (see boldLayout). */
+  layout?: BoldLayout;
+  /** Real numbers from the brief for the numbers device, e.g. { value: '1.800', label: 'msnm' }. Never invented. */
+  numbers?: Array<{ value: string; label: string }> };
+
+export type BoldLayout = 'rail' | 'band' | 'poster';
+/** The bold template's layout from the drawn frame: the header decides, then the hero; the side rail is the default. */
+export function boldLayout(frame: HeroFacts['frame'] = {}): BoldLayout {
+  if (frame.header === 'side-rail') return 'rail';
+  if (frame.header === 'wordmark-band') return 'band';
+  if (frame.header === 'overlay' || frame.header === 'bottom-pill') return 'poster';
+  if (frame.hero === 'statement-strip') return 'band';
+  if (frame.hero === 'type-only' || frame.hero === 'collage') return 'poster';
+  return 'rail';
+}
 
 const MAX_HERO = 40_000;
 const escape = (text: string) => text.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
@@ -119,7 +139,6 @@ export function templateHero(facts: HeroFacts): string {
   if (facts.mode === 'bold') return intenseTemplateHero(facts);
   const display = fontOf(facts.fonts.display), text = fontOf(facts.fonts.text);
   const p = { paper: hexColour(facts.palette.paper, '#ffffff'), ink: hexColour(facts.palette.ink, '#111111'), accent: hexColour(facts.palette.accent, '#111111'), accent2: hexColour(facts.palette.accent2, '#f2f2f2') };
-  const photo = facts.photoPath ? `<img class="th-photo" src="${escape(facts.photoPath)}" alt="">` : '';
   const logo = facts.logoPath ? `<img class="th-logo" src="${escape(facts.logoPath)}" alt="">` : '';
   // The family's own button shape and radius, with a small offset: never a default button.
   const radius = facts.radius === 'square' ? '2px' : facts.radius === 'soft' ? '10px' : '6px';
@@ -127,71 +146,316 @@ export function templateHero(facts: HeroFacts): string {
   const button = form === 'outline' ? `background:transparent;color:${p.accent};border:2px solid ${p.accent};border-radius:${radius};box-shadow:3px 3px 0 ${p.accent2}`
     : form === 'underline' ? `background:transparent;color:${p.ink};border:0;border-bottom:2px solid ${p.accent};border-radius:0;padding:8px 0`
     : `background:${p.accent};color:${p.paper};border:2px solid ${p.accent};border-radius:${form === 'pill' ? '999px' : radius};box-shadow:3px 3px 0 ${p.accent2}`;
+  // The drawn hero where it is cheap: a full-bleed photo, a facts panel, a calm line drawing, else the photo split.
+  const drawnHero = facts.frame?.hero, header = facts.frame?.header;
+  const variant = drawnHero === 'full-bleed' && facts.photoPath ? 'bleed' : drawnHero === 'facts-panel' ? 'panel' : drawnHero === 'illustration' || (drawnHero && !facts.photoPath && drawnHero !== 'catalog-lead') ? 'drawing' : 'split';
+  const photo = facts.photoPath && variant !== 'drawing' ? `<img class="th-photo" src="${escape(facts.photoPath)}" alt="">` : '';
+  const drawing = `<svg class="th-draw" viewBox="0 0 320 320" aria-hidden="true"><circle cx="160" cy="160" r="128" fill="${p.accent2}"></circle><circle cx="206" cy="116" r="28" fill="none" stroke="${p.accent}" stroke-width="3"></circle><path d="M44 206 Q104 150 164 200 T 284 196" fill="none" stroke="${p.ink}" stroke-width="3" stroke-linecap="round"></path><path d="M62 242 Q150 204 262 238" fill="none" stroke="${p.ink}" stroke-width="3" stroke-linecap="round"></path></svg>`;
+  const name = `<span class="th-name">${logo}<span data-store-name>${escape(facts.storeName)}</span></span>`;
+  const links = ['Productos', 'Nosotros', 'Contacto'].map(link => `<a href="#">${link}</a>`);
+  // The drawn header where it is cheap: an info bar, a centred split, a stacked name or a menu button.
+  const bar = header === 'centered-split' ? `<header class="th-bar th-split"><nav class="th-nav">${links.slice(0, 2).join('')}</nav>${name}<span class="th-tools"><a href="#">Contacto</a><span>Carrito (0)</span></span></header>`
+    : header === 'stacked' ? `<header class="th-bar th-stack">${name}<nav class="th-nav">${links.join('')}<a href="#">Buscar</a><span>Carrito (0)</span></nav></header>`
+    : header === 'menu-button' ? `<header class="th-bar">${name}<span class="th-tools"><span class="th-menu">Menú</span><span>Carrito (0)</span></span></header>`
+    : `<header class="th-bar">${name}<nav class="th-nav">${links.join('')}</nav><span>Carrito (0)</span></header>`;
+  const info = header === 'info-bar' ? `<p class="th-info">${escape(facts.eyebrow?.trim() || facts.line)}</p>` : '';
+  const copy = variant === 'panel'
+    ? `<div><h1>${escape(facts.headline)}</h1><a class="th-cta" href="#">${escape(facts.action)} <span aria-hidden="true">→</span></a></div><aside class="th-panel">${photo}<p class="th-panel-name">${escape(facts.storeName)}</p><p>${escape(facts.line)}</p></aside>`
+    : `<div><h1>${escape(facts.headline)}</h1><p>${escape(facts.line)}</p><a class="th-cta" href="#">${escape(facts.action)} <span aria-hidden="true">→</span></a></div>${variant === 'drawing' ? drawing : variant === 'bleed' ? '' : photo}`;
+  const columns = variant === 'panel' || variant === 'drawing' || photo && variant === 'split' ? '1.1fr 1fr' : '1fr';
+  const extra = [
+    info ? `.th .th-info{max-width:none;margin:0;background:${p.accent};color:${p.paper};text-align:center;font-size:13px;padding:8px 5vw}` : '',
+    header === 'centered-split' ? '.th-split{display:grid;grid-template-columns:1fr auto 1fr}.th-split .th-tools{justify-self:end;display:flex;gap:20px}' : '',
+    header === 'stacked' ? '.th-stack{flex-direction:column;justify-content:center}.th-stack .th-name{font-size:30px}' : '',
+    header === 'menu-button' ? `.th-tools{display:flex;gap:16px;align-items:center}.th-menu{border:1.5px solid ${p.ink};border-radius:${radius};padding:8px 14px;font-size:14px}` : '',
+    variant === 'bleed' ? '.th-bleed{position:relative;min-height:72vh;color:#ffffff}.th-bleed .th-photo{position:absolute;inset:0;width:100%;height:100%;border-radius:0;z-index:0}.th-bleed::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.1));z-index:1}.th-bleed > div{position:relative;z-index:2}.th-bleed .th-cta{background:#ffffff;color:#111111;border-color:#ffffff;box-shadow:none}' : '',
+    variant === 'panel' ? `.th-panel{background:${p.accent2};border-radius:${radius};padding:28px;display:flex;flex-direction:column;gap:12px}.th-panel .th-photo{height:min(36vh,300px)}.th-panel-name{font-family:"${display.family}",serif;font-size:24px;margin:0}.th-panel p{margin:0}` : '',
+    variant === 'drawing' ? '.th-draw{width:min(100%,440px);height:auto;justify-self:center}' : '',
+  ].join('');
   return `<style>${heroFontFaces(facts.fonts)}
 .th{background:${p.paper};color:${p.ink};font-family:"${text.family}",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
 .th-bar{display:flex;align-items:center;justify-content:space-between;padding:20px 5vw;gap:16px}
 .th-name{font-family:"${display.family}",serif;font-size:22px;display:flex;align-items:center;gap:10px}.th-logo{height:36px;width:auto}
-.th-nav{display:flex;gap:20px;font-size:15px}.th-main{flex:1;display:grid;grid-template-columns:${photo ? '1.1fr 1fr' : '1fr'};align-items:center;gap:5vw;padding:4vw 5vw}
+.th-nav{display:flex;gap:20px;font-size:15px}${header ? '.th-nav a,.th-tools a{color:inherit}' : ''}.th-main{flex:1;display:grid;grid-template-columns:${columns};align-items:center;gap:5vw;padding:4vw 5vw}
 .th h1{font-family:"${display.family}",serif;font-size:clamp(34px,5vw,64px);line-height:1.02;margin:0 0 18px;text-wrap:balance}.th p{font-size:18px;max-width:46ch;margin:0 0 28px}
 .th-cta{display:inline-flex;align-items:center;gap:10px;padding:14px 26px;text-decoration:none;font-weight:600;${button}}
-.th-photo{width:100%;height:min(70vh,620px);object-fit:cover;border-radius:12px}
+.th-photo{width:100%;height:min(70vh,620px);object-fit:cover;border-radius:12px}${extra}
 @media (max-width:640px){.th-main{grid-template-columns:1fr}.th-nav{display:none}}</style>
-<div class="th"><header class="th-bar"><span class="th-name">${logo}<span data-store-name>${escape(facts.storeName)}</span></span><nav class="th-nav"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a></nav><span>Carrito (0)</span></header>
-<section class="th-main"><div><h1>${escape(facts.headline)}</h1><p>${escape(facts.line)}</p><a class="th-cta" href="#">${escape(facts.action)} <span aria-hidden="true">→</span></a></div>${photo}</section></div>`;
+<div class="th">${info}${bar}
+<section class="th-main${variant === 'bleed' ? ' th-bleed' : ''}">${variant === 'bleed' ? photo : ''}${copy}</section></div>`;
 }
 
-/** The intense card's template (spec amendment "two cards"), after the owner's reference store: a dark side rail with the
- * name rotated, a tilted photo in a thick white frame with a hard offset shadow (a giant type field without a photo), a
- * rotating SVG stamp of the store's name, a giant tight headline and an arrow pill with an accent offset shadow. */
-function intenseTemplateHero(facts: HeroFacts): string {
-  const display = fontOf(facts.fonts.display), text = fontOf(facts.fonts.text);
+type BoldContext = { facts: HeroFacts; display: ReturnType<typeof fontOf>; text: ReturnType<typeof fontOf>; p: { paper: string; ink: string; accent: string; accent2: string }; hard: string; fill: string; fillText: string; buttonShadow: string; upper: string; headlineDivisor: number; typeDivisor: number; logo: string; words: string[] };
+
+function boldContext(facts: HeroFacts): BoldContext {
   const p = { paper: hexColour(facts.palette.paper, '#f2b705'), ink: hexColour(facts.palette.ink, '#111111'), accent: hexColour(facts.palette.accent, '#e5371f'), accent2: hexColour(facts.palette.accent2, '#fff6d6') };
   const dark = luminance(p.paper) < 0.35;
   // A black shadow and button on a light colour field; on a dark one they take the light ink, so they still read.
   const hard = dark ? p.accent : '#111111';
   const fill = dark ? p.ink : '#111111', fillText = dark ? p.paper : '#ffffff';
-  const buttonShadow = p.accent.toLowerCase() === fill.toLowerCase() ? p.accent2 : p.accent;
-  const upper = facts.storeName.toUpperCase();
-  // As many repeats of the name as fill the ring at 16px, then a size that never overfills it; textLength spaces it to the full circle.
-  const unit = [...upper].length + 3;
-  const ring = Array.from({ length: Math.max(1, Math.round(RING_LENGTH / (unit * 16 * 0.62))) }, () => `${upper} · `).join('');
+  const words = facts.storeName.split(/\s+/).filter(Boolean).slice(0, 3);
+  return { facts, display: fontOf(facts.fonts.display), text: fontOf(facts.fonts.text), p, hard, fill, fillText, buttonShadow: p.accent.toLowerCase() === fill.toLowerCase() ? p.accent2 : p.accent, upper: facts.storeName.toUpperCase(),
+    // Giant type is sized by its longest word against its own column (container units), so no word breaks or clips.
+    headlineDivisor: wordDivisor(longestWord(facts.headline), 0.66), typeDivisor: wordDivisor(longestWord(facts.storeName), 0.92),
+    logo: facts.logoPath ? `<img class="ty-logo" src="${escape(facts.logoPath)}" alt="">` : '', words: words.length ? words : [facts.storeName] };
+}
+
+/** The circular stamp: as many repeats of the name as fill the ring at 16px, then a size that never overfills it; textLength spaces it to the full circle. */
+function stampSvg(c: BoldContext, cls: string, id: string): string {
+  const unit = [...c.upper].length + 3;
+  const ring = Array.from({ length: Math.max(1, Math.round(RING_LENGTH / (unit * 16 * 0.62))) }, () => `${c.upper} · `).join('');
   const ringSize = Math.min(16, Math.floor(RING_LENGTH / ([...ring].length * 0.62) * 10) / 10);
-  // Giant type is sized by its longest word against its own column (container units), so no word breaks or clips.
-  const headlineDivisor = wordDivisor(longestWord(facts.headline), 0.66), typeDivisor = wordDivisor(longestWord(facts.storeName), 0.92);
+  return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="${id}" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"></path></defs><circle cx="100" cy="100" r="98" fill="${c.p.accent2}"></circle><circle cx="100" cy="100" r="46" fill="${c.p.accent}"></circle><text font-size="${ringSize}" font-weight="700" fill="${luminance(c.p.accent2) < 0.4 ? '#ffffff' : '#111111'}"><textPath href="#${id}" textLength="${RING_LENGTH}" lengthAdjust="spacing">${escape(ring)}</textPath></text></svg>`;
+}
+
+/** Real numbers for the numbers device: the facts' own, else the ones in the card's copy; never invented. */
+function realNumbers(facts: HeroFacts): Array<{ value: string; label: string }> {
+  if (facts.numbers?.length) return facts.numbers.slice(0, 4);
+  return numbersIn(`${facts.eyebrow ?? ''} ${facts.headline} ${facts.line}`);
+}
+const NUMBER_STOPWORDS = new Set(['del', 'las', 'los', 'por', 'para', 'con', 'que', 'hasta', 'desde', 'and', 'the']);
+/** Numbers written in a text with the word after them as their label, e.g. "1.800 msnm", "8:00", "2015". */
+export function numbersIn(text: string): Array<{ value: string; label: string }> {
+  const out: Array<{ value: string; label: string }> = [];
+  for (const m of text.matchAll(/(?<![\p{L}\d.,:])(\d{1,4}(?:[.,:]\d{1,3})?)(?![\d.,:]?\d)(?:\s*(%|\p{L}{1,14}))?/gu)) {
+    const label = m[2] && (m[2] === '%' || (m[2].length >= 3 && !NUMBER_STOPWORDS.has(m[2].toLowerCase()))) ? m[2] : '';
+    if (m[1].length < 2 && !label) continue;
+    if (!out.some(item => item.value === m[1])) out.push({ value: m[1], label });
+    if (out.length === 4) break;
+  }
+  return out;
+}
+
+/** The words a marquee, a sticker or a ticket may use: the store's own copy, never invented. */
+const ownWords = (facts: HeroFacts) => [...new Set([facts.storeName, facts.eyebrow?.trim(), facts.action].filter((word): word is string => Boolean(word && word.trim())))];
+
+/** Where a layout puts the drawn device: a corner piece over the art, a row in the copy, a band below, a wordmark
+ * behind the headline, or a treatment of the photos (torn edge, polaroids). */
+type DevicePiece = { css: string; corner: string; copy: string; band: string; behind: string; torn: boolean; polaroids: boolean };
+
+function devicePiece(device: SignatureDevice, c: BoldContext): DevicePiece {
+  const { p, facts, display } = c;
+  const piece: DevicePiece = { css: '', corner: '', copy: '', band: '', behind: '', torn: false, polaroids: false };
+  const marquee = () => {
+    const phrase = ownWords(facts).map(word => escape(word.toUpperCase())).join(' · ') + ' · ';
+    const half = `<span>${Array.from({ length: 4 }, () => phrase).join('')}</span>`;
+    piece.band = `<div class="xd-marquee" aria-hidden="true"><div class="xd-track">${half}${half}</div></div>`;
+    piece.css += `.xd-marquee{overflow:hidden;contain:inline-size;min-width:0;max-width:100%;background:${c.fill};color:${c.fillText};border-block:3px solid ${c.hard};padding:14px 0;font-family:"${display.family}",sans-serif;font-weight:900;font-size:clamp(20px,3.2vw,42px);line-height:1;white-space:nowrap;grid-column:1/-1}
+.xd-track{display:flex;width:max-content;animation:xd-slide 30s linear infinite}.xd-track span{padding-right:.4em}
+@keyframes xd-slide{to{transform:translateX(-50%)}}@media (prefers-reduced-motion:reduce){.xd-track{animation:none}}`;
+  };
+  switch (device) {
+    case 'stamp':
+      piece.corner = stampSvg(c, 'xd-stamp', 'xd-ring');
+      piece.css += '.xd-stamp{display:block;width:150px;height:150px;animation:xd-spin 24s linear infinite}@keyframes xd-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.xd-stamp{animation:none}}@media (max-width:640px){.xd-stamp{width:96px;height:96px}}';
+      break;
+    case 'stickers': {
+      const words = ownWords(facts).slice(0, 3);
+      // Uppercase heavy letters are about 0.78em wide; the circle's text box is 64px on the phone (84px less its padding and a margin).
+      const size = (word: string, box: number) => Math.max(8, Math.min(16, Math.floor(box / (longestWord(word) * 0.78))));
+      piece.corner = `<div class="xd-stickers" aria-hidden="true">${words.map((word, i) => `<span class="xd-st xd-st${i + 1}">${escape(word)}</span>`).join('')}</div>`;
+      const sizes = words.map((word, i) => [`.xd-st${i + 1}{font-size:${size(word, i === 0 ? 88 : 136)}px}`, `.xd-st${i + 1}{font-size:${size(word, i === 0 ? 64 : 96)}px}`]);
+      const on = (bg: string) => readableOn(bg, [p.ink, '#111111', '#ffffff']);
+      piece.css += `.xd-stickers{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.xd-st{font-family:"${display.family}",sans-serif;font-weight:800;text-transform:uppercase;text-align:center;line-height:1.05;border:3px solid ${c.hard};box-shadow:4px 4px 0 ${c.hard};max-width:170px;overflow-wrap:normal;word-break:normal}
+.xd-st1{display:flex;align-items:center;justify-content:center;width:112px;height:112px;border-radius:50%;padding:8px;box-sizing:border-box;background:${p.accent};color:${on(p.accent)};transform:rotate(-10deg)}
+.xd-st2{padding:8px 14px;border-radius:999px;background:${p.accent2};color:${on(p.accent2)};transform:rotate(6deg)}
+.xd-st3{padding:6px 12px;background:${c.fill};color:${c.fillText};transform:rotate(-4deg)}
+${sizes.map(pair => pair[0]).join('')}
+@media (max-width:640px){.xd-st1{width:84px;height:84px}.xd-st{max-width:130px}${sizes.map(pair => pair[1]).join('')}}`;
+      break;
+    }
+    case 'ticket': {
+      const nameSize = Math.max(11, Math.min(20, Math.floor(150 / (longestWord(facts.storeName) * 0.92))));
+      const ink = readableOn(p.accent2, [p.ink, '#111111', '#ffffff']);
+      piece.corner = `<div class="xd-ticket" aria-hidden="true"><span class="xd-ticket-name">${escape(c.upper)}</span><span class="xd-ticket-line">${escape(facts.action)}</span></div>`;
+      piece.css += `.xd-ticket{position:relative;display:block;max-width:210px;box-sizing:border-box;background:${p.accent2};color:${ink};padding:16px 20px 16px 38px;border:3px solid ${c.hard};box-shadow:6px 6px 0 ${c.hard};transform:rotate(7deg);font-family:"${display.family}",sans-serif;font-weight:800}
+.xd-ticket::before{content:"";position:absolute;left:12px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:${p.paper};border:2px solid ${c.hard}}
+.xd-ticket-name{display:block;font-size:${nameSize}px;line-height:1.05;overflow-wrap:normal;word-break:normal}.xd-ticket-line{display:block;font-size:12px;letter-spacing:.16em;text-transform:uppercase;border-top:2px dashed currentColor;margin-top:8px;padding-top:8px}`;
+      break;
+    }
+    case 'numbers': {
+      const numbers = realNumbers(facts);
+      if (!numbers.length) { marquee(); break; }
+      piece.copy = `<div class="xd-numbers">${numbers.map(n => `<span class="xd-num"><b>${escape(n.value)}</b>${n.label ? `<small>${escape(n.label)}</small>` : ''}</span>`).join('')}</div>`;
+      piece.css += `.xd-numbers{display:flex;flex-wrap:wrap;gap:12px 32px;margin:0 0 30px}.xd-num{display:flex;flex-direction:column}.xd-num b{font-family:"${display.family}",sans-serif;font-weight:900;font-size:clamp(40px,6vw,84px);line-height:.9;letter-spacing:-0.03em}.xd-num small{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-top:6px}`;
+      break;
+    }
+    case 'marquee': marquee(); break;
+    case 'outline-wordmark':
+      piece.behind = `<span class="xd-ghost" aria-hidden="true">${escape(c.upper)}</span>`;
+      piece.css += `.xd-host{position:relative}.xd-host > *{position:relative;z-index:1}.xd-host > .xd-ghost{position:absolute;left:0;top:-0.4em;z-index:0;font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(240px,calc(100cqi/${c.typeDivisor}));line-height:.85;letter-spacing:-0.03em;color:transparent;-webkit-text-stroke:2px ${p.accent};opacity:.35;pointer-events:none;overflow-wrap:normal;word-break:normal}`;
+      break;
+    case 'torn-edge': piece.torn = true; break;
+    case 'polaroids': piece.polaroids = true; break;
+  }
+  return piece;
+}
+
+/** A torn-paper edge along the bottom: an irregular zigzag, the same for every render. */
+const TORN = `polygon(0 0,100% 0,${Array.from({ length: 15 }, (_, i) => `${(100 - i * 100 / 14).toFixed(1)}% ${[100, 94, 98, 92, 99, 95, 100, 93, 97, 94, 100, 92, 98, 95, 100][i]}%`).join(',')})`;
+
+/** Polaroid stack of the one real photo (three crops), or of the store's words on colour without one. */
+function polaroids(c: BoldContext, cls: string): string {
+  const crops = ['30% 50%', '75% 40%', '50% 50%'];
+  const card = (i: number) => c.facts.photoPath
+    ? `<img src="${escape(c.facts.photoPath)}" alt="" style="object-position:${crops[i]}">`
+    : `<span class="${cls}-word">${escape((c.words[i % c.words.length] ?? '').toUpperCase())}</span>`;
+  return `<div class="${cls}">${[0, 1, 2].map(i => `<figure class="${cls}-card ${cls}-card${i + 1}">${card(i)}${i === 2 ? `<figcaption>${escape(c.facts.storeName)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+}
+const polaroidCss = (c: BoldContext, cls: string, height: number, phone: number) => `.${cls}{position:relative;height:${height}px;container-type:inline-size}
+.${cls}-card{position:absolute;margin:0;width:70%;box-sizing:border-box;background:#ffffff;padding:12px 12px 46px;box-shadow:10px 10px 0 ${c.hard}}
+.${cls}-card img{display:block;width:100%;height:${Math.round(height * 0.66)}px;object-fit:cover}
+.${cls}-word{display:flex;align-items:center;justify-content:center;height:${Math.round(height * 0.66)}px;background:${c.p.accent};color:${readableOn(c.p.accent, [c.p.paper, '#ffffff', '#111111'])};font-family:"${c.display.family}",sans-serif;font-weight:900;font-size:min(56px,calc((70cqi - 24px)/${c.typeDivisor}));overflow-wrap:normal;word-break:normal}
+.${cls}-card1{left:0;top:8%;transform:rotate(-8deg)}.${cls}-card2{right:0;top:0;transform:rotate(6deg)}.${cls}-card3{left:15%;top:16%;transform:rotate(-2deg)}
+.${cls} figcaption{position:absolute;left:14px;right:14px;bottom:12px;color:#111111;font-family:"${c.display.family}",sans-serif;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){.${cls}{height:${phone}px}.${cls}-card img,.${cls}-word{height:${Math.round(phone * 0.62)}px}}`;
+
+const ctaCss = (c: BoldContext, cls: string, background = c.fill, color = c.fillText, shadow = c.buttonShadow) =>
+  `.${cls}{display:inline-flex;align-items:center;gap:14px;background:${background};color:${color};padding:18px 30px;font-size:17px;font-weight:700;text-decoration:none;border-radius:999px;box-shadow:6px 6px 0 ${shadow}}.ty-arrow{width:22px;height:22px}`;
+const H1_RULES = 'line-height:.9;letter-spacing:-0.04em;font-weight:900;margin:0 0 24px;overflow-wrap:normal;word-break:normal;hyphens:manual';
+
+/** The intense card's template: one of three poster layouts (rail, band, poster) taken from the drawn header and hero,
+ * each with the card's drawn signature device. */
+function intenseTemplateHero(facts: HeroFacts): string {
+  const c = boldContext(facts);
+  const device = facts.device ?? 'stamp';
+  const layout = facts.layout ?? boldLayout(facts.frame);
+  return layout === 'band' ? bandHero(c, device) : layout === 'poster' ? posterHero(c, device) : railHero(c, device);
+}
+
+/** Side rail + offset frame, after the owner's reference store: a dark side rail with the name rotated, a tilted photo in a
+ * thick white frame with a hard offset shadow (a giant type field without a photo), the drawn device (by default a
+ * rotating SVG stamp of the store's name), a giant tight headline and an arrow pill with an accent offset shadow. */
+function railHero(c: BoldContext, device: SignatureDevice): string {
+  const { facts, p, display, text } = c;
   // The phone rail holds the name and the cart in one row: a long name gets smaller, and an ellipsis is the last resort.
-  const phoneName = Math.max(12, Math.min(20, Math.floor(230 / ([...upper].length * 0.7) * 10) / 10));
+  const phoneName = Math.max(12, Math.min(20, Math.floor(230 / ([...c.upper].length * 0.7) * 10) / 10));
   // The type field's words alternate two colours that both read on the accent field, whatever the palette.
   const typeOdd = readableOn(p.accent, [p.paper, '#ffffff', '#111111']);
   const typeEven = readableOn(p.accent, [p.ink, '#ffffff', '#111111'].filter(colour => colour !== typeOdd));
-  const logo = facts.logoPath ? `<img class="ty-logo" src="${escape(facts.logoPath)}" alt="">` : '';
-  const words = facts.storeName.split(/\s+/).filter(Boolean).slice(0, 3);
-  const art = facts.photoPath
-    ? `<figure class="ty-frame"><img class="ty-photo" src="${escape(facts.photoPath)}" alt=""></figure>`
-    : `<div class="ty-type" aria-hidden="true">${(words.length ? words : [facts.storeName]).map(word => `<span>${escape(word)}</span>`).join('')}</div>`;
-  const stamp = `<svg class="ty-stamp" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="ty-ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"></path></defs><circle cx="100" cy="100" r="98" fill="${p.accent2}"></circle><circle cx="100" cy="100" r="46" fill="${p.accent}"></circle><text font-size="${ringSize}" font-weight="700" fill="${luminance(p.accent2) < 0.4 ? '#ffffff' : '#111111'}"><textPath href="#ty-ring" textLength="${RING_LENGTH}" lengthAdjust="spacing">${escape(ring)}</textPath></text></svg>`;
+  const piece = device === 'stamp' ? undefined : devicePiece(device, c);
+  const frame = `<figure class="ty-frame${piece?.torn ? ' ty-torn' : ''}"><img class="ty-photo" src="${escape(facts.photoPath ?? '')}" alt=""></figure>`;
+  const typeField = `<div class="ty-type${piece?.torn ? ' ty-torn' : ''}" aria-hidden="true">${c.words.map(word => `<span>${escape(word)}</span>`).join('')}</div>`;
+  const art = piece?.polaroids ? polaroids(c, 'ty-pol') : facts.photoPath ? (piece?.torn ? `<div class="ty-tear">${frame}</div>` : frame) : piece?.torn ? `<div class="ty-tear">${typeField}</div>` : typeField;
+  const corner = piece ? (piece.corner ? `<div class="xd-corner">${piece.corner}</div>` : '') : stampSvg(c, 'ty-stamp', 'ty-ring');
+  const deviceCss = piece ? [piece.css,
+    piece.corner ? '.xd-corner{position:absolute;top:0;right:0;z-index:2}' : '',
+    piece.torn ? `.ty-tear{filter:drop-shadow(16px 16px 0 ${c.hard})}.ty-tear .ty-torn{box-shadow:none;clip-path:${TORN}}` : '',
+    piece.polaroids ? polaroidCss(c, 'ty-pol', 520, 380) : ''].join('\n') : `.ty-stamp{position:absolute;width:${STAMP.desktop.size}px;height:${STAMP.desktop.size}px;top:0;right:0;animation:ty-spin 24s linear infinite}
+@keyframes ty-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ty-stamp{animation:none}}`;
+  const phoneStamp = piece ? '' : `.ty-stamp{width:${STAMP.phone.size}px;height:${STAMP.phone.size}px}`;
   return `<style>${heroFontFaces(facts.fonts)}
 .ty{background:${p.paper};color:${p.ink};font-family:"${text.family}",system-ui,sans-serif;min-height:100vh;display:grid;grid-template-columns:96px 1fr;overflow:hidden}
-.ty-rail{background:${fill};color:${fillText};display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:24px;padding:28px 0}
+.ty-rail{background:${c.fill};color:${c.fillText};display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:24px;padding:28px 0}
 .ty-logo{width:48px;height:auto}
 .ty-name{font-family:"${display.family}",sans-serif;font-weight:800;font-size:26px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg)}
 .ty-nav{display:flex;gap:18px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg)}.ty-nav a{color:inherit;text-decoration:none}
 .ty-cart{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg)}
-.ty-main{display:grid;grid-template-columns:1.05fr 1fr;align-items:center;gap:5vw;padding:6vw 6vw 6vw 5vw}
+.ty-main{display:grid;grid-template-columns:1.05fr 1fr;align-items:center;gap:5vw;padding:6vw 6vw 6vw 5vw;min-width:0}
 .ty-copy{container-type:inline-size;min-width:0}
 .ty-eyebrow{font-size:13px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;margin:0 0 22px}
-.ty h1{font-family:"${display.family}",sans-serif;font-size:min(140px,calc(100cqi/${headlineDivisor}));line-height:.9;letter-spacing:-0.04em;font-weight:900;margin:0 0 24px;overflow-wrap:normal;word-break:normal;hyphens:manual}
+.ty h1{font-family:"${display.family}",sans-serif;font-size:min(140px,calc(100cqi/${c.headlineDivisor}));${H1_RULES}}
 .ty-line{font-size:19px;max-width:40ch;margin:0 0 34px}
-.ty-cta{display:inline-flex;align-items:center;gap:14px;background:${fill};color:${fillText};padding:18px 30px;font-size:17px;font-weight:700;text-decoration:none;border-radius:999px;box-shadow:6px 6px 0 ${buttonShadow}}.ty-arrow{width:22px;height:22px}
+${ctaCss(c, 'ty-cta')}
 .ty-art{position:relative;justify-self:center;width:min(100%,520px);box-sizing:border-box;padding:${STAMP.desktop.inset}px ${STAMP.desktop.inset}px 0 0;container-type:inline-size}
-.ty-frame{margin:0;background:#ffffff;padding:16px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard}}
+.ty-frame{margin:0;background:#ffffff;padding:16px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${c.hard}}
 .ty-photo{display:block;width:100%;height:min(62vh,560px);object-fit:cover}
-.ty-type{display:flex;flex-direction:column;background:${p.accent};color:${typeOdd};padding:36px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard};font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(120px,calc((100cqi - 72px)/${typeDivisor}));line-height:.88;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.ty-type span:nth-child(2n){color:${typeEven}}
-.ty-stamp{position:absolute;width:${STAMP.desktop.size}px;height:${STAMP.desktop.size}px;top:0;right:0;animation:ty-spin 24s linear infinite}
-@keyframes ty-spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.ty-stamp{animation:none}}
-@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${headlineDivisor}))}.ty-art{padding:${STAMP.phone.inset}px ${STAMP.phone.inset}px 0 0}.ty-stamp{width:${STAMP.phone.size}px;height:${STAMP.phone.size}px}}</style>
-<div class="ty"><header class="ty-rail">${logo}<span class="ty-name" data-store-name>${escape(facts.storeName)}</span><nav class="ty-nav"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a></nav><span class="ty-cart">Carrito (0)</span></header>
-<section class="ty-main"><div class="ty-copy"><p class="ty-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="ty-line">${escape(facts.line)}</p><a class="ty-cta" href="#">${escape(facts.action)} ${ARROW}</a></div><div class="ty-art">${art}${stamp}</div></section></div>`;
+.ty-type{display:flex;flex-direction:column;background:${p.accent};color:${typeOdd};padding:36px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${c.hard};font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(120px,calc((100cqi - 72px)/${c.typeDivisor}));line-height:.88;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.ty-type span:nth-child(2n){color:${typeEven}}
+${deviceCss}
+@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.ty-art{padding:${STAMP.phone.inset}px ${STAMP.phone.inset}px 0 0}${phoneStamp}}</style>
+<div class="ty"><header class="ty-rail">${c.logo}<span class="ty-name" data-store-name>${escape(facts.storeName)}</span><nav class="ty-nav"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a></nav><span class="ty-cart">Carrito (0)</span></header>
+<section class="ty-main"><div class="ty-copy${piece?.behind ? ' xd-host' : ''}">${piece?.behind ?? ''}<p class="ty-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="ty-line">${escape(facts.line)}</p>${piece?.copy ?? ''}<a class="ty-cta" href="#">${escape(facts.action)} ${ARROW}</a></div><div class="ty-art">${art}${corner}</div>${piece?.band ?? ''}</section></div>`;
+}
+
+/** Wordmark band / statement strip: the store name as a giant full-width wordmark over a thin bar, a giant statement
+ * beside the support copy, a horizontal strip of the photo (colour blocks without one) and a marquee band. */
+function bandHero(c: BoldContext, device: SignatureDevice): string {
+  const { facts, p, display, text } = c;
+  const piece = devicePiece(device, c);
+  // The band always ends on a marquee: the drawn one when the device is (or falls back to) a marquee.
+  const band = piece.band || devicePiece('marquee', c).band;
+  const marqueeCss = piece.band ? '' : devicePiece('marquee', c).css;
+  const crops = ['20% 50%', '50% 40%', '80% 60%'];
+  const blockColours = [p.accent, c.fill, p.accent2];
+  const blockWords = [c.words[0], facts.action, c.words[1] ?? facts.eyebrow?.trim() ?? c.words[0]].map(word => word ?? '');
+  const shot = (i: number) => facts.photoPath
+    ? (piece.polaroids ? `<img src="${escape(facts.photoPath)}" alt="" style="object-position:${crops[i]}">` : `<img class="tb-shot${piece.torn ? ' tb-torn' : ''}" src="${escape(facts.photoPath)}" alt="" style="object-position:${crops[i]}">`)
+    : `<div class="tb-block${piece.torn ? ' tb-torn' : ''}" style="background:${blockColours[i]};color:${readableOn(blockColours[i], [p.paper, p.ink, '#ffffff', '#111111'])}"><span style="font-size:min(64px,calc(100cqi/${wordDivisor(longestWord(blockWords[i]), 0.92)}))">${escape(blockWords[i].toUpperCase())}</span></div>`;
+  const cell = (i: number) => piece.polaroids ? `<figure class="tb-pc">${shot(i)}</figure>` : shot(i);
+  const tools = '<span class="tb-tools"><a href="#">Buscar</a><a href="#">Mi cuenta</a><span>Carrito (0)</span></span>';
+  return `<style>${heroFontFaces(facts.fonts)}
+.tb{background:${p.paper};color:${p.ink};font-family:"${text.family}",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tb-top{padding:24px 4vw 8px;display:flex;align-items:flex-end;gap:16px}.tb-wordbox{flex:1;min-width:0;container-type:inline-size}
+.tb-logo{width:56px;height:auto;flex:none}
+.tb-word{margin:0;font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(300px,calc(100cqi/${c.typeDivisor}));line-height:.82;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}
+.tb-bar{display:flex;align-items:center;gap:22px;margin:0 4vw;padding:12px 0;border-block:3px solid ${p.ink};font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.tb-bar a{color:inherit;text-decoration:none}.tb-tools{margin-left:auto;display:flex;gap:18px}
+.tb-main{display:grid;grid-template-columns:1.4fr 1fr;align-items:end;gap:5vw;padding:5vw 4vw 4vw;min-width:0}
+.tb-copy{container-type:inline-size;min-width:0}
+.tb h1{font-family:"${display.family}",sans-serif;font-size:min(150px,calc(100cqi/${c.headlineDivisor}));${H1_RULES.replace('margin:0 0 24px', 'margin:0')}}
+.tb-eyebrow{font-size:13px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;margin:0 0 18px}.tb-line{font-size:19px;max-width:40ch;margin:0 0 30px}
+${ctaCss(c, 'tb-cta')}
+.tb-strip{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:0 4vw 32px}
+.tb-shot{display:block;width:100%;height:clamp(150px,30vh,320px);object-fit:cover;border:3px solid ${c.hard};box-sizing:border-box}
+.tb-block{container-type:inline-size;display:flex;align-items:flex-end;height:clamp(150px,30vh,320px);padding:18px;box-sizing:border-box;border:3px solid ${c.hard}}.tb-block span{font-family:"${display.family}",sans-serif;font-weight:900;line-height:.9;overflow-wrap:normal;word-break:normal}
+.tb-pc{margin:0;background:#ffffff;padding:10px 10px 34px;box-shadow:8px 8px 0 ${c.hard}}.tb-pc:nth-child(odd){transform:rotate(-3deg)}.tb-pc:nth-child(even){transform:rotate(3deg)}.tb-pc img{display:block;width:100%;height:clamp(130px,26vh,280px);object-fit:cover}
+.tb-torn{clip-path:${TORN};border:0}
+.tb-strip .xd-corner{position:absolute;right:6vw;top:-56px;z-index:2}
+${piece.css}
+${marqueeCss}
+@media (max-width:640px){.tb-top{padding:18px 18px 6px}.tb-bar{margin:0 18px;gap:14px;font-size:11px}.tb-bar > a{display:none}.tb-tools a{display:none}.tb-main{grid-template-columns:1fr;padding:28px 18px}.tb h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.tb-strip{gap:8px;padding:0 18px 24px}.tb-blocks{grid-template-columns:1fr}.tb-block{height:auto;min-height:104px}.tb-strip .xd-corner{right:18px;top:-40px}}</style>
+<div class="tb"><header><div class="tb-top">${facts.logoPath ? `<img class="tb-logo" src="${escape(facts.logoPath)}" alt="">` : ''}<div class="tb-wordbox"><p class="tb-word" data-store-name>${escape(facts.storeName)}</p></div></div><nav class="tb-bar"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a>${tools}</nav></header>
+<section class="tb-main"><div class="tb-copy${piece.behind ? ' xd-host' : ''}">${piece.behind}<h1>${escape(facts.headline)}</h1></div><div class="tb-side"><p class="tb-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><p class="tb-line">${escape(facts.line)}</p>${piece.copy}<a class="tb-cta" href="#">${escape(facts.action)} ${ARROW}</a></div></section>
+<div class="tb-strip${facts.photoPath ? '' : ' tb-blocks'}">${[0, 1, 2].map(cell).join('')}${piece.corner ? `<div class="xd-corner">${piece.corner}</div>` : ''}</div>${band}</div>`;
+}
+
+/** Poster split: two colour fields side by side, the copy giant on the first, an overlapping collage of the photo (or the
+ * store's words alone) on the second, a sticker over the seam and the drawn device; a floating pill when the header is one. */
+function posterHero(c: BoldContext, device: SignatureDevice): string {
+  const { facts, p, display, text } = c;
+  const piece = devicePiece(device, c);
+  const pill = facts.frame?.header === 'bottom-pill';
+  const onA = readableOn(p.accent, [p.paper, p.ink, '#ffffff', '#111111']);
+  const ctaBg = readableOn(p.accent, [c.fill, p.ink, '#111111', '#ffffff']);
+  const ctaText = readableOn(ctaBg, [p.paper, '#ffffff', '#111111']);
+  const onB = readableOn(p.accent2, [p.ink, '#111111', '#ffffff']);
+  const typeOnly = !facts.photoPath || facts.frame?.hero === 'type-only';
+  const crops = ['25% 50%', '70% 40%', '50% 55%'];
+  const collage = piece.polaroids ? polaroids(c, 'tp-pol')
+    : typeOnly ? `<div class="tp-words${piece.torn ? ' tp-torn' : ''}" aria-hidden="true">${c.words.map(word => `<span>${escape(word)}</span>`).join('')}</div>`
+    : `<div class="tp-collage">${[0, 1, 2].map(i => `<div class="tp-shot tp-shot${i + 1}"><img${piece.torn ? ' class="tp-torn"' : ''} src="${escape(facts.photoPath!)}" alt="" style="object-position:${crops[i]}"></div>`).join('')}</div>`;
+  // One sticker over the seam (unless the device already is a sticker cluster).
+  const stickerSize = Math.max(11, Math.min(18, Math.floor(100 / (longestWord(facts.action) * 0.62))));
+  const sticker = device === 'stickers' ? '' : `<span class="tp-sticker" aria-hidden="true" style="font-size:${stickerSize}px">${escape(facts.action)}</span>`;
+  const links = '<a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Buscar</a>';
+  return `<style>${heroFontFaces(facts.fonts)}
+.tp{position:relative;background:${p.paper};color:${p.ink};font-family:"${text.family}",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tp-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 4vw;border-bottom:3px solid ${c.hard}}
+.tp-name{display:flex;align-items:center;gap:10px;min-width:0;font-family:"${display.family}",sans-serif;font-weight:900;font-size:26px;letter-spacing:-0.01em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tp-logo{height:40px;width:auto}
+.tp-tools{display:flex;align-items:center;gap:14px;flex:none;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.tp-tools a{color:inherit;text-decoration:none}
+.tp-menu{background:${c.fill};color:${c.fillText};border-radius:999px;padding:10px 18px}
+.tp-main{flex:1;display:grid;grid-template-columns:1fr 1fr;min-width:0}
+.tp-a{background:${p.accent};color:${onA};padding:6vw max(5vw,64px) 6vw 5vw;display:flex;align-items:center;min-width:0}
+.tp-b{position:relative;background:${p.accent2};color:${onB};padding:5vw;display:flex;align-items:center;justify-content:center;min-width:0;container-type:inline-size}
+.tp-copy{container-type:inline-size;width:100%;min-width:0}
+.tp-eyebrow{font-size:13px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;margin:0 0 22px}
+.tp h1{font-family:"${display.family}",sans-serif;font-size:min(130px,calc(100cqi/${c.headlineDivisor}));${H1_RULES}}
+.tp-line{font-size:19px;max-width:40ch;margin:0 0 34px}
+${ctaCss(c, 'tp-cta', ctaBg, ctaText, p.accent2)}
+.tp-collage{position:relative;width:100%;height:min(64vh,560px)}
+.tp-shot{position:absolute;width:62%;filter:drop-shadow(12px 12px 0 ${c.hard})}.tp-shot img{display:block;width:100%;height:min(40vh,340px);object-fit:cover;border:4px solid #ffffff;box-sizing:border-box}
+.tp-shot1{left:0;top:4%;transform:rotate(-6deg)}.tp-shot2{right:0;top:18%;transform:rotate(5deg)}.tp-shot3{left:16%;bottom:0;transform:rotate(-1deg)}
+.tp-torn{clip-path:${TORN}}
+.tp-words{display:flex;flex-direction:column;width:100%;font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(150px,calc(100cqi/${c.typeDivisor}));line-height:.86;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.tp-words span:nth-child(2n){color:${readableOn(p.accent2, [p.accent, c.fill, '#111111'])}}
+.tp-sticker{position:absolute;left:-48px;bottom:9%;z-index:3;display:flex;align-items:center;justify-content:center;width:112px;height:112px;box-sizing:border-box;padding:10px;border-radius:50%;background:${c.fill};color:${c.fillText};border:3px solid ${c.hard};transform:rotate(-12deg);font-family:"${display.family}",sans-serif;font-weight:800;text-transform:uppercase;text-align:center;line-height:1.05;overflow-wrap:normal;word-break:normal}
+.tp-b .xd-corner{position:absolute;top:24px;right:24px;z-index:3}
+.tp-pill{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);z-index:4;display:flex;gap:18px;align-items:center;background:${c.fill};color:${c.fillText};border-radius:999px;padding:12px 22px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;box-shadow:5px 5px 0 ${p.accent}}.tp-pill a{color:inherit;text-decoration:none}
+${piece.polaroids ? polaroidCss(c, 'tp-pol', 500, 360) : ''}
+${piece.css}
+@media (max-width:640px){.tp-bar{padding:14px 18px}.tp-name{font-size:20px}.tp-tools a{display:none}.tp-main{grid-template-columns:1fr}.tp-a{padding:36px 18px}.tp-b{padding:48px 18px 72px}.tp h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.tp-collage{height:340px}.tp-shot img{height:200px}.tp-sticker{left:auto;right:18px;bottom:auto;top:-48px;width:92px;height:92px}.tp-pill{gap:12px;padding:10px 16px;font-size:11px}.tp-pill a:nth-child(2){display:none}${piece.corner ? '.tp-sticker{display:none}' : ''}}</style>
+<div class="tp"><header class="tp-bar"><span class="tp-name">${facts.logoPath ? `<img class="tp-logo" src="${escape(facts.logoPath)}" alt="">` : ''}<span data-store-name>${escape(facts.storeName)}</span></span>${pill ? '' : '<span class="tp-tools"><a href="#">Buscar</a><span class="tp-menu">Menú</span><span>Carrito (0)</span></span>'}</header>
+<section class="tp-main"><div class="tp-a"><div class="tp-copy${piece.behind ? ' xd-host' : ''}">${piece.behind}<p class="tp-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="tp-line">${escape(facts.line)}</p>${piece.copy}<a class="tp-cta" href="#">${escape(facts.action)} ${ARROW}</a></div></div><div class="tp-b">${collage}${sticker}${piece.corner ? `<div class="xd-corner">${piece.corner}</div>` : ''}</div></section>${piece.band}${pill ? `<nav class="tp-pill">${links}<span>Carrito (0)</span></nav>` : ''}</div>`;
 }
 
 const HERO_SCHEMA = { type: 'object', additionalProperties: false, required: ['html'], properties: { html: { type: 'string' } } };
@@ -203,16 +467,29 @@ const modelRejected = (status: number, text: string) => (status === 400 || statu
  * hero carries more devices, so it is written on the run model with more room (the bridge itself stops a call at 240 s). */
 const HERO_CAPS = { calm: { outputTokens: 4000, timeoutMs: 120_000 }, bold: { outputTokens: 7000, timeoutMs: 200_000 } } as const;
 
-/** The intense card's art direction (spec amendment "two cards"): the reference store's devices, each one required. */
+/** How the model builds each signature device: the store's own words only, never an invented fact. */
+const DEVICE_DIRECTION: Record<SignatureDevice, (facts: HeroFacts) => string> = {
+  stamp: facts => `a circular rotating-text stamp overlapping a corner of the main image or colour block, drawn as inline SVG: <svg viewBox="0 0 200 200"><defs><path id="stamp-ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"/></defs><text><textPath href="#stamp-ring">...</textPath></text></svg>, turned slowly by a CSS animation. Its text uses only the store's own words: the store name, its city and what it sells, e.g. "${facts.storeName.toUpperCase()} · " and then the city or the product when the brief names them.`,
+  marquee: () => "a full-width marquee band: one line of heavy uppercase type on a colour field, the business's own words (the store name, what it sells, the city when the brief names it) repeated and sliding slowly with a CSS animation (still under prefers-reduced-motion); the band hides its overflow so it never widens the page.",
+  stickers: () => "a cluster of two or three stickers (a circle, a pill, a cut shape) overlapping a corner of the main image, each turned 5-15 degrees with a thick outline or a hard shadow, each carrying two or three real words from the store's copy.",
+  numbers: () => "a row of two to four oversized numbers in the display font, each with a small uppercase label, using only numbers the brief or the store data gives (hours, years, altitude, sizes, prices). With fewer than two real numbers, make a marquee band of the business's own words instead.",
+  'torn-edge': () => "the main photo with a torn-paper edge (a jagged clip-path polygon along one or two sides, the paper colour showing behind it) and a hard offset shadow (filter: drop-shadow with no blur); nothing else on the card is torn.",
+  polaroids: () => "the real photo as a small stack of two or three overlapping polaroid frames (white border, thicker at the bottom, each turned a few degrees, a hard offset shadow), with a short caption of real words on the front one.",
+  ticket: () => "a label or ticket tag (a punched hole or notched edges, a dashed rule) pinned at an angle over a corner of the hero, carrying a real detail: the store name with what it sells, or the main action.",
+  'outline-wordmark': () => "the store name as a giant outline wordmark (text stroke only, no fill, low contrast) set behind the headline and sized so its longest word fits the width; the headline stays fully readable on top of it.",
+};
+
+/** The intense card's art direction: THIS card's drawn header and hero at poster intensity, with its drawn signature device. */
 function intenseDirection(facts: HeroFacts): string {
-  const { ink, accent } = facts.palette;
+  const { accent } = facts.palette;
+  const device = facts.device ?? 'stamp';
   return [
     "This card is INTENSE: the bold option shown next to a calm one, a poster-like shop with a strong point of view. Every move below is required, made in this card's colours, fonts and the store's own words:",
-    "- HEADER (required): an unusual header taken from this card's frame draw below, e.g. a dark vertical side rail with the store name rotated 90 degrees, a giant wordmark across the top, or a header laid over the photo; never a plain bar of links.",
+    "- HEADER AND HERO (required): build exactly this card's drawn header and hero (DESIGN DRAW below) at poster intensity: oversized, cropped, colour-blocked; never a plain bar of links over an ordinary hero.",
     facts.photoPath
-      ? `- PHOTO (required): the real photo large, in a thick frame (14-20px of white or the panel colour), rotated 2-4 degrees, with a hard offset shadow (no blur, e.g. box-shadow: 16px 16px 0 ${ink}).`
-      : "- PHOTO (required): there is no photo, so make a giant type collage of the store's own words on blocks of colour instead, rotated a few degrees, with a hard offset shadow (no blur).",
-    `- STAMP (required): a circular rotating-text stamp overlapping a corner of the photo, drawn as inline SVG: <svg viewBox="0 0 200 200"><defs><path id="stamp-ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"/></defs><text><textPath href="#stamp-ring">...</textPath></text></svg>, turned slowly by a CSS animation. Its text uses only the store's own words: the store name, its city and what it sells, e.g. "${facts.storeName.toUpperCase()} · " and then the city or the product when the brief names them. Never invent a fact, a date or a place.`,
+      ? '- PHOTO (required): the real photo large and cropped with intent, placed the way the drawn hero says, with a hard edge or a hard offset shadow (no blur).'
+      : "- PHOTO (required): there is no photo, so make a giant type collage of the store's own words on blocks of colour instead.",
+    `- SIGNATURE DEVICE (required, drawn for this card; it is the card's one ornament): ${DEVICE_DIRECTION[device](facts)} Never invent a fact, a number, a date or a place.`,
     '- EYEBROW (required): a short uppercase line above the headline with wide letter-spacing (0.2em or more).',
     '- HEADLINE (required): giant and very heavy in the display font: font-size clamp(64px, 10vw, 140px) on desktop, font-weight 800-900 where the font has it, line-height 0.95 or less, letter-spacing tight but no tighter than -0.04em, never break a word (no hyphenation, no word-break; wrap only between words, and step the size down on phones so the longest word fits).',
     '- SUPPORT (required): one line of support copy under the headline.',
