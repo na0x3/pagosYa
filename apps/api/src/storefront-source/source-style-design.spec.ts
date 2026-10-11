@@ -1,4 +1,4 @@
-import { validateStyleDesign, styleConceptsSchema } from './source-style-design';
+import { distinctBoldDisplay, distinctBoldDisplays, validateStyleDesign, styleConceptsSchema } from './source-style-design';
 import { savedSourceDesign, sourceDesignSchema, SOURCE_DESIGN_FILE } from './source-design';
 import { validDna } from './fixtures/dna';
 
@@ -74,4 +74,13 @@ it('seeds DNA defaults by the real slot, like the four-concept plan', () => {
 it('asks for as many concepts as there are lanes', () => {
   const schema = styleConceptsSchema(structuredClone(sourceDesignSchema.properties.concepts), 1);
   expect([schema.minItems, schema.maxItems]).toEqual([1, 1]);
+});
+
+it('moves a bold concept off a display font another bold concept already uses, to the first font no concept uses', () => {
+  const { design } = validateStyleDesign({ concepts: four(), selection: { index: 0, rationale: 'r' } }, modes, { narrative: true });
+  const [calm, , boldA, boldB] = design.concepts;
+  expect(distinctBoldDisplay(boldB, [boldA]).dna!.type.display).toBe('bricolage');
+  expect(distinctBoldDisplay(boldB, [calm])).toBe(boldB);
+  expect(distinctBoldDisplay(calm, [boldA])).toBe(calm);
+  expect(distinctBoldDisplays(design).concepts[3].dna!.type.display).toBe(distinctBoldDisplay(boldB, design.concepts.slice(0, 3)).dna!.type.display);
 });

@@ -7,12 +7,13 @@ import * as styleHero from './design-engine/style-hero';
 import * as styleDrawsModule from './design-engine/style-draws';
 import { Logger } from '@nestjs/common';
 import { SourceGenerationService } from './source-generation.service';
+import * as styleDesignModule from './source-style-design';
 import { validateStyleDesign } from './source-style-design';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { styleProposalView, type StyleProposal } from './source-style-proposal';
-import { sanitizeHeroHtml } from './design-engine/style-hero';
+import { heroFontFaces, sanitizeHeroHtml } from './design-engine/style-hero';
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -133,35 +134,76 @@ describe('style proposal mode', () => {
     expect(saved.heroPalettes![0]).toMatchObject({ paper: saved.slots[0].palette!.paper });
   });
 
-  it('gives the two bold cards different display fonts: the second takes the first catalogue display font no card uses', async () => {
+  /** A model hero drawn in the fonts it was given, like the real writer. */
+  const fontHero = async (args: any) => ({ html: `<style>${heroFontFaces(args.facts.fonts)}</style><header data-store-name>hero ${args.concept.card.slot}</header>`, source: 'model' as const });
+  /** Each saved card's hero, font line and DNA name the same display font. */
+  const fontsAgree = (proposal: StyleProposal) => {
+    const view = styleProposalView('run-1', proposal);
+    proposal.design!.concepts.forEach((concept, i) => {
+      expect(view.cards[i].fonts.display).toBe(concept.dna!.type.display);
+      expect(proposal.heroes[i]!.html).toContain(`assets/${concept.dna!.type.display}.ttf`);
+    });
+  };
+  const boldHeroFonts = () => Object.fromEntries(writeStyleHero.mock.calls.filter(c => c[0].facts.mode === 'bold').map(c => [c[0].concept.card.slot, c[0].facts.fonts.display]));
+
+  it('gives the two bold cards different display fonts before their heroes are drawn: the second to plan takes the first catalogue display font no card uses', async () => {
     lanes();
+    writeStyleHero.mockImplementation(fontHero);
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     // Every planned concept used Fraunces + Instrument; Bricolage is the first unused display/both font in the catalogue.
-    const final = finalWrite();
-    expect(final.data.proposal.design.concepts.map((c: any) => c.dna.type.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
-    expect(styleProposalView('run-1', final.data.proposal).cards.map(card => card.fonts.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
+    expect(boldHeroFonts()).toEqual({ 2: 'fraunces', 3: 'bricolage' });
+    const final: StyleProposal = finalWrite().data.proposal;
+    expect(final.design!.concepts.map(c => c.dna!.type.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
+    expect(final.heroes.map(hero => hero!.source)).toEqual(['model', 'model', 'model', 'model']);
+    fontsAgree(final);
   });
 
-  it('dedupes the bold fonts once every lane has its concept: a hero already being written keeps its font, the saved concept and a waiting template hero take the new one', async () => {
+  it('moves the bold lane that plans second, whichever slot it is, and every save agrees on the fonts', async () => {
     const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
     explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
-    const hero3 = deferred<{ html: string; source: 'model' }>();
-    writeStyleHero.mockImplementation(async (args: any) => args.concept.card.slot === 3 ? hero3.promise : { html: '<header data-store-name>x</header>', source: 'model' });
+    writeStyleHero.mockImplementation(fontHero);
     const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     await until(() => explore.mock.calls.length === 4);
     planned[3].resolve(laneDesign(3));
     await until(() => writeStyleHero.mock.calls.length === 1);
-    expect(writeStyleHero.mock.calls[0][0].facts.fonts.display).toBe('fraunces');
     [0, 1, 2].forEach(slot => planned[slot].resolve(laneDesign(slot)));
-    await until(() => proposals().some(p => p.design?.concepts.length === 4 && p.design.concepts[3].dna!.type.display === 'bricolage'));
-    const deduped = proposals().find(p => p.design?.concepts.length === 4 && p.design.concepts[3].dna!.type.display === 'bricolage')!;
-    expect(deduped.heroPending![3]).toBe(true);
-    expect(deduped.heroes[3]).toMatchObject({ source: 'template', html: expect.stringContaining('assets/bricolage.ttf') });
-    hero3.resolve({ html: '<header data-store-name>fraunces hero</header>', source: 'model' });
     await run;
-    const final = finalWrite().data.proposal as StyleProposal;
-    expect(final.design!.concepts[3].dna!.type.display).toBe('bricolage');
-    expect(final.heroes[3]!.html).toContain('fraunces hero');
+    expect(boldHeroFonts()).toEqual({ 3: 'fraunces', 2: 'bricolage' });
+    proposals().forEach(fontsAgree);
+    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.dna.type.display)).toEqual(['fraunces', 'fraunces', 'bricolage', 'fraunces']);
+  });
+
+  it('backstop: a font changed after every lane planned stops that card\'s model hero and keeps its template hero in the new font', async () => {
+    const real = styleDesignModule.distinctBoldDisplays;
+    jest.spyOn(styleDesignModule, 'distinctBoldDisplays').mockImplementation(design => {
+      const out = real(design);
+      return { ...out, concepts: out.concepts.map(c => c.card!.slot === 3 ? { ...c, dna: { ...c.dna!, type: { ...c.dna!.type, display: 'outfit' } } } : c) };
+    });
+    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
+    writeStyleHero.mockImplementation((args: any) => args.concept.card.slot === 3 ? new Promise((_ok, fail) => args.signal.addEventListener('abort', () => fail(args.signal.reason))) : fontHero(args));
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    await until(() => explore.mock.calls.length === 4);
+    planned[3].resolve(laneDesign(3));
+    await until(() => writeStyleHero.mock.calls.length === 1);
+    [0, 1, 2].forEach(slot => planned[slot].resolve(laneDesign(slot)));
+    await run;
+    expect(writeStyleHero.mock.calls.find(c => c[0].concept.card.slot === 3)![0].signal.aborted).toBe(true);
+    const final: StyleProposal = finalWrite().data.proposal;
+    expect(final.design!.concepts[3].dna!.type.display).toBe('outfit');
+    expect(final.heroes[3]).toMatchObject({ source: 'template', html: expect.stringContaining('assets/outfit.ttf') });
+    expect(final.heroPending).toEqual([false, false, false, false]);
+    fontsAgree(final);
+  });
+
+  it('clears every pending flag in the final save, also for a card whose lane broke before its hero landed', async () => {
+    lanes();
+    writeStyleHero.mockImplementation(async (args: any) => { if (args.concept.card.slot === 1) throw new Error('lane broke'); return fontHero(args); });
+    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 4 } });
+    expect(proposals().some(p => p.heroPending?.[1] === true)).toBe(true);
+    const final: StyleProposal = finalWrite().data.proposal;
+    expect(final.heroPending).toEqual([false, false, false, false]);
+    expect(final.heroes[1]!.source).toBe('template');
   });
 
   it('throws and leaves no proposal awaiting when the run lost its row before the proposal finished', async () => {

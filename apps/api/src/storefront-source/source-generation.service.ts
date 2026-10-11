@@ -71,7 +71,7 @@ import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design
 import { styleDraws, styleSlotDirection, type StyleSlot } from './design-engine/style-draws';
 import { templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
-import { distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
+import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
 import { sourceTaskContext, sourceRedesignRequested } from './source-context';
@@ -1643,7 +1643,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const proposal = (status: StyleProposalStatus): StyleProposal => {
       const order = live(), concepts = order.map(slot => slotConcepts[slot.slot]!);
       return { version: 1, status, slots: input.styleSlots, design: concepts.length ? { concepts, ...styleRecommendation(concepts, input.boldAsked) } : null,
-        heroes: order.map(slot => slotHeroes[slot.slot] ?? null), heroPalettes: order.map(slot => slotPalettes[slot.slot] ?? null), heroPending: order.map(slot => slotPending[slot.slot] === true),
+        heroes: order.map(slot => slotHeroes[slot.slot] ?? null), heroPalettes: order.map(slot => slotPalettes[slot.slot] ?? null), heroPending: order.map(slot => status === 'RUNNING' && slotPending[slot.slot] === true),
         assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt };
     };
     // Saves run one after another and each writes the state at its own turn, so a slow write never lands an older proposal.
@@ -1665,7 +1665,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         try {
           const concept = (await input.plan(slot)).concepts[0];
           if (!concept?.card) return;
-          slotConcepts[slot.slot] = { ...concept, card: { ...concept.card, slot: slot.slot, mode: slot.mode } };
+          // A bold lane that plans second moves off the other bold card's display font now, before its hero is drawn.
+          const others = input.styleSlots.flatMap(other => other.slot !== slot.slot && slotConcepts[other.slot] ? [slotConcepts[other.slot]!] : []);
+          slotConcepts[slot.slot] = distinctBoldDisplay({ ...concept, card: { ...concept.card, slot: slot.slot, mode: slot.mode } }, others);
           slotPalettes[slot.slot] = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
           slotHeroes[slot.slot] = { html: templateHero(factsFor(slotConcepts[slot.slot]!, slot)), source: 'template' };
           slotPending[slot.slot] = true;
@@ -1680,18 +1682,16 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         const hero = await writeStyleHero({ facts: factsFor(concept, slot), concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, heroModel, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: AbortSignal.any([input.signal, lane.signal]), attempts: input.attempts,
           record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', attempt.model, body, attempt.durationMs, attempt.status) });
         const current = slotConcepts[slot.slot];
-        if (!current) return;
-        // A template fallback is redrawn from the concept as it is now, so it shows a deduped font.
-        slotHeroes[slot.slot] = hero.source === 'template' ? { html: templateHero(factsFor(current, slot)), source: 'template' } : hero;
+        if (!current || lane.signal.aborted) return;
+        slotHeroes[slot.slot] = hero;
         slotPending[slot.slot] = false;
         await save();
       })().catch(error => { if (!input.signal.aborted && !lane.signal.aborted) this.logger.warn(JSON.stringify({ event: 'style_lane_failed', generationId: input.runId, slot: slot.slot, stage: 'hero', reason: error instanceof Error ? error.message.slice(0, 200) : 'unknown' })); });
     });
     await Promise.all(planned);
     input.signal.throwIfAborted();
-    // Every lane has its concept. Lanes plan apart: a repeated opening keeps the lower slot's card, and the two bold
-    // cards never share a display font. A model hero already being written keeps the font it was given; the saved
-    // concept, and a card still on its template hero, take the deduped one.
+    // Every lane has its concept. Lanes plan apart: a repeated opening keeps the lower slot's card. The bold fonts were
+    // already kept apart as each lane planned; this pass is the backstop.
     const openings = new Set<string>();
     for (const slot of live()) {
       const key = styleOpeningKey(slotConcepts[slot.slot]!.opening);
@@ -1702,8 +1702,12 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     order.forEach((slot, index) => {
       const concept = deduped.concepts[index];
       if (concept === slotConcepts[slot.slot]) return;
+      // Its model hero was drawn (or is being drawn) in the old font: the card keeps a template hero in the new one, so
+      // the hero, the card's font line and the built store agree.
       slotConcepts[slot.slot] = concept;
-      if (slotPending[slot.slot]) slotHeroes[slot.slot] = { html: templateHero(factsFor(concept, slot)), source: 'template' };
+      laneControllers.get(slot.slot)!.abort();
+      slotHeroes[slot.slot] = { html: templateHero(factsFor(concept, slot)), source: 'template' };
+      slotPending[slot.slot] = false;
     });
     if (order.length < 2) {
       // One card is built straight away and none falls back to the joint planner: neither waits for a hero.

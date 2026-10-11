@@ -32,7 +32,7 @@ export function styleProposalView(generationId: string, proposal: StyleProposal)
     return { index, slot, name: concept.card!.name, mode: concept.card!.mode, vibe: concept.card!.vibe, inspiration: concept.card!.inspiration,
       fonts: { display, text, displayFamily: family(display), textFamily: family(text) },
       palette: palette ? [palette.paper, palette.ink, palette.accent, palette.accent2] : [],
-      html: hero ? cardHtmlForPreview(hero.html, proposal.assetMap) : null, source: hero?.source ?? null, pending: proposal.heroPending?.[index] === true };
+      html: hero ? cardHtmlForPreview(hero.html, proposal.assetMap) : null, source: hero?.source ?? null, pending: proposal.status === 'RUNNING' && proposal.heroPending?.[index] === true };
   });
   return { generationId, status: proposal.status, recommended: proposal.design?.selected ?? 0, ...(proposal.status === 'PICKED' && proposal.picked !== undefined ? { picked: proposal.picked } : {}), cards };
 }

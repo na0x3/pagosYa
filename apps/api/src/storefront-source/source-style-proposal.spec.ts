@@ -46,4 +46,6 @@ it('marks each card whose model hero is still being written as pending', () => {
   const value = { ...proposal(), status: 'RUNNING' as const, heroPending: [true, false] };
   expect(styleProposalView('gen1', value).cards.map(card => card.pending)).toEqual([true, false]);
   expect(styleProposalView('gen1', proposal()).cards.map(card => card.pending)).toEqual([false, false]);
+  // Only a proposal still being drawn has pending cards: a stale flag never keeps "Mejorando diseño…" on screen.
+  for (const status of ['AWAITING_STYLE', 'PICKED'] as const) expect(styleProposalView('gen1', { ...value, status, picked: 0 }).cards.map(card => card.pending)).toEqual([false, false]);
 });

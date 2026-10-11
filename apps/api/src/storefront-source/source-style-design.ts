@@ -57,15 +57,25 @@ export function validateStyleDesign(value: any, modes: Array<'calm' | 'bold'>, o
   return { design: { concepts: kept, selected: Math.max(0, recommended), selection: { source: 'planner', rationale: recommended >= 0 ? rationale : null } }, dropped };
 }
 
+/** The rule that keeps the two bold cards on different display fonts (spec): a bold concept whose display font another bold
+ * concept already uses takes the first catalogue display font no concept uses. A lane applies it as it plans, so its hero
+ * is drawn in the font it keeps. */
+export function distinctBoldDisplay(concept: SourceDesignConcept, others: SourceDesignConcept[]): SourceDesignConcept {
+  const display = concept.dna?.type?.display;
+  if (concept.card?.mode !== 'bold' || !display || !others.some(other => other.card?.mode === 'bold' && other.dna?.type?.display === display)) return concept;
+  const used = new Set([concept, ...others].flatMap(entry => entry.dna?.type ? [entry.dna.type.display, entry.dna.type.text] : []));
+  const font = SOURCE_FONT_CATALOG.find(entry => entry.role !== 'text' && !used.has(entry.id));
+  return font ? { ...concept, dna: { ...concept.dna!, type: { ...concept.dna!.type, display: font.id } } } : concept;
+}
+
 /** The two bold cards never share a display font (spec): the second bold one takes the first catalogue display font no card uses. */
 export function distinctBoldDisplays(design: SourceDesign): SourceDesign {
   const bold = design.concepts.map((concept, index) => ({ concept, index })).filter(({ concept }) => concept.card?.mode === 'bold' && concept.dna?.type);
-  if (bold.length < 2 || bold[0].concept.dna!.type.display !== bold[1].concept.dna!.type.display) return design;
-  const used = new Set(design.concepts.flatMap(concept => concept.dna?.type ? [concept.dna.type.display, concept.dna.type.text] : []));
-  const font = SOURCE_FONT_CATALOG.find(entry => entry.role !== 'text' && !used.has(entry.id));
-  if (!font) return design;
+  if (bold.length < 2) return design;
   const { concept, index } = bold[1];
+  const changed = distinctBoldDisplay(concept, design.concepts.filter((_, other) => other !== index));
+  if (changed === concept) return design;
   const concepts = [...design.concepts];
-  concepts[index] = { ...concept, dna: { ...concept.dna!, type: { ...concept.dna!.type, display: font.id } } };
+  concepts[index] = changed;
   return { ...design, concepts };
 }
