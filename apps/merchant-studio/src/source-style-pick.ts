@@ -52,10 +52,11 @@ export function renderStylePicker(view: StyleProposalView | null, state: { open:
         <h3>Tipografía</h3><p class="style-type"><strong>Aa</strong> ${escape(open.fonts.displayFamily)}<br><span>${escape(state.storeName)}</span> ${escape(open.fonts.textFamily)}</p>
         <button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy || running ? 'disabled' : ''}>Usar este estilo</button>${running ? '<small class="style-preview__wait">Podrás elegirlo cuando estén listos todos los estilos.</small>' : ''}</aside></section>`;
   }
-  const placeholders = running ? Math.max(0, 4 - cards.length) : 0;
+  // A proposal offers two cards, one calm and one bold (spec 2026-10-11 amendment "two cards").
+  const placeholders = running ? Math.max(0, 2 - cards.length) : 0;
   const calm = cards.filter(card => card.mode === 'calm').length;
-  // The cards actually shown: a lane that failed leaves fewer than four.
-  const count = calm === 2 && cards.length === 4 ? 'dos tranquilos y dos atrevidos' : cards.length === 1 ? '1 estilo' : cards.length ? `${cards.length} estilos` : '';
+  // The cards actually shown: a lane that failed leaves one.
+  const count = calm === 1 && cards.length === 2 ? 'uno tranquilo y uno atrevido' : cards.length === 1 ? '1 estilo' : cards.length ? `${cards.length} estilos` : '';
   const picked = view?.status === 'PICKED' ? cards.find(card => card.index === view.picked) : undefined;
   const footer = running ? '' : picked
     ? `<footer><button type="button" class="button button--primary" data-style-retry="${Number(picked.index)}" ${state.busy ? 'disabled' : ''}>Reintentar con «${escape(picked.name)}»</button></footer>`

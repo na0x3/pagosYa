@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { apiHeroUrls, fitStyleFrames, frameScale, heroSrcdoc, renderStylePicker, type StyleProposalView } from './source-style-pick';
 
 const card = (index: number, mode: 'calm' | 'bold') => ({ index, slot: index, name: `Estilo ${index}`, mode, vibe: 'Vibra', inspiration: ['Uno', 'Dos', 'Tres'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff', '#111111', '#ff0000', '#eeeeee'], html: '<header data-store-name>Buna</header>', source: 'model' as const });
-const view: StyleProposalView = { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [card(0, 'calm'), card(1, 'calm'), card(2, 'bold'), card(3, 'bold')] };
+const view: StyleProposalView = { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 0, cards: [card(0, 'calm'), card(1, 'bold')] };
 const state = { open: null, device: 'desktop' as const, storeName: 'Café Buna', busy: false };
 
 describe('style picker', () => {
-  it('shows four cards with mode tags, font names, palette dots and an Elige tú button', () => {
+  it('shows the two cards, one calm and one bold, with mode tags, font names, palette dots and an Elige tú button', () => {
     const html = renderStylePicker(view, state);
-    expect(html.match(/data-style-card=/g)).toHaveLength(4);
+    expect(html.match(/data-style-card=/g)).toHaveLength(2);
     expect(html).toContain('Tranquilo');
     expect(html).toContain('Atrevido');
     expect(html).toContain('Outfit · Manrope');
@@ -24,17 +24,20 @@ describe('style picker', () => {
   it('shows empty cards and no Elige tú while the proposal is still running', () => {
     const html = renderStylePicker({ ...view, status: 'RUNNING', cards: [{ ...card(0, 'calm'), html: null, source: null }] }, state);
     expect(html).toContain('Preparando tus estilos…');
-    expect(html.match(/data-style-placeholder/g)).toHaveLength(3);
+    expect(html.match(/data-style-placeholder/g)).toHaveLength(1);
     expect(html).not.toContain('data-style-auto');
+    // Two loading placeholders before any card arrives, not four.
+    expect(renderStylePicker({ ...view, status: 'RUNNING', cards: [] }, state).match(/data-style-placeholder/g)).toHaveLength(2);
+    expect(renderStylePicker(null, state).match(/data-style-placeholder/g)).toHaveLength(2);
   });
   it('shows a pending card with its template hero like any other, plus a small Mejorando diseño hint', () => {
-    const html = renderStylePicker({ ...view, status: 'RUNNING', cards: [{ ...card(0, 'calm'), source: 'template', pending: true }, card(1, 'calm')] }, state);
-    expect(html.match(/data-style-card=/g)).toHaveLength(2);
+    const html = renderStylePicker({ ...view, status: 'RUNNING', cards: [{ ...card(0, 'calm'), source: 'template', pending: true }] }, state);
+    expect(html.match(/data-style-card=/g)).toHaveLength(1);
     expect(html).toMatch(/data-style-card="0" >/);
     expect(html).toContain('srcdoc=');
     expect(html.match(/Mejorando diseño…/g)).toHaveLength(1);
     expect(html).toContain('data-style-pending');
-    expect(html.match(/data-style-placeholder/g)).toHaveLength(2);
+    expect(html.match(/data-style-placeholder/g)).toHaveLength(1);
     expect(renderStylePicker(view, state)).not.toContain('Mejorando diseño');
   });
   it('keeps Usar este estilo disabled in the preview while the proposal is still running', () => {
@@ -42,13 +45,14 @@ describe('style picker', () => {
     expect(renderStylePicker(running, { ...state, open: 1 })).toMatch(/data-style-use="1" disabled/);
     expect(renderStylePicker(view, { ...state, open: 1 })).not.toMatch(/data-style-use="1" disabled/);
   });
-  it('counts the cards actually shown in the header', () => {
-    expect(renderStylePicker(view, state)).toContain('Café Buna: dos tranquilos y dos atrevidos.');
-    const three = renderStylePicker({ ...view, cards: [card(0, 'calm'), card(2, 'bold'), card(3, 'bold')] }, state);
-    expect(three).toContain('Café Buna: 3 estilos.');
-    expect(three).not.toContain('dos tranquilos');
-    expect(renderStylePicker({ ...view, cards: [card(0, 'calm'), card(1, 'calm'), card(2, 'calm'), card(3, 'bold')] }, state)).toContain('Café Buna: 4 estilos.');
-    expect(renderStylePicker({ ...view, status: 'RUNNING', cards: [card(2, 'bold')] }, state)).toContain('Café Buna: 1 estilo.');
+  it('says one calm and one bold in the header, and otherwise counts the cards actually shown', () => {
+    expect(renderStylePicker(view, state)).toContain('Café Buna: uno tranquilo y uno atrevido.');
+    const twoCalm = renderStylePicker({ ...view, cards: [card(0, 'calm'), card(1, 'calm')] }, state);
+    expect(twoCalm).toContain('Café Buna: 2 estilos.');
+    expect(twoCalm).not.toContain('uno tranquilo');
+    // A proposal saved before the two-card change still shows its cards, counted.
+    expect(renderStylePicker({ ...view, cards: [card(0, 'calm'), card(1, 'calm'), card(2, 'bold'), card(3, 'bold')] }, state)).toContain('Café Buna: 4 estilos.');
+    expect(renderStylePicker({ ...view, status: 'RUNNING', cards: [card(1, 'bold')] }, state)).toContain('Café Buna: 1 estilo.');
   });
   it('opens a preview with vibe, inspiration, typography and the use button', () => {
     const html = renderStylePicker(view, { ...state, open: 1 });
@@ -64,14 +68,14 @@ describe('style picker', () => {
     expect(html).not.toContain('url(x)');
   });
   it('after a failed pick build, marks the picked card and offers Reintentar with it instead of Elige tú', () => {
-    const html = renderStylePicker({ ...view, status: 'PICKED', picked: 3 }, state);
-    expect(html.match(/data-style-card=/g)).toHaveLength(4);
-    expect(html).toMatch(/class="style-card style-card--picked" data-style-card="3"/);
+    const html = renderStylePicker({ ...view, status: 'PICKED', picked: 1 }, state);
+    expect(html.match(/data-style-card=/g)).toHaveLength(2);
+    expect(html).toMatch(/class="style-card style-card--picked" data-style-card="1"/);
     expect(html.match(/style-card--picked/g)).toHaveLength(1);
-    expect(html).toContain('data-style-retry="3"');
-    expect(html).toContain('Reintentar con «Estilo 3»');
+    expect(html).toContain('data-style-retry="1"');
+    expect(html).toContain('Reintentar con «Estilo 1»');
     expect(html).not.toContain('data-style-auto');
-    expect(renderStylePicker({ ...view, status: 'PICKED', picked: 3 }, { ...state, busy: true })).toMatch(/data-style-retry="3" disabled/);
+    expect(renderStylePicker({ ...view, status: 'PICKED', picked: 1 }, { ...state, busy: true })).toMatch(/data-style-retry="1" disabled/);
   });
   it('wraps a hero in a full document and escapes it for srcdoc', () => {
     const doc = heroSrcdoc('<p class="a">"x" & y</p>');

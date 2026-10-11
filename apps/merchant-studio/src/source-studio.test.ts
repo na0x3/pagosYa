@@ -502,12 +502,12 @@ it('keeps the new message in the box when the draft could not be saved', async (
   expect(sent).toHaveBeenCalledTimes(1);
 });
 
-const styleCard = (index: number) => ({ index, slot: index, name: `Estilo ${index}`, mode: index < 2 ? 'calm' : 'bold', vibe: 'Vibra', inspiration: ['Uno'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff'], html: '<img src="/v1/uploads/a.jpg">', source: 'model' }) as const;
+const styleCard = (index: number) => ({ index, slot: index, name: `Estilo ${index}`, mode: index < 1 ? 'calm' : 'bold', vibe: 'Vibra', inspiration: ['Uno'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff'], html: '<img src="/v1/uploads/a.jpg">', source: 'model' }) as const;
 it('shows the proposed styles in the preview area and sends the picked one as a stylePick', async () => {
-  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
   await mountSourceStudio(app);
-  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(4));
+  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2));
   expect(app.querySelector('.source-frame-wrap')).toBeNull();
   const frame = app.querySelector<HTMLIFrameElement>('.style-frame iframe')!;
   expect(frame.getAttribute('sandbox')).toBe('');
@@ -519,38 +519,38 @@ it('shows the proposed styles in the preview area and sends the picked one as a 
   expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
 });
 it('sends Elige tú as an automatic pick and retries a failed build with the same pick', async () => {
-  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockRejectedValueOnce(new Error('Falló la construcción'))
     .mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
   await mountSourceStudio(app);
   await vi.waitFor(() => expect(app.querySelector('[data-style-auto]')).not.toBeNull());
-  vi.mocked(MerchantStudioApi.prototype.sourceConversation).mockResolvedValue({ messages: [{ id: 'm1', role: 'USER', content: 'Usar el estilo «Estilo 2»', metadata: { assetUrls: [] } }] } as any);
+  vi.mocked(MerchantStudioApi.prototype.sourceConversation).mockResolvedValue({ messages: [{ id: 'm1', role: 'USER', content: 'Usar el estilo «Estilo 1»', metadata: { assetUrls: [] } }] } as any);
   app.querySelector<HTMLButtonElement>('[data-style-auto]')!.click();
   await vi.waitFor(() => expect(app.querySelector('#source-retry-message')).not.toBeNull());
-  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 2»');
+  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
   expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
   app.querySelector<HTMLButtonElement>('#source-retry-message')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
-  expect(sent.mock.calls[1][1]).toBe('Usar el estilo «Estilo 2»');
+  expect(sent.mock.calls[1][1]).toBe('Usar el estilo «Estilo 1»');
   expect(sent.mock.calls[1].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
 });
 it('after a reload, shows a picked style whose build failed and retries it with the same pick', async () => {
-  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'PICKED', picked: 2, recommended: 1, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'PICKED', picked: 1, recommended: 0, cards: [0, 1].map(styleCard) } } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
   await mountSourceStudio(app);
   await vi.waitFor(() => expect(app.querySelector('[data-style-retry]')).not.toBeNull());
-  expect(app.querySelectorAll('[data-style-card]')).toHaveLength(4);
-  expect(app.querySelector('[data-style-retry]')!.textContent).toBe('Reintentar con «Estilo 2»');
+  expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2);
+  expect(app.querySelector('[data-style-retry]')!.textContent).toBe('Reintentar con «Estilo 1»');
   app.querySelector<HTMLButtonElement>('[data-style-retry]')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
-  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 2»');
-  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 2 } });
+  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
+  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
 });
 it('does not drop a pick while code edits are unsaved: the buttons are disabled and the picker stays', async () => {
-  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage');
   await mountSourceStudio(app);
-  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(4));
+  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2));
   app.querySelector<HTMLButtonElement>('#source-code-tab')!.click();
   const code = app.querySelector<HTMLTextAreaElement>('#source-code')!;
   code.value = '<h1>Editado</h1>';
@@ -587,14 +587,14 @@ it('stops polling the proposal when the build ends, even if the row still says R
   expect(app.querySelector('.style-pick')).toBeNull();
 });
 it('does not re-arm the proposal poll once the cards are waiting for the pick', async () => {
-  const proposal = vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  const proposal = vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
   const progress = vi.spyOn(MerchantStudioApi.prototype, 'sourceProgress').mockResolvedValue({ progress: { status: 'running', startedAt: 1, updatedAt: 1, steps: [{ stage: 'styles', label: 'Estilos', startedAt: 1, status: 'completed' }] } });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue({ at: null });
   let finish: (value: any) => void = () => {};
   vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockReturnValue(new Promise(resolve => { finish = resolve; }) as any);
   const armed = vi.spyOn(window, 'setInterval');
   await mountSourceStudio(app);
-  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(4));
+  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2));
   const fetched = proposal.mock.calls.length;
   const composer = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
   composer.value = 'Hola';
