@@ -52,6 +52,10 @@ export const FRAME_CATALOGUE: Record<FramePart, readonly FrameEntry[]> = {
     { id: 'statement-strip', bold: true, needs: 'photos3', desktop: 'Hero: one statement in very large type, then a horizontal strip of photos below it.', phone: 'On phones: the photo strip scrolls sideways.' },
     { id: 'offset-frame', bold: true, needs: 'photos1', desktop: "Hero: a single photo inside a visible frame or border, with the headline placed offset so it overlaps the frame's edge.", phone: 'On phones: the frame narrows and the headline overlaps its bottom edge.' },
     { id: 'slow-slideshow', bold: false, needs: 'photos2', desktop: 'Hero: two or more photos cross-fading slowly (about 6 seconds each) behind a fixed headline, paused on hover and under prefers-reduced-motion.', phone: 'On phones: the same, showing a single photo under reduced motion.' },
+    // Calm openings that need no photo (night run 2026-10-11: every store without photos got the type-only hero).
+    { id: 'facts-panel', bold: false, needs: 'facts', desktop: "Hero: no photo; the headline, one line and the main action on one side, and on the other a calm panel in the palette's second colour listing the store's real facts from the brief (what it offers, hours, where, delivery or pickup) as short labelled rows.", phone: 'On phones: the headline first, the facts panel below it.' },
+    { id: 'catalog-lead', bold: false, desktop: "Hero: no photo; a compact headline band with one line and the main action, and the catalog's first product cards (the runtime catalog) already starting inside the first screen, the way a busy online shop opens.", phone: 'On phones: the headline band, then the first card peeking at the bottom of the screen.' },
+    { id: 'illustration', bold: false, desktop: 'Hero: no photo; the headline, one line and the main action beside one large, calm line drawing of what the store sells (from the illustration library), coloured in the palette.', phone: 'On phones: the drawing smaller above the headline.' },
   ],
 };
 
@@ -74,7 +78,7 @@ export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], av
     const fitting = FRAME_CATALOGUE[part].filter(entry => fits(entry, available));
     const restricted = allowed[part] ? fitting.filter(entry => allowed[part]!.includes(entry.id)) : fitting;
     const options = restricted.length ? restricted : fitting;
-    if (part === 'cart' || part === 'footer') { draw[part] = pick(options).id; continue; }
+    if (part === 'cart') { draw[part] = pick(options).id; continue; }
     const uses = new Map(options.map(entry => [entry.id, recent.filter(item => item[part] === entry.id).length]));
     const fewest = Math.min(...uses.values());
     draw[part] = pick(options.filter(entry => uses.get(entry.id) === fewest)).id;

@@ -8,7 +8,7 @@ const bare = { composedInstruction: 'x', assetLegend: [], imageUses: [], items: 
 const ids = (part: keyof typeof FRAME_CATALOGUE) => FRAME_CATALOGUE[part].map(entry => entry.id);
 
 it('has the agreed catalogue sizes and every entry says something for desktop and phone', () => {
-  expect([FRAME_CATALOGUE.header.length, FRAME_CATALOGUE.cart.length, FRAME_CATALOGUE.footer.length, FRAME_CATALOGUE.hero.length]).toEqual([10, 6, 6, 8]);
+  expect([FRAME_CATALOGUE.header.length, FRAME_CATALOGUE.cart.length, FRAME_CATALOGUE.footer.length, FRAME_CATALOGUE.hero.length]).toEqual([10, 6, 6, 11]);
   for (const entry of Object.values(FRAME_CATALOGUE).flat()) {
     expect(entry.desktop.trim().length).toBeGreaterThan(20);
     expect(entry.phone.trim().length).toBeGreaterThan(10);
@@ -36,7 +36,7 @@ it('never repeats a recent header or hero while a free one exists, else takes th
   for (let seed = 1; seed < 40; seed++) {
     const draw = drawFrame(seeded(seed), recent, rich);
     expect(draw.header).toBe(headers[9]);
-    expect(draw.hero).toBe(heroes[7]);
+    expect(heroes.slice(7)).toContain(draw.hero);
   }
   const all = [...headers, headers[0], headers[1]].map(header => ({ header }));
   for (let seed = 1; seed < 20; seed++) expect(headers.slice(2)).toContain(drawFrame(seeded(seed), all, rich).header);
@@ -50,6 +50,24 @@ it('never asks a store for photos, a product or facts it does not have', () => {
     expect(draw.footer).not.toBe('photo-echo');
     expect(draw.header).not.toBe('info-bar');
   }
+});
+
+// Night run 2026-10-11: a store without photos could only get the type-only hero, so every one of them looked alike.
+it('gives a store without photos calm heroes of its own, kept apart by repeat avoidance', () => {
+  const noPhotos: FrameAvailable = { photos: 0, products: 0, facts: true };
+  const calm = FRAME_CATALOGUE.hero.filter(entry => !entry.bold).map(entry => entry.id);
+  const seen = new Set<string>();
+  for (let seed = 1; seed < 80; seed++) seen.add(drawFrame(seeded(seed), [], noPhotos, { hero: calm }).hero);
+  expect([...seen].sort()).toEqual(expect.arrayContaining(['catalog-lead', 'facts-panel', 'illustration']));
+  expect(seen.has('type-only')).toBe(false);
+  for (let seed = 1; seed < 40; seed++) expect(drawFrame(seeded(seed), [{ hero: 'facts-panel' }, { hero: 'illustration' }], noPhotos, { hero: calm }).hero).toBe('catalog-lead');
+  const bare: FrameAvailable = { photos: 0, products: 0, facts: false };
+  for (let seed = 1; seed < 40; seed++) expect(['catalog-lead', 'illustration', 'type-only']).toContain(drawFrame(seeded(seed), [], bare).hero);
+});
+
+it('keeps a recent footer away while another fits', () => {
+  const footers = ['directory', 'contact-card', 'statement-band', 'wordmark-signoff'];
+  for (let seed = 1; seed < 40; seed++) expect(drawFrame(seeded(seed), [{ footer: 'contact-card' }, { footer: 'directory' }, { footer: 'statement-band' }], rich, { footer: footers }).footer).toBe('wordmark-signoff');
 });
 
 it('writes one paragraph from the draw and drops the parts the merchant decided', () => {
