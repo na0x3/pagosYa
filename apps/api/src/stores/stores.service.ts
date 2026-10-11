@@ -18,6 +18,7 @@ import { assertWebsiteRevision, saveWebsiteDraftPatch, websiteDraft, websiteEdit
 import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { assertValidStoreLocations, storeLocationSnapshot } from "./store-locations";
 import { DEFAULT_STORE_ANIMATION, normalizeAnimationMedia, animationContentSection, DEFAULT_STORE_CONTENT_ORDER, type StoreAnimation, storeUpdateData, readStoreHeroSlides, readStoreEditorialGallery } from "./store-presentation";
+import { mergeOnboarding, onboardingBrief, type StoreOnboardingPatch } from "./store-onboarding";
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 
 /** Store management for the merchant: creating, configuring, publishing the website draft, links, archiving, and quick QR payments. */
@@ -29,6 +30,24 @@ export class StoresService {
     private readonly paymentIntents: PaymentIntentsService,
     private readonly uploads: UploadsService,
   ) {}
+
+  async onboardingState(merchantId: string, enabled: boolean) {
+    if (!enabled) return { enabled: false, store: null };
+    const stores = await this.prisma.store.findMany({ where: { merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true }, orderBy: { createdAt: 'asc' }, take: 2 });
+    // Only a merchant whose single store started the walkthrough and never finished it resumes it.
+    const open = stores.length === 1 && stores[0].onboarding && !(stores[0].onboarding as { finishedAt?: string }).finishedAt ? stores[0] : null;
+    return { enabled: true, store: open ? { id: open.id, name: open.name, onboarding: open.onboarding } : null };
+  }
+
+  async saveOnboarding(merchantId: string, storeId: string, patch: StoreOnboardingPatch) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, onboarding: true } });
+    if (!store) throw new NotFoundException('Tienda no encontrada.');
+    const onboarding = mergeOnboarding(store.onboarding, patch);
+    await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: onboarding as unknown as Prisma.InputJsonValue, ...(patch.contact?.whatsapp && onboarding.contact?.whatsapp ? { contactPhone: onboarding.contact.whatsapp } : {}) } });
+    if (!patch.finished) return { onboarding };
+    const products = await this.prisma.paymentLink.findMany({ where: { storeId }, select: { name: true, amount: true }, orderBy: { createdAt: 'asc' }, take: 5 });
+    return { onboarding, brief: onboardingBrief(store.name, onboarding, products) };
+  }
 
   async createQuickQrPayment(merchantId: string, storeId: string, dto: CreateQuickQrPaymentDto) {
     const store = await this.prisma.store.findFirst({

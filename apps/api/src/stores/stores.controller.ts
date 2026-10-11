@@ -8,6 +8,8 @@ import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { Throttle } from "@nestjs/throttler";
+import { ConfigService } from "@nestjs/config";
+import { StoreOnboardingDto } from "./dto/store-onboarding.dto";
 import { SaveWebsiteDraftDto, WebsiteRevisionDto } from "./dto/save-website-draft.dto";
 
 /** Dashboard/backend-authenticated management of the merchant account's stores.
@@ -21,7 +23,7 @@ import { SaveWebsiteDraftDto, WebsiteRevisionDto } from "./dto/save-website-draf
 @ApiBearerAuth()
 @UseGuards(MerchantAuthGuard)
 export class StoresController {
-  constructor(private readonly stores: StoresService) {}
+  constructor(private readonly stores: StoresService, private readonly config: ConfigService) {}
 
   @Post()
   create(@CurrentMerchant() merchant: { id: string }, @Body() dto: CreateStoreDto) {
@@ -31,6 +33,16 @@ export class StoresController {
   @Get()
   list(@CurrentMerchant() merchant: { id: string }) {
     return this.stores.listForMerchant(merchant.id);
+  }
+
+  @Get("onboarding")
+  onboarding(@CurrentMerchant() merchant: { id: string }) {
+    return this.stores.onboardingState(merchant.id, this.config.get<boolean>("app.onboardingWalkthrough") === true);
+  }
+
+  @Patch(":id/onboarding")
+  saveOnboarding(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() body: StoreOnboardingDto) {
+    return this.stores.saveOnboarding(merchant.id, id, body);
   }
 
   @Post(":id/quick-qr-payments")
