@@ -4,6 +4,7 @@ import { createStoreBody } from "/src/create-store.mjs";
 import { debtAmountInCents, parseDebtCollectionRows, parseDebtCsv } from "/src/debt-csv.mjs";
 import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
+import { runWalkthrough } from "/src/onboarding-walkthrough.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
@@ -1292,7 +1293,33 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   document.getElementById("accountManageSessions")?.addEventListener("click", () => profileMenuEl.showPopover());
   document.getElementById("accountLogoutProxy")?.addEventListener("click", () => document.getElementById("logout")?.click());
 
+  let onboardingEnabled = false;
+  let onboardingChecked = false;
+  function openWalkthrough() {
+    const root = document.getElementById("onboardingWalkthrough");
+    root.hidden = false;
+    void runWalkthrough(root, { api, uploadFile, onDone: async storeId => {
+      root.hidden = true; root.innerHTML = "";
+      selectStore(storeId); await refresh();
+      history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace");
+    } });
+  }
+  // The walkthrough's Shopify links hide it first, then open the usual import dialog.
+  document.getElementById("onboardingWalkthrough").addEventListener("click", event => {
+    if (!event.target.closest("[data-open-shopify-import]")) return;
+    document.getElementById("onboardingWalkthrough").hidden = true;
+    void openShopifyImport();
+  });
+  async function checkOnboardingOnce() {
+    if (onboardingChecked) return;
+    onboardingChecked = true;
+    const onboarding = await api("/stores/onboarding").catch(() => ({ enabled: false, store: null }));
+    onboardingEnabled = Boolean(onboarding.enabled);
+    if (onboardingEnabled && (!lastStores.length || onboarding.store)) openWalkthrough();
+  }
+
   function openCreateStore() {
+    if (onboardingEnabled && !lastStores.length) return openWalkthrough();
     document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
     document.getElementById("createStoreError").hidden = true;
     document.getElementById("createStoreDialog").showModal();
@@ -3721,6 +3748,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       showLoggedIn();
       appEl.style.display = "block";
       renderStoreRows(stores);
+      void checkOnboardingOnce();
 
       const selectedStoreId = currentStoreId;
       const storeQuery = selectedStoreId ? `?storeId=${encodeURIComponent(selectedStoreId)}` : "";
