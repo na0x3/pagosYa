@@ -46,3 +46,20 @@ describe("onboardingState", () => {
     expect((await service.onboardingState("m_1", true)).store?.id).toBe("only");
   });
 });
+
+describe("listForMerchant onboarding", () => {
+  it("returns only step and finishedAt, and null for stores without the walkthrough", async () => {
+    const rows = [
+      { id: "a", onboarding: { version: 1, step: 2, what: "private answer", photos: ["x"], done: ["name"] } },
+      { id: "b", onboarding: finished },
+      { id: "c", onboarding: null },
+    ];
+    const service = new StoresService({ store: { findMany: jest.fn(async () => rows) } } as any, undefined as any, undefined as any);
+    const list = await service.listForMerchant("m_1");
+    expect(list.map((s) => s.onboarding)).toEqual([
+      { step: 2, finishedAt: null },
+      { step: 7, finishedAt: "2026-10-11T00:00:00.000Z" },
+      null,
+    ]);
+  });
+});

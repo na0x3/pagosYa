@@ -4,7 +4,7 @@ import { createStoreBody } from "/src/create-store.mjs";
 import { debtAmountInCents, parseDebtCollectionRows, parseDebtCsv } from "/src/debt-csv.mjs";
 import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
-import { runWalkthrough, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
+import { isUnfinishedStore, runWalkthrough, showWalkthroughChoice, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
@@ -1300,11 +1300,19 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   function openWalkthrough(resume = null) {
     const root = document.getElementById("onboardingWalkthrough");
     root.hidden = false;
-    void runWalkthrough(root, { api, uploadFile, resume, onExit: () => { root.hidden = true; root.innerHTML = ""; }, onDone: async storeId => {
+    void runWalkthrough(root, { api, uploadFile, resume, onExit: () => { root.hidden = true; root.innerHTML = ""; void refresh(); }, onDone: async storeId => {
       root.hidden = true; root.innerHTML = "";
       selectStore(storeId); await refresh();
       history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace");
     } });
+  }
+  // "Crear otra tienda" with a half-built walkthrough store: offer to continue it before starting a new one.
+  async function offerUnfinishedOrFresh() {
+    const unfinished = (await api("/stores/onboarding").catch(() => ({ store: null }))).store || null;
+    if (!unfinished) return openWalkthrough(null);
+    const root = document.getElementById("onboardingWalkthrough");
+    root.hidden = false;
+    showWalkthroughChoice(root, { store: unfinished, onContinue: store => openWalkthrough(store), onFresh: () => openWalkthrough(null), onExit: () => { root.hidden = true; root.innerHTML = ""; } });
   }
   // The walkthrough's Shopify links hide it first, then open the usual import dialog.
   document.getElementById("onboardingWalkthrough").addEventListener("click", event => {
@@ -1324,7 +1332,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   }
 
   function openCreateStore() {
-    if (walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, intent: "create" }) === "fresh") return openWalkthrough(null);
+    if (walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, intent: "create" }) === "fresh") return void offerUnfinishedOrFresh();
     document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
     document.getElementById("createStoreError").hidden = true;
     document.getElementById("createStoreDialog").showModal();
@@ -2108,8 +2116,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       const state = statusFor(store), stateLabel = { published: "Publicada", draft: "Borrador", archived: "Archivada" }[state];
       return `<article class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
         <div class="store-card-preview">${preview}</div>
-        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === currentStoreId ? '<span class="store-card-current">Tienda actual</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
-        <span class="store-card-edit">Abrir editor ↗</span>
+        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === currentStoreId ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
+        ${isUnfinishedStore(store) ? `<button class="primary continue-store store-card-edit" data-id="${esc(store.id)}" type="button">Continuar</button>` : '<span class="store-card-edit">Abrir editor ↗</span>'}
       </article>`;
     }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
     document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
@@ -2130,6 +2138,11 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         await refresh();
       });
     });
+    document.querySelectorAll(".continue-store").forEach(btn => btn.addEventListener("click", event => {
+      event.stopPropagation();
+      const store = lastStores.find(entry => entry.id === btn.dataset.id);
+      if (store) openWalkthrough({ id: store.id, name: store.name, onboarding: store.onboarding });
+    }));
     document.querySelectorAll(".delete-store").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();

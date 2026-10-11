@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WALKTHROUGH_STEPS, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
+import { readFileSync } from 'node:fs';
+import { WALKTHROUGH_STEPS, isUnfinishedStore, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
@@ -180,4 +181,40 @@ test('Salir calls onExit and leaves the store alone', async () => {
   listeners.click({ target: { closest: sel => (sel === '[data-wt-exit]' ? {} : null) } });
   assert.equal(exited, 1);
   assert.deepEqual(calls, []);
+});
+
+test('choice screen: verbatim copy, escaped name', () => {
+  const html = walkthroughChoiceView({ id: 's1', name: '<b>"Buna"</b>' });
+  assert.match(html, /Tienes una tienda sin terminar/);
+  assert.match(html, /«&lt;b&gt;&quot;Buna&quot;&lt;\/b&gt;» quedó a medio crear\./);
+  assert.match(html, /Continuar con «&lt;b&gt;/);
+  assert.match(html, /Empezar una nueva/);
+  assert.match(html, /Salir/);
+  assert.doesNotMatch(html, /<b>/);
+});
+
+test('choice screen: Continuar resumes that store, Empezar una nueva starts fresh, Salir exits', () => {
+  let handler; const root = { innerHTML: '', addEventListener: (_t, fn) => { handler = fn; } };
+  const log = [];
+  const store = { id: 's1', name: 'Buna', onboarding: { step: 2 } };
+  showWalkthroughChoice(root, { store, onContinue: s => log.push(['continue', s.id]), onFresh: () => log.push(['fresh']), onExit: () => log.push(['exit']) });
+  assert.match(root.innerHTML, /data-wt-choice/);
+  const click = attr => handler({ target: { closest: sel => (sel === attr ? {} : null) } });
+  click('[data-wt-continue]'); click('[data-wt-fresh]'); click('[data-wt-exit]');
+  assert.deepEqual(log, [['continue', 's1'], ['fresh'], ['exit']]);
+});
+
+test('list badge only for non-null, unfinished onboarding', () => {
+  assert.equal(isUnfinishedStore({ onboarding: { step: 2, finishedAt: null } }), true);
+  assert.equal(isUnfinishedStore({ onboarding: { step: 7, finishedAt: '2026-10-11T00:00:00.000Z' } }), false);
+  assert.equal(isUnfinishedStore({ onboarding: null }), false);
+  assert.equal(isUnfinishedStore({}), false);
+});
+
+test('dashboard wiring: Salir refreshes the data, the list shows Sin terminar + Continuar, create offers the choice', () => {
+  const src = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
+  assert.match(src, /onExit: \(\) => \{ root\.hidden = true; root\.innerHTML = ""; void refresh\(\); \}/);
+  assert.match(src, /isUnfinishedStore\(store\) \? '<span class="store-card-status" data-status="draft">Sin terminar<\/span>'/);
+  assert.match(src, /continue-store/);
+  assert.match(src, /showWalkthroughChoice\(root/);
 });

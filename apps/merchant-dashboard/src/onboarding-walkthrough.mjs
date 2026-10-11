@@ -60,6 +60,32 @@ export function walkthroughEntry({ enabled, storeCount = 0, resumable = false, i
   return storeCount === 0 ? 'fresh' : 'none';
 }
 
+// A store listed with unfinished walkthrough progress (null onboarding = made before the walkthrough, never unfinished).
+export const isUnfinishedStore = store => Boolean(store?.onboarding) && !store.onboarding.finishedAt;
+
+// "Crear otra tienda" while a walkthrough store sits half-built: continue it or start a new one.
+export function walkthroughChoiceView(store) {
+  const name = escapeHtml(store?.name || '');
+  return `<div class="wt" data-wt-choice>
+    <button class="wt-ghost wt-exit" type="button" data-wt-exit>Salir</button>
+    <h1 class="wt-title">Tienes una tienda sin terminar</h1>
+    <p class="wt-aside">«${name}» quedó a medio crear.</p>
+    <footer class="wt-actions"><button class="wt-ghost" type="button" data-wt-fresh>Empezar una nueva</button><button class="primary" type="button" data-wt-continue>Continuar con «${name}»</button></footer>
+  </div>`;
+}
+
+export function showWalkthroughChoice(root, { store, onContinue, onFresh, onExit }) {
+  root._wtAbort?.abort();
+  const abort = new AbortController();
+  root._wtAbort = abort;
+  root.innerHTML = walkthroughChoiceView(store);
+  root.addEventListener('click', event => {
+    if (event.target.closest('[data-wt-continue]')) onContinue(store);
+    else if (event.target.closest('[data-wt-fresh]')) onFresh();
+    else if (event.target.closest('[data-wt-exit]')) onExit?.();
+  }, { signal: abort.signal });
+}
+
 export function walkthroughView(state) {
   const step = WALKTHROUGH_STEPS[state.step];
   const total = WALKTHROUGH_STEPS.length;

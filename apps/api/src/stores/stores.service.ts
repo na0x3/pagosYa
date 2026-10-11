@@ -196,7 +196,7 @@ export class StoresService {
     throw new Error("unreachable");
   }
   async listForMerchant(merchantId: string) {
-    return this.prisma.store.findMany({
+    const stores = await this.prisma.store.findMany({
       where: { merchantId },
       orderBy: { createdAt: "desc" },
       // Links ride along so the dashboard's store editor can populate its
@@ -210,6 +210,8 @@ export class StoresService {
         },
       },
     });
+    // The list needs only the walkthrough's progress marker (a "Sin terminar" badge); the answers stay behind /stores/onboarding.
+    return stores.map((store) => ({ ...store, onboarding: listedOnboarding(store.onboarding) }));
   }
   async update(merchantId: string, id: string, dto: UpdateStoreDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
@@ -428,3 +430,10 @@ export class StoresService {
     await this.uploads.deleteFiles(fileUrls);
     return { success: true };
   }}
+
+/** What the store list shows of the walkthrough state: null for stores that never started it. */
+export function listedOnboarding(raw: unknown): { step: number | null; finishedAt: string | null } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const { step, finishedAt } = raw as { step?: unknown; finishedAt?: unknown };
+  return { step: typeof step === "number" ? step : null, finishedAt: typeof finishedAt === "string" ? finishedAt : null };
+}
