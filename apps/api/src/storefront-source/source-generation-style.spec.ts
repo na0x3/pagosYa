@@ -102,6 +102,19 @@ describe('style proposal mode', () => {
     expect(projects.save).not.toHaveBeenCalled();
   });
 
+  it('saves the palette each hero was drawn with, also for a slot without one', async () => {
+    draws.mockRestore();
+    const real = styleDrawsModule.styleDraws;
+    draws = jest.spyOn(styleDrawsModule, 'styleDraws').mockImplementation((input: any) => real(input).map((slot: any) => (slot.slot === 1 ? { ...slot, palette: undefined } : slot)));
+    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
+    const saved: StyleProposal = final.data.proposal;
+    expect(saved.heroPalettes).toEqual(writeStyleHero.mock.calls.map(c => c[0].facts.palette));
+    expect(saved.heroPalettes![1]).toEqual({ paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' });
+    expect(saved.heroPalettes![0]).toMatchObject({ paper: saved.slots[0].palette!.paper });
+  });
+
   it('throws and leaves no proposal awaiting when the run lost its row before the proposal finished', async () => {
     explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
     // The stale sweep marked the row INTERRUPTED: every RUNNING-guarded write after the start matches nothing.

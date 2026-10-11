@@ -1618,7 +1618,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
   }
 
   private async saveStyleProposal(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; design: SourceDesign; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult> {
-    const proposal: StyleProposal = { version: 1, status: 'RUNNING', slots: input.styleSlots, design: input.design, heroes: input.design.concepts.map(() => null), assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt: new Date().toISOString() };
+    const proposal: StyleProposal = { version: 1, status: 'RUNNING', slots: input.styleSlots, design: input.design, heroes: input.design.concepts.map(() => null), heroPalettes: input.design.concepts.map(() => null), assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt: new Date().toISOString() };
     // Only a row this run still holds: once a sweep or a lost lease ends it, sibling heroes stop writing and the proposal is never revived.
     const save = (data: Record<string, unknown> = {}) => this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: { proposal: proposal as unknown as Prisma.InputJsonValue, ...data } });
     await save();
@@ -1628,6 +1628,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     await Promise.all(input.design.concepts.map(async (concept, index) => {
       const slot = input.styleSlots[concept.card!.slot];
       const palette = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
+      proposal.heroPalettes![index] = palette;
       const facts: HeroFacts = { storeName: input.storeName, logoPath, photoPath, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette, fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode };
       proposal.heroes[index] = await writeStyleHero({ facts, concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: input.signal, attempts: input.attempts, record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', input.model, body, attempt.durationMs, attempt.status) });
       await save();

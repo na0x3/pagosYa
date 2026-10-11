@@ -27,3 +27,17 @@ it('refuses a saved value that is not a proposal', () => {
   expect(styleProposalFrom({ version: 2 })).toBeNull();
   expect(styleProposalFrom(JSON.parse(JSON.stringify(proposal())))?.status).toBe('AWAITING_STYLE');
 });
+
+it('falls back to the palette each hero was drawn with when its slot has none (confirmed brand colours)', () => {
+  const value = proposal();
+  value.slots = value.slots.map(slot => ({ ...slot, palette: undefined }));
+  value.heroPalettes = [{ paper: '#fafafa', ink: '#202020', accent: '#0055ff', accent2: '#dde6ff' }, null];
+  const view = styleProposalView('gen1', value);
+  expect(view.cards[0].palette).toEqual(['#fafafa', '#202020', '#0055ff', '#dde6ff']);
+  expect(view.cards[1].palette).toEqual([]);
+});
+
+it('reports the pick only on a picked proposal', () => {
+  expect(styleProposalView('gen1', { ...proposal(), status: 'PICKED', picked: 1 }).picked).toBe(1);
+  expect('picked' in styleProposalView('gen1', { ...proposal(), picked: 1 })).toBe(false);
+});

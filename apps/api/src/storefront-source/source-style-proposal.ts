@@ -6,7 +6,10 @@ import type { SourceImageUse } from './source-setup';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 
 export type StyleProposalStatus = 'RUNNING' | 'AWAITING_STYLE' | 'PICKED' | 'SUPERSEDED';
-export type StyleProposal = { version: 1; status: StyleProposalStatus; slots: Array<StyleSlot & { playbook: string }>; design: SourceDesign | null; heroes: Array<{ html: string; source: 'model' | 'template' } | null>; assetMap: Array<{ original: string; path: string }>; request: { dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean }; picked?: number; createdAt: string };
+export type StyleProposal = { version: 1; status: StyleProposalStatus; slots: Array<StyleSlot & { playbook: string }>; design: SourceDesign | null; heroes: Array<{ html: string; source: 'model' | 'template' } | null>; assetMap: Array<{ original: string; path: string }>; request: { dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean }; picked?: number; createdAt: string;
+  /** The palette each hero was drawn with, by concept index: a slot has none when the merchant confirmed brand colours. */
+  heroPalettes?: Array<HeroPalette | null> };
+type HeroPalette = { paper: string; ink: string; accent: string; accent2: string };
 export type StyleCardView = { index: number; slot: number; name: string; mode: 'calm' | 'bold'; vibe: string; inspiration: string[]; fonts: { display: string; text: string; displayFamily: string; textFamily: string }; palette: string[]; html: string | null; source: 'model' | 'template' | null };
 
 const family = (id: string) => SOURCE_FONT_CATALOG.find(font => font.id === id)?.family ?? id;
@@ -21,7 +24,7 @@ export function cardHtmlForPreview(html: string, assetMap: StyleProposal['assetM
 export function styleProposalView(generationId: string, proposal: StyleProposal) {
   const cards: StyleCardView[] = (proposal.design?.concepts ?? []).map((concept, index) => {
     const slot = concept.card!.slot;
-    const palette = proposal.slots[slot]?.palette;
+    const palette = proposal.slots[slot]?.palette ?? proposal.heroPalettes?.[index] ?? undefined;
     const hero = proposal.heroes[index] ?? null;
     const display = concept.dna?.type?.display ?? 'bricolage', text = concept.dna?.type?.text ?? 'instrument';
     return { index, slot, name: concept.card!.name, mode: concept.card!.mode, vibe: concept.card!.vibe, inspiration: concept.card!.inspiration,
