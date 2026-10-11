@@ -172,9 +172,16 @@ it('reads the largest visible h1, and no h1 as zero', async () => {
 it('counts product cards whose price is not aligned with the product name', async () => {
   const header = '<a href="index.html">Nube</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
   const card = '<article class="menu-item"><div class="menu-item__copy"><h3>Bocha simple</h3><p>Helado artesanal.</p></div><strong class="menu-item__price">Bs 12,00</strong></article>';
-  const off = await captureSep5Draft(await store(header, '', card + card, '.menu-item{width:300px}.menu-item__copy{padding:0 18px}'));
+  const off = await captureSep5Draft(await store(header, '', card + card, '.menu-item{width:300px}.menu-item__copy{padding:0 80px}'));
   expect(off.facts[0].priceOffset).toBeGreaterThanOrEqual(2);
   const aligned = await captureSep5Draft(await store(header, '', card, '.menu-item{width:300px;padding:0 18px}'));
   expect(aligned.facts[0].priceOffset).toBe(0);
   expect(sep5MeasuredFacts([{ ...aligned.facts[0], priceOffset: 2 }]).join(' ')).toMatch(/precio.*no está alineado/);
+});
+
+// Night run 2026-10-11: authors pad .menu-item__copy and forget the price beside it; the kit lines it up itself.
+it('lines the kit-rendered price up with the product name when only the copy is padded', async () => {
+  const header = '<a href="index.html">Nube</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
+  const { facts } = await captureSep5Draft(await store(header, '', '', '.menu-item{width:300px}.menu-item__copy{padding:0 18px}'));
+  expect(facts[0].priceOffset).toBe(0);
 });

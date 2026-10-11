@@ -2826,6 +2826,20 @@
     }
     return root.outerHTML;
   }
+  // The price sits beside .menu-item__copy, not inside it, so a store that pads only the copy leaves the price on the
+  // card edge (night run 2026-10-11). Line its start up with the product name; a price laid out elsewhere is left alone.
+  function alignCardPrices() {
+    document.querySelectorAll('.menu-item').forEach(card => {
+      const name = card.querySelector('.menu-item__copy h3'), price = card.querySelector('.menu-item__price');
+      if (!name || !price) return;
+      price.style.marginInlineStart = '';
+      const gap = name.getBoundingClientRect().left - price.getBoundingClientRect().left;
+      const card0 = card.getBoundingClientRect().left;
+      // Only a price flush with the card edge, inside the name's padding: never a price placed on the right or below a photo column.
+      if (gap > 2 && gap < 64 && price.getBoundingClientRect().left - card0 < 4) price.style.marginInlineStart = `${(parseFloat(getComputedStyle(price).marginInlineStart) || 0) + gap}px`;
+    });
+  }
+  if (typeof addEventListener === 'function') addEventListener('resize', () => alignCardPrices(), { passive: true });
   // The default catalog card. Custom templates (customProductCard) take priority when the store authored one.
   function productCard(p) {
     const image = galleryImages(p)[0];
@@ -3111,6 +3125,8 @@
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     observeCards();
+    alignCardPrices();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(alignCardPrices);
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
     if (fullProductPage && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
