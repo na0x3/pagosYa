@@ -35,13 +35,16 @@ export function productDrafts(rows) {
   }).filter(Boolean).slice(0, 5);
 }
 
-const field = (step, values) => {
+// Files chosen or dropped but not uploaded yet: shown at once, kept in state so an error repaint never loses them.
+const pendingView = files => (files || []).map(({ file, url }) => `<figure class="wt-pending">${url ? `<img src="${escapeHtml(url)}" alt="">` : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption></figure>`).join('');
+
+const field = (step, values, pending = {}) => {
   const v = name => escapeHtml(String(values[name] || ''));
   switch (step.id) {
     case 'name': return `<input class="wt-input" name="name" maxlength="120" autocomplete="organization" placeholder="Café Buna" value="${v('name')}" autofocus><p class="wt-aside">¿Vienes de Shopify? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>`;
     case 'what': return `<textarea class="wt-input" name="what" maxlength="300" rows="3" placeholder="Café de especialidad tostado en Sopocachi" autofocus>${v('what')}</textarea>`;
-    case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Subir logo</span></label><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
-    case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${(values.photos || []).map(url => `<img src="${escapeHtml(url)}" alt="">`).join('')}</div>`;
+    case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Arrastra tu logo o toca para elegir</span></label><div class="wt-thumbs">${pendingView(pending.logo)}</div><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
+    case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${(values.photos || []).map(url => `<img src="${escapeHtml(url)}" alt="">`).join('')}${pendingView(pending.photos)}</div>`;
     case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product"><input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
     case 'story': return `<textarea class="wt-input" name="story" maxlength="1200" rows="5" placeholder="Desde cuándo, dónde y qué hace único a tu negocio">${v('story')}</textarea>`;
     case 'contact': return `<input class="wt-input" name="whatsapp" inputmode="tel" placeholder="WhatsApp: +591 70000000" value="${v('whatsapp')}"><input class="wt-input" name="city" placeholder="Ciudad" value="${v('city')}">`;
@@ -54,7 +57,7 @@ export function walkthroughView(state) {
   const total = WALKTHROUGH_STEPS.length;
   return `<form class="wt" data-wt-form novalidate>
     <div class="wt-progress" role="progressbar" aria-label="Progreso" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${state.step + 1}"><i style="width:${Math.round(((state.step + 1) / total) * 100)}%"></i></div>
-    <h1 class="wt-title">${escapeHtml(step.title)}</h1>${field(step, state.values)}
+    <h1 class="wt-title">${escapeHtml(step.title)}</h1>${field(step, state.values, state.pending)}
     ${state.error ? `<p class="wt-error" role="alert">${escapeHtml(state.error)}</p>` : ''}
     <footer class="wt-actions">${state.step ? '<button class="wt-ghost" type="button" data-wt-back>Atrás</button>' : '<span></span>'}<span>${step.optional ? '<button class="wt-ghost" type="button" data-wt-skip>Saltar</button>' : ''}<button class="primary" type="submit" ${state.busy ? 'disabled' : ''}>${state.step === total - 1 ? 'Crear mi tienda' : 'Siguiente'}</button></span></footer>
   </form>`;
@@ -69,7 +72,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
 
   const resume = await api('/stores/onboarding').catch(() => ({ store: null }));
   const saved = resume.store?.onboarding;
-  let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null },
+  let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [] } },
     ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city } } : {}) };
   const paint = () => { root.innerHTML = walkthroughView(state); root.querySelector('[autofocus]')?.focus(); };
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
@@ -78,9 +81,25 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
   const requestId = crypto.randomUUID();
   let brief = null;
   let jobPosted = false;
-  const pickedFiles = name => [...(root.querySelector(`input[name="${name}"]`)?.files || [])];
+  const MAX_PHOTOS = 20;
+  const objectUrl = file => { try { return URL.createObjectURL(file); } catch { return ''; } };
+  const isImage = file => /^image\//.test(file?.type || '');
+  // Picked or dropped files wait in state until their step saves.
+  function choose(name, files) {
+    const images = [...(files || [])].filter(isImage);
+    if (!images.length) return;
+    const room = name === 'logo' ? 1 : MAX_PHOTOS - (state.values.photos || []).length;
+    const kept = name === 'logo' ? images.slice(0, 1) : [...state.pending.photos.map(p => p.file), ...images].slice(0, Math.max(0, room));
+    const previous = new Map(state.pending[name].map(p => [p.file, p.url]));
+    for (const [file, url] of previous) if (url && !kept.includes(file)) URL.revokeObjectURL(url);
+    state = { ...state, pending: { ...state.pending, [name]: kept.map(file => ({ file, url: previous.get(file) ?? objectUrl(file) })) } };
+    paint();
+  }
+  function clearPending(name) {
+    for (const { url } of state.pending[name]) if (url) URL.revokeObjectURL(url);
+    state = { ...state, pending: { ...state.pending, [name]: [] } };
+  }
 
-  // `picked` is read before the busy repaint, which replaces the file inputs.
   async function save(skipped, picked) {
     const id = WALKTHROUGH_STEPS[state.step].id;
     const mark = { step: state.step + 1, ...(skipped ? { skipped: [id] } : { done: [id] }) };
@@ -91,10 +110,11 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     }
     if (skipped) return patch(mark);
     if (id === 'what') return patch({ ...mark, what: state.values.what });
-    if (id === 'logo' && picked.logo[0]) await api(`/stores/${state.storeId}`, { method: 'PATCH', body: JSON.stringify({ logoUrl: await uploadFile(picked.logo[0]) }) });
+    if (id === 'logo' && picked.logo[0]) { await api(`/stores/${state.storeId}`, { method: 'PATCH', body: JSON.stringify({ logoUrl: await uploadFile(picked.logo[0]) }) }); clearPending('logo'); }
     if (id === 'photos') {
-      const urls = [...(state.values.photos || []), ...await Promise.all(picked.photos.slice(0, 20).map(file => uploadFile(file)))].slice(0, 20);
+      const urls = [...(state.values.photos || []), ...await Promise.all(picked.photos.slice(0, MAX_PHOTOS).map(file => uploadFile(file)))].slice(0, MAX_PHOTOS);
       state = { ...state, values: { ...state.values, photos: urls } };
+      clearPending('photos');
       return patch({ ...mark, photos: urls });
     }
     if (id === 'products') {
@@ -128,13 +148,13 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
   async function advance(skipped) {
     const moved = skipped ? nextState(state, { type: 'skip' }) : nextState(state, { type: 'next' });
     if (moved.error) { state = moved; return paint(); }
-    const picked = { logo: pickedFiles('logo'), photos: pickedFiles('photos') };
+    const picked = { logo: state.pending.logo.map(p => p.file), photos: state.pending.photos.map(p => p.file) };
     state = { ...state, busy: true, error: null }; paint();
     try {
       const last = state.step === LAST;
       await save(skipped, picked);
       if (last) return onDone(state.storeId);
-      state = { ...moved, storeId: state.storeId, values: state.values, busy: false };
+      state = { ...moved, storeId: state.storeId, values: state.values, pending: state.pending, busy: false };
     } catch (error) {
       state = { ...state, busy: false, error: `No pudimos guardar este paso (${error?.message || 'error'}). Inténtalo de nuevo${WALKTHROUGH_STEPS[state.step].optional ? ' o sáltalo' : ''}.` };
     }
@@ -142,6 +162,14 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
   }
 
   listen('input', event => { if (event.target.name && event.target.type !== 'file') { state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
+  listen('change', event => { if (event.target.type === 'file' && ['logo', 'photos'].includes(event.target.name)) choose(event.target.name, event.target.files); });
+  // A file dropped anywhere on the overlay must never navigate the browser away; only the logo and photos steps take it.
+  listen('dragover', event => event.preventDefault());
+  listen('drop', event => {
+    event.preventDefault();
+    const id = WALKTHROUGH_STEPS[state.step].id;
+    if (!state.busy && (id === 'logo' || id === 'photos')) choose(id, event.dataTransfer?.files);
+  });
   listen('submit', event => { event.preventDefault(); if (!state.busy) void advance(false); });
   listen('click', event => {
     if (event.target.closest('[data-wt-skip]') && !state.busy) void advance(true);

@@ -111,3 +111,40 @@ test('a failing finish PATCH is retried alone and never re-posts the job', async
   assert.equal(w.done(), 's1');
 });
 
+const image = name => ({ name, type: 'image/jpeg' });
+
+test('dropping photos keeps image files only, shows them before Siguiente, and survives a failed upload', async () => {
+  let failOnce = true;
+  const w = await drive(3, { uploadFail: () => (failOnce ? ((failOnce = false), true) : false) });
+  assert.equal(w.drop('dragover', []).prevented, true);
+  const dropped = w.drop('drop', [image('tienda.jpg'), { name: 'menu.pdf', type: 'application/pdf' }, image('equipo.jpg')]);
+  assert.equal(dropped.prevented, true);
+  assert.match(w.root.innerHTML, /tienda\.jpg/); assert.match(w.root.innerHTML, /equipo\.jpg/); assert.doesNotMatch(w.root.innerHTML, /menu\.pdf/);
+  await w.submit();
+  assert.match(w.root.innerHTML, /No pudimos guardar/);
+  assert.match(w.root.innerHTML, /tienda\.jpg/);
+  await w.submit();
+  const saved = w.calls.find(c => c.method === 'PATCH' && c.body?.photos);
+  assert.deepEqual(saved.body.photos, ['/v1/uploads/tienda.jpg', '/v1/uploads/equipo.jpg']);
+});
+
+test('photos picked with the file input show at once; at most 20 are kept', async () => {
+  const w = await drive(3);
+  w.pick('photos', [image('a.jpg')]);
+  assert.match(w.root.innerHTML, /a\.jpg/);
+  w.drop('drop', Array.from({ length: 25 }, (_, i) => image(`d${i}.jpg`)));
+  await w.submit();
+  assert.equal(w.calls.find(c => c.body?.photos).body.photos.length, 20);
+  assert.equal(w.uploads.length, 20);
+});
+
+test('a dropped logo is used on the logo step; a drop on another step is only blocked', async () => {
+  const w = await drive(2);
+  w.drop('drop', [image('logo.png')]);
+  assert.match(w.root.innerHTML, /logo\.png/);
+  await w.submit();
+  assert.ok(w.calls.some(c => c.body?.logoUrl === '/v1/uploads/logo.png'));
+  const s = await drive(5);
+  assert.equal(s.drop('drop', [image('x.jpg')]).prevented, true);
+  assert.doesNotMatch(s.root.innerHTML, /x\.jpg/);
+});
