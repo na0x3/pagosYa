@@ -53,6 +53,11 @@ export function brandStyles(data: BrandProfile, fonts: Record<string, string> = 
   return declarations.length ? `/* Confirmed merchant identity. Shared across every page. */\n${faces.join('\n')}\n:root {\n${declarations.join('\n')}\n}\n` : '';
 }
 
+/** Whether the merchant confirmed any brand colour; a drawn colour world never overrides those. */
+export function brandHasColours(data: BrandProfile | undefined | null): boolean {
+  return Boolean(data?.confirmed?.some(fact => colors.has(fact.field)));
+}
+
 export const BRAND_SCHEMA = { type: 'object', additionalProperties: false, required: ['facts'], properties: {
   facts: { type: 'array', maxItems: BRAND_FIELDS.length, items: { type: 'object', additionalProperties: false,
     required: ['field', 'value', 'evidence', 'source'], properties: {

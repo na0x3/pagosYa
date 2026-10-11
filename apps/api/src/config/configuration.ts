@@ -82,6 +82,9 @@ export interface AppConfig {
   /** Frame and hero draw (spec 2026-10-10): the platform rolls header, cart, footer and hero per new store or
    *  redesign. Default on; YAPI_FRAME_DRAW=off returns to the previous prompts and saves no frame-draw.json. */
   yapiFrameDraw: boolean;
+  /** Design draw round 2 (spec 2026-10-10): colour world, story angle, page structure, photo treatment and buttons per
+   *  store. Default on; YAPI_DESIGN_DRAW=off drops them, the frame keeps YAPI_FRAME_DRAW. */
+  yapiDesignDraw: boolean;
   sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
@@ -403,6 +406,7 @@ export default (): { app: AppConfig } => {
     yapiSketchFirst: process.env.YAPI_SKETCH_FIRST !== 'off',
     yapiSignature: process.env.YAPI_SIGNATURE !== 'off',
     yapiFrameDraw: process.env.YAPI_FRAME_DRAW !== 'off',
+    yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
     sep5Author,

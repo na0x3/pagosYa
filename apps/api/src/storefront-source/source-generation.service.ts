@@ -14,7 +14,7 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
+import { designCategory, frameForRun, frameFresh, frameInputs, paletteBrandCss } from './design-engine/frame-draw';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -74,7 +74,7 @@ import { SourceRequestBudget } from './source-request-budget';
 import { Optional } from '@nestjs/common';
 import { BrandProfileService } from '../brand/brand-profile.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
-import { brandContext, brandStyles, BRAND_FONT_FIELDS, linkBrandStylesheet } from '../brand/brand-profile';
+import { brandContext, brandHasColours, brandStyles, BRAND_FONT_FIELDS, linkBrandStylesheet } from '../brand/brand-profile';
 import { requestedSourceProductOperations, requestedSourceProducts, sourceProductOperationsSchema, sourceProductsSchema, type SourceProductOperation } from './source-products';
 import { sourceCommerceRoutes } from './source-commerce-pages';
 import { withSourceCommerceDesign } from './source-commerce-design';
@@ -506,6 +506,8 @@ export class SourceGenerationService {
     const frameEnabled = this.config.get<boolean>('app.yapiFrameDraw') === true;
     const frame = frameForRun({
       enabled: frameEnabled,
+      designEnabled: this.config.get<boolean>('app.yapiDesignDraw') === true,
+      category: designCategory(dto.brief),
       fresh: frameNow,
       previous: previousFiles,
       // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
@@ -697,7 +699,7 @@ export class SourceGenerationService {
         const recentCompositions = retainedDesign ? [] : await Promise.resolve().then(() => this.projects.recentCompositionFingerprints(storeId)).catch(() => [] as string[]);
         try {
           committedDesign = retainedDesign || await this.designPlanner.explore({ model, provider, apiKey, selected: exploration.selected, sitePurpose, narrative: narrativePlanning, signature: signatureOn, dnaSeed: storeId, repairs: autoRepairs,
-            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
+            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, designDraw: frame.planner || undefined, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
             images, budget, signal, attempts, record: async (body, attempt) => this.metering?.record(storeId, 'source-design', model, body, attempt.durationMs, attempt.status),
           });
         } finally { implementationFloor.settle({ input_tokens: 0, output_tokens: 0 }); }
@@ -1407,7 +1409,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const assetPaths = new Set(assets.map((f) => f.path));
     assets.push(...previousAssets.filter((f) => !assetPaths.has(f.path)));
     const previousBrand = (previous?.snapshot as any)?.files?.find((file: SourceProjectFileDto) => file.path === 'brand.css');
-    const tokenCss = brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) || '/* No confirmed visual tokens. */\n' : previousBrand?.content || '';
+    // Confirmed brand colours win; otherwise a fresh design's drawn colour world becomes the brand tokens.
+    const paletteCss = frame.palette && !brandHasColours(brand?.data) ? paletteBrandCss(frame.palette) : '';
+    const confirmedCss = brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '';
+    const tokenCss = paletteCss ? `${paletteCss}${confirmedCss}` : brand && brand.revision > 0 ? confirmedCss || '/* No confirmed visual tokens. */\n' : previousBrand?.content || '';
     if (useNext) generated.files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(generated.files, sitePurpose)));
     if (tokenCss) {
       generated.files = generated.files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);
@@ -1439,7 +1444,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press'];
     const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
       ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
-    const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}) };
+    const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}) };
     // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
     const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
     const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));

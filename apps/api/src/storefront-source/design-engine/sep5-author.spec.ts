@@ -215,3 +215,9 @@ it('keeps the cart, Buscar and Mi cuenta reachable on phones even when the merch
 it('keeps the whole store name inside one data-store-name slot', () => {
   for (const shell of [SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED]) expect(shell).toMatch(/whole store name inside one \[data-store-name\]/);
 });
+
+it('asks the self-review to check colours, buttons and photos when there is a design draw', () => {
+  const input = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [], storeShell: true, draft: [], measured: [] };
+  expect(sep5ReviewPrompt({ ...input, frame: 'DESIGN DRAW: x' })).toMatch(/colours, buttons, photo treatment and structure match DESIGN DRAW/);
+  expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).not.toMatch(/DESIGN DRAW/);
+});

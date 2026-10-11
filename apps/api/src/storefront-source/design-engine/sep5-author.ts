@@ -127,7 +127,10 @@ export const SEP5_STORE_SHELL_FRAMED = 'STORE SHELL: Every page shares one heade
  * reliably, such as a link that exists but sits off-screen.
  */
 export function sep5ReviewPrompt(input: Parameters<typeof sep5AuthorPrompt>[0] & { draft: Sep5Files['files']; measured: string[] }): string {
-  const frameCheck = input.frame?.trim() ? 'Check that the header and hero match FRAME AND HERO at both widths; rebuild whichever does not. ' : '';
+  const frame = input.frame?.trim() ?? '';
+  const frameCheck = !frame ? '' : frame.startsWith('DESIGN DRAW')
+    ? 'Check that the header and hero match the frame lines of the DESIGN DRAW, and that the colours, buttons, photo treatment and structure match DESIGN DRAW, at both widths; rebuild whichever does not. '
+    : 'Check that the header and hero match FRAME AND HERO at both widths; rebuild whichever does not. ';
   const measured = input.measured.length ? `\nMeasured by the browser:\n${input.measured.map(fact => `- ${fact}`).join('\n')}` : '';
   return `${sep5AuthorPrompt({ ...input, previousSource: input.draft })}
 

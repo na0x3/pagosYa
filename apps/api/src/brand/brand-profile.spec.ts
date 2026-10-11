@@ -1,4 +1,4 @@
-import { brandContext, brandFacts, brandStyles, linkBrandStylesheet } from './brand-profile';
+import { brandContext, brandFacts, brandHasColours, brandStyles, linkBrandStylesheet } from './brand-profile';
 import { detectedMediaMime } from '../uploads/uploads.service';
 import { publicBrandUrl } from './brand-import';
 import { BrandProfileService } from './brand-profile.service';
@@ -53,4 +53,10 @@ describe('Durable brand evidence', () => {
     expect(linkBrandStylesheet(linked, 'index.html')).toBe(linked);
     expect(linkBrandStylesheet('<main>Hola</main>', 'index.html')).toContain('href="brand.css"');
   });
+});
+
+it('knows whether the merchant confirmed any brand colour', () => {
+  expect(brandHasColours(undefined)).toBe(false);
+  expect(brandHasColours({ confirmed: [{ field: 'headingFontUrl', value: 'x' }] } as never)).toBe(false);
+  expect(brandHasColours({ confirmed: [{ field: 'accent', value: '#123456' }] } as never)).toBe(true);
 });
