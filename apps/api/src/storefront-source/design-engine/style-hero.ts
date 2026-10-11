@@ -103,10 +103,14 @@ const relativeLuminance = (hex: string) => [1, 3, 5].map(i => channel(parseInt(h
 const contrast = (a: string, b: string) => { const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
 /** The first candidate that reads on `background` (contrast 3 or more), else the one that reads best. */
 const readableOn = (background: string, candidates: string[]) => candidates.find(colour => contrast(colour, background) >= 3) ?? [...candidates].sort((a, b) => contrast(b, background) - contrast(a, background))[0];
-/** Font-size divisor that keeps a word of `letters` inside its box: a heavy display glyph is about 0.66em wide (0.72em in capitals). */
+/** Font-size divisor that keeps a word of `letters` inside its box: a heavy display glyph is about 0.66em wide in mixed case and up to 0.92em in capitals (Archivo Black). */
 const wordDivisor = (letters: number, em: number) => Math.ceil(Math.max(1, letters) * em * 100) / 100;
 const longestWord = (text: string) => Math.max(1, ...text.split(/\s+/).filter(Boolean).map(word => [...word].length));
 // The ring the stamp's text runs on: a circle of radius 74 in a 200-unit box.
+/** The stamp sits in the art box's top-right padding, its centre `out` px beyond the block's corner on both axes: it covers
+ * the corner and never reaches the text, which starts 36px inside the block (√2·(36 + out) ≥ size/2). */
+const stampBox = (size: number, out: number) => ({ size, out, inset: size / 2 + out });
+const STAMP = { desktop: stampBox(150, 28), phone: stampBox(96, 4) };
 const RING_LENGTH = Math.round(2 * Math.PI * 74 * 10) / 10;
 
 const ARROW = '<svg class="ty-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
@@ -153,7 +157,7 @@ function intenseTemplateHero(facts: HeroFacts): string {
   const ring = Array.from({ length: Math.max(1, Math.round(RING_LENGTH / (unit * 16 * 0.62))) }, () => `${upper} · `).join('');
   const ringSize = Math.min(16, Math.floor(RING_LENGTH / ([...ring].length * 0.62) * 10) / 10);
   // Giant type is sized by its longest word against its own column (container units), so no word breaks or clips.
-  const headlineDivisor = wordDivisor(longestWord(facts.headline), 0.66), typeDivisor = wordDivisor(longestWord(facts.storeName), 0.72);
+  const headlineDivisor = wordDivisor(longestWord(facts.headline), 0.66), typeDivisor = wordDivisor(longestWord(facts.storeName), 0.92);
   // The phone rail holds the name and the cart in one row: a long name gets smaller, and an ellipsis is the last resort.
   const phoneName = Math.max(12, Math.min(20, Math.floor(230 / ([...upper].length * 0.7) * 10) / 10));
   // The type field's words alternate two colours that both read on the accent field, whatever the palette.
@@ -178,14 +182,14 @@ function intenseTemplateHero(facts: HeroFacts): string {
 .ty h1{font-family:"${display.family}",sans-serif;font-size:min(140px,calc(100cqi/${headlineDivisor}));line-height:.9;letter-spacing:-0.04em;font-weight:900;margin:0 0 24px;overflow-wrap:normal;word-break:normal;hyphens:manual}
 .ty-line{font-size:19px;max-width:40ch;margin:0 0 34px}
 .ty-cta{display:inline-flex;align-items:center;gap:14px;background:${fill};color:${fillText};padding:18px 30px;font-size:17px;font-weight:700;text-decoration:none;border-radius:999px;box-shadow:6px 6px 0 ${buttonShadow}}.ty-arrow{width:22px;height:22px}
-.ty-art{position:relative;justify-self:center;width:min(100%,520px);container-type:inline-size}
+.ty-art{position:relative;justify-self:center;width:min(100%,520px);box-sizing:border-box;padding:${STAMP.desktop.inset}px ${STAMP.desktop.inset}px 0 0;container-type:inline-size}
 .ty-frame{margin:0;background:#ffffff;padding:16px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard}}
 .ty-photo{display:block;width:100%;height:min(62vh,560px);object-fit:cover}
 .ty-type{display:flex;flex-direction:column;background:${p.accent};color:${typeOdd};padding:36px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard};font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(120px,calc((100cqi - 72px)/${typeDivisor}));line-height:.88;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.ty-type span:nth-child(2n){color:${typeEven}}
-.ty-stamp{position:absolute;width:150px;height:150px;top:-48px;right:-36px;animation:ty-spin 24s linear infinite}
+.ty-stamp{position:absolute;width:${STAMP.desktop.size}px;height:${STAMP.desktop.size}px;top:0;right:0;animation:ty-spin 24s linear infinite}
 @keyframes ty-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.ty-stamp{animation:none}}
-@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${headlineDivisor}))}.ty-stamp{width:104px;height:104px;top:-30px;right:-6px}}</style>
+@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${headlineDivisor}))}.ty-art{padding:${STAMP.phone.inset}px ${STAMP.phone.inset}px 0 0}.ty-stamp{width:${STAMP.phone.size}px;height:${STAMP.phone.size}px}}</style>
 <div class="ty"><header class="ty-rail">${logo}<span class="ty-name" data-store-name>${escape(facts.storeName)}</span><nav class="ty-nav"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a></nav><span class="ty-cart">Carrito (0)</span></header>
 <section class="ty-main"><div class="ty-copy"><p class="ty-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="ty-line">${escape(facts.line)}</p><a class="ty-cta" href="#">${escape(facts.action)} ${ARROW}</a></div><div class="ty-art">${art}${stamp}</div></section></div>`;
 }

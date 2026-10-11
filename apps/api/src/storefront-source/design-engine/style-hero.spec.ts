@@ -381,10 +381,11 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
       const html = templateHero({ ...bold, storeName, photoPath: undefined });
       expect(html).toMatch(/\.ty-art\{[^}]*container-type:inline-size/);
       const longest = Math.max(...storeName.split(' ').map(word => word.length));
-      // 390px phone: the art box is 354px (282px inside the padding); 1280px desktop: about 477px; at most 520px.
-      for (const width of [354, 477, 520]) {
+      // Uppercase heavy display letters (Archivo Black) are up to 0.92em wide. Container widths: the art box minus the
+      // stamp's corner padding, on a 390px phone, a 1280px and a 1440px desktop, and the widest box.
+      for (const width of [302, 374, 405, 417]) {
         const size = sizeAt(html, TYPE, width);
-        expect(size * longest * 0.66).toBeLessThanOrEqual(width - 72 + 1e-9);
+        expect(size * longest * 0.92).toBeLessThanOrEqual(width - 72 + 1e-9);
       }
     }
   });
@@ -413,6 +414,23 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
       expect(tag![2].length * fontSize * 0.62).toBeGreaterThan(2 * Math.PI * 74 * 0.6);
       expect(sanitizeHeroHtml(html)).toContain('textLength="');
       expect(sanitizeHeroHtml(html)).toContain('lengthAdjust="spacing"');
+    }
+  });
+
+  it('puts the stamp over the block\'s top-right corner only, never over the type, on desktop and phone', () => {
+    const html = templateHero({ ...bold, photoPath: undefined });
+    const phone = html.slice(html.indexOf('@media (max-width:640px)'));
+    const read = (css: string) => ({ inset: Number(css.match(/\.ty-art\{[^}]*padding:(\d+)px \1px 0 0/)![1]), size: Number(css.match(/\.ty-stamp\{[^}]*width:(\d+)px/)![1]) });
+    expect(html).toMatch(/\.ty-art\{[^}]*box-sizing:border-box/);
+    expect(html).toMatch(/\.ty-stamp\{position:absolute;[^}]*top:0;right:0/);
+    expect(html).toMatch(/\.ty-type\{[^}]*padding:36px/);
+    for (const { inset, size } of [read(html), read(phone)]) {
+      const out = inset - size / 2;
+      // The stamp's centre lies outside the block, close enough to cover its corner...
+      expect(out).toBeGreaterThan(0);
+      expect(Math.SQRT2 * out).toBeLessThan(size / 2);
+      // ...and its circle never reaches the type, which starts 36px inside the block.
+      expect(Math.SQRT2 * (36 + out)).toBeGreaterThanOrEqual(size / 2);
     }
   });
 
