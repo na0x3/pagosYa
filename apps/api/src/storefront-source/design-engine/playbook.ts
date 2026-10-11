@@ -11,7 +11,9 @@ export type StyleFamily = { id: string; name: string; palettes: Palette[]; fonts
 export type Evidence = 'hours' | 'location' | 'delivery';
 /** `evidence`: shown only when the store has that fact (never invented); `kitPage`: the platform's own information pages carry it. */
 export type PlaybookSection = { id: string; label: string; must: string; detect: RegExp; evidence?: Evidence; kitPage?: boolean };
-export type PlaybookEntry = { kind: PlaybookKind; name: string; profile: CraftProfile; sections: PlaybookSection[]; families: StyleFamily[]; tone: string; footer: string; references: string[] };
+export type PlaybookEntry = { kind: PlaybookKind; name: string; profile: CraftProfile; sections: PlaybookSection[]; families: StyleFamily[]; tone: string; footer: string; references: string[];
+  /** Story angles (DESIGN_CATALOGUE.angle) that suit this kind; a calm build draws only these. */
+  angles: string[] };
 
 export const CONVENTIONAL_HEADERS = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking'] as const;
 
@@ -25,7 +27,7 @@ const CONTACT: PlaybookSection = { kitPage: true, id: 'contact', label: 'contact
 const LEGAL = 'a multi-column footer (shop, information pages, contact and hours) with a legal row: store name, NIT when set, address, and the information pages';
 
 export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
-  'cafe-food': { kind: 'cafe-food', name: 'café and food', profile: 'shop', references: ['buna.mx', 'pukupuku.pe'], sections: [ABOUT, HOURS, LOCATION, DELIVERY], footer: LEGAL,
+  'cafe-food': { kind: 'cafe-food', angles: ['origin-place', 'ritual-time', 'the-maker', 'senses', 'neighbourhood', 'field-guide'], name: 'café and food', profile: 'shop', references: ['buna.mx', 'pukupuku.pe'], sections: [ABOUT, HOURS, LOCATION, DELIVERY], footer: LEGAL,
     tone: 'warm and concrete: origin, process and taste in real words from the brief; no poetry about pauses or moments',
     families: [
       { id: 'cafe-shop', name: 'clean roaster shop', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline', 'underline'], fonts: [{ display: 'outfit', text: 'outfit' }, { display: 'manrope', text: 'manrope' }, { display: 'familjen-grotesk', text: 'figtree' }],
@@ -33,7 +35,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'cafe-editorial', name: 'editorial café', radius: 'soft', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'pill'], fonts: [{ display: 'young-serif', text: 'instrument' }, { display: 'newsreader', text: 'manrope' }],
         palettes: [p('cafe-paper-blue', 'warm paper and ink blue', '#f7f4ef', '#1a1f2b', '#2f4bb8', '#ebe5db'), p('cafe-paper-olive', 'warm paper and olive', '#f6f4ee', '#1c1d17', '#56602a', '#e9e6db')] },
     ] },
-  'bakery-sweets': { kind: 'bakery-sweets', name: 'bakery and sweets', profile: 'shop', references: ['panio.mx', 'rapanui.com.ar', 'pumpstreetchocolate.com'], sections: [ABOUT, HOURS, LOCATION, DELIVERY, FAQ], footer: LEGAL,
+  'bakery-sweets': { kind: 'bakery-sweets', angles: ['ritual-time', 'the-maker', 'senses', 'neighbourhood'], name: 'bakery and sweets', profile: 'shop', references: ['panio.mx', 'rapanui.com.ar', 'pumpstreetchocolate.com'], sections: [ABOUT, HOURS, LOCATION, DELIVERY, FAQ], footer: LEGAL,
     tone: 'generous and specific: ingredients, baking times and real flavours; gifts and occasions when the brief has them',
     families: [
       { id: 'bakery-editorial', name: 'calm editorial bakery', radius: 'soft', photoShape: 'plain', buttons: ['pill', 'outline'], fonts: [{ display: 'libre-caslon-text', text: 'figtree' }, { display: 'dm-serif-display', text: 'manrope' }],
@@ -41,7 +43,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'bakery-shop', name: 'chocolate counter', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'epilogue', text: 'epilogue' }, { display: 'sora', text: 'manrope' }],
         palettes: [p('bakery-white-blush', 'white and blush', '#ffffff', '#1a1515', '#c1543f', '#f0d3c9'), p('bakery-white-navy', 'white and navy', '#ffffff', '#121826', '#23365f', '#e7ebf2')] },
     ] },
-  clothing: { kind: 'clothing', name: 'clothing and accessories', profile: 'shop', references: ['carlafernandez.com', 'juanadearco.net', 'solalpaca.com', 'thinkingmu.com'], footer: LEGAL,
+  clothing: { kind: 'clothing', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'clothing and accessories', profile: 'shop', references: ['carlafernandez.com', 'juanadearco.net', 'solalpaca.com', 'thinkingmu.com'], footer: LEGAL,
     sections: [ABOUT, DELIVERY, { id: 'sizes', label: 'tallas', must: 'sizes and how to choose them', detect: /(talla|tallas|medidas|size)/i }, { kitPage: true, id: 'returns', label: 'cambios y devoluciones', must: 'exchanges and returns in one line', detect: /(cambio|devoluci[oó]n|devoluciones)/i }],
     tone: 'short and confident: collections, materials and fit; never hype',
     families: [
@@ -50,7 +52,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'clothing-crafted', name: 'crafted label', radius: 'square', photoShape: 'tall', buttons: ['outline', 'pill'], fonts: [{ display: 'bodoni-moda', text: 'figtree' }, { display: 'instrument-serif', text: 'instrument' }],
         palettes: [p('clothing-sand-ink', 'sand and ink', '#f5f1ea', '#161616', '#7a3e1d', '#e8e1d5'), p('clothing-stone-teal', 'stone and teal', '#f2f2ee', '#141816', '#1d5b5b', '#e2e4df')] },
     ] },
-  beauty: { kind: 'beauty', name: 'beauty and personal care', profile: 'shop', references: ['xinu.mx', 'matarrania.com'], footer: LEGAL,
+  beauty: { kind: 'beauty', angles: ['ritual-time', 'the-maker', 'origin-place', 'field-guide'], name: 'beauty and personal care', profile: 'shop', references: ['xinu.mx', 'matarrania.com'], footer: LEGAL,
     sections: [ABOUT, { id: 'ingredients', label: 'ingredientes o servicios', must: 'what is inside or what the service does, from the brief', detect: /(ingrediente|f[oó]rmula|natural|servicio|tratamiento|piel|cabello)/i }, DELIVERY, CONTACT],
     tone: 'calm and exact: ingredients, routines and results the brief supports; never medical claims',
     families: [
@@ -59,7 +61,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'beauty-fresh', name: 'fresh natural', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'outline'], fonts: [{ display: 'nunito', text: 'nunito' }, { display: 'sora', text: 'figtree' }],
         palettes: [p('beauty-white-leaf', 'white and leaf green', '#ffffff', '#132017', '#2e7d4f', '#e8f2ec'), p('beauty-white-coral', 'white and coral', '#ffffff', '#1e1716', '#c84d3f', '#f6e6e2')] },
     ] },
-  services: { kind: 'services', name: 'professional services and finance', profile: 'story', references: ['kambista.com', 'p-narayan-and-associates-15999.boosterpack.xyz', 'pagosya.boosterpack.xyz'], footer: LEGAL,
+  services: { kind: 'services', angles: ['field-guide', 'the-maker', 'neighbourhood'], name: 'professional services and finance', profile: 'story', references: ['kambista.com', 'p-narayan-and-associates-15999.boosterpack.xyz', 'pagosya.boosterpack.xyz'], footer: LEGAL,
     sections: [{ id: 'offer', label: 'qué ofrecemos', must: 'what is offered, in plain words', detect: /(servicio|ofrecemos|asesor|contab|legal|financ|cr[eé]dito|tr[aá]mite)/i }, { id: 'steps', label: 'cómo funciona', must: 'how it works in 3-4 numbered steps', detect: /(c[oó]mo funciona|paso|primero|1\.|01)/i }, { id: 'proof', label: 'confianza', must: 'proof from the brief only: years, clients, registrations or reviews it states', detect: /(a[nñ]os|clientes|registr|rese[nñ]a|confian|certific)/i }, FAQ, CONTACT],
     tone: 'clear and trustworthy: what you get, what it costs and what happens next; no jargon',
     families: [
@@ -68,7 +70,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'services-clear', name: 'clear modern', radius: 'soft', photoShape: 'plain', buttons: ['block', 'pill'], fonts: [{ display: 'manrope', text: 'manrope' }, { display: 'sora', text: 'figtree' }],
         palettes: [p('services-white-blue', 'white and trust blue', '#ffffff', '#111827', '#1d4ed8', '#eef2fb'), p('services-white-teal', 'white and teal', '#ffffff', '#10201f', '#0f766e', '#e7f3f1')] },
     ] },
-  'fitness-wellness': { kind: 'fitness-wellness', name: 'fitness and wellness', profile: 'story', references: ['yoko-studio-gent-19475.boosterpack.xyz', 'moonpilates.mx'], footer: LEGAL,
+  'fitness-wellness': { kind: 'fitness-wellness', angles: ['ritual-time', 'the-maker', 'neighbourhood', 'field-guide'], name: 'fitness and wellness', profile: 'story', references: ['yoko-studio-gent-19475.boosterpack.xyz', 'moonpilates.mx'], footer: LEGAL,
     sections: [{ id: 'classes', label: 'clases', must: 'the classes or services with level and length', detect: /(clase|clases|sesi[oó]n|nivel|minutos)/i }, { id: 'prices', label: 'precios', must: 'prices or memberships from the catalogue', detect: /(precio|plan|membres|paquete|Bs\.?|\$)/i }, HOURS, LOCATION, CONTACT],
     tone: 'encouraging and practical: who it is for, what a class feels like, how to start',
     families: [
@@ -77,7 +79,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'fitness-clean', name: 'clean performance', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'sora', text: 'manrope' }, { display: 'epilogue', text: 'epilogue' }],
         palettes: [p('fitness-white-black', 'white and black', '#ffffff', '#0f0f0f', '#0f0f0f', '#f0f0f0'), p('fitness-white-violet', 'white and violet', '#ffffff', '#16131f', '#5b3fd1', '#efecfb')] },
     ] },
-  'crafts-home': { kind: 'crafts-home', name: 'crafts and home', profile: 'shop', references: ['onoracasa.com', 'utilitariomexicano.com'], footer: LEGAL,
+  'crafts-home': { kind: 'crafts-home', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'crafts and home', profile: 'shop', references: ['onoracasa.com', 'utilitariomexicano.com'], footer: LEGAL,
     sections: [ABOUT, { id: 'craft', label: 'cómo se hace', must: 'materials and how each piece is made', detect: /(hecho a mano|artesan|material|barro|cer[aá]mica|madera|tejid|proceso)/i }, LOCATION, DELIVERY],
     tone: 'honest and tactile: materials, makers and care; each piece is real',
     families: [
@@ -86,7 +88,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'crafts-market', name: 'market catalogue', radius: 'soft', photoShape: 'plain', buttons: ['block', 'pill'], fonts: [{ display: 'figtree', text: 'figtree' }, { display: 'chivo', text: 'manrope' }],
         palettes: [p('crafts-bone-cobalt', 'bone and cobalt', '#f6f3ec', '#141823', '#2846a8', '#e9e5da'), p('crafts-bone-green', 'bone and green', '#f5f3ec', '#151c16', '#2f6b3a', '#e7e8de')] },
     ] },
-  'flowers-gifts': { kind: 'flowers-gifts', name: 'flowers and gifts', profile: 'shop', references: ['margaritasellamamiamor.com'], footer: LEGAL,
+  'flowers-gifts': { kind: 'flowers-gifts', angles: ['ritual-time', 'the-maker', 'senses', 'neighbourhood'], name: 'flowers and gifts', profile: 'shop', references: ['margaritasellamamiamor.com'], footer: LEGAL,
     sections: [{ id: 'occasions', label: 'ocasiones', must: 'shop by occasion or category', detect: /(ocasi[oó]n|cumplea|aniversario|boda|regalo|ramo|arreglo)/i }, DELIVERY, ABOUT, CONTACT],
     tone: 'kind and helpful: occasions, delivery times and care, without clichés',
     families: [
@@ -95,7 +97,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'flowers-garden', name: 'garden fresh', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'outline'], fonts: [{ display: 'fraunces', text: 'figtree' }, { display: 'dm-serif-display', text: 'nunito' }],
         palettes: [p('flowers-cream-green', 'cream and leaf green', '#fbf8f1', '#152017', '#2f6b3a', '#ebe9dc'), p('flowers-cream-coral', 'cream and coral', '#fbf7f2', '#1f1715', '#c4553d', '#efe2d9')] },
     ] },
-  general: { kind: 'general', name: 'professional store', profile: 'shop', references: ['pagosya.boosterpack.xyz'], sections: [ABOUT, DELIVERY, CONTACT], footer: LEGAL,
+  general: { kind: 'general', angles: ['the-maker', 'field-guide', 'neighbourhood', 'origin-place'], name: 'professional store', profile: 'shop', references: ['pagosya.boosterpack.xyz'], sections: [ABOUT, DELIVERY, CONTACT], footer: LEGAL,
     tone: 'plain and specific: what is sold, for whom and how to buy it',
     families: [
       { id: 'general-clean', name: 'clean shop', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'manrope', text: 'manrope' }, { display: 'figtree', text: 'figtree' }],

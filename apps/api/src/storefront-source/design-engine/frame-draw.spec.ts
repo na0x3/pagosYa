@@ -331,3 +331,16 @@ describe('playbook review fixes for the dice', () => {
     }
   });
 });
+
+// Night run 2026-10-11: an accountant drew the "senses" angle and opened with "El sonido de una gestión clara".
+describe('story angles fit the kind of business', () => {
+  it('draws only the angles a kind lists, and every listed angle is a calm catalogue entry', () => {
+    const calmAngles = DESIGN_CATALOGUE.angle.filter(entry => !entry.bold).map(entry => entry.id);
+    for (const entry of Object.values(PLAYBOOK)) for (const angle of entry.angles) expect(calmAngles).toContain(angle);
+    const family = PLAYBOOK.services.families[0];
+    for (let seed = 1; seed < 60; seed++) {
+      const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la web', random: seeded(seed), playbook: { kind: 'services', family, bold: false } });
+      expect(PLAYBOOK.services.angles).toContain((parseFrameDraw(run.file!.content) as Record<string, string>).angle);
+    }
+  });
+});
