@@ -1,6 +1,7 @@
 /** The style planner's output (spec 2026-10-11 Elige tu estilo): four concepts, one per drawn slot, each with its card text. */
 import { BadGatewayException } from '@nestjs/common';
 import { validateSourceConcept, type SourceDesign, type SourceDesignConcept } from './source-design';
+import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 
 export const STYLE_CARD_PROPERTIES = {
   cardName: { type: 'string', minLength: 1, maxLength: 40 },
@@ -38,4 +39,17 @@ export function validateStyleDesign(value: any, modes: Array<'calm' | 'bold'>, o
   const recommended = kept.findIndex(concept => concept.card!.slot === value?.selection?.index);
   const rationale = typeof value?.selection?.rationale === 'string' && value.selection.rationale.trim().length <= 400 ? value.selection.rationale.trim() || null : null;
   return { design: { concepts: kept, selected: Math.max(0, recommended), selection: { source: 'planner', rationale: recommended >= 0 ? rationale : null } }, dropped };
+}
+
+/** The two bold cards never share a display font (spec): the second bold one takes the first catalogue display font no card uses. */
+export function distinctBoldDisplays(design: SourceDesign): SourceDesign {
+  const bold = design.concepts.map((concept, index) => ({ concept, index })).filter(({ concept }) => concept.card?.mode === 'bold' && concept.dna?.type);
+  if (bold.length < 2 || bold[0].concept.dna!.type.display !== bold[1].concept.dna!.type.display) return design;
+  const used = new Set(design.concepts.flatMap(concept => concept.dna?.type ? [concept.dna.type.display, concept.dna.type.text] : []));
+  const font = SOURCE_FONT_CATALOG.find(entry => entry.role !== 'text' && !used.has(entry.id));
+  if (!font) return design;
+  const { concept, index } = bold[1];
+  const concepts = [...design.concepts];
+  concepts[index] = { ...concept, dna: { ...concept.dna!, type: { ...concept.dna!.type, display: font.id } } };
+  return { ...design, concepts };
 }

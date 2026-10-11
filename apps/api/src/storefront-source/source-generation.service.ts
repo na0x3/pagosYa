@@ -71,6 +71,7 @@ import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design
 import { styleDraws, styleSlotDirection, type StyleSlot } from './design-engine/style-draws';
 import { writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal } from './source-style-proposal';
+import { distinctBoldDisplays } from './source-style-design';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
 import { sourceTaskContext, sourceRedesignRequested } from './source-context';
@@ -767,6 +768,7 @@ export class SourceGenerationService {
             styleAttempted = true;
             styled = await this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: styleSlots.map(slot => ({ mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook) })), context: contextFor(true) })
               .catch(error => { if (signal.aborted) throw error; this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id })); return undefined; });
+            if (styled) styled = distinctBoldDisplays(styled);
           }
           if (styled && styled.concepts.length >= 2) {
             return await this.saveStyleProposal({ runId: run.id, storeId, dto, imageUses, redesign, styleSlots, design: styled, assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits });

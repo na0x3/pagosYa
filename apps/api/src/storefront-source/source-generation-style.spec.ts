@@ -115,6 +115,15 @@ describe('style proposal mode', () => {
     expect(saved.heroPalettes![0]).toMatchObject({ paper: saved.slots[0].palette!.paper });
   });
 
+  it('gives the two bold cards different display fonts: the second takes the first catalogue display font no card uses', async () => {
+    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    // Every planned concept used Fraunces + Instrument; Bricolage is the first unused display/both font in the catalogue.
+    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.mode, c[0].facts.fonts.display])).toEqual([['calm', 'fraunces'], ['calm', 'fraunces'], ['bold', 'fraunces'], ['bold', 'bricolage']]);
+    const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
+    expect(final.data.proposal.design.concepts.map((c: any) => c.dna.type.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
+  });
+
   it('throws and leaves no proposal awaiting when the run lost its row before the proposal finished', async () => {
     explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
     // The stale sweep marked the row INTERRUPTED: every RUNNING-guarded write after the start matches nothing.
