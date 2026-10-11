@@ -114,7 +114,7 @@ const KIND_WORDS: Array<[PlaybookKind, RegExp]> = [
   ['flowers-gifts', /(?<!\p{L})(flor(es|er[ií]a)?|ramos? de flores|arreglos? florales?|regaler[ií]a)(?!\p{L})/giu],
   ['fitness-wellness', /(?<!\p{L})(gimnasio|gym|yoga|pilates|crossfit|entrenamiento|fitness|bienestar|meditaci[oó]n)(?!\p{L})/giu],
   ['beauty', /(?<!\p{L})(belleza|sal[oó]n|peluquer[ií]a|barber[ií]a|u[nñ]as|maquillaje|cosm[eé]tica|skincare|spa|perfumes?|champ[uú]s?|shampoos?|cabello|cuidado personal|cremas?|jab[oó]n(es)?|piel|skin)(?!\p{L})/giu],
-  ['clothing', /(?<!\p{L})(ropa|moda|poleras?|vestidos?|camisas?|pantalones?|zapatos?|calzado|accesorios|boutique|joyer[ií]a|carteras?|chompas?|ponchos?|alpaca|polos?|chaquetas?|bufandas?|gorras?)(?!\p{L})/giu],
+  ['clothing', /(?<!\p{L})(ropa|moda|poleras?|vestidos?|camisas?|pantalones?|zapatos?|calzado|accesorios de moda|boutique|joyer[ií]a|carteras?|chompas?|ponchos?|alpaca|polos?|chaquetas?|bufandas?|gorras?)(?!\p{L})/giu],
   ['crafts-home', /(?<!\p{L})(artesan[ií]as?|cer[aá]mica|alfarer[ií]a|muebles?|decoraci[oó]n|hogar|textiles?|tejidos?|velas|cuadros?|impresiones? de arte|l[aá]minas?|arte para tu casa|posters? de arte)(?!\p{L})/giu],
   // Generic shop words ("pago seguro", "tarjeta de crédito", "garantía legal") are not services; only phrases are.
   ['services', /(?<!\p{L})(contador|contable|contabilidad|abogad[oa]s?|asesor[ií]a (legal|contable|financiera|tributaria)|consultor[ií]a|estudio (contable|jur[ií]dico)|financier[oa]|cr[eé]ditos? (para|a) (pymes|personas|empresas)|seguros de (vida|salud|autos?)|tr[aá]mites)(?!\p{L})/giu],

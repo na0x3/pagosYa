@@ -116,3 +116,9 @@ it('rules out novelty ornaments on a professional build, not on a bold one', () 
   expect(playbookDirection(entry, family)).toMatch(/no circular or rotating text badges/);
   expect(playbookDirection(entry, family, { bold: true })).not.toMatch(/no circular or rotating text badges/);
 });
+
+// Night run 2026-10-11: "alimento y accesorios para perros y gatos" drew the clothing playbook.
+it('reads pet accessories as a general store, fashion accessories as clothing', () => {
+  expect(detectKind('tienda de alimento y accesorios para perros y gatos')).toBe('general');
+  expect(detectKind('accesorios de moda y carteras de cuero')).toBe('clothing');
+});
