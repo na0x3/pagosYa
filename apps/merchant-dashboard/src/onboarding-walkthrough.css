@@ -12,3 +12,5 @@
 .wt-ghost { background: none; border: 0; padding: 10px 12px; font: inherit; color: var(--muted, #555); cursor: pointer; }
 .wt-error { color: #b42318; margin: 0; } .wt-aside { color: var(--muted, #666); margin: 0; }
 @media (prefers-reduced-motion: reduce) { .wt-progress i { transition: none; } }
+
+.wt-exit { position: absolute; top: 16px; right: 20px; }

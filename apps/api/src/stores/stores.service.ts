@@ -33,9 +33,9 @@ export class StoresService {
 
   async onboardingState(merchantId: string, enabled: boolean) {
     if (!enabled) return { enabled: false, store: null };
-    const stores = await this.prisma.store.findMany({ where: { merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true }, orderBy: { createdAt: 'asc' }, take: 2 });
-    // Only a merchant whose single store started the walkthrough and never finished it resumes it.
-    const open = stores.length === 1 && stores[0].onboarding && !(stores[0].onboarding as { finishedAt?: string }).finishedAt ? stores[0] : null;
+    const stores = await this.prisma.store.findMany({ where: { merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true }, orderBy: { createdAt: 'desc' }, take: 50 });
+    // The newest store that started the walkthrough and never finished it resumes; stores from before the walkthrough (null) never do.
+    const open = stores.find((store) => store.onboarding && !(store.onboarding as { finishedAt?: string }).finishedAt) ?? null;
     return { enabled: true, store: open ? { id: open.id, name: open.name, onboarding: open.onboarding } : null };
   }
 

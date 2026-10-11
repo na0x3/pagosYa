@@ -4,7 +4,7 @@ import { createStoreBody } from "/src/create-store.mjs";
 import { debtAmountInCents, parseDebtCollectionRows, parseDebtCsv } from "/src/debt-csv.mjs";
 import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
-import { runWalkthrough } from "/src/onboarding-walkthrough.mjs";
+import { runWalkthrough, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
@@ -1295,10 +1295,12 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
 
   let onboardingEnabled = false;
   let onboardingChecked = false;
-  function openWalkthrough() {
+  let onboardingResumable = null;
+  // resume: the unfinished store to continue, or null for a fresh run that creates a new store at step 1.
+  function openWalkthrough(resume = null) {
     const root = document.getElementById("onboardingWalkthrough");
     root.hidden = false;
-    void runWalkthrough(root, { api, uploadFile, onDone: async storeId => {
+    void runWalkthrough(root, { api, uploadFile, resume, onExit: () => { root.hidden = true; root.innerHTML = ""; }, onDone: async storeId => {
       root.hidden = true; root.innerHTML = "";
       selectStore(storeId); await refresh();
       history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace");
@@ -1315,11 +1317,14 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     onboardingChecked = true;
     const onboarding = await api("/stores/onboarding").catch(() => ({ enabled: false, store: null }));
     onboardingEnabled = Boolean(onboarding.enabled);
-    if (onboardingEnabled && (!lastStores.length || onboarding.store)) openWalkthrough();
+    onboardingResumable = onboarding.store || null;
+    const entry = walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, resumable: Boolean(onboardingResumable), intent: "boot" });
+    if (entry === "resume") openWalkthrough(onboardingResumable);
+    else if (entry === "fresh") openWalkthrough(null);
   }
 
   function openCreateStore() {
-    if (onboardingEnabled && !lastStores.length) return openWalkthrough();
+    if (walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, intent: "create" }) === "fresh") return openWalkthrough(null);
     document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
     document.getElementById("createStoreError").hidden = true;
     document.getElementById("createStoreDialog").showModal();

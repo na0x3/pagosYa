@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WALKTHROUGH_STEPS, nextState, productDrafts, runWalkthrough, walkthroughView } from './onboarding-walkthrough.mjs';
+import { WALKTHROUGH_STEPS, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
@@ -147,4 +147,37 @@ test('a dropped logo is used on the logo step; a drop on another step is only bl
   const s = await drive(5);
   assert.equal(s.drop('drop', [image('x.jpg')]).prevented, true);
   assert.doesNotMatch(s.root.innerHTML, /x\.jpg/);
+});
+
+test('walkthroughEntry: boot resumes, opens fresh for an empty merchant, else nothing', () => {
+  assert.equal(walkthroughEntry({ enabled: true, storeCount: 3, resumable: true, intent: 'boot' }), 'resume');
+  assert.equal(walkthroughEntry({ enabled: true, storeCount: 0, resumable: false, intent: 'boot' }), 'fresh');
+  assert.equal(walkthroughEntry({ enabled: true, storeCount: 2, resumable: false, intent: 'boot' }), 'none');
+  assert.equal(walkthroughEntry({ enabled: false, storeCount: 0, resumable: false, intent: 'boot' }), 'none');
+});
+
+test('walkthroughEntry: create is always fresh with the flag on, the modal with it off', () => {
+  assert.equal(walkthroughEntry({ enabled: true, storeCount: 4, resumable: true, intent: 'create' }), 'fresh');
+  assert.equal(walkthroughEntry({ enabled: true, storeCount: 0, intent: 'create' }), 'fresh');
+  assert.equal(walkthroughEntry({ enabled: false, storeCount: 4, intent: 'create' }), 'modal');
+});
+
+test('a fresh run (resume: null) never looks up or resumes another store', async () => {
+  const calls = [];
+  const root = { innerHTML: '', addEventListener() {}, querySelector: () => null };
+  const api = async path => { calls.push(path); return { store: { id: 'other', name: 'Otra', onboarding: { step: 4 } } }; };
+  await runWalkthrough(root, { api, uploadFile: async () => '', onDone() {}, resume: null });
+  assert.deepEqual(calls, []);
+  assert.match(root.innerHTML, /¿Cómo se llama tu negocio\?/);
+});
+
+test('Salir calls onExit and leaves the store alone', async () => {
+  const listeners = {};
+  const root = { innerHTML: '', addEventListener: (t, h) => { listeners[t] = h; }, querySelector: () => null };
+  const calls = [];
+  let exited = 0;
+  await runWalkthrough(root, { api: async p => { calls.push(p); }, uploadFile: async () => '', onDone() {}, onExit: () => { exited++; }, resume: null });
+  listeners.click({ target: { closest: sel => (sel === '[data-wt-exit]' ? {} : null) } });
+  assert.equal(exited, 1);
+  assert.deepEqual(calls, []);
 });

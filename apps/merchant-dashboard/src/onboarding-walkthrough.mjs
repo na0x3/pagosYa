@@ -52,25 +52,35 @@ const field = (step, values, pending = {}) => {
   }
 };
 
+// What the dashboard does with the walkthrough: boot opens it for a merchant with no stores or an unfinished one; "create" always starts fresh.
+export function walkthroughEntry({ enabled, storeCount = 0, resumable = false, intent = 'boot' }) {
+  if (!enabled) return intent === 'create' ? 'modal' : 'none';
+  if (intent === 'create') return 'fresh';
+  if (resumable) return 'resume';
+  return storeCount === 0 ? 'fresh' : 'none';
+}
+
 export function walkthroughView(state) {
   const step = WALKTHROUGH_STEPS[state.step];
   const total = WALKTHROUGH_STEPS.length;
   return `<form class="wt" data-wt-form novalidate>
     <div class="wt-progress" role="progressbar" aria-label="Progreso" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${state.step + 1}"><i style="width:${Math.round(((state.step + 1) / total) * 100)}%"></i></div>
+    <button class="wt-ghost wt-exit" type="button" data-wt-exit>Salir</button>
     <h1 class="wt-title">${escapeHtml(step.title)}</h1>${field(step, state.values, state.pending)}
     ${state.error ? `<p class="wt-error" role="alert">${escapeHtml(state.error)}</p>` : ''}
     <footer class="wt-actions">${state.step ? '<button class="wt-ghost" type="button" data-wt-back>Atrás</button>' : '<span></span>'}<span>${step.optional ? '<button class="wt-ghost" type="button" data-wt-skip>Saltar</button>' : ''}<button class="primary" type="submit" ${state.busy ? 'disabled' : ''}>${state.step === total - 1 ? 'Crear mi tienda' : 'Siguiente'}</button></span></footer>
   </form>`;
 }
 
-export async function runWalkthrough(root, { api, uploadFile, onDone }) {
+export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, resume: resumeStore }) {
   // A second run on the same root must not stack listeners on the first.
   root._wtAbort?.abort();
   const abort = new AbortController();
   root._wtAbort = abort;
   const listen = (type, handler) => root.addEventListener(type, handler, { signal: abort.signal });
 
-  const resume = await api('/stores/onboarding').catch(() => ({ store: null }));
+  // `resume` given (a store, or null for a fresh run) skips the lookup; omitted keeps the old fetch.
+  const resume = resumeStore !== undefined ? { store: resumeStore } : await api('/stores/onboarding').catch(() => ({ store: null }));
   const saved = resume.store?.onboarding;
   let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [] } },
     ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city } } : {}) };
@@ -172,6 +182,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
   });
   listen('submit', event => { event.preventDefault(); if (!state.busy) void advance(false); });
   listen('click', event => {
+    if (event.target.closest('[data-wt-exit]') && !state.busy) { onExit?.(); return; }
     if (event.target.closest('[data-wt-skip]') && !state.busy) void advance(true);
     if (event.target.closest('[data-wt-back]') && !state.busy) { state = nextState(state, { type: 'back' }); paint(); }
   });
