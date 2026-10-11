@@ -190,3 +190,41 @@ it('asks for one high-energy concept and picks the strongest identity unless the
   expect(SOURCE_CONCEPT_ENERGY_DIRECTION).toMatch(/calm, minimal or sober/);
   expect(text).not.toContain('This is a brief-fit judgment, not a rendered visual quality score.');
 });
+
+describe('style slots', () => {
+  const styled = () => [...structuredClone(concepts), { ...structuredClone(concepts[0]), name: 'Studio', premise: 'Studio premise', opening: 'Studio opening', flow: 'Studio flow' }]
+    .map((concept, slot) => ({ ...concept, cardName: `Estilo ${slot + 1}`, vibe: 'Una vibra clara.', inspiration: ['Uno', 'Dos', 'Tres'] }));
+  const slots = (['calm', 'calm', 'bold', 'bold'] as const).map((mode, i) => ({ mode, direction: `CONCEPT ${i + 1} of 4 (${mode}` }));
+  const reply = (value: unknown) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }));
+
+  it('plans four style concepts from four slots and returns their cards', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: styled(), selection: { index: 2, rationale: 'Fits' } }));
+    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots });
+    const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(body.text.format.schema.properties.concepts.minItems).toBe(4);
+    expect(body.text.format.schema.properties.selection.properties.index.maximum).toBe(3);
+    const prompt = body.input[0].content[0].text as string;
+    expect(prompt).toContain('Return exactly four fully developed concepts');
+    expect(prompt).toContain('CONCEPT 3 of 4 (bold');
+    expect(prompt).not.toContain(SOURCE_CONCEPT_ENERGY_DIRECTION);
+    expect(result.concepts.map(c => c.card?.mode)).toEqual(['calm', 'calm', 'bold', 'bold']);
+    expect(result.selected).toBe(2);
+  });
+
+  it('keeps the cards that validate instead of repairing a partly bad style plan', async () => {
+    const value = styled();
+    (value[1].layout as any).catalogSection = 'missing';
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: value, selection: { index: 0, rationale: 'r' } }));
+    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.concepts.map(c => c.card!.slot)).toEqual([0, 2, 3]);
+  });
+
+  it('keeps the three-concept prompt byte-identical without style slots', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts, selection: { index: 2, rationale: 'r' } }));
+    await new SourceDesignPlanner().explore(input());
+    const prompt = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text as string;
+    expect(prompt).toContain('Return exactly three fully developed concepts and NO source files. Develop all three concepts fully before choosing.');
+    expect(prompt).toContain(SOURCE_CONCEPT_ENERGY_DIRECTION);
+  });
+});
