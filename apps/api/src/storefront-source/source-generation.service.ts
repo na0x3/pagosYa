@@ -14,6 +14,7 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
+import { frameForRun } from './design-engine/frame-draw';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -463,6 +464,22 @@ export class SourceGenerationService {
     const useNext = !sep5Author && (isNextSource(previousFiles) || (!execution?.candidate || execution.evaluate === true) && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign));
     // The tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) builds component stores; candidates keep the single call.
     const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
+    // Spec 2026-10-10: the platform rolls the frame and hero; the model alone always lands on one header.
+    const frameFresh = (sep5Author || agentEngine) && (!previous || redesign);
+    const frame = frameForRun({
+      enabled: this.config.get<boolean>('app.yapiFrameDraw') === true,
+      fresh: frameFresh,
+      previous: previousFiles,
+      // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
+      recent: frameFresh ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [],
+      available: {
+        photos: assetLegend.filter(asset => !sourceVideo(asset.path)).length,
+        products: data.items.filter(item => item.imageUrls?.length).length,
+        facts: Boolean((data as { locations?: unknown[] }).locations?.length) || (typeof (dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation === 'string' && String((dto.brief as { businessInformation?: unknown }).businessInformation).trim().length > 0),
+      },
+      // The merchant's own instruction only: a brief like "menú del día, en el centro" is not a header request.
+      request: dto.instruction,
+    });
     const migrating = useNext && !!previous && !isNextSource(previousFiles);
     const editExisting = !!previous && !migrating;
     const oldFiles = previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path));
@@ -829,7 +846,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief }), fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn) };
+        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief }), fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
@@ -1246,7 +1263,7 @@ export class SourceGenerationService {
         try {
           // Measured against the run's hard stop, so the agent stops itself (warned, and its draft rescued) before the run is aborted.
           const runLimits = agentWallWithin(agentLimits(chatgptPlan), started + runTimeout);
-          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
+          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, frame.paragraph), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
           accepted = outcome.status === 'finished' && !!toolbox.finished;
           // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
           if (!accepted && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length)) accepted = await toolbox.acceptIfBuildable();
@@ -1444,6 +1461,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
       ...(sketchFile ? [sketchFile] : []),
       ...(websiteDesignFile ? [websiteDesignFile] : []),
+      ...(frame.file ? [frame.file] : []),
       { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
       { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
       ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },

@@ -1,4 +1,5 @@
 import { sourceRequestContext } from './source-request-context';
+import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
 import { assertPreparedSource, type PreparedSourceArtifact } from './source-prepared-artifact';
 import { DesignRetryableConflict } from './source-design-errors';
 import { savedSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
@@ -85,6 +86,24 @@ export class SourceProjectsService {
       return concept?.composition ? [compositionFingerprint({ composition: concept.composition })] : [];
     });
     return [...new Set(fingerprints)];
+  }
+
+  /** The frame draws of the six most recent other stores (30 days), read server-side so no bundled photo bytes travel. */
+  async recentFrameDraws(storeId: string, now = new Date()): Promise<Partial<FrameDraw>[]> {
+    const since = new Date(now.getTime() - 30 * 86_400_000);
+    const rows = await this.prisma.$queryRaw<Array<{ content: string }>>(Prisma.sql`
+      WITH latest AS (
+        SELECT DISTINCT ON (v."storeId") v."storeId", v.revision, v."createdAt"
+        FROM "StoreSourceVersion" v
+        WHERE v."storeId" <> ${storeId} AND v."createdAt" >= ${since}
+        ORDER BY v."storeId", v."createdAt" DESC
+      ), top AS (SELECT * FROM latest ORDER BY "createdAt" DESC LIMIT 6)
+      SELECT f->>'content' AS content
+      FROM top JOIN "StoreSourceVersion" v ON v."storeId" = top."storeId" AND v.revision = top.revision,
+      LATERAL jsonb_array_elements(v.snapshot->'files') f
+      WHERE f->>'path' = ${FRAME_DRAW_FILE}
+    `);
+    return rows.map(row => parseFrameDraw(row.content)).filter(draw => Object.keys(draw).length > 0);
   }
 
   async current(merchantId: string, storeId: string) {

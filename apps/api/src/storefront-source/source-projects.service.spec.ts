@@ -356,3 +356,21 @@ describe('sketch.json lifecycle (sketch-first C1)', () => {
     expect(read().versions[1].snapshot.files.some((f: any) => f.path === 'sketch.json')).toBe(false);
   });
 });
+
+describe('recent frame draws', () => {
+  it('reads only the small frame file of the six latest other stores and drops garbage', async () => {
+    const { service, prisma } = setup();
+    prisma.$queryRaw = jest.fn().mockResolvedValue([
+      { content: JSON.stringify({ header: 'side-rail', hero: 'collage' }) },
+      { content: 'not json' },
+      { content: JSON.stringify({ header: 'made-up' }) },
+    ]);
+    expect(await service.recentFrameDraws('s1', new Date('2026-10-10T12:00:00Z'))).toEqual([{ header: 'side-rail', hero: 'collage' }]);
+    const query = prisma.$queryRaw.mock.calls[0][0];
+    expect(query.text).toContain('DISTINCT ON');
+    expect(query.text).toContain('jsonb_array_elements');
+    expect(query.text).toContain('LIMIT 6');
+    expect(query.values).toContain('s1');
+    expect(query.values).toContain('frame-draw.json');
+  });
+});
