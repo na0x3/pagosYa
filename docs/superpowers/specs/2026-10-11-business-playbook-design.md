@@ -107,3 +107,10 @@ h1 28-48 px, body 14-16 px, white + one brand colour band, product grid early, s
 **story-led** (services, fitness-wellness: h1 56-96 px, body 16-20 px, tinted alternating backgrounds, 96-144 px
 rhythm). Both keep the 1140-1320 px container, the standard header and the multi-column footer with a legal row.
 The self-review measures against the kind's profile. Supersedes the single "h1 56-80, body 17-19" in §2.
+
+## Planning rulings (2026-10-11, plan `docs/superpowers/plans/2026-10-11-business-playbook.md`)
+
+- Kind detection is keyword-based on the merchant's instruction, the brief and the catalogue names, run before the
+  draw; the planner does not output `kind` (it runs after the draw and would need a schema change).
+- The contract check reads the rendered page text with a per-section regex.
+- The craft self-review measures h1 and body sizes against the profile; container width stays a prompt rule.
