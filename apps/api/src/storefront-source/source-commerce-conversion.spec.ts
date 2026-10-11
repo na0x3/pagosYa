@@ -166,3 +166,18 @@ it('draws every icon the API accepts', () => {
   expect(names).toHaveLength(55);
   for (const name of names) expect(commerce).toContain(`${name.includes('-') ? `'${name}'` : name}: { motion:`);
 });
+
+// Live run 2026-10-10: YAPI styled a wordmark as <span data-store-name>Tostadero</span> <strong>Yungas</strong>
+// and the runtime wrote the full name into the span, showing "Tostadero Yungas Yungas".
+describe('store name slots', () => {
+  const text = (el: any) => el.textContent.replace(/\s+/g, ' ').trim();
+  it('leaves a wordmark alone when it already shows the whole name split for styling', async () => {
+    const { q } = await page({ settings: { storeName: 'Tostadero Yungas' }, template: '<a class="wordmark" href="index.html"><span data-store-name>Tostadero</span> <strong>Yungas</strong></a>' });
+    expect(text(q('.wordmark'))).toBe('Tostadero Yungas');
+  });
+  it('still writes the current name into a stale or empty slot', async () => {
+    const { q } = await page({ settings: { storeName: 'Tostadero Yungas' }, template: '<p class="old"><span data-store-name>Café Viejo</span></p><p class="empty"><span data-store-name></span></p>' });
+    expect(text(q('.old'))).toBe('Tostadero Yungas');
+    expect(text(q('.empty'))).toBe('Tostadero Yungas');
+  });
+});

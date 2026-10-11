@@ -211,3 +211,7 @@ it('asks the self-review to check the drawn frame only when there is one', () =>
 it('keeps the cart, Buscar and Mi cuenta reachable on phones even when the merchant overrides the drawn header', () => {
   expect(SEP5_STORE_SHELL_FRAMED).toMatch(/On mobile all four stay reachable/);
 });
+
+it('keeps the whole store name inside one data-store-name slot', () => {
+  for (const shell of [SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED]) expect(shell).toMatch(/whole store name inside one \[data-store-name\]/);
+});

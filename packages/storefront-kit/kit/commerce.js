@@ -3064,7 +3064,14 @@
     delete document.documentElement.dataset.productTemplateInvalid;
     // The catalog can change the fallback style, so this follows every render.
     if (hasDna) document.documentElement.setAttribute('data-dna-product', productPageStyle());
-    document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
+    // A wordmark styled as <span data-store-name>Tostadero</span> <strong>Yungas</strong> already shows the whole
+    // name; writing it into the span again read "Tostadero Yungas Yungas". Stale and empty slots are still filled.
+    const storeName = store.storeName || "Tu tienda", squash = (text) => (text || "").replace(/\s+/g, " ").trim().toLowerCase();
+    document.querySelectorAll("[data-store-name]").forEach((el) => {
+      const own = squash(el.textContent), around = squash(el.parentElement?.textContent);
+      if (own && own !== squash(storeName) && squash(storeName).includes(own) && around.includes(squash(storeName))) return;
+      el.textContent = storeName;
+    });
     document.querySelectorAll("[data-pagosya-categories]").forEach((el) => {
       el.hidden = !(store.categories || []).length;
       el.innerHTML = [{ id: "all", name: "Todo" }, ...(store.categories || [])].map((c) => `<button type="button" data-category="${escape(c.id)}" aria-pressed="${category === c.id}">${escape(c.name)}</button>`).join("");
