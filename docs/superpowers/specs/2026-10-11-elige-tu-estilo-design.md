@@ -71,10 +71,10 @@ Every step saves when the merchant presses "Siguiente" or "Saltar". On reload, a
 
 On the last step:
 
-1. The walkthrough builds the brief from the answers: the business sentence, the story, contact and city, with photos tagged by the step they came from.
-2. It seeds the Studio setup draft (`SourceSetupDraft.answers.context` and `imageUses`, `source-setup.ts:5-21`) with that brief, so the chat starts from it and never asks again what was answered.
-3. It starts the proposal job (C2), or, with the style flag off, today's generation.
-4. It lands the merchant in the Studio workspace (`dashboard.js:1455-1460`), where the preview shows "Preparando tus estilos…".
+1. The server composes the brief from the answers (business sentence, story, city, WhatsApp and the products created in step 5) and returns it with the final save.
+2. The walkthrough posts that brief as one ordinary YAPI chat job with the uploaded photos and `setupAction: 'generate'` ("build now"), so the chat builds from it and never asks again what was answered.
+3. That job makes the proposal (C2), or, with the style flag off, today's generation.
+4. It lands the merchant in the Studio workspace (`dashboard.js:1455-1460`). Studio resumes the running job and shows "Preparando tus estilos…".
 
 ## C2. The style step
 
@@ -94,7 +94,7 @@ Rules:
 - Calm draws use the existing conventional limits (`CONVENTIONAL_HEADERS`, calm hero/footer/structure/photos/hover, the kind's angles). Bold draws lift them, exactly as `asksForBold` does today.
 - The four draws avoid recent stores, as today (`recentForKind`), **and each other**: no two cards share a hero part or a palette.
 - In a full redesign, the store's previous draw joins the history, as today, so no card gives the store its own hero back.
-- For kind `general` (no playbook kind detected), the two calm cards take one family each from the two nearest kinds. Nearest means the second- and third-highest keyword scores in `detectKind`, and `services` and `crafts-home` when every score is zero.
+- Every playbook kind, `general` included, has exactly two families (checked 2026-10-11), so the two calm cards always take one each.
 - Fonts: calm cards use their family's font pairs. Bold cards draw a pair from the full 52-family catalogue (part B), and the two bold cards never share a display font.
 
 ### The planner fills four slots
@@ -125,7 +125,7 @@ The four calls run in parallel, and each card fills in as soon as its call retur
 
 ### Storage and the waiting state
 
-The proposal job is a `StoreSourceChatJob`, like any generation. It ends with the new job status `AWAITING_STYLE`. The proposal is saved on its `StoreSourceGeneration`, in a new nullable `Json` column `proposal`:
+The proposal runs inside an ordinary `StoreSourceChatJob`, like any generation. The job ends in the existing `AWAITING_INPUT` status, the same one a chat reply uses. Its `StoreSourceGeneration` row ends in the new status `AWAITING_STYLE`, and the proposal is saved there in a new nullable `Json` column `proposal`:
 
 ```ts
 { version: 1, draws: Draw[4], design: SourceDesign /* the four concepts + selection */, heroes: Array<{ html: string; source: 'model' | 'template' }>, kind: string, redesign: boolean, createdAt: string }
@@ -142,7 +142,7 @@ These screens live in `apps/merchant-studio`, in the preview area. The chat stay
 **While loading.** The preview shows "Preparando tus estilos…" with four empty cards that fill one by one. The chat says: "Te preparo 4 estilos para *{nombre}*: dos tranquilos y dos atrevidos."
 
 **The grid.** The cards sit 2 × 2 on desktop and in one column on a phone. Each card shows:
-- the hero, rendered at scale in a sandboxed iframe (`sandbox` without `allow-scripts`)
+- the hero, rendered at scale in a sandboxed iframe (`sandbox` without `allow-scripts`). Its fonts load from a new public route, `GET v1/source-fonts/<id>.ttf`, because the iframe cannot read the store's bundle
 - `cardName`
 - a small "Tranquilo" or "Atrevido" tag
 - the two font names
@@ -158,11 +158,11 @@ These screens live in `apps/merchant-studio`, in the preview area. The chat stay
 
 **Chat while waiting.** A message sent before picking gets the fixed reply "Primero elige un estilo; después lo ajustamos juntos." This reply costs no model call.
 
-**After the pick.** The cards close, the preview returns to the normal build progress, and the chat says "Construyendo tu tienda con *{cardName}*…".
+**After the pick.** The cards close, the merchant's message "Usar el estilo «{cardName}»" appears in the chat, and the preview returns to the normal build progress.
 
 ### Building from the pick
 
-Picking calls a new endpoint, `POST v1/stores/:id/source-project/style-pick {generationId, index}`, or `{generationId, auto: true}` for "Elige tú". It starts a normal generation job with:
+Picking sends an ordinary chat job carrying `stylePick: {generationId, index}`, or `{generationId, auto: true}` for "Elige tú". Studio's existing "Reintentar" re-sends the same job, which is how a failed build is retried from the same pick. The chat service starts a normal generation with:
 
 - `explore({ selected: index })`: the existing forced pick (`source-design-planner.ts:65-68`). Because the pick is forced, `preferFreshComposition` leaves it alone.
 - the proposal's `design`, passed as the committed design, so the planner does not run again (the same path `retainedDesign` uses today)
@@ -201,16 +201,16 @@ Small edits never show it. With the flag off, generation runs exactly as today.
 - **Planner:** one call, as today, with a longer prompt (four slots) and four concepts out instead of three.
 - **Heroes:** four small calls, each with the brief, one concept and the font and palette lines in, and one HTML fragment out.
 - Estimated at 5–10 % of a full build (11–22 large calls). The live check measures the real number.
-- In plan mode (ChatGPT bridge) no credits are charged. For metered merchants, the proposal is charged to the same generation budget as the build that follows.
+- In plan mode (ChatGPT bridge) no credits are charged. For metered merchants, the proposal's credits are computed and recorded on its own generation row, like any run.
 
 ## Testing
 
 **Unit and service tests**
 
-- `styleDraws`: four draws, two calm and two bold, one per calm family. The four never share a hero part or a palette, they avoid recent stores, and a redesign avoids the store's own previous draw. The `general` kind takes its two calm families from two different kinds.
+- `styleDraws`: four draws, two calm and two bold, one per calm family. The four never share a hero part or a palette, they avoid recent stores, and a redesign avoids the store's own previous draw.
 - Planner four-slot mode: each concept honours its slot's draw and carries `cardName`, `vibe` and `inspiration`. Invalid concepts are dropped, and the two-or-three, one and none rules hold.
 - Heroes: the templated fallback is used when a call fails. Card HTML is shown only in a sandbox without scripts.
-- The job ends in `AWAITING_STYLE` with the proposal saved. `style-pick` starts a build with the forced index, the saved design and the picked draw. "Elige tú" uses `selection.index`. A retry after a failed build does not create new cards.
+- The generation row ends in `AWAITING_STYLE` with the proposal saved. A `stylePick` chat job starts a build with the forced index, the saved design and the picked draw. "Elige tú" uses `selection.index`. A retry after a failed build does not create new cards.
 - Sep-5 prompt: the picked palette, fonts, mode and hero are present. With the flag off, the prompt is byte-identical to today's.
 - Walkthrough: the store is created at step 1, steps are saved as done or skipped, a reload resumes at `step`, and the seeded setup draft contains the answers.
 - Both flags off: no new prompt text, no new job status, the old create modal.
