@@ -51,11 +51,18 @@ it('never asks for a proposal when the flag is off', async () => {
   expect(out.assistantMessage.content.startsWith('No pude preparar')).toBe(false);
 });
 
-it('says so when it asked for styles but built directly', async () => {
-  generate.mockResolvedValueOnce(savedRevision());
+it('says so when it tried to prepare styles but built directly', async () => {
+  generate.mockResolvedValueOnce({ ...savedRevision(), generation: { styleAttempted: true } });
   const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería', setupAction: 'generate', requestId: uuid() });
   expect(out.assistantMessage.content.startsWith('No pude preparar los estilos, armé uno por ti. ')).toBe(true);
   expect(out.revision).toMatchObject({ revision: 1 });
+});
+
+it('says nothing about styles when the run could not offer them (e.g. sketch-first on)', async () => {
+  generate.mockResolvedValueOnce({ ...savedRevision(), generation: {} });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería', setupAction: 'generate', requestId: uuid() });
+  expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
+  expect(out.assistantMessage.content.startsWith('No pude preparar')).toBe(false);
 });
 
 it('does not ask for a proposal on a small edit', async () => {

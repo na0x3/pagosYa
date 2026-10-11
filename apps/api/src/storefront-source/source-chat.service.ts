@@ -466,7 +466,8 @@ export class SourceChatService {
           metadata: { progress: workflow.value, sourceSetup: { ...setupDraft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, styleProposal: { generationId: revision.styleProposal.generationId } } } });
         return { userMessage, assistantMessage, setup: null };
       }
-      return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, decision.imageUses, input.assetUrls || [], proposeStyle ? 'No pude preparar los estilos, armé uno por ti. ' : '');
+      // An ineligible run (sketch-first, a draw flag off) never tried, so it has nothing to apologise for.
+      return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, decision.imageUses, input.assetUrls || [], proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : '');
     } catch (error) {
       await workflow.finish('failed');
       // The same default-deny gate the generation path uses. Chat also wraps the

@@ -553,8 +553,12 @@ export class SourceGenerationService {
     let playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // "Elige tu estilo" (spec 2026-10-11): a fresh design shows four drawn concepts before anything is built.
-    const styleOn = execution?.styleProposal === true && this.config.get<boolean>('app.yapiStylePick') === true && Boolean(exploration)
-      && playbookOn && frameEnabled && frameNow && this.config.get<boolean>('app.yapiDesignDraw') === true;
+    const styleAsked = execution?.styleProposal === true && this.config.get<boolean>('app.yapiStylePick') === true;
+    const designDrawOn = this.config.get<boolean>('app.yapiDesignDraw') === true;
+    const styleOn = styleAsked && Boolean(exploration) && playbookOn && frameEnabled && frameNow && designDrawOn;
+    if (styleAsked && !styleOn) this.logger.warn(JSON.stringify({ event: 'style_proposal_ineligible', storeId, sketchFirst, exploration: Boolean(exploration), playbook: playbookOn, frameDraw: frameEnabled && frameNow, designDraw: designDrawOn }));
+    // The chat says "No pude preparar los estilos" only when the style planner actually ran and no proposal came of it.
+    let styleAttempted = false;
     const styleKind = kind ?? 'general';
     const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, available: frameFacts.available, request: frameFacts.request })
       .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold' }) })) : [];
@@ -760,6 +764,7 @@ export class SourceGenerationService {
           let styled: SourceDesign | undefined;
           if (styleSlots.length && !retainedDesign && !pickedDesign) {
             await progress?.('styles');
+            styleAttempted = true;
             styled = await this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: styleSlots.map(slot => ({ mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook) })), context: contextFor(true) })
               .catch(error => { if (signal.aborted) throw error; this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id })); return undefined; });
           }
@@ -1543,7 +1548,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...({} as { rewardCreditsCovered?: number }) };
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
     const saveInput = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
       ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,

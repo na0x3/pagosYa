@@ -132,18 +132,31 @@ describe('style proposal mode', () => {
     expect(projects.save.mock.calls[0][2].files).toContainEqual(drawn);
   });
 
-  it('falls back to today when the style planner fails', async () => {
+  it('falls back to today when the style planner fails, and reports that styles were attempted', async () => {
     explore.mockRejectedValueOnce(new Error('bad')).mockResolvedValueOnce(threeConceptDesign);
     const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     expect('styleProposal' in result).toBe(false);
     expect(explore.mock.calls[1][0].styleSlots).toBeUndefined();
     expect(writeStyleHero).not.toHaveBeenCalled();
+    expect((result as any).generation.styleAttempted).toBe(true);
+  });
+
+  it('skips styles on an ineligible run without claiming it tried, and warns once', async () => {
+    config.set('app.yapiDesignDraw', false);
+    explore.mockResolvedValueOnce(threeConceptDesign);
+    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect(explore.mock.calls[0][0].styleSlots).toBeUndefined();
+    expect((result as any).generation.styleAttempted).toBeUndefined();
+    const warns = (Logger.prototype.warn as jest.Mock).mock.calls.filter(c => String(c[0]).includes('style_proposal_ineligible'));
+    expect(warns).toHaveLength(1);
   });
 
   it('changes nothing with the flag off', async () => {
     config.set('app.yapiStylePick', false);
     explore.mockResolvedValueOnce(threeConceptDesign);
-    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect((result as any).generation.styleAttempted).toBeUndefined();
+    expect((Logger.prototype.warn as jest.Mock).mock.calls.some(c => String(c[0]).includes('style_proposal_ineligible'))).toBe(false);
     expect(explore.mock.calls[0][0].styleSlots).toBeUndefined();
     expect(explore).toHaveBeenCalledTimes(1);
     expect(progress).not.toHaveBeenCalledWith('styles');
