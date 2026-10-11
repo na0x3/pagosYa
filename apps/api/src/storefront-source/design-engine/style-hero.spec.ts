@@ -228,3 +228,136 @@ describe('hero model', () => {
     expect(sent(fetchMock)[0].model).toBe('gpt-5.6-terra');
   });
 });
+
+describe('two cards: one calm, one intense (spec amendment "two cards")', () => {
+  const okBody = { status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ html: '<header><span data-store-name>Tostadero Yungas</span></header><section><h1>Hola</h1></section>' }) }] }] };
+  const bold: HeroFacts = { storeName: 'Tostadero Yungas', photoPath: 'assets/photo-1.webp', eyebrow: 'Café de los Yungas', headline: 'Café de altura', line: 'Tostado cada semana en La Paz.', action: 'Ver cafés', palette: { paper: '#f2b705', ink: '#111111', accent: '#e5371f', accent2: '#fff6d6' }, fonts: { display: 'bricolage', text: 'instrument' }, mode: 'bold' };
+  const calm: HeroFacts = { ...facts, buttons: ['outline', 'split', 'pill'], radius: 'soft' };
+  const base = (heroFacts: HeroFacts) => ({ facts: heroFacts, concept: { name: 'x' } as any, direction: 'CONCEPT 2 of 2 (bold', model: 'gpt-5.6-terra' as const, heroModel: 'gpt-5.6-luna' as const, provider: { endpoint: 'http://127.0.0.1:4319/v1/responses', name: 'ChatGPT plan' }, apiKey: 'k', budget: new SourceRequestBudget(200), signal: new AbortController().signal, attempts: [] as any[] });
+  const sent = (fetchMock: jest.SpyInstance) => fetchMock.mock.calls.map(call => JSON.parse(call[1].body as string));
+  const promptOf = (fetchMock: jest.SpyInstance) => sent(fetchMock)[0].input[0].content[0].text as string;
+  afterEach(() => jest.useRealTimers());
+
+  it('asks the intense card for every Yungas device, in its own palette and words', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    await writeStyleHero(base(bold));
+    const prompt = promptOf(fetchMock);
+    expect(prompt).toContain('This card is INTENSE');
+    expect(prompt).toMatch(/HEADER \(required\):[^\n]*side rail[^\n]*rotated/);
+    expect(prompt).toMatch(/PHOTO \(required\):[^\n]*thick frame[^\n]*rotated[^\n]*hard offset shadow/);
+    expect(prompt).toMatch(/STAMP \(required\):[^\n]*<textPath href="#/);
+    expect(prompt).toContain('TOSTADERO YUNGAS ·');
+    expect(prompt).toMatch(/never invent/i);
+    expect(prompt).toMatch(/HEADLINE \(required\):[^\n]*clamp\(64px[^\n]*140px\)[^\n]*line-height 0\.95 or less[^\n]*-0\.04em[^\n]*never break a word/);
+    expect(prompt).toMatch(/EYEBROW \(required\):[^\n]*uppercase[^\n]*letter-spacing/);
+    expect(prompt).toMatch(/BUTTON \(required\):[^\n]*(pill|block|split)[^\n]*arrow[^\n]*offset shadow[^\n]*#e5371f/);
+    expect(prompt).toMatch(/COLOUR \(required\):[^\n]*colour field/);
+    expect(prompt).not.toContain('This card is calm');
+  });
+
+  it('asks the intense card without a photo for a giant type collage on colour fields', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    await writeStyleHero(base({ ...bold, photoPath: undefined }));
+    expect(promptOf(fetchMock)).toMatch(/PHOTO \(required\):[^\n]*no photo[^\n]*giant type collage/i);
+  });
+
+  it('asks the calm card for a professional page with a custom button from its family, never a default grey one', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    await writeStyleHero(base(calm));
+    const prompt = promptOf(fetchMock);
+    expect(prompt).toContain('This card is calm: a normal, professionally made website of this kind.');
+    expect(prompt).toMatch(/custom button shape[^\n]*outline, split, pill[^\n]*soft radius[^\n]*never a default grey button/);
+    expect(prompt).not.toContain('INTENSE');
+  });
+
+  it('writes the intense hero on the run model with 7000 tokens, 200 s and low reasoning; the calm one stays on the fast model', async () => {
+    const timeout = jest.spyOn(AbortSignal, 'timeout');
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody))).mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    const boldInput = base(bold);
+    expect((await writeStyleHero(boldInput)).source).toBe('model');
+    await writeStyleHero(base(calm));
+    const [boldBody, calmBody] = sent(fetchMock);
+    expect([boldBody.model, boldBody.max_output_tokens, boldBody.reasoning]).toEqual(['gpt-5.6-terra', 7000, { effort: 'low' }]);
+    expect(timeout.mock.calls.map(call => call[0])).toEqual([200_000, 120_000]);
+    expect([calmBody.model, calmBody.reasoning]).toEqual(['gpt-5.6-luna', { effort: 'low' }]);
+    expect(calmBody.max_output_tokens).toBeLessThanOrEqual(4000);
+    expect(boldInput.attempts).toEqual([expect.objectContaining({ model: 'gpt-5.6-terra', status: 'COMPLETED' })]);
+  });
+
+  it('waits 3 s and retries the same hero call once when the ChatGPT plan rejects it', async () => {
+    jest.useFakeTimers();
+    const refusal = () => new Response(JSON.stringify({ error: { code: 'chatgpt_authentication_rejected' } }), { status: 401 });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(refusal()).mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    const input = base(bold);
+    const out = writeStyleHero(input);
+    await jest.advanceTimersByTimeAsync(2999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+    expect((await out).source).toBe('model');
+    expect(sent(fetchMock).map(body => body.model)).toEqual(['gpt-5.6-terra', 'gpt-5.6-terra']);
+    expect(input.attempts.map(attempt => attempt.status)).toEqual(['FAILED', 'COMPLETED']);
+    expect(input.attempts[0].failureReason).toContain('rechazó la autorización');
+  });
+
+  it('retries a rejected hero only once, and never an unusable answer', async () => {
+    jest.useFakeTimers();
+    const limit = () => new Response(JSON.stringify({ error: { code: 'rate_limited' } }), { status: 429 });
+    let fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(limit()).mockResolvedValueOnce(limit());
+    const out = writeStyleHero(base(bold));
+    await jest.advanceTimersByTimeAsync(3000);
+    expect((await out).source).toBe('template');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockRestore();
+    fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ ...okBody, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ html: '<div>sin nombre</div>' }) }] }] })));
+    expect((await writeStyleHero(base(bold))).source).toBe('template');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an inline SVG stamp: svg, defs, path, text and a textPath pointing at #id survive the sanitiser', () => {
+    const stamp = '<div data-store-name>Tostadero Yungas</div><svg viewBox="0 0 200 200" class="stamp"><defs><path id="ring" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0"></path></defs><text font-size="17"><textPath href="#ring">TOSTADERO YUNGAS · LA PAZ ·</textPath></text></svg>';
+    const html = sanitizeHeroHtml(stamp)!;
+    for (const part of ['<svg', '<defs>', '<path id="ring"', '<text font-size="17">', '<textPath href="#ring">', 'TOSTADERO YUNGAS · LA PAZ ·']) expect(html).toContain(part);
+    // Never an external target or a script, also inside the stamp.
+    const hostile = sanitizeHeroHtml('<div data-store-name>x</div><svg><defs><path id="r" d="M0 0"></path></defs><text><textPath href="https://evil.test/x.svg#r" onclick="x()">x</textPath><script>alert(1)</script></text></svg>')!;
+    expect(hostile).not.toMatch(/evil|onclick|<script|alert/);
+    expect(hostile).toContain('<textPath href="#">');
+  });
+
+  it('draws the intense template like the reference store: rail with the rotated name, tilted framed photo, textPath stamp, giant headline and an arrow pill with an accent offset shadow', () => {
+    const html = templateHero(bold);
+    expect(html).toContain('class="ty-rail"');
+    expect(html).toMatch(/\.ty-name\{[^}]*rotate\(/);
+    expect(html).toMatch(/\.ty-frame\{[^}]*rotate\(-?\d/);
+    expect(html).toMatch(/\.ty-frame\{[^}]*box-shadow:\d+px \d+px 0 #/);
+    expect(html).toContain('assets/photo-1.webp');
+    expect(html).toMatch(/<textPath href="#ty-ring"[^>]*>TOSTADERO YUNGAS · /);
+    expect(html).toMatch(/\.ty h1\{[^}]*font-size:clamp\(64px,[^)]*140px\)[^}]*line-height:0?\.9/);
+    expect(html).toMatch(/\.ty-cta\{[^}]*border-radius:999px[^}]*box-shadow:6px 6px 0 #e5371f/);
+    expect(html).toMatch(/<a class="ty-cta"[^>]*>[^<]*Ver cafés[^<]*<svg/);
+    expect(html).toContain('class="ty-eyebrow"');
+    expect(html).toContain('Café de los Yungas');
+    const clean = sanitizeHeroHtml(html)!;
+    expect(clean).not.toBeNull();
+    expect(clean).toContain('<textPath href="#ty-ring"');
+    expect(clean).toMatch(/rotate\(/);
+  });
+
+  it('draws the intense template without a photo as a giant type field, and escapes the store name in the stamp', () => {
+    const html = templateHero({ ...bold, photoPath: undefined, storeName: 'Yungas <b>&</b>' });
+    expect(html).not.toContain('<img class="ty-photo"');
+    expect(html).toContain('class="ty-type"');
+    expect(html).not.toContain('<b>&</b>');
+    expect(html).toContain('YUNGAS &lt;B&gt;&amp;&lt;/B&gt; · ');
+    expect(sanitizeHeroHtml(html)).not.toBeNull();
+    expect(sanitizeHeroHtml(templateHero({ ...bold, palette: { paper: 'x', ink: 'y', accent: 'z', accent2: 'w' } }))).not.toBeNull();
+  });
+
+  it('gives the calm template a custom button from its family (radius and offset), not a default one', () => {
+    const outline = templateHero(calm);
+    expect(outline).toMatch(/\.th-cta\{[^}]*border:2px solid #8f1d14[^}]*border-radius:10px[^}]*box-shadow:3px 3px 0 #f4efe9/);
+    expect(outline).toMatch(/<a class="th-cta"[^>]*>Ver productos <span aria-hidden="true">→<\/span><\/a>/);
+    expect(templateHero({ ...calm, buttons: ['pill'] })).toMatch(/\.th-cta\{[^}]*background:#8f1d14[^}]*border-radius:999px/);
+    expect(templateHero({ ...calm, buttons: ['block'], radius: 'square' })).toMatch(/\.th-cta\{[^}]*background:#8f1d14[^}]*border-radius:2px/);
+    expect(sanitizeHeroHtml(outline)).not.toBeNull();
+  });
+});
