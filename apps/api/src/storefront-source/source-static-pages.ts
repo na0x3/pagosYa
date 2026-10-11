@@ -81,6 +81,15 @@ function withPageMount(html: string, content: string, label: string): string | n
   return page.replace(/<title>[\s\S]*?<\/title>/, `<title>${label}</title>`);
 }
 
+/** Section links the homepage keeps in its header and footer (`href="#catalogo"`) point at ids that live in its
+ *  `<main>`, which a standard page replaces. Those links go to the homepage instead; a link whose id is still on the
+ *  page, a bare `#`, and every non-hash link stay as they are. Standard pages are top-level files, so no `../`. */
+function relinkMissingAnchors(html: string): string {
+  const ids = new Set([...html.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(m => m[1] ?? m[2]));
+  return html.replace(/(\shref\s*=\s*)(["'])#([^"'\s]+)\2/g, (whole, head: string, quote: string, name: string) =>
+    ids.has(name) ? whole : `${head}${quote}index.html#${name}${quote}`);
+}
+
 /**
  * Adds the standard pages, and the footer navigation that links them, to an authored (static) store.
  *
@@ -113,8 +122,9 @@ export function withStaticStandardPages(files: SourceProjectFileDto[]): { files:
     const existing = files.find(file => file.path === page.url);
     if (existing && (existing.encoding === 'base64' || mainInner(existing.content) !== page.mount.trim())) continue;
     // The slot is applied to the shell first, so every page this adds carries the footer navigation too.
-    const content = withPageMount(withStaticNavSlot(index.content) ?? index.content, page.mount, page.label);
+    let content = withPageMount(withStaticNavSlot(index.content) ?? index.content, page.mount, page.label);
     if (!content) continue;
+    content = relinkMissingAnchors(content);
     if (!existing) added.push({ path: page.url, content });
     else if (content !== existing.content) refreshed.set(page.url, content);
   }

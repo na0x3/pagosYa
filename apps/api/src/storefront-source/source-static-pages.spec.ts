@@ -148,3 +148,41 @@ describe('standard pages follow the current home shell', () => {
     expect(twice.files.map(file => file.content)).toEqual(once.map(file => file.content));
   });
 });
+
+describe('in-page anchors on standard pages', () => {
+  const homepage = authored
+    .replace('<a href="index.html">teidns</a></nav>', `<a href="index.html">teidns</a><a href="#catalogo">Catálogo</a><a href='#elegir'>Cómo elegir</a><a href="#" data-pagosya-account="login">Ingresar</a><a href="#site-menu">Menú</a><a href="https://example.com/#x">Fuera</a></nav><button aria-controls="site-menu">m</button><div id="site-menu"></div>`)
+    .replace('</footer>', '<a href="#encontrarnos">Encontrarnos</a></footer>');
+  const build = () => withStaticStandardPages([{ path: 'index.html', content: homepage }]).files;
+
+  it('points header and footer section links at the homepage when the section is gone', () => {
+    const nosotros = build().find(file => file.path === 'nosotros.html')!.content;
+    expect(nosotros).toContain('href="index.html#catalogo"');
+    expect(nosotros).toContain(`href='index.html#elegir'`);
+    expect(nosotros).toContain('href="index.html#encontrarnos"');
+    expect(nosotros).not.toContain('href="#catalogo"');
+  });
+
+  it('leaves a bare # link, an anchor whose id is still on the page, and other links alone', () => {
+    const nosotros = build().find(file => file.path === 'nosotros.html')!.content;
+    expect(nosotros).toContain('href="#" data-pagosya-account="login"');
+    expect(nosotros).toContain('href="#site-menu"');
+    expect(nosotros).toContain('href="https://example.com/#x"');
+    expect(nosotros).toContain('href="index.html"');
+  });
+
+  it('leaves index.html itself untouched', () => {
+    const index = build().find(file => file.path === 'index.html')!.content;
+    expect(index).toContain('href="#catalogo"');
+    expect(index).toContain('href="#encontrarnos"');
+    expect(index).not.toContain('index.html#');
+  });
+
+  it('fixes a refreshed copy of an older standard page too', () => {
+    const first = build();
+    const stale = first.map(file => file.path === 'nosotros.html' ? { ...file, content: file.content.replace('href="index.html#catalogo"', 'href="#catalogo"') } : file);
+    const out = withStaticStandardPages(stale);
+    expect(out.refreshed).toContain('nosotros.html');
+    expect(out.files.find(file => file.path === 'nosotros.html')!.content).toContain('href="index.html#catalogo"');
+  });
+});
