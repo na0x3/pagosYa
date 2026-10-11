@@ -134,24 +134,41 @@ export function sep5ReviewPrompt(input: Parameters<typeof sep5AuthorPrompt>[0] &
   const measured = input.measured.length ? `\nMeasured by the browser:\n${input.measured.map(fact => `- ${fact}`).join('\n')}` : '';
   return `${sep5AuthorPrompt({ ...input, previousSource: input.draft })}
 
-SELF-REVIEW: The previous authored source above is the draft you just wrote for this same request, not an earlier store. The attached screenshots show it rendered by the real platform runtime with the live catalog: index.html at 1280px wide, then at 390px, each at the top, the middle and the bottom of the page. The render is offline, so a catalog photo served by the platform API may show as an empty frame; that is not a defect. Look at them as this store's most demanding customer would, then return the corrected project. Check for: text that overlaps, is cut off or lacks contrast with what sits behind it; images that are missing, distorted or badly cropped; empty or broken areas; anything wider than the screen on mobile; a header that is cramped or wraps badly; whether the store name, search, account and cart are visible and reachable; whether the catalog and the primary action are easy to find; spacing and alignment that look accidental; and whether the page has the identity the brief asks for rather than a generic template look.${measured}
-${frameCheck}Fix what is wrong and keep what works, including the motion, copy and structure you chose; do not start over. In notes, describe each change in one short Spanish sentence a merchant would understand (at most six). If nothing needs fixing, return an empty files list and empty notes.`;
+SELF-REVIEW: The previous authored source above is the draft you just wrote for this same request, not an earlier store. The attached screenshots show it rendered by the real platform runtime with the live catalog: index.html at 1280px wide, then at 390px, each at the top, the middle and the bottom of the page. The render is offline, so a catalog photo served by the platform API may show as an empty frame; that is not a defect. Look at them as this store's most demanding customer would, then correct it. Check for: text that overlaps, is cut off or lacks contrast with what sits behind it; images that are missing, distorted or badly cropped; empty or broken areas; anything wider than the screen on mobile; a header that is cramped or wraps badly; whether the store name, search, account and cart are visible and reachable; whether the catalog and the primary action are easy to find; spacing and alignment that look accidental; and whether the page has the identity the brief asks for rather than a generic template look.${measured}
+${frameCheck}Fix what is wrong and keep what works, including the motion, copy and structure you chose; do not start over. In notes, describe each change in one short Spanish sentence a merchant would understand (at most six). For this review, return only edits instead of the whole project, overriding the contract above: each edit names a draft file (path), one exact snippet of it (find) that appears exactly once, and its replacement (replace). Keep each find short, one rule or one element, and make several edits rather than one huge one; at most twenty. If nothing needs fixing, return an empty edits list and empty notes.`;
 }
 
 export const sep5ReviewSchema = z.object({
   label: z.string(),
   notes: z.array(z.string()).max(6),
-  files: sep5FilesSchema.shape.files,
+  edits: z.array(z.object({ path: z.string().min(1), find: z.string().min(1), replace: z.string() }).strict()).max(20),
 }).strict();
 
+/** The review answers with edits, not the whole project: rewriting every file to fix a few cost half of each run. */
 export const SEP5_REVIEW_RESPONSE_SCHEMA = {
-  type: 'object', additionalProperties: false, required: ['label', 'notes', 'files'],
+  type: 'object', additionalProperties: false, required: ['label', 'notes', 'edits'],
   properties: {
     label: { type: 'string' },
     notes: { type: 'array', items: { type: 'string' } },
-    files: SEP5_RESPONSE_SCHEMA.properties.files,
+    edits: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['path', 'find', 'replace'], properties: { path: { type: 'string' }, find: { type: 'string' }, replace: { type: 'string' } } } },
   },
 };
+
+export type Sep5Edit = { path: string; find: string; replace: string };
+const PLATFORM_FILES = new Set(['config.js', 'commerce.js', 'brand.css']);
+/** Applies the review's edits in order to a copy of the draft. An edit whose snippet is not found exactly once, whose
+ *  file the draft does not have, or that targets a platform file is skipped and reported, never fatal. */
+export function applySep5Edits<F extends { path: string; content: string }>(draft: F[], edits: Sep5Edit[]): { files: F[]; skipped: string[] } {
+  const files = draft.map(file => ({ ...file }));
+  const skipped: string[] = [];
+  for (const edit of edits) {
+    const file = files.find(candidate => candidate.path === edit.path);
+    const count = file && edit.find ? file.content.split(edit.find).length - 1 : 0;
+    if (!file || PLATFORM_FILES.has(edit.path) || count !== 1) { skipped.push(`${edit.path}: ${!file || PLATFORM_FILES.has(edit.path) ? 'archivo no editable' : count ? 'fragmento ambiguo' : 'fragmento no encontrado'}`); continue; }
+    file.content = file.content.replace(edit.find, () => edit.replace);
+  }
+  return { files, skipped };
+}
 
 /** Sep-5's own guard: a project missing these never rendered commerce correctly. */
 export function sep5ProjectIsUsable(files: Sep5Files['files']): boolean {

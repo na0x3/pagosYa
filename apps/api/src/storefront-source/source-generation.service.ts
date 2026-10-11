@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
-import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, SEP5_REVIEW_RESPONSE_SCHEMA } from './design-engine/sep5-author';
+import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, SEP5_REVIEW_RESPONSE_SCHEMA } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
 import { STATIC_STANDARD_PAGE_PATHS, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
@@ -928,9 +928,12 @@ export class SourceGenerationService {
             review = reviewed.attempt;
             const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
             if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${review.responseStatus || 'sin estado'}${review.incompleteReason ? `: ${review.incompleteReason}` : ''})`);
-            if (result.data.files.length) {
-              if (!sep5ProjectIsUsable(result.data.files)) throw new Error('la revisión devolvió un proyecto sin catálogo, carrito o estilos');
-              const reviewed = sep5AuthorableFiles(result.data.files);
+            if (result.data.edits.length) {
+              // Edits on the draft the review was shown; one that does not apply cleanly is skipped, never fatal.
+              const edited = applySep5Edits(authored.data.files, result.data.edits);
+              if (edited.skipped.length) autoRepairs.push(`review edits skipped: ${edited.skipped.join('; ').slice(0, 300)}`);
+              if (!sep5ProjectIsUsable(edited.files)) throw new Error('la revisión dejó el proyecto sin catálogo, carrito o estilos');
+              const reviewed = sep5AuthorableFiles(edited.files);
               if (reviewed.dropped.length) autoRepairs.push(`dropped platform files the review returned: ${reviewed.dropped.join(', ')}`);
               generated = { label: result.data.label.slice(0, 120) || draft.generated.label, files: reviewed.files };
               lenient = true;
@@ -938,7 +941,7 @@ export class SourceGenerationService {
               autoRepairs.push(...result.data.notes.map(note => `Revisión visual: ${note.slice(0, 200)}`));
             }
             review.status = 'COMPLETED';
-            this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.files.length > 0, notes: result.data.notes.length }));
+            this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
           } catch (error) {
             signal.throwIfAborted();
             generated = draft.generated; autoRepairs.length = draft.repairs; motifFiles = draft.motifs; acceptedPreviewFiles = draft.preview; unusedImagePaths = draft.unused;

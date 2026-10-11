@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection } from './sep5-author';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -112,9 +112,9 @@ it('shows the model its own draft and what the browser measured', () => {
   expect(prompt).toContain('- 390px: la página es más ancha que la pantalla (512px).');
   expect(prompt).toContain(SEP5_STORE_SHELL);
   expect(sep5ReviewPrompt({ brief: {}, instruction: '', data: {}, assetLegend: [], draft, measured: [] })).not.toContain('Measured by the browser');
-  // "Nothing to fix" is an empty files list, so a clean draft does not cost a second full write.
-  expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: [], files: [] }).success).toBe(true);
-  expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: ['a', 'b', 'c', 'd', 'e', 'f', 'g'], files: [] }).success).toBe(false);
+  // "Nothing to fix" is an empty edits list, so a clean draft does not cost a second write at all.
+  expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: [], edits: [] }).success).toBe(true);
+  expect(sep5ReviewSchema.safeParse({ label: 'Eje', notes: ['a', 'b', 'c', 'd', 'e', 'f', 'g'], edits: [] }).success).toBe(false);
 });
 
 // Sep-5 never read the planner, so a concept's signature (spec 2026-10-09) reached only the agent builder. It is
@@ -220,4 +220,34 @@ it('asks the self-review to check colours, buttons and photos when there is a de
   const input = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [], storeShell: true, draft: [], measured: [] };
   expect(sep5ReviewPrompt({ ...input, frame: 'DESIGN DRAW: x' })).toMatch(/colours, buttons, photo treatment and structure match DESIGN DRAW/);
   expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).not.toMatch(/DESIGN DRAW/);
+});
+
+// Speed (2026-10-11): the review rewrote the whole site to fix a few things, half of every generation's time.
+describe('self-review as edits', () => {
+  const draft = [{ path: 'index.html', content: '<h1>Eje</h1><p>Hola</p><p>Hola</p>' }, { path: 'styles.css', content: 'h1{color:red}' }];
+  it('applies a snippet found exactly once and skips missing, ambiguous, unknown and platform targets', () => {
+    const { files, skipped } = applySep5Edits(draft, [
+      { path: 'styles.css', find: 'color:red', replace: 'color:#123456' },
+      { path: 'index.html', find: '<p>Hola</p>', replace: '<p>Chau</p>' },
+      { path: 'index.html', find: '<h2>', replace: 'x' },
+      { path: 'nope.html', find: 'a', replace: 'b' },
+      { path: 'config.js', find: 'a', replace: 'b' },
+    ]);
+    expect(files.find(file => file.path === 'styles.css')!.content).toBe('h1{color:#123456}');
+    expect(files.find(file => file.path === 'index.html')!.content).toBe(draft[0].content);
+    expect(skipped).toHaveLength(4);
+    expect(draft[1].content).toBe('h1{color:red}');
+  });
+  it('applies edits in order, each on the result of the one before', () => {
+    const { files } = applySep5Edits(draft, [{ path: 'index.html', find: '<h1>Eje</h1>', replace: '<h1>Eje Pilates</h1>' }, { path: 'index.html', find: 'Eje Pilates', replace: 'Estudio Eje' }]);
+    expect(files[0].content.startsWith('<h1>Estudio Eje</h1>')).toBe(true);
+  });
+  it('asks for short unique edits instead of the whole project', () => {
+    const prompt = sep5ReviewPrompt({ brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [], storeShell: true, draft, measured: [] });
+    expect(prompt).toMatch(/return only edits/i);
+    expect(prompt).toMatch(/instead of the whole project/i);
+    expect(JSON.stringify(SEP5_REVIEW_RESPONSE_SCHEMA)).toContain('"edits"');
+    expect(JSON.stringify(SEP5_REVIEW_RESPONSE_SCHEMA)).not.toContain('"files"');
+    expect(sep5ReviewSchema.safeParse({ label: 'x', notes: [], edits: Array.from({ length: 21 }, () => ({ path: 'a', find: 'b', replace: 'c' })) }).success).toBe(false);
+  });
 });
