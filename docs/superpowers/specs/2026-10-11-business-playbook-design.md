@@ -98,3 +98,12 @@ numbers; then two coffee shops differ in style family while both look like real 
 ## Not in this round
 
 The working tool per business (track B), AI-generated photos, real business facts from the web, a Studio style picker.
+
+## Reference findings (2026-10-11, `docs/superpowers/research/2026-10-11-playbook-references.md`)
+
+The 18 owner-approved references split into two shapes, so the craft contract has two profiles and each kind picks
+one: **shop-led** (café-food, clothing, beauty, crafts-home, flowers-gifts, bakery-sweets when it sells online:
+h1 28-48 px, body 14-16 px, white + one brand colour band, product grid early, square or pill buttons) and
+**story-led** (services, fitness-wellness: h1 56-96 px, body 16-20 px, tinted alternating backgrounds, 96-144 px
+rhythm). Both keep the 1140-1320 px container, the standard header and the multi-column footer with a legal row.
+The self-review measures against the kind's profile. Supersedes the single "h1 56-80, body 17-19" in §2.

@@ -1,0 +1,1647 @@
+[
+ {
+  "kind": "cafe-food",
+  "url": "https://www.pukupuku.pe",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 29,
+    "lh": 1.2,
+    "weight": "300",
+    "family": "Outfit",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 48,
+    "lh": 1.22,
+    "weight": "300",
+    "family": "Outfit",
+    "transform": "none"
+   },
+   "body": {
+    "size": 19,
+    "lh": 1.63,
+    "weight": "300",
+    "family": "Outfit",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 24,
+    "lh": 2.4,
+    "weight": "400",
+    "family": "Outfit",
+    "transform": "uppercase"
+   },
+   "container": 980,
+   "sections": [],
+   "bgs": [
+    "rgb(255, 255, 255)",
+    "rgb(143, 0, 0)"
+   ],
+   "headerLinks": 10,
+   "footer": {
+    "links": 6,
+    "cols": 7,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     6
+    ],
+    [
+     "0px/solid",
+     4
+    ]
+   ],
+   "keyframes": 32,
+   "images": 7,
+   "pageHeight": 5564,
+   "inputs": 0
+  }
+ },
+ {
+  "kind": "bakery-sweets",
+  "url": "https://www.panio.mx",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 68,
+    "lh": 1,
+    "weight": "400",
+    "family": "kepler-w03-light-scd-cp",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 32,
+    "lh": 1.3,
+    "weight": "400",
+    "family": "kepler-w03-light-scd-cp",
+    "transform": "none"
+   },
+   "body": {
+    "size": 16,
+    "lh": 1.6,
+    "weight": "400",
+    "family": "kepler-w03-light-scd-cp",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 10,
+    "lh": 0,
+    "weight": "400",
+    "family": "Arial",
+    "transform": "none"
+   },
+   "container": 921,
+   "sections": [
+    {
+     "h": 110,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1496,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": "Todo lo bueno lleva su tiempo, empezando"
+    },
+    {
+     "h": 568,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": ""
+    },
+    {
+     "h": 48,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1207,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": "¿Qué hace que un pan se convierta en tra"
+    },
+    {
+     "h": 900,
+     "padTop": 0,
+     "bg": "rgba(255, 255, 255, 0)",
+     "heading": "Siempre es un buen momento para comparti"
+    },
+    {
+     "h": 72,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": ""
+    },
+    {
+     "h": 687,
+     "padTop": 0,
+     "bg": "rgba(255, 255, 255, 0)",
+     "heading": "Piezas que acompañan tu ritual."
+    },
+    {
+     "h": 117,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": ""
+    },
+    {
+     "h": 810,
+     "padTop": 0,
+     "bg": "rgba(255, 254, 252, 0)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgba(255, 254, 252, 0)",
+    "rgba(255, 255, 255, 0)"
+   ],
+   "headerLinks": 10,
+   "footer": {
+    "links": 10,
+    "cols": 2,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "40px/solid",
+     2
+    ],
+    [
+     "0px/outline",
+     1
+    ],
+    [
+     "35px/solid",
+     1
+    ]
+   ],
+   "keyframes": 24,
+   "images": 24,
+   "pageHeight": 6015,
+   "inputs": 1
+  }
+ },
+ {
+  "kind": "cafe-food",
+  "url": "https://www.buna.mx",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 38,
+    "lh": 0,
+    "weight": "500",
+    "family": "Circular Black",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 38,
+    "lh": 1.05,
+    "weight": "500",
+    "family": "Circular Bold",
+    "transform": "none"
+   },
+   "body": {
+    "size": 16,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "Circular Book",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 16,
+    "lh": 1.5,
+    "weight": "500",
+    "family": "Circular Book",
+    "transform": "uppercase"
+   },
+   "container": 1230,
+   "sections": [],
+   "bgs": [
+    "rgb(255, 255, 255)"
+   ],
+   "headerLinks": 18,
+   "footer": {
+    "links": 18,
+    "cols": 13,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "30px/solid",
+     2
+    ],
+    [
+     "0px/solid",
+     2
+    ],
+    [
+     "50px/solid",
+     1
+    ]
+   ],
+   "keyframes": 191,
+   "images": 48,
+   "pageHeight": 3672,
+   "inputs": 1
+  }
+ },
+ {
+  "kind": "bakery-sweets",
+  "url": "https://pumpstreetchocolate.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 36,
+    "lh": 1.4,
+    "weight": "600",
+    "family": "Work Sans",
+    "transform": "uppercase"
+   },
+   "h2": {
+    "size": 22,
+    "lh": 1.5,
+    "weight": "600",
+    "family": "Work Sans",
+    "transform": "uppercase"
+   },
+   "body": {
+    "size": 13,
+    "lh": 1.6,
+    "weight": "500",
+    "family": "Work Sans",
+    "transform": "uppercase"
+   },
+   "nav": null,
+   "container": 1420,
+   "sections": [
+    {
+     "h": 858,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "ECCLES CAKE 65%"
+    },
+    {
+     "h": 25,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 74,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "discover our award winning bars"
+    },
+    {
+     "h": 25,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 519,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "SHOP OUR COLLECTIONS"
+    },
+    {
+     "h": 331,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 387,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 20,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 204,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Subscribe"
+    },
+    {
+     "h": 497,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)",
+    "rgb(240, 211, 201)"
+   ],
+   "headerLinks": 0,
+   "footer": {
+    "links": 28,
+    "cols": 7,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     19
+    ],
+    [
+     "0px/solid",
+     5
+    ]
+   ],
+   "keyframes": 28,
+   "images": 45,
+   "pageHeight": 3816,
+   "inputs": 2
+  }
+ },
+ {
+  "kind": "bakery-sweets",
+  "url": "https://www.rapanui.com.ar",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 64,
+    "lh": 1.4,
+    "weight": "500",
+    "family": "Rowtonsansfy L",
+    "transform": "uppercase"
+   },
+   "h2": {
+    "size": 32,
+    "lh": 1.5,
+    "weight": "500",
+    "family": "Rowtonsansfy L",
+    "transform": "uppercase"
+   },
+   "body": {
+    "size": 28,
+    "lh": 1.6,
+    "weight": "500",
+    "family": "Rowtonsansfy L",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 12,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "Gotham Book",
+    "transform": "uppercase"
+   },
+   "container": 1238,
+   "sections": [
+    {
+     "h": 900,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Innovar es nuestra más rica tradición"
+    },
+    {
+     "h": 972,
+     "padTop": 112,
+     "bg": "rgb(52, 35, 68)",
+     "heading": ""
+    },
+    {
+     "h": 1024,
+     "padTop": 112,
+     "bg": "rgb(233, 232, 213)",
+     "heading": "Conocé nuestrOs PRODUCTOS"
+    },
+    {
+     "h": 456,
+     "padTop": 56,
+     "bg": "rgb(233, 232, 213)",
+     "heading": "¿Te tentaste?"
+    },
+    {
+     "h": 1547,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Desde el origen"
+    },
+    {
+     "h": 2250,
+     "padTop": 0,
+     "bg": "rgb(249, 246, 242)",
+     "heading": "RECOMENDADOS"
+    },
+    {
+     "h": 1148,
+     "padTop": 112,
+     "bg": "rgb(249, 246, 242)",
+     "heading": "NUESTRAS CASAS"
+    },
+    {
+     "h": 897,
+     "padTop": 96,
+     "bg": "rgb(52, 35, 68)",
+     "heading": "¿Pensando en hacer un regalo?"
+    },
+    {
+     "h": 1109,
+     "padTop": 112,
+     "bg": "rgb(233, 231, 211)",
+     "heading": "¿Querés saber en qué andamos?"
+    },
+    {
+     "h": 1248,
+     "padTop": 112,
+     "bg": "rgb(233, 232, 213)",
+     "heading": "PREGUNTAS FRECUENTES"
+    },
+    {
+     "h": 499,
+     "padTop": 56,
+     "bg": "rgb(52, 35, 68)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgb(249, 246, 242)",
+    "rgb(52, 35, 68)",
+    "rgb(233, 232, 213)",
+    "rgb(233, 231, 211)"
+   ],
+   "headerLinks": 6,
+   "footer": {
+    "links": 0,
+    "cols": 0,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "32px/solid",
+     10
+    ]
+   ],
+   "keyframes": 1,
+   "images": 69,
+   "pageHeight": 12171,
+   "inputs": 5
+  }
+ },
+ {
+  "kind": "clothing",
+  "url": "https://www.carlafernandez.com",
+  "ok": true,
+  "m": {
+   "h1": null,
+   "h2": {
+    "size": 19,
+    "lh": 1.3,
+    "weight": "800",
+    "family": "LetterGothic-Bold",
+    "transform": "none"
+   },
+   "body": {
+    "size": 16,
+    "lh": 1.3,
+    "weight": "300",
+    "family": "LetterGothic-Bold",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 16,
+    "lh": 0,
+    "weight": "300",
+    "family": "LetterGothic-Bold",
+    "transform": "none"
+   },
+   "container": 1140,
+   "sections": [
+    {
+     "h": 145,
+     "padTop": 32,
+     "bg": "rgb(255, 255, 255)",
+     "heading": "Cookie consent"
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)"
+   ],
+   "headerLinks": 9,
+   "footer": {
+    "links": 0,
+    "cols": 0,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "0px/solid",
+     16
+    ],
+    [
+     "0px/outline",
+     4
+    ],
+    [
+     "100px/outline",
+     2
+    ]
+   ],
+   "keyframes": 172,
+   "images": 22,
+   "pageHeight": 4411,
+   "inputs": 0
+  }
+ },
+ {
+  "kind": "clothing",
+  "url": "https://www.solalpaca.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 28,
+    "lh": 1.65,
+    "weight": "700",
+    "family": "Instrument Sans",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 28,
+    "lh": 1.4,
+    "weight": "400",
+    "family": "Instrument Sans",
+    "transform": "uppercase"
+   },
+   "body": {
+    "size": 14,
+    "lh": 1.65,
+    "weight": "400",
+    "family": "Instrument Sans",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 28,
+    "lh": 1.65,
+    "weight": "700",
+    "family": "Instrument Sans",
+    "transform": "none"
+   },
+   "container": 1344,
+   "sections": [
+    {
+     "h": 540,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 481,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 798,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 590,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Discover"
+    },
+    {
+     "h": 171,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 134,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 512,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Subscribe to our Newsletter"
+    },
+    {
+     "h": 198,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgb(239, 239, 239)"
+   ],
+   "headerLinks": 58,
+   "footer": {
+    "links": 29,
+    "cols": 9,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     9
+    ],
+    [
+     "9999px/outline",
+     5
+    ],
+    [
+     "9999px/solid",
+     1
+    ]
+   ],
+   "keyframes": 30,
+   "images": 222,
+   "pageHeight": 3917,
+   "inputs": 5
+  }
+ },
+ {
+  "kind": "clothing",
+  "url": "https://juanadearco.net",
+  "ok": true,
+  "m": {
+   "h1": null,
+   "h2": {
+    "size": 20,
+    "lh": 0,
+    "weight": "600",
+    "family": "Outfit",
+    "transform": "none"
+   },
+   "body": null,
+   "nav": {
+    "size": 14,
+    "lh": 0,
+    "weight": "400",
+    "family": "Outfit",
+    "transform": "none"
+   },
+   "container": 1300,
+   "sections": [
+    {
+     "h": 35,
+     "padTop": 10,
+     "bg": "rgb(230, 126, 34)",
+     "heading": ""
+    },
+    {
+     "h": 774,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1285,
+     "padTop": 30,
+     "bg": "rgb(255, 255, 255)",
+     "heading": "NEW IN"
+    },
+    {
+     "h": 1210,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "CATEGORÍAS"
+    },
+    {
+     "h": 510,
+     "padTop": 60,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "CLÁSICOS JUANEROS"
+    },
+    {
+     "h": 422,
+     "padTop": 60,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 810,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)",
+    "rgb(230, 126, 34)",
+    "rgb(236, 240, 241)"
+   ],
+   "headerLinks": 13,
+   "footer": {
+    "links": 20,
+    "cols": 16,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     6
+    ],
+    [
+     "50px/solid",
+     1
+    ]
+   ],
+   "keyframes": 0,
+   "images": 40,
+   "pageHeight": 5964,
+   "inputs": 1
+  }
+ },
+ {
+  "kind": "clothing",
+  "url": "https://thinkingmu.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 40,
+    "lh": 0,
+    "weight": "300",
+    "family": "TWKLausannePan-300",
+    "transform": "none"
+   },
+   "h2": null,
+   "body": {
+    "size": 12,
+    "lh": 1.25,
+    "weight": "400",
+    "family": "TWKLausannePan-300",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 11,
+    "lh": 0,
+    "weight": "300",
+    "family": "TWKLausannePan-300",
+    "transform": "none"
+   },
+   "container": 1170,
+   "sections": [
+    {
+     "h": 1113,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "NEW IN HOMBRE"
+    },
+    {
+     "h": 983,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 896,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 159,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "ENVÍO GRATUITO"
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)"
+   ],
+   "headerLinks": 92,
+   "footer": {
+    "links": 19,
+    "cols": 6,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     7
+    ],
+    [
+     "0px/solid",
+     4
+    ]
+   ],
+   "keyframes": 22,
+   "images": 45,
+   "pageHeight": 4642,
+   "inputs": 1
+  }
+ },
+ {
+  "kind": "services",
+  "url": "https://kambista.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 40,
+    "lh": 1.02,
+    "weight": "300",
+    "family": "Montserrat",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 36,
+    "lh": 1.3,
+    "weight": "700",
+    "family": "Montserrat",
+    "transform": "none"
+   },
+   "body": {
+    "size": 16,
+    "lh": 1.44,
+    "weight": "400",
+    "family": "Montserrat",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 16,
+    "lh": 1.5,
+    "weight": "700",
+    "family": "Montserrat",
+    "transform": "none"
+   },
+   "container": 1230,
+   "sections": [],
+   "bgs": [
+    "rgba(255, 255, 255, 0)"
+   ],
+   "headerLinks": 6,
+   "footer": {
+    "links": 29,
+    "cols": 8,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "24px/solid",
+     4
+    ],
+    [
+     "37px/solid",
+     2
+    ],
+    [
+     "2px/solid",
+     2
+    ]
+   ],
+   "keyframes": 13,
+   "images": 36,
+   "pageHeight": 6096,
+   "inputs": 2
+  }
+ },
+ {
+  "kind": "beauty",
+  "url": "https://www.xinu.mx",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 32,
+    "lh": 1,
+    "weight": "400",
+    "family": "Sentinel-BookItalic",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 23,
+    "lh": 1.25,
+    "weight": "600",
+    "family": "Sentinel-BookItalic",
+    "transform": "none"
+   },
+   "body": {
+    "size": 14,
+    "lh": 2,
+    "weight": "400",
+    "family": "Sentinel-Book",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 14,
+    "lh": 2,
+    "weight": "400",
+    "family": "Sentinel-Book",
+    "transform": "none"
+   },
+   "container": 1170,
+   "sections": [
+    {
+     "h": 900,
+     "padTop": 150,
+     "bg": "rgb(255, 255, 255)",
+     "heading": "Perfumes"
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)",
+    "rgb(246, 244, 236)"
+   ],
+   "headerLinks": 11,
+   "footer": {
+    "links": 10,
+    "cols": 10,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "0px/solid",
+     2
+    ],
+    [
+     "4px/outline",
+     1
+    ],
+    [
+     "1px/solid",
+     1
+    ]
+   ],
+   "keyframes": 51,
+   "images": 22,
+   "pageHeight": 1591,
+   "inputs": 0
+  }
+ },
+ {
+  "kind": "beauty",
+  "url": "https://www.matarrania.com",
+  "ok": true,
+  "m": {
+   "h1": null,
+   "h2": {
+    "size": 36,
+    "lh": 1.1,
+    "weight": "700",
+    "family": "Quicksand",
+    "transform": "none"
+   },
+   "body": {
+    "size": 14,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "Quicksand",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 14,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "Quicksand",
+    "transform": "none"
+   },
+   "container": 1170,
+   "sections": [
+    {
+     "h": 36,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 573,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "CONTORNO DE OJOS REGENERADOR 100% BIO"
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 491,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 209,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 365,
+     "padTop": 16,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)"
+   ],
+   "headerLinks": 11,
+   "footer": {
+    "links": 0,
+    "cols": 0,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     2
+    ],
+    [
+     "0px/solid",
+     2
+    ]
+   ],
+   "keyframes": 225,
+   "images": 689,
+   "pageHeight": 3979,
+   "inputs": 1
+  }
+ },
+ {
+  "kind": "services",
+  "url": "https://p-narayan-and-associates-15999.boosterpack.xyz",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 96,
+    "lh": 1.05,
+    "weight": "400",
+    "family": "Playfair Display",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 48,
+    "lh": 1.25,
+    "weight": "700",
+    "family": "Playfair Display",
+    "transform": "none"
+   },
+   "body": {
+    "size": 18,
+    "lh": 1.63,
+    "weight": "400",
+    "family": "Lora",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 16,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "Lora",
+    "transform": "none"
+   },
+   "container": 1216,
+   "sections": [
+    {
+     "h": 900,
+     "padTop": 144,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Counsel Rooted inPrinciple & Precedent"
+    },
+    {
+     "h": 997,
+     "padTop": 128,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Five Decades ofUnwavering Counsel"
+    },
+    {
+     "h": 1000,
+     "padTop": 128,
+     "bg": "rgb(234, 234, 228)",
+     "heading": "A Ledger of Comprehensive Legal Authorit"
+    },
+    {
+     "h": 424,
+     "padTop": 96,
+     "bg": "rgb(245, 245, 240)",
+     "heading": "A Directory of Enduring Trust"
+    },
+    {
+     "h": 792,
+     "padTop": 128,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "From District Courts to the Supreme Cour"
+    },
+    {
+     "h": 755,
+     "padTop": 128,
+     "bg": "rgb(77, 84, 113)",
+     "heading": "Counsel Validated by Trust"
+    },
+    {
+     "h": 850,
+     "padTop": 128,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Schedule a Formal Consultation"
+    }
+   ],
+   "bgs": [
+    "rgb(245, 245, 240)",
+    "rgb(234, 234, 228)",
+    "rgb(77, 84, 113)"
+   ],
+   "headerLinks": 6,
+   "footer": {
+    "links": 7,
+    "cols": 17,
+    "legal": false
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     13
+    ],
+    [
+     "0px/solid",
+     2
+    ],
+    [
+     "999px/outline",
+     1
+    ]
+   ],
+   "keyframes": 1,
+   "images": 9,
+   "pageHeight": 6247,
+   "inputs": 0
+  }
+ },
+ {
+  "kind": "fitness-wellness",
+  "url": "https://yoko-studio-gent-19475.boosterpack.xyz",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 72,
+    "lh": 0.9,
+    "weight": "700",
+    "family": "Spinnaker",
+    "transform": "uppercase"
+   },
+   "h2": {
+    "size": 48,
+    "lh": 1,
+    "weight": "700",
+    "family": "Spinnaker",
+    "transform": "uppercase"
+   },
+   "body": {
+    "size": 20,
+    "lh": 1.63,
+    "weight": "400",
+    "family": "Space Grotesk",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 16,
+    "lh": 1.5,
+    "weight": "700",
+    "family": "Space Grotesk",
+    "transform": "uppercase"
+   },
+   "container": 1216,
+   "sections": [
+    {
+     "h": 1024,
+     "padTop": 128,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Meer Dan Een Workout"
+    },
+    {
+     "h": 859,
+     "padTop": 96,
+     "bg": "rgb(2, 69, 38)",
+     "heading": "Onze Lessen"
+    },
+    {
+     "h": 1191,
+     "padTop": 96,
+     "bg": "rgb(253, 248, 232)",
+     "heading": "Onze Studio's"
+    },
+    {
+     "h": 2066,
+     "padTop": 96,
+     "bg": "rgb(243, 229, 171)",
+     "heading": "Prijzen & Abonnementen"
+    },
+    {
+     "h": 1621,
+     "padTop": 96,
+     "bg": "rgb(255, 255, 255)",
+     "heading": "Reviews"
+    },
+    {
+     "h": 1422,
+     "padTop": 96,
+     "bg": "rgb(2, 69, 38)",
+     "heading": "Laten We Verbinden"
+    }
+   ],
+   "bgs": [
+    "rgb(253, 248, 232)",
+    "rgb(2, 69, 38)",
+    "rgb(243, 229, 171)",
+    "rgb(255, 255, 255)",
+    "rgb(2, 51, 28)"
+   ],
+   "headerLinks": 1,
+   "footer": {
+    "links": 13,
+    "cols": 20,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "33554400px/solid",
+     10
+    ],
+    [
+     "33554400px/outline",
+     6
+    ],
+    [
+     "0px/outline",
+     6
+    ]
+   ],
+   "keyframes": 3,
+   "images": 9,
+   "pageHeight": 9572,
+   "inputs": 2
+  }
+ },
+ {
+  "kind": "fitness-wellness",
+  "url": "https://www.moonpilates.mx",
+  "ok": true,
+  "m": {
+   "h1": null,
+   "h2": null,
+   "body": null,
+   "nav": {
+    "size": 16,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "-apple-system",
+    "transform": "none"
+   },
+   "container": 1420,
+   "sections": [],
+   "bgs": [
+    "rgb(255, 255, 255)"
+   ],
+   "headerLinks": 6,
+   "footer": {
+    "links": 4,
+    "cols": 0,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "100px/solid",
+     5
+    ]
+   ],
+   "keyframes": 27,
+   "images": 19,
+   "pageHeight": 5278,
+   "inputs": 1
+  }
+ },
+ {
+  "kind": "crafts-home",
+  "url": "https://www.utilitariomexicano.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 40,
+    "lh": 0,
+    "weight": "400",
+    "family": "Inter",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 24,
+    "lh": 1.3,
+    "weight": "400",
+    "family": "Inter",
+    "transform": "none"
+   },
+   "body": {
+    "size": 16,
+    "lh": 1.8,
+    "weight": "400",
+    "family": "Inter",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 14,
+    "lh": 0,
+    "weight": "400",
+    "family": "Inter",
+    "transform": "none"
+   },
+   "container": 1200,
+   "sections": [
+    {
+     "h": 900,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 2169,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "LIBRO / PUERTAS CDMX. 2da. Edición"
+    },
+    {
+     "h": 239,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Apúntate a nuestras Promos"
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)"
+   ],
+   "headerLinks": 4,
+   "footer": {
+    "links": 17,
+    "cols": 4,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     6
+    ],
+    [
+     "41px/solid",
+     2
+    ],
+    [
+     "5px/outline",
+     1
+    ]
+   ],
+   "keyframes": 11,
+   "images": 53,
+   "pageHeight": 3779,
+   "inputs": 0
+  }
+ },
+ {
+  "kind": "crafts-home",
+  "url": "https://onoracasa.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 48,
+    "lh": 1,
+    "weight": "400",
+    "family": "EditorsNote",
+    "transform": "uppercase"
+   },
+   "h2": {
+    "size": 40,
+    "lh": 1,
+    "weight": "400",
+    "family": "EditorsNote",
+    "transform": "none"
+   },
+   "body": {
+    "size": 14,
+    "lh": 1.5,
+    "weight": "400",
+    "family": "Suisse",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 14,
+    "lh": 1.4,
+    "weight": "400",
+    "family": "Suisse",
+    "transform": "none"
+   },
+   "container": 1152,
+   "sections": [
+    {
+     "h": 830,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Colección Arrieta"
+    },
+    {
+     "h": 1133,
+     "padTop": 96,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Los RITUALES COTIDIANOS de la VIDA MODER"
+    },
+    {
+     "h": 804,
+     "padTop": 96,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Categoría"
+    },
+    {
+     "h": 750,
+     "padTop": 48,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Visítanos en CDMX"
+    },
+    {
+     "h": 840,
+     "padTop": 96,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Pastillaje"
+    },
+    {
+     "h": 687,
+     "padTop": 48,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": "Somos Empresa B"
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)",
+    "rgb(57, 54, 52)"
+   ],
+   "headerLinks": 24,
+   "footer": {
+    "links": 27,
+    "cols": 9,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "0px/outline",
+     9
+    ],
+    [
+     "0px/solid",
+     2
+    ],
+    [
+     "50px/outline",
+     2
+    ]
+   ],
+   "keyframes": 13,
+   "images": 10,
+   "pageHeight": 6086,
+   "inputs": 3
+  }
+ },
+ {
+  "kind": "flowers-gifts",
+  "url": "https://www.margaritasellamamiamor.com",
+  "ok": true,
+  "m": {
+   "h1": {
+    "size": 22,
+    "lh": 1.1,
+    "weight": "400",
+    "family": "Benne",
+    "transform": "none"
+   },
+   "h2": {
+    "size": 21,
+    "lh": 1.1,
+    "weight": "400",
+    "family": "Benne",
+    "transform": "uppercase"
+   },
+   "body": {
+    "size": 14,
+    "lh": 1.43,
+    "weight": "300",
+    "family": "Roboto",
+    "transform": "none"
+   },
+   "nav": {
+    "size": 14,
+    "lh": 1.43,
+    "weight": "700",
+    "family": "Benne",
+    "transform": "uppercase"
+   },
+   "container": 1140,
+   "sections": [
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 1,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 115,
+     "padTop": 20,
+     "bg": "rgb(255, 255, 255)",
+     "heading": ""
+    },
+    {
+     "h": 3168,
+     "padTop": 25,
+     "bg": "rgb(255, 255, 255)",
+     "heading": "Floristería EN MADRID Margarita se llama"
+    },
+    {
+     "h": 170,
+     "padTop": 50,
+     "bg": "rgb(0, 0, 0)",
+     "heading": "PEDIDOS TELEFÓNICOS"
+    },
+    {
+     "h": 299,
+     "padTop": 0,
+     "bg": "rgb(0, 0, 0)",
+     "heading": ""
+    },
+    {
+     "h": 20,
+     "padTop": 0,
+     "bg": "rgba(0, 0, 0, 0)",
+     "heading": ""
+    }
+   ],
+   "bgs": [
+    "rgb(255, 255, 255)",
+    "rgb(0, 0, 0)"
+   ],
+   "headerLinks": 40,
+   "footer": {
+    "links": 46,
+    "cols": 29,
+    "legal": true
+   },
+   "buttons": [
+    [
+     "3px/outline",
+     4
+    ],
+    [
+     "0px/outline",
+     1
+    ],
+    [
+     "3px/solid",
+     1
+    ]
+   ],
+   "keyframes": 101,
+   "images": 26,
+   "pageHeight": 3819,
+   "inputs": 1
+  }
+ }
+]
