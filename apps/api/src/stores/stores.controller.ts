@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -36,8 +36,8 @@ export class StoresController {
   }
 
   @Get("onboarding")
-  onboarding(@CurrentMerchant() merchant: { id: string }) {
-    return this.stores.onboardingState(merchant.id, this.config.get<boolean>("app.onboardingWalkthrough") === true);
+  onboarding(@CurrentMerchant() merchant: { id: string }, @Query("storeId") storeId?: string) {
+    return this.stores.onboardingState(merchant.id, this.config.get<boolean>("app.onboardingWalkthrough") === true, storeId);
   }
 
   @Patch(":id/onboarding")

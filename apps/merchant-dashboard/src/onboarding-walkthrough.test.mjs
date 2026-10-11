@@ -216,5 +216,31 @@ test('dashboard wiring: Salir refreshes the data, the list shows Sin terminar + 
   assert.match(src, /onExit: \(\) => \{ root\.hidden = true; root\.innerHTML = ""; void refresh\(\); \}/);
   assert.match(src, /isUnfinishedStore\(store\) \? '<span class="store-card-status" data-status="draft">Sin terminar<\/span>'/);
   assert.match(src, /continue-store/);
+  assert.match(src, /\/stores\/onboarding\?storeId=/);
+  assert.match(src, /isUnfinishedStore\(store, onboardingEnabled\)/);
   assert.match(src, /showWalkthroughChoice\(root/);
+});
+
+test('list badge: not for archived stores or with the walkthrough disabled', () => {
+  const open = { onboarding: { step: 2, finishedAt: null } };
+  assert.equal(isUnfinishedStore({ ...open, status: 'ACTIVE' }, true), true);
+  assert.equal(isUnfinishedStore({ ...open, status: 'ARCHIVED' }, true), false);
+  assert.equal(isUnfinishedStore({ ...open, status: 'ACTIVE' }, false), false);
+});
+
+test('resuming with only {step} and skipping photos and contact sends no photos or contact keys', async () => {
+  const d = await drive(4);
+  await d.submit(); // products step, nothing typed
+  await d.submit(); // story step
+  await d.submit(); // contact step: nothing typed
+  const patches = d.calls.filter(c => c.method === 'PATCH' && c.body);
+  assert.ok(patches.length >= 3);
+  for (const c of patches) { assert.ok(!('photos' in c.body), JSON.stringify(c.body)); assert.ok(!('contact' in c.body), JSON.stringify(c.body)); }
+});
+
+test('resuming at the photos step and skipping it sends no photos key', async () => {
+  const d = await drive(3);
+  await d.submit();
+  const c = d.calls.filter(x => x.method === 'PATCH' && x.body);
+  assert.ok(c.length && c.every(x => !('photos' in x.body)));
 });

@@ -61,7 +61,7 @@ export function walkthroughEntry({ enabled, storeCount = 0, resumable = false, i
 }
 
 // A store listed with unfinished walkthrough progress (null onboarding = made before the walkthrough, never unfinished).
-export const isUnfinishedStore = store => Boolean(store?.onboarding) && !store.onboarding.finishedAt;
+export const isUnfinishedStore = (store, enabled = true) => enabled && store?.status !== 'ARCHIVED' && Boolean(store?.onboarding) && !store.onboarding.finishedAt;
 
 // "Crear otra tienda" while a walkthrough store sits half-built: continue it or start a new one.
 export function walkthroughChoiceView(store) {
@@ -114,6 +114,8 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
   // Per run: product rows already created (index -> { id, name, amount }), and the one chat-job id, so retries never duplicate.
   const created = {};
+  // Answers the merchant typed or picked in this run: a resumed run never overwrites saved ones with blanks.
+  const touched = new Set();
   const requestId = crypto.randomUUID();
   let brief = null;
   let jobPosted = false;
@@ -151,7 +153,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
       const urls = [...(state.values.photos || []), ...await Promise.all(picked.photos.slice(0, MAX_PHOTOS).map(file => uploadFile(file)))].slice(0, MAX_PHOTOS);
       state = { ...state, values: { ...state.values, photos: urls } };
       clearPending('photos');
-      return patch({ ...mark, photos: urls });
+      return patch({ ...mark, ...(picked.photos.length ? { photos: urls } : {}) });
     }
     if (id === 'products') {
       for (let i = 0; i < 5; i++) {
@@ -172,7 +174,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     if (id === 'contact') {
       // Order matters: the job exists before the store is marked finished, so a reload never strands a finished store.
       if (!jobPosted) {
-        brief = (await patch({ ...mark, contact: { whatsapp: state.values.whatsapp, city: state.values.city }, brief: true }))?.brief;
+        brief = (await patch({ ...mark, ...(touched.has('whatsapp') || touched.has('city') ? { contact: { whatsapp: state.values.whatsapp, city: state.values.city } } : {}), brief: true }))?.brief;
         await api(`/stores/${state.storeId}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction: brief || `Mi negocio se llama ${state.values.name}.\nCrea mi tienda.`, assetUrls: state.values.photos || [], revision: 0, setupAction: 'generate', requestId }) });
         jobPosted = true;
       }
@@ -197,7 +199,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     paint();
   }
 
-  listen('input', event => { if (event.target.name && event.target.type !== 'file') { state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
+  listen('input', event => { if (event.target.name && event.target.type !== 'file') { touched.add(event.target.name); state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
   listen('change', event => { if (event.target.type === 'file' && ['logo', 'photos'].includes(event.target.name)) choose(event.target.name, event.target.files); });
   // A file dropped anywhere on the overlay must never navigate the browser away; only the logo and photos steps take it.
   listen('dragover', event => event.preventDefault());

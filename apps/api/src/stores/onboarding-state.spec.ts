@@ -63,3 +63,19 @@ describe("listForMerchant onboarding", () => {
     ]);
   });
 });
+
+describe("onboardingState with storeId", () => {
+  const findFirst = (rows: Array<Row & { merchantId: string }>) => jest.fn(async ({ where }: any) => rows.find((r) => r.id === where.id && r.merchantId === where.merchantId && r.status === where.status) ?? null);
+  const make = (rows: Array<Row & { merchantId: string }>) => new StoresService({ store: { findFirst: findFirst(rows), findMany: jest.fn() } } as any, undefined as any, undefined as any);
+  const full = { version: 1, step: 3, what: "Café", photos: ["/v1/uploads/a.webp"] };
+  const mine = (id: string, onboarding: unknown, status: StoreStatus = StoreStatus.ACTIVE) => ({ ...row(id, 1, onboarding, status), merchantId: "m_1" });
+
+  it("returns that store's full onboarding when unfinished", async () => {
+    const state = await make([mine("s1", full)]).onboardingState("m_1", true, "s1");
+    expect(state).toEqual({ enabled: true, store: { id: "s1", name: "s1", onboarding: full } });
+  });
+  it("returns null for another merchant's store, archived, finished or never-started stores", async () => {
+    const service = make([mine("s1", full), { ...mine("s2", full), merchantId: "m_2" }, mine("s3", full, StoreStatus.ARCHIVED), mine("s4", finished), mine("s5", null)]);
+    for (const id of ["s2", "s3", "s4", "s5", "missing"]) expect((await service.onboardingState("m_1", true, id)).store).toBeNull();
+  });
+});

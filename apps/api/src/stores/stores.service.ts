@@ -31,8 +31,14 @@ export class StoresService {
     private readonly uploads: UploadsService,
   ) {}
 
-  async onboardingState(merchantId: string, enabled: boolean) {
+  async onboardingState(merchantId: string, enabled: boolean, storeId?: string) {
     if (!enabled) return { enabled: false, store: null };
+    if (storeId) {
+      // A specific store (the list's Continuar): the merchant's own, active and unfinished, with its full answers.
+      const one = await this.prisma.store.findFirst({ where: { id: storeId, merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true } });
+      const unfinished = Boolean(one?.onboarding) && !(one!.onboarding as { finishedAt?: string }).finishedAt;
+      return { enabled: true, store: one && unfinished ? { id: one.id, name: one.name, onboarding: one.onboarding } : null };
+    }
     const stores = await this.prisma.store.findMany({ where: { merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true }, orderBy: { createdAt: 'desc' }, take: 50 });
     // The newest store that started the walkthrough and never finished it resumes; stores from before the walkthrough (null) never do.
     const open = stores.find((store) => store.onboarding && !(store.onboarding as { finishedAt?: string }).finishedAt) ?? null;

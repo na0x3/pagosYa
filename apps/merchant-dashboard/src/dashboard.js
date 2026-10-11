@@ -2116,8 +2116,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       const state = statusFor(store), stateLabel = { published: "Publicada", draft: "Borrador", archived: "Archivada" }[state];
       return `<article class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
         <div class="store-card-preview">${preview}</div>
-        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === currentStoreId ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
-        ${isUnfinishedStore(store) ? `<button class="primary continue-store store-card-edit" data-id="${esc(store.id)}" type="button">Continuar</button>` : '<span class="store-card-edit">Abrir editor ↗</span>'}
+        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === currentStoreId ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store, onboardingEnabled) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
+        ${isUnfinishedStore(store, onboardingEnabled) ? `<button class="primary continue-store store-card-edit" data-id="${esc(store.id)}" type="button">Continuar</button>` : '<span class="store-card-edit">Abrir editor ↗</span>'}
       </article>`;
     }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
     document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
@@ -2138,10 +2138,11 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         await refresh();
       });
     });
-    document.querySelectorAll(".continue-store").forEach(btn => btn.addEventListener("click", event => {
+    document.querySelectorAll(".continue-store").forEach(btn => btn.addEventListener("click", async event => {
       event.stopPropagation();
-      const store = lastStores.find(entry => entry.id === btn.dataset.id);
-      if (store) openWalkthrough({ id: store.id, name: store.name, onboarding: store.onboarding });
+      // The list carries only the progress marker; the full answers come from the lookup.
+      const found = (await api(`/stores/onboarding?storeId=${encodeURIComponent(btn.dataset.id)}`).catch(() => ({ store: null }))).store;
+      if (found) openWalkthrough(found); else void refresh();
     }));
     document.querySelectorAll(".delete-store").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
