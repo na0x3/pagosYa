@@ -1,0 +1,20 @@
+.style-pick { padding: 24px; display: grid; gap: 20px; }
+.style-pick header h2 { margin: 0; font-size: 22px; } .style-pick header p { margin: 4px 0 0; color: var(--muted, #666); }
+.style-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.style-card { display: grid; gap: 10px; padding: 0; border: 1px solid var(--line, #e5e5e5); border-radius: 12px; background: var(--surface, #fff); text-align: left; cursor: pointer; overflow: hidden; }
+.style-card:disabled { cursor: progress; } .style-card:not(:disabled):hover { border-color: var(--ink, #111); }
+.style-card--empty { min-height: 260px; animation: style-pulse 1.4s ease-in-out infinite; background: var(--line, #eee); }
+.style-frame { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--line, #f2f2f2); }
+.style-frame iframe { position: absolute; inset: 0 auto auto 0; border: 0; transform-origin: 0 0; transform: scale(var(--frame-scale, .3)); pointer-events: none; }
+.style-frame--empty { animation: style-pulse 1.4s ease-in-out infinite; }
+.style-card__meta { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 0 14px 14px; align-items: center; }
+.style-card__meta small { grid-column: 1 / -1; color: var(--muted, #666); }
+.style-dots { grid-column: 1 / -1; display: flex; gap: 6px; } .style-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
+.style-tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--line, #eee); } .style-tag--bold { background: #111; color: #fff; }
+.style-pick footer { display: flex; justify-content: center; }
+.style-pick--preview { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.style-preview__stage .style-frame { aspect-ratio: auto; height: 70vh; } .style-preview__toggle { display: flex; gap: 8px; margin-bottom: 10px; }
+.style-preview__side h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #666); }
+@media (max-width: 720px) { .style-grid, .style-pick--preview { grid-template-columns: 1fr; } .style-pick { padding: 16px; } }
+@media (prefers-reduced-motion: reduce) { .style-card--empty, .style-frame--empty { animation: none; } }
+@keyframes style-pulse { 50% { opacity: .55; } }

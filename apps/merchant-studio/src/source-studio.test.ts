@@ -501,3 +501,36 @@ it('keeps the new message in the box when the draft could not be saved', async (
   await vi.waitFor(() => expect(app.querySelector<HTMLTextAreaElement>('#agent-command')!.value).toBe('Agrega una sección de sabores'));
   expect(sent).toHaveBeenCalledTimes(1);
 });
+
+const styleCard = (index: number) => ({ index, slot: index, name: `Estilo ${index}`, mode: index < 2 ? 'calm' : 'bold', vibe: 'Vibra', inspiration: ['Uno'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff'], html: '<img src="/v1/uploads/a.jpg">', source: 'model' }) as const;
+it('shows the proposed styles in the preview area and sends the picked one as a stylePick', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(4));
+  expect(app.querySelector('.source-frame-wrap')).toBeNull();
+  const frame = app.querySelector<HTMLIFrameElement>('.style-frame iframe')!;
+  expect(frame.getAttribute('sandbox')).toBe('');
+  expect(frame.getAttribute('srcdoc')).toContain(`src="${new URL('/api/v1/uploads/a.jpg', location.href).href}"`);
+  app.querySelector<HTMLButtonElement>('[data-style-card="1"]')!.click();
+  app.querySelector<HTMLButtonElement>('[data-style-use="1"]')!.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
+  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
+});
+it('sends Elige tú as an automatic pick and retries a failed build with the same pick', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockRejectedValueOnce(new Error('Falló la construcción'))
+    .mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-style-auto]')).not.toBeNull());
+  vi.mocked(MerchantStudioApi.prototype.sourceConversation).mockResolvedValue({ messages: [{ id: 'm1', role: 'USER', content: 'Usar el estilo «Estilo 2»', metadata: { assetUrls: [] } }] } as any);
+  app.querySelector<HTMLButtonElement>('[data-style-auto]')!.click();
+  await vi.waitFor(() => expect(app.querySelector('#source-retry-message')).not.toBeNull());
+  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 2»');
+  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
+  app.querySelector<HTMLButtonElement>('#source-retry-message')!.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
+  expect(sent.mock.calls[1][1]).toBe('Usar el estilo «Estilo 2»');
+  expect(sent.mock.calls[1].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
+});
