@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+import { BadGatewayException, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { SourceChatJobsService, chatRequestDigest } from './source-chat-jobs.service';
 import { sourceRequestContext } from './source-request-context';
 function setup() {
@@ -45,4 +47,40 @@ it('anchors new requests to successful conversation context, excluding failed ad
   prisma.storeSourceChatJob.create.mockImplementation(async ({data}:any)=>({...job,...data}));
   await service.create('m','s',input);
   expect(prisma.storeSourceChatJob.create.mock.calls[0][0].data.input.merchantRequest.contextAnchor).toBe('confirmed');
+});
+describe('failure message stored on the job', () => {
+  const stored = (prisma: any) => prisma.storeSourceChatJob.updateMany.mock.calls.map((c: any[]) => c[0].data.error).filter(Boolean).at(-1);
+  const friendly = 'No pude completar el pedido. Tu diseño anterior se conserva.';
+  it('never stores a Prisma message; it is logged instead', async () => {
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const errors = [
+      new Prisma.PrismaClientKnownRequestError('Invalid `prisma.storeSourceGeneration.updateMany()` invocation: new row violates check constraint "status_check"', { code: 'P2004', clientVersion: 'x' }),
+      new Prisma.PrismaClientUnknownRequestError('Raw query failed. Code: `23514`', { clientVersion: 'x' }),
+      new Prisma.PrismaClientValidationError('Argument `status`: Invalid value provided.', { clientVersion: 'x' }),
+    ];
+    for (const error of errors) {
+      const { service, prisma, chat } = setup();
+      chat.send.mockRejectedValue(error);
+      await service.run(job);
+      expect(stored(prisma)).toBe(friendly);
+      expect(logged).toHaveBeenLastCalledWith(expect.stringContaining(error.message));
+    }
+    logged.mockRestore();
+  });
+  it('stores the friendly message for an internal error, and keeps a merchant-facing one', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const cases: Array<[Error, string]> = [
+      [new TypeError("Cannot read properties of undefined (reading 'concepts')"), friendly],
+      [new InternalServerErrorException('stack trace here'), friendly],
+      [new BadGatewayException('YAPI no logró armar una propuesta de diseño válida en este intento.'), 'YAPI no logró armar una propuesta de diseño válida en este intento.'],
+      [new ConflictException('El proyecto cambió. Recarga antes de generar.'), 'El proyecto cambió. Recarga antes de generar.'],
+    ];
+    for (const [error, message] of cases) {
+      const { service, prisma, chat } = setup();
+      chat.send.mockRejectedValue(error);
+      await service.run(job);
+      expect(stored(prisma)).toBe(message);
+    }
+    jest.restoreAllMocks();
+  });
 });

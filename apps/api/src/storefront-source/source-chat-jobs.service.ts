@@ -1,5 +1,5 @@
 import { sourceMerchantRequest } from './source-merchant-request';
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { createHash, randomUUID } from 'node:crypto';
 import { Prisma, StoreSourceChatJob } from '@prisma/client';
@@ -12,6 +12,15 @@ const LEASE_MS = 45_000;
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 function canonical(value: any): string { return JSON.stringify(value === null || typeof value !== 'object' ? value : Array.isArray(value) ? value.map(v => JSON.parse(canonical(v))) : Object.fromEntries(Object.keys(value).sort().filter(k => value[k] !== undefined).map(k => [k, JSON.parse(canonical(value[k]))]))); }
 export function chatRequestDigest(input: SendSourceMessageDto) { return createHash('sha256').update(canonical(input)).digest('hex'); }
+const FAILED_JOB_MESSAGE = 'No pude completar el pedido. Tu diseño anterior se conserva.';
+const isPrismaError = (error: unknown) => error instanceof Prisma.PrismaClientKnownRequestError || error instanceof Prisma.PrismaClientUnknownRequestError
+  || error instanceof Prisma.PrismaClientValidationError || error instanceof Prisma.PrismaClientRustPanicError || error instanceof Prisma.PrismaClientInitializationError;
+/** What a failed job tells the merchant: only a message written for them (a client error, or YAPI's own 502), never database or internal text. */
+export function merchantJobError(error: unknown): string | null {
+  if (isPrismaError(error) || !(error instanceof HttpException)) return null;
+  const status = error.getStatus();
+  return status < 500 || status === 502 ? error.message : null;
+}
 export function chatJobView(job: StoreSourceChatJob) {
   return { id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
 }
@@ -111,7 +120,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
     } catch (error) {
       const generation = await this.prisma.storeSourceGeneration.findFirst({ where: { requestJobId: job.id }, orderBy: { createdAt: 'desc' }, select: { status: true } }).catch(() => null);
       const outcome = generation && ['PARTIAL', 'BLOCKED'].includes(generation.status) ? generation.status : 'FAILED';
-      await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: controller.signal.aborted ? 'INTERRUPTED' : outcome, activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: (error instanceof Error ? error.message : 'No se pudo completar el pedido.').slice(0, 1000) } }).catch(() => {});
+      const message = merchantJobError(error);
+      if (message === null) this.logger.error(`YAPI job ${job.id} failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
+      await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: controller.signal.aborted ? 'INTERRUPTED' : outcome, activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: (message ?? FAILED_JOB_MESSAGE).slice(0, 1000) } }).catch(() => {});
     } finally { clearInterval(heartbeat); if (this.controller === controller) this.controller = undefined; }
   }
 }
