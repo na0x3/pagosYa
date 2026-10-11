@@ -97,6 +97,18 @@ export function sanitizeHeroHtml(html: string): string | null {
 
 const hexColour = (value: string, fallback: string) => /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 const luminance = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+// WCAG relative luminance and contrast, to keep the type field's colours readable on any palette.
+const channel = (v: number) => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+const relativeLuminance = (hex: string) => [1, 3, 5].map(i => channel(parseInt(hex.slice(i, i + 2), 16) / 255)).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+const contrast = (a: string, b: string) => { const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+/** The first candidate that reads on `background` (contrast 3 or more), else the one that reads best. */
+const readableOn = (background: string, candidates: string[]) => candidates.find(colour => contrast(colour, background) >= 3) ?? [...candidates].sort((a, b) => contrast(b, background) - contrast(a, background))[0];
+/** Font-size divisor that keeps a word of `letters` inside its box: a heavy display glyph is about 0.66em wide (0.72em in capitals). */
+const wordDivisor = (letters: number, em: number) => Math.ceil(Math.max(1, letters) * em * 100) / 100;
+const longestWord = (text: string) => Math.max(1, ...text.split(/\s+/).filter(Boolean).map(word => [...word].length));
+// The ring the stamp's text runs on: a circle of radius 74 in a 200-unit box.
+const RING_LENGTH = Math.round(2 * Math.PI * 74 * 10) / 10;
+
 const ARROW = '<svg class="ty-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
 export function templateHero(facts: HeroFacts): string {
@@ -136,35 +148,46 @@ function intenseTemplateHero(facts: HeroFacts): string {
   const fill = dark ? p.ink : '#111111', fillText = dark ? p.paper : '#ffffff';
   const buttonShadow = p.accent.toLowerCase() === fill.toLowerCase() ? p.accent2 : p.accent;
   const upper = facts.storeName.toUpperCase();
-  const ring = Array.from({ length: Math.max(1, Math.round(34 / (upper.length + 3))) }, () => `${upper} · `).join('');
+  // As many repeats of the name as fill the ring at 16px, then a size that never overfills it; textLength spaces it to the full circle.
+  const unit = [...upper].length + 3;
+  const ring = Array.from({ length: Math.max(1, Math.round(RING_LENGTH / (unit * 16 * 0.62))) }, () => `${upper} · `).join('');
+  const ringSize = Math.min(16, Math.floor(RING_LENGTH / ([...ring].length * 0.62) * 10) / 10);
+  // Giant type is sized by its longest word against its own column (container units), so no word breaks or clips.
+  const headlineDivisor = wordDivisor(longestWord(facts.headline), 0.66), typeDivisor = wordDivisor(longestWord(facts.storeName), 0.72);
+  // The phone rail holds the name and the cart in one row: a long name gets smaller, and an ellipsis is the last resort.
+  const phoneName = Math.max(12, Math.min(20, Math.floor(230 / ([...upper].length * 0.7) * 10) / 10));
+  // The type field's words alternate two colours that both read on the accent field, whatever the palette.
+  const typeOdd = readableOn(p.accent, [p.paper, '#ffffff', '#111111']);
+  const typeEven = readableOn(p.accent, [p.ink, '#ffffff', '#111111'].filter(colour => colour !== typeOdd));
   const logo = facts.logoPath ? `<img class="ty-logo" src="${escape(facts.logoPath)}" alt="">` : '';
   const words = facts.storeName.split(/\s+/).filter(Boolean).slice(0, 3);
   const art = facts.photoPath
     ? `<figure class="ty-frame"><img class="ty-photo" src="${escape(facts.photoPath)}" alt=""></figure>`
     : `<div class="ty-type" aria-hidden="true">${(words.length ? words : [facts.storeName]).map(word => `<span>${escape(word)}</span>`).join('')}</div>`;
-  const stamp = `<svg class="ty-stamp" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="ty-ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"></path></defs><circle cx="100" cy="100" r="98" fill="${p.accent2}"></circle><circle cx="100" cy="100" r="46" fill="${p.accent}"></circle><text font-size="16" font-weight="700" letter-spacing="3" fill="${luminance(p.accent2) < 0.4 ? '#ffffff' : '#111111'}"><textPath href="#ty-ring">${escape(ring)}</textPath></text></svg>`;
+  const stamp = `<svg class="ty-stamp" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="ty-ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"></path></defs><circle cx="100" cy="100" r="98" fill="${p.accent2}"></circle><circle cx="100" cy="100" r="46" fill="${p.accent}"></circle><text font-size="${ringSize}" font-weight="700" fill="${luminance(p.accent2) < 0.4 ? '#ffffff' : '#111111'}"><textPath href="#ty-ring" textLength="${RING_LENGTH}" lengthAdjust="spacing">${escape(ring)}</textPath></text></svg>`;
   return `<style>${heroFontFaces(facts.fonts)}
 .ty{background:${p.paper};color:${p.ink};font-family:"${text.family}",system-ui,sans-serif;min-height:100vh;display:grid;grid-template-columns:96px 1fr;overflow:hidden}
 .ty-rail{background:${fill};color:${fillText};display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:24px;padding:28px 0}
 .ty-logo{width:48px;height:auto}
 .ty-name{font-family:"${display.family}",sans-serif;font-weight:800;font-size:26px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg)}
 .ty-nav{display:flex;gap:18px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg)}.ty-nav a{color:inherit;text-decoration:none}
-.ty-cart{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.ty-cart{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg)}
 .ty-main{display:grid;grid-template-columns:1.05fr 1fr;align-items:center;gap:5vw;padding:6vw 6vw 6vw 5vw}
+.ty-copy{container-type:inline-size;min-width:0}
 .ty-eyebrow{font-size:13px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;margin:0 0 22px}
-.ty h1{font-family:"${display.family}",sans-serif;font-size:clamp(64px,10vw,140px);line-height:.9;letter-spacing:-0.04em;font-weight:900;margin:0 0 24px;overflow-wrap:normal;word-break:normal;hyphens:manual}
+.ty h1{font-family:"${display.family}",sans-serif;font-size:min(140px,calc(100cqi/${headlineDivisor}));line-height:.9;letter-spacing:-0.04em;font-weight:900;margin:0 0 24px;overflow-wrap:normal;word-break:normal;hyphens:manual}
 .ty-line{font-size:19px;max-width:40ch;margin:0 0 34px}
 .ty-cta{display:inline-flex;align-items:center;gap:14px;background:${fill};color:${fillText};padding:18px 30px;font-size:17px;font-weight:700;text-decoration:none;border-radius:999px;box-shadow:6px 6px 0 ${buttonShadow}}.ty-arrow{width:22px;height:22px}
-.ty-art{position:relative;justify-self:center;width:min(100%,520px)}
+.ty-art{position:relative;justify-self:center;width:min(100%,520px);container-type:inline-size}
 .ty-frame{margin:0;background:#ffffff;padding:16px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard}}
 .ty-photo{display:block;width:100%;height:min(62vh,560px);object-fit:cover}
-.ty-type{display:flex;flex-direction:column;background:${p.accent};color:${p.paper};padding:36px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard};font-family:"${display.family}",sans-serif;font-weight:900;font-size:clamp(56px,8vw,120px);line-height:.88;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal}.ty-type span:nth-child(2n){color:${p.ink}}
+.ty-type{display:flex;flex-direction:column;background:${p.accent};color:${typeOdd};padding:36px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${hard};font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(120px,calc((100cqi - 72px)/${typeDivisor}));line-height:.88;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.ty-type span:nth-child(2n){color:${typeEven}}
 .ty-stamp{position:absolute;width:150px;height:150px;top:-48px;right:-36px;animation:ty-spin 24s linear infinite}
 @keyframes ty-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.ty-stamp{animation:none}}
-@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:20px}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:clamp(40px,12vw,64px)}.ty-stamp{width:104px;height:104px;top:-30px;right:-6px}}</style>
+@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${headlineDivisor}))}.ty-stamp{width:104px;height:104px;top:-30px;right:-6px}}</style>
 <div class="ty"><header class="ty-rail">${logo}<span class="ty-name" data-store-name>${escape(facts.storeName)}</span><nav class="ty-nav"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a></nav><span class="ty-cart">Carrito (0)</span></header>
-<section class="ty-main"><div><p class="ty-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="ty-line">${escape(facts.line)}</p><a class="ty-cta" href="#">${escape(facts.action)} ${ARROW}</a></div><div class="ty-art">${art}${stamp}</div></section></div>`;
+<section class="ty-main"><div class="ty-copy"><p class="ty-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="ty-line">${escape(facts.line)}</p><a class="ty-cta" href="#">${escape(facts.action)} ${ARROW}</a></div><div class="ty-art">${art}${stamp}</div></section></div>`;
 }
 
 const HERO_SCHEMA = { type: 'object', additionalProperties: false, required: ['html'], properties: { html: { type: 'string' } } };

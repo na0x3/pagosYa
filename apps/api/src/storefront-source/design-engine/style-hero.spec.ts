@@ -331,7 +331,7 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
     expect(html).toMatch(/\.ty-frame\{[^}]*box-shadow:\d+px \d+px 0 #/);
     expect(html).toContain('assets/photo-1.webp');
     expect(html).toMatch(/<textPath href="#ty-ring"[^>]*>TOSTADERO YUNGAS · /);
-    expect(html).toMatch(/\.ty h1\{[^}]*font-size:clamp\(64px,[^)]*140px\)[^}]*line-height:0?\.9/);
+    expect(html).toMatch(/\.ty h1\{[^}]*font-size:min\(140px,calc\(100cqi\/[\d.]+\)\)[^}]*line-height:0?\.9/);
     expect(html).toMatch(/\.ty-cta\{[^}]*border-radius:999px[^}]*box-shadow:6px 6px 0 #e5371f/);
     expect(html).toMatch(/<a class="ty-cta"[^>]*>[^<]*Ver cafés[^<]*<svg/);
     expect(html).toContain('class="ty-eyebrow"');
@@ -350,6 +350,79 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
     expect(html).toContain('YUNGAS &lt;B&gt;&amp;&lt;/B&gt; · ');
     expect(sanitizeHeroHtml(html)).not.toBeNull();
     expect(sanitizeHeroHtml(templateHero({ ...bold, palette: { paper: 'x', ink: 'y', accent: 'z', accent2: 'w' } }))).not.toBeNull();
+  });
+
+  /** The font-size the template gives `selector` in a box `width` px wide: min(cap, (width - inset) / divisor), in container units. */
+  const sizeAt = (css: string, selector: RegExp, width: number) => {
+    const match = css.match(selector);
+    expect(match).not.toBeNull();
+    const [, cap, inset, divisor] = match!;
+    return Math.min(Number(cap), (width - Number(inset ?? 0)) / Number(divisor));
+  };
+  const H1 = /\.ty h1\{[^}]*font-size:min\((\d+)px,calc\((?:100cqi)()\/([\d.]+)\)\)/;
+  const H1_PHONE = /@media \(max-width:640px\)\{[^@]*\.ty h1\{font-size:min\((\d+)px,calc\((?:100cqi)()\/([\d.]+)\)\)/;
+  const TYPE = /\.ty-type\{[^}]*font-size:min\((\d+)px,calc\(\(100cqi - (\d+)px\)\/([\d.]+)\)\)/;
+
+  it('sizes the giant headline by its longest word so no word breaks or clips, on the phone column and the desktop column', () => {
+    const html = templateHero({ ...bold, headline: 'Especialidades de altura' });
+    expect(html).toMatch(/\.ty-copy\{[^}]*container-type:inline-size/);
+    expect(html).toMatch(/\.ty h1\{[^}]*overflow-wrap:normal;word-break:normal;hyphens:manual/);
+    // 390px phone: 354px column; 1280px desktop: about 501px column; plus the widest desktop column.
+    for (const [width, selector] of [[354, H1_PHONE], [354, H1], [501, H1], [900, H1]] as const) {
+      const size = sizeAt(html, selector, width);
+      expect(size * 'Especialidades'.length * 0.66).toBeLessThanOrEqual(width + 1e-9);
+    }
+    // A short headline still gets the giant size.
+    expect(sizeAt(templateHero({ ...bold, headline: 'Café de altura' }), H1, 501)).toBeGreaterThanOrEqual(110);
+  });
+
+  it('sizes the giant type field by the store name\'s longest word inside its padding', () => {
+    for (const storeName of ['Tostadero Yungas', 'Especialidades']) {
+      const html = templateHero({ ...bold, storeName, photoPath: undefined });
+      expect(html).toMatch(/\.ty-art\{[^}]*container-type:inline-size/);
+      const longest = Math.max(...storeName.split(' ').map(word => word.length));
+      // 390px phone: the art box is 354px (282px inside the padding); 1280px desktop: about 477px; at most 520px.
+      for (const width of [354, 477, 520]) {
+        const size = sizeAt(html, TYPE, width);
+        expect(size * longest * 0.66).toBeLessThanOrEqual(width - 72 + 1e-9);
+      }
+    }
+  });
+
+  it('fits the rail: the cart runs vertically on desktop, and a long name on the phone rail shrinks and never overflows', () => {
+    const html = templateHero({ ...bold, storeName: 'Tostadero de Especialidades Yungas' });
+    expect(html).toMatch(/\.ty-cart\{[^}]*writing-mode:vertical-rl/);
+    const phone = html.slice(html.indexOf('@media (max-width:640px)'));
+    expect(phone).toMatch(/\.ty-name\{[^}]*min-width:0;overflow:hidden;text-overflow:ellipsis/);
+    expect(phone).toMatch(/\.ty-cart\{[^}]*writing-mode:horizontal-tb/);
+    const size = Number(phone.match(/\.ty-name\{[^}]*font-size:(\d+(?:\.\d+)?)px/)![1]);
+    expect(size).toBeLessThan(20);
+    expect(Number(templateHero(bold).slice(templateHero(bold).indexOf('@media (max-width:640px)')).match(/\.ty-name\{[^}]*font-size:(\d+(?:\.\d+)?)px/)![1])).toBe(20);
+  });
+
+  it('fits the stamp text to the whole ring with textLength, for short and long names, and the sanitiser keeps it', () => {
+    for (const storeName of ['Buna', 'Tostadero Yungas', 'Tostadero de Especialidades de los Yungas Bolivianos']) {
+      const html = templateHero({ ...bold, storeName });
+      const tag = html.match(/<textPath href="#ty-ring" textLength="(\d+(?:\.\d+)?)" lengthAdjust="spacing">([^<]*)<\/textPath>/);
+      expect(tag).not.toBeNull();
+      expect(Number(tag![1])).toBeCloseTo(2 * Math.PI * 74, 0);
+      expect(tag![2]).toContain(storeName.toUpperCase());
+      const fontSize = Number(html.match(/<text font-size="(\d+(?:\.\d+)?)"/)![1]);
+      // Natural length close to the ring: at most a little stretch, never squeezed into overlapping letters.
+      expect(tag![2].length * fontSize * 0.62).toBeLessThanOrEqual(2 * Math.PI * 74 * 1.05);
+      expect(tag![2].length * fontSize * 0.62).toBeGreaterThan(2 * Math.PI * 74 * 0.6);
+      expect(sanitizeHeroHtml(html)).toContain('textLength="');
+      expect(sanitizeHeroHtml(html)).toContain('lengthAdjust="spacing"');
+    }
+  });
+
+  it('keeps every type span readable when the accent is the ink colour', () => {
+    const html = templateHero({ ...bold, photoPath: undefined, palette: { paper: '#f2b705', ink: '#111111', accent: '#111111', accent2: '#fff6d6' } });
+    const odd = html.match(/\.ty-type\{[^}]*;color:(#[0-9a-f]{6})/i)![1], even = html.match(/\.ty-type span:nth-child\(2n\)\{color:(#[0-9a-f]{6})\}/i)![1];
+    for (const colour of [odd, even]) expect(colour.toLowerCase()).not.toBe('#111111');
+    // On the brief's own palette both keep their colours.
+    const own = templateHero({ ...bold, photoPath: undefined });
+    expect(own).toMatch(/\.ty-type span:nth-child\(2n\)\{color:#111111\}/);
   });
 
   it('gives the calm template a custom button from its family (radius and offset), not a default one', () => {
