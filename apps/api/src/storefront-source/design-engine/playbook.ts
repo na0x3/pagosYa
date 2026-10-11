@@ -146,7 +146,7 @@ const PROFILE_LINE: Record<CraftProfile, string> = {
   shop: 'Craft profile shop-led: products lead early (the catalog within the first two screens), h1 28-48px, body 14-16px, a white or near-white page with one brand colour band, compact rhythm.',
   story: 'Craft profile story-led: h1 56-96px, body 16-20px, calm alternating tinted backgrounds with at most one dark band, 96-144px between sections.',
 };
-export type PlaybookOptions = { bold?: boolean; palette?: Palette; button?: string; brandColours?: boolean; evidence?: Partial<Record<Evidence, boolean>> };
+export type PlaybookOptions = { bold?: boolean; palette?: Palette; button?: string; brandColours?: boolean; freeFonts?: boolean; evidence?: Partial<Record<Evidence, boolean>> };
 const shown = (section: PlaybookSection, evidence: Partial<Record<Evidence, boolean>>) => !section.evidence || evidence[section.evidence] !== false;
 export function playbookDirection(entry: PlaybookEntry, family: StyleFamily, options: PlaybookOptions = {}): string {
   const evidence = options.evidence ?? {};
@@ -158,7 +158,7 @@ export function playbookDirection(entry: PlaybookEntry, family: StyleFamily, opt
       : `PLAYBOOK: This is a ${entry.name} business. Make it read like a normal, professionally made website of that kind, like the best real ones, not an art experiment.`,
     `- It must show: ${entry.sections.filter(section => shown(section, evidence)).map(section => section.must).join('; ')}. Only real facts from the brief and the store data; never invent hours, addresses, dates, numbers or reviews.`,
     `- ${options.bold ? '' : PROFILE_LINE[entry.profile] + ' '}One content container 1140-1320px wide with 64-80px side margins; standard header (logo, 3-5 links, one action, cart); ${entry.footer}.`,
-    `- Style family "${family.name}": ${family.radius} corners, ${family.photoShape} photos, fonts ${family.fonts.map(f => `${f.display} + ${f.text}`).join(' or ')}, buttons ${options.button ?? family.buttons.join(' or ')}${colours}.`,
+    `- Style family "${family.name}": ${family.radius} corners, ${family.photoShape} photos, ${options.freeFonts ? 'fonts free from the self-hosted catalogue (set them in dna.type)' : `fonts ${family.fonts.map(f => `${f.display} + ${f.text}`).join(' or ')}`}, buttons ${options.button ?? family.buttons.join(' or ')}${colours}.`,
     ...(options.bold ? [] : ['- No novelty ornaments: no circular or rotating text badges, stamps, stickers, wavy or torn dividers, blobs or scribbles; separate sections with space, a hairline or a calm background change.']),
     '- Modern and professional details: a header that stays usable while scrolling, a footer with columns, small headings, line icons and the legal row on every page; consistent line icons (inline SVG, 1.5px stroke, currentColor) for contact, hours, location, delivery and features; never emoji.',
     `- Voice: ${entry.tone}.`,

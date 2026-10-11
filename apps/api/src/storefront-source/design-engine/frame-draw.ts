@@ -144,7 +144,7 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean } }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -161,14 +161,18 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   // Professional by default: inside a playbook family only conventional headers, unless the merchant asked for bold.
   const conventional = Boolean(input.playbook && !input.playbook.bold);
   const calm = (list: readonly FrameEntry[]) => list.filter(entry => !entry.bold).map(entry => entry.id);
+  const loud = (list: readonly FrameEntry[]) => list.filter(entry => entry.bold).map(entry => entry.id);
   // Every part, not only the header: a bold hero, footer or structure contradicts the playbook just as much.
-  const headerAllowed: Partial<Record<FramePart, readonly string[]>> = conventional ? { header: CONVENTIONAL_HEADERS, cart: calm(FRAME_CATALOGUE.cart), footer: ['directory', 'contact-card', 'statement-band', 'wordmark-signoff'], hero: calm(FRAME_CATALOGUE.hero) } : {};
+  // A bold style card (spec 2026-10-11) prefers the loud headers and heroes; an empty narrowing falls back in drawFrame.
+  const headerAllowed: Partial<Record<FramePart, readonly string[]>> = conventional
+    ? { header: CONVENTIONAL_HEADERS, cart: calm(FRAME_CATALOGUE.cart), footer: ['directory', 'contact-card', 'statement-band', 'wordmark-signoff'], hero: calm(FRAME_CATALOGUE.hero) }
+    : input.boldStyle ? { header: loud(FRAME_CATALOGUE.header), hero: loud(FRAME_CATALOGUE.hero) } : {};
   const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed);
   const frameOmit = frameOverrides(input.request);
   const playbookFields: Record<string, string> = input.playbook ? { kind: input.playbook.kind, family: input.playbook.family.id } : {};
   if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
   const category = input.playbook?.kind ?? input.category ?? '';
-  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) });
+  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) });
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
   const draw = { ...frame, ...design, category, ...playbookFields };
