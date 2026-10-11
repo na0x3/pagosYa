@@ -15,6 +15,13 @@ describe('authorable source paths', () => {
     expect(files.map(f => f.path)).toEqual(['index.html', 'styles.css', 'site.js']);
     expect(dropped).toEqual(['config.js', 'package.json', 'design-direction.json']);
   });
+  // Night run 2026-10-11: Tostadero Illimani's finished draft failed the whole store with "Duplicate or reserved source
+  // file path" because the author returned one file twice. The last copy is the author's final word.
+  it('keeps one copy of a file the author returned twice, the last one, whatever its case', () => {
+    const { files, dropped } = sep5AuthorableFiles([{ path: 'index.html', content: 'a' }, { path: 'styles.css', content: 'b' }, { path: 'Styles.css', content: 'c' }, { path: 'index.html', content: 'd' }]);
+    expect(files).toEqual([{ path: 'Styles.css', content: 'c' }, { path: 'index.html', content: 'd' }]);
+    expect(dropped).toEqual(['index.html (duplicate)', 'styles.css (duplicate)']);
+  });
   it('shows a redesign only the files the author may rewrite, and never the platform copies or kit stylesheet', () => {
     const shown = sep5PreviousSource(pulso.map(file)).map(f => f.path);
     expect(shown).toEqual(expect.arrayContaining(['index.html', 'styles.css', 'site.js', 'product.html', 'pages/historia.html']));

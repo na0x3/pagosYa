@@ -21,7 +21,11 @@ export function isAuthorableSourcePath(path: string): boolean {
  * at save, so dropping them loses nothing the model may change.
  */
 export function sep5AuthorableFiles<T extends { path: string }>(files: T[]): { files: T[]; dropped: string[] } {
-  return { files: files.filter(file => isAuthorableSourcePath(file.path)), dropped: files.filter(file => !isAuthorableSourcePath(file.path)).map(file => file.path) };
+  // A file returned twice (paths are compared without case, as the save does) keeps its last copy, the author's final word.
+  const last = new Map(files.map((file, index) => [file.path.toLowerCase(), index]));
+  const duplicates = files.filter((file, index) => last.get(file.path.toLowerCase()) !== index).map(file => `${file.path} (duplicate)`);
+  const unique = files.filter((file, index) => last.get(file.path.toLowerCase()) === index);
+  return { files: unique.filter(file => isAuthorableSourcePath(file.path)), dropped: [...duplicates, ...unique.filter(file => !isAuthorableSourcePath(file.path)).map(file => file.path)] };
 }
 
 /** What a redesign shows the author: only what it may rewrite. Standard pages are copies of index.html rebuilt at save. */
