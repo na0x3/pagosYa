@@ -2839,7 +2839,25 @@
       if (gap > 2 && gap < 64 && price.getBoundingClientRect().left - card0 < 4) price.style.marginInlineStart = `${(parseFloat(getComputedStyle(price).marginInlineStart) || 0) + gap}px`;
     });
   }
-  if (typeof addEventListener === 'function') addEventListener('resize', () => alignCardPrices(), { passive: true });
+  // A photo bled to the card edges with negative margins, capped by a reset's img{max-width:100%}, stops short of the
+  // right edge (night run 2026-10-11): release the cap so it reaches both edges. A photo without a bleed is left alone.
+  function fitCardPhotos() {
+    document.querySelectorAll('.menu-item img.menu-item__image').forEach(img => {
+      if (img.style.maxWidth === 'none' || parseFloat(getComputedStyle(img).marginLeft) >= 0) return;
+      const card = img.closest('.menu-item').getBoundingClientRect(), box = img.getBoundingClientRect();
+      if (box.width && (card.right - box.right) - (box.left - card.left) > 6) img.style.maxWidth = 'none';
+    });
+  }
+  // The card's add button is an icon-only "+". A store that decorates it with a symbol of its own (a split "+" cell drawn
+  // with ::after) drew it for a word label, so give it one instead of showing "+ | +".
+  function labelDecoratedAddButtons() {
+    document.querySelectorAll('.menu-add[data-add]').forEach(button => {
+      if ((button.textContent || '').trim() || !button.querySelector('svg')) return;
+      if (['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content))) button.textContent = 'Añadir';
+    });
+  }
+  function fitCards() { labelDecoratedAddButtons(); fitCardPhotos(); alignCardPrices(); }
+  if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   // The default catalog card. Custom templates (customProductCard) take priority when the store authored one.
   function productCard(p) {
     const image = galleryImages(p)[0];
@@ -3125,8 +3143,8 @@
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     observeCards();
-    alignCardPrices();
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(alignCardPrices);
+    fitCards();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fitCards);
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
     if (fullProductPage && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));

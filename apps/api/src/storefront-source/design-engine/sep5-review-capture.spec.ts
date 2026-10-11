@@ -185,3 +185,28 @@ it('lines the kit-rendered price up with the product name when only the copy is 
   const { facts } = await captureSep5Draft(await store(header, '', '', '.menu-item{width:300px}.menu-item__copy{padding:0 18px}'));
   expect(facts[0].priceOffset).toBe(0);
 });
+
+// Night run 2026-10-11 (Nutrimar): the split DNA drew a "+" cell after the card button, but the kit's card button is an
+// icon-only "+" already, so the card read "+ | +". The kit gives such a button its word label, the shape the author drew for.
+it('labels an icon-only card add button that the store decorates with its own symbol cell', async () => {
+  const { facts } = await captureSep5Draft(await store(completeHeader, '', '', '.menu-add{display:flex;justify-content:space-between}.menu-add::after{content:"+";padding-left:12px;border-left:1px solid}'));
+  expect(facts[0].addSymbolTwice).toBe(0);
+  expect(facts[0].pageText).toContain('Añadir');
+  expect(sep5MeasuredFacts([{ ...facts[0], addSymbolTwice: 1 }]).join(' ')).toMatch(/botón de añadir.*símbolo/);
+});
+
+it('leaves an icon-only card add button without decoration as the icon', async () => {
+  const { facts } = await captureSep5Draft(await store(completeHeader, '', '', '.menu-add{display:flex}'));
+  expect(facts[0].addSymbolTwice).toBe(0);
+  expect(facts[0].pageText).not.toContain('Añadir');
+});
+
+// Night run 2026-10-11 (Estudio Eje): a photo bled to the card edges with negative margins, capped by a reset's
+// img{max-width:100%}, stopped 53px short of the right edge. The kit lets a bleeding card photo reach both edges.
+it('lets a card photo bled with negative margins reach both card edges', async () => {
+  const photo = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#c96"/></svg>');
+  const card = `<article class="menu-item"><img class="menu-item__image" src="${photo}" alt=""><div class="menu-item__copy"><h3>Clase</h3></div></article>`;
+  const { facts } = await captureSep5Draft(await store(completeHeader, '', card, 'img{max-width:100%}.menu-item{display:flex;flex-direction:column;width:300px;padding:0 24px}.menu-item__image{width:calc(100% + 48px);height:160px;margin:0 -24px;object-fit:cover}'));
+  expect(facts[0].narrowPhoto).toBe(0);
+  expect(sep5MeasuredFacts([{ ...facts[0], narrowPhoto: 2 }]).join(' ')).toMatch(/foto.*más angosta/);
+});

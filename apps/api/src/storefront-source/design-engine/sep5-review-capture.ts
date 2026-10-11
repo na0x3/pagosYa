@@ -4,7 +4,7 @@ import { sourceVisualState } from '../source-visual-state';
 import type { SourceProjectSnapshot } from '../source-project';
 
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
-export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string; priceOffset?: number };
+export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string; priceOffset?: number; addSymbolTwice?: number; narrowPhoto?: number };
 
 // Emoji presentation only: arrows, ticks and close glyphs (↗ ✔ ✖) are functional symbols, and a glyph inside a
 // button or a labelled control is an icon.
@@ -37,6 +37,8 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
     ...(fact.decorEmoji ? [`${fact.width}px: ${fact.decorEmoji} emoji usado(s) como decoración; reemplázalo(s) por una ilustración o quítalo(s).`] : []),
     ...(fact.fakeCircle ? [`${fact.width}px: ${fact.fakeCircle} texto(s) circular(es) hecho(s) con un span girado; un texto en círculo necesita un SVG con <textPath>, o quítalo.`] : []),
     ...(fact.priceOffset ? [`${fact.width}px: en ${fact.priceOffset} tarjeta(s) de producto el precio no está alineado con el nombre (queda pegado al borde); da a .menu-item__price el mismo margen lateral que .menu-item__copy, o el relleno a la tarjeta entera.`] : []),
+    ...(fact.addSymbolTwice ? [`${fact.width}px: en ${fact.addSymbolTwice} tarjeta(s) el botón de añadir es solo un ícono «+» y tu CSS le agrega otro símbolo con ::before/::after; no decores .menu-add con un símbolo propio.`] : []),
+    ...(fact.narrowPhoto ? [`${fact.width}px: en ${fact.narrowPhoto} tarjeta(s) la foto es más angosta que la tarjeta (sangra a la izquierda con margen negativo pero un max-width:100% la corta); pon max-width:none en .menu-item__image.`] : []),
     ...(fact.overlaps?.length ? [`${fact.width}px: un texto se superpone a otro: ${fact.overlaps.join('; ')}.`] : []),
     ...fact.errors.map(error => `${fact.width}px: error de JavaScript: ${error}`),
   ]);
@@ -96,6 +98,10 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
           // The kit renders the price beside .menu-item__copy, not inside it: padding only the copy leaves the price on the card edge.
           priceOffset: Array.from(document.querySelectorAll('.menu-item')).filter(card => { const name = card.querySelector('.menu-item__copy h3, .menu-item__copy h2'), price = card.querySelector('.menu-item__price'); if (!name || !price || !price.getBoundingClientRect().width) return false; return Math.abs(name.getBoundingClientRect().left - price.getBoundingClientRect().left) > 6; }).length,
+          // An icon-only card add button (the kit's "+") that the store's CSS decorates with a symbol of its own.
+          addSymbolTwice: Array.from(document.querySelectorAll('.menu-add')).filter(button => { if ((button.textContent || '').trim() || !button.querySelector('svg') || !button.getBoundingClientRect().width) return false; return ['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content)); }).length,
+          // A card photo bled left with a negative margin that a max-width keeps from reaching the right edge.
+          narrowPhoto: Array.from(document.querySelectorAll('.menu-item')).filter(card => { const img = card.querySelector('img.menu-item__image'); if (!img) return false; const c = card.getBoundingClientRect(), r = img.getBoundingClientRect(); if (!r.width || parseFloat(getComputedStyle(img).marginLeft) >= 0) return false; return (c.right - r.right) - (r.left - c.left) > 6; }).length,
           fakeCircle: (() => {
             const hits = Array.from(document.body.querySelectorAll('*')).filter(el => {
               if (el.closest('svg') || el.querySelector('textPath')) return false;
