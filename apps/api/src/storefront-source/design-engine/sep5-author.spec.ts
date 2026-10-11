@@ -290,3 +290,12 @@ describe('Sep-5 products', () => {
     expect(sep5Products(undefined, instruction, new Set()).products).toEqual([]);
   });
 });
+
+// "Elige tu estilo" (spec 2026-10-11): the store keeps the header and hero of the card the merchant picked.
+it('appends the picked header and hero, and stays byte-identical without one', () => {
+  const base = { brief: {}, instruction: 'x', data: {}, assetLegend: [] };
+  expect(sep5AuthorPrompt({ ...base, hero: '' })).toBe(sep5AuthorPrompt(base));
+  const prompt = sep5AuthorPrompt({ ...base, hero: '<header data-store-name>Buna</header>' });
+  expect(prompt).toContain('PICKED HEADER AND HERO');
+  expect(prompt).toContain('<header data-store-name>Buna</header>');
+});

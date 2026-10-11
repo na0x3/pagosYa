@@ -54,6 +54,9 @@ export function sep5Products(value: unknown, instruction: string, allowedImages:
   }
 }
 
+/** The style card the merchant picked (spec 2026-10-11): the store keeps this header and hero. */
+export const SEP5_KEEP_HERO = (html: string) => `PICKED HEADER AND HERO: The merchant chose this design from four. Keep this header and first screen exactly as given (markup and CSS), move its CSS into styles.css, keep [data-store-name], and build the rest of the store in the same fonts, colours and language. Replace preview-only links with real ones (index.html, buscar.html, the catalog, Mi cuenta with data-pagosya-account="login", the cart button with [data-cart-count]).\n${html}`;
+
 export function sep5AuthorPrompt(input: {
   brief: unknown; instruction: string; data: unknown; assetLegend: unknown;
   /** The merchant's own previous files. The Sep-5 engine sent these, and the prompt's last paragraph asks
@@ -82,6 +85,8 @@ export function sep5AuthorPrompt(input: {
   playbook?: string;
   /** Appends SEP5_PRODUCTS; the response schema must then be sep5ResponseSchema(true). */
   products?: boolean;
+  /** The header and hero of the style card the merchant picked (SEP5_KEEP_HERO, spec 2026-10-11). Absent or blank, the prompt stays byte-identical. */
+  hero?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -94,6 +99,7 @@ export function sep5AuthorPrompt(input: {
     "If assets are unavailable use the business's public product images or a deliberate typography-led composition; never invent a URL. For an edit, preserve unrelated copy, navigation, and design decisions. Return the whole project, not a diff. Keep code concise enough for 18000 output tokens.",
     ...(input.storeShell ? [input.frame?.trim() ? SEP5_STORE_SHELL_FRAMED : SEP5_STORE_SHELL] : []),
     ...(input.frame?.trim() ? [input.frame.trim()] : []),
+    ...(input.hero?.trim() ? [SEP5_KEEP_HERO(input.hero.trim())] : []),
     ...(input.playbook?.trim() ? [input.playbook.trim()] : []),
     ...(input.products ? [SEP5_PRODUCTS] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),

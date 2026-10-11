@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
-import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA } from './design-engine/sep5-author';
+import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
 import { STATIC_STANDARD_PAGE_PATHS, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
@@ -342,7 +342,7 @@ export class SourceGenerationService {
     return { aiUsage, models: Object.entries(SOURCE_MODELS).map(([id, model]) => ({ id, label: model.label })), defaultModel: 'auto', defaultMaxCredits: DEFAULT_MAX_CREDITS, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', runs };
   }
 
-  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves four style cards on the run and returns before building. */ styleProposal?: boolean }) {
+  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves four style cards on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
     execution?.signal?.throwIfAborted();
     // On the merchant's own ChatGPT plan nothing is billed: no credit allowance, no credits charged, more time per run.
     const chatgptPlan = Boolean(this.config.get('app.chatgptPlan')), freeRun = Boolean(execution?.free) || chatgptPlan;
@@ -566,6 +566,13 @@ export class SourceGenerationService {
       boldAsked = slot.mode === 'bold';
       styleBold = boldAsked;
     };
+    // The merchant picked a card: its concept is forced and its drawn slot becomes this run's frame, palette and mode.
+    const picked = execution?.style;
+    const pickedConcept = picked?.proposal.design?.concepts[picked.index];
+    const pickedSlot = pickedConcept?.card ? picked!.proposal.slots[pickedConcept.card.slot] : undefined;
+    if (pickedSlot) useSlot(pickedSlot);
+    const pickedHero = picked ? picked.proposal.heroes[picked.index]?.html ?? '' : '';
+    const pickedDesign: SourceDesign | undefined = picked?.proposal.design && pickedConcept ? { ...picked.proposal.design, selected: picked.index, selection: { source: 'forced', rationale: null } } : undefined;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
       const original = assetLegend.find(entry => entry.path === asset.path)?.original;
@@ -745,13 +752,13 @@ export class SourceGenerationService {
         await progress?.('design');
         const implementationFloor = budget.reserve(model, estimate.estimatedInputTokens, 2000, 2000);
         // Cross-store memory is best-effort: a failed lookup plans without it rather than failing the run.
-        const avoidRecent = retainedDesign ? [] : await Promise.resolve().then(() => this.projects.recentDesignFingerprints(storeId)).catch(() => [] as string[]);
-        const recentCompositions = retainedDesign ? [] : await Promise.resolve().then(() => this.projects.recentCompositionFingerprints(storeId)).catch(() => [] as string[]);
+        const avoidRecent = retainedDesign || pickedDesign ? [] : await Promise.resolve().then(() => this.projects.recentDesignFingerprints(storeId)).catch(() => [] as string[]);
+        const recentCompositions = retainedDesign || pickedDesign ? [] : await Promise.resolve().then(() => this.projects.recentCompositionFingerprints(storeId)).catch(() => [] as string[]);
         try {
           const plannerArgs = { model, provider, apiKey, selected: exploration.selected, sitePurpose, narrative: narrativePlanning, signature: signatureOn, dnaSeed: storeId, repairs: autoRepairs, images, budget, signal, attempts, record: async (body: unknown, attempt: DesignPlanningAttempt) => this.metering?.record(storeId, 'source-design', model, body, attempt.durationMs, attempt.status) };
           const contextFor = (style: boolean) => JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, designDraw: style ? undefined : frame.planner || undefined, playbook: style ? undefined : playbookText || undefined, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] });
           let styled: SourceDesign | undefined;
-          if (styleSlots.length && !retainedDesign) {
+          if (styleSlots.length && !retainedDesign && !pickedDesign) {
             await progress?.('styles');
             styled = await this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: styleSlots.map(slot => ({ mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook) })), context: contextFor(true) })
               .catch(error => { if (signal.aborted) throw error; this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id })); return undefined; });
@@ -764,10 +771,10 @@ export class SourceGenerationService {
             useSlot(styleSlots[styled.concepts[0].card!.slot]);
             committedDesign = { ...styled, selected: 0, selection: { source: 'forced', rationale: null } };
           } else {
-            committedDesign = retainedDesign || await this.designPlanner.explore({ ...plannerArgs, context: contextFor(false) });
+            committedDesign = retainedDesign || pickedDesign || await this.designPlanner.explore({ ...plannerArgs, context: contextFor(false) });
           }
         } finally { implementationFloor.settle({ input_tokens: 0, output_tokens: 0 }); }
-        if (!retainedDesign) committedDesign = preferFreshComposition(committedDesign, recentCompositions);
+        if (!retainedDesign && !pickedDesign) committedDesign = preferFreshComposition(committedDesign, recentCompositions);
         visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), committedDesign);
         taskPrompt += `\nUpdated visual system after concept selection. This newer manifest is authoritative:\n${sourceVisualSystemContext(visualSystem)}`;
         const chosen = committedDesign.concepts[committedDesign.selected];
@@ -785,6 +792,7 @@ export class SourceGenerationService {
         }
         taskPrompt = `Implement this committed concept literally. Its layout, typography, image roles and mobile plan were chosen in a separate exploration. Do not replace it with your default layout. Return source files, not new concepts. Selected concept: ${JSON.stringify(chosen)}\nRequired direct main block IDs, in order: ${chosen.layout!.sections.join(', ')}. Use these exact IDs in ${useNext ? 'components/home.tsx' : 'index.html'}; do not rename them to catalogo or generic labels. Put header/navigation outside main ${sitePurpose === 'shop' ? 'and the real catalog' : 'and the principal content'} inside #${chosen.layout!.catalogSection}.\n${taskPrompt}`;
         taskPrompt += sourceSignatureTaskLine(chosen, signatureOn);
+        if (pickedHero) taskPrompt += `\n${SEP5_KEEP_HERO(pickedHero)}`;
         // The runtime styles the purchase control in the DNA button form; the authored CSS should draw the same form.
         if (chosen.dna) taskPrompt += `\nPurchase control form: ${chosen.dna.buttons.form}.\n${sourceMotionPersonalityLine(chosen.dna.motion.personality)}`;
         // The one exception to the art direction above: the DNA's own motifs, drawn as sanitised files.
@@ -916,7 +924,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph };
+        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph, hero: pickedHero };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {

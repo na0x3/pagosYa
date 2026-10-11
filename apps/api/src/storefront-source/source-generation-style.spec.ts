@@ -11,6 +11,7 @@ import { validateStyleDesign } from './source-style-design';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
+import type { StyleProposal } from './source-style-proposal';
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -32,7 +33,18 @@ const files = () => [
   { path: 'index.html', content: '<!doctype html><main><section id="menu"><h1>Menú</h1><div data-pagosya-catalog></div></section></main><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>' },
   { path: 'styles.css', content: 'body { color: #222; }' }, { path: 'site.js', content: 'globalThis.__generatedSourceExecuted = true;' },
 ];
+/** Deterministic draws, so slot 3 is always bold with the same palette. */
+const seeded = (seed: number) => () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
 const dto = { revision: 0, brief: { businessType: 'Cafetería', audience: 'Vecinos', primaryAction: 'Pedir', visualDirection: 'Menú primero' }, instruction: 'Crea la tienda de mi cafetería', assetUrls: [] } as any;
+
+/** What a finished proposal saved on the run: four concepts, four drawn slots and a hero per card (bundle paths). */
+const savedProposal = (): StyleProposal => {
+  const slots = styleDrawsModule.styleDraws({ kind: 'cafe-food', brandColours: false, category: 'cafe', previous: [], recent: [], available: { photos: 0, products: 0, facts: false }, request: dto.instruction, random: seeded(7) })
+    .map(slot => ({ ...slot, playbook: `PLAYBOOK slot ${slot.slot}` }));
+  return { version: 1, status: 'AWAITING_STYLE', slots, design: designWith([0, 1, 2, 3]), assetMap: [],
+    heroes: [0, 1, 2, 3].map(i => ({ html: `<header data-store-name>Café ${i}</header><section class="hero-${i}"><h1>Tarjeta ${i}</h1></section>`, source: 'model' as const })),
+    request: { dto, imageUses: [], redesign: false }, createdAt: '2026-10-11T00:00:00.000Z' };
+};
 
 function setup() {
   const prisma: any = { storeRetention: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceGeneration: { create: jest.fn().mockResolvedValue({ id: 'run-1' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, store: { findFirst: jest.fn().mockResolvedValue({ slug: 'cafe' }), findUnique: jest.fn().mockResolvedValue(null) }, mediaAsset: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) } };
@@ -69,6 +81,8 @@ describe('style proposal mode', () => {
     fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Café', files: files(), products: [] }) }] }] })));
   });
   afterEach(() => jest.restoreAllMocks());
+  /** The files of the one saved revision. */
+  const savedFiles = (): Array<{ path: string; content: string }> => projects.save.mock.calls[0][2].files;
 
   it('makes a proposal instead of building: four slots to the planner, a hero per concept, row left awaiting the pick', async () => {
     explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
@@ -134,5 +148,36 @@ describe('style proposal mode', () => {
     expect(explore).toHaveBeenCalledTimes(1);
     expect(progress).not.toHaveBeenCalledWith('styles');
     expect(authorPrompt()).not.toContain('BOLD BY DEFAULT');
+  });
+
+  it('builds the picked card: forced concept, its draw as the frame, its palette, bold mode and hero to Sep-5, no planner call', async () => {
+    const proposal = savedProposal();
+    expect([proposal.slots[3].mode, Boolean(proposal.slots[3].palette)]).toEqual(['bold', true]);
+    const result = await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 3 } });
+    expect(explore).not.toHaveBeenCalled();
+    expect('styleProposal' in result).toBe(false);
+    const prompt = authorPrompt()!;
+    expect(prompt).toContain(proposal.slots[3].paragraph);
+    expect(prompt).toContain('BOLD BY DEFAULT');
+    expect(prompt).toContain('PICKED HEADER AND HERO');
+    expect(prompt).toContain(proposal.heroes[3]!.html);
+    expect(prompt).not.toContain(proposal.heroes[2]!.html);
+    const files = savedFiles();
+    expect(files.find(f => f.path === 'frame-draw.json')!.content).toBe(proposal.slots[3].file.content);
+    const design = JSON.parse(files.find(f => f.path === 'design-direction.json')!.content);
+    expect([design.selected, design.selection.source]).toEqual([3, 'forced']);
+    expect(files.find(f => f.path === 'brand.css')!.content).toContain(proposal.slots[3].palette!.paper);
+    expect(projects.recentDesignFingerprints).not.toHaveBeenCalled();
+    expect(projects.recentCompositionFingerprints).not.toHaveBeenCalled();
+  });
+
+  it('builds a calm pick without the bold paragraph', async () => {
+    const proposal = savedProposal();
+    await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 0 } });
+    expect(explore).not.toHaveBeenCalled();
+    const prompt = authorPrompt()!;
+    expect(prompt).toContain(proposal.slots[0].paragraph);
+    expect(prompt).not.toContain('BOLD BY DEFAULT');
+    expect(prompt).toContain(proposal.heroes[0]!.html);
   });
 });
