@@ -40,6 +40,7 @@ async function main() {
       console.log(`Repairing ${id}`);
       try {
         const generated = await generator.generate(run.merchantId, run.storeId, { revision: current.revision, model: 'gpt-5.6-sol', maxCredits: 100, motion: 'subtle', brief: snapshot.brief, instruction, assetUrls: [...uses.map(u => u.url), ...photoUrls] }, undefined, [...uses, ...photoUrls.map(url => ({ url, role: 'product' as const, description: 'Existing catalog product photography; retain its identity.' }))], async phase => { console.log(`${id}: ${phase}`); });
+        if ('styleProposal' in generated) throw new Error('unexpected style proposal');
         const version = await projects.version(run.merchantId, run.storeId, generated.revision);
         for (const file of (version.snapshot as any).files) {
           const path = resolve(folder, String(id), file.path); await mkdir(dirname(path), { recursive: true });

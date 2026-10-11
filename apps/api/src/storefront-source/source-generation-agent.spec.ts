@@ -405,6 +405,7 @@ describe('sketch-first design orchestration', () => {
     const { service, projects, brief } = await setup(); fresh(projects);
     const fetchMock = mockPipeline();
     const result = await service.generate('m', 's', { ...input(brief), revision: 0, designSeed: 'seed-1' }, new SourceRequestBudget(50));
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(fetchMock.mock.calls.map(call => JSON.parse(String(call[1]?.body)).text.format.name)).toEqual(['website_brand', 'website_creative', 'store_sketch', 'website_critic']);
     const sketch = savedSketch(projects);
     expect(sketch.design.designSeed).toBe('seed-1'); expect(sketch.design.brand).toEqual(direction);
@@ -436,6 +437,7 @@ describe('sketch-first design orchestration', () => {
     const { service, projects, brief } = await setup(); fresh(projects);
     const fetchMock = mockPipeline();
     const result = await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(savedSketch(projects).blocks.every((b: any) => !b.free)).toBe(true);
     expect(savedSketch(projects).blocks.every((b: any) => !b.extras?.length)).toBe(true);
     expect(result.generation.attempts.some(a => a.phase === 'composition')).toBe(false);
@@ -452,6 +454,7 @@ describe('sketch-first design orchestration', () => {
     const { service, projects, brief } = await setup(); fresh(projects);
     jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network down'));
     const result = await service.generate('m', 's', { ...input(brief), revision: 0 }, new SourceRequestBudget(50));
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(savedSketch(projects).design.generation.mode).toBe('fallback');
     expect(result.generation.attempts.every(a => a.status === 'FAILED')).toBe(true);
     expect(result.generation.credits).toBe(0);

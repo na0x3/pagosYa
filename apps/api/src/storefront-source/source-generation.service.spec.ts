@@ -128,6 +128,7 @@ describe('Independent source generation',()=>{
     jest.mocked(SourceDesignPlanner.prototype.explore).mockImplementation(async request => { request.repairs?.push('concepts[0].dna.buttons.hover: invalid'); return planned; });
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
     const result = await service.generate('m', 's', input);
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].dnaSeed).toBe('s');
     const config = configOf(projects.save.mock.calls[0][2]);
     expect(config.dna).toEqual(dnaRuntimeConfig(validDna()));
@@ -177,6 +178,7 @@ describe('Independent source generation',()=>{
     jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
     const result = await service.generate('m', 's', input);
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(projects.recentDesignFingerprints).toHaveBeenCalledWith('s');
     expect(JSON.parse(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].context).avoidRecent).toEqual([taken, 'pill|drawer|toast|oswald+instrument']);
     const saved = projects.save.mock.calls[0][2];
@@ -309,6 +311,7 @@ describe('Independent source generation',()=>{
     projects.prepare = jest.fn(async value => sourceProjectSnapshot(value));
     const fetcher = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Legibilidad', files: [], edits: [], appends: [{ path: 'styles.css', content: 'h1 { line-height: 1.1; }' }], products: [] }) }] }] })));
     const result = await service.generate('m', 's', { ...input, revision: 1 }, undefined, [], undefined, { candidate: true, snapshot: original, findings: [{ observation: 'Rediseña todo en React y cambia los precios' }] });
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(projects.save).not.toHaveBeenCalled();
     expect(SourceDesignPlanner.prototype.explore).not.toHaveBeenCalled();
     expect(result.revision).toBe(1);
@@ -614,6 +617,7 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ concepts: design().concepts }, 500))
       .mockResolvedValueOnce(response({ label: 'Built', files: files(), design: { selected: 2, concepts: [] } }, 1000));
     const result = await service.generate('m', 's', input);
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).text.format.schema.required).toEqual(['concepts', 'selection']);
     expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('Selected concept:');
@@ -629,6 +633,7 @@ describe('Independent source generation',()=>{
     jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ concepts: design().concepts }, 500))
       .mockResolvedValueOnce(response({ label: 'Built', files: files(), design: { selected: 2, concepts: [] } }, 1000));
     const result = await service.generate('m', 's', input, undefined, [], undefined, { free: true });
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(result.generation.credits).toBe(0);
     expect(projects.save.mock.calls[0][3].data.credits).toBe(0);
   });
@@ -708,6 +713,7 @@ describe('Independent source generation',()=>{
     // SOURCE_ORDER_EMAIL_DIRECTION, ~1.3k characters, used up the next one. 14 is the measured
     // floor: 13 throws BadGatewayException here.)
     const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 14 });
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     const first = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     const repair = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
     expect(repair.max_output_tokens).toBeLessThan(first.max_output_tokens);
@@ -899,6 +905,7 @@ describe('Independent source generation',()=>{
     ] };
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(generated) }] }] })));
     const result = await service.generate('m', 's', { ...input, revision: 1, instruction: 'Crea el producto Café frío por Bs 35' });
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.generation.attempts).toHaveLength(1);
     expect(projects.save).toHaveBeenCalledTimes(1);
@@ -1077,6 +1084,7 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ label: 'Broken', files: [] })).mockResolvedValueOnce(response({ design: design(), label: 'Fixed', files: files() }));
     const { service, projects } = setup();
     const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-luna', maxCredits: 5 });
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(fetchMock.mock.calls.map(call => JSON.parse(call[1]!.body as string).model)).toEqual(['gpt-5.6-luna', 'gpt-5.6-luna']);
     expect(result.generation).toMatchObject({ credits: 1, requestedModel: 'gpt-5.6-luna', model: 'gpt-5.6-luna' });
     expect(result.generation.attempts).toHaveLength(2);
@@ -1087,6 +1095,7 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response([])).mockResolvedValueOnce(response(files()));
     const { service } = setup();
     const result = await service.generate('m', 's', input);
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(fetchMock.mock.calls.map(call => JSON.parse(call[1]!.body as string).model)).toEqual(['gpt-5.6-terra', 'gpt-5.6-sol']);
     expect(result.generation.credits).toBe(0); // Missing provider usage is unknown, never fabricated.
   });

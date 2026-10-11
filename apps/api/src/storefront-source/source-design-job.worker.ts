@@ -93,6 +93,7 @@ export class SourceDesignJobWorker implements OnModuleDestroy {
         actual = 0;
         const baseline = await this.jobs.artifact<SourceProjectSnapshot>(job.id, 'baseline');
         const generated = await this.generator.generate(store.merchantId, job.storeId, { revision: job.revision, brief: baseline.brief, instruction: 'Corrige los hallazgos visuales adjuntos.', maxCredits: DESIGN_JOB_CAPS.REPAIR, model: DESIGN_JOB_REPAIR_MODEL, motion: sourceMotionMode(baseline.files) }, undefined, [], undefined, { candidate: true, snapshot: baseline, findings: cp.findings, referenceCaptures: (await this.jobs.artifact<VisualCapture[]>(job.id, 'baseline-captures')).filter(c => c.y === 0 || c.viewport === 'mobile'), signal, onDispatch: () => { actual = null; }, onAttempts: attempts => { actual = attempts.length ? knownDesignSpend(attempts) : actual; } });
+        if ('styleProposal' in generated) throw new Error('unexpected style proposal');
         actual = knownDesignSpend(generated.generation.attempts);
         if (!generated.candidate) throw new Error('No se recibió una propuesta privada.');
         cp.candidateDigest = sourceProjectDigest(generated.candidate); cp.generation = generated.generation;

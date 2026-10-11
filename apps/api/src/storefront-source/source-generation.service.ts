@@ -67,7 +67,10 @@ import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validate
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
-import { SourceDesignPlanner } from './source-design-planner';
+import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
+import { styleDraws, styleSlotDirection, type StyleSlot } from './design-engine/style-draws';
+import { writeStyleHero, type HeroFacts } from './design-engine/style-hero';
+import type { StyleProposal } from './source-style-proposal';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
 import { sourceTaskContext, sourceRedesignRequested } from './source-context';
@@ -75,7 +78,7 @@ import { SourceRequestBudget } from './source-request-budget';
 import { Optional } from '@nestjs/common';
 import { BrandProfileService } from '../brand/brand-profile.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
-import { brandContext, brandHasColours, brandStyles, BRAND_FONT_FIELDS, linkBrandStylesheet } from '../brand/brand-profile';
+import { brandContext, brandHasColours, brandStyles, BRAND_FONT_FIELDS, linkBrandStylesheet, type BrandProfile } from '../brand/brand-profile';
 import { requestedSourceProductOperations, requestedSourceProducts, sourceProductOperationsSchema, sourceProductsSchema, type SourceProductOperation } from './source-products';
 import { sourceCommerceRoutes } from './source-commerce-pages';
 import { withSourceCommerceDesign } from './source-commerce-design';
@@ -135,6 +138,17 @@ const outputSchema = {
     files: { type: "array", items: { type: "object", additionalProperties: false, required: ["path", "content"], properties: { path: { type: "string" }, content: { type: "string" } } } },
   },
 };
+
+/** What a proposal-mode generate returns: the run now waits for the merchant to pick a card. */
+export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
+
+/** The merchant's confirmed colours as a card palette, for a hero whose slot drew none; undefined without any. */
+function brandPalette(data: BrandProfile | undefined | null): HeroFacts['palette'] | undefined {
+  const colour = (field: string) => data?.confirmed?.find(fact => fact.field === field && /^#[0-9a-f]{6}$/i.test(fact.value))?.value;
+  const [paper, ink, accent, accent2] = [colour('background'), colour('foreground'), colour('accent'), colour('surface') ?? colour('accentForeground')];
+  if (!paper && !ink && !accent && !accent2) return undefined;
+  return { paper: paper ?? '#ffffff', ink: ink ?? '#111111', accent: accent ?? ink ?? '#111111', accent2: accent2 ?? '#f2f2f2' };
+}
 
 export function sourceMarqueeEditPaths(files: SourceProjectFileDto[]): string[] | undefined {
   const stylesheet = files.find(file => /(?:^|\/)styles(?:\/globals)?\.css$/i.test(file.path))?.path;
@@ -328,7 +342,7 @@ export class SourceGenerationService {
     return { aiUsage, models: Object.entries(SOURCE_MODELS).map(([id, model]) => ({ id, label: model.label })), defaultModel: 'auto', defaultMaxCredits: DEFAULT_MAX_CREDITS, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', runs };
   }
 
-  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void }) {
+  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves four style cards on the run and returns before building. */ styleProposal?: boolean }) {
     execution?.signal?.throwIfAborted();
     // On the merchant's own ChatGPT plan nothing is billed: no credit allowance, no credits charged, more time per run.
     const chatgptPlan = Boolean(this.config.get('app.chatgptPlan')), freeRun = Boolean(execution?.free) || chatgptPlan;
@@ -512,7 +526,7 @@ export class SourceGenerationService {
     const briefFacts = dto.brief as { businessType?: unknown; businessInformation?: unknown } | undefined;
     const businessInfo = typeof briefFacts?.businessInformation === 'string' ? briefFacts.businessInformation : '';
     const kind = playbookOn ? detectKind(`${merchantWords}\n${typeof briefFacts?.businessType === 'string' ? briefFacts.businessType : ''}\n${businessInfo}\n${data.items.map(item => item.name).join(', ')}`) : undefined;
-    const boldAsked = asksForBold(merchantWords);
+    let boldAsked = asksForBold(merchantWords);
     const storeData = data as { locations?: unknown[]; shippingEnabled?: boolean; shippingPickupEnabled?: boolean };
     // A contract section is asked for only when the store has the fact: YAPI must never invent hours or an address.
     const playbookEvidence = {
@@ -524,7 +538,7 @@ export class SourceGenerationService {
     const recentDraws = frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId, new Date(), 40)).catch(() => []) : [];
     const playbookEntry = kind ? PLAYBOOK[kind] : undefined;
     const playbookFamily = playbookEntry ? pickFamily(playbookEntry, Math.random, recentForKind(recentDraws, kind).families) : undefined;
-    const frame = frameForRun({
+    let frame: ReturnType<typeof frameForRun> = frameForRun({
       enabled: frameEnabled,
       designEnabled: this.config.get<boolean>('app.yapiDesignDraw') === true,
       brandColours: brandHasColours(brand?.data),
@@ -536,8 +550,22 @@ export class SourceGenerationService {
       available: frameFacts.available,
       request: frameFacts.request,
     });
-    const playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
+    let playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
+    // "Elige tu estilo" (spec 2026-10-11): a fresh design shows four drawn concepts before anything is built.
+    const styleOn = execution?.styleProposal === true && this.config.get<boolean>('app.yapiStylePick') === true && Boolean(exploration)
+      && playbookOn && frameEnabled && frameNow && this.config.get<boolean>('app.yapiDesignDraw') === true;
+    const styleKind = kind ?? 'general';
+    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, available: frameFacts.available, request: frameFacts.request })
+      .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold' }) })) : [];
+    // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
+    let styleBold = false;
+    const useSlot = (slot: StyleSlot & { playbook: string }) => {
+      frame = { file: slot.file, paragraph: slot.paragraph, ...(slot.dna ? { dna: slot.dna } : {}), ...(slot.palette ? { palette: slot.palette } : {}) };
+      playbookText = slot.playbook;
+      boldAsked = slot.mode === 'bold';
+      styleBold = boldAsked;
+    };
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
       const original = assetLegend.find(entry => entry.path === asset.path)?.original;
@@ -720,10 +748,24 @@ export class SourceGenerationService {
         const avoidRecent = retainedDesign ? [] : await Promise.resolve().then(() => this.projects.recentDesignFingerprints(storeId)).catch(() => [] as string[]);
         const recentCompositions = retainedDesign ? [] : await Promise.resolve().then(() => this.projects.recentCompositionFingerprints(storeId)).catch(() => [] as string[]);
         try {
-          committedDesign = retainedDesign || await this.designPlanner.explore({ model, provider, apiKey, selected: exploration.selected, sitePurpose, narrative: narrativePlanning, signature: signatureOn, dnaSeed: storeId, repairs: autoRepairs,
-            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, designDraw: frame.planner || undefined, playbook: playbookText || undefined, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
-            images, budget, signal, attempts, record: async (body, attempt) => this.metering?.record(storeId, 'source-design', model, body, attempt.durationMs, attempt.status),
-          });
+          const plannerArgs = { model, provider, apiKey, selected: exploration.selected, sitePurpose, narrative: narrativePlanning, signature: signatureOn, dnaSeed: storeId, repairs: autoRepairs, images, budget, signal, attempts, record: async (body: unknown, attempt: DesignPlanningAttempt) => this.metering?.record(storeId, 'source-design', model, body, attempt.durationMs, attempt.status) };
+          const contextFor = (style: boolean) => JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, designDraw: style ? undefined : frame.planner || undefined, playbook: style ? undefined : playbookText || undefined, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] });
+          let styled: SourceDesign | undefined;
+          if (styleSlots.length && !retainedDesign) {
+            await progress?.('styles');
+            styled = await this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: styleSlots.map(slot => ({ mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook) })), context: contextFor(true) })
+              .catch(error => { if (signal.aborted) throw error; this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id })); return undefined; });
+          }
+          if (styled && styled.concepts.length >= 2) {
+            return await this.saveStyleProposal({ runId: run.id, dto, imageUses, redesign, styleSlots, design: styled, assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits });
+          }
+          if (styled) {
+            // One card left: build it straight away, on its own drawn slot.
+            useSlot(styleSlots[styled.concepts[0].card!.slot]);
+            committedDesign = { ...styled, selected: 0, selection: { source: 'forced', rationale: null } };
+          } else {
+            committedDesign = retainedDesign || await this.designPlanner.explore({ ...plannerArgs, context: contextFor(false) });
+          }
         } finally { implementationFloor.settle({ input_tokens: 0, output_tokens: 0 }); }
         if (!retainedDesign) committedDesign = preferFreshComposition(committedDesign, recentCompositions);
         visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), committedDesign);
@@ -874,7 +916,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph };
+        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
@@ -1560,5 +1602,26 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // would otherwise reach the merchant verbatim. Every exit goes through the gate.
       throw merchantFacingSourceFailure(error);
     } finally { clearInterval(heartbeat); }
+  }
+
+  private async saveStyleProposal(input: { runId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; design: SourceDesign; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult> {
+    const proposal: StyleProposal = { version: 1, status: 'RUNNING', slots: input.styleSlots, design: input.design, heroes: input.design.concepts.map(() => null), assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt: new Date().toISOString() };
+    const save = (data: Record<string, unknown> = {}) => this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId }, data: { proposal: proposal as unknown as Prisma.InputJsonValue, ...data } });
+    await save();
+    const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
+    const photoPath = photo ? input.assetLegend.find(entry => entry.original === photo.url)?.path : undefined;
+    const logoPath = input.logoUrl ? input.assetLegend.find(entry => entry.original === input.logoUrl)?.path : undefined;
+    await Promise.all(input.design.concepts.map(async (concept, index) => {
+      const slot = input.styleSlots[concept.card!.slot];
+      const palette = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
+      const facts: HeroFacts = { storeName: input.storeName, logoPath, photoPath, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette, fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode };
+      proposal.heroes[index] = await writeStyleHero({ facts, concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: input.signal, attempts: input.attempts });
+      await save();
+    }));
+    proposal.status = 'AWAITING_STYLE';
+    const successful = input.attempts.filter(attempt => attempt.status === 'COMPLETED');
+    const credits = input.freeRun ? 0 : successful.every(attempt => attempt.usage) ? Math.min(input.maxCredits, Math.ceil(successful.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
+    await save({ status: 'AWAITING_STYLE', activeStoreId: null, credits, attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() });
+    return { styleProposal: { generationId: input.runId, cards: input.design.concepts.length } };
   }
 }
