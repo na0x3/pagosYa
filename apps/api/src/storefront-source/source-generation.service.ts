@@ -39,7 +39,7 @@ import { searchCreativeAssets, creativeAssetFile } from './source-creative-asset
 import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
 import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } from './source-dna';
-import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
+import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign, type SourceDesignConcept } from './source-design';
 import { sourceProvider, isClaude } from './source-provider';
 import { withSavedLogo } from './source-saved-logo';
 import { isAuthorableSourcePath, sep5AuthorableFiles, sep5PreviousSource } from './source-authorable';
@@ -69,9 +69,9 @@ import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
 import { styleDraws, styleSlotDirection, type StyleSlot } from './design-engine/style-draws';
-import { writeStyleHero, type HeroFacts } from './design-engine/style-hero';
-import type { StyleProposal } from './source-style-proposal';
-import { distinctBoldDisplays } from './source-style-design';
+import { templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
+import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
+import { distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
 import { sourceTaskContext, sourceRedesignRequested } from './source-context';
@@ -766,12 +766,13 @@ export class SourceGenerationService {
           if (styleSlots.length && !retainedDesign && !pickedDesign) {
             await progress?.('styles');
             styleAttempted = true;
-            styled = await this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: styleSlots.map(slot => ({ mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook) })), context: contextFor(true) })
-              .catch(error => { if (signal.aborted) throw error; this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id })); return undefined; });
-            if (styled) styled = distinctBoldDisplays(styled);
-          }
-          if (styled && styled.concepts.length >= 2) {
-            return await this.saveStyleProposal({ runId: run.id, storeId, dto, imageUses, redesign, styleSlots, design: styled, assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits });
+            const styleContext = contextFor(true);
+            // One planner lane per slot (spec 2026-10-11 speed-up): each card is planned, shown and drawn on its own.
+            const proposed = await this.proposeStyles({ runId: run.id, storeId, dto, imageUses, redesign, styleSlots, boldAsked: asksForBold(merchantWords), assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits,
+              plan: slot => this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: [{ slot: slot.slot, mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook, { lane: true }) }], context: styleContext }) });
+            if ('styleProposal' in proposed) return proposed;
+            styled = proposed.design;
+            if (!styled) this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id }));
           }
           if (styled) {
             // One card left: build it straight away, on its own drawn slot.
@@ -1619,28 +1620,107 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     } finally { clearInterval(heartbeat); }
   }
 
-  private async saveStyleProposal(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; design: SourceDesign; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult> {
-    const proposal: StyleProposal = { version: 1, status: 'RUNNING', slots: input.styleSlots, design: input.design, heroes: input.design.concepts.map(() => null), heroPalettes: input.design.concepts.map(() => null), assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt: new Date().toISOString() };
-    // Only a row this run still holds: once a sweep or a lost lease ends it, sibling heroes stop writing and the proposal is never revived.
-    const save = (data: Record<string, unknown> = {}) => this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: { proposal: proposal as unknown as Prisma.InputJsonValue, ...data } });
-    await save();
+  /**
+   * Elige tu estilo in four lanes (spec 2026-10-11 speed-up): each slot plans its own concept, shows its card at once with
+   * the template hero, then swaps in the model hero. A failed lane costs only its card. Two or more cards wait for the
+   * pick; one card or none come back to the caller, which builds that card or replans as before.
+   */
+  private async proposeStyles(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; plan: (slot: StyleSlot & { playbook: string }) => Promise<SourceDesign>; boldAsked: boolean; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult | { design?: SourceDesign }> {
+    // Lanes finish out of order, so everything is kept by drawn slot and compacted, in slot order, on each save.
+    const slotConcepts: Array<SourceDesignConcept | undefined> = [];
+    const slotHeroes: StyleProposal['heroes'] = [];
+    const slotPalettes: Array<HeroFacts['palette']> = [];
+    const slotPending: boolean[] = [];
+    const laneControllers = new Map(input.styleSlots.map(slot => [slot.slot, new AbortController()]));
+    // Heroes are short fragments: the fast model writes them; writeStyleHero falls back to the run model if it is refused.
+    const heroModel: SourceModel = input.model.startsWith('gpt-') ? 'gpt-5.6-luna' : input.model;
+    const createdAt = new Date().toISOString();
     const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
     const photoPath = photo ? input.assetLegend.find(entry => entry.original === photo.url)?.path : undefined;
     const logoPath = input.logoUrl ? input.assetLegend.find(entry => entry.original === input.logoUrl)?.path : undefined;
-    await Promise.all(input.design.concepts.map(async (concept, index) => {
-      const slot = input.styleSlots[concept.card!.slot];
-      const palette = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
-      proposal.heroPalettes![index] = palette;
-      const facts: HeroFacts = { storeName: input.storeName, logoPath, photoPath, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette, fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode };
-      proposal.heroes[index] = await writeStyleHero({ facts, concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: input.signal, attempts: input.attempts, record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', input.model, body, attempt.durationMs, attempt.status) });
-      await save();
-    }));
+    const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot], fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode });
+    const live = () => input.styleSlots.filter(slot => slotConcepts[slot.slot]);
+    const proposal = (status: StyleProposalStatus): StyleProposal => {
+      const order = live(), concepts = order.map(slot => slotConcepts[slot.slot]!);
+      return { version: 1, status, slots: input.styleSlots, design: concepts.length ? { concepts, ...styleRecommendation(concepts, input.boldAsked) } : null,
+        heroes: order.map(slot => slotHeroes[slot.slot] ?? null), heroPalettes: order.map(slot => slotPalettes[slot.slot] ?? null), heroPending: order.map(slot => slotPending[slot.slot] === true),
+        assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt };
+    };
+    // Saves run one after another and each writes the state at its own turn, so a slow write never lands an older proposal.
+    // Once the outcome is decided (closed), lane saves stop. Only a row this run still holds is written: after a sweep or
+    // a lost lease the writes match nothing and the proposal is never revived.
+    let queue: Promise<unknown> = Promise.resolve(), closed = false, shown = false;
+    const save = (status: StyleProposalStatus = 'RUNNING', data: Record<string, unknown> = {}) => {
+      const write = queue.catch(() => undefined).then(() => closed && status === 'RUNNING' ? { count: 0 }
+        : this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: { proposal: proposal(status) as unknown as Prisma.InputJsonValue, ...data } }));
+      queue = write;
+      return write;
+    };
+    const planned: Array<Promise<void>> = [];
+    const lanes = input.styleSlots.map(slot => {
+      let ready!: () => void;
+      planned.push(new Promise<void>(resolve => { ready = resolve; }));
+      const lane = laneControllers.get(slot.slot)!;
+      return (async () => {
+        try {
+          const concept = (await input.plan(slot)).concepts[0];
+          if (!concept?.card) return;
+          slotConcepts[slot.slot] = { ...concept, card: { ...concept.card, slot: slot.slot, mode: slot.mode } };
+          slotPalettes[slot.slot] = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
+          slotHeroes[slot.slot] = { html: templateHero(factsFor(slotConcepts[slot.slot]!, slot)), source: 'template' };
+          slotPending[slot.slot] = true;
+        } catch (error) {
+          if (!input.signal.aborted) this.logger.warn(JSON.stringify({ event: 'style_lane_failed', generationId: input.runId, slot: slot.slot }));
+          return;
+        } finally { ready(); }
+        shown = true;
+        await save();
+        const concept = slotConcepts[slot.slot];
+        if (!concept || lane.signal.aborted) return;
+        const hero = await writeStyleHero({ facts: factsFor(concept, slot), concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, heroModel, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: AbortSignal.any([input.signal, lane.signal]), attempts: input.attempts,
+          record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', attempt.model, body, attempt.durationMs, attempt.status) });
+        const current = slotConcepts[slot.slot];
+        if (!current) return;
+        // A template fallback is redrawn from the concept as it is now, so it shows a deduped font.
+        slotHeroes[slot.slot] = hero.source === 'template' ? { html: templateHero(factsFor(current, slot)), source: 'template' } : hero;
+        slotPending[slot.slot] = false;
+        await save();
+      })().catch(error => { if (!input.signal.aborted && !lane.signal.aborted) this.logger.warn(JSON.stringify({ event: 'style_lane_failed', generationId: input.runId, slot: slot.slot, stage: 'hero', reason: error instanceof Error ? error.message.slice(0, 200) : 'unknown' })); });
+    });
+    await Promise.all(planned);
     input.signal.throwIfAborted();
-    proposal.status = 'AWAITING_STYLE';
+    // Every lane has its concept. Lanes plan apart: a repeated opening keeps the lower slot's card, and the two bold
+    // cards never share a display font. A model hero already being written keeps the font it was given; the saved
+    // concept, and a card still on its template hero, take the deduped one.
+    const openings = new Set<string>();
+    for (const slot of live()) {
+      const key = styleOpeningKey(slotConcepts[slot.slot]!.opening);
+      if (openings.has(key)) { slotConcepts[slot.slot] = undefined; laneControllers.get(slot.slot)!.abort(); } else openings.add(key);
+    }
+    const order = live();
+    const deduped = distinctBoldDisplays({ concepts: order.map(slot => slotConcepts[slot.slot]!), selected: 0 });
+    order.forEach((slot, index) => {
+      const concept = deduped.concepts[index];
+      if (concept === slotConcepts[slot.slot]) return;
+      slotConcepts[slot.slot] = concept;
+      if (slotPending[slot.slot]) slotHeroes[slot.slot] = { html: templateHero(factsFor(concept, slot)), source: 'template' };
+    });
+    if (order.length < 2) {
+      // One card is built straight away and none falls back to the joint planner: neither waits for a hero.
+      closed = true;
+      for (const controller of laneControllers.values()) controller.abort();
+      if (shown) await save('SUPERSEDED');
+      const only = order[0] && slotConcepts[order[0].slot];
+      return { design: only ? { concepts: [only], selected: 0, selection: { source: 'forced', rationale: null } } : undefined };
+    }
+    await save();
+    await Promise.all(lanes);
+    input.signal.throwIfAborted();
+    closed = true;
     const successful = input.attempts.filter(attempt => attempt.status === 'COMPLETED');
     const credits = input.freeRun ? 0 : successful.every(attempt => attempt.usage) ? Math.min(input.maxCredits, Math.ceil(successful.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const completed = await save({ status: 'AWAITING_STYLE', activeStoreId: null, credits, attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() });
+    const completed = await save('AWAITING_STYLE', { status: 'AWAITING_STYLE', activeStoreId: null, credits, attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() }) as { count: number };
     if (completed.count !== 1) throw new ConflictException('La generación expiró. Tu revisión anterior sigue guardada.');
-    return { styleProposal: { generationId: input.runId, cards: input.design.concepts.length } };
+    return { styleProposal: { generationId: input.runId, cards: live().length } };
   }
 }

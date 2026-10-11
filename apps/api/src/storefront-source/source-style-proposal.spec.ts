@@ -41,3 +41,9 @@ it('reports the pick only on a picked proposal', () => {
   expect(styleProposalView('gen1', { ...proposal(), status: 'PICKED', picked: 1 }).picked).toBe(1);
   expect('picked' in styleProposalView('gen1', { ...proposal(), picked: 1 })).toBe(false);
 });
+
+it('marks each card whose model hero is still being written as pending', () => {
+  const value = { ...proposal(), status: 'RUNNING' as const, heroPending: [true, false] };
+  expect(styleProposalView('gen1', value).cards.map(card => card.pending)).toEqual([true, false]);
+  expect(styleProposalView('gen1', proposal()).cards.map(card => card.pending)).toEqual([false, false]);
+});

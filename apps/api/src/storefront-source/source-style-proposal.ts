@@ -8,9 +8,11 @@ import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 export type StyleProposalStatus = 'RUNNING' | 'AWAITING_STYLE' | 'PICKED' | 'SUPERSEDED';
 export type StyleProposal = { version: 1; status: StyleProposalStatus; slots: Array<StyleSlot & { playbook: string }>; design: SourceDesign | null; heroes: Array<{ html: string; source: 'model' | 'template' } | null>; assetMap: Array<{ original: string; path: string }>; request: { dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean }; picked?: number; createdAt: string;
   /** The palette each hero was drawn with, by concept index: a slot has none when the merchant confirmed brand colours. */
-  heroPalettes?: Array<HeroPalette | null> };
+  heroPalettes?: Array<HeroPalette | null>;
+  /** By concept index, like heroes: true while that card shows its template hero and the model hero is still being written. */
+  heroPending?: boolean[] };
 type HeroPalette = { paper: string; ink: string; accent: string; accent2: string };
-export type StyleCardView = { index: number; slot: number; name: string; mode: 'calm' | 'bold'; vibe: string; inspiration: string[]; fonts: { display: string; text: string; displayFamily: string; textFamily: string }; palette: string[]; html: string | null; source: 'model' | 'template' | null };
+export type StyleCardView = { index: number; slot: number; name: string; mode: 'calm' | 'bold'; vibe: string; inspiration: string[]; fonts: { display: string; text: string; displayFamily: string; textFamily: string }; palette: string[]; html: string | null; source: 'model' | 'template' | null; pending: boolean };
 
 const family = (id: string) => SOURCE_FONT_CATALOG.find(font => font.id === id)?.family ?? id;
 
@@ -30,7 +32,7 @@ export function styleProposalView(generationId: string, proposal: StyleProposal)
     return { index, slot, name: concept.card!.name, mode: concept.card!.mode, vibe: concept.card!.vibe, inspiration: concept.card!.inspiration,
       fonts: { display, text, displayFamily: family(display), textFamily: family(text) },
       palette: palette ? [palette.paper, palette.ink, palette.accent, palette.accent2] : [],
-      html: hero ? cardHtmlForPreview(hero.html, proposal.assetMap) : null, source: hero?.source ?? null };
+      html: hero ? cardHtmlForPreview(hero.html, proposal.assetMap) : null, source: hero?.source ?? null, pending: proposal.heroPending?.[index] === true };
   });
   return { generationId, status: proposal.status, recommended: proposal.design?.selected ?? 0, ...(proposal.status === 'PICKED' && proposal.picked !== undefined ? { picked: proposal.picked } : {}), cards };
 }

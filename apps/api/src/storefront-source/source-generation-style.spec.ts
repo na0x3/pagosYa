@@ -11,7 +11,8 @@ import { validateStyleDesign } from './source-style-design';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
-import type { StyleProposal } from './source-style-proposal';
+import { styleProposalView, type StyleProposal } from './source-style-proposal';
+import { sanitizeHeroHtml } from './design-engine/style-hero';
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -45,6 +46,12 @@ const savedProposal = (): StyleProposal => {
     heroes: [0, 1, 2, 3].map(i => ({ html: `<header data-store-name>Café ${i}</header><section class="hero-${i}"><h1>Tarjeta ${i}</h1></section>`, source: 'model' as const })),
     request: { dto, imageUses: [], redesign: false }, createdAt: '2026-10-11T00:00:00.000Z' };
 };
+
+/** One lane's planner answer: the concept of that slot only, its card on the slot. */
+const laneDesign = (slot: number) => designWith([slot]);
+const deferred = <T>() => { let resolve!: (value: T) => void, reject!: (error: unknown) => void; const promise = new Promise<T>((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; };
+/** Waits (on real macrotask turns) until the service has reached a state. */
+const until = async (check: () => boolean) => { for (let i = 0; i < 500 && !check(); i++) await new Promise(resolve => setImmediate(resolve)); expect(check()).toBe(true); };
 
 function setup() {
   const prisma: any = { storeRetention: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceGeneration: { create: jest.fn().mockResolvedValue({ id: 'run-1' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, store: { findFirst: jest.fn().mockResolvedValue({ slug: 'cafe' }), findUnique: jest.fn().mockResolvedValue(null) }, mediaAsset: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) } };
@@ -81,21 +88,32 @@ describe('style proposal mode', () => {
     fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Café', files: files(), products: [] }) }] }] })));
   });
   afterEach(() => jest.restoreAllMocks());
+  /** Every proposal the run saved, in order (each save writes a fresh value). */
+  const proposals = (): StyleProposal[] => prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => 'proposal' in c.data).map((c: any) => c.data.proposal);
+  const finalWrite = () => prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
+  /** Each lane's planner call answers with its own slot's concept; `fail` lanes throw. */
+  const lanes = (fail: number[] = [], change: (slot: number, design: designModule.SourceDesign) => designModule.SourceDesign = (_slot, design) => design) => explore.mockImplementation(async (args: any) => {
+    if (!args.styleSlots) return threeConceptDesign;
+    const slot = args.styleSlots[0].slot;
+    if (fail.includes(slot)) throw new Error('lane failed');
+    return change(slot, laneDesign(slot));
+  });
   /** The files of the one saved revision. */
   const savedFiles = (): Array<{ path: string; content: string }> => projects.save.mock.calls[0][2].files;
 
-  it('makes a proposal instead of building: four slots to the planner, a hero per concept, row left awaiting the pick', async () => {
-    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+  it('makes a proposal instead of building: one planner lane per slot, a hero per concept, row left awaiting the pick', async () => {
+    lanes();
     const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     expect(result).toEqual({ styleProposal: { generationId: expect.any(String), cards: 4 } });
-    const call = explore.mock.calls[0][0];
-    expect(call.styleSlots.map((slot: { mode: string }) => slot.mode)).toEqual(['calm', 'calm', 'bold', 'bold']);
-    expect(JSON.parse(call.context).designDraw).toBeUndefined();
+    const calls = explore.mock.calls.map(c => c[0]);
+    expect(calls.map(call => call.styleSlots.map((slot: { slot: number; mode: string }) => [slot.slot, slot.mode]))).toEqual([[[0, 'calm']], [[1, 'calm']], [[2, 'bold']], [[3, 'bold']]]);
+    expect(calls.every(call => call.styleSlots[0].direction.includes(`CONCEPT ${call.styleSlots[0].slot + 1} of 4`))).toBe(true);
+    expect(JSON.parse(calls[0].context).designDraw).toBeUndefined();
     expect(writeStyleHero).toHaveBeenCalledTimes(4);
     expect(writeStyleHero.mock.calls.map(c => [c[0].facts.storeName, c[0].facts.mode])).toEqual([['Café', 'calm'], ['Café', 'calm'], ['Café', 'bold'], ['Café', 'bold']]);
-    await writeStyleHero.mock.calls[0][0].record({ usage: null }, { durationMs: 7, status: 'COMPLETED' });
-    expect(metering.record).toHaveBeenCalledWith('s1', 'source-style-hero', expect.any(String), { usage: null }, 7, 'COMPLETED');
-    const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
+    await writeStyleHero.mock.calls[0][0].record({ usage: null }, { model: 'gpt-5.6-luna', durationMs: 7, status: 'COMPLETED' });
+    expect(metering.record).toHaveBeenCalledWith('s1', 'source-style-hero', 'gpt-5.6-luna', { usage: null }, 7, 'COMPLETED');
+    const final = finalWrite();
     expect(final.data).toMatchObject({ activeStoreId: null, proposal: expect.objectContaining({ version: 1, status: 'AWAITING_STYLE' }) });
     expect(progress).toHaveBeenCalledWith('styles');
     expect(authorPrompt()).toBeUndefined();
@@ -106,7 +124,7 @@ describe('style proposal mode', () => {
     draws.mockRestore();
     const real = styleDrawsModule.styleDraws;
     draws = jest.spyOn(styleDrawsModule, 'styleDraws').mockImplementation((input: any) => real(input).map((slot: any) => (slot.slot === 1 ? { ...slot, palette: undefined } : slot)));
-    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    lanes();
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
     const saved: StyleProposal = final.data.proposal;
@@ -116,16 +134,38 @@ describe('style proposal mode', () => {
   });
 
   it('gives the two bold cards different display fonts: the second takes the first catalogue display font no card uses', async () => {
-    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    lanes();
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     // Every planned concept used Fraunces + Instrument; Bricolage is the first unused display/both font in the catalogue.
-    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.mode, c[0].facts.fonts.display])).toEqual([['calm', 'fraunces'], ['calm', 'fraunces'], ['bold', 'fraunces'], ['bold', 'bricolage']]);
-    const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
+    const final = finalWrite();
     expect(final.data.proposal.design.concepts.map((c: any) => c.dna.type.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
+    expect(styleProposalView('run-1', final.data.proposal).cards.map(card => card.fonts.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
+  });
+
+  it('dedupes the bold fonts once every lane has its concept: a hero already being written keeps its font, the saved concept and a waiting template hero take the new one', async () => {
+    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
+    const hero3 = deferred<{ html: string; source: 'model' }>();
+    writeStyleHero.mockImplementation(async (args: any) => args.concept.card.slot === 3 ? hero3.promise : { html: '<header data-store-name>x</header>', source: 'model' });
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    await until(() => explore.mock.calls.length === 4);
+    planned[3].resolve(laneDesign(3));
+    await until(() => writeStyleHero.mock.calls.length === 1);
+    expect(writeStyleHero.mock.calls[0][0].facts.fonts.display).toBe('fraunces');
+    [0, 1, 2].forEach(slot => planned[slot].resolve(laneDesign(slot)));
+    await until(() => proposals().some(p => p.design?.concepts.length === 4 && p.design.concepts[3].dna!.type.display === 'bricolage'));
+    const deduped = proposals().find(p => p.design?.concepts.length === 4 && p.design.concepts[3].dna!.type.display === 'bricolage')!;
+    expect(deduped.heroPending![3]).toBe(true);
+    expect(deduped.heroes[3]).toMatchObject({ source: 'template', html: expect.stringContaining('assets/bricolage.ttf') });
+    hero3.resolve({ html: '<header data-store-name>fraunces hero</header>', source: 'model' });
+    await run;
+    const final = finalWrite().data.proposal as StyleProposal;
+    expect(final.design!.concepts[3].dna!.type.display).toBe('bricolage');
+    expect(final.heroes[3]!.html).toContain('fraunces hero');
   });
 
   it('throws and leaves no proposal awaiting when the run lost its row before the proposal finished', async () => {
-    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    lanes();
     // The stale sweep marked the row INTERRUPTED: every RUNNING-guarded write after the start matches nothing.
     prisma.storeSourceGeneration.updateMany.mockImplementation(async (args: any) => ({ count: args.data.status === 'AWAITING_STYLE' ? 0 : 1 }));
     await expect(service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).rejects.toThrow();
@@ -136,31 +176,138 @@ describe('style proposal mode', () => {
   });
 
   it('guards every proposal write on a running row', async () => {
-    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    lanes();
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     const writes = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => 'proposal' in c.data);
-    expect(writes.length).toBe(6);
+    // Each lane saves its card with the template hero, then with the model hero; one save after every lane has its
+    // concept (dedupe, recommendation), and the final AWAITING_STYLE save.
+    expect(writes.length).toBe(10);
+    expect(writes.every((c: any) => c.where.activeStoreId === 's1')).toBe(true);
     expect(writes.every((c: any) => c.where.status === 'RUNNING' && c.where.id === 'run-1')).toBe(true);
   });
 
-  it('builds directly with the only card the planner kept, on its own drawn slot', async () => {
-    explore.mockResolvedValueOnce(designWith([2]));
-    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+  it('builds directly with the only card the lanes kept, on its own drawn slot, and retires the shown card', async () => {
+    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    explore.mockImplementation((args: any) => args.styleSlots ? planned[args.styleSlots[0].slot].promise : Promise.resolve(threeConceptDesign));
+    // The kept card's model hero is still being written when the other lanes fail: the build does not wait for it.
+    writeStyleHero.mockImplementation((args: any) => new Promise((_ok, fail) => args.signal.addEventListener('abort', () => fail(args.signal.reason))));
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    await until(() => explore.mock.calls.length === 4);
+    planned[2].resolve(laneDesign(2));
+    await until(() => writeStyleHero.mock.calls.length === 1);
+    [0, 1, 3].forEach(slot => planned[slot].reject(new Error('lane failed')));
+    const result = await run;
     expect('styleProposal' in result).toBe(false);
+    expect(writeStyleHero.mock.calls[0][0].signal.aborted).toBe(true);
     expect(authorPrompt()).toContain('BOLD BY DEFAULT');
-    expect(explore).toHaveBeenCalledTimes(1);
+    expect(explore).toHaveBeenCalledTimes(4);
+    expect(proposals().at(-1)!.status).toBe('SUPERSEDED');
+    expect(finalWrite()).toBeUndefined();
     expect(projects.save).toHaveBeenCalledTimes(1);
     const drawn = draws.mock.results[0].value[2].file;
     expect(projects.save.mock.calls[0][2].files).toContainEqual(drawn);
   });
 
   it('falls back to today when the style planner fails, and reports that styles were attempted', async () => {
-    explore.mockRejectedValueOnce(new Error('bad')).mockResolvedValueOnce(threeConceptDesign);
+    lanes([0, 1, 2, 3]);
     const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     expect('styleProposal' in result).toBe(false);
-    expect(explore.mock.calls[1][0].styleSlots).toBeUndefined();
+    expect(explore).toHaveBeenCalledTimes(5);
+    expect(explore.mock.calls[4][0].styleSlots).toBeUndefined();
     expect(writeStyleHero).not.toHaveBeenCalled();
+    expect(proposals()).toEqual([]);
     expect((result as any).generation.styleAttempted).toBe(true);
+  });
+
+  it('runs the four lanes at once: the second lane plans while the first lane\'s hero is still being written', async () => {
+    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
+    const heroes = [0, 1, 2, 3].map(() => deferred<{ html: string; source: 'model' }>());
+    writeStyleHero.mockImplementation((args: any) => heroes[args.concept.card.slot].promise);
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    await until(() => explore.mock.calls.length >= 1);
+    planned[0].resolve(laneDesign(0));
+    await until(() => writeStyleHero.mock.calls.length === 1);
+    // Lane 0's hero has not finished, and every other lane's planner call is already out.
+    expect(explore.mock.calls.map(c => c[0].styleSlots[0].slot)).toEqual([0, 1, 2, 3]);
+    // The card is on screen already, with the template hero, marked pending.
+    await until(() => proposals().length >= 1);
+    const first = proposals().at(-1)!;
+    expect(first.status).toBe('RUNNING');
+    expect(first.design!.concepts.map(c => c.card!.slot)).toEqual([0]);
+    expect(first.heroes[0]!.source).toBe('template');
+    expect(sanitizeHeroHtml(first.heroes[0]!.html)).not.toBeNull();
+    expect(first.heroes[0]!.html).toContain('Café');
+    expect(first.heroPending).toEqual([true]);
+    expect(styleProposalView('run-1', first).cards[0]).toMatchObject({ slot: 0, pending: true, source: 'template' });
+    heroes[0].resolve({ html: '<header data-store-name>modelo 0</header>', source: 'model' });
+    await until(() => proposals().at(-1)!.heroes[0]?.source === 'model');
+    expect(proposals().at(-1)!.heroPending).toEqual([false]);
+    [1, 2, 3].forEach(slot => { planned[slot].resolve(laneDesign(slot)); heroes[slot].resolve({ html: `<header data-store-name>modelo ${slot}</header>`, source: 'model' }); });
+    expect(await run).toEqual({ styleProposal: { generationId: 'run-1', cards: 4 } });
+    expect(finalWrite().data.proposal.heroPending).toEqual([false, false, false, false]);
+  });
+
+  it('saves slot-ordered, aligned arrays when lanes finish out of order', async () => {
+    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
+    writeStyleHero.mockImplementation(async (args: any) => ({ html: `<header data-store-name>hero ${args.concept.card.slot}</header>`, source: 'model' }));
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    await until(() => explore.mock.calls.length === 4);
+    for (const slot of [3, 1, 0, 2]) {
+      planned[slot].resolve(laneDesign(slot));
+      await until(() => proposals().some(p => p.design?.concepts.some(c => c.card!.slot === slot)));
+    }
+    await run;
+    const saved = proposals();
+    for (const proposal of saved) {
+      const slots = proposal.design!.concepts.map(c => c.card!.slot);
+      expect(slots).toEqual([...slots].sort());
+      expect([proposal.heroes.length, proposal.heroPalettes!.length, proposal.heroPending!.length]).toEqual([slots.length, slots.length, slots.length]);
+      proposal.heroes.forEach((hero, i) => { if (hero?.source === 'model') expect(hero.html).toContain(`hero ${slots[i]}`); });
+      proposal.heroPalettes!.forEach((palette, i) => expect(palette!.paper).toBe(proposal.slots[slots[i]].palette!.paper));
+    }
+    expect(saved.find(p => p.design!.concepts.length === 1)!.design!.concepts[0].card!.slot).toBe(3);
+    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('drops only the card of a failed lane', async () => {
+    lanes([1]);
+    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 3 } });
+    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 2, 3]);
+    expect(writeStyleHero).toHaveBeenCalledTimes(3);
+  });
+
+  it('drops a later lane whose opening repeats an earlier slot\'s', async () => {
+    lanes([], (slot, design) => slot === 2 ? { ...design, concepts: [{ ...design.concepts[0], opening: '  MENU   opening ' }] } : design);
+    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 3 } });
+    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 1, 3]);
+  });
+
+  it('recommends the first calm card with its premise\'s first sentence, or the first bold one when the merchant asked for bold', async () => {
+    const premise = (slot: number, design: designModule.SourceDesign) => ({ ...design, concepts: [{ ...design.concepts[0], premise: `Premisa ${slot}: una idea clara. Segunda frase que no va.` }] });
+    lanes([], premise);
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect(finalWrite().data.proposal.design).toMatchObject({ selected: 0, selection: { source: 'planner', rationale: 'Premisa 0: una idea clara.' } });
+    ({ service, prisma, projects, config, metering } = setup());
+    lanes([2], premise);
+    await service.generate('m1', 's1', { ...dto, instruction: 'Quiero una tienda atrevida para mi cafetería' }, new SourceRequestBudget(25), [], progress, { styleProposal: true });
+    const bold = finalWrite().data.proposal.design;
+    expect(bold.concepts[bold.selected].card.slot).toBe(3);
+    expect(bold.selection).toEqual({ source: 'planner', rationale: 'Premisa 3: una idea clara.' });
+    ({ service, prisma, projects, config, metering } = setup());
+    lanes([0, 1], (_slot, design) => ({ ...design, concepts: [{ ...design.concepts[0], premise: 'x'.repeat(300) }] }));
+    await service.generate('m1', 's1', dto, new SourceRequestBudget(25), [], progress, { styleProposal: true });
+    expect(finalWrite().data.proposal.design.selected).toBe(0);
+    expect(finalWrite().data.proposal.design.selection.rationale).toHaveLength(200);
+  });
+
+  it('writes the heroes on the fast model while the planner keeps the run model', async () => {
+    lanes();
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    const runModel = explore.mock.calls[0][0].model;
+    expect(runModel).toMatch(/^gpt-/);
+    expect(writeStyleHero.mock.calls.map(c => [c[0].heroModel, c[0].model])).toEqual(Array(4).fill(['gpt-5.6-luna', runModel]));
   });
 
   it('skips styles on an ineligible run without claiming it tried, and warns once', async () => {
