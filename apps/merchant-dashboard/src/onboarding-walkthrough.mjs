@@ -73,7 +73,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city } } : {}) };
   const paint = () => { root.innerHTML = walkthroughView(state); root.querySelector('[autofocus]')?.focus(); };
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
-  // Per run: product rows already created (index -> id), and the one chat-job id, so retries never duplicate.
+  // Per run: product rows already created (index -> { id, name, amount }), and the one chat-job id, so retries never duplicate.
   const created = {};
   const requestId = crypto.randomUUID();
   let brief = null;
@@ -99,10 +99,17 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     }
     if (id === 'products') {
       for (let i = 0; i < 5; i++) {
-        const [draft] = created[i] ? [] : productDrafts([{ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`] }]);
+        const [draft] = productDrafts([{ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`] }]);
         if (!draft) continue;
+        const made = created[i];
+        // An edited row updates the product it created; a second POST would leave the old price in the brief.
+        if (made) {
+          if (made.id && (made.name !== draft.name || made.amount !== draft.amount)) await api(`/stores/${state.storeId}/payment_links/${made.id}`, { method: 'PATCH', body: JSON.stringify({ name: draft.name, amount: draft.amount }) });
+          created[i] = { ...made, name: draft.name, amount: draft.amount };
+          continue;
+        }
         const product = await api(`/stores/${state.storeId}/payment_links`, { method: 'POST', body: JSON.stringify({ ...draft, currency: 'BOB' }) });
-        created[i] = product?.id || true;
+        created[i] = { id: product?.id, name: draft.name, amount: draft.amount };
       }
     }
     if (id === 'story') return patch({ ...mark, story: state.values.story });
@@ -134,7 +141,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     paint();
   }
 
-  listen('input', event => { if (event.target.name && event.target.type !== 'file') { delete created[/^p(\d)-/.exec(event.target.name)?.[1]]; state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
+  listen('input', event => { if (event.target.name && event.target.type !== 'file') { state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
   listen('submit', event => { event.preventDefault(); if (!state.busy) void advance(false); });
   listen('click', event => {
     if (event.target.closest('[data-wt-skip]') && !state.busy) void advance(true);

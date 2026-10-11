@@ -37,8 +37,8 @@ test('product rows become centavos and incomplete rows are dropped', () => {
 });
 
 // A fake root and api: drives runWalkthrough without a DOM.
-async function drive(step, { fail = () => false } = {}) {
-  const handlers = {}; const calls = []; let done = null;
+async function drive(step, { fail = () => false, uploadFail = () => false } = {}) {
+  const handlers = {}; const calls = []; const uploads = []; let done = null;
   const root = { innerHTML: '', querySelector: () => null, addEventListener: (type, fn) => { handlers[type] = fn; } };
   const api = async (path, init = {}) => {
     const call = { path, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null };
@@ -49,10 +49,13 @@ async function drive(step, { fail = () => false } = {}) {
     if (call.body?.brief) return { brief: 'BRIEF' };
     return {};
   };
-  await runWalkthrough(root, { api, uploadFile: async () => '/v1/uploads/x.webp', onDone: id => { done = id; } });
+  const uploadFile = async file => { if (uploadFail(file)) throw new Error('upload'); uploads.push(file.name); return `/v1/uploads/${file.name}`; };
+  await runWalkthrough(root, { api, uploadFile, onDone: id => { done = id; } });
   const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   return {
-    calls, root, done: () => done,
+    calls, root, uploads, done: () => done,
+    drop: (type, files) => { const event = { prevented: false, preventDefault() { event.prevented = true; }, dataTransfer: { files } }; handlers[type](event); return event; },
+    pick: (name, files) => handlers.change({ target: { name, type: 'file', files } }),
     type: async (name, value) => handlers.input({ target: { name, type: 'text', value } }),
     submit: async () => { handlers.submit({ preventDefault() {} }); await tick(); await tick(); },
     back: async () => { handlers.click({ target: { closest: sel => (sel === '[data-wt-back]' ? {} : null) } }); },
@@ -66,7 +69,12 @@ test('products are created once, across Atrás/Siguiente and after a partial fai
   await w.submit(); await w.back(); await w.submit();
   assert.equal(posts(w.calls, '/payment_links').length, 2);
   await w.back(); await w.type('p1-price', '35'); await w.submit();
-  assert.equal(posts(w.calls, '/payment_links').length, 3);
+  // An edited row updates the product it already created, never a second one.
+  assert.equal(posts(w.calls, '/payment_links').length, 2);
+  const patches = w.calls.filter(c => c.method === 'PATCH' && c.path.includes('/payment_links/'));
+  assert.deepEqual(patches.map(c => [c.path, c.body]), [['/stores/s1/payment_links/p3', { name: 'Taza', amount: 3500 }]]);
+  await w.back(); await w.submit();
+  assert.equal(w.calls.filter(c => c.method === 'PATCH' && c.path.includes('/payment_links/')).length, 1);
 
   let failRow2 = true;
   const f = await drive(4, { fail: c => failRow2 && c.body?.name === 'Taza' });
@@ -102,3 +110,4 @@ test('a failing finish PATCH is retried alone and never re-posts the job', async
   assert.equal(posts(w.calls, '/chat-jobs').length, 1);
   assert.equal(w.done(), 's1');
 });
+
