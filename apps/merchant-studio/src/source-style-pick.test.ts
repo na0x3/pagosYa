@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { apiHeroUrls, fitStyleFrames, frameScale, heroSrcdoc, renderStylePicker, type StyleProposalView } from './source-style-pick';
 
@@ -116,5 +117,16 @@ describe('frame fit', () => {
   it('gives the phone preview a full phone page and the cards a desktop page', () => {
     expect(renderStylePicker(view, { ...state, open: 1, device: 'phone' })).toContain('style="width:390px;height:844px"');
     expect(renderStylePicker(view, state)).toContain('style="width:1280px;height:800px"');
+  });
+  it('renders the use button before the Vibe heading so the side panel never hides it', () => {
+    const html = renderStylePicker(view, { ...state, open: 1 });
+    expect(html.indexOf('data-style-use')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-style-use')).toBeLessThan(html.indexOf('>Vibe<'));
+  });
+  it('scrolls inside the canvas and keeps the side panel sticky', () => {
+    const css = readFileSync(new URL('./source-style-pick.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.style-pick \{[^}]*overflow-y: ?auto/);
+    expect(css).toMatch(/\.style-preview__side \{[^}]*position: ?sticky/);
+    expect(css).toMatch(/\.style-pick footer \{[^}]*position: ?sticky/);
   });
 });

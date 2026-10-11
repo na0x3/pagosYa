@@ -47,10 +47,11 @@ export function renderStylePicker(view: StyleProposalView | null, state: { open:
     return `<section class="style-pick style-pick--preview" aria-label="${escape(open.name)}">
       <div class="style-preview__stage"><div class="style-preview__toggle" role="group" aria-label="Tamaño"><button type="button" data-style-device="desktop" aria-pressed="${state.device === 'desktop'}">Escritorio</button><button type="button" data-style-device="phone" aria-pressed="${state.device === 'phone'}">Celular</button></div>${frame(open, state.device === 'phone' ? PHONE : DESKTOP)}</div>
       <aside class="style-preview__side"><button type="button" class="link" data-style-close>← Ver los ${cards.length} estilos</button><h2>${escape(open.name)} ${tag(open.mode)}</h2>
+        <div class="style-preview__action"><button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy || running ? 'disabled' : ''}>Usar este estilo</button>${running ? '<small class="style-preview__wait">Podrás elegirlo cuando estén listos todos los estilos.</small>' : ''}</div>
         <h3>Vibe</h3><p>${escape(open.vibe)}</p>
         <h3>Inspiración</h3><ul>${open.inspiration.map(line => `<li>${escape(line)}</li>`).join('')}</ul>
         <h3>Tipografía</h3><p class="style-type"><strong>Aa</strong> ${escape(open.fonts.displayFamily)}<br><span>${escape(state.storeName)}</span> ${escape(open.fonts.textFamily)}</p>
-        <button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy || running ? 'disabled' : ''}>Usar este estilo</button>${running ? '<small class="style-preview__wait">Podrás elegirlo cuando estén listos todos los estilos.</small>' : ''}</aside></section>`;
+      </aside></section>`;
   }
   // A proposal offers two cards, one calm and one bold (spec 2026-10-11 amendment "two cards").
   const placeholders = running ? Math.max(0, 2 - cards.length) : 0;

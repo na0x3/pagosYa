@@ -1,4 +1,4 @@
-.style-pick { padding: 24px; display: grid; gap: 20px; }
+.style-pick { padding: 24px; display: grid; gap: 20px; align-content: start; height: 100%; min-height: 0; overflow-y: auto; box-sizing: border-box; }
 .style-pick header h2 { margin: 0; font-size: 22px; } .style-pick header p { margin: 4px 0 0; color: var(--muted, #666); }
 .style-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .style-card { display: grid; gap: 10px; padding: 0; border: 1px solid var(--line, #e5e5e5); border-radius: 12px; background: var(--surface, #fff); text-align: left; cursor: pointer; overflow: hidden; }
@@ -12,11 +12,12 @@
 .style-card__meta small { grid-column: 1 / -1; color: var(--muted, #666); }
 .style-dots { grid-column: 1 / -1; display: flex; gap: 6px; } .style-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
 .style-tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--line, #eee); } .style-tag--bold { background: #111; color: #fff; }
-.style-pick footer { display: flex; justify-content: center; }
+.style-pick footer { display: flex; justify-content: center; position: sticky; bottom: 0; padding: 12px 0; margin: 0 -24px -24px; background: var(--surface, #fff); border-top: 1px solid var(--line, #e5e5e5); }
 .style-pick--preview { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 .style-preview__stage .style-frame { aspect-ratio: auto; height: 70vh; } .style-preview__toggle { display: flex; gap: 8px; margin-bottom: 10px; }
 .style-preview__side h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #666); }
-.style-preview__wait { display: block; margin-top: 8px; color: var(--muted, #666); }
-@media (max-width: 720px) { .style-grid, .style-pick--preview { grid-template-columns: 1fr; } .style-pick { padding: 16px; } }
+.style-preview__side { position: sticky; top: 0; max-height: 100%; overflow-y: auto; }
+.style-preview__action { margin: 12px 0 0; } .style-preview__wait { display: block; margin-top: 8px; color: var(--muted, #666); }
+@media (max-width: 720px) { .style-grid, .style-pick--preview { grid-template-columns: 1fr; } .style-pick { padding: 16px; } .style-pick footer { margin: 0 -16px -16px; } .style-preview__side { position: static; max-height: none; overflow-y: visible; } }
 @media (prefers-reduced-motion: reduce) { .style-card--empty, .style-frame--empty { animation: none; } }
 @keyframes style-pulse { 50% { opacity: .55; } }
