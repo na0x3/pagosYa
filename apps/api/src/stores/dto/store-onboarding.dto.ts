@@ -15,4 +15,5 @@ export class StoreOnboardingDto {
   @IsOptional() @IsArray() @ArrayMaxSize(20) @Matches(/^\/v1\/uploads\/[A-Za-z0-9._-]+$/, { each: true }) photos?: string[];
   @IsOptional() @ValidateNested() @Type(() => StoreOnboardingContactDto) contact?: StoreOnboardingContactDto;
   @IsOptional() @IsBoolean() finished?: boolean;
+  @IsOptional() @IsBoolean() brief?: boolean;
 }

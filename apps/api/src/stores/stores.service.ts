@@ -44,7 +44,7 @@ export class StoresService {
     if (!store) throw new NotFoundException('Tienda no encontrada.');
     const onboarding = mergeOnboarding(store.onboarding, patch);
     await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: onboarding as unknown as Prisma.InputJsonValue, ...(patch.contact?.whatsapp && onboarding.contact?.whatsapp ? { contactPhone: onboarding.contact.whatsapp } : {}) } });
-    if (!patch.finished) return { onboarding };
+    if (!patch.finished && !patch.brief) return { onboarding };
     const products = await this.prisma.paymentLink.findMany({ where: { storeId }, select: { name: true, amount: true }, orderBy: { createdAt: 'asc' }, take: 5 });
     return { onboarding, brief: onboardingBrief(store.name, onboarding, products) };
   }

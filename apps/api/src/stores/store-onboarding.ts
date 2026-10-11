@@ -2,7 +2,7 @@
 export const ONBOARDING_STEPS = ['name', 'what', 'logo', 'photos', 'products', 'story', 'contact'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export type StoreOnboarding = { version: 1; step: number; done: string[]; skipped: string[]; what?: string; story?: string; photos?: string[]; contact?: { whatsapp?: string; city?: string }; finishedAt?: string };
-export type StoreOnboardingPatch = { step?: number; done?: OnboardingStep[]; skipped?: OnboardingStep[]; what?: string; story?: string; photos?: string[]; contact?: { whatsapp?: string; city?: string }; finished?: boolean };
+export type StoreOnboardingPatch = { step?: number; done?: OnboardingStep[]; skipped?: OnboardingStep[]; what?: string; story?: string; photos?: string[]; contact?: { whatsapp?: string; city?: string }; finished?: boolean; brief?: boolean };
 
 const steps = (list: unknown[] | undefined) => (list ?? []).filter((step): step is OnboardingStep => ONBOARDING_STEPS.includes(step as OnboardingStep));
 const text = (value: unknown, max: number) => typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : undefined;

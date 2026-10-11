@@ -73,6 +73,11 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city } } : {}) };
   const paint = () => { root.innerHTML = walkthroughView(state); root.querySelector('[autofocus]')?.focus(); };
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
+  // Per run: product rows already created (index -> id), and the one chat-job id, so retries never duplicate.
+  const created = {};
+  const requestId = crypto.randomUUID();
+  let brief = null;
+  let jobPosted = false;
   const pickedFiles = name => [...(root.querySelector(`input[name="${name}"]`)?.files || [])];
 
   // `picked` is read before the busy repaint, which replaces the file inputs.
@@ -93,12 +98,23 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
       return patch({ ...mark, photos: urls });
     }
     if (id === 'products') {
-      for (const draft of productDrafts([0, 1, 2, 3, 4].map(i => ({ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`] })))) {
-        await api(`/stores/${state.storeId}/payment_links`, { method: 'POST', body: JSON.stringify({ ...draft, currency: 'BOB' }) });
+      for (let i = 0; i < 5; i++) {
+        const [draft] = created[i] ? [] : productDrafts([{ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`] }]);
+        if (!draft) continue;
+        const product = await api(`/stores/${state.storeId}/payment_links`, { method: 'POST', body: JSON.stringify({ ...draft, currency: 'BOB' }) });
+        created[i] = product?.id || true;
       }
     }
     if (id === 'story') return patch({ ...mark, story: state.values.story });
-    if (id === 'contact') return patch({ ...mark, contact: { whatsapp: state.values.whatsapp, city: state.values.city }, finished: true });
+    if (id === 'contact') {
+      // Order matters: the job exists before the store is marked finished, so a reload never strands a finished store.
+      if (!jobPosted) {
+        brief = (await patch({ ...mark, contact: { whatsapp: state.values.whatsapp, city: state.values.city }, brief: true }))?.brief;
+        await api(`/stores/${state.storeId}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction: brief || `Mi negocio se llama ${state.values.name}.\nCrea mi tienda.`, assetUrls: state.values.photos || [], revision: 0, setupAction: 'generate', requestId }) });
+        jobPosted = true;
+      }
+      return patch({ step: WALKTHROUGH_STEPS.length, finished: true });
+    }
     return patch(mark);
   }
 
@@ -109,12 +125,8 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     state = { ...state, busy: true, error: null }; paint();
     try {
       const last = state.step === LAST;
-      const result = await save(skipped, picked);
-      if (last) {
-        const brief = result?.brief || `Mi negocio se llama ${state.values.name}.\nCrea mi tienda.`;
-        await api(`/stores/${state.storeId}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction: brief, assetUrls: state.values.photos || [], revision: 0, setupAction: 'generate', requestId: crypto.randomUUID() }) });
-        return onDone(state.storeId);
-      }
+      await save(skipped, picked);
+      if (last) return onDone(state.storeId);
       state = { ...moved, storeId: state.storeId, values: state.values, busy: false };
     } catch (error) {
       state = { ...state, busy: false, error: `No pudimos guardar este paso (${error?.message || 'error'}). Inténtalo de nuevo${WALKTHROUGH_STEPS[state.step].optional ? ' o sáltalo' : ''}.` };
@@ -122,7 +134,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone }) {
     paint();
   }
 
-  listen('input', event => { if (event.target.name && event.target.type !== 'file') state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); });
+  listen('input', event => { if (event.target.name && event.target.type !== 'file') { delete created[/^p(\d)-/.exec(event.target.name)?.[1]]; state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
   listen('submit', event => { event.preventDefault(); if (!state.busy) void advance(false); });
   listen('click', event => {
     if (event.target.closest('[data-wt-skip]') && !state.busy) void advance(true);
