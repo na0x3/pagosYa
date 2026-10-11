@@ -2,6 +2,8 @@ import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
+import { sourceRequestContext } from './source-request-context';
+import { sourceMerchantRequest } from './source-merchant-request';
 import type { StyleProposal } from './source-style-proposal';
 
 /** Spec 2026-10-11 "Elige tu estilo" Task 9: the chat proposes, waits, builds from the pick; Studio reads the cards. */
@@ -22,6 +24,7 @@ beforeEach(() => {
     storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn() },
     storeSourceVersion: { count: jest.fn().mockResolvedValue(1) },
     storeSourceGeneration: { findFirst: jest.fn().mockResolvedValue(null), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    storeSourceChatJob: { findFirst: jest.fn().mockResolvedValue(null) },
   };
   projects = { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessType: 'Café Buna', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Editorial' } } }) };
   generate = jest.fn().mockResolvedValue(savedRevision());
@@ -115,7 +118,38 @@ it('refuses a pick outside the proposal or one that is no longer offered, and sa
   expect(generate).not.toHaveBeenCalled();
   expect(prisma.storeSourceGeneration.updateMany).not.toHaveBeenCalled();
   const failure = prisma.storeAgentMessage.create.mock.calls.at(-1)[0].data;
-  expect(failure).toMatchObject({ role: 'ASSISTANT', content: 'Ese estilo ya no está disponible. Pide un nuevo diseño. Puedes reintentar con el mismo estilo.', metadata: { failed: true, styleProposal: { generationId: 'g1' } } });
+  expect(failure).toMatchObject({ role: 'ASSISTANT', content: 'Ese estilo ya no está disponible. Pide un nuevo diseño.', metadata: { failed: true, styleProposal: { generationId: 'g1' } } });
+});
+
+it('offers the same style again when the build itself fails', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  generate.mockRejectedValueOnce(new Error('provider down'));
+  await expect(chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() })).rejects.toThrow();
+  expect(prisma.storeAgentMessage.create.mock.calls.at(-1)[0].data).toMatchObject({ content: 'No pude completar tu pedido. Puedes reintentar con el mismo estilo.', metadata: { failed: true, styleProposal: { generationId: 'g1' } } });
+});
+
+it('builds a pick inside the request that asked for the styles, keeping the pick job\'s fence', async () => {
+  const askedFor = { revision: 0, instruction: 'Una cafetería en Sopocachi, colorida', setupAction: 'generate' as const, requestId: uuid() };
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', requestJobId: 'job-proposal', proposal: awaitingProposal() });
+  prisma.storeSourceChatJob.findFirst.mockResolvedValue({ input: { ...askedFor, merchantRequest: sourceMerchantRequest(askedFor) } });
+  let seen: any;
+  generate.mockImplementation(async () => { seen = sourceRequestContext.getStore(); return savedRevision(); });
+  const pick = { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 1 }, requestId: uuid() };
+  const assertLease = jest.fn();
+  await sourceRequestContext.run({ signal: new AbortController().signal, jobId: 'job-pick', request: sourceMerchantRequest(pick), assertLease }, () => chat.send('m1', 's1', pick));
+  expect(prisma.storeSourceChatJob.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'job-proposal', storeId: 's1' } }));
+  expect(seen.request.instruction).toBe('Una cafetería en Sopocachi, colorida');
+  expect(seen.request.profile).toEqual(sourceMerchantRequest(askedFor).profile);
+  expect(seen).toMatchObject({ jobId: 'job-pick', assertLease });
+});
+
+it('builds a pick in its own context when the job that asked for the styles is gone', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', requestJobId: 'job-gone', proposal: awaitingProposal() });
+  let seen: any;
+  generate.mockImplementation(async () => { seen = sourceRequestContext.getStore(); return savedRevision(); });
+  const pick = { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 1 }, requestId: uuid() };
+  await sourceRequestContext.run({ signal: new AbortController().signal, jobId: 'job-pick', request: sourceMerchantRequest(pick), assertLease: jest.fn() }, () => chat.send('m1', 's1', pick));
+  expect(seen.request.instruction).toBe('Usar este estilo');
 });
 
 it('supersedes a waiting proposal when the merchant asks for another full redesign', async () => {

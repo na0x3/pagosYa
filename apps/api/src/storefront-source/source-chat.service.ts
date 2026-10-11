@@ -1,4 +1,5 @@
 import { sourceRequestContext } from './source-request-context';
+import { sourceMerchantRequest, type SourceMerchantRequest } from './source-merchant-request';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { DESIGN_DIRECTIONS, directionBrief, type DesignDirection } from './source-directions';
 import { loadStoreKnowledge } from '../store-knowledge/store-knowledge';
@@ -491,21 +492,31 @@ export class SourceChatService {
   /** "Elige tu estilo": build the store from the merchant's card with the request the proposal saved, not this message. */
   private async buildFromStyle(merchantId: string, storeId: string, input: SendSourceMessageDto, thread: { id: string }, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, setupDraft: SourceSetupDraft) {
     try {
-      const row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: input.stylePick!.generationId, storeId }, select: { id: true, proposal: true } });
+      const row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: input.stylePick!.generationId, storeId }, select: { id: true, proposal: true, requestJobId: true } });
       const proposal = row ? styleProposalFrom(row.proposal) : null;
       if (!proposal?.design || !['AWAITING_STYLE', 'PICKED'].includes(proposal.status)) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
       const index = input.stylePick!.auto ? proposal.design.selected : input.stylePick!.index ?? proposal.picked ?? proposal.design.selected;
       if (!proposal.design.concepts[index]) throw new BadRequestException('Elige uno de los estilos de la propuesta.');
       await this.prisma.storeSourceGeneration.updateMany({ where: { id: row!.id }, data: { proposal: { ...proposal, status: 'PICKED', picked: index } as unknown as Prisma.InputJsonValue } });
       await workflow.report('interpreting');
-      const revision = await this.generation.generate(merchantId, storeId, { ...proposal.request.dto, revision: input.revision }, this.generation.newBudget(input.maxCredits), proposal.request.imageUses, workflow.report, { ...(proposal.request.redesign ? { redesign: true } : {}), style: { proposal, index } });
+      // The pick's job carries only the card tap ("Usar este estilo"); the build is priced, scoped and checked against the
+      // request that asked for the styles, as the resume path rebuilds it. This job keeps its own fence and progress.
+      const context = sourceRequestContext.getStore();
+      const proposalJob = context && row!.requestJobId ? await this.prisma.storeSourceChatJob.findFirst({ where: { id: row!.requestJobId, storeId }, select: { input: true } }) : null;
+      // Without that job (a proposal made outside a queued request, or one since deleted) nothing else holds the merchant's
+      // own words, so the build reads the pick's context.
+      const original: SourceMerchantRequest | undefined = proposalJob ? { ...sourceMerchantRequest(proposalJob.input as unknown as SendSourceMessageDto), ...(proposalJob.input as { merchantRequest?: SourceMerchantRequest }).merchantRequest } : undefined;
+      const build = () => this.generation.generate(merchantId, storeId, { ...proposal.request.dto, revision: input.revision }, this.generation.newBudget(input.maxCredits), proposal.request.imageUses, workflow.report, { ...(proposal.request.redesign ? { redesign: true } : {}), style: { proposal, index } });
+      const revision = await (context && original ? sourceRequestContext.run({ ...context, request: original }, build) : build());
       if ('styleProposal' in revision) throw new BadRequestException('No se pudo construir el estilo elegido.');
       return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, proposal.request.imageUses, proposal.request.dto.assetUrls ?? []);
     } catch (error) {
       await workflow.finish('failed');
       const shown = merchantFacingSourceFailure(error);
-      const failureReason = shown instanceof HttpException && (shown.getStatus() < 500 || shown.getStatus() === 502) ? shown.message : 'No pude completar tu pedido.';
-      await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${failureReason} Puedes reintentar con el mismo estilo.`, metadata: { failed: true, progress: workflow.value, styleProposal: { generationId: input.stylePick!.generationId } } } });
+      // A refused pick (style gone, card not offered) says why on its own; retrying the same card would fail the same way.
+      const refused = shown instanceof HttpException && shown.getStatus() < 500;
+      const failureReason = refused || shown instanceof HttpException && shown.getStatus() === 502 ? shown.message : 'No pude completar tu pedido.';
+      await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: refused ? failureReason : `${failureReason} Puedes reintentar con el mismo estilo.`, metadata: { failed: true, progress: workflow.value, styleProposal: { generationId: input.stylePick!.generationId } } } });
       throw shown;
     }
   }
