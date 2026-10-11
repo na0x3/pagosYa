@@ -63,3 +63,40 @@ it('flags type sizes outside the profile, never a page inside it', () => {
   expect(craftFacts('story', 1280, 80, 11).join(' ')).toMatch(/texto/);
   expect(craftFacts('shop', 390, 44, 15)).toEqual([]);
 });
+
+// Final review fixes (2026-10-11).
+describe('playbook review fixes', () => {
+  it('is not tipped by generic shop words', () => {
+    expect(detectKind('Cafetería con pago seguro y envíos seguros')).toBe('cafe-food');
+    expect(detectKind('Tienda de tecnología, pagos con tarjeta de crédito')).toBe('general');
+    expect(detectKind('Pastelería, ideal para regalo')).toBe('bakery-sweets');
+    expect(detectKind('Estudio de abogados, asesoría legal')).toBe('services');
+  });
+  it('steps aside for a bold request, confirmed colours and missing facts, and names only what was drawn', () => {
+    const entry = PLAYBOOK['cafe-food'], family = entry.families[0];
+    const bold = playbookDirection(entry, family, { bold: true });
+    expect(bold).not.toMatch(/Craft profile|art experiment/);
+    const drawn = playbookDirection(entry, family, { palette: family.palettes[1], button: 'block' });
+    expect(drawn).toContain(family.palettes[1].accent);
+    expect(drawn).not.toContain(family.palettes[0].accent);
+    expect(drawn).toMatch(/buttons block/);
+    expect(playbookDirection(entry, family, { brandColours: true })).not.toMatch(/background #/);
+    const noHours = playbookDirection(entry, family, { evidence: { hours: false, location: true, delivery: true } });
+    expect(noHours).not.toContain('opening hours');
+    expect(noHours).toMatch(/never invent/i);
+  });
+  it('never flags a section the store has no facts for, or one the platform pages carry', () => {
+    expect(contractMisses(PLAYBOOK['cafe-food'], 'Nuestra historia. Calle Sagárnaga 215. Envíos.', { hours: false, location: true, delivery: true })).not.toContain('horario');
+    expect(contractMisses(PLAYBOOK.clothing, 'Nuestra historia. Envíos a todo el país. Tallas S a XL.')).not.toContain('cambios y devoluciones');
+  });
+  it('measures type at desktop only once', () => {
+    expect(craftFacts('shop', 1024, 140, 15)).toEqual([]);
+    expect(craftFacts('shop', 1280, 140, 15)).not.toEqual([]);
+  });
+});
+
+it('asks for line icons and a modern footer, never emoji', () => {
+  const text = playbookDirection(PLAYBOOK['cafe-food'], PLAYBOOK['cafe-food'].families[0]);
+  expect(text).toMatch(/line icons \(inline SVG/);
+  expect(text).toMatch(/never emoji/);
+});

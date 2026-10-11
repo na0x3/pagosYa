@@ -8,17 +8,20 @@ import type { Palette } from './frame-draw';
 export type PlaybookKind = 'cafe-food' | 'bakery-sweets' | 'clothing' | 'beauty' | 'services' | 'fitness-wellness' | 'crafts-home' | 'flowers-gifts' | 'general';
 export type CraftProfile = 'shop' | 'story';
 export type StyleFamily = { id: string; name: string; palettes: Palette[]; fonts: Array<{ display: string; text: string }>; buttons: string[]; radius: string; photoShape: string };
-export type PlaybookEntry = { kind: PlaybookKind; name: string; profile: CraftProfile; sections: Array<{ id: string; label: string; must: string; detect: RegExp }>; families: StyleFamily[]; tone: string; footer: string; references: string[] };
+export type Evidence = 'hours' | 'location' | 'delivery';
+/** `evidence`: shown only when the store has that fact (never invented); `kitPage`: the platform's own information pages carry it. */
+export type PlaybookSection = { id: string; label: string; must: string; detect: RegExp; evidence?: Evidence; kitPage?: boolean };
+export type PlaybookEntry = { kind: PlaybookKind; name: string; profile: CraftProfile; sections: PlaybookSection[]; families: StyleFamily[]; tone: string; footer: string; references: string[] };
 
 export const CONVENTIONAL_HEADERS = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking'] as const;
 
 const p = (id: string, name: string, paper: string, ink: string, accent: string, accent2: string): Palette => ({ id, name, paper, ink, accent, accent2, dark: false });
-const HOURS = { id: 'hours', label: 'horario', must: 'opening hours from the brief', detect: /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2}|\d{1,2}\s*(a|-|–)\s*\d{1,2}\s*h)/i };
-const LOCATION = { id: 'location', label: 'ubicación', must: 'where to find it: address and a map link', detect: /(calle|avenida|av\.|zona|barrio|direcci[oó]n|ubicaci[oó]n|mapa|c\/|esquina)/i };
-const DELIVERY = { id: 'delivery', label: 'envío o retiro', must: 'how the shopper receives it: delivery area and pickup', detect: /(env[ií]os?|delivery|retiro|recojo|pickup|entrega)/i };
-const ABOUT = { id: 'about', label: 'quiénes somos', must: 'a short real story: who makes it and since when', detect: /(nosotros|historia|qui[eé]nes somos|desde \d{4}|nuestro|nuestra|fundad)/i };
-const FAQ = { id: 'faq', label: 'preguntas frecuentes', must: 'answers to the real questions a buyer asks', detect: /(preguntas|frecuentes|\?)/i };
-const CONTACT = { id: 'contact', label: 'contacto', must: 'how to reach a person: phone, email or form', detect: /(contacto|cont[aá]ctanos|escr[ií]benos|whatsapp|tel[eé]fono|correo|@)/i };
+const HOURS: PlaybookSection = { id: 'hours', label: 'horario', must: 'opening hours from the brief', evidence: 'hours', detect: /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2}|\d{1,2}\s*(a|-|–)\s*\d{1,2}\s*h)/i };
+const LOCATION: PlaybookSection = { id: 'location', label: 'ubicación', must: 'where to find it: address and a map link', evidence: 'location', detect: /(calle|avenida|av\.|zona|barrio|direcci[oó]n|ubicaci[oó]n|mapa|c\/|esquina)/i };
+const DELIVERY: PlaybookSection = { id: 'delivery', label: 'envío o retiro', must: 'how the shopper receives it: delivery area and pickup', evidence: 'delivery', detect: /(env[ií]os?|delivery|retiro|recojo|pickup|entrega)/i };
+const ABOUT: PlaybookSection = { id: 'about', label: 'quiénes somos', must: 'a short real story from the brief: who makes it (dates and numbers only when the brief gives them)', detect: /(nosotros|historia|qui[eé]nes somos|desde \d{4}|nuestro|nuestra|fundad)/i };
+const FAQ: PlaybookSection = { kitPage: true, id: 'faq', label: 'preguntas frecuentes', must: 'answers to the real questions a buyer asks', detect: /(preguntas|frecuentes|\?)/i };
+const CONTACT: PlaybookSection = { kitPage: true, id: 'contact', label: 'contacto', must: 'how to reach a person: phone, email or form', detect: /(contacto|cont[aá]ctanos|escr[ií]benos|whatsapp|tel[eé]fono|correo|@)/i };
 const LEGAL = 'a multi-column footer (shop, information pages, contact and hours) with a legal row: store name, NIT when set, address, and the information pages';
 
 export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
@@ -39,7 +42,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
         palettes: [p('bakery-white-blush', 'white and blush', '#ffffff', '#1a1515', '#c1543f', '#f0d3c9'), p('bakery-white-navy', 'white and navy', '#ffffff', '#121826', '#23365f', '#e7ebf2')] },
     ] },
   clothing: { kind: 'clothing', name: 'clothing and accessories', profile: 'shop', references: ['carlafernandez.com', 'juanadearco.net', 'solalpaca.com', 'thinkingmu.com'], footer: LEGAL,
-    sections: [ABOUT, DELIVERY, { id: 'sizes', label: 'tallas', must: 'sizes and how to choose them', detect: /(talla|tallas|medidas|size)/i }, { id: 'returns', label: 'cambios y devoluciones', must: 'exchanges and returns in one line', detect: /(cambio|devoluci[oó]n|devoluciones)/i }],
+    sections: [ABOUT, DELIVERY, { id: 'sizes', label: 'tallas', must: 'sizes and how to choose them', detect: /(talla|tallas|medidas|size)/i }, { kitPage: true, id: 'returns', label: 'cambios y devoluciones', must: 'exchanges and returns in one line', detect: /(cambio|devoluci[oó]n|devoluciones)/i }],
     tone: 'short and confident: collections, materials and fit; never hype',
     families: [
       { id: 'clothing-minimal', name: 'minimal boutique', radius: 'square', photoShape: 'plain', buttons: ['block', 'underline', 'outline'], fonts: [{ display: 'instrument', text: 'instrument' }, { display: 'manrope', text: 'manrope' }],
@@ -57,7 +60,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
         palettes: [p('beauty-white-leaf', 'white and leaf green', '#ffffff', '#132017', '#2e7d4f', '#e8f2ec'), p('beauty-white-coral', 'white and coral', '#ffffff', '#1e1716', '#c84d3f', '#f6e6e2')] },
     ] },
   services: { kind: 'services', name: 'professional services and finance', profile: 'story', references: ['kambista.com', 'p-narayan-and-associates-15999.boosterpack.xyz', 'pagosya.boosterpack.xyz'], footer: LEGAL,
-    sections: [{ id: 'offer', label: 'qué ofrecemos', must: 'what is offered, in plain words', detect: /(servicio|ofrecemos|asesor|contab|legal|financ|cr[eé]dito|tr[aá]mite)/i }, { id: 'steps', label: 'cómo funciona', must: 'how it works in 3-4 numbered steps', detect: /(c[oó]mo funciona|paso|primero|1\.|01)/i }, { id: 'proof', label: 'confianza', must: 'proof: years, clients, registrations or reviews from the brief', detect: /(a[nñ]os|clientes|registr|rese[nñ]a|confian|certific)/i }, FAQ, CONTACT],
+    sections: [{ id: 'offer', label: 'qué ofrecemos', must: 'what is offered, in plain words', detect: /(servicio|ofrecemos|asesor|contab|legal|financ|cr[eé]dito|tr[aá]mite)/i }, { id: 'steps', label: 'cómo funciona', must: 'how it works in 3-4 numbered steps', detect: /(c[oó]mo funciona|paso|primero|1\.|01)/i }, { id: 'proof', label: 'confianza', must: 'proof from the brief only: years, clients, registrations or reviews it states', detect: /(a[nñ]os|clientes|registr|rese[nñ]a|confian|certific)/i }, FAQ, CONTACT],
     tone: 'clear and trustworthy: what you get, what it costs and what happens next; no jargon',
     families: [
       { id: 'services-editorial', name: 'editorial trust', radius: 'square', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'block'], fonts: [{ display: 'young-serif', text: 'instrument' }, { display: 'playfair-display', text: 'lora' }, { display: 'newsreader', text: 'manrope' }],
@@ -104,14 +107,15 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
 
 /** Keyword lists in priority order: most hits wins, ties go to the earlier (more specific) kind. */
 const KIND_WORDS: Array<[PlaybookKind, RegExp]> = [
-  ['flowers-gifts', /(?<!\p{L})(flor(es|er[ií]a)?|ramos?|arreglos? florales?|regal(o|os|er[ií]a))(?!\p{L})/giu],
   ['bakery-sweets', /(?<!\p{L})(panader[ií]a|pasteler[ií]a|reposter[ií]a|tortas?|pan|masa madre|galletas?|chocolates?|dulces|helados?)(?!\p{L})/giu],
   ['cafe-food', /(?<!\p{L})(caf[eé]|cafeter[ií]a|tostader[oa]|tostadur[ií]a|barista|restaurante|comida|cocina|men[uú] del d[ií]a)(?!\p{L})/giu],
+  ['flowers-gifts', /(?<!\p{L})(flor(es|er[ií]a)?|ramos? de flores|arreglos? florales?|regaler[ií]a)(?!\p{L})/giu],
   ['fitness-wellness', /(?<!\p{L})(gimnasio|gym|yoga|pilates|crossfit|entrenamiento|fitness|bienestar|meditaci[oó]n)(?!\p{L})/giu],
   ['beauty', /(?<!\p{L})(belleza|sal[oó]n|peluquer[ií]a|barber[ií]a|u[nñ]as|maquillaje|cosm[eé]tica|skincare|spa|perfumes?)(?!\p{L})/giu],
   ['clothing', /(?<!\p{L})(ropa|moda|poleras?|vestidos?|camisas?|pantalones?|zapatos?|calzado|accesorios|boutique|joyer[ií]a|carteras?)(?!\p{L})/giu],
   ['crafts-home', /(?<!\p{L})(artesan[ií]as?|cer[aá]mica|alfarer[ií]a|muebles?|decoraci[oó]n|hogar|textiles?|tejidos?|velas)(?!\p{L})/giu],
-  ['services', /(?<!\p{L})(contador|contable|contabilidad|abogad[oa]s?|legal|asesor[ií]a|consultor[ií]a|financier[oa]|cr[eé]ditos?|seguros?|estudio contable|tr[aá]mites)(?!\p{L})/giu],
+  // Generic shop words ("pago seguro", "tarjeta de crédito", "garantía legal") are not services; only phrases are.
+  ['services', /(?<!\p{L})(contador|contable|contabilidad|abogad[oa]s?|asesor[ií]a (legal|contable|financiera|tributaria)|consultor[ií]a|estudio (contable|jur[ií]dico)|financier[oa]|cr[eé]ditos? (para|a) (pymes|personas|empresas)|seguros de (vida|salud|autos?)|tr[aá]mites)(?!\p{L})/giu],
 ];
 export function detectKind(text: string): PlaybookKind {
   let best: PlaybookKind = 'general', bestHits = 0;
@@ -133,24 +137,33 @@ const PROFILE_LINE: Record<CraftProfile, string> = {
   shop: 'Craft profile shop-led: products lead early (the catalog within the first two screens), h1 28-48px, body 14-16px, a white or near-white page with one brand colour band, compact rhythm.',
   story: 'Craft profile story-led: h1 56-96px, body 16-20px, calm alternating tinted backgrounds with at most one dark band, 96-144px between sections.',
 };
-export function playbookDirection(entry: PlaybookEntry, family: StyleFamily): string {
+export type PlaybookOptions = { bold?: boolean; palette?: Palette; button?: string; brandColours?: boolean; evidence?: Partial<Record<Evidence, boolean>> };
+const shown = (section: PlaybookSection, evidence: Partial<Record<Evidence, boolean>>) => !section.evidence || evidence[section.evidence] !== false;
+export function playbookDirection(entry: PlaybookEntry, family: StyleFamily, options: PlaybookOptions = {}): string {
+  const evidence = options.evidence ?? {};
+  const palettes = options.palette ? [options.palette] : family.palettes;
+  const colours = options.brandColours ? '' : `, colours ${palettes.map(pl => `${pl.name} (background ${pl.paper}, text ${pl.ink}, accent ${pl.accent}, panels ${pl.accent2})`).join(' or ')}`;
   return [
-    `PLAYBOOK: This is a ${entry.name} business. Make it read like a normal, professionally made website of that kind, like the best real ones, not an art experiment.`,
-    `- It must show: ${entry.sections.map(section => section.must).join('; ')}.`,
-    `- ${PROFILE_LINE[entry.profile]} One content container 1140-1320px wide with 64-80px side margins; standard header (logo, 3-5 links, one action, cart); ${entry.footer}.`,
-    `- Style family "${family.name}": ${family.radius} corners, ${family.photoShape} photos, fonts ${family.fonts.map(f => `${f.display} + ${f.text}`).join(' or ')}, buttons ${family.buttons.join(' or ')}, colours ${family.palettes.map(pl => `${pl.name} (background ${pl.paper}, text ${pl.ink}, accent ${pl.accent}, panels ${pl.accent2})`).join(' or ')}.`,
+    options.bold
+      ? `PLAYBOOK: This is a ${entry.name} business. The merchant asked for a bold look; keep the sections below and the footer, and make the layout as bold as they asked.`
+      : `PLAYBOOK: This is a ${entry.name} business. Make it read like a normal, professionally made website of that kind, like the best real ones, not an art experiment.`,
+    `- It must show: ${entry.sections.filter(section => shown(section, evidence)).map(section => section.must).join('; ')}. Only real facts from the brief and the store data; never invent hours, addresses, dates, numbers or reviews.`,
+    `- ${options.bold ? '' : PROFILE_LINE[entry.profile] + ' '}One content container 1140-1320px wide with 64-80px side margins; standard header (logo, 3-5 links, one action, cart); ${entry.footer}.`,
+    `- Style family "${family.name}": ${family.radius} corners, ${family.photoShape} photos, fonts ${family.fonts.map(f => `${f.display} + ${f.text}`).join(' or ')}, buttons ${options.button ?? family.buttons.join(' or ')}${colours}.`,
+    '- Modern and professional details: a header that stays usable while scrolling, a footer with columns, small headings, line icons and the legal row on every page; consistent line icons (inline SVG, 1.5px stroke, currentColor) for contact, hours, location, delivery and features; never emoji.',
     `- Voice: ${entry.tone}.`,
   ].join('\n');
 }
 
-export function contractMisses(entry: PlaybookEntry, pageText: string): string[] {
-  return entry.sections.filter(section => !section.detect.test(pageText)).map(section => section.label);
+export function contractMisses(entry: PlaybookEntry, pageText: string, evidence: Partial<Record<Evidence, boolean>> = {}): string[] {
+  return entry.sections.filter(section => !section.kitPage && shown(section, evidence) && !section.detect.test(pageText)).map(section => section.label);
 }
 
 const LIMITS: Record<CraftProfile, { h1: [number, number]; body: [number, number] }> = { shop: { h1: [22, 64], body: [13, 17] }, story: { h1: [44, 112], body: [15, 21] } };
 /** Desktop type sizes against the profile; generous margins so a fact appears only when clearly out of range. */
 export function craftFacts(profile: CraftProfile, width: number, h1Size: number, bodySize: number): string[] {
-  if (width < 1000) return [];
+  // One desktop width only: 1280 and 1024 would report the same size twice.
+  if (width !== 1280) return [];
   const limit = LIMITS[profile];
   return [
     ...(h1Size && (h1Size < limit.h1[0] || h1Size > limit.h1[1]) ? [`${width}px: el título principal mide ${h1Size}px; para este tipo de tienda va entre ${limit.h1[0]} y ${limit.h1[1]}px.`] : []),

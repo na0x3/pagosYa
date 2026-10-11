@@ -159,3 +159,11 @@ it('measures the h1 and body sizes and the page text for the playbook checks', a
   expect(facts[0].bodySize).toBe(15);
   expect(facts[0].pageText).toMatch(/lunes a sábado/);
 });
+
+it('reads the largest visible h1, and no h1 as zero', async () => {
+  const header = '<a href="index.html">Eje</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
+  const none = await captureSep5Draft(await store(header, '', '<p>Sin título en esta página, solo un párrafo largo para medir.</p>', 'p{font-size:15px}'));
+  expect(none.facts[0].h1Size).toBe(0);
+  const two = await captureSep5Draft(await store('<h1 class="logo">Eje</h1>' + header, '', '<h1>Café de altura</h1>', '.logo{font-size:20px}main h1{font-size:44px}'));
+  expect(two.facts[0].h1Size).toBe(44);
+});

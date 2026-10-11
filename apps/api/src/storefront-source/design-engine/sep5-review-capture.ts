@@ -87,8 +87,9 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           account: outsideFooter('a[data-pagosya-account]'),
           cart: outsideFooter('[data-cart-count]'),
           // Playbook checks (spec 2026-10-11): type sizes against the craft profile and the page text for the contract.
-          h1Size: Math.round(parseFloat(getComputedStyle(document.querySelector('h1') || document.body).fontSize)) || 0,
-          bodySize: (() => { const el = Array.from(document.querySelectorAll('main p, p')).find(node => (node.textContent || '').trim().length > 40 && node.getBoundingClientRect().width > 0); return el ? Math.round(parseFloat(getComputedStyle(el).fontSize)) : 0; })(),
+          // The largest visible h1 (a logo can be an h1 too), 0 without one; body is the median of the paragraphs in main.
+          h1Size: Math.max(0, ...Array.from(document.querySelectorAll('h1')).filter(el => el.getBoundingClientRect().width > 0).map(el => Math.round(parseFloat(getComputedStyle(el).fontSize)) || 0)),
+          bodySize: (() => { const sizes = Array.from(document.querySelectorAll('main p')).filter(node => (node.textContent || '').trim().length > 40 && node.getBoundingClientRect().width > 0).map(node => Math.round(parseFloat(getComputedStyle(node).fontSize))).sort((a, b) => a - b); return sizes.length ? sizes[Math.floor(sizes.length / 2)] : 0; })(),
           pageText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 20000),
           // Design draw round 2 quality floor (inlined: the page cannot import the helpers above).
           decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,

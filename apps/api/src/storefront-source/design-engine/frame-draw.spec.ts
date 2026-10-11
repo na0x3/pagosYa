@@ -313,3 +313,21 @@ describe('dice inside the playbook family', () => {
     expect(parseFrameDraw(JSON.stringify({ header: 'stacked', kind: 'cafe-food', family: 'cafe-shop' }))).toMatchObject({ kind: 'cafe-food', family: 'cafe-shop' });
   });
 });
+
+describe('playbook review fixes for the dice', () => {
+  const family = PLAYBOOK['cafe-food'].families[0];
+  const boldIds = (list: ReadonlyArray<{ id: string; bold: boolean }>) => list.filter(entry => entry.bold).map(entry => entry.id);
+  it('keeps every drawn part conventional inside a playbook family', () => {
+    for (let seed = 1; seed < 80; seed++) {
+      const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(seed), playbook: { kind: 'cafe-food', family, bold: false } });
+      const saved = parseFrameDraw(run.file!.content) as Record<string, string>;
+      expect(['directory', 'contact-card', 'statement-band', 'wordmark-signoff']).toContain(saved.footer);
+      expect(boldIds(FRAME_CATALOGUE.hero)).not.toContain(saved.hero);
+      expect(boldIds(FRAME_CATALOGUE.cart)).not.toContain(saved.cart);
+      for (const part of ['angle', 'structure', 'photos', 'hover'] as const) expect([part, boldIds(DESIGN_CATALOGUE[part]).includes(saved[part])]).toEqual([part, false]);
+      expect(family.buttons).toContain(saved.button);
+      expect(run.paragraph).not.toMatch(/fonts, spacing and motion are yours/);
+      expect(run.planner).not.toMatch(/choose fonts freely/);
+    }
+  });
+});

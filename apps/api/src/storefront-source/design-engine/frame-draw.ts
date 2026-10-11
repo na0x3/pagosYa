@@ -82,7 +82,7 @@ export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], av
   return draw;
 }
 
-export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Partial<Record<FramePart | DesignPart, boolean>> = {}): string {
+export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Partial<Record<FramePart | DesignPart, boolean>> = {}, playbook = false): string {
   const frameLines = PARTS.flatMap(part => {
     const entry = !omit[part] && FRAME_CATALOGUE[part].find(item => item.id === draw[part]);
     return entry ? [`- ${entry.desktop} ${entry.phone}`] : [];
@@ -97,7 +97,7 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
   ];
   if (!frameLines.length && !designLines.length) return '';
   if (!designLines.length) return ["FRAME AND HERO: This store's frame was drawn for it so stores never repeat each other. Build exactly this structure and style it entirely in the store's own language; type, colour, spacing and motion are yours.", ...frameLines, 'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
-  return ["DESIGN DRAW: This store's design was drawn for it so stores never repeat each other, even two in the same business. Build exactly this and style it in the store's own language; fonts, spacing and motion are yours.", ...frameLines, ...designLines,
+  return [`DESIGN DRAW: This store's design was drawn for it so stores never repeat each other, even two in the same business. Build exactly this and style it in the store's own language; ${playbook ? 'fonts and spacing follow the PLAYBOOK below, motion is yours' : 'fonts, spacing and motion are yours'}.`, ...frameLines, ...designLines,
     '- Quality: circular text only with an inline SVG <textPath>, never a rotated span; never use emoji as decoration; text never overlaps other text. Photo treatments apply to your own images, never to the platform\'s catalog cards or product page, so shoppers see the real product colours.',
     'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
 }
@@ -155,13 +155,16 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
   const recent = Object.keys(own).length ? [own, ...input.recent] : input.recent;
   // Professional by default: inside a playbook family only conventional headers, unless the merchant asked for bold.
-  const headerAllowed = input.playbook && !input.playbook.bold ? { header: CONVENTIONAL_HEADERS } : {};
+  const conventional = Boolean(input.playbook && !input.playbook.bold);
+  const calm = (list: readonly FrameEntry[]) => list.filter(entry => !entry.bold).map(entry => entry.id);
+  // Every part, not only the header: a bold hero, footer or structure contradicts the playbook just as much.
+  const headerAllowed: Partial<Record<FramePart, readonly string[]>> = conventional ? { header: CONVENTIONAL_HEADERS, cart: calm(FRAME_CATALOGUE.cart), footer: ['directory', 'contact-card', 'statement-band', 'wordmark-signoff'], hero: calm(FRAME_CATALOGUE.hero) } : {};
   const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed);
   const frameOmit = frameOverrides(input.request);
   const playbookFields: Record<string, string> = input.playbook ? { kind: input.playbook.kind, family: input.playbook.family.id } : {};
   if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
   const category = input.playbook?.kind ?? input.category ?? '';
-  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.playbook?.family.palettes, button: input.playbook?.family.buttons });
+  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) });
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
   const draw = { ...frame, ...design, category, ...playbookFields };
@@ -173,8 +176,8 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const palette = designOmit.palette ? undefined : allPalettes().find(entry => entry.id === design.palette);
   return {
     file: { path: FRAME_DRAW_FILE, content: JSON.stringify(savedDraw, null, 2) + '\n' },
-    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }),
-    planner: plannerDirection(draw, { palette: designOmit.palette }),
+    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }, Boolean(input.playbook)),
+    planner: plannerDirection(draw, { palette: designOmit.palette }, Boolean(input.playbook)),
     ...(designOmit.button ? {} : { dna: { button: design.button, hover: design.hover } }),
     ...(palette ? { palette } : {}),
   };
@@ -293,11 +296,12 @@ export const DESIGN_CATALOGUE: Record<Exclude<DesignPart, 'palette'>, readonly F
   ],
 };
 
-type DesignAllowed = { palettes?: Palette[]; button?: readonly string[] };
+type DesignAllowed = { palettes?: Palette[]; button?: readonly string[]; parts?: Partial<Record<'angle' | 'structure' | 'photos' | 'hover', readonly string[]>> };
 const designOptions = (part: DesignPart, available: FrameAvailable, allowed: DesignAllowed = {}): Array<{ id: string }> => {
   if (part === 'palette') return allowed.palettes?.length ? [...allowed.palettes] : [...PALETTES];
   const fitting = DESIGN_CATALOGUE[part].filter(entry => fits(entry, available));
-  const narrowed = part === 'button' && allowed.button?.length ? fitting.filter(entry => allowed.button!.includes(entry.id)) : fitting;
+  const only = part === 'button' ? allowed.button : allowed.parts?.[part as 'angle'];
+  const narrowed = only?.length ? fitting.filter(entry => only.includes(entry.id)) : fitting;
   return narrowed.length ? narrowed : fitting;
 };
 /** The round-2 colour worlds plus every playbook family's palettes: what a saved draw may name. */
@@ -339,11 +343,11 @@ export function designOverrides(text: string): { palette: boolean; photos: boole
 
 const paletteLine = (palette: Palette) => `Colour world: ${palette.name}, ${palette.dark ? 'a dark page' : 'a light page'}: background ${palette.paper}, text ${palette.ink}, accent ${palette.accent}, second accent ${palette.accent2}. Do not take colours from the photos; style the photos to sit in this world.`;
 
-export function plannerDirection(draw: Partial<DesignDraw>, omit: Partial<Record<DesignPart, boolean>> = {}): string {
+export function plannerDirection(draw: Partial<DesignDraw>, omit: Partial<Record<DesignPart, boolean>> = {}, playbook = false): string {
   const angle = !omit.angle && DESIGN_CATALOGUE.angle.find(entry => entry.id === draw.angle);
   const palette = !omit.palette && allPalettes().find(entry => entry.id === draw.palette);
   if (!angle && !palette) return '';
-  return ['DRAWN FOR THIS STORE (build every concept on it; choose fonts freely):', ...(angle ? [angle.desktop] : []), ...(palette ? [paletteLine(palette)] : [])].join(' ');
+  return [`DRAWN FOR THIS STORE (build every concept on it; ${playbook ? 'fonts from the PLAYBOOK family pairings' : 'choose fonts freely'}):`, ...(angle ? [angle.desktop] : []), ...(palette ? [paletteLine(palette)] : [])].join(' ');
 }
 
 const luminance = (hex: string) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };

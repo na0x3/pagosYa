@@ -507,8 +507,19 @@ export class SourceGenerationService {
     const frameEnabled = this.config.get<boolean>('app.yapiFrameDraw') === true;
     // Playbook (spec 2026-10-11): the kind of business from the merchant's words, brief and catalogue, then one style family.
     const playbookOn = this.config.get<boolean>('app.yapiPlaybook') === true;
-    const merchantWords = sourceRequestContext.getStore()?.request.instruction || dto.instruction;
-    const kind = playbookOn ? detectKind(`${merchantWords}\n${JSON.stringify(dto.brief ?? {})}\n${data.items.map(item => item.name).join(', ')}`) : undefined;
+    // The merchant's own words only (the chat composes YAPI's summary and interpretation before them).
+    const merchantWords = (sourceRequestContext.getStore()?.request.instruction || dto.instruction).split('Pedido actual del comercio:').at(-1)!;
+    const briefFacts = dto.brief as { businessType?: unknown; businessInformation?: unknown } | undefined;
+    const businessInfo = typeof briefFacts?.businessInformation === 'string' ? briefFacts.businessInformation : '';
+    const kind = playbookOn ? detectKind(`${merchantWords}\n${typeof briefFacts?.businessType === 'string' ? briefFacts.businessType : ''}\n${businessInfo}\n${data.items.map(item => item.name).join(', ')}`) : undefined;
+    const boldAsked = asksForBold(merchantWords);
+    const storeData = data as { locations?: unknown[]; shippingEnabled?: boolean; shippingPickupEnabled?: boolean };
+    // A contract section is asked for only when the store has the fact: YAPI must never invent hours or an address.
+    const playbookEvidence = {
+      hours: /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2})/i.test(businessInfo) || JSON.stringify(storeData.locations ?? []).includes('open'),
+      location: Boolean(storeData.locations?.length) || /(calle|avenida|av\.|zona|barrio|direcci[oó]n)/i.test(businessInfo),
+      delivery: Boolean(storeData.shippingEnabled || storeData.shippingPickupEnabled) || /(env[ií]os?|delivery|retiro|recojo|pickup|entrega)/i.test(businessInfo),
+    };
     // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
     const recentDraws = frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [];
     const playbookEntry = kind ? PLAYBOOK[kind] : undefined;
@@ -521,11 +532,11 @@ export class SourceGenerationService {
       fresh: frameNow,
       previous: previousFiles,
       recent: recentDraws,
-      ...(playbookEntry && playbookFamily ? { playbook: { kind: playbookEntry.kind, family: playbookFamily, bold: asksForBold(merchantWords) } } : {}),
+      ...(playbookEntry && playbookFamily ? { playbook: { kind: playbookEntry.kind, family: playbookFamily, bold: boldAsked } } : {}),
       available: frameFacts.available,
       request: frameFacts.request,
     });
-    const playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily) : '';
+    const playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
@@ -932,7 +943,7 @@ export class SourceGenerationService {
             ] } as unknown as SourceProjectSnapshot);
             const { shots, facts } = await captureSep5Draft(preview, signal);
             // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
-            const playbookFacts = playbookEntry ? facts.flatMap(fact => [...craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText).map(label => `Falta en la página: ${label}.`) : [])]) : [];
+            const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
             const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
             await progress?.('repairing');
             const reviewPrompt = sep5ReviewPrompt({ ...authorInput, draft: authored.data.files, measured });
