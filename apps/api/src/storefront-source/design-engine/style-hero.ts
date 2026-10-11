@@ -18,7 +18,7 @@ const escape = (text: string) => text.replace(/[&<>"']/g, ch => ({ '&': '&amp;',
 const fontOf = (id: string) => SOURCE_FONT_CATALOG.find(font => font.id === id) ?? SOURCE_FONT_CATALOG.find(font => font.id === 'instrument')!;
 // Local paths only: the kit's assets/, uploads and inline images. Everything else is dropped.
 const LOCAL_URL = /^(assets\/[\w./-]+|\/v1\/uploads\/[\w.-]+|data:image\/(png|jpe?g|webp|svg\+xml)[;,])/i;
-const BLOCKED = new Set(['script', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'form', 'frame', 'frameset', 'noscript', 'template', 'animate', 'set', 'animatemotion', 'animatetransform', 'discard', 'foreignobject']);
+const BLOCKED = new Set(['script', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'form', 'frame', 'frameset', 'noscript', 'template', 'math', 'xmp', 'noembed', 'noframes', 'plaintext', 'applet', 'animate', 'set', 'animatemotion', 'animatetransform', 'discard', 'foreignobject']);
 const URL_ATTRS = new Set(['src', 'href', 'xlink:href', 'srcset', 'poster', 'action', 'formaction', 'data', 'background', 'ping']);
 // Checked on DECODED text (attribute values, <style> bodies): anything that can spell a fetch or an escape.
 const LOCAL_CSS_URL = /^url\(\s*["']?(assets\/|\/v1\/uploads\/|data:image\/)/i;
@@ -59,7 +59,7 @@ function cleanNode(parent: { childNodes: Node[] }): boolean {
       for (const child of el.childNodes) {
         if (child.nodeName !== '#text') return false;
         const text = child as DefaultTreeAdapterMap['textNode'];
-        if (text.value.includes('\\')) return false;
+        if (/[\\<]/.test(text.value)) return false;
         // Decoded, escape-free CSS: foreign url()s and @import become inert, anything stranger fails closed.
         text.value = text.value.replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(["']?)([^"'()\s]*)\1\s*\)/gi, (match, _quote, url: string) => LOCAL_URL.test(url) ? match : 'none');
         if (cssIsUnsafe(text.value)) return false;
@@ -80,7 +80,10 @@ export function sanitizeHeroHtml(html: string): string | null {
   try {
     const fragment = parseFragment(html);
     if (!cleanNode(fragment)) return null;
-    const out = serialize(fragment).trim();
+    const raw = serialize(fragment);
+    // The browser re-parses what we emit: unless parse -> serialise is a fixed point, the tree we checked is not the tree it builds.
+    if (raw.length > MAX_HERO || serialize(parseFragment(raw)) !== raw) return null;
+    const out = raw.trim();
     const inert = out.replace(/\sxmlns(:[\w-]+)?\s*=\s*("[^"]*"|'[^']*')/gi, '').replace(/data:image\/[^"')\s]*/gi, '');
     if (/\b(?:https?|ftp|wss?):/i.test(inert) || /(?:^|[\s"'(=,>])\/\/[^\s"'/]/.test(inert)) return null;
     return out && /data-store-name/.test(out) ? out : null;

@@ -77,6 +77,45 @@ it('rejects unclosed style tags quickly', () => {
   }
 });
 
+it('survives parse/serialise mutation probes (math, raw-text elements, namespace confusion)', () => {
+  const probes = [
+    '<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>',
+    '<math><mtext><table><mglyph><style><img src="&#47;&#47;evil.test/m2.png">',
+    '<math><mtext><table><mglyph><style><div style="background:url(&#47;&#47;evil.test/m3.png)">x</div>',
+    '<math><mtext><table><mglyph><style><embed src="&#47;&#47;evil.test/m4">',
+    '<math><mtext><table><malignmark><style><img src=x onerror=alert(5)>',
+    '<math><mi><table><mglyph><style><img src=x onerror=alert(6)>',
+    '<math><mtext><table><mglyph><xmp><img src=x onerror=alert(7)>',
+    '<math><mtext><table><mglyph><noembed><img src=x onerror=alert(8)>',
+    '<math><mtext><table><mglyph><style><img src="h&#116;tps:&#47;&#47;evil.test/m9.png">',
+    '<math><mtext><table><mglyph><noframes><img src=x onerror=alert(10)>',
+    '<math><mtext><table><mglyph><style><meta http-equiv="refresh" content="0;url=&#47;&#47;evil.test/m11">',
+    '<form><math><mtext></form><form><mglyph><style></math><img src onerror=alert(1)>',
+    '<svg></p><style><a id="</style><img src=1 onerror=alert(1)>">',
+    '<math><mtext><table><mglyph><style><!--</style><img src=x onerror=alert(1)>',
+    '<svg><style>&lt;/style&gt;&lt;img src=x onerror=alert(1)&gt;</style></svg>',
+    '<svg><style><![CDATA[</style><img src=x onerror=alert(1)>]]></style></svg>',
+    '<math><style><img src=x onerror=alert(1)></style></math>',
+    '<noembed><img src=x onerror=alert(1)></noembed>',
+    '<math><mi><xmp>&lt;/xmp&gt;&lt;img src=x onerror=alert(1)&gt;</xmp></mi></math>',
+    '<svg><svg><style>.a{fill:red}</style></svg><desc><style><img src=x onerror=alert(1)></style></desc></svg>',
+    '<svg><title><style><img src=x onerror=alert(1)></style></title></svg>',
+    '<table><style><img src=x onerror=alert(1)></style></table>',
+    '<select><style><img src=x onerror=alert(1)></style></select>',
+    '<svg><annotation-xml encoding="text/html"><style><img src=x onerror=alert(1)></style></annotation-xml></svg>',
+    '<math><annotation-xml encoding="text/html"><style><img src=x onerror=alert(1)></style></annotation-xml></math>',
+    '<math><mtext><table><mglyph><svg><mtext><style><path id="</style><img onerror=alert(1) src>">',
+    '<plaintext><img src=x onerror=alert(1)>',
+    '<applet code="x"></applet><noframes><img src=x onerror=alert(1)></noframes>',
+  ];
+  for (const probe of probes) {
+    const html = sanitizeHeroHtml('<div data-store-name></div>' + probe);
+    expect(html === null || !/onerror|alert|evil|<math|<xmp|<noembed|<noframes|<plaintext/i.test(html)).toBe(true);
+  }
+  const ok = sanitizeHeroHtml(templateHero(facts))!;
+  expect(sanitizeHeroHtml(ok)).toBe(ok);
+});
+
 it('rejects empty, oversized or nameless answers', () => {
   expect(sanitizeHeroHtml('')).toBeNull();
   expect(sanitizeHeroHtml('<div data-store-name>' + 'x'.repeat(60_000) + '</div>')).toBeNull();
