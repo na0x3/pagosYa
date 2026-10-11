@@ -139,6 +139,27 @@ it('"Elige tú" explains its choice in the chat; a merchant\'s own pick does not
   expect(own.assistantMessage.content.startsWith('Elegí')).toBe(false);
 });
 
+it('a picked style whose build failed waits for Reintentar: no new cards, no model call', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED', picked: 2 } });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Hola, ¿sigues ahí?', requestId: uuid() });
+  expect(out.assistantMessage.content).toBe('Tu estilo «Estilo 2» quedó elegido; toca Reintentar para construir la tienda.');
+  expect(out.assistantMessage.metadata).toMatchObject({ styleProposal: { generationId: 'g1' } });
+  expect(conversationDecide).not.toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
+});
+
+it('a picked style yields to a full redesign request, and is ignored once the store moved on', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED', picked: 2 } });
+  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g2', cards: 4 } });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Rediseña mi tienda desde cero', requestId: uuid() });
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'SUPERSEDED' }) } }));
+  expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
+  currentRevision(1);
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED', picked: 2 } });
+  await chat.send('m1', 's1', { revision: 1, instruction: 'Cambia el teléfono', requestId: uuid() });
+  expect(generate).toHaveBeenCalledTimes(2);
+});
+
 it('offers the same style again when the build itself fails', async () => {
   prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
   generate.mockRejectedValueOnce(new Error('provider down'));
@@ -178,14 +199,21 @@ it('supersedes a waiting proposal when the merchant asks for another full redesi
   expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
 });
 
-it('serves the newest running or waiting proposal as cards, and nothing once picked or when its run failed', async () => {
+it('serves the newest running or waiting proposal as cards, and nothing when its run failed', async () => {
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
   expect((await chat.styleProposal('m1', 's1')).proposal!.cards).toHaveLength(4);
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: { ...awaitingProposal(), status: 'RUNNING' } });
   expect((await chat.styleProposal('m1', 's1')).proposal!.status).toBe('RUNNING');
-  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED' } });
-  expect((await chat.styleProposal('m1', 's1')).proposal).toBeNull();
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'FAILED', proposal: { ...awaitingProposal(), status: 'RUNNING' } });
   expect((await chat.styleProposal('m1', 's1')).proposal).toBeNull();
   expect(prisma.storeSourceGeneration.findFirst.mock.calls[0][0].select).toMatchObject({ id: true, status: true, proposal: true });
+});
+
+it('keeps serving a picked proposal with its pick until the store moves past its revision, so the pick can be retried', async () => {
+  const picked = { id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED', picked: 2 } };
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce(picked);
+  expect((await chat.styleProposal('m1', 's1')).proposal).toMatchObject({ generationId: 'g1', status: 'PICKED', picked: 2 });
+  currentRevision(1);
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce(picked);
+  expect((await chat.styleProposal('m1', 's1')).proposal).toBeNull();
 });

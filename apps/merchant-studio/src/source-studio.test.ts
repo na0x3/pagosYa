@@ -534,6 +534,18 @@ it('sends Elige tú as an automatic pick and retries a failed build with the sam
   expect(sent.mock.calls[1][1]).toBe('Usar el estilo «Estilo 2»');
   expect(sent.mock.calls[1].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
 });
+it('after a reload, shows a picked style whose build failed and retries it with the same pick', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'PICKED', picked: 2, recommended: 1, cards: [0, 1, 2, 3].map(styleCard) } } as any);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-style-retry]')).not.toBeNull());
+  expect(app.querySelectorAll('[data-style-card]')).toHaveLength(4);
+  expect(app.querySelector('[data-style-retry]')!.textContent).toBe('Reintentar con «Estilo 2»');
+  app.querySelector<HTMLButtonElement>('[data-style-retry]')!.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+  expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 2»');
+  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 2 } });
+});
 it('does not drop a pick while code edits are unsaved: the buttons are disabled and the picker stays', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [0, 1, 2, 3].map(styleCard) } } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage');

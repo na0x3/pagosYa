@@ -2,6 +2,7 @@
 .style-pick header h2 { margin: 0; font-size: 22px; } .style-pick header p { margin: 4px 0 0; color: var(--muted, #666); }
 .style-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .style-card { display: grid; gap: 10px; padding: 0; border: 1px solid var(--line, #e5e5e5); border-radius: 12px; background: var(--surface, #fff); text-align: left; cursor: pointer; overflow: hidden; }
+.style-card--picked { border-color: var(--ink, #111); box-shadow: 0 0 0 2px var(--ink, #111); } .style-tag--picked { background: var(--ink, #111); color: #fff; }
 .style-card:disabled { cursor: progress; } .style-card:not(:disabled):hover { border-color: var(--ink, #111); }
 .style-card--empty { min-height: 260px; animation: style-pulse 1.4s ease-in-out infinite; background: var(--line, #eee); }
 .style-frame { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--line, #f2f2f2); }

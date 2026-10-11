@@ -9,7 +9,7 @@ import { BadRequestException, ConflictException, HttpException, Injectable, NotF
 import { PrismaService } from '../prisma/prisma.service';
 import { SourceProjectsService } from './source-projects.service';
 import { SourceGenerationService, type StyleProposalResult } from './source-generation.service';
-import { styleProposalFrom, styleProposalView } from './source-style-proposal';
+import { styleProposalFrom, styleProposalView, type StyleProposal } from './source-style-proposal';
 import { SourceTemplatesService } from './source-templates.service';
 import { Prisma, type StoreAgentMessage } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
@@ -90,6 +90,9 @@ function offeredDirections(messages: Array<{ role: string; metadata?: unknown }>
   const choices = (last?.metadata as { directionChoices?: DesignDirection[] } | undefined)?.directionChoices;
   return Array.isArray(choices) ? choices : [];
 }
+
+/** A pick whose build failed: its run row still waits and the store is on the revision the styles were made for. */
+const retryablePick = (proposal: StyleProposal, rowStatus: string, revision: number) => proposal.status === 'PICKED' && Boolean(proposal.design) && rowStatus === 'AWAITING_STYLE' && proposal.request.dto.revision === revision;
 
 @Injectable()
 export class SourceChatService {
@@ -235,12 +238,14 @@ export class SourceChatService {
     return { progress: progress || null };
   }
 
-  /** The cards Studio shows: the newest proposal still drawing or waiting for the pick, on a run that did not fail. */
+  /** The cards Studio shows: the newest proposal still drawing or waiting for the pick, on a run that did not fail. A pick whose
+   * build failed stays shown, with its pick, until the store moves past the revision the styles were made for, so it can be retried. */
   async styleProposal(merchantId: string, storeId: string) {
-    await this.owner(merchantId, storeId);
+    const [, current] = await Promise.all([this.owner(merchantId, storeId), this.projects.current(merchantId, storeId)]);
     const row = await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, proposal: { not: Prisma.DbNull } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, proposal: true } });
     const proposal = row && ['RUNNING', 'AWAITING_STYLE'].includes(row.status) ? styleProposalFrom(row.proposal) : null;
-    return { proposal: proposal && ['RUNNING', 'AWAITING_STYLE'].includes(proposal.status) ? styleProposalView(row!.id, proposal) : null };
+    const shown = proposal && (['RUNNING', 'AWAITING_STYLE'].includes(proposal.status) || retryablePick(proposal, row!.status, current.revision));
+    return { proposal: shown ? styleProposalView(row!.id, proposal) : null };
   }
 
   async send(merchantId: string, storeId: string, input: SendSourceMessageDto) {
@@ -298,14 +303,17 @@ export class SourceChatService {
     const styleOn = this.config.get<boolean>('app.yapiStylePick') === true;
     if (styleOn && input.stylePick) return this.buildFromStyle(merchantId, storeId, input, thread, userMessage, workflow, setupDraft);
     const latestProposal = styleOn ? await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, proposal: { not: Prisma.DbNull } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, proposal: true } }) : null;
-    const waitingProposal = latestProposal?.status === 'AWAITING_STYLE' ? styleProposalFrom(latestProposal.proposal) : null;
-    if (waitingProposal?.status === 'AWAITING_STYLE') {
+    const openProposal = latestProposal?.status === 'AWAITING_STYLE' ? styleProposalFrom(latestProposal.proposal) : null;
+    // A picked style whose build failed is still the merchant's choice: the next message must not pay for new cards.
+    const pickedName = openProposal && retryablePick(openProposal, latestProposal!.status, current.revision) ? openProposal.design!.concepts[openProposal.picked ?? openProposal.design!.selected]?.card?.name : undefined;
+    if (openProposal?.status === 'AWAITING_STYLE' || pickedName) {
       if (!sourceRedesignRequested(input.instruction)) {
         await workflow.finish('completed');
-        const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: 'Primero elige un estilo; después lo ajustamos juntos.', metadata: { progress: workflow.value, styleProposal: { generationId: latestProposal!.id } } } });
+        const content = pickedName ? `Tu estilo «${pickedName}» quedó elegido; toca Reintentar para construir la tienda.` : 'Primero elige un estilo; después lo ajustamos juntos.';
+        const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content, metadata: { progress: workflow.value, styleProposal: { generationId: latestProposal!.id } } } });
         return { userMessage, assistantMessage, setup: null };
       }
-      await this.prisma.storeSourceGeneration.updateMany({ where: { id: latestProposal!.id }, data: { proposal: { ...waitingProposal, status: 'SUPERSEDED' } as unknown as Prisma.InputJsonValue } });
+      await this.prisma.storeSourceGeneration.updateMany({ where: { id: latestProposal!.id }, data: { proposal: { ...openProposal, status: 'SUPERSEDED' } as unknown as Prisma.InputJsonValue } });
     }
     await workflow.report('interpreting');
     const formCommand = /^(?:quita|elimina|desactiva|oculta|remove|disable|hide)\s+(?:el\s+|the\s+)?(?:formulario\s+de\s+contacto|contact\s+form)[.!]?$/i.test(input.instruction.trim()) ? false

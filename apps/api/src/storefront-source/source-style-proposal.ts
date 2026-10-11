@@ -29,7 +29,7 @@ export function styleProposalView(generationId: string, proposal: StyleProposal)
       palette: palette ? [palette.paper, palette.ink, palette.accent, palette.accent2] : [],
       html: hero ? cardHtmlForPreview(hero.html, proposal.assetMap) : null, source: hero?.source ?? null };
   });
-  return { generationId, status: proposal.status, recommended: proposal.design?.selected ?? 0, cards };
+  return { generationId, status: proposal.status, recommended: proposal.design?.selected ?? 0, ...(proposal.status === 'PICKED' && proposal.picked !== undefined ? { picked: proposal.picked } : {}), cards };
 }
 
 export function styleProposalFrom(value: unknown): StyleProposal | null {

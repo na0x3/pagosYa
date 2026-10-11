@@ -40,6 +40,16 @@ describe('style picker', () => {
     expect(html).not.toContain('<img src=x>');
     expect(html).not.toContain('url(x)');
   });
+  it('after a failed pick build, marks the picked card and offers Reintentar with it instead of Elige tú', () => {
+    const html = renderStylePicker({ ...view, status: 'PICKED', picked: 3 }, state);
+    expect(html.match(/data-style-card=/g)).toHaveLength(4);
+    expect(html).toMatch(/class="style-card style-card--picked" data-style-card="3"/);
+    expect(html.match(/style-card--picked/g)).toHaveLength(1);
+    expect(html).toContain('data-style-retry="3"');
+    expect(html).toContain('Reintentar con «Estilo 3»');
+    expect(html).not.toContain('data-style-auto');
+    expect(renderStylePicker({ ...view, status: 'PICKED', picked: 3 }, { ...state, busy: true })).toMatch(/data-style-retry="3" disabled/);
+  });
   it('wraps a hero in a full document and escapes it for srcdoc', () => {
     const doc = heroSrcdoc('<p class="a">"x" & y</p>');
     expect(doc).toContain('&lt;!doctype html&gt;');

@@ -770,7 +770,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (!bocetoPhase() || productPhoto) { bocetoOpen = false; bocetoConfirm = false; }
     const inBoceto = Boolean(bocetoOpen && version && mode === 'preview');
     // A RUNNING proposal only shows while its build runs; once the cards are ready they wait for the pick.
-    const showStyles = !inBoceto && mode === 'preview' && (styleView ? styleView.status === 'AWAITING_STYLE' || building() : building() && buildProgress?.steps.at(-1)?.stage === 'styles');
+    // A picked style whose build failed shows again for Reintentar, but not while that build (or another) is running.
+    const showStyles = !inBoceto && mode === 'preview' && (styleView ? styleView.status === 'PICKED' ? !building() : styleView.status === 'AWAITING_STYLE' || building() : building() && buildProgress?.steps.at(-1)?.stage === 'styles');
     if (!sessionStorage.getItem(SESSION_STORAGE_KEY)) {
       if (embedded) { notifyParent({ type: 'pagosya:session-expired' }); app.innerHTML = '<p>Tu sesión terminó. Vuelve a entrar desde el panel.</p>'; return; }
       app.innerHTML = renderStudioLogin({ busy, error });
@@ -900,6 +901,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelectorAll<HTMLButtonElement>('[data-style-device]').forEach(button => button.addEventListener('click', () => { styleDevice = button.dataset.styleDevice as 'desktop' | 'phone'; render(); }));
     app.querySelector<HTMLButtonElement>('[data-style-use]')?.addEventListener('click', event => void pickStyle({ index: Number((event.currentTarget as HTMLButtonElement).dataset.styleUse) }));
     app.querySelector('[data-style-auto]')?.addEventListener('click', () => void pickStyle({ auto: true }));
+    app.querySelector<HTMLButtonElement>('[data-style-retry]')?.addEventListener('click', event => void pickStyle({ index: Number((event.currentTarget as HTMLButtonElement).dataset.styleRetry) }));
     app.querySelector('#source-boceto-tab')?.addEventListener('click', () => {
       if (busy || dirty() || historical() || showingDraft() || !bocetoPhase()) return;
       bocetoOpen = true; bocetoFitted = false; mode = 'preview'; page = 'index.html';
@@ -1122,7 +1124,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-code')?.addEventListener('input', event => {
       if (!version || !codeFileEditable(version.snapshot.files, filePath)) return;
       draft = (event.target as HTMLTextAreaElement).value;
-      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-code-file], [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], [data-style-card], [data-style-use], [data-style-auto], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
+      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-code-file], [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], [data-style-card], [data-style-use], [data-style-auto], [data-style-retry], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
       app.querySelector<HTMLButtonElement>('#source-save')!.disabled = busy || !dirty() || historical();
       app.querySelector<HTMLButtonElement>('#source-discard')!.disabled = busy || !dirty();
     });
