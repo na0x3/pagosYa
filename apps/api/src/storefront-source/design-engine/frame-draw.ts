@@ -3,6 +3,8 @@
  * random: given the same kind of brief it lands on the same header every time. The platform rolls these four parts
  * per new store or redesign, avoiding what recent stores got, and YAPI builds them in the store's own language.
  */
+import { CONVENTIONAL_HEADERS, PLAYBOOK, type StyleFamily } from './playbook';
+
 export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'product' | 'facts';
 export type FrameEntry = { id: string; bold: boolean; desktop: string; phone: string; needs?: FrameNeed };
 export type FramePart = 'header' | 'cart' | 'footer' | 'hero';
@@ -64,11 +66,14 @@ const fits = (entry: FrameEntry, available: FrameAvailable) => {
   }
 };
 
-export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], available: FrameAvailable): FrameDraw {
+export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], available: FrameAvailable, allowed: Partial<Record<FramePart, readonly string[]>> = {}): FrameDraw {
   const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
   const draw = {} as FrameDraw;
   for (const part of PARTS) {
-    const options = FRAME_CATALOGUE[part].filter(entry => fits(entry, available));
+    // The playbook family narrows the choice (conventional headers); an empty narrowing falls back to every fitting option.
+    const fitting = FRAME_CATALOGUE[part].filter(entry => fits(entry, available));
+    const restricted = allowed[part] ? fitting.filter(entry => allowed[part]!.includes(entry.id)) : fitting;
+    const options = restricted.length ? restricted : fitting;
     if (part === 'cart' || part === 'footer') { draw[part] = pick(options).id; continue; }
     const uses = new Map(options.map(entry => [entry.id, recent.filter(item => item[part] === entry.id).length]));
     const fewest = Math.min(...uses.values());
@@ -82,7 +87,7 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
     const entry = !omit[part] && FRAME_CATALOGUE[part].find(item => item.id === draw[part]);
     return entry ? [`- ${entry.desktop} ${entry.phone}`] : [];
   });
-  const palette = !omit.palette && PALETTES.find(entry => entry.id === draw.palette);
+  const palette = !omit.palette && allPalettes().find(entry => entry.id === draw.palette);
   const designLines = [
     ...(palette ? [`- ${paletteLine(palette)}`] : []),
     ...(['angle', 'structure', 'photos', 'button', 'hover'] as const).flatMap(part => {
@@ -112,27 +117,30 @@ export function frameOverrides(text: string): { header: boolean; hero: boolean }
   return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }
 
-export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw> & { category?: string } {
+export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw> & { category?: string; kind?: string; family?: string } {
   let value: unknown;
   try { value = typeof content === 'string' ? JSON.parse(content) : undefined; } catch { return {}; }
   if (!value || typeof value !== 'object') return {};
-  const out: Partial<FrameDraw & DesignDraw> & { category?: string } = {};
+  const out: Partial<FrameDraw & DesignDraw> & { category?: string; kind?: string; family?: string } = {};
   for (const part of PARTS) {
     const id = (value as Record<string, unknown>)[part];
     if (typeof id === 'string' && FRAME_CATALOGUE[part].some(entry => entry.id === id)) out[part] = id;
   }
   for (const part of DESIGN_PARTS) {
     const id = (value as Record<string, unknown>)[part];
-    if (typeof id === 'string' && designOptions(part, { photos: 99, products: 99, facts: true }).some(option => option.id === id)) (out as Record<string, string>)[part] = id;
+    const known = part === 'palette' ? allPalettes() : designOptions(part, { photos: 99, products: 99, facts: true });
+    if (typeof id === 'string' && known.some(option => option.id === id)) (out as Record<string, string>)[part] = id;
   }
-  const category = (value as Record<string, unknown>).category;
-  if (typeof category === 'string' && category.trim()) (out as Record<string, string>).category = category.trim().slice(0, 40);
+  for (const key of ['category', 'kind', 'family'] as const) {
+    const text = (value as Record<string, unknown>)[key];
+    if (typeof text === 'string' && text.trim()) (out as Record<string, string>)[key] = text.trim().slice(0, 40);
+  }
   return out;
 }
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean } }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -140,25 +148,29 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
     if (!input.designEnabled) return { file: saved, paragraph: '' };
     // An ordinary edit keeps what the fresh design drew: its buttons in the DNA and its colour world in brand.css.
     const kept = parseFrameDraw(saved.content);
-    const keptPalette = input.brandColours ? undefined : PALETTES.find(entry => entry.id === kept.palette);
+    const keptPalette = input.brandColours ? undefined : allPalettes().find(entry => entry.id === kept.palette);
     return { file: saved, paragraph: '', ...(kept.button && kept.hover ? { dna: { button: kept.button, hover: kept.hover } } : {}), ...(keptPalette ? { palette: keptPalette } : {}) };
   }
   // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
   const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
   const recent = Object.keys(own).length ? [own, ...input.recent] : input.recent;
-  const frame = drawFrame(input.random ?? Math.random, recent, input.available);
+  // Professional by default: inside a playbook family only conventional headers, unless the merchant asked for bold.
+  const headerAllowed = input.playbook && !input.playbook.bold ? { header: CONVENTIONAL_HEADERS } : {};
+  const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed);
   const frameOmit = frameOverrides(input.request);
-  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify(frame, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
-  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, input.category ?? '');
+  const playbookFields: Record<string, string> = input.playbook ? { kind: input.playbook.kind, family: input.playbook.family.id } : {};
+  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
+  const category = input.playbook?.kind ?? input.category ?? '';
+  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.playbook?.family.palettes, button: input.playbook?.family.buttons });
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
-  const draw = { ...frame, ...design, category: input.category ?? '' };
+  const draw = { ...frame, ...design, category, ...playbookFields };
   // Parts the merchant decided are not saved: they were never built, so they must not count in other stores' history.
   const savedDraw: Record<string, string> = { ...draw };
   if (designOmit.palette) delete savedDraw.palette;
   if (designOmit.photos) delete savedDraw.photos;
   if (designOmit.button) { delete savedDraw.button; delete savedDraw.hover; }
-  const palette = designOmit.palette ? undefined : PALETTES.find(entry => entry.id === design.palette);
+  const palette = designOmit.palette ? undefined : allPalettes().find(entry => entry.id === design.palette);
   return {
     file: { path: FRAME_DRAW_FILE, content: JSON.stringify(savedDraw, null, 2) + '\n' },
     paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }),
@@ -281,14 +293,22 @@ export const DESIGN_CATALOGUE: Record<Exclude<DesignPart, 'palette'>, readonly F
   ],
 };
 
-const designOptions = (part: DesignPart, available: FrameAvailable): Array<{ id: string }> => part === 'palette' ? [...PALETTES] : DESIGN_CATALOGUE[part].filter(entry => fits(entry, available));
+type DesignAllowed = { palettes?: Palette[]; button?: readonly string[] };
+const designOptions = (part: DesignPart, available: FrameAvailable, allowed: DesignAllowed = {}): Array<{ id: string }> => {
+  if (part === 'palette') return allowed.palettes?.length ? [...allowed.palettes] : [...PALETTES];
+  const fitting = DESIGN_CATALOGUE[part].filter(entry => fits(entry, available));
+  const narrowed = part === 'button' && allowed.button?.length ? fitting.filter(entry => allowed.button!.includes(entry.id)) : fitting;
+  return narrowed.length ? narrowed : fitting;
+};
+/** The round-2 colour worlds plus every playbook family's palettes: what a saved draw may name. */
+const allPalettes = (): Palette[] => [...PALETTES, ...Object.values(PLAYBOOK).flatMap(entry => entry.families.flatMap(family => family.palettes))];
 const DESIGN_AVOID = new Set<DesignPart>(['palette', 'angle', 'structure', 'button']);
 
-export function drawDesign(random: () => number, recent: Array<Partial<DesignDraw> & { category?: string }>, available: FrameAvailable, category: string): DesignDraw {
+export function drawDesign(random: () => number, recent: Array<Partial<DesignDraw> & { category?: string }>, available: FrameAvailable, category: string, allowed: DesignAllowed = {}): DesignDraw {
   const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
   const draw = {} as DesignDraw;
   for (const part of DESIGN_PARTS) {
-    const options = designOptions(part, available);
+    const options = designOptions(part, available, allowed);
     if (!DESIGN_AVOID.has(part)) { draw[part] = pick(options).id; continue; }
     // The same kind of business counts double: two cafés must not share a colour world while another is free.
     const weight = (item: { category?: string }) => (category && item.category === category ? 2 : 1);
@@ -321,7 +341,7 @@ const paletteLine = (palette: Palette) => `Colour world: ${palette.name}, ${pale
 
 export function plannerDirection(draw: Partial<DesignDraw>, omit: Partial<Record<DesignPart, boolean>> = {}): string {
   const angle = !omit.angle && DESIGN_CATALOGUE.angle.find(entry => entry.id === draw.angle);
-  const palette = !omit.palette && PALETTES.find(entry => entry.id === draw.palette);
+  const palette = !omit.palette && allPalettes().find(entry => entry.id === draw.palette);
   if (!angle && !palette) return '';
   return ['DRAWN FOR THIS STORE (build every concept on it; choose fonts freely):', ...(angle ? [angle.desktop] : []), ...(palette ? [paletteLine(palette)] : [])].join(' ');
 }

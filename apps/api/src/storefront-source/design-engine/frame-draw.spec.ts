@@ -1,4 +1,5 @@
 import { SOURCE_RHYTHM_DIRECTION } from '../source-design';
+import { PLAYBOOK } from './playbook';
 import { asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -292,4 +293,23 @@ describe('design draw review fixes', () => {
 it('hears a merchant who asks for a bold store, and nobody else', () => {
   for (const text of ['hazla atrevida', 'quiero un estilo póster', 'algo muy llamativo', 'diseño bold']) expect([text, asksForBold(text)]).toEqual([text, true]);
   for (const text of ['Hazme la tienda de café', 'una tienda tranquila', 'ropa para niños']) expect([text, asksForBold(text)]).toEqual([text, false]);
+});
+
+describe('dice inside the playbook family', () => {
+  const family = PLAYBOOK['cafe-food'].families[0];
+  it('draws only conventional headers, family palettes and family buttons unless the merchant asked for bold', () => {
+    for (let seed = 1; seed < 60; seed++) {
+      const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(seed), playbook: { kind: 'cafe-food', family, bold: false } });
+      const saved = parseFrameDraw(run.file!.content) as Record<string, string>;
+      expect(['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking']).toContain(saved.header);
+      expect(family.buttons).toContain(saved.button);
+      expect(family.palettes.map(pl => pl.id)).toContain(run.palette?.id);
+      expect(saved).toMatchObject({ kind: 'cafe-food', family: family.id });
+    }
+    const bold = frameForRun({ enabled: true, designEnabled: true, fresh: true, previous: [], recent: [], available: rich, request: 'hazla atrevida', random: seeded(9), playbook: { kind: 'cafe-food', family, bold: true } });
+    expect(FRAME_CATALOGUE.header.map(entry => entry.id)).toContain(parseFrameDraw(bold.file!.content).header);
+  });
+  it('reads back kind and family from a saved draw', () => {
+    expect(parseFrameDraw(JSON.stringify({ header: 'stacked', kind: 'cafe-food', family: 'cafe-shop' }))).toMatchObject({ kind: 'cafe-food', family: 'cafe-shop' });
+  });
 });

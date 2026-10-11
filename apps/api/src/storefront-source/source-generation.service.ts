@@ -14,7 +14,8 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { designBrandCss, designCategory, frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
+import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
+import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -504,6 +505,14 @@ export class SourceGenerationService {
       businessInformation: (dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation,
     });
     const frameEnabled = this.config.get<boolean>('app.yapiFrameDraw') === true;
+    // Playbook (spec 2026-10-11): the kind of business from the merchant's words, brief and catalogue, then one style family.
+    const playbookOn = this.config.get<boolean>('app.yapiPlaybook') === true;
+    const merchantWords = sourceRequestContext.getStore()?.request.instruction || dto.instruction;
+    const kind = playbookOn ? detectKind(`${merchantWords}\n${JSON.stringify(dto.brief ?? {})}\n${data.items.map(item => item.name).join(', ')}`) : undefined;
+    // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
+    const recentDraws = frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [];
+    const playbookEntry = kind ? PLAYBOOK[kind] : undefined;
+    const playbookFamily = playbookEntry ? pickFamily(playbookEntry, Math.random, recentDraws.filter(draw => draw.kind === kind).map(draw => String(draw.family ?? ''))) : undefined;
     const frame = frameForRun({
       enabled: frameEnabled,
       designEnabled: this.config.get<boolean>('app.yapiDesignDraw') === true,
@@ -511,11 +520,12 @@ export class SourceGenerationService {
       category: designCategory(dto.brief),
       fresh: frameNow,
       previous: previousFiles,
-      // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
-      recent: frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [],
+      recent: recentDraws,
+      ...(playbookEntry && playbookFamily ? { playbook: { kind: playbookEntry.kind, family: playbookFamily, bold: asksForBold(merchantWords) } } : {}),
       available: frameFacts.available,
       request: frameFacts.request,
     });
+    const playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
@@ -700,7 +710,7 @@ export class SourceGenerationService {
         const recentCompositions = retainedDesign ? [] : await Promise.resolve().then(() => this.projects.recentCompositionFingerprints(storeId)).catch(() => [] as string[]);
         try {
           committedDesign = retainedDesign || await this.designPlanner.explore({ model, provider, apiKey, selected: exploration.selected, sitePurpose, narrative: narrativePlanning, signature: signatureOn, dnaSeed: storeId, repairs: autoRepairs,
-            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, designDraw: frame.planner || undefined, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
+            context: JSON.stringify({ brief: dto.brief, instruction: dto.instruction, avoidRecent, designDraw: frame.planner || undefined, playbook: playbookText || undefined, motionPlan: sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }), compositionCandidates: uiCompositions.length ? uiCompositions : undefined, business: { ...data, items: data.items.slice(0, 60), catalogItemCount: data.items.length }, assets: assetLegend, visionAssetPaths, optionalCreativeAssets: creativeAssets.map(({ path, family, description }) => ({ path, family, description })), trailingDecorativeThumbnails: creativeThumbnails, visualAssets: availableVisualAssets, confirmedBrand: brand ? brandContext(brand.data) : '', previousDirection: previousDesign?.concepts[previousDesign.selected] }),
             images, budget, signal, attempts, record: async (body, attempt) => this.metering?.record(storeId, 'source-design', model, body, attempt.durationMs, attempt.status),
           });
         } finally { implementationFloor.settle({ input_tokens: 0, output_tokens: 0 }); }
@@ -853,7 +863,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief }), fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph };
+        const authorInput = { brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
@@ -921,7 +931,9 @@ export class SourceGenerationService {
               { path: 'commerce.js', content: '' },
             ] } as unknown as SourceProjectSnapshot);
             const { shots, facts } = await captureSep5Draft(preview, signal);
-            const measured = sep5MeasuredFacts(facts);
+            // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
+            const playbookFacts = playbookEntry ? facts.flatMap(fact => [...craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText).map(label => `Falta en la página: ${label}.`) : [])]) : [];
+            const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
             await progress?.('repairing');
             const reviewPrompt = sep5ReviewPrompt({ ...authorInput, draft: authored.data.files, measured });
             const reviewed = await sep5Call('review', reviewPrompt, shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, Math.min(SEP5_CLIENT_TIMEOUT_MS, remaining - 60_000));
@@ -1273,7 +1285,7 @@ export class SourceGenerationService {
         try {
           // Measured against the run's hard stop, so the agent stops itself (warned, and its draft rescued) before the run is aborted.
           const runLimits = agentWallWithin(agentLimits(chatgptPlan), started + runTimeout);
-          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, frame.paragraph), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
+          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [frame.paragraph, playbookText].filter(Boolean).join('\n')), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
           accepted = outcome.status === 'finished' && !!toolbox.finished;
           // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
           if (!accepted && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length)) accepted = await toolbox.acceptIfBuildable();

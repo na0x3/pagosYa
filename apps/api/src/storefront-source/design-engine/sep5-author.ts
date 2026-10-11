@@ -58,6 +58,8 @@ export function sep5AuthorPrompt(input: {
   /** The drawn frame and hero (frameDirection, spec 2026-10-10). With it, the shell lists requirements only, not
    *  an order, so headers stop repeating. Absent or blank, the prompt stays byte-identical. */
   frame?: string;
+  /** The business playbook paragraph (playbookDirection, spec 2026-10-11). Absent or blank, the prompt stays byte-identical. */
+  playbook?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -70,6 +72,7 @@ export function sep5AuthorPrompt(input: {
     "If assets are unavailable use the business's public product images or a deliberate typography-led composition; never invent a URL. For an edit, preserve unrelated copy, navigation, and design decisions. Return the whole project, not a diff. Keep code concise enough for 18000 output tokens.",
     ...(input.storeShell ? [input.frame?.trim() ? SEP5_STORE_SHELL_FRAMED : SEP5_STORE_SHELL] : []),
     ...(input.frame?.trim() ? [input.frame.trim()] : []),
+    ...(input.playbook?.trim() ? [input.playbook.trim()] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
     ...(input.fonts?.trim() ? [input.fonts.trim()] : []),

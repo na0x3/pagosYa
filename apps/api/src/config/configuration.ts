@@ -85,6 +85,9 @@ export interface AppConfig {
   /** Design draw round 2 (spec 2026-10-10): colour world, story angle, page structure, photo treatment and buttons per
    *  store. Default on; YAPI_DESIGN_DRAW=off drops them, the frame keeps YAPI_FRAME_DRAW. */
   yapiDesignDraw: boolean;
+  /** Business playbook (spec 2026-10-11): kind detection, style families, craft profiles, bold only when asked. Default
+   *  on; YAPI_PLAYBOOK=off returns to the design draw without them. */
+  yapiPlaybook: boolean;
   sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
@@ -407,6 +410,7 @@ export default (): { app: AppConfig } => {
     yapiSignature: process.env.YAPI_SIGNATURE !== 'off',
     yapiFrameDraw: process.env.YAPI_FRAME_DRAW !== 'off',
     yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',
+    yapiPlaybook: process.env.YAPI_PLAYBOOK !== 'off',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
     sep5Author,

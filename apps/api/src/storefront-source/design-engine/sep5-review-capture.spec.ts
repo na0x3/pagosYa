@@ -151,3 +151,11 @@ it('reports text over text, but not wrapped inline text, a fixed bottom nav or a
   const bad = await captureSep5Draft(await store(header, '', piled, 'body{margin:0}'));
   expect(bad.facts[0].overlaps?.length).toBeGreaterThan(0);
 });
+
+it('measures the h1 and body sizes and the page text for the playbook checks', async () => {
+  const header = '<a href="index.html">Eje</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
+  const { facts } = await captureSep5Draft(await store(header, '', '<h1>Café de altura</h1><p>Abrimos de lunes a sábado de 9:00 a 18:00 en la calle Sagárnaga 215.</p>', 'h1{font-size:140px}p{font-size:15px}'));
+  expect(facts[0].h1Size).toBe(140);
+  expect(facts[0].bodySize).toBe(15);
+  expect(facts[0].pageText).toMatch(/lunes a sábado/);
+});

@@ -258,3 +258,10 @@ it('keeps bold for merchants who ask when the playbook is on', () => {
   expect(sep5BoldDefault({ ...base, instruction: 'Pedido actual del comercio:\nhazla atrevida', playbook: true })).toBe(true);
   expect(sep5BoldDefault({ ...base, instruction: 'Hazme la tienda' })).toBe(sep5BoldDefault({ ...base, instruction: 'Hazme la tienda', playbook: false }));
 });
+
+it('adds the playbook after the frame and stays byte-identical without it', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  const text = sep5AuthorPrompt({ ...base, storeShell: true, frame: 'DESIGN DRAW: x', playbook: 'PLAYBOOK: y' });
+  expect(text.indexOf('DESIGN DRAW: x')).toBeLessThan(text.indexOf('PLAYBOOK: y'));
+  expect(sep5AuthorPrompt({ ...base, playbook: '  ' })).toBe(sep5AuthorPrompt(base));
+});

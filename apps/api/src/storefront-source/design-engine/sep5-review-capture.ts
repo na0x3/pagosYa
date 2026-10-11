@@ -4,7 +4,7 @@ import { sourceVisualState } from '../source-visual-state';
 import type { SourceProjectSnapshot } from '../source-project';
 
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
-export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[] };
+export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string };
 
 // Emoji presentation only: arrows, ticks and close glyphs (↗ ✔ ✖) are functional symbols, and a glyph inside a
 // button or a labelled control is an icon.
@@ -86,6 +86,10 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           search: outsideFooter('a[href$="buscar.html"],form[role=search],input[type=search]'),
           account: outsideFooter('a[data-pagosya-account]'),
           cart: outsideFooter('[data-cart-count]'),
+          // Playbook checks (spec 2026-10-11): type sizes against the craft profile and the page text for the contract.
+          h1Size: Math.round(parseFloat(getComputedStyle(document.querySelector('h1') || document.body).fontSize)) || 0,
+          bodySize: (() => { const el = Array.from(document.querySelectorAll('main p, p')).find(node => (node.textContent || '').trim().length > 40 && node.getBoundingClientRect().width > 0); return el ? Math.round(parseFloat(getComputedStyle(el).fontSize)) : 0; })(),
+          pageText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 20000),
           // Design draw round 2 quality floor (inlined: the page cannot import the helpers above).
           decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
           fakeCircle: (() => {

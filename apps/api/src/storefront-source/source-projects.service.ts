@@ -89,7 +89,7 @@ export class SourceProjectsService {
   }
 
   /** The frame draws of the six most recent other stores (30 days), read server-side so no bundled photo bytes travel. */
-  async recentFrameDraws(storeId: string, now = new Date()): Promise<Partial<FrameDraw>[]> {
+  async recentFrameDraws(storeId: string, now = new Date()): Promise<ReturnType<typeof parseFrameDraw>[]> {
     const since = new Date(now.getTime() - 30 * 86_400_000);
     const rows = await this.prisma.$queryRaw<Array<{ content: string }>>(Prisma.sql`
       WITH latest AS (
