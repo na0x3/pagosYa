@@ -148,6 +148,28 @@ Concepts and heroes are kept by slot and saved in slot order, one save at a time
 
 **Errors.** A failed job never shows database or internal error text to the merchant. Merchant-facing 503s (quota, ChatGPT plan) still pass through.
 
+### Amendment 2026-10-11: two cards (owner-approved after the second live run)
+
+**Why.** In the second live run, two of the four lanes got "ChatGPT rechazó la autorización" in the same second. The ChatGPT bridge seems to allow only about 2 calls at once. Both lost lanes were the bold ones, so the merchant saw only two calm cards. The owner also wants exactly two options: one serious and one intense, like their reference store "Tostadero Yungas".
+
+**What changed.**
+- **Two slots.** `styleDraws` returns two cards. Slot 0 is calm, on the playbook family that recent stores of the same kind used least (`pickFamily`). Slot 1 is bold, on the other family, with the full colour catalogue and bold header and hero parts. The bold card still avoids the calm card's hero and palette.
+- **Two lanes.** Two lanes means at most two model calls at once, which matches the bridge. Everything downstream works as before: slot-keyed state, `heroPending`, the recommendation rule and the saves. The rule that gives each bold card its own display font stays, but with one bold card it changes nothing.
+- **Outcomes.** Two cards end in `AWAITING_STYLE`. One card is built directly. With none, YAPI falls back to the three-concept plan.
+- **Retry on rejection.** A planner or hero call can be refused by the provider: quota, or the ChatGPT plan's "authorization rejected" or "usage limit". That call waits 3 s and is tried once more. Validation failures and aborts are not retried. The planner keeps the refusal as the cause of its plain error, so the lane can tell a refusal from other failures.
+- **The intense hero.** The bold card's hero prompt makes the reference store's devices required moves, in the card's own palette, fonts and words:
+  - an unusual header from the slot's frame draw, for example a side rail with the store name rotated
+  - a framed, tilted photo with a hard offset shadow; without a photo, a giant type collage on blocks of colour
+  - a circular stamp drawn with SVG `<textPath>`, using only the store's own words
+  - an uppercase, widely spaced eyebrow
+  - a giant, heavy headline: clamp 64–140px, line-height 0.95 or less, letter-spacing no tighter than -0.04em, no broken words
+  - a custom button with an arrow and an offset shadow in the accent colour
+  - at least one strong colour field
+
+  This hero is written on the run model: 7000 tokens, 200 s, low reasoning. The calm hero stays on `gpt-5.6-luna` with the same limits as before, and its prompt asks for a button shape from its family's `buttons` list and the family's radius.
+- **Templates.** The bold template uses the same Yungas-like layout: a rail with the rotated name, a tilted framed photo or a giant type field, an SVG stamp, a giant headline, and an arrow pill with an accent offset shadow. The calm template keeps its layout but uses the family's button shape and radius. Both templates pass `sanitizeHeroHtml`, which already keeps `svg`, `defs`, `path`, `text` and `textPath href="#id"`.
+- **Copy.** The chat says «Te preparo 2 estilos para {nombre}: uno tranquilo y uno atrevido. Elige uno para construir tu tienda.» The Studio header says «{store}: uno tranquilo y uno atrevido.» While the cards load, Studio shows 2 placeholders. Slot directions say "CONCEPT n of 2". The three-concept prompt is unchanged, byte for byte.
+
 ### The cards in Studio
 
 These screens live in `apps/merchant-studio`, in the preview area. The chat stays beside them.
