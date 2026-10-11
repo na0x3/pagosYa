@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection } from './sep5-author';
+import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -264,4 +264,29 @@ it('adds the playbook after the frame and stays byte-identical without it', () =
   const text = sep5AuthorPrompt({ ...base, storeShell: true, frame: 'DESIGN DRAW: x', playbook: 'PLAYBOOK: y' });
   expect(text.indexOf('DESIGN DRAW: x')).toBeLessThan(text.indexOf('PLAYBOOK: y'));
   expect(sep5AuthorPrompt({ ...base, playbook: '  ' })).toBe(sep5AuthorPrompt(base));
+});
+
+// A merchant who lists products and prices in the first message gets them in the real catalog (night run 2026-10-11:
+// every Sep-5 store shipped with an empty catalog because the author had no way to return products).
+describe('Sep-5 products', () => {
+  const input = { brief: {}, instruction: 'x', data: {}, assetLegend: [] };
+  it('asks for the merchant-listed products only when enabled, and the schema requires them then', () => {
+    expect(sep5AuthorPrompt({ ...input, products: true })).toMatch(/PRODUCTS:/);
+    expect(sep5AuthorPrompt(input)).not.toMatch(/PRODUCTS:/);
+    expect(sep5ResponseSchema(true).required).toContain('products');
+    expect(sep5ResponseSchema(false)).toEqual(SEP5_RESPONSE_SCHEMA);
+    expect(sep5FilesSchema.safeParse({ label: 'x', files: [], products: [{ name: 'Pan' }] }).success).toBe(true);
+  });
+  it('keeps products the merchant priced and drops the rest without failing the store', () => {
+    const instruction = 'Pedido actual del comercio: Crea estos productos: pan de masa madre Bs 25, galletas Bs 8.';
+    const photo = '/v1/uploads/a.jpg';
+    const item = (name: string, priceText: string, amount: number) => ({ name, description: name, amount, currency: 'BOB', priceText, imageUrls: [photo], variants: [], subscriptionOptions: [] });
+    const kept = sep5Products([item('Pan de masa madre', 'Bs 25', 2500), item('Galletas', 'Bs 8', 800)], instruction, new Set([photo]));
+    expect(kept.products.map(product => product.name)).toEqual(['Pan de masa madre', 'Galletas']);
+    expect(kept.note).toBeUndefined();
+    const invented = sep5Products([item('Torta', 'Bs 90', 9000)], instruction, new Set([photo]));
+    expect(invented.products).toEqual([]);
+    expect(invented.note).toMatch(/precio/);
+    expect(sep5Products(undefined, instruction, new Set()).products).toEqual([]);
+  });
 });

@@ -5,6 +5,7 @@ import { sep5CreativePlan, type Sep5Translation } from './sep5-plan';
 import { sourceAsksForRestraint, type SourceMotionMode } from '../source-motion';
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { SOURCE_FONT_CHOICES } from '../source-fonts';
+import { requestedSourceProducts, sourceProductsSchema, type SourceProduct } from '../source-products';
 
 /**
  * The Sep-5 generator as a plan source.
@@ -22,6 +23,8 @@ export const SEP5_AUTHOR_VERSION = 'sep5-author/26f889c8';
 export const sep5FilesSchema = z.object({
   label: z.string(),
   files: z.array(z.object({ path: z.string(), content: z.string() }).strict()).max(24),
+  // Checked by requestedSourceProducts (sep5Products), which knows the merchant's words.
+  products: z.array(z.unknown()).optional(),
 }).strict();
 export type Sep5Files = z.infer<typeof sep5FilesSchema>;
 
@@ -33,6 +36,23 @@ export const SEP5_RESPONSE_SCHEMA = {
     files: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['path', 'content'], properties: { path: { type: 'string' }, content: { type: 'string' } } } },
   },
 };
+
+/** The response schema; with products, the author also returns the products the merchant listed (night run 2026-10-11). */
+export function sep5ResponseSchema(products: boolean) {
+  return products ? { ...SEP5_RESPONSE_SCHEMA, required: [...SEP5_RESPONSE_SCHEMA.required, 'products'], properties: { ...SEP5_RESPONSE_SCHEMA.properties, products: sourceProductsSchema } } : SEP5_RESPONSE_SCHEMA;
+}
+
+export const SEP5_PRODUCTS = 'PRODUCTS: Return products: [] unless the current merchant request explicitly lists products with names and prices to sell or create (an initial catalog counts). For each listed product return name, a concise factual description from the request, amount in integer minor units (Bs 25 is 2500), currency BOB or USD, priceText copied exactly from the request (e.g. Bs 25), imageUrls only from the "original" URLs of Bundled images that show that product ([] when none does), and variants and subscriptionOptions [] unless the merchant listed them. Never invent a price or a product. They are saved to the real catalog, which the runtime renders on the page; never hardcode product cards.';
+
+/** Products the merchant priced, checked against their own words. A rejected list never fails the store: it is
+ *  dropped with a note, and the merchant can still add products from Productos. */
+export function sep5Products(value: unknown, instruction: string, allowedImages: Set<string>): { products: SourceProduct[]; note?: string } {
+  try {
+    return { products: requestedSourceProducts(value, instruction, allowedImages) };
+  } catch (error) {
+    return { products: [], note: `productos no creados: ${(error as Error).message}` };
+  }
+}
 
 export function sep5AuthorPrompt(input: {
   brief: unknown; instruction: string; data: unknown; assetLegend: unknown;
@@ -60,6 +80,8 @@ export function sep5AuthorPrompt(input: {
   frame?: string;
   /** The business playbook paragraph (playbookDirection, spec 2026-10-11). Absent or blank, the prompt stays byte-identical. */
   playbook?: string;
+  /** Appends SEP5_PRODUCTS; the response schema must then be sep5ResponseSchema(true). */
+  products?: boolean;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -73,6 +95,7 @@ export function sep5AuthorPrompt(input: {
     ...(input.storeShell ? [input.frame?.trim() ? SEP5_STORE_SHELL_FRAMED : SEP5_STORE_SHELL] : []),
     ...(input.frame?.trim() ? [input.frame.trim()] : []),
     ...(input.playbook?.trim() ? [input.playbook.trim()] : []),
+    ...(input.products ? [SEP5_PRODUCTS] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
     ...(input.fonts?.trim() ? [input.fonts.trim()] : []),
