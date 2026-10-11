@@ -18,12 +18,12 @@ export const SIGNATURE_DEVICES = {
   stamp: { label: 'a circular text stamp (inline SVG textPath) with the store\'s own words' },
   marquee: { label: 'a marquee band of the business\'s own words running across the page' },
   stickers: { label: 'a cluster of two or three tilted stickers with short real words from the brief' },
-  numbers: { label: 'a row of oversized real numbers from the brief (hours, years, sizes, prices), never invented', needs: (available: FrameAvailable) => available.facts },
+  numbers: { label: 'a row of oversized real numbers from the brief (hours, years, sizes, prices), never invented', needs: (available: FrameAvailable, numbers: number) => available.facts && numbers >= 2 },
   'torn-edge': { label: 'a torn-paper edge on the main photo', needs: (available: FrameAvailable) => available.photos >= 1 },
   polaroids: { label: 'a small stack of polaroid-framed photos, each slightly turned', needs: (available: FrameAvailable) => available.photos >= 1 },
   ticket: { label: 'a label or ticket tag (notched or punched) carrying a real detail' },
   'outline-wordmark': { label: 'a giant outline wordmark of the store name set behind the headline' },
-} as const satisfies Record<string, { label: string; needs?: (available: FrameAvailable) => boolean }>;
+} as const satisfies Record<string, { label: string; needs?: (available: FrameAvailable, numbers: number) => boolean }>;
 export type SignatureDevice = keyof typeof SIGNATURE_DEVICES;
 export const isSignatureDevice = (value: unknown): value is SignatureDevice => typeof value === 'string' && Object.prototype.hasOwnProperty.call(SIGNATURE_DEVICES, value);
 
@@ -44,7 +44,18 @@ export type StyleDrawsInput = { kind: PlaybookKind; brandColours: boolean; categ
   /** The families the latest same-kind stores used (`recentForKind(...).families`): the calm card takes the least used. */
   recentFamilies?: string[];
   /** Cards recent proposals showed: the merchant's own and the same kind's across stores, newest first. */
-  shown?: ShownStyleCard[] };
+  shown?: ShownStyleCard[];
+  /** How many real numbers the brief gives (`numbersIn`): the numbers device needs two. */
+  briefNumbers?: number };
+
+/** How long a proposal waits for the shown-cards history before drawing without it. */
+export const SHOWN_CARDS_TIMEOUT_MS = 1500;
+/** `work()`'s result, or `fallback` when it throws, rejects or takes longer than `ms`. */
+export async function withinOr<T>(work: () => Promise<T> | T, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>(resolve => { timer = setTimeout(() => resolve(fallback), ms); });
+  try { return await Promise.race([Promise.resolve().then(work).catch(() => fallback), late]); } finally { clearTimeout(timer); }
+}
 
 /** How many cards a proposal offers: one calm, one bold. The ChatGPT bridge allows about two concurrent calls, one per lane. */
 export const STYLE_CARDS = 2;
@@ -92,7 +103,7 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
       extra = { ...(fonts ? { fonts: { display: fonts.display, text: fonts.text } } : {}), avoidDisplay: [...new Set(used)].filter(id => id !== fonts?.display).slice(0, AVOID_FONTS) };
     } else {
       // The device avoids every recent one while a fresh one fits; ties are random.
-      const devices = (Object.keys(SIGNATURE_DEVICES) as SignatureDevice[]).filter(id => { const needs = (SIGNATURE_DEVICES[id] as { needs?: (a: FrameAvailable) => boolean }).needs; return !needs || needs(input.available); });
+      const devices = (Object.keys(SIGNATURE_DEVICES) as SignatureDevice[]).filter(id => { const needs = (SIGNATURE_DEVICES[id] as { needs?: (a: FrameAvailable, n: number) => boolean }).needs; return !needs || needs(input.available, input.briefNumbers ?? 0); });
       const recentDevices = weighted(shown, card => card.device);
       extra = { device: rotate(devices, id => recentDevices.filter(device => device === id).length, random, 0), avoidDisplay: [...new Set(used)].slice(0, AVOID_FONTS) };
     }

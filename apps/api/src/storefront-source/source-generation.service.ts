@@ -68,7 +68,7 @@ import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
-import { styleDraws, styleSlotDirection, type StyleSlot } from './design-engine/style-draws';
+import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type ShownStyleCard, type StyleSlot } from './design-engine/style-draws';
 import { numbersIn, templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
 import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
@@ -563,8 +563,9 @@ export class SourceGenerationService {
     const styleKind = kind ?? 'general';
     // The cards recent proposals showed (built or not) join the history, so a card shown and not picked is not shown again.
     // Never blocks the run: a failed lookup only loses that history.
-    const shownCards = styleOn ? await Promise.resolve().then(() => this.projects.recentStyleCards(merchantId, styleKind, new Date(), 20)).then(cards => Array.isArray(cards) ? cards : []).catch(() => []) : [];
-    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards })
+    // Bounded: a slow lookup costs only the history, never the proposal.
+    const shownCards = styleOn ? await withinOr(() => this.projects.recentStyleCards(merchantId, styleKind, new Date(), 20), SHOWN_CARDS_TIMEOUT_MS, [] as ShownStyleCard[]).then(cards => Array.isArray(cards) ? cards : []) : [];
+    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards, briefNumbers: numbersIn(businessInfo).length })
       .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold', ...(slot.mode === 'calm' && slot.fonts ? { fonts: slot.fonts } : {}) }) })) : [];
     // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
     let styleBold = false;

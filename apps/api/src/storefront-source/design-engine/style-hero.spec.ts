@@ -476,7 +476,7 @@ describe('bold card variety: three template layouts and a drawn device (2026-10-
   const devices = Object.keys(SIGNATURE_DEVICES) as SignatureDevice[];
   const LAYOUT_MARKUP: Record<BoldLayout, RegExp[]> = {
     rail: [/class="ty-rail"/, /\.ty-name\{[^}]*writing-mode:vertical-rl/],
-    band: [/class="tb-word" data-store-name/, /class="tb-strip/, /class="xd-marquee"/],
+    band: [/class="tb-word" data-store-name/, /class="tb-strip/],
     poster: [/class="tp-a"/, /class="tp-b"/, /\.tp-a\{background:#e5371f/, /\.tp-b\{[^}]*background:#fff6d6/],
   };
   const DEVICE_MARKUP: Record<SignatureDevice, RegExp> = {
@@ -504,15 +504,23 @@ describe('bold card variety: three template layouts and a drawn device (2026-10-
   it('builds every layout with every device, with and without a photo: sanitised, its own markup and the device in it', () => {
     const seen = new Set<string>();
     for (const layout of layouts) for (const device of devices) for (const photoPath of [bold.photoPath, undefined]) {
-      const html = templateHero({ ...bold, layout, device, photoPath, numbers: [{ value: '1.800', label: 'msnm' }] });
+      const html = templateHero({ ...bold, layout, device, photoPath, numbers: [{ value: '1.800', label: 'msnm' }, { value: '3', label: 'orígenes' }] });
       const clean = sanitizeHeroHtml(html);
       expect(clean).not.toBeNull();
       for (const markup of LAYOUT_MARKUP[layout]) expect(html).toMatch(markup);
       expect(html).toMatch(DEVICE_MARKUP[device]);
-      // The poster always carries a sticker over the seam, unless the device is the sticker cluster itself.
-      if (layout === 'poster') expect(html.includes('class="tp-sticker"')).toBe(device !== 'stickers');
-      // Never an invented number: the numbers device without real numbers becomes a marquee of the store's words.
-      if (device === 'numbers') expect(templateHero({ ...bold, layout, device, photoPath, line: 'Tostado cada semana en La Paz.' })).toMatch(/class="xd-marquee"/);
+      // One ornament per card: no extra seam sticker, and a marquee only when it is the drawn device.
+      expect(html).not.toContain('tp-sticker');
+      expect(html.includes('class="xd-marquee"')).toBe(device === 'marquee');
+      expect(html.includes('class="xd-stickers"')).toBe(device === 'stickers');
+      expect(html.includes('<textPath')).toBe(device === 'stamp');
+      // Never an invented number: the numbers device with fewer than two brief numbers becomes a marquee of the store's words,
+      // and never reads numbers out of the card's own copy.
+      if (device === 'numbers') for (const numbers of [undefined, [{ value: '1.800', label: 'msnm' }]]) {
+        const fallback = templateHero({ ...bold, layout, device, photoPath, numbers, line: 'Desde 2015, 3 orígenes y 1.800 msnm.' });
+        expect(fallback).toMatch(/class="xd-marquee"/);
+        expect(fallback).not.toContain('xd-numbers');
+      }
       expect(html).toContain('data-store-name');
       expect(html).toMatch(/box-shadow:6px 6px 0 #/);
       seen.add(html.match(/<div class="(ty|tb|tp)"/)![1]);
@@ -556,7 +564,11 @@ describe('bold card variety: three template layouts and a drawn device (2026-10-
   });
 
   it('reads real numbers from text, never phone numbers, stopwords or long digit runs', () => {
-    expect(numbersIn('Café de 1.800 msnm, abrimos a las 8:00 y tostamos desde 2015. WhatsApp 71234567')).toEqual([{ value: '1.800', label: 'msnm' }, { value: '8:00', label: '' }, { value: '2015', label: '' }]);
+    expect(numbersIn('Café de 1.800 msnm, abrimos a las 8:00 y tostamos desde 2015. WhatsApp 71234567')).toEqual([{ value: '1.800', label: 'msnm' }, { value: '8:00', label: '' }]);
+    // Phone and address fragments are never facts.
+    for (const text of ['+591 71234567', '712-34567', 'Calle 21 de Calacoto, Nro 8045', 'Av. 6 de Agosto 2540', 'Tel: 2 2441234', 'Cel 70012345', 'WhatsApp 7123 4567', 'n° 45 edificio', '# 12 local', 'zona 16 de julio', 'desde 2015', 'Abierto 8:00 - 20:00'])
+      expect([text, numbersIn(text)]).toEqual([text, []]);
+    expect(numbersIn('20% de descuento')).toEqual([{ value: '20', label: '%' }]);
     expect(numbersIn('Tostado cada semana en La Paz.')).toEqual([]);
     expect(numbersIn('3 orígenes y 12 cafés')).toEqual([{ value: '3', label: 'orígenes' }, { value: '12', label: 'cafés' }]);
   });
@@ -581,5 +593,31 @@ describe('calm template follows the drawn hero and header (2026-10-11)', () => {
     expect(templateHero({ ...calm, frame: { header: 'menu-button' } })).toContain('class="th-menu"');
     // Without a drawn frame the calm template is unchanged.
     expect(templateHero(calm)).toBe(templateHero({ ...calm, frame: {} }));
+  });
+});
+
+describe('variety fix round 1', () => {
+  const bold: HeroFacts = { storeName: 'Tostadero Yungas', photoPath: 'assets/photo-1.webp', eyebrow: 'Café de los Yungas', headline: 'Especialidades de altura', line: 'Tostado cada semana en La Paz.', action: 'Ver cafés', palette: { paper: '#f2b705', ink: '#111111', accent: '#e5371f', accent2: '#fff6d6' }, fonts: { display: 'archivo-black', text: 'instrument' }, mode: 'bold', layout: 'rail' };
+  it('keeps the rail art box\'s corner room only for corner devices', () => {
+    const inset = (html: string) => html.match(/\.ty-art\{[^}]*padding:([^;]*);/)![1];
+    for (const device of ['stamp', 'stickers', 'ticket'] as SignatureDevice[]) {
+      const html = templateHero({ ...bold, device });
+      expect(inset(html)).toMatch(/^\d+px \d+px 0 0$/);
+      expect(html.slice(html.indexOf('@media (max-width:640px)'))).toMatch(/\.ty-art\{padding:\d+px \d+px 0 0\}/);
+    }
+    for (const device of ['marquee', 'numbers', 'torn-edge', 'polaroids', 'outline-wordmark'] as SignatureDevice[]) {
+      const html = templateHero({ ...bold, device });
+      expect(inset(html)).toBe('0');
+      expect(html.slice(html.indexOf('@media (max-width:640px)'))).not.toMatch(/\.ty-art\{padding/);
+    }
+  });
+
+  it('keeps the calm cart outside the navigation (hidden on phones) in every header variant', () => {
+    for (const header of [undefined, 'info-bar', 'centered-split', 'stacked', 'menu-button', 'shrinking']) {
+      const html = templateHero({ ...facts, frame: { header } });
+      expect(html).toContain('Carrito (0)');
+      for (const nav of html.match(/<nav class="th-nav">[\s\S]*?<\/nav>/g) ?? []) expect(nav).not.toContain('Carrito');
+      expect(html).toMatch(/@media \(max-width:640px\)\{[^@]*\.th-nav\{display:none\}/);
+    }
   });
 });

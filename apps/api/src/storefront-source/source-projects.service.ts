@@ -1,6 +1,9 @@
 import { sourceRequestContext } from './source-request-context';
 import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
 import { isSignatureDevice, type ShownStyleCard } from './design-engine/style-draws';
+import { SOURCE_FONT_CATALOG } from './source-font-catalog';
+/** Another merchant's display font enters a prompt only when it is a catalogue id. */
+const FONT_IDS = new Set<string>(SOURCE_FONT_CATALOG.map(font => font.id));
 import { assertPreparedSource, type PreparedSourceArtifact } from './source-prepared-artifact';
 import { DesignRetryableConflict } from './source-design-errors';
 import { savedSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
@@ -136,7 +139,7 @@ export class SourceProjectsService {
         if (slot.mode !== 'calm' && slot.mode !== 'bold') return [];
         const draw = parseFrameDraw(JSON.stringify(slot.draw ?? null));
         const display = fonts.find(font => font.slot === slot.slot)?.display;
-        return [{ ...(typeof slot.kind === 'string' ? { kind: slot.kind } : {}), mode: slot.mode, draw, ...(row.mine === true ? { mine: true } : {}), ...(isSignatureDevice(slot.device) ? { device: slot.device } : {}), ...(typeof display === 'string' && display ? { display } : {}) }];
+        return [{ ...(typeof slot.kind === 'string' ? { kind: slot.kind } : {}), mode: slot.mode, draw, ...(row.mine === true ? { mine: true } : {}), ...(isSignatureDevice(slot.device) ? { device: slot.device } : {}), ...(typeof display === 'string' && display && (row.mine === true || FONT_IDS.has(display)) ? { display } : {}) }];
       });
     });
   }

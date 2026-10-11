@@ -155,7 +155,7 @@ export function templateHero(facts: HeroFacts): string {
   const links = ['Productos', 'Nosotros', 'Contacto'].map(link => `<a href="#">${link}</a>`);
   // The drawn header where it is cheap: an info bar, a centred split, a stacked name or a menu button.
   const bar = header === 'centered-split' ? `<header class="th-bar th-split"><nav class="th-nav">${links.slice(0, 2).join('')}</nav>${name}<span class="th-tools"><a href="#">Contacto</a><span>Carrito (0)</span></span></header>`
-    : header === 'stacked' ? `<header class="th-bar th-stack">${name}<nav class="th-nav">${links.join('')}<a href="#">Buscar</a><span>Carrito (0)</span></nav></header>`
+    : header === 'stacked' ? `<header class="th-bar th-stack">${name}<span class="th-tools"><nav class="th-nav">${links.join('')}<a href="#">Buscar</a></nav><span>Carrito (0)</span></span></header>`
     : header === 'menu-button' ? `<header class="th-bar">${name}<span class="th-tools"><span class="th-menu">Menú</span><span>Carrito (0)</span></span></header>`
     : `<header class="th-bar">${name}<nav class="th-nav">${links.join('')}</nav><span>Carrito (0)</span></header>`;
   const info = header === 'info-bar' ? `<p class="th-info">${escape(facts.eyebrow?.trim() || facts.line)}</p>` : '';
@@ -166,7 +166,7 @@ export function templateHero(facts: HeroFacts): string {
   const extra = [
     info ? `.th .th-info{max-width:none;margin:0;background:${p.accent};color:${p.paper};text-align:center;font-size:13px;padding:8px 5vw}` : '',
     header === 'centered-split' ? '.th-split{display:grid;grid-template-columns:1fr auto 1fr}.th-split .th-tools{justify-self:end;display:flex;gap:20px}' : '',
-    header === 'stacked' ? '.th-stack{flex-direction:column;justify-content:center}.th-stack .th-name{font-size:30px}' : '',
+    header === 'stacked' ? '.th-stack{flex-direction:column;justify-content:center}.th-stack .th-name{font-size:30px}.th-stack .th-tools{display:flex;gap:20px;align-items:center}' : '',
     header === 'menu-button' ? `.th-tools{display:flex;gap:16px;align-items:center}.th-menu{border:1.5px solid ${p.ink};border-radius:${radius};padding:8px 14px;font-size:14px}` : '',
     variant === 'bleed' ? '.th-bleed{position:relative;min-height:72vh;color:#ffffff}.th-bleed .th-photo{position:absolute;inset:0;width:100%;height:100%;border-radius:0;z-index:0}.th-bleed::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.1));z-index:1}.th-bleed > div{position:relative;z-index:2}.th-bleed .th-cta{background:#ffffff;color:#111111;border-color:#ffffff;box-shadow:none}' : '',
     variant === 'panel' ? `.th-panel{background:${p.accent2};border-radius:${radius};padding:28px;display:flex;flex-direction:column;gap:12px}.th-panel .th-photo{height:min(36vh,300px)}.th-panel-name{font-family:"${display.family}",serif;font-size:24px;margin:0}.th-panel p{margin:0}` : '',
@@ -208,18 +208,24 @@ function stampSvg(c: BoldContext, cls: string, id: string): string {
   return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="${id}" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"></path></defs><circle cx="100" cy="100" r="98" fill="${c.p.accent2}"></circle><circle cx="100" cy="100" r="46" fill="${c.p.accent}"></circle><text font-size="${ringSize}" font-weight="700" fill="${luminance(c.p.accent2) < 0.4 ? '#ffffff' : '#111111'}"><textPath href="#${id}" textLength="${RING_LENGTH}" lengthAdjust="spacing">${escape(ring)}</textPath></text></svg>`;
 }
 
-/** Real numbers for the numbers device: the facts' own, else the ones in the card's copy; never invented. */
+/** Real numbers for the numbers device: only the brief's own (HeroFacts.numbers), and at least two; never the card copy. */
+export const MIN_DEVICE_NUMBERS = 2;
 function realNumbers(facts: HeroFacts): Array<{ value: string; label: string }> {
-  if (facts.numbers?.length) return facts.numbers.slice(0, 4);
-  return numbersIn(`${facts.eyebrow ?? ''} ${facts.headline} ${facts.line}`);
+  const numbers = (facts.numbers ?? []).slice(0, 4);
+  return numbers.length >= MIN_DEVICE_NUMBERS ? numbers : [];
 }
-const NUMBER_STOPWORDS = new Set(['del', 'las', 'los', 'por', 'para', 'con', 'que', 'hasta', 'desde', 'and', 'the']);
-/** Numbers written in a text with the word after them as their label, e.g. "1.800 msnm", "8:00", "2015". */
+const NUMBER_STOPWORDS = new Set(['del', 'las', 'los', 'por', 'para', 'con', 'que', 'hasta', 'desde', 'and', 'the', 'nro', 'zona']);
+/** An address or contact number follows these words: never a fact for the numbers row. */
+const CONTACT_BEFORE = /(?:^|[^\p{L}])(calle|c|av|avda|avenida|nro|num|n[°º]|no|#|whatsapp|wsp|tel|tel[eé]fono|cel|celular|casilla|zona|km)\.?\s*:?\s*$/iu;
+/** Numbers with a unit word after them ("1.800 msnm", "12 cafés", "30 %") or a time ("8:00"). Phone, address and
+ *  bare numbers are never taken: nothing next to + or -, nothing followed by more digits, nothing after calle/nro/tel. */
 export function numbersIn(text: string): Array<{ value: string; label: string }> {
   const out: Array<{ value: string; label: string }> = [];
-  for (const m of text.matchAll(/(?<![\p{L}\d.,:])(\d{1,4}(?:[.,:]\d{1,3})?)(?![\d.,:]?\d)(?:\s*(%|\p{L}{1,14}))?/gu)) {
-    const label = m[2] && (m[2] === '%' || (m[2].length >= 3 && !NUMBER_STOPWORDS.has(m[2].toLowerCase()))) ? m[2] : '';
-    if (m[1].length < 2 && !label) continue;
+  for (const m of text.matchAll(/(?<![\p{L}\d.,:+\-#°º/])(?<!-\s{1,2})(\d{1,2}:\d{2}|\d{1,4}(?:[.,]\d{1,3})?)(?![\d.,:/]?\d)(?!\s*-\s*\d)(?!\s+\d)(?:\s*(%|\p{L}{3,14}))?/gu)) {
+    const time = /^\d{1,2}:\d{2}$/.test(m[1]);
+    const label = m[2] && (m[2] === '%' || !NUMBER_STOPWORDS.has(m[2].toLowerCase())) ? m[2] : '';
+    if (!time && !label) continue;
+    if (CONTACT_BEFORE.test(text.slice(Math.max(0, m.index! - 24), m.index!))) continue;
     if (!out.some(item => item.value === m[1])) out.push({ value: m[1], label });
     if (out.length === 4) break;
   }
@@ -335,6 +341,8 @@ function railHero(c: BoldContext, device: SignatureDevice): string {
   const typeOdd = readableOn(p.accent, [p.paper, '#ffffff', '#111111']);
   const typeEven = readableOn(p.accent, [p.ink, '#ffffff', '#111111'].filter(colour => colour !== typeOdd));
   const piece = device === 'stamp' ? undefined : devicePiece(device, c);
+  // The art box keeps the stamp's corner room only for a corner device (stamp, stickers, ticket).
+  const cornered = !piece || Boolean(piece.corner);
   const frame = `<figure class="ty-frame${piece?.torn ? ' ty-torn' : ''}"><img class="ty-photo" src="${escape(facts.photoPath ?? '')}" alt=""></figure>`;
   const typeField = `<div class="ty-type${piece?.torn ? ' ty-torn' : ''}" aria-hidden="true">${c.words.map(word => `<span>${escape(word)}</span>`).join('')}</div>`;
   const art = piece?.polaroids ? polaroids(c, 'ty-pol') : facts.photoPath ? (piece?.torn ? `<div class="ty-tear">${frame}</div>` : frame) : piece?.torn ? `<div class="ty-tear">${typeField}</div>` : typeField;
@@ -359,12 +367,12 @@ function railHero(c: BoldContext, device: SignatureDevice): string {
 .ty h1{font-family:"${display.family}",sans-serif;font-size:min(140px,calc(100cqi/${c.headlineDivisor}));${H1_RULES}}
 .ty-line{font-size:19px;max-width:40ch;margin:0 0 34px}
 ${ctaCss(c, 'ty-cta')}
-.ty-art{position:relative;justify-self:center;width:min(100%,520px);box-sizing:border-box;padding:${STAMP.desktop.inset}px ${STAMP.desktop.inset}px 0 0;container-type:inline-size}
+.ty-art{position:relative;justify-self:center;width:min(100%,520px);box-sizing:border-box;padding:${cornered ? `${STAMP.desktop.inset}px ${STAMP.desktop.inset}px 0 0` : '0'};container-type:inline-size}
 .ty-frame{margin:0;background:#ffffff;padding:16px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${c.hard}}
 .ty-photo{display:block;width:100%;height:min(62vh,560px);object-fit:cover}
 .ty-type{display:flex;flex-direction:column;background:${p.accent};color:${typeOdd};padding:36px;transform:rotate(-3deg);box-shadow:16px 16px 0 ${c.hard};font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(120px,calc((100cqi - 72px)/${c.typeDivisor}));line-height:.88;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.ty-type span:nth-child(2n){color:${typeEven}}
 ${deviceCss}
-@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.ty-art{padding:${STAMP.phone.inset}px ${STAMP.phone.inset}px 0 0}${phoneStamp}}</style>
+@media (max-width:640px){.ty{grid-template-columns:1fr}.ty-rail{flex-direction:row;padding:14px 18px}.ty-name{writing-mode:horizontal-tb;transform:none;font-size:${phoneName}px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ty-cart{writing-mode:horizontal-tb;transform:none;flex:none}.ty-nav{display:none}.ty-main{grid-template-columns:1fr;padding:32px 18px 56px}.ty h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}${cornered ? `.ty-art{padding:${STAMP.phone.inset}px ${STAMP.phone.inset}px 0 0}` : ''}${phoneStamp}}</style>
 <div class="ty"><header class="ty-rail">${c.logo}<span class="ty-name" data-store-name>${escape(facts.storeName)}</span><nav class="ty-nav"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a></nav><span class="ty-cart">Carrito (0)</span></header>
 <section class="ty-main"><div class="ty-copy${piece?.behind ? ' xd-host' : ''}">${piece?.behind ?? ''}<p class="ty-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="ty-line">${escape(facts.line)}</p>${piece?.copy ?? ''}<a class="ty-cta" href="#">${escape(facts.action)} ${ARROW}</a></div><div class="ty-art">${art}${corner}</div>${piece?.band ?? ''}</section></div>`;
 }
@@ -374,9 +382,8 @@ ${deviceCss}
 function bandHero(c: BoldContext, device: SignatureDevice): string {
   const { facts, p, display, text } = c;
   const piece = devicePiece(device, c);
-  // The band always ends on a marquee: the drawn one when the device is (or falls back to) a marquee.
-  const band = piece.band || devicePiece('marquee', c).band;
-  const marqueeCss = piece.band ? '' : devicePiece('marquee', c).css;
+  // One ornament per card: the band carries a marquee only when that is the drawn device (or the numbers fallback).
+  const band = piece.band;
   const crops = ['20% 50%', '50% 40%', '80% 60%'];
   const blockColours = [p.accent, c.fill, p.accent2];
   const blockWords = [c.words[0], facts.action, c.words[1] ?? facts.eyebrow?.trim() ?? c.words[0]].map(word => word ?? '');
@@ -403,7 +410,6 @@ ${ctaCss(c, 'tb-cta')}
 .tb-torn{clip-path:${TORN};border:0}
 .tb-strip .xd-corner{position:absolute;right:6vw;top:-56px;z-index:2}
 ${piece.css}
-${marqueeCss}
 @media (max-width:640px){.tb-top{padding:18px 18px 6px}.tb-bar{margin:0 18px;gap:14px;font-size:11px}.tb-bar > a{display:none}.tb-tools a{display:none}.tb-main{grid-template-columns:1fr;padding:28px 18px}.tb h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.tb-strip{gap:8px;padding:0 18px 24px}.tb-blocks{grid-template-columns:1fr}.tb-block{height:auto;min-height:104px}.tb-strip .xd-corner{right:18px;top:-40px}}</style>
 <div class="tb"><header><div class="tb-top">${facts.logoPath ? `<img class="tb-logo" src="${escape(facts.logoPath)}" alt="">` : ''}<div class="tb-wordbox"><p class="tb-word" data-store-name>${escape(facts.storeName)}</p></div></div><nav class="tb-bar"><a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Contacto</a>${tools}</nav></header>
 <section class="tb-main"><div class="tb-copy${piece.behind ? ' xd-host' : ''}">${piece.behind}<h1>${escape(facts.headline)}</h1></div><div class="tb-side"><p class="tb-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><p class="tb-line">${escape(facts.line)}</p>${piece.copy}<a class="tb-cta" href="#">${escape(facts.action)} ${ARROW}</a></div></section>
@@ -425,9 +431,6 @@ function posterHero(c: BoldContext, device: SignatureDevice): string {
   const collage = piece.polaroids ? polaroids(c, 'tp-pol')
     : typeOnly ? `<div class="tp-words${piece.torn ? ' tp-torn' : ''}" aria-hidden="true">${c.words.map(word => `<span>${escape(word)}</span>`).join('')}</div>`
     : `<div class="tp-collage">${[0, 1, 2].map(i => `<div class="tp-shot tp-shot${i + 1}"><img${piece.torn ? ' class="tp-torn"' : ''} src="${escape(facts.photoPath!)}" alt="" style="object-position:${crops[i]}"></div>`).join('')}</div>`;
-  // One sticker over the seam (unless the device already is a sticker cluster).
-  const stickerSize = Math.max(11, Math.min(18, Math.floor(100 / (longestWord(facts.action) * 0.62))));
-  const sticker = device === 'stickers' ? '' : `<span class="tp-sticker" aria-hidden="true" style="font-size:${stickerSize}px">${escape(facts.action)}</span>`;
   const links = '<a href="#">Productos</a><a href="#">Nosotros</a><a href="#">Buscar</a>';
   return `<style>${heroFontFaces(facts.fonts)}
 .tp{position:relative;background:${p.paper};color:${p.ink};font-family:"${text.family}",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -448,14 +451,13 @@ ${ctaCss(c, 'tp-cta', ctaBg, ctaText, p.accent2)}
 .tp-shot1{left:0;top:4%;transform:rotate(-6deg)}.tp-shot2{right:0;top:18%;transform:rotate(5deg)}.tp-shot3{left:16%;bottom:0;transform:rotate(-1deg)}
 .tp-torn{clip-path:${TORN}}
 .tp-words{display:flex;flex-direction:column;width:100%;font-family:"${display.family}",sans-serif;font-weight:900;font-size:min(150px,calc(100cqi/${c.typeDivisor}));line-height:.86;letter-spacing:-0.04em;text-transform:uppercase;overflow-wrap:normal;word-break:normal}.tp-words span:nth-child(2n){color:${readableOn(p.accent2, [p.accent, c.fill, '#111111'])}}
-.tp-sticker{position:absolute;left:-48px;bottom:9%;z-index:3;display:flex;align-items:center;justify-content:center;width:112px;height:112px;box-sizing:border-box;padding:10px;border-radius:50%;background:${c.fill};color:${c.fillText};border:3px solid ${c.hard};transform:rotate(-12deg);font-family:"${display.family}",sans-serif;font-weight:800;text-transform:uppercase;text-align:center;line-height:1.05;overflow-wrap:normal;word-break:normal}
 .tp-b .xd-corner{position:absolute;top:24px;right:24px;z-index:3}
 .tp-pill{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);z-index:4;display:flex;gap:18px;align-items:center;background:${c.fill};color:${c.fillText};border-radius:999px;padding:12px 22px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;box-shadow:5px 5px 0 ${p.accent}}.tp-pill a{color:inherit;text-decoration:none}
 ${piece.polaroids ? polaroidCss(c, 'tp-pol', 500, 360) : ''}
 ${piece.css}
-@media (max-width:640px){.tp-bar{padding:14px 18px}.tp-name{font-size:20px}.tp-tools a{display:none}.tp-main{grid-template-columns:1fr}.tp-a{padding:36px 18px}.tp-b{padding:48px 18px 72px}.tp h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.tp-collage{height:340px}.tp-shot img{height:200px}.tp-sticker{left:auto;right:18px;bottom:auto;top:-48px;width:92px;height:92px}.tp-pill{gap:12px;padding:10px 16px;font-size:11px}.tp-pill a:nth-child(2){display:none}${piece.corner ? '.tp-sticker{display:none}' : ''}}</style>
+@media (max-width:640px){.tp-bar{padding:14px 18px}.tp-name{font-size:20px}.tp-tools a{display:none}.tp-main{grid-template-columns:1fr}.tp-a{padding:36px 18px}.tp-b{padding:48px 18px 72px}.tp h1{font-size:min(72px,calc(100cqi/${c.headlineDivisor}))}.tp-collage{height:340px}.tp-shot img{height:200px}.tp-pill{gap:12px;padding:10px 16px;font-size:11px}.tp-pill a:nth-child(2){display:none}}</style>
 <div class="tp"><header class="tp-bar"><span class="tp-name">${facts.logoPath ? `<img class="tp-logo" src="${escape(facts.logoPath)}" alt="">` : ''}<span data-store-name>${escape(facts.storeName)}</span></span>${pill ? '' : '<span class="tp-tools"><a href="#">Buscar</a><span class="tp-menu">Menú</span><span>Carrito (0)</span></span>'}</header>
-<section class="tp-main"><div class="tp-a"><div class="tp-copy${piece.behind ? ' xd-host' : ''}">${piece.behind}<p class="tp-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="tp-line">${escape(facts.line)}</p>${piece.copy}<a class="tp-cta" href="#">${escape(facts.action)} ${ARROW}</a></div></div><div class="tp-b">${collage}${sticker}${piece.corner ? `<div class="xd-corner">${piece.corner}</div>` : ''}</div></section>${piece.band}${pill ? `<nav class="tp-pill">${links}<span>Carrito (0)</span></nav>` : ''}</div>`;
+<section class="tp-main"><div class="tp-a"><div class="tp-copy${piece.behind ? ' xd-host' : ''}">${piece.behind}<p class="tp-eyebrow">${escape(facts.eyebrow?.trim() || facts.storeName)}</p><h1>${escape(facts.headline)}</h1><p class="tp-line">${escape(facts.line)}</p>${piece.copy}<a class="tp-cta" href="#">${escape(facts.action)} ${ARROW}</a></div></div><div class="tp-b">${collage}${piece.corner ? `<div class="xd-corner">${piece.corner}</div>` : ''}</div></section>${piece.band}${pill ? `<nav class="tp-pill">${links}<span>Carrito (0)</span></nav>` : ''}</div>`;
 }
 
 const HERO_SCHEMA = { type: 'object', additionalProperties: false, required: ['html'], properties: { html: { type: 'string' } } };

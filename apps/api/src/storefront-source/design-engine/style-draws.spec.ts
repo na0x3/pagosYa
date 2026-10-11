@@ -1,4 +1,4 @@
-import { SIGNATURE_DEVICES, styleDraws, styleSlotDirection } from './style-draws';
+import { SHOWN_CARDS_TIMEOUT_MS, SIGNATURE_DEVICES, styleDraws, styleSlotDirection, withinOr } from './style-draws';
 import { FRAME_CATALOGUE, PALETTES, type FrameAvailable } from './frame-draw';
 import { PLAYBOOK, playbookDirection } from './playbook';
 
@@ -157,10 +157,35 @@ describe('variety across proposals (2026-10-11: "always the same two templates")
     const shown: Array<{ kind: string; mode: 'bold'; draw: Record<string, string>; device: string; mine: boolean }> = [];
     const devices: string[] = [];
     for (let round = 0; round < 8; round++) {
-      const [, bold] = styleDraws({ ...base, shown, random: seeded(round + 11) });
+      const [, bold] = styleDraws({ ...base, shown, briefNumbers: 2, random: seeded(round + 11) });
       devices.push(bold.device!);
       shown.unshift({ kind: 'cafe-food', mode: 'bold', draw: {}, device: bold.device!, mine: true });
     }
     expect(new Set(devices).size).toBe(8);
   });
+});
+
+it('draws the numbers device only when the brief gives at least two real numbers', () => {
+  for (const briefNumbers of [undefined, 0, 1]) for (let seed = 1; seed <= 40; seed++) expect(styleDraws({ ...base, briefNumbers, random: seeded(seed) })[1].device).not.toBe('numbers');
+  const recent = ['stamp', 'marquee', 'stickers', 'ticket', 'torn-edge', 'polaroids', 'outline-wordmark'].map(device => ({ kind: 'cafe-food', mode: 'bold' as const, draw: {}, device }));
+  expect(styleDraws({ ...base, shown: recent, briefNumbers: 2, random: seeded(1) })[1].device).toBe('numbers');
+  expect(styleDraws({ ...base, shown: recent, briefNumbers: 2, available: { ...base.available, facts: false }, random: seeded(1) })[1].device).not.toBe('numbers');
+});
+
+it('bounds the shown-cards lookup: a slow, failing or throwing lookup falls back to no history', async () => {
+  jest.useFakeTimers();
+  try {
+    const slow = withinOr(() => new Promise<string[]>(() => undefined), SHOWN_CARDS_TIMEOUT_MS, ['fallback']);
+    await jest.advanceTimersByTimeAsync(SHOWN_CARDS_TIMEOUT_MS - 1);
+    let settled = false;
+    void slow.then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(await slow).toEqual(['fallback']);
+  } finally { jest.useRealTimers(); }
+  expect(SHOWN_CARDS_TIMEOUT_MS).toBe(1500);
+  expect(await withinOr(async () => ['fast'], 1500, [] as string[])).toEqual(['fast']);
+  expect(await withinOr(async () => { throw new Error('db'); }, 1500, [] as string[])).toEqual([]);
+  expect(await withinOr(() => { throw new Error('sync'); }, 1500, [] as string[])).toEqual([]);
 });
