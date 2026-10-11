@@ -102,3 +102,12 @@ describe('standard pages in the agent context', () => {
     expect(text).toContain('@pagosya-page');
   });
 });
+
+it('gives a fresh design the drawn frame and leaves everything else untouched', () => {
+  const frame = 'FRAME AND HERO: test\n- Header: side rail.';
+  const framed = agentInstructions('STABLE', 'shop', true, true, 6, true, frame);
+  expect(framed).toContain(frame);
+  expect(framed.indexOf(frame)).toBeLessThan(framed.indexOf('AGENT PROTOCOL'));
+  expect(agentInstructions('STABLE', 'shop', true, true, 6, true, '')).toBe(agentInstructions('STABLE', 'shop', true, true, 6, true));
+  expect(agentInstructions('STABLE', 'shop', false, false, 6, true, frame)).not.toContain(frame);
+});
