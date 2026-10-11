@@ -27,6 +27,16 @@ describe('style picker', () => {
     expect(html.match(/data-style-placeholder/g)).toHaveLength(3);
     expect(html).not.toContain('data-style-auto');
   });
+  it('shows a pending card with its template hero like any other, plus a small Mejorando diseño hint', () => {
+    const html = renderStylePicker({ ...view, status: 'RUNNING', cards: [{ ...card(0, 'calm'), source: 'template', pending: true }, card(1, 'calm')] }, state);
+    expect(html.match(/data-style-card=/g)).toHaveLength(2);
+    expect(html).toMatch(/data-style-card="0" >/);
+    expect(html).toContain('srcdoc=');
+    expect(html.match(/Mejorando diseño…/g)).toHaveLength(1);
+    expect(html).toContain('data-style-pending');
+    expect(html.match(/data-style-placeholder/g)).toHaveLength(2);
+    expect(renderStylePicker(view, state)).not.toContain('Mejorando diseño');
+  });
   it('opens a preview with vibe, inspiration, typography and the use button', () => {
     const html = renderStylePicker(view, { ...state, open: 1 });
     expect(html).toContain('Vibe');

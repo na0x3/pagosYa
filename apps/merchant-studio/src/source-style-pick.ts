@@ -1,7 +1,9 @@
 import { escapeHtml as escape } from './studio-ui';
 import './source-style-pick.css';
 
-export type StyleCard = { index: number; slot: number; name: string; mode: 'calm' | 'bold'; vibe: string; inspiration: string[]; fonts: { display: string; text: string; displayFamily: string; textFamily: string }; palette: string[]; html: string | null; source: 'model' | 'template' | null };
+export type StyleCard = { index: number; slot: number; name: string; mode: 'calm' | 'bold'; vibe: string; inspiration: string[]; fonts: { display: string; text: string; displayFamily: string; textFamily: string }; palette: string[]; html: string | null; source: 'model' | 'template' | null;
+  /** The card shows its template hero while YAPI is still writing the real one. */
+  pending?: boolean };
 /** PICKED: the merchant's pick whose build failed; the cards stay, with that card marked, so it can be retried. */
 export type StyleProposalView = { generationId: string; status: 'RUNNING' | 'AWAITING_STYLE' | 'PICKED'; recommended: number; picked?: number; cards: StyleCard[] };
 
@@ -57,6 +59,6 @@ export function renderStylePicker(view: StyleProposalView | null, state: { open:
     : `<footer><button type="button" class="button" data-style-auto ${state.busy ? 'disabled' : ''}>Elige tú</button></footer>`;
   return `<section class="style-pick" aria-label="Elige tu estilo" aria-busy="${running}">
     <header><h2>${running ? 'Preparando tus estilos…' : picked ? 'Tu estilo quedó elegido' : 'Elige tu estilo'}</h2><p>${picked ? 'La tienda no se terminó de construir. Reintenta con tu estilo o elige otro.' : `${escape(state.storeName)}: dos tranquilos y dos atrevidos.`}</p></header>
-    <div class="style-grid">${cards.map(card => `<button type="button" class="style-card${card === picked ? ' style-card--picked' : ''}" data-style-card="${Number(card.index)}" ${card === picked ? 'aria-current="true" ' : ''}${card.html ? '' : 'disabled'}>${frame(card, DESKTOP)}<span class="style-card__meta"><strong>${escape(card.name)}</strong>${tag(card.mode)}${card === picked ? '<span class="style-tag style-tag--picked">Elegido</span>' : ''}<small>${escape(card.fonts.displayFamily)} · ${escape(card.fonts.textFamily)}</small><span class="style-dots">${dots(card.palette)}</span></span></button>`).join('')}${'<div class="style-card style-card--empty" data-style-placeholder aria-hidden="true"></div>'.repeat(placeholders)}</div>
+    <div class="style-grid">${cards.map(card => `<button type="button" class="style-card${card === picked ? ' style-card--picked' : ''}" data-style-card="${Number(card.index)}" ${card === picked ? 'aria-current="true" ' : ''}${card.html ? '' : 'disabled'}>${frame(card, DESKTOP)}<span class="style-card__meta"><strong>${escape(card.name)}</strong>${tag(card.mode)}${card === picked ? '<span class="style-tag style-tag--picked">Elegido</span>' : ''}<small>${escape(card.fonts.displayFamily)} · ${escape(card.fonts.textFamily)}</small><span class="style-dots">${dots(card.palette)}</span>${card.pending ? '<small class="style-card__pending" data-style-pending>Mejorando diseño…</small>' : ''}</span></button>`).join('')}${'<div class="style-card style-card--empty" data-style-placeholder aria-hidden="true"></div>'.repeat(placeholders)}</div>
     ${footer}</section>`;
 }
