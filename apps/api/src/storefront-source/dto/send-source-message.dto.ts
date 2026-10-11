@@ -6,6 +6,11 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { SourceSelectionDto } from './source-selection.dto';
 import { SourceProjectRevisionDto } from './save-source-project.dto';
+export class SourceStylePickDto {
+  @IsString() @Matches(/^[a-z0-9]{8,40}$/i) generationId!: string;
+  @IsOptional() @IsInt() @Min(0) @Max(3) index?: number;
+  @IsOptional() @IsBoolean() auto?: boolean;
+}
 export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsIn(['shop', 'service', 'portfolio', 'editorial']) sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
   @IsOptional() @IsUUID() requestId?: string;
@@ -32,4 +37,6 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @ValidateNested() @Type(() => SourceSelectionDto) selection?: SourceSelectionDto;
   /** Preview context for phrases such as 'this page'; does not override an explicit global request. */
   @IsOptional() @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html$/) currentPage?: string;
+  /** "Elige tu estilo" (spec 2026-10-11): build from this saved proposal's card, or YAPI's recommendation when auto. */
+  @IsOptional() @ValidateNested() @Type(() => SourceStylePickDto) stylePick?: SourceStylePickDto;
 }

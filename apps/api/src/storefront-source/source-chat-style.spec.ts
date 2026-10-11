@@ -1,0 +1,139 @@
+import { randomUUID as uuid } from 'node:crypto';
+import { ConfigService } from '@nestjs/config';
+import { SourceChatService } from './source-chat.service';
+import { SourceRequestBudget } from './source-request-budget';
+import type { StyleProposal } from './source-style-proposal';
+
+/** Spec 2026-10-11 "Elige tu estilo" Task 9: the chat proposes, waits, builds from the pick; Studio reads the cards. */
+const awaitingProposal = (): StyleProposal => ({ version: 1, status: 'AWAITING_STYLE', createdAt: '2026-10-11T00:00:00.000Z', assetMap: [],
+  request: { dto: { revision: 0, instruction: 'x', brief: { businessType: 'Café' } } as any, imageUses: [], redesign: false },
+  slots: [0, 1, 2, 3].map(slot => ({ slot, mode: slot < 2 ? 'calm' : 'bold', kind: 'cafe-food', family: { id: 'f' }, file: { path: 'frame-draw.json', content: '{}' }, paragraph: 'p', palette: { id: 'x', name: 'x', paper: '#ffffff', ink: '#111111', accent: '#ff0000', accent2: '#eeeeee', dark: false }, draw: {}, playbook: 'pb' })) as any,
+  design: { selected: 1, selection: { source: 'planner', rationale: 'r' }, concepts: [0, 1, 2, 3].map(slot => ({ name: `c${slot}`, opening: `o${slot}`, flow: 'f', premise: 'p', typography: 't', imagery: 'i', mobile: 'm', dna: { type: { display: 'outfit', text: 'manrope' } }, card: { slot, mode: slot < 2 ? 'calm' : 'bold', name: `Estilo ${slot}`, vibe: 'v', inspiration: ['a', 'b', 'c'] } })) as any },
+  heroes: [null, null, null, null] });
+const savedRevision = () => ({ revision: 1, label: 'Carta editorial' });
+
+let chat: SourceChatService, prisma: any, projects: any, generate: jest.Mock, conversationDecide: jest.Mock, config: Map<string, unknown>;
+const currentRevision = (revision: number) => projects.current.mockResolvedValue({ revision });
+beforeEach(() => {
+  const messages: any[] = [];
+  prisma = {
+    store: { findFirst: jest.fn().mockResolvedValue({ name: 'Café Buna', logoUrl: null, _count: { paymentLinks: 0 }, paymentLinks: [] }) },
+    storeAgentThread: { findUnique: jest.fn().mockImplementation(async () => ({ id: 't1', messages: [...messages].reverse() })), upsert: jest.fn().mockResolvedValue({ id: 't1' }) },
+    storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn() },
+    storeSourceVersion: { count: jest.fn().mockResolvedValue(1) },
+    storeSourceGeneration: { findFirst: jest.fn().mockResolvedValue(null), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  };
+  projects = { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessType: 'Café Buna', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Editorial' } } }) };
+  generate = jest.fn().mockResolvedValue(savedRevision());
+  const generation: any = { generate, newBudget: jest.fn((maxCredits?: number) => new SourceRequestBudget(maxCredits)), catalog: jest.fn(), interruptedPreview: jest.fn() };
+  conversationDecide = jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería de especialidad en Sopocachi.', generationInstruction: 'Crea la tienda.', imageUses: [], startFrom: 'scratch' });
+  config = new Map<string, unknown>([['app.yapiStylePick', true]]);
+  chat = new SourceChatService(prisma, projects, generation, { decide: conversationDecide } as any, { apply: jest.fn() } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+});
+
+it('asks for a proposal on a new store when the flag is on, and says so in the chat', async () => {
+  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g1', cards: 4 } });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería en Sopocachi', setupAction: 'generate', requestId: uuid() });
+  expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
+  expect(out.assistantMessage.content).toBe('Te preparo 4 estilos para Café Buna: dos tranquilos y dos atrevidos. Elige uno para construir tu tienda.');
+  expect(out.assistantMessage.metadata).toMatchObject({ styleProposal: { generationId: 'g1' } });
+  expect(out.revision).toBeUndefined();
+});
+
+it('never asks for a proposal when the flag is off', async () => {
+  config.set('app.yapiStylePick', false);
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería', setupAction: 'generate', requestId: uuid() });
+  expect(generate.mock.calls[0][6].styleProposal).toBeUndefined();
+  expect(prisma.storeSourceGeneration.findFirst).not.toHaveBeenCalled();
+  expect(out.assistantMessage.content.startsWith('No pude preparar')).toBe(false);
+});
+
+it('says so when it asked for styles but built directly', async () => {
+  generate.mockResolvedValueOnce(savedRevision());
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería', setupAction: 'generate', requestId: uuid() });
+  expect(out.assistantMessage.content.startsWith('No pude preparar los estilos, armé uno por ti. ')).toBe(true);
+  expect(out.revision).toMatchObject({ revision: 1 });
+});
+
+it('does not ask for a proposal on a small edit', async () => {
+  currentRevision(3);
+  await chat.send('m1', 's1', { revision: 3, instruction: 'Cambia el teléfono', requestId: uuid() });
+  expect(generate.mock.calls[0][6]?.styleProposal).toBeFalsy();
+});
+
+it('answers without a model call while a proposal waits', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: '¿y en azul?', requestId: uuid() });
+  expect(out.assistantMessage.content).toBe('Primero elige un estilo; después lo ajustamos juntos.');
+  expect(out.assistantMessage.metadata).toMatchObject({ styleProposal: { generationId: 'g1' } });
+  expect(conversationDecide).not.toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
+});
+
+it('does not wait on a proposal whose run failed', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'FAILED', proposal: awaitingProposal() });
+  await chat.send('m1', 's1', { revision: 0, instruction: '¿y en azul?', requestId: uuid() });
+  expect(generate).toHaveBeenCalled();
+});
+
+it('builds from a pick with the saved request, marks it picked, and "Elige tú" uses the recommendation', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  generate.mockResolvedValue(savedRevision());
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', auto: true }, requestId: uuid() });
+  const call = generate.mock.calls[0];
+  expect(call[2]).toEqual(awaitingProposal().request.dto);
+  expect(call[6].style.index).toBe(awaitingProposal().design!.selected);
+  expect(call[6].style.proposal).toEqual(awaitingProposal());
+  expect(call[6].redesign).toBeUndefined();
+  expect(conversationDecide).not.toHaveBeenCalled();
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'PICKED', picked: awaitingProposal().design!.selected }) } }));
+});
+
+it('builds a picked redesign as a redesign', async () => {
+  const proposal = awaitingProposal();
+  proposal.request.redesign = true;
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal });
+  currentRevision(4);
+  await chat.send('m1', 's1', { revision: 4, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 3 }, requestId: uuid() });
+  expect(generate.mock.calls[0][2].revision).toBe(4);
+  expect(generate.mock.calls[0][6]).toMatchObject({ redesign: true, style: { index: 3 } });
+});
+
+it('retries a failed build from the same pick without asking again', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED', picked: 2 } });
+  generate.mockResolvedValue(savedRevision());
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 2 }, requestId: uuid() });
+  expect(generate.mock.calls[0][6]).toMatchObject({ style: { index: 2 } });
+  expect(generate.mock.calls[0][6].styleProposal).toBeUndefined();
+});
+
+it('refuses a pick outside the proposal or one that is no longer offered, and says the style can be retried', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), design: { ...awaitingProposal().design!, concepts: awaitingProposal().design!.concepts.slice(0, 2) } } });
+  await expect(chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 3 }, requestId: uuid() })).rejects.toThrow('Elige uno de los estilos de la propuesta.');
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'SUPERSEDED' } });
+  await expect(chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() })).rejects.toThrow('Ese estilo ya no está disponible.');
+  expect(generate).not.toHaveBeenCalled();
+  expect(prisma.storeSourceGeneration.updateMany).not.toHaveBeenCalled();
+  const failure = prisma.storeAgentMessage.create.mock.calls.at(-1)[0].data;
+  expect(failure).toMatchObject({ role: 'ASSISTANT', content: 'Ese estilo ya no está disponible. Pide un nuevo diseño. Puedes reintentar con el mismo estilo.', metadata: { failed: true, styleProposal: { generationId: 'g1' } } });
+});
+
+it('supersedes a waiting proposal when the merchant asks for another full redesign', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g2', cards: 4 } });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Rediseña mi tienda desde cero', requestId: uuid() });
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'SUPERSEDED' }) } }));
+  expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
+});
+
+it('serves the newest running or waiting proposal as cards, and nothing once picked or when its run failed', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  expect((await chat.styleProposal('m1', 's1')).proposal!.cards).toHaveLength(4);
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: { ...awaitingProposal(), status: 'RUNNING' } });
+  expect((await chat.styleProposal('m1', 's1')).proposal!.status).toBe('RUNNING');
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED' } });
+  expect((await chat.styleProposal('m1', 's1')).proposal).toBeNull();
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'FAILED', proposal: { ...awaitingProposal(), status: 'RUNNING' } });
+  expect((await chat.styleProposal('m1', 's1')).proposal).toBeNull();
+  expect(prisma.storeSourceGeneration.findFirst.mock.calls[0][0].select).toMatchObject({ id: true, status: true, proposal: true });
+});

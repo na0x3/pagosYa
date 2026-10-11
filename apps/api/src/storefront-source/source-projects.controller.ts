@@ -82,6 +82,12 @@ export class SourceProjectsController {
     return this.chat.progress(merchant.id, storeId, requestId);
   }
 
+  @Get('style-proposal')
+  @Header('Cache-Control', 'private, no-store')
+  styleProposal(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string) {
+    return this.chat.styleProposal(merchant.id, storeId);
+  }
+
   @Post('estimate')
   estimate(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SendSourceMessageDto) {
     return this.generation.estimate(merchant.id, storeId, input);

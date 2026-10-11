@@ -23,7 +23,7 @@ function setup(messages: any[] = []) {
   // Existing first-site tests exercise the from-scratch path; the template path sets startFrom explicitly.
   const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Café de especialidad, estilo cálido y editorial.', generationInstruction: request.instruction, imageUses: [], startFrom: 'scratch' }) };
   const templates: any = { apply: jest.fn().mockResolvedValue({ revision: 1, label: 'Plantilla: Tostado' }) };
-  return { service: new SourceChatService(prisma, projects, generation, dialogue, templates), prisma, projects, generation, dialogue, templates, messages };
+  return { service: new SourceChatService(prisma, projects, generation, dialogue, templates, { get: () => undefined } as any), prisma, projects, generation, dialogue, templates, messages };
 }
 const request = { revision: 1, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
 it('takes the run budget from the generation service, so a run that costs nothing is not capped', async () => {
