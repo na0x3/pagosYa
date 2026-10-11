@@ -14,7 +14,8 @@ import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { styleProposalView, type StyleProposal } from './source-style-proposal';
 import { heroFontFaces, sanitizeHeroHtml } from './design-engine/style-hero';
-import { BadGatewayException, ServiceUnavailableException } from '@nestjs/common';
+import { BadGatewayException } from '@nestjs/common';
+import { SourceProviderRefusedException } from './source-provider-error';
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -303,7 +304,7 @@ describe('style proposal mode', () => {
   });
 
   /** A lane error like the planner's when the ChatGPT plan refuses a call: a plain message, the refusal as its cause. */
-  const refused = () => new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.', { cause: new ServiceUnavailableException('YAPI no pudo continuar: ChatGPT rechazó la autorización. Vuelve a conectar tu cuenta de ChatGPT. No se cambió a una API de pago. Tu sitio sigue guardado.') });
+  const refused = () => new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.', { cause: new SourceProviderRefusedException('YAPI no pudo continuar: ChatGPT rechazó la autorización. Vuelve a conectar tu cuenta de ChatGPT. No se cambió a una API de pago. Tu sitio sigue guardado.') });
   /** The 3 s retry pause runs at once here; the delays the service asked for are kept. */
   const fastRetries = () => {
     const real = global.setTimeout;
@@ -376,12 +377,12 @@ describe('style proposal mode', () => {
     expect(finalWrite().data.proposal.design.selection.rationale).toHaveLength(200);
   });
 
-  it('writes the calm hero on the fast model and the intense hero on the run model, which the planner keeps', async () => {
+  it('offers every hero the fast model and the run model the planner keeps; writeStyleHero alone puts the intense hero on the run model', async () => {
     lanes();
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     const runModel = explore.mock.calls[0][0].model;
     expect(runModel).toMatch(/^gpt-/);
-    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.mode, c[0].heroModel, c[0].model])).toEqual([['calm', 'gpt-5.6-luna', runModel], ['bold', undefined, runModel]]);
+    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.mode, c[0].heroModel, c[0].model])).toEqual([['calm', 'gpt-5.6-luna', runModel], ['bold', 'gpt-5.6-luna', runModel]]);
   });
 
   it('skips styles on an ineligible run without claiming it tried, and warns once', async () => {

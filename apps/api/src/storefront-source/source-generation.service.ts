@@ -1634,8 +1634,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const slotPalettes: Array<HeroFacts['palette']> = [];
     const slotPending: boolean[] = [];
     const laneControllers = new Map(input.styleSlots.map(slot => [slot.slot, new AbortController()]));
-    // The calm hero is a short fragment on the fast model (writeStyleHero falls back to the run model if it is refused);
-    // the intense hero is always written on the run model.
+    // Heroes are offered the fast model; writeStyleHero writes the intense one on the run model, and falls back to the run
+    // model when the provider refuses the fast one.
     const heroModel: SourceModel = input.model.startsWith('gpt-') ? 'gpt-5.6-luna' : input.model;
     const createdAt = new Date().toISOString();
     const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
@@ -1683,7 +1683,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         await save();
         const concept = slotConcepts[slot.slot];
         if (!concept || lane.signal.aborted) return;
-        const hero = await writeStyleHero({ facts: factsFor(concept, slot), concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, heroModel: slot.mode === 'calm' ? heroModel : undefined, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: AbortSignal.any([input.signal, lane.signal]), attempts: input.attempts,
+        const hero = await writeStyleHero({ facts: factsFor(concept, slot), concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, heroModel, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: AbortSignal.any([input.signal, lane.signal]), attempts: input.attempts,
           record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', attempt.model, body, attempt.durationMs, attempt.status) });
         const current = slotConcepts[slot.slot];
         if (!current || lane.signal.aborted) return;
