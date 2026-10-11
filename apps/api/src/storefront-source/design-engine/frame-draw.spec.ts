@@ -1,7 +1,8 @@
-import { drawFrame, frameDirection, frameForRun, frameOverrides, parseFrameDraw, FRAME_CATALOGUE, FRAME_DRAW_FILE, type FrameAvailable } from './frame-draw';
+import { drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, parseFrameDraw, FRAME_CATALOGUE, FRAME_DRAW_FILE, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const rich: FrameAvailable = { photos: 9, products: 9, facts: true };
+const bare = { composedInstruction: 'x', assetLegend: [], imageUses: [], items: [] } as Parameters<typeof frameInputs>[0];
 const ids = (part: keyof typeof FRAME_CATALOGUE) => FRAME_CATALOGUE[part].map(entry => entry.id);
 
 it('has the agreed catalogue sizes and every entry says something for desktop and phone', () => {
@@ -79,4 +80,53 @@ it('decides what a run gets: fresh draws and saves, edits carry the file, off do
   expect(frameForRun({ enabled: true, fresh: false, previous: [], recent, available: rich, request: 'x' })).toEqual({ paragraph: '' });
   expect(frameForRun({ enabled: false, fresh: true, previous: [saved], recent, available: rich, request: 'x' })).toEqual({ paragraph: '' });
   expect(frameForRun({ enabled: true, fresh: true, previous: [], recent, available: rich, request: 'logo centrado', random: seeded(3) }).paragraph).not.toMatch(/^- Header/m);
+});
+
+// Final review fixes (2026-10-10): what reaches the draw from a real generate() run.
+describe('frame inputs from a real run', () => {
+  it('reads only the merchant words, never the composed summary or YAPI interpretation', () => {
+    const composed = 'Contexto acordado:\nCafé con menú del día en el centro de Cochabamba.\nInterpretación operativa de YAPI: logo centrado arriba\nPedido actual del comercio:\nHazme la tienda';
+    expect(frameInputs({ ...bare, composedInstruction: composed, merchantInstruction: 'Hazme la tienda' }).request).toBe('Hazme la tienda');
+    expect(frameInputs({ ...bare, composedInstruction: composed }).request.trim()).toBe('Hazme la tienda');
+    expect(frameOverrides(frameInputs({ ...bare, composedInstruction: composed }).request)).toEqual({ header: false, hero: false });
+  });
+  it('counts only real display photos: never the logo, references, unused uploads or duplicates', () => {
+    const logo = { original: '/v1/uploads/logo.png', path: 'assets/image-logo.png' };
+    expect(frameInputs({ ...bare, assetLegend: [logo], imageUses: [{ url: logo.original, role: 'logo' }] }).available.photos).toBe(0);
+    expect(frameInputs({ ...bare, assetLegend: [logo], logoUrl: logo.original }).available.photos).toBe(0);
+    const ref = { original: '/v1/uploads/ref.png', path: 'assets/image-ref.png' };
+    expect(frameInputs({ ...bare, assetLegend: [ref], imageUses: [{ url: ref.original, role: 'reference' }] }).available.photos).toBe(0);
+    const a = { original: '/v1/uploads/a.jpg', path: 'assets/image-a.jpg' }, a2 = { original: '/v1/uploads/a2.jpg', path: 'assets/image-a.jpg' };
+    const clip = { original: '/v1/uploads/c.mp4', path: 'assets/c.mp4' };
+    expect(frameInputs({ ...bare, assetLegend: [a, a2, clip] }).available.photos).toBe(1);
+  });
+  it('treats only delivery, hours, pickup or a location as a fact for the info bar', () => {
+    expect(frameInputs({ ...bare, businessInformation: 'Café de especialidad para amantes del grano.' }).available.facts).toBe(false);
+    expect(frameInputs({ ...bare, businessInformation: 'Abrimos de lunes a sábado de 8:00 a 18:00.' }).available.facts).toBe(true);
+    expect(frameInputs({ ...bare, businessInformation: 'Hacemos envíos a todo La Paz.' }).available.facts).toBe(true);
+    expect(frameInputs({ ...bare, locations: [{ name: 'Local' }] }).available.facts).toBe(true);
+  });
+  it('draws fresh only where the drawn frame is actually built', () => {
+    expect(frameFresh({ sep5Author: true, agentEngine: false, sketchFirst: false, hasPrevious: false, redesign: false })).toBe(true);
+    expect(frameFresh({ sep5Author: false, agentEngine: true, sketchFirst: false, hasPrevious: true, redesign: true })).toBe(true);
+    expect(frameFresh({ sep5Author: false, agentEngine: true, sketchFirst: true, hasPrevious: false, redesign: false })).toBe(false);
+    expect(frameFresh({ sep5Author: true, agentEngine: false, sketchFirst: false, hasPrevious: true, redesign: false })).toBe(false);
+  });
+  it('gives a redesign a different header and hero from its own last draw', () => {
+    const saved = { path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'overlay', cart: 'icon-dot', footer: 'quiet-line', hero: 'split' }) };
+    for (let seed = 1; seed < 40; seed++) {
+      const draw = parseFrameDraw(frameForRun({ enabled: true, fresh: true, previous: [saved], recent: [], available: rich, request: 'rediséñala', random: seeded(seed) }).file!.content);
+      expect(draw.header).not.toBe('overlay');
+      expect(draw.hero).not.toBe('split');
+    }
+  });
+  it('does not mistake "portada" in passing for a hero decision', () => {
+    expect(frameOverrides('Rehaz la composición de la portada con la nueva marca')).toEqual({ header: false, hero: false });
+    expect(frameOverrides('pon mis productos en la portada')).toEqual({ header: false, hero: false });
+    expect(frameOverrides('quiero un video en la primera pantalla')).toEqual({ header: false, hero: true });
+  });
+  it('never asks for a typed price in the product hero', () => {
+    const entry = FRAME_CATALOGUE.hero.find(item => item.id === 'single-product')!;
+    expect(entry.desktop).toMatch(/never type/i);
+  });
 });

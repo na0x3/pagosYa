@@ -46,7 +46,7 @@ export const FRAME_CATALOGUE: Record<FramePart, readonly FrameEntry[]> = {
     { id: 'split', bold: false, needs: 'photos1', desktop: 'Hero: the first screen divided into a photo half and a text half with the headline and the main action.', phone: 'On phones: the photo on top, the text below.' },
     { id: 'type-only', bold: true, desktop: 'Hero: no photo at all; the first screen is typography and colour, a very large headline, one short line and the main action.', phone: 'On phones: the headline still dominates the first screen.' },
     { id: 'collage', bold: true, needs: 'photos3', desktop: 'Hero: three or more photos arranged as an overlapping collage with the headline set among them.', phone: 'On phones: two photos overlap above the headline and the rest are left out.' },
-    { id: 'single-product', bold: false, needs: 'product', desktop: 'Hero: one real product from the catalog as the hero, its photo large with its name, price and a button to its product page.', phone: 'On phones: the product photo, name, price and button stacked.' },
+    { id: 'single-product', bold: false, needs: 'product', desktop: 'Hero: one real product from the catalog as the hero, its photo large with its name and a button to its product page; never type its price, which the runtime owns and may change.', phone: 'On phones: the product photo, name and button stacked.' },
     { id: 'statement-strip', bold: true, needs: 'photos3', desktop: 'Hero: one statement in very large type, then a horizontal strip of photos below it.', phone: 'On phones: the photo strip scrolls sideways.' },
     { id: 'offset-frame', bold: true, needs: 'photos1', desktop: "Hero: a single photo inside a visible frame or border, with the headline placed offset so it overlaps the frame's edge.", phone: 'On phones: the frame narrows and the headline overlaps its bottom edge.' },
     { id: 'slow-slideshow', bold: false, needs: 'photos2', desktop: 'Hero: two or more photos cross-fading slowly (about 6 seconds each) behind a fixed headline, paused on hover and under prefers-reduced-motion.', phone: 'On phones: the same, showing a single photo under reduced motion.' },
@@ -90,9 +90,11 @@ export function frameDirection(draw: Partial<FrameDraw>, omit: Partial<Record<Fr
 const HEADER_WORDS = /(?<!\p{L})(logo|logotipo|cabecera|encabezado|header|men[uú]|navegaci[oó]n)(?!\p{L})/iu;
 const PLACE_WORDS = /(?<!\p{L})(centrad[oa]|centro|izquierda|derecha|lateral|arriba|abajo|fij[oa]|sticky|flotante)(?!\p{L})/iu;
 const HERO_WORDS = /(?<!\p{L})(portada|hero|primera pantalla|banner principal)(?!\p{L})/iu;
+// "portada" in passing ("mis productos en la portada", a template rework's "composición de la portada") is not a hero decision.
+const HERO_CHOICE = /(?<!\p{L})(fotos?|im[aá]gen(es)?|videos?|texto|tipograf[ií]a|collage|slider|carrusel)(?!\p{L})/iu;
 /** The merchant already decided: their words win over the dice for that part. When unsure, keep the draw. */
 export function frameOverrides(text: string): { header: boolean; hero: boolean } {
-  return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) };
+  return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }
 
 export function parseFrameDraw(content: unknown): Partial<FrameDraw> {
@@ -115,6 +117,43 @@ export function frameForRun(input: { enabled: boolean; fresh: boolean; previous:
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
     return saved ? { file: saved, paragraph: '' } : { paragraph: '' };
   }
-  const draw = drawFrame(input.random ?? Math.random, input.recent, input.available);
+  // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
+  const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
+  const draw = drawFrame(input.random ?? Math.random, Object.keys(own).length ? [own, ...input.recent] : input.recent, input.available);
   return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify(draw, null, 2) + '\n' }, paragraph: frameDirection(draw, frameOverrides(input.request)) };
+}
+
+/** Only the merchant's own words decide overrides. In the chat flow the instruction is composed: the agreed business
+ *  summary, YAPI's interpretation and inspected references come first, then "Pedido actual del comercio:". */
+const MERCHANT_MARKER = 'Pedido actual del comercio:';
+const DISPLAY_IMAGE = /\.(png|jpe?g|webp|avif|gif)$/i;
+const NOT_PHOTOS = new Set(['reference', 'unused', 'unknown', 'logo']);
+const FACT = /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2}|env[ií]o|delivery|entrega|recojo|retiro|pickup)/i;
+
+export function frameInputs(input: {
+  composedInstruction: string; merchantInstruction?: string;
+  assetLegend: Array<{ original: string; path: string }>; imageUses: Array<{ url: string; role?: string }>; logoUrl?: string | null;
+  items: Array<{ imageUrls?: string[] }>; locations?: unknown[]; businessInformation?: unknown;
+}): { request: string; available: FrameAvailable } {
+  const request = input.merchantInstruction?.trim() || input.composedInstruction.split(MERCHANT_MARKER).at(-1) || '';
+  const photos = new Set(input.assetLegend.filter(asset => {
+    if (!DISPLAY_IMAGE.test(asset.path) || (input.logoUrl && asset.original === input.logoUrl)) return false;
+    const role = input.imageUses.find(use => use.url === asset.original)?.role;
+    return !role || !NOT_PHOTOS.has(role);
+  }).map(asset => asset.path));
+  const info = typeof input.businessInformation === 'string' ? input.businessInformation : '';
+  return {
+    request,
+    available: {
+      photos: photos.size,
+      products: input.items.filter(item => item.imageUrls?.length).length,
+      facts: Boolean(input.locations?.length) || FACT.test(info),
+    },
+  };
+}
+
+/** Draw only where the paragraph is actually built: the Sep-5 author or the agent builder, never the sketch-first
+ *  path (it never reads the paragraph, so its draw would enter other stores' history unbuilt). */
+export function frameFresh(input: { sep5Author: boolean; agentEngine: boolean; sketchFirst: boolean; hasPrevious: boolean; redesign: boolean }): boolean {
+  return (input.sep5Author || (input.agentEngine && !input.sketchFirst)) && (!input.hasPrevious || input.redesign);
 }

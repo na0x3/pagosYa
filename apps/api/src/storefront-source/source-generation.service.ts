@@ -14,7 +14,7 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { frameForRun } from './design-engine/frame-draw';
+import { frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -464,22 +464,6 @@ export class SourceGenerationService {
     const useNext = !sep5Author && (isNextSource(previousFiles) || (!execution?.candidate || execution.evaluate === true) && this.config.get<string>('app.sourceFramework') !== 'static' && (!previous || redesign));
     // The tool-using agent (docs/superpowers/specs/2026-09-26-yapi-agent-design.md) builds component stores; candidates keep the single call.
     const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
-    // Spec 2026-10-10: the platform rolls the frame and hero; the model alone always lands on one header.
-    const frameFresh = (sep5Author || agentEngine) && (!previous || redesign);
-    const frame = frameForRun({
-      enabled: this.config.get<boolean>('app.yapiFrameDraw') === true,
-      fresh: frameFresh,
-      previous: previousFiles,
-      // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
-      recent: frameFresh ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [],
-      available: {
-        photos: assetLegend.filter(asset => !sourceVideo(asset.path)).length,
-        products: data.items.filter(item => item.imageUrls?.length).length,
-        facts: Boolean((data as { locations?: unknown[] }).locations?.length) || (typeof (dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation === 'string' && String((dto.brief as { businessInformation?: unknown }).businessInformation).trim().length > 0),
-      },
-      // The merchant's own instruction only: a brief like "menú del día, en el centro" is not a header request.
-      request: dto.instruction,
-    });
     const migrating = useNext && !!previous && !isNextSource(previousFiles);
     const editExisting = !!previous && !migrating;
     const oldFiles = previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path));
@@ -509,6 +493,26 @@ export class SourceGenerationService {
     const sketchFlag = this.config.get<boolean>('app.yapiSketchFirst') !== false;
     const sketchFirst = agentEngine && !execution?.candidate && sketchFlag && (!previous || (sketchBorn && sourceRedesignRequested(dto.instruction)));
     const sketchEdit = agentEngine && !execution?.candidate && sketchFlag && !sketchFirst && editExisting && sketchBorn;
+    // Spec 2026-10-10: the platform rolls the frame and hero; the model alone always lands on one header.
+    // Each decision below lives in design-engine/frame-draw.ts, where it is tested; this only passes values through.
+    const frameNow = frameFresh({ sep5Author, agentEngine, sketchFirst, hasPrevious: Boolean(previous), redesign });
+    const frameFacts = frameInputs({
+      composedInstruction: dto.instruction,
+      merchantInstruction: sourceRequestContext.getStore()?.request.instruction,
+      assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl,
+      items: data.items, locations: (data as { locations?: unknown[] }).locations,
+      businessInformation: (dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation,
+    });
+    const frameEnabled = this.config.get<boolean>('app.yapiFrameDraw') === true;
+    const frame = frameForRun({
+      enabled: frameEnabled,
+      fresh: frameNow,
+      previous: previousFiles,
+      // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
+      recent: frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [],
+      available: frameFacts.available,
+      request: frameFacts.request,
+    });
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {

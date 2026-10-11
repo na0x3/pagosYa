@@ -207,3 +207,7 @@ it('asks the self-review to check the drawn frame only when there is one', () =>
   expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).toMatch(/header and hero match FRAME AND HERO/);
   expect(sep5ReviewPrompt(input)).not.toMatch(/FRAME AND HERO/);
 });
+
+it('keeps the cart, Buscar and Mi cuenta reachable on phones even when the merchant overrides the drawn header', () => {
+  expect(SEP5_STORE_SHELL_FRAMED).toMatch(/On mobile all four stay reachable/);
+});
