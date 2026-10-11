@@ -4,7 +4,24 @@ import { sourceVisualState } from '../source-visual-state';
 import type { SourceProjectSnapshot } from '../source-project';
 
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
-export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[] };
+export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[] };
+
+const EMOJI = /\p{Extended_Pictographic}/u;
+/** Elements whose whole text is emoji: decoration, the clearest AI-site tell. Emoji inside a sentence is copy. */
+export function decorativeEmojiCount(doc: Document): number {
+  return Array.from(doc.body.querySelectorAll('*')).filter(el => el.children.length === 0 && EMOJI.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '')).length;
+}
+/** Circular stamp text (several "·" separators) in a round box without an SVG textPath: HTML cannot bend it. */
+export function fakeCircularTextCount(doc: Document, styleOf: (el: Element) => { radius: number; width: number; height: number }): number {
+  const hits = Array.from(doc.body.querySelectorAll('*')).filter(el => {
+    if (el.closest('svg') || el.querySelector('textPath')) return false;
+    const text = el.textContent || '';
+    if ((text.match(/[·•|]/g) || []).length < 2 || text.trim().length < 10) return false;
+    const box = styleOf(el);
+    return box.width >= 60 && Math.abs(box.width - box.height) <= box.width * 0.15 && box.radius >= box.width * 0.4;
+  });
+  return hits.filter(el => !hits.some(other => other !== el && other.contains(el))).length;
+}
 
 /** What the browser can say for certain, in the Spanish the merchant's notes are written in. */
 export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
@@ -15,6 +32,9 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
     ...(fact.account ? [] : [`${fact.width}px: no hay enlace data-pagosya-account fuera del pie de página.`]),
     ...(fact.cart ? [] : [`${fact.width}px: no hay botón de carrito con [data-cart-count].`]),
     ...(fact.brokenWords.length ? [`${fact.width}px: un título corta la palabra ${fact.brokenWords.map(word => `«${word}»`).join(', ')} a mitad de línea; dale ancho para que salte solo entre palabras.`] : []),
+    ...(fact.decorEmoji ? [`${fact.width}px: ${fact.decorEmoji} emoji usado(s) como decoración; reemplázalo(s) por una ilustración o quítalo(s).`] : []),
+    ...(fact.fakeCircle ? [`${fact.width}px: ${fact.fakeCircle} texto(s) circular(es) hecho(s) con un span girado; un texto en círculo necesita un SVG con <textPath>, o quítalo.`] : []),
+    ...(fact.overlaps?.length ? [`${fact.width}px: un texto se superpone a otro: ${fact.overlaps.join('; ')}.`] : []),
     ...fact.errors.map(error => `${fact.width}px: error de JavaScript: ${error}`),
   ]);
 }
@@ -64,6 +84,30 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           search: outsideFooter('a[href$="buscar.html"],form[role=search],input[type=search]'),
           account: outsideFooter('a[data-pagosya-account]'),
           cart: outsideFooter('[data-cart-count]'),
+          // Design draw round 2 quality floor (inlined: the page cannot import the helpers above).
+          decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && /\p{Extended_Pictographic}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
+          fakeCircle: (() => {
+            const hits = Array.from(document.body.querySelectorAll('*')).filter(el => {
+              if (el.closest('svg') || el.querySelector('textPath')) return false;
+              const text = el.textContent || ''; if ((text.match(/[·•|]/g) || []).length < 2 || text.trim().length < 10) return false;
+              // A computed radius can stay a percentage ("50%"); turn it into pixels of the box's width.
+              const r = el.getBoundingClientRect(), raw = getComputedStyle(el).borderTopLeftRadius, radius = raw.trim().endsWith('%') ? (parseFloat(raw) / 100) * r.width : parseFloat(raw) || 0;
+              return r.width >= 60 && Math.abs(r.width - r.height) <= r.width * 0.15 && radius >= r.width * 0.4;
+            });
+            return hits.filter(el => !hits.some(other => other !== el && other.contains(el))).length;
+          })(),
+          overlaps: (() => {
+            const leaves = Array.from(document.body.querySelectorAll('h1,h2,h3,p,a,button,li,span,strong,em')).filter(el => el.children.length === 0 && (el.textContent || '').trim().length > 2 && getComputedStyle(el).visibility !== 'hidden' && Number(getComputedStyle(el).opacity) > 0.2)
+              .map(el => ({ el, r: el.getBoundingClientRect() })).filter(item => item.r.width > 4 && item.r.height > 4).slice(0, 400);
+            const out: string[] = [];
+            for (let i = 0; i < leaves.length && out.length < 3; i++) for (let j = i + 1; j < leaves.length && out.length < 3; j++) {
+              const a = leaves[i], b = leaves[j];
+              if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+              const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+              if (w > 0 && h > 0 && w * h > 0.3 * Math.min(a.r.width * a.r.height, b.r.width * b.r.height)) out.push(`«${(a.el.textContent || '').trim().slice(0, 30)}» sobre «${(b.el.textContent || '').trim().slice(0, 30)}»`);
+            }
+            return out;
+          })(),
           // A word whose own line boxes sit on two lines was split mid-word: a heading squeezed into a narrow column.
           brokenWords: (() => {
             const broken: string[] = [];

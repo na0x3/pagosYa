@@ -2,7 +2,9 @@ jest.setTimeout(60_000);
 
 import { readFile } from 'node:fs/promises';
 import { kitPath } from '@pagosya/storefront-kit';
-import { captureSep5Draft, sep5MeasuredFacts } from './sep5-review-capture';
+import { join } from 'node:path';
+import { createRequire } from 'node:module';
+import { captureSep5Draft, decorativeEmojiCount, fakeCircularTextCount, sep5MeasuredFacts } from './sep5-review-capture';
 import { sourceProjectSnapshot } from '../source-project';
 import { applySourceLayoutBaseline } from '../source-layout-baseline';
 
@@ -97,4 +99,38 @@ it('ignores visually hidden headings when measuring broken words', async () => {
   const snapshot = await store(completeHeader, '', '<h3 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Productos destacados de temporada</h3>', 'body{margin:0}');
   const { facts } = await captureSep5Draft(snapshot);
   expect(facts.every(fact => fact.brokenWords.length === 0)).toBe(true);
+});
+
+// Design draw round 2 quality floor: the live coffee store shipped a "roundel" with straight text across an emoji.
+const { JSDOM } = createRequire(join(__dirname, '../../../../checkout/package.json'))('jsdom');
+const html = (body: string) => new JSDOM(`<body>${body}</body>`).window.document as Document;
+
+it('counts emoji used as decoration, not emoji inside a sentence', () => {
+  expect(decorativeEmojiCount(html('<div class="roundel"><span>YUNGAS · LA PAZ ·</span><strong>☕</strong></div>'))).toBe(1);
+  expect(decorativeEmojiCount(html('<p>Nos encanta el café ☕ de la mañana.</p>'))).toBe(0);
+});
+
+it('flags circular stamp text written without an SVG textPath, not round icon buttons', () => {
+  const round = () => ({ radius: 120, width: 240, height: 240 });
+  expect(fakeCircularTextCount(html('<div class="roundel"><span>YUNGAS · LA PAZ · CAFÉ ·</span></div>'), round)).toBe(1);
+  expect(fakeCircularTextCount(html('<div class="roundel"><svg><path id="c" d="M0 0"/><text><textPath href="#c">YUNGAS · LA PAZ · CAFÉ ·</textPath></text></svg></div>'), round)).toBe(0);
+  expect(fakeCircularTextCount(html('<button class="round">Ir</button>'), () => ({ radius: 22, width: 44, height: 44 }))).toBe(0);
+});
+
+it('reports emoji decoration, fake circular text and overlapping text in the merchant language', () => {
+  const base = { width: 1280, pageWidth: 1280, missingImages: 0, search: true, account: true, cart: true, brokenWords: [], errors: [] };
+  const facts = sep5MeasuredFacts([{ ...base, decorEmoji: 1, fakeCircle: 1, overlaps: ['«Una pausa» sobre «Explorar»'] }]).join('\n');
+  expect(facts).toMatch(/emoji/);
+  expect(facts).toMatch(/textPath/);
+  expect(facts).toMatch(/se superpone/);
+  expect(sep5MeasuredFacts([base])).toEqual([]);
+});
+
+it('measures the fake roundel and its emoji in a real browser', async () => {
+  const header = '<a href="index.html">Eje</a><a href="buscar.html">Buscar</a><a href="#" data-pagosya-account="login">Mi cuenta</a><button type="button"><span data-cart-count>0</span></button>';
+  const roundel = '<div class="roundel"><span>YUNGAS · LA PAZ · CAFÉ ·</span><strong>☕</strong></div>';
+  const css = '.roundel{width:240px;height:240px;border-radius:50%;display:grid;place-items:center;background:#c88}';
+  const { facts } = await captureSep5Draft(await store(header, '', roundel, css));
+  expect(facts[0].decorEmoji).toBe(1);
+  expect(facts[0].fakeCircle).toBe(1);
 });
