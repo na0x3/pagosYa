@@ -77,13 +77,24 @@ export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], av
   return draw;
 }
 
-export function frameDirection(draw: Partial<FrameDraw>, omit: Partial<Record<FramePart, boolean>> = {}): string {
-  const lines = PARTS.flatMap(part => {
+export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Partial<Record<FramePart | DesignPart, boolean>> = {}): string {
+  const frameLines = PARTS.flatMap(part => {
     const entry = !omit[part] && FRAME_CATALOGUE[part].find(item => item.id === draw[part]);
     return entry ? [`- ${entry.desktop} ${entry.phone}`] : [];
   });
-  if (!lines.length) return '';
-  return ["FRAME AND HERO: This store's frame was drawn for it so stores never repeat each other. Build exactly this structure and style it entirely in the store's own language; type, colour, spacing and motion are yours.", ...lines, 'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
+  const palette = !omit.palette && PALETTES.find(entry => entry.id === draw.palette);
+  const designLines = [
+    ...(palette ? [`- ${paletteLine(palette)}`] : []),
+    ...(['angle', 'structure', 'photos', 'button', 'hover'] as const).flatMap(part => {
+      const entry = !omit[part] && DESIGN_CATALOGUE[part].find(item => item.id === draw[part]);
+      return entry ? [`- ${entry.desktop}${entry.phone ? ` ${entry.phone}` : ''}`] : [];
+    }),
+  ];
+  if (!frameLines.length && !designLines.length) return '';
+  if (!designLines.length) return ["FRAME AND HERO: This store's frame was drawn for it so stores never repeat each other. Build exactly this structure and style it entirely in the store's own language; type, colour, spacing and motion are yours.", ...frameLines, 'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
+  return ["DESIGN DRAW: This store's design was drawn for it so stores never repeat each other, even two in the same business. Build exactly this and style it in the store's own language; fonts, spacing and motion are yours.", ...frameLines, ...designLines,
+    '- Quality: circular text only with an inline SVG <textPath>, never a rotated span; never use emoji as decoration; text never overlaps other text. Photo treatments apply to your own images, never inside the platform product page.',
+    'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
 }
 
 // \b treats accented letters as non-word characters, so "menú" would never match; whole words via letter lookarounds.
@@ -97,21 +108,27 @@ export function frameOverrides(text: string): { header: boolean; hero: boolean }
   return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }
 
-export function parseFrameDraw(content: unknown): Partial<FrameDraw> {
+export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw> & { category?: string } {
   let value: unknown;
   try { value = typeof content === 'string' ? JSON.parse(content) : undefined; } catch { return {}; }
   if (!value || typeof value !== 'object') return {};
-  const out: Partial<FrameDraw> = {};
+  const out: Partial<FrameDraw & DesignDraw> & { category?: string } = {};
   for (const part of PARTS) {
     const id = (value as Record<string, unknown>)[part];
     if (typeof id === 'string' && FRAME_CATALOGUE[part].some(entry => entry.id === id)) out[part] = id;
   }
+  for (const part of DESIGN_PARTS) {
+    const id = (value as Record<string, unknown>)[part];
+    if (typeof id === 'string' && designOptions(part, { photos: 99, products: 99, facts: true }).some(option => option.id === id)) (out as Record<string, string>)[part] = id;
+  }
+  const category = (value as Record<string, unknown>).category;
+  if (typeof category === 'string' && category.trim()) (out as Record<string, string>).category = category.trim().slice(0, 40);
   return out;
 }
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Partial<FrameDraw>[]; available: FrameAvailable; request: string; random?: () => number }): { file?: { path: string; content: string }; paragraph: string } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -119,8 +136,21 @@ export function frameForRun(input: { enabled: boolean; fresh: boolean; previous:
   }
   // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
   const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
-  const draw = drawFrame(input.random ?? Math.random, Object.keys(own).length ? [own, ...input.recent] : input.recent, input.available);
-  return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify(draw, null, 2) + '\n' }, paragraph: frameDirection(draw, frameOverrides(input.request)) };
+  const recent = Object.keys(own).length ? [own, ...input.recent] : input.recent;
+  const frame = drawFrame(input.random ?? Math.random, recent, input.available);
+  const frameOmit = frameOverrides(input.request);
+  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify(frame, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
+  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, input.category ?? '');
+  const designOmit = designOverrides(input.request);
+  const draw = { ...frame, ...design, category: input.category ?? '' };
+  const palette = designOmit.palette ? undefined : PALETTES.find(entry => entry.id === design.palette);
+  return {
+    file: { path: FRAME_DRAW_FILE, content: JSON.stringify(draw, null, 2) + '\n' },
+    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }),
+    planner: plannerDirection(draw, { palette: designOmit.palette }),
+    ...(designOmit.button ? {} : { dna: { button: design.button, hover: design.hover } }),
+    ...(palette ? { palette } : {}),
+  };
 }
 
 /** Only the merchant's own words decide overrides. In the chat flow the instruction is composed: the agreed business
@@ -156,4 +186,129 @@ export function frameInputs(input: {
  *  path (it never reads the paragraph, so its draw would enter other stores' history unbuilt). */
 export function frameFresh(input: { sep5Author: boolean; agentEngine: boolean; sketchFirst: boolean; hasPrevious: boolean; redesign: boolean }): boolean {
   return (input.sep5Author || (input.agentEngine && !input.sketchFirst)) && (!input.hasPrevious || input.redesign);
+}
+
+export type DesignPart = 'palette' | 'angle' | 'structure' | 'photos' | 'button' | 'hover';
+export type DesignDraw = Record<DesignPart, string>;
+export type Palette = { id: string; name: string; ink: string; paper: string; accent: string; accent2: string; dark: boolean };
+const DESIGN_PARTS: DesignPart[] = ['palette', 'angle', 'structure', 'photos', 'button', 'hover'];
+
+/** Colour worlds, deliberately not taken from the photos: the photos are styled to fit them. Ink on paper ≥ 7.6:1. */
+export const PALETTES: readonly Palette[] = [
+  { id: 'cobalt-bone', name: 'cobalt and bone', ink: '#1533c9', paper: '#f2ede3', accent: '#ff5a1f', accent2: '#0c0c0c', dark: false },
+  { id: 'black-acid', name: 'black and acid green', ink: '#f4f4ef', paper: '#0d0d0d', accent: '#c8ff2e', accent2: '#7a7a7a', dark: true },
+  { id: 'pink-olive', name: 'pastel pink and olive', ink: '#3b4114', paper: '#f7d6dc', accent: '#6b7a1f', accent2: '#e8476b', dark: false },
+  { id: 'tomato-cream', name: 'tomato red and cream', ink: '#161616', paper: '#fff4e2', accent: '#e5371f', accent2: '#2f5d50', dark: false },
+  { id: 'forest-lilac', name: 'forest green and lilac', ink: '#123b2a', paper: '#d9cff5', accent: '#1f6b45', accent2: '#f2f0ea', dark: false },
+  { id: 'grey-hot-orange', name: 'mono grey and hot orange', ink: '#1b1b1b', paper: '#e6e6e3', accent: '#ff4f00', accent2: '#8a8a86', dark: false },
+  { id: 'navy-butter', name: 'navy and butter yellow', ink: '#fff1b8', paper: '#12203f', accent: '#ffd23f', accent2: '#6f8bd6', dark: true },
+  { id: 'sage-rust', name: 'sage and rust', ink: '#1e2a22', paper: '#c9d3bf', accent: '#b5462a', accent2: '#f4f1e8', dark: false },
+  { id: 'ink-blueprint', name: 'blueprint blue and white', ink: '#eef3ff', paper: '#1739a6', accent: '#ffe14d', accent2: '#0b1b52', dark: true },
+  { id: 'plum-mint', name: 'plum and mint', ink: '#c9f5e3', paper: '#3a1240', accent: '#7ef0c1', accent2: '#ff8fb1', dark: true },
+  { id: 'mustard-black', name: 'mustard and black', ink: '#111111', paper: '#f2b705', accent: '#111111', accent2: '#fff6d6', dark: false },
+  { id: 'sky-red', name: 'sky blue and signal red', ink: '#0a2540', paper: '#cfe8ff', accent: '#e02424', accent2: '#ffffff', dark: false },
+  { id: 'charcoal-coral', name: 'charcoal and coral', ink: '#f5f1ea', paper: '#262626', accent: '#ff6f61', accent2: '#a7a29a', dark: true },
+  { id: 'teal-sand', name: 'deep teal and sand', ink: '#f3e6cf', paper: '#0f4c4c', accent: '#f2a65a', accent2: '#8fd6cf', dark: true },
+];
+
+export const DESIGN_CATALOGUE: Record<Exclude<DesignPart, 'palette'>, readonly FrameEntry[]> = {
+  angle: [
+    { id: 'origin-place', bold: false, desktop: 'Story angle: the place it comes from; the headline names the place or the route, sections follow the product from origin to the shopper.', phone: '' },
+    { id: 'process-numbers', bold: true, desktop: 'Story angle: the process told in real numbers from the brief (grams, minutes, degrees, days); the headline is a number or a measurement, sections are steps.', phone: '' },
+    { id: 'ritual-time', bold: false, desktop: 'Story angle: a time of day or a ritual; the headline names a moment, sections run through the day.', phone: '' },
+    { id: 'the-maker', bold: false, desktop: 'Story angle: the people who make it; the headline speaks in their voice, sections are what they do with their hands.', phone: '' },
+    { id: 'product-hero', bold: true, desktop: 'Story angle: the product itself is the protagonist; the headline is the product, sections zoom into its parts and choices.', phone: '' },
+    { id: 'humour', bold: true, desktop: 'Story angle: dry, warm humour; the headline is a short joke or a wink that only this business could make, sections stay useful.', phone: '' },
+    { id: 'manifesto', bold: true, desktop: 'Story angle: a manifesto; the headline states a belief, sections are short numbered convictions backed by real facts.', phone: '' },
+    { id: 'field-guide', bold: false, desktop: 'Story angle: a field guide; the headline invites the shopper to learn, sections explain how to choose between the products.', phone: '' },
+    { id: 'senses', bold: false, desktop: 'Story angle: the senses; the headline is a smell, sound, taste or texture, sections are each sense.', phone: '' },
+    { id: 'neighbourhood', bold: false, desktop: 'Story angle: the neighbourhood and its people; the headline names the street or the city, sections are local moments and how to pick up or receive.', phone: '' },
+  ],
+  structure: [
+    { id: 'catalog-first', bold: false, desktop: 'Page structure: the catalog right after the hero, then one short story section, then pickup and delivery, then contact.', phone: 'On phones: the catalog first, two products per row.' },
+    { id: 'story-scroll', bold: true, desktop: 'Page structure: one long story scroll of four or five chapters, each a full-width band with one idea and one photo or number, the catalog as the fourth chapter.', phone: 'On phones: one chapter per screen.' },
+    { id: 'lookbook', bold: true, needs: 'photos3', desktop: 'Page structure: a lookbook; large photos lead in an uneven grid with short captions, the catalog follows the photos.', phone: 'On phones: photos full width, captions under each.' },
+    { id: 'menu-board', bold: true, desktop: 'Page structure: a menu board; the catalog styled as a big printed menu with prices from the runtime, then a short note about the business.', phone: 'On phones: the menu as one long list.' },
+    { id: 'guide-compare', bold: false, desktop: 'Page structure: a guide; a short "how to choose" section comparing the products side by side, then the catalog, then answers to real questions.', phone: 'On phones: the comparison becomes stacked cards.' },
+    { id: 'magazine-issue', bold: true, desktop: 'Page structure: a magazine issue; a contents list, numbered features of different widths, a pull quote from the brief, then the catalog as the "shop" pages.', phone: 'On phones: one feature per screen with its number.' },
+    { id: 'single-focus', bold: true, needs: 'product', desktop: 'Page structure: one product in focus; a long detailed section about the main product with its photo, then the rest of the catalog smaller.', phone: 'On phones: the main product first, then the list.' },
+    { id: 'index-list', bold: true, desktop: 'Page structure: an index; every section is a numbered row in a long list that opens into its content, the catalog is one of the rows.', phone: 'On phones: the rows stay full width.' },
+  ],
+  photos: [
+    { id: 'natural', bold: false, desktop: 'Photo treatment: natural colour, generous crops, no filters.', phone: '' },
+    { id: 'black-white', bold: true, desktop: 'Photo treatment: every store photo in black and white (CSS grayscale), colour only from the palette.', phone: '' },
+    { id: 'duotone', bold: true, desktop: "Photo treatment: duotone in the palette's ink and accent (grayscale plus a mix-blend colour layer).", phone: '' },
+    { id: 'film-grain', bold: false, desktop: 'Photo treatment: slightly warm, with a fine film-grain overlay (an SVG noise layer at low opacity).', phone: '' },
+    { id: 'framed-polaroid', bold: true, desktop: 'Photo treatment: photos in thick paper frames like prints, slightly rotated, never covering text.', phone: '' },
+    { id: 'tight-crops', bold: true, desktop: 'Photo treatment: very tight crops on details (object-position on the interesting part), never a whole scene.', phone: '' },
+    { id: 'one-per-screen', bold: true, needs: 'photos2', desktop: 'Photo treatment: one photo per screen-height band, full width, with nothing else in the band except a short caption.', phone: '' },
+  ],
+  button: [
+    { id: 'pill', bold: false, desktop: 'Buttons: fully rounded pills; chips and quantity controls rounded too.', phone: '' },
+    { id: 'block', bold: false, desktop: 'Buttons: solid blocks with square corners and generous padding.', phone: '' },
+    { id: 'underline', bold: true, desktop: 'Buttons: no box at all, text with a thick underline and an arrow.', phone: '' },
+    { id: 'tag', bold: true, desktop: 'Buttons: price-tag shapes with one cut corner and a small hole dot.', phone: '' },
+    { id: 'stamp', bold: true, desktop: 'Buttons: rubber-stamp look, uppercase, double border, slightly rotated.', phone: '' },
+    { id: 'outline', bold: false, desktop: 'Buttons: thick outlines that fill on hover.', phone: '' },
+    { id: 'ghost', bold: false, desktop: 'Buttons: quiet ghost buttons, a hairline and lots of letter spacing.', phone: '' },
+    { id: 'split', bold: true, desktop: 'Buttons: split in two, the label and a separate square with an arrow.', phone: '' },
+    { id: 'sticker', bold: true, desktop: 'Buttons: stickers with a hard offset shadow and a small tilt.', phone: '' },
+    { id: 'ticket', bold: true, desktop: 'Buttons: ticket stubs with notched ends and a dashed line.', phone: '' },
+    { id: 'bubbly', bold: true, desktop: 'Buttons: soft bubbly shapes with an inner highlight.', phone: '' },
+    { id: 'brutal', bold: true, desktop: 'Buttons: brutalist, thick black border, hard shadow, no radius.', phone: '' },
+  ],
+  hover: [
+    { id: 'lift', bold: false, desktop: 'Button hover: lifts slightly with a shadow.', phone: '' },
+    { id: 'fill', bold: false, desktop: 'Button hover: its edge fills inward with its own colour.', phone: '' },
+    { id: 'underline-grow', bold: false, desktop: 'Button hover: an underline grows across the label.', phone: '' },
+    { id: 'tilt', bold: true, desktop: 'Button hover: tilts a couple of degrees.', phone: '' },
+    { id: 'shine', bold: true, desktop: 'Button hover: a light sweep crosses it.', phone: '' },
+  ],
+};
+
+const designOptions = (part: DesignPart, available: FrameAvailable): Array<{ id: string }> => part === 'palette' ? [...PALETTES] : DESIGN_CATALOGUE[part].filter(entry => fits(entry, available));
+const DESIGN_AVOID = new Set<DesignPart>(['palette', 'angle', 'structure', 'button']);
+
+export function drawDesign(random: () => number, recent: Array<Partial<DesignDraw> & { category?: string }>, available: FrameAvailable, category: string): DesignDraw {
+  const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
+  const draw = {} as DesignDraw;
+  for (const part of DESIGN_PARTS) {
+    const options = designOptions(part, available);
+    if (!DESIGN_AVOID.has(part)) { draw[part] = pick(options).id; continue; }
+    // The same kind of business counts double: two cafés must not share a colour world while another is free.
+    const weight = (item: { category?: string }) => (category && item.category === category ? 2 : 1);
+    const uses = new Map(options.map(option => [option.id, recent.filter(item => item[part] === option.id).reduce((sum, item) => sum + weight(item), 0)]));
+    const fewest = Math.min(...uses.values());
+    draw[part] = pick(options.filter(option => uses.get(option.id) === fewest)).id;
+  }
+  return draw;
+}
+
+const PALETTE_WORDS = /(?<!\p{L})(colou?r(es)?|paleta|tonos?)(?!\p{L})/iu;
+const PHOTO_WORDS = /(?<!\p{L})(blanco y negro|filtros?|sepia|fotos naturales|sin filtro)(?!\p{L})/iu;
+const BUTTON_WORDS = /(?<!\p{L})botone?s?(?!\p{L})/iu;
+/** The merchant already decided: their words win over the dice for that part. */
+export function designOverrides(text: string): { palette: boolean; photos: boolean; button: boolean } {
+  return { palette: PALETTE_WORDS.test(text), photos: PHOTO_WORDS.test(text), button: BUTTON_WORDS.test(text) };
+}
+
+const paletteLine = (palette: Palette) => `Colour world: ${palette.name}, ${palette.dark ? 'a dark page' : 'a light page'}: background ${palette.paper}, text ${palette.ink}, accent ${palette.accent}, second accent ${palette.accent2}. Do not take colours from the photos; style the photos to sit in this world.`;
+
+export function plannerDirection(draw: Partial<DesignDraw>, omit: Partial<Record<DesignPart, boolean>> = {}): string {
+  const angle = !omit.angle && DESIGN_CATALOGUE.angle.find(entry => entry.id === draw.angle);
+  const palette = !omit.palette && PALETTES.find(entry => entry.id === draw.palette);
+  if (!angle && !palette) return '';
+  return ['DRAWN FOR THIS STORE (build every concept on it; choose fonts freely):', ...(angle ? [angle.desktop] : []), ...(palette ? [paletteLine(palette)] : [])].join(' ');
+}
+
+const luminance = (hex: string) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+const ratio = (a: string, b: string) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+export function paletteBrandCss(palette: Palette): string {
+  const onAccent = [palette.ink, palette.paper, '#111111', '#ffffff'].sort((a, b) => ratio(b, palette.accent) - ratio(a, palette.accent))[0];
+  return `/* Drawn colour world (spec 2026-10-10 design draw round 2): ${palette.name}. */\n:root {\n  --brand-background: ${palette.paper};\n  --brand-foreground: ${palette.ink};\n  --brand-accent: ${palette.accent};\n  --brand-accent-foreground: ${onAccent};\n  --brand-surface: ${palette.accent2};\n}\n`;
+}
+
+export function designCategory(brief: unknown): string {
+  const value = brief && typeof brief === 'object' ? (brief as { businessType?: unknown }).businessType : undefined;
+  return typeof value === 'string' ? value.trim().toLowerCase().slice(0, 40) : '';
 }

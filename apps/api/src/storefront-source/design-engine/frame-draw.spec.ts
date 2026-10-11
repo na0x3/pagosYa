@@ -1,4 +1,4 @@
-import { drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, parseFrameDraw, FRAME_CATALOGUE, FRAME_DRAW_FILE, type FrameAvailable } from './frame-draw';
+import { drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const rich: FrameAvailable = { photos: 9, products: 9, facts: true };
@@ -128,5 +128,98 @@ describe('frame inputs from a real run', () => {
   it('never asks for a typed price in the product hero', () => {
     const entry = FRAME_CATALOGUE.hero.find(item => item.id === 'single-product')!;
     expect(entry.desktop).toMatch(/never type/i);
+  });
+});
+
+describe('design draw round 2', () => {
+  const lum = (hex: string) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+  const hsl = (hex: string) => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255); const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)); const h = d === 0 ? 0 : max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4); return { h: (h + 360) % 360, s, l }; };
+
+  it('has the agreed catalogues, readable palettes and no brown-on-cream', () => {
+    expect(PALETTES).toHaveLength(14);
+    expect([DESIGN_CATALOGUE.angle.length, DESIGN_CATALOGUE.structure.length, DESIGN_CATALOGUE.photos.length, DESIGN_CATALOGUE.button.length, DESIGN_CATALOGUE.hover.length]).toEqual([10, 8, 7, 12, 5]);
+    expect(DESIGN_CATALOGUE.button.map(entry => entry.id).sort()).toEqual(['block', 'brutal', 'bubbly', 'ghost', 'outline', 'pill', 'split', 'stamp', 'sticker', 'tag', 'ticket', 'underline']);
+    for (const palette of PALETTES) {
+      expect(contrast(palette.ink, palette.paper)).toBeGreaterThanOrEqual(4.5);
+      const ink = hsl(palette.ink), paper = hsl(palette.paper);
+      const brownInk = ink.h >= 10 && ink.h <= 45 && ink.s > 0.15 && ink.l < 0.35, creamPaper = paper.h >= 25 && paper.h <= 55 && paper.s > 0.2 && paper.l > 0.85;
+      expect(brownInk && creamPaper).toBe(false);
+    }
+  });
+
+  it('avoids recent palettes and angles, the same business first', () => {
+    const recent = PALETTES.slice(0, 13).map((palette, i) => ({ palette: palette.id, angle: DESIGN_CATALOGUE.angle[i % 9].id, category: 'café' }));
+    for (let seed = 1; seed < 30; seed++) {
+      const draw = drawDesign(seeded(seed), recent, rich, 'café');
+      expect(draw.palette).toBe(PALETTES[13].id);
+      expect(draw.angle).toBe(DESIGN_CATALOGUE.angle[9].id);
+    }
+    // p0 used once by a florist, p1 once by a café, every other palette twice by florists: only the double weight
+    // of the café use separates p0 from p1.
+    const mixed = [{ palette: PALETTES[0].id, category: 'florería' }, { palette: PALETTES[1].id, category: 'café' }, ...PALETTES.slice(2).flatMap(p => [{ palette: p.id, category: 'florería' }, { palette: p.id, category: 'florería' }])];
+    for (let seed = 1; seed < 30; seed++) expect(drawDesign(seeded(seed), mixed, rich, 'café').palette).toBe(PALETTES[0].id);
+    expect(drawDesign(seeded(5), [], rich, 'café')).toEqual(drawDesign(seeded(5), [], rich, 'café'));
+  });
+
+  it('never asks for photos or a product the store lacks', () => {
+    for (let seed = 1; seed < 200; seed++) {
+      const draw = drawDesign(seeded(seed), [], { photos: 0, products: 0, facts: false }, '');
+      expect(['lookbook', 'single-focus']).not.toContain(draw.structure);
+      expect(draw.photos).not.toBe('one-per-screen');
+    }
+  });
+
+  it('lets the merchant keep their colours, buttons and photos', () => {
+    expect(designOverrides('usa mis colores verde y blanco')).toEqual({ palette: true, photos: false, button: false });
+    expect(designOverrides('quiero botones redondos')).toEqual({ palette: false, photos: false, button: true });
+    expect(designOverrides('fotos en blanco y negro')).toEqual({ palette: false, photos: true, button: false });
+    expect(designOverrides('Hazme la tienda de café')).toEqual({ palette: false, photos: false, button: false });
+  });
+
+  it('writes the design draw for YAPI and the angle and palette for the planner', () => {
+    const draw = { header: 'side-rail', cart: 'icon-dot', footer: 'quiet-line', hero: 'type-only', palette: 'cobalt-bone', angle: 'process-numbers', structure: 'menu-board', photos: 'duotone', button: 'sticker', hover: 'tilt' };
+    const text = frameDirection(draw);
+    expect(text.startsWith('DESIGN DRAW:')).toBe(true);
+    expect(text).toContain('#1533c9');
+    for (const part of ['angle', 'structure', 'photos', 'button', 'hover'] as const) expect(text).toContain(DESIGN_CATALOGUE[part].find(entry => entry.id === draw[part])!.desktop);
+    expect(text).toMatch(/textPath/);
+    expect(frameDirection(draw, { palette: true })).not.toContain('#1533c9');
+    expect(plannerDirection(draw)).toMatch(/process/i);
+    expect(plannerDirection(draw)).toContain('#1533c9');
+    expect(plannerDirection({})).toBe('');
+  });
+
+  it('turns a palette into brand tokens with a readable accent text colour', () => {
+    const palette = PALETTES.find(p => p.id === 'cobalt-bone')!;
+    const css = paletteBrandCss(palette);
+    for (const token of ['--brand-background', '--brand-foreground', '--brand-accent', '--brand-accent-foreground', '--brand-surface']) expect(css).toContain(token);
+    const fg = css.match(/--brand-accent-foreground:\s*(#[0-9a-f]{6})/i)![1];
+    expect(contrast(fg, palette.accent)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('reads the business category from the brief', () => {
+    expect(designCategory({ businessType: '  Café de Especialidad ' })).toBe('café de especialidad');
+    expect(designCategory({})).toBe('');
+    expect(designCategory(null)).toBe('');
+  });
+
+  it('adds the design draw only to fresh runs that ask for it', () => {
+    const fresh = frameForRun({ enabled: true, designEnabled: true, category: 'café', fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(4) });
+    const saved = parseFrameDraw(fresh.file!.content);
+    expect(saved).toMatchObject({ category: 'café' });
+    expect(Object.keys(saved)).toEqual(expect.arrayContaining(['palette', 'angle', 'structure', 'photos', 'button', 'hover']));
+    expect(fresh.paragraph.startsWith('DESIGN DRAW:')).toBe(true);
+    expect(fresh.dna).toEqual({ button: saved.button, hover: saved.hover });
+    expect(fresh.palette?.id).toBe(saved.palette);
+    expect(fresh.planner).not.toBe('');
+    const kept = frameForRun({ enabled: true, designEnabled: true, category: 'café', fresh: true, previous: [], recent: [], available: rich, request: 'usa mis colores verde y blanco, botones redondos', random: seeded(4) });
+    expect(kept.palette).toBeUndefined();
+    expect(kept.dna).toBeUndefined();
+    expect(kept.paragraph).not.toMatch(/#[0-9a-f]{6}/i);
+    const off = frameForRun({ enabled: true, designEnabled: false, fresh: true, previous: [], recent: [], available: rich, request: 'x', random: seeded(4) });
+    expect(off.paragraph.startsWith('FRAME AND HERO:')).toBe(true);
+    expect('planner' in off || 'dna' in off || 'palette' in off).toBe(false);
   });
 });
