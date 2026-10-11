@@ -369,7 +369,8 @@ describe('recent frame draws', () => {
     const query = prisma.$queryRaw.mock.calls[0][0];
     expect(query.text).toContain('DISTINCT ON');
     expect(query.text).toContain('jsonb_array_elements');
-    expect(query.text).toContain('LIMIT 6');
+    expect(query.text).toMatch(/LIMIT \$\d+/);
+    expect(query.values).toContain(6);
     expect(query.values).toContain('s1');
     expect(query.values).toContain('frame-draw.json');
   });

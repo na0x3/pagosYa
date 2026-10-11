@@ -1,4 +1,4 @@
-import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, CONVENTIONAL_HEADERS } from './playbook';
+import { recentForKind, contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, CONVENTIONAL_HEADERS } from './playbook';
 import { SOURCE_FONT_IDS } from '../source-font-catalog';
 import { DESIGN_CATALOGUE, FRAME_CATALOGUE } from './frame-draw';
 
@@ -121,4 +121,13 @@ it('rules out novelty ornaments on a professional build, not on a bold one', () 
 it('reads pet accessories as a general store, fashion accessories as clothing', () => {
   expect(detectKind('tienda de alimento y accesorios para perros y gatos')).toBe('general');
   expect(detectKind('accesorios de moda y carteras de cuero')).toBe('clothing');
+});
+
+// Night run 2026-10-11: a law firm drew the accountant's family because 12 other stores had pushed the accountant out
+// of the last six. Repeats are judged against the last stores of the same kind, however many others came between.
+it('keeps the last stores of the same kind in view, beyond the newest six of any kind', () => {
+  const draws = Array.from({ length: 12 }, (_, i) => ({ kind: i === 10 ? 'services' : 'cafe-food', family: i === 10 ? 'services-clear' : 'cafe-shop', header: `h${i}` }));
+  const view = recentForKind(draws, 'services');
+  expect(view.families).toEqual(['services-clear']);
+  expect(view.dice.map(draw => draw.header)).toEqual(['h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h10']);
 });

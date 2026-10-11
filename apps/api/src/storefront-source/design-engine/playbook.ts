@@ -128,6 +128,13 @@ export function detectKind(text: string): PlaybookKind {
   return best;
 }
 
+/** Draws for this run's repeat avoidance: the newest stores of any kind for the dice, plus the last stores of the same
+ *  kind (however many others came between) for the dice and the family pick. */
+export function recentForKind<T extends { kind?: unknown; family?: unknown }>(draws: T[], kind: string | undefined, newest = 6, sameKind = 4): { dice: T[]; families: string[] } {
+  const same = kind ? draws.filter(draw => draw.kind === kind).slice(0, sameKind) : [];
+  return { dice: [...draws.slice(0, newest), ...same.filter(draw => !draws.slice(0, newest).includes(draw))], families: same.map(draw => String(draw.family ?? '')) };
+}
+
 export function pickFamily(entry: PlaybookEntry, random: () => number, recentFamilies: string[]): StyleFamily {
   const uses = entry.families.map(family => recentFamilies.filter(id => id === family.id).length);
   const fewest = Math.min(...uses);

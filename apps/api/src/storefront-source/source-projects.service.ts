@@ -89,7 +89,7 @@ export class SourceProjectsService {
   }
 
   /** The frame draws of the six most recent other stores (30 days), read server-side so no bundled photo bytes travel. */
-  async recentFrameDraws(storeId: string, now = new Date()): Promise<ReturnType<typeof parseFrameDraw>[]> {
+  async recentFrameDraws(storeId: string, now = new Date(), limit = 6): Promise<ReturnType<typeof parseFrameDraw>[]> {
     const since = new Date(now.getTime() - 30 * 86_400_000);
     const rows = await this.prisma.$queryRaw<Array<{ content: string }>>(Prisma.sql`
       WITH latest AS (
@@ -97,7 +97,7 @@ export class SourceProjectsService {
         FROM "StoreSourceVersion" v
         WHERE v."storeId" <> ${storeId} AND v."createdAt" >= ${since}
         ORDER BY v."storeId", v."createdAt" DESC
-      ), top AS (SELECT * FROM latest ORDER BY "createdAt" DESC LIMIT 6)
+      ), top AS (SELECT * FROM latest ORDER BY "createdAt" DESC LIMIT ${limit})
       SELECT f->>'content' AS content
       FROM top JOIN "StoreSourceVersion" v ON v."storeId" = top."storeId" AND v.revision = top.revision,
       LATERAL jsonb_array_elements(v.snapshot->'files') f

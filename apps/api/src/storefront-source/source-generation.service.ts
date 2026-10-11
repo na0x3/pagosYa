@@ -15,7 +15,7 @@ import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
-import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK } from './design-engine/playbook';
+import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -521,9 +521,9 @@ export class SourceGenerationService {
       delivery: Boolean(storeData.shippingEnabled || storeData.shippingPickupEnabled) || /(env[ií]os?|delivery|retiro|recojo|pickup|entrega)/i.test(businessInfo),
     };
     // Never blocks a build: a synchronous throw becomes a rejection, like the fingerprint lookups below.
-    const recentDraws = frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId)).catch(() => []) : [];
+    const recentDraws = frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId, new Date(), 40)).catch(() => []) : [];
     const playbookEntry = kind ? PLAYBOOK[kind] : undefined;
-    const playbookFamily = playbookEntry ? pickFamily(playbookEntry, Math.random, recentDraws.filter(draw => draw.kind === kind).map(draw => String(draw.family ?? ''))) : undefined;
+    const playbookFamily = playbookEntry ? pickFamily(playbookEntry, Math.random, recentForKind(recentDraws, kind).families) : undefined;
     const frame = frameForRun({
       enabled: frameEnabled,
       designEnabled: this.config.get<boolean>('app.yapiDesignDraw') === true,
@@ -531,7 +531,7 @@ export class SourceGenerationService {
       category: designCategory(dto.brief),
       fresh: frameNow,
       previous: previousFiles,
-      recent: recentDraws,
+      recent: recentForKind(recentDraws, kind).dice,
       ...(playbookEntry && playbookFamily ? { playbook: { kind: playbookEntry.kind, family: playbookFamily, bold: boldAsked } } : {}),
       available: frameFacts.available,
       request: frameFacts.request,
