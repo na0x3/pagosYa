@@ -250,7 +250,7 @@ export const DESIGN_CATALOGUE: Record<Exclude<DesignPart, 'palette'>, readonly F
     { id: 'product-hero', bold: true, desktop: 'Story angle: the product itself is the protagonist; the headline is the product, sections zoom into its parts and choices.', phone: '' },
     { id: 'humour', bold: true, desktop: 'Story angle: dry, warm humour; the headline is a short joke or a wink that only this business could make, sections stay useful.', phone: '' },
     { id: 'manifesto', bold: true, desktop: 'Story angle: a manifesto; the headline states a belief, sections are short numbered convictions backed by real facts.', phone: '' },
-    { id: 'field-guide', bold: false, desktop: 'Story angle: a field guide; the headline invites the shopper to learn, sections explain how to choose between the products.', phone: '' },
+    { id: 'field-guide', bold: false, desktop: 'Story angle: helping the shopper choose; the headline names what the shopper gets, sections explain plainly how to pick between the products (never label the page a guide).', phone: '' },
     { id: 'senses', bold: false, desktop: 'Story angle: the senses; the headline is a smell, sound, taste or texture, sections are each sense.', phone: '' },
     { id: 'neighbourhood', bold: false, desktop: 'Story angle: the neighbourhood and its people; the headline names the street or the city, sections are local moments and how to pick up or receive.', phone: '' },
   ],

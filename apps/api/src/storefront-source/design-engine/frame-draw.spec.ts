@@ -344,3 +344,8 @@ describe('story angles fit the kind of business', () => {
     }
   });
 });
+
+// Night run 2026-10-11: the angle's own name leaked into copy ("Guía de campo", "Guía de barra").
+it('never hands the author an angle name it could copy onto the page', () => {
+  expect(DESIGN_CATALOGUE.angle.find(entry => entry.id === 'field-guide')!.desktop).not.toMatch(/field guide/i);
+});
