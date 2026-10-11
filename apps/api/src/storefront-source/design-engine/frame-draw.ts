@@ -327,6 +327,8 @@ const COLOUR_NAMES = '(?:verde|blanco|negro|rojo|azul|amarillo|rosa|rosado|morad
 // "mis colores", "colores de (mi) marca", "paleta", or a colour named right after en/de color/fondo: "mi tienda en verde y blanco".
 // "zapatos negros", "varios colores" and "un tono cercano" are not colour decisions.
 const PALETTE_WISH = new RegExp(`(?<!\\p{L})(mis colores|colores de (mi |la )?marca|mi color|paleta)(?!\\p{L})|(?<!\\p{L})(en|de color|colou?r(es)?|fondo)\\s+${COLOUR_NAMES}(?!\\p{L})`, 'iu');
+const QUOTED_NAME = /[«"“][^»"”\n]{1,80}[»"”]/gu;
+const PRICED = /(?<!\p{L})(bs\.?|bob)\s*\d|\d\s*(bs|bob)(?!\p{L})/iu;
 const PHOTO_PHRASE = /(?<!\p{L})(fotos?|im[aá]gen(es)?)\s+en\s+blanco y negro(?!\p{L})/giu;
 const PHOTO_WISH = /(?<!\p{L})(blanco y negro|sepia)(?!\p{L})/iu;
 const PHOTO_CONTEXT = /(?<!\p{L})(fotos?|im[aá]gen(es)?)(?!\p{L})/iu;
@@ -336,8 +338,10 @@ const BUTTON_SHAPE = /(?<!\p{L})(redond\w*|cuadrad\w*|p[ií]ldora|pill|bordes?|e
 /** The merchant already decided: their words win over the dice for that part. When unsure, keep the draw. */
 export function designOverrides(text: string): { palette: boolean; photos: boolean; button: boolean } {
   const photos = PHOTO_WISH.test(text) || (PHOTO_CONTEXT.test(text) && PHOTO_FILTER.test(text));
-  // "fotos en blanco y negro" is about photos, not the store's colours.
-  const palette = PALETTE_WISH.test(text.replace(PHOTO_PHRASE, ' '));
+  // "fotos en blanco y negro" is about photos, not the store's colours; nor is a colour inside a product's name, quoted
+  // or listed with its price («Flores en azul a Bs 120»).
+  const colourWords = text.replace(PHOTO_PHRASE, ' ').replace(QUOTED_NAME, ' ').split(/[,;\n]|\.(?!\d)/).filter(chunk => !PRICED.test(chunk)).join(' . ');
+  const palette = PALETTE_WISH.test(colourWords);
   return { palette, photos, button: BUTTON.test(text) && BUTTON_SHAPE.test(text) };
 }
 

@@ -180,6 +180,14 @@ describe('design draw round 2', () => {
     expect(designOverrides('Hazme la tienda de café')).toEqual({ palette: false, photos: false, button: false });
   });
 
+  // Night run 2026-10-11 (Cuadrízate): the print «Flores en azul» in the product list skipped the drawn colour world.
+  it('reads a colour in a priced or quoted product name as the product, not a colour wish', () => {
+    expect(designOverrides('Vendemos láminas de arte. Crea estos productos: Flores en azul a Bs 120, Cerro rojo a Bs 90.').palette).toBe(false);
+    expect(designOverrides('Nuestra lámina «Mar en azul» es la más vendida.').palette).toBe(false);
+    expect(designOverrides('Crea estos productos: Flores en azul a Bs 120. Quiero la tienda en azul.').palette).toBe(true);
+    expect(designOverrides('usa fondo negro, crea estos productos: taza Bs 40').palette).toBe(true);
+  });
+
   it('writes the design draw for YAPI and the angle and palette for the planner', () => {
     const draw = { header: 'side-rail', cart: 'icon-dot', footer: 'quiet-line', hero: 'type-only', palette: 'cobalt-bone', angle: 'process-numbers', structure: 'menu-board', photos: 'duotone', button: 'sticker', hover: 'tilt' };
     const text = frameDirection(draw);
