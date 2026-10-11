@@ -757,7 +757,7 @@ export class SourceGenerationService {
               .catch(error => { if (signal.aborted) throw error; this.logger.warn(JSON.stringify({ event: 'style_proposal_failed', generationId: run.id })); return undefined; });
           }
           if (styled && styled.concepts.length >= 2) {
-            return await this.saveStyleProposal({ runId: run.id, dto, imageUses, redesign, styleSlots, design: styled, assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits });
+            return await this.saveStyleProposal({ runId: run.id, storeId, dto, imageUses, redesign, styleSlots, design: styled, assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits });
           }
           if (styled) {
             // One card left: build it straight away, on its own drawn slot.
@@ -1604,9 +1604,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     } finally { clearInterval(heartbeat); }
   }
 
-  private async saveStyleProposal(input: { runId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; design: SourceDesign; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult> {
+  private async saveStyleProposal(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; design: SourceDesign; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult> {
     const proposal: StyleProposal = { version: 1, status: 'RUNNING', slots: input.styleSlots, design: input.design, heroes: input.design.concepts.map(() => null), assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt: new Date().toISOString() };
-    const save = (data: Record<string, unknown> = {}) => this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId }, data: { proposal: proposal as unknown as Prisma.InputJsonValue, ...data } });
+    // Only a row this run still holds: once a sweep or a lost lease ends it, sibling heroes stop writing and the proposal is never revived.
+    const save = (data: Record<string, unknown> = {}) => this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: { proposal: proposal as unknown as Prisma.InputJsonValue, ...data } });
     await save();
     const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
     const photoPath = photo ? input.assetLegend.find(entry => entry.original === photo.url)?.path : undefined;
@@ -1615,13 +1616,15 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const slot = input.styleSlots[concept.card!.slot];
       const palette = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
       const facts: HeroFacts = { storeName: input.storeName, logoPath, photoPath, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette, fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode };
-      proposal.heroes[index] = await writeStyleHero({ facts, concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: input.signal, attempts: input.attempts });
+      proposal.heroes[index] = await writeStyleHero({ facts, concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: input.signal, attempts: input.attempts, record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', input.model, body, attempt.durationMs, attempt.status) });
       await save();
     }));
+    input.signal.throwIfAborted();
     proposal.status = 'AWAITING_STYLE';
     const successful = input.attempts.filter(attempt => attempt.status === 'COMPLETED');
     const credits = input.freeRun ? 0 : successful.every(attempt => attempt.usage) ? Math.min(input.maxCredits, Math.ceil(successful.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    await save({ status: 'AWAITING_STYLE', activeStoreId: null, credits, attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() });
+    const completed = await save({ status: 'AWAITING_STYLE', activeStoreId: null, credits, attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() });
+    if (completed.count !== 1) throw new ConflictException('La generación expiró. Tu revisión anterior sigue guardada.');
     return { styleProposal: { generationId: input.runId, cards: input.design.concepts.length } };
   }
 }

@@ -112,7 +112,7 @@ export function templateHero(facts: HeroFacts): string {
 
 const HERO_SCHEMA = { type: 'object', additionalProperties: false, required: ['html'], properties: { html: { type: 'string' } } };
 
-export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceDesignConcept; direction: string; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[] }): Promise<{ html: string; source: 'model' | 'template' }> {
+export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceDesignConcept; direction: string; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; /** Meters the call, like the planner's record; a failure here never costs the card. */ record?: (body: unknown, attempt: DesignPlanningAttempt) => Promise<unknown> }): Promise<{ html: string; source: 'model' | 'template' }> {
   const { facts } = input;
   const prompt = [
     'Write ONLY the header and the first screen (hero) of this storefront as one self-contained HTML fragment: a <style> block followed by markup. No <script>, no external URLs, no event handlers. It is a preview card, so nothing needs to work; it must look like the real store.',
@@ -147,5 +147,8 @@ export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceD
     attempt.failureReason = (error instanceof Error ? error.message : 'hero falló').slice(0, 300);
     attempt.usage ??= sourceUsage(input.model, body?.usage);
     return { html: templateHero(facts), source: 'template' };
-  } finally { attempt.durationMs = Date.now() - started; }
+  } finally {
+    attempt.durationMs = Date.now() - started;
+    await Promise.resolve().then(() => input.record?.(body, attempt)).catch(() => undefined);
+  }
 }

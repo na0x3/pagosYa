@@ -153,3 +153,20 @@ it('keeps a usable model hero', async () => {
   const out = await writeStyleHero({ facts, concept: { name: 'x' } as any, direction: 'd', model: 'gpt-5.6-terra', provider: { endpoint: 'https://api.openai.com/v1/responses', name: 'OpenAI' }, apiKey: 'k', budget: new SourceRequestBudget(200), signal: new AbortController().signal, attempts: [] });
   expect(out).toEqual({ html: expect.stringContaining('<h1>Hola</h1>'), source: 'model' });
 });
+
+it('records every hero call for metering, on success and on the template fallback', async () => {
+  const base = { facts, concept: { name: 'x' } as any, direction: 'd', model: 'gpt-5.6-terra' as const, provider: { endpoint: 'https://api.openai.com/v1/responses', name: 'OpenAI' }, apiKey: 'k', budget: new SourceRequestBudget(200), signal: new AbortController().signal, attempts: [] };
+  const ok = { status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ html: '<header><span data-store-name>Café Buna</span></header><section><h1>Hola</h1></section>' }) }] }] };
+  const record = jest.fn().mockResolvedValue(undefined);
+  jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(ok)));
+  expect((await writeStyleHero({ ...base, record })).source).toBe('model');
+  expect(record).toHaveBeenLastCalledWith(ok, expect.objectContaining({ status: 'COMPLETED', durationMs: expect.any(Number) }));
+  jest.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('down'));
+  expect((await writeStyleHero({ ...base, record })).source).toBe('template');
+  expect(record).toHaveBeenLastCalledWith(null, expect.objectContaining({ status: 'FAILED' }));
+  // A metering failure never costs the merchant the card.
+  record.mockRejectedValueOnce(new Error('metering down'));
+  jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(ok)));
+  expect((await writeStyleHero({ ...base, record })).source).toBe('model');
+  expect(record).toHaveBeenCalledTimes(3);
+});

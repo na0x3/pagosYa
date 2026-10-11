@@ -42,11 +42,12 @@ function setup() {
     'app.yapiStylePick': true, 'app.sep5Author': true, 'app.yapiPlaybook': true, 'app.yapiFrameDraw': true, 'app.yapiDesignDraw': true }));
   const config: any = { get: jest.fn((key: string) => values.get(key)), set: (key: string, value: unknown) => values.set(key, value) };
   const uploads: any = { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') };
-  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config), prisma, projects, config };
+  const metering: any = { record: jest.fn().mockResolvedValue(undefined) };
+  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config, undefined, metering), prisma, projects, config, metering };
 }
 
 describe('style proposal mode', () => {
-  let service: SourceGenerationService, prisma: any, projects: any, config: any;
+  let service: SourceGenerationService, prisma: any, projects: any, config: any, metering: any;
   let explore: jest.SpyInstance, writeStyleHero: jest.SpyInstance, fetchMock: jest.SpyInstance, draws: jest.SpyInstance;
   let budget: SourceRequestBudget;
   const progress = jest.fn(async () => undefined);
@@ -56,7 +57,7 @@ describe('style proposal mode', () => {
     return call?.input[0].content[0].text;
   };
   beforeEach(() => {
-    ({ service, prisma, projects, config } = setup());
+    ({ service, prisma, projects, config, metering } = setup());
     progress.mockClear();
     budget = new SourceRequestBudget(25);
     explore = jest.spyOn(SourceDesignPlanner.prototype, 'explore');
@@ -78,11 +79,32 @@ describe('style proposal mode', () => {
     expect(JSON.parse(call.context).designDraw).toBeUndefined();
     expect(writeStyleHero).toHaveBeenCalledTimes(4);
     expect(writeStyleHero.mock.calls.map(c => [c[0].facts.storeName, c[0].facts.mode])).toEqual([['Café', 'calm'], ['Café', 'calm'], ['Café', 'bold'], ['Café', 'bold']]);
+    await writeStyleHero.mock.calls[0][0].record({ usage: null }, { durationMs: 7, status: 'COMPLETED' });
+    expect(metering.record).toHaveBeenCalledWith('s1', 'source-style-hero', expect.any(String), { usage: null }, 7, 'COMPLETED');
     const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
     expect(final.data).toMatchObject({ activeStoreId: null, proposal: expect.objectContaining({ version: 1, status: 'AWAITING_STYLE' }) });
     expect(progress).toHaveBeenCalledWith('styles');
     expect(authorPrompt()).toBeUndefined();
     expect(projects.save).not.toHaveBeenCalled();
+  });
+
+  it('throws and leaves no proposal awaiting when the run lost its row before the proposal finished', async () => {
+    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    // The stale sweep marked the row INTERRUPTED: every RUNNING-guarded write after the start matches nothing.
+    prisma.storeSourceGeneration.updateMany.mockImplementation(async (args: any) => ({ count: args.data.status === 'AWAITING_STYLE' ? 0 : 1 }));
+    await expect(service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).rejects.toThrow();
+    const awaiting = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => c.data.status === 'AWAITING_STYLE');
+    expect(awaiting).toHaveLength(1);
+    expect(awaiting[0].where).toEqual({ id: 'run-1', status: 'RUNNING', activeStoreId: 's1' });
+    expect(projects.save).not.toHaveBeenCalled();
+  });
+
+  it('guards every proposal write on a running row', async () => {
+    explore.mockResolvedValueOnce(designWith([0, 1, 2, 3]));
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    const writes = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => 'proposal' in c.data);
+    expect(writes.length).toBe(6);
+    expect(writes.every((c: any) => c.where.status === 'RUNNING' && c.where.id === 'run-1')).toBe(true);
   });
 
   it('builds directly with the only card the planner kept, on its own drawn slot', async () => {
