@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SourceChatService } from './source-chat.service';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { sourceRequestContext } from './source-request-context';
+import { merchantFacingSourceFailure } from './source-validation-error';
 
 const LEASE_MS = 45_000;
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -15,12 +16,14 @@ export function chatRequestDigest(input: SendSourceMessageDto) { return createHa
 const FAILED_JOB_MESSAGE = 'No pude completar el pedido. Tu diseño anterior se conserva.';
 const isPrismaError = (error: unknown) => error instanceof Prisma.PrismaClientKnownRequestError || error instanceof Prisma.PrismaClientUnknownRequestError
   || error instanceof Prisma.PrismaClientValidationError || error instanceof Prisma.PrismaClientRustPanicError || error instanceof Prisma.PrismaClientInitializationError;
-/** What a failed job tells the merchant: only a message written for them (a client error, or YAPI's own 502), never database or internal text. */
+/** What a failed job tells the merchant: an HTTP error written for them (a client error, or any error the merchant-facing
+ * gate leaves unchanged, such as a provider quota or ChatGPT-plan 503), never database, internal or diagnostic text. */
 export function merchantJobError(error: unknown): string | null {
   if (isPrismaError(error) || !(error instanceof HttpException)) return null;
-  const status = error.getStatus();
-  return status < 500 || status === 502 ? error.message : null;
+  return error.getStatus() < 500 || merchantFacingSourceFailure(error) === error ? error.message : null;
 }
+// By name: an aborted fetch rejects with a DOMException, which is not always an Error in this realm.
+const isAbort = (error: unknown) => ['AbortError', 'TimeoutError'].includes((error as { name?: unknown } | null)?.name as string);
 export function chatJobView(job: StoreSourceChatJob) {
   return { id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
 }
@@ -121,7 +124,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
       const generation = await this.prisma.storeSourceGeneration.findFirst({ where: { requestJobId: job.id }, orderBy: { createdAt: 'desc' }, select: { status: true } }).catch(() => null);
       const outcome = generation && ['PARTIAL', 'BLOCKED'].includes(generation.status) ? generation.status : 'FAILED';
       const message = merchantJobError(error);
-      if (message === null) this.logger.error(`YAPI job ${job.id} failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
+      const detail = `YAPI job ${job.id} failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`;
+      // A cancelled or interrupted job is not a fault.
+      if (message === null) { if (controller.signal.aborted || isAbort(error)) this.logger.warn(detail); else this.logger.error(detail); }
       await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: controller.signal.aborted ? 'INTERRUPTED' : outcome, activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: (message ?? FAILED_JOB_MESSAGE).slice(0, 1000) } }).catch(() => {});
     } finally { clearInterval(heartbeat); if (this.controller === controller) this.controller = undefined; }
   }

@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
-import { BadGatewayException, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadGatewayException, ConflictException, InternalServerErrorException, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { SourceProviderQuotaException, checkSourceProviderQuota } from './source-provider-error';
 import { SourceChatJobsService, chatRequestDigest } from './source-chat-jobs.service';
 import { sourceRequestContext } from './source-request-context';
 function setup() {
@@ -71,7 +72,8 @@ describe('failure message stored on the job', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const cases: Array<[Error, string]> = [
       [new TypeError("Cannot read properties of undefined (reading 'concepts')"), friendly],
-      [new InternalServerErrorException('stack trace here'), friendly],
+      [new InternalServerErrorException('Invalid `prisma.storeSourceGeneration.updateMany()` invocation'), friendly],
+      [new ServiceUnavailableException('Expected column "proposal" in components/home.tsx'), friendly],
       [new BadGatewayException('YAPI no logró armar una propuesta de diseño válida en este intento.'), 'YAPI no logró armar una propuesta de diseño válida en este intento.'],
       [new ConflictException('El proyecto cambió. Recarga antes de generar.'), 'El proyecto cambió. Recarga antes de generar.'],
     ];
@@ -81,6 +83,32 @@ describe('failure message stored on the job', () => {
       await service.run(job);
       expect(stored(prisma)).toBe(message);
     }
+    jest.restoreAllMocks();
+  });
+  it('passes merchant-facing 503s through: an exhausted provider balance, a ChatGPT-plan failure, a provider that is not configured', async () => {
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    let plan: unknown;
+    try { checkSourceProviderQuota(429, {}, 'ChatGPT plan'); } catch (error) { plan = error; }
+    expect(plan).toBeInstanceOf(ServiceUnavailableException);
+    const cases = [new SourceProviderQuotaException('OpenAI'), plan as Error, new ServiceUnavailableException('La integración no está configurada. Configura OPENAI_API_KEY en el servidor para usar OpenAI. Tu sitio sigue guardado.')];
+    for (const error of cases) {
+      const { service, prisma, chat } = setup();
+      chat.send.mockRejectedValue(error);
+      await service.run(job);
+      expect(stored(prisma)).toBe(error.message);
+    }
+    expect(logged).not.toHaveBeenCalled();
+    logged.mockRestore();
+  });
+  it('does not log a cancelled or aborted job as an error', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { service, prisma, chat } = setup();
+    chat.send.mockRejectedValue(new DOMException('This operation was aborted', 'AbortError'));
+    await service.run(job);
+    expect(stored(prisma)).toBe(friendly);
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('AbortError'));
     jest.restoreAllMocks();
   });
 });
