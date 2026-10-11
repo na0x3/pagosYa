@@ -73,7 +73,7 @@ import { templateHero, writeStyleHero, type HeroFacts } from './design-engine/st
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
 import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
-import { checkSourceProviderQuota } from './source-provider-error';
+import { checkSourceProviderQuota, retryProviderRejection } from './source-provider-error';
 import { sourceTaskContext, sourceRedesignRequested } from './source-context';
 import { SourceRequestBudget } from './source-request-budget';
 import { Optional } from '@nestjs/common';
@@ -343,7 +343,7 @@ export class SourceGenerationService {
     return { aiUsage, models: Object.entries(SOURCE_MODELS).map(([id, model]) => ({ id, label: model.label })), defaultModel: 'auto', defaultMaxCredits: DEFAULT_MAX_CREDITS, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', runs };
   }
 
-  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves four style cards on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
+  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
     execution?.signal?.throwIfAborted();
     // On the merchant's own ChatGPT plan nothing is billed: no credit allowance, no credits charged, more time per run.
     const chatgptPlan = Boolean(this.config.get('app.chatgptPlan')), freeRun = Boolean(execution?.free) || chatgptPlan;
@@ -553,7 +553,7 @@ export class SourceGenerationService {
     });
     let playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
-    // "Elige tu estilo" (spec 2026-10-11): a fresh design shows four drawn concepts before anything is built.
+    // "Elige tu estilo" (spec 2026-10-11, amendment "two cards"): a fresh design shows a calm and a bold drawn concept before anything is built.
     const styleAsked = execution?.styleProposal === true && this.config.get<boolean>('app.yapiStylePick') === true;
     const designDrawOn = this.config.get<boolean>('app.yapiDesignDraw') === true;
     const styleOn = styleAsked && Boolean(exploration) && playbookOn && frameEnabled && frameNow && designDrawOn;
@@ -561,7 +561,7 @@ export class SourceGenerationService {
     // The chat says "No pude preparar los estilos" only when the style planner actually ran and no proposal came of it.
     let styleAttempted = false;
     const styleKind = kind ?? 'general';
-    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, available: frameFacts.available, request: frameFacts.request })
+    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request })
       .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold' }) })) : [];
     // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
     let styleBold = false;
@@ -1621,9 +1621,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
   }
 
   /**
-   * Elige tu estilo in four lanes (spec 2026-10-11 speed-up): each slot plans its own concept, shows its card at once with
-   * the template hero, then swaps in the model hero. A failed lane costs only its card. Two or more cards wait for the
-   * pick; one card or none come back to the caller, which builds that card or replans as before.
+   * Elige tu estilo in two lanes (spec 2026-10-11, amendments "four parallel lanes" and "two cards"): one calm card and one
+   * bold card, so at most two model calls run at once (the ChatGPT bridge allows about two). Each slot plans its own concept,
+   * shows its card at once with the template hero, then swaps in the model hero. A call the provider refused waits 3 s and
+   * is tried once more; any other failure costs only its card. Two cards wait for the pick; one card or none come back to
+   * the caller, which builds that card or replans as before.
    */
   private async proposeStyles(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; plan: (slot: StyleSlot & { playbook: string }) => Promise<SourceDesign>; boldAsked: boolean; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult | { design?: SourceDesign }> {
     // Lanes finish out of order, so everything is kept by drawn slot and compacted, in slot order, on each save.
@@ -1632,13 +1634,14 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const slotPalettes: Array<HeroFacts['palette']> = [];
     const slotPending: boolean[] = [];
     const laneControllers = new Map(input.styleSlots.map(slot => [slot.slot, new AbortController()]));
-    // Heroes are short fragments: the fast model writes them; writeStyleHero falls back to the run model if it is refused.
+    // The calm hero is a short fragment on the fast model (writeStyleHero falls back to the run model if it is refused);
+    // the intense hero is always written on the run model.
     const heroModel: SourceModel = input.model.startsWith('gpt-') ? 'gpt-5.6-luna' : input.model;
     const createdAt = new Date().toISOString();
     const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
     const photoPath = photo ? input.assetLegend.find(entry => entry.original === photo.url)?.path : undefined;
     const logoPath = input.logoUrl ? input.assetLegend.find(entry => entry.original === input.logoUrl)?.path : undefined;
-    const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot], fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode });
+    const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, eyebrow: concept.story?.eyebrow || undefined, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot], fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode, buttons: slot.family.buttons, radius: slot.family.radius });
     const live = () => input.styleSlots.filter(slot => slotConcepts[slot.slot]);
     const proposal = (status: StyleProposalStatus): StyleProposal => {
       const order = live(), concepts = order.map(slot => slotConcepts[slot.slot]!);
@@ -1663,9 +1666,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const lane = laneControllers.get(slot.slot)!;
       return (async () => {
         try {
-          const concept = (await input.plan(slot)).concepts[0];
+          // A refusal from the provider (two lanes reached the bridge at the same second) is planned once more after 3 s.
+          const concept = (await retryProviderRejection(() => input.plan(slot), { signal: AbortSignal.any([input.signal, lane.signal]) })).concepts[0];
           if (!concept?.card) return;
-          // A bold lane that plans second moves off the other bold card's display font now, before its hero is drawn.
+          // A bold lane moves off another bold card's display font before its hero is drawn (a no-op with one bold card).
           const others = input.styleSlots.flatMap(other => other.slot !== slot.slot && slotConcepts[other.slot] ? [slotConcepts[other.slot]!] : []);
           slotConcepts[slot.slot] = distinctBoldDisplay({ ...concept, card: { ...concept.card, slot: slot.slot, mode: slot.mode } }, others);
           slotPalettes[slot.slot] = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
@@ -1679,7 +1683,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         await save();
         const concept = slotConcepts[slot.slot];
         if (!concept || lane.signal.aborted) return;
-        const hero = await writeStyleHero({ facts: factsFor(concept, slot), concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, heroModel, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: AbortSignal.any([input.signal, lane.signal]), attempts: input.attempts,
+        const hero = await writeStyleHero({ facts: factsFor(concept, slot), concept, direction: styleSlotDirection(slot, slot.playbook), model: input.model, heroModel: slot.mode === 'calm' ? heroModel : undefined, provider: input.provider, apiKey: input.apiKey, budget: input.budget, signal: AbortSignal.any([input.signal, lane.signal]), attempts: input.attempts,
           record: async (body, attempt) => this.metering?.record(input.storeId, 'source-style-hero', attempt.model, body, attempt.durationMs, attempt.status) });
         const current = slotConcepts[slot.slot];
         if (!current || lane.signal.aborted) return;
@@ -1690,8 +1694,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     });
     await Promise.all(planned);
     input.signal.throwIfAborted();
-    // Every lane has its concept. Lanes plan apart: a repeated opening keeps the lower slot's card. The bold fonts were
-    // already kept apart as each lane planned; this pass is the backstop.
+    // Every lane has its concept. Lanes plan apart: a repeated opening keeps the lower slot's card. Bold fonts were already
+    // kept apart as each lane planned; this pass is the backstop (with one bold card, nothing moves).
     const openings = new Set<string>();
     for (const slot of live()) {
       const key = styleOpeningKey(slotConcepts[slot.slot]!.opening);

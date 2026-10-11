@@ -8,32 +8,37 @@ const bare: FrameAvailable = { photos: 0, products: 0, facts: false };
 const base = { kind: 'cafe-food' as const, brandColours: false, category: 'cafe-food', previous: [], recent: [], available: rich, request: 'Mi cafetería' };
 const boldIds = (part: 'header' | 'hero') => FRAME_CATALOGUE[part].filter(entry => entry.bold).map(entry => entry.id);
 
-it('returns two calm slots (one per playbook family) then two bold slots', () => {
-  const slots = styleDraws({ ...base, random: seeded(3) });
-  expect(slots.map(slot => slot.mode)).toEqual(['calm', 'calm', 'bold', 'bold']);
-  expect(slots.map(slot => slot.slot)).toEqual([0, 1, 2, 3]);
-  expect(slots[0].family.id).toBe(PLAYBOOK['cafe-food'].families[0].id);
-  expect(slots[1].family.id).toBe(PLAYBOOK['cafe-food'].families[1].id);
-});
+const families = PLAYBOOK['cafe-food'].families;
 
-it('keeps calm slots on their family palettes and gives bold slots the full colour catalogue and bold parts', () => {
-  for (let seed = 1; seed < 30; seed++) {
-    const slots = styleDraws({ ...base, random: seeded(seed) });
-    expect(PLAYBOOK['cafe-food'].families[0].palettes.map(p => p.id)).toContain(slots[0].palette!.id);
-    expect(PLAYBOOK['cafe-food'].families[1].palettes.map(p => p.id)).toContain(slots[1].palette!.id);
-    for (const bold of slots.slice(2)) {
-      expect(PALETTES.map(p => p.id)).toContain(bold.palette!.id);
-      expect(boldIds('header')).toContain(bold.draw.header);
-      expect(boldIds('hero')).toContain(bold.draw.hero);
-    }
+it('returns exactly two slots: a calm one on the least-used family, then a bold one on the other family', () => {
+  const slots = styleDraws({ ...base, random: seeded(3) });
+  expect(slots.map(slot => slot.mode)).toEqual(['calm', 'bold']);
+  expect(slots.map(slot => slot.slot)).toEqual([0, 1]);
+  expect(slots[0].family.id).not.toBe(slots[1].family.id);
+  // The calm card takes the family the latest same-kind stores used least, the bold card the other one.
+  for (let seed = 1; seed < 10; seed++) {
+    const [calm, bold] = styleDraws({ ...base, recentFamilies: [families[0].id, families[0].id, families[1].id], random: seeded(seed) });
+    expect([calm.family.id, bold.family.id]).toEqual([families[1].id, families[0].id]);
+    const [calm2, bold2] = styleDraws({ ...base, recentFamilies: [families[1].id], random: seeded(seed) });
+    expect([calm2.family.id, bold2.family.id]).toEqual([families[0].id, families[1].id]);
   }
 });
 
-it('never gives two cards the same hero or palette when the catalogue allows it', () => {
+it('keeps the calm slot on its family palettes and gives the bold slot the full colour catalogue and bold parts', () => {
+  for (let seed = 1; seed < 30; seed++) {
+    const [calm, bold] = styleDraws({ ...base, random: seeded(seed) });
+    expect(calm.family.palettes.map(p => p.id)).toContain(calm.palette!.id);
+    expect(PALETTES.map(p => p.id)).toContain(bold.palette!.id);
+    expect(boldIds('header')).toContain(bold.draw.header);
+    expect(boldIds('hero')).toContain(bold.draw.hero);
+  }
+});
+
+it('never gives the bold card the calm card\'s hero or palette', () => {
   for (let seed = 1; seed < 40; seed++) {
     const slots = styleDraws({ ...base, random: seeded(seed) });
-    expect(new Set(slots.map(slot => slot.draw.hero)).size).toBe(4);
-    expect(new Set(slots.map(slot => slot.palette!.id)).size).toBe(4);
+    expect(new Set(slots.map(slot => slot.draw.hero)).size).toBe(2);
+    expect(new Set(slots.map(slot => slot.palette!.id)).size).toBe(2);
   }
 });
 
@@ -42,9 +47,9 @@ it('avoids the hero the store itself used last time', () => {
   for (let seed = 1; seed < 20; seed++) expect(styleDraws({ ...base, previous, random: seeded(seed) }).map(slot => slot.draw.hero)).not.toContain('full-bleed');
 });
 
-it('still returns four slots for a store with no photos, products or facts', () => {
+it('still returns two slots, calm then bold, for a store with no photos, products or facts', () => {
   const slots = styleDraws({ ...base, available: bare, random: seeded(5) });
-  expect(slots).toHaveLength(4);
+  expect(slots.map(slot => slot.mode)).toEqual(['calm', 'bold']);
   for (const slot of slots) expect(['type-only', 'catalog-lead', 'illustration']).toContain(slot.draw.hero);
 });
 
@@ -53,14 +58,14 @@ it('keeps confirmed brand colours: no drawn palette on any card', () => {
 });
 
 it('writes a slot direction that names the slot, its mode and its drawn frame', () => {
-  const [calm, , bold] = styleDraws({ ...base, random: seeded(9) });
+  const [calm, bold] = styleDraws({ ...base, random: seeded(9) });
   const playbook = playbookDirection(PLAYBOOK['cafe-food'], bold.family, { bold: true, palette: bold.palette, freeFonts: true });
-  expect(styleSlotDirection(calm, 'PLAYBOOK: calm')).toMatch(/^CONCEPT 1 of 4 \(calm/);
-  expect(styleSlotDirection(bold, playbook)).toMatch(/^CONCEPT 3 of 4 \(bold/);
+  expect(styleSlotDirection(calm, 'PLAYBOOK: calm')).toMatch(/^CONCEPT 1 of 2 \(calm/);
+  expect(styleSlotDirection(bold, playbook)).toMatch(/^CONCEPT 2 of 2 \(bold/);
   expect(styleSlotDirection(bold, playbook)).toContain(bold.paragraph);
   // A lane plans this slot alone: same frame and playbook, but its one concept is concepts[0].
-  expect(styleSlotDirection(bold, playbook, { lane: true })).toMatch(/^CONCEPT 3 of 4 \(bold: [^)]*\)\. Build the one concept you return on exactly this; the other cards are planned separately:/);
-  expect(styleSlotDirection(bold, playbook, { lane: true })).not.toContain('concepts[2]');
+  expect(styleSlotDirection(bold, playbook, { lane: true })).toMatch(/^CONCEPT 2 of 2 \(bold: [^)]*\)\. Build the one concept you return on exactly this; the other card is planned separately:/);
+  expect(styleSlotDirection(bold, playbook, { lane: true })).not.toContain('concepts[1]');
   expect(styleSlotDirection(bold, playbook, { lane: true })).toContain(bold.paragraph);
   expect(playbook).toContain('fonts free from the self-hosted catalogue');
   expect(playbook).not.toContain(`${bold.family.fonts[0].display} + `);

@@ -35,10 +35,10 @@ beforeEach(() => {
 });
 
 it('asks for a proposal on a new store when the flag is on, and says so in the chat', async () => {
-  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g1', cards: 4 } });
+  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g1', cards: 2 } });
   const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería en Sopocachi', setupAction: 'generate', requestId: uuid() });
   expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
-  expect(out.assistantMessage.content).toBe('Te preparo 4 estilos para Café Buna: dos tranquilos y dos atrevidos. Elige uno para construir tu tienda.');
+  expect(out.assistantMessage.content).toBe('Te preparo 2 estilos para Café Buna: uno tranquilo y uno atrevido. Elige uno para construir tu tienda.');
   expect(out.assistantMessage.metadata).toMatchObject({ styleProposal: { generationId: 'g1' } });
   expect(out.revision).toBeUndefined();
 });
@@ -157,7 +157,7 @@ it('a picked style whose build failed waits for Reintentar: no new cards, no mod
 
 it('a picked style yields to a full redesign request, and is ignored once the store moved on', async () => {
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), status: 'PICKED', picked: 2 } });
-  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g2', cards: 4 } });
+  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g2', cards: 2 } });
   await chat.send('m1', 's1', { revision: 0, instruction: 'Rediseña mi tienda desde cero', requestId: uuid() });
   expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'SUPERSEDED' }) } }));
   expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });
@@ -200,7 +200,7 @@ it('builds a pick in its own context when the job that asked for the styles is g
 
 it('supersedes a waiting proposal when the merchant asks for another full redesign', async () => {
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
-  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g2', cards: 4 } });
+  generate.mockResolvedValueOnce({ styleProposal: { generationId: 'g2', cards: 2 } });
   await chat.send('m1', 's1', { revision: 0, instruction: 'Rediseña mi tienda desde cero', requestId: uuid() });
   expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'SUPERSEDED' }) } }));
   expect(generate.mock.calls[0][6]).toMatchObject({ styleProposal: true });

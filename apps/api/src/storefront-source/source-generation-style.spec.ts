@@ -14,6 +14,7 @@ import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { styleProposalView, type StyleProposal } from './source-style-proposal';
 import { heroFontFaces, sanitizeHeroHtml } from './design-engine/style-hero';
+import { BadGatewayException, ServiceUnavailableException } from '@nestjs/common';
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -24,10 +25,10 @@ const concept = (name: string) => ({ name, premise: `${name} premise`, opening: 
   story: { promise: `${name} promise`, eyebrow: '', headline: `${name} para compartir`, support: 'Una selección breve y clara.', primaryAction: 'Ver menú', beats: [{ section: 'menu', role: 'offer', headline: 'Menú', media: 'product' }] },
   motion: { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [] }, dna: validDna(),
   cardName: `${name} de barrio`, vibe: `${name} vibe paragraph.`, inspiration: ['El tostado de cada mañana', 'La esquina de la plaza', 'Tazas de cerámica local'] });
-const modes = ['calm', 'calm', 'bold', 'bold'] as Array<'calm' | 'bold'>;
+const modes = ['calm', 'bold'] as Array<'calm' | 'bold'>;
 /** A planner result whose concepts carry the cards of exactly these slots. */
 const designWith = (slots: number[]): designModule.SourceDesign => {
-  const { design } = validateStyleDesign({ concepts: ['Menu', 'Window', 'Counter', 'Studio'].map(concept), selection: { index: 0, rationale: 'r' } }, modes, { narrative: true });
+  const { design } = validateStyleDesign({ concepts: ['Menu', 'Window'].map(concept), selection: { index: 0, rationale: 'r' } }, modes, { narrative: true });
   return { ...design, selected: 0, concepts: design.concepts.filter(c => slots.includes(c.card!.slot)) };
 };
 const threeConceptDesign = designModule.validateSourceDesign({ concepts: ['Menu', 'Window', 'Counter'].map(name => { const { cardName, vibe, inspiration, ...rest } = concept(name); return rest; }), selected: 0 }, 0, true, true);
@@ -35,16 +36,16 @@ const files = () => [
   { path: 'index.html', content: '<!doctype html><main><section id="menu"><h1>Menú</h1><div data-pagosya-catalog></div></section></main><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>' },
   { path: 'styles.css', content: 'body { color: #222; }' }, { path: 'site.js', content: 'globalThis.__generatedSourceExecuted = true;' },
 ];
-/** Deterministic draws, so slot 3 is always bold with the same palette. */
+/** Deterministic draws, so slot 1 is always bold with the same palette. */
 const seeded = (seed: number) => () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
 const dto = { revision: 0, brief: { businessType: 'Cafetería', audience: 'Vecinos', primaryAction: 'Pedir', visualDirection: 'Menú primero' }, instruction: 'Crea la tienda de mi cafetería', assetUrls: [] } as any;
 
-/** What a finished proposal saved on the run: four concepts, four drawn slots and a hero per card (bundle paths). */
+/** What a finished proposal saved on the run: two concepts, two drawn slots and a hero per card (bundle paths). */
 const savedProposal = (): StyleProposal => {
   const slots = styleDrawsModule.styleDraws({ kind: 'cafe-food', brandColours: false, category: 'cafe', previous: [], recent: [], available: { photos: 0, products: 0, facts: false }, request: dto.instruction, random: seeded(7) })
     .map(slot => ({ ...slot, playbook: `PLAYBOOK slot ${slot.slot}` }));
-  return { version: 1, status: 'AWAITING_STYLE', slots, design: designWith([0, 1, 2, 3]), assetMap: [],
-    heroes: [0, 1, 2, 3].map(i => ({ html: `<header data-store-name>Café ${i}</header><section class="hero-${i}"><h1>Tarjeta ${i}</h1></section>`, source: 'model' as const })),
+  return { version: 1, status: 'AWAITING_STYLE', slots, design: designWith([0, 1]), assetMap: [],
+    heroes: [0, 1].map(i => ({ html: `<header data-store-name>Café ${i}</header><section class="hero-${i}"><h1>Tarjeta ${i}</h1></section>`, source: 'model' as const })),
     request: { dto, imageUses: [], redesign: false }, createdAt: '2026-10-11T00:00:00.000Z' };
 };
 
@@ -103,15 +104,19 @@ describe('style proposal mode', () => {
   const savedFiles = (): Array<{ path: string; content: string }> => projects.save.mock.calls[0][2].files;
 
   it('makes a proposal instead of building: one planner lane per slot, a hero per concept, row left awaiting the pick', async () => {
-    lanes();
+    lanes([], (_slot, design) => ({ ...design, concepts: [{ ...design.concepts[0], story: { ...design.concepts[0].story!, eyebrow: 'Hecho en Sopocachi' } }] }));
     const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
-    expect(result).toEqual({ styleProposal: { generationId: expect.any(String), cards: 4 } });
+    expect(result).toEqual({ styleProposal: { generationId: expect.any(String), cards: 2 } });
     const calls = explore.mock.calls.map(c => c[0]);
-    expect(calls.map(call => call.styleSlots.map((slot: { slot: number; mode: string }) => [slot.slot, slot.mode]))).toEqual([[[0, 'calm']], [[1, 'calm']], [[2, 'bold']], [[3, 'bold']]]);
-    expect(calls.every(call => call.styleSlots[0].direction.includes(`CONCEPT ${call.styleSlots[0].slot + 1} of 4`))).toBe(true);
+    // Two lanes, so at most two model calls at once: one calm card, one bold card.
+    expect(calls.map(call => call.styleSlots.map((slot: { slot: number; mode: string }) => [slot.slot, slot.mode]))).toEqual([[[0, 'calm']], [[1, 'bold']]]);
+    expect(calls.every(call => call.styleSlots[0].direction.includes(`CONCEPT ${call.styleSlots[0].slot + 1} of 2`))).toBe(true);
     expect(JSON.parse(calls[0].context).designDraw).toBeUndefined();
-    expect(writeStyleHero).toHaveBeenCalledTimes(4);
-    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.storeName, c[0].facts.mode])).toEqual([['Café', 'calm'], ['Café', 'calm'], ['Café', 'bold'], ['Café', 'bold']]);
+    expect(writeStyleHero).toHaveBeenCalledTimes(2);
+    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.storeName, c[0].facts.mode])).toEqual([['Café', 'calm'], ['Café', 'bold']]);
+    // The calm card is drawn with its family's own buttons and radius; every card carries its concept's eyebrow.
+    const [calmSlot] = draws.mock.results[0].value;
+    expect(writeStyleHero.mock.calls[0][0].facts).toMatchObject({ buttons: calmSlot.family.buttons, radius: calmSlot.family.radius, eyebrow: 'Hecho en Sopocachi' });
     await writeStyleHero.mock.calls[0][0].record({ usage: null }, { model: 'gpt-5.6-luna', durationMs: 7, status: 'COMPLETED' });
     expect(metering.record).toHaveBeenCalledWith('s1', 'source-style-hero', 'gpt-5.6-luna', { usage: null }, 7, 'COMPLETED');
     const final = finalWrite();
@@ -146,63 +151,47 @@ describe('style proposal mode', () => {
   };
   const boldHeroFonts = () => Object.fromEntries(writeStyleHero.mock.calls.filter(c => c[0].facts.mode === 'bold').map(c => [c[0].concept.card.slot, c[0].facts.fonts.display]));
 
-  it('gives the two bold cards different display fonts before their heroes are drawn: the second to plan takes the first catalogue display font no card uses', async () => {
+  it('keeps the one bold card on the font it planned: the distinct-bold-font rule has nothing to move', async () => {
     lanes();
     writeStyleHero.mockImplementation(fontHero);
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
-    // Every planned concept used Fraunces + Instrument; Bricolage is the first unused display/both font in the catalogue.
-    expect(boldHeroFonts()).toEqual({ 2: 'fraunces', 3: 'bricolage' });
+    expect(boldHeroFonts()).toEqual({ 1: 'fraunces' });
     const final: StyleProposal = finalWrite().data.proposal;
-    expect(final.design!.concepts.map(c => c.dna!.type.display)).toEqual(['fraunces', 'fraunces', 'fraunces', 'bricolage']);
-    expect(final.heroes.map(hero => hero!.source)).toEqual(['model', 'model', 'model', 'model']);
-    fontsAgree(final);
-  });
-
-  it('moves the bold lane that plans second, whichever slot it is, and every save agrees on the fonts', async () => {
-    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
-    explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
-    writeStyleHero.mockImplementation(fontHero);
-    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
-    await until(() => explore.mock.calls.length === 4);
-    planned[3].resolve(laneDesign(3));
-    await until(() => writeStyleHero.mock.calls.length === 1);
-    [0, 1, 2].forEach(slot => planned[slot].resolve(laneDesign(slot)));
-    await run;
-    expect(boldHeroFonts()).toEqual({ 3: 'fraunces', 2: 'bricolage' });
+    expect(final.design!.concepts.map(c => c.dna!.type.display)).toEqual(['fraunces', 'fraunces']);
+    expect(final.heroes.map(hero => hero!.source)).toEqual(['model', 'model']);
     proposals().forEach(fontsAgree);
-    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.dna.type.display)).toEqual(['fraunces', 'fraunces', 'bricolage', 'fraunces']);
   });
 
   it('backstop: a font changed after every lane planned stops that card\'s model hero and keeps its template hero in the new font', async () => {
     const real = styleDesignModule.distinctBoldDisplays;
     jest.spyOn(styleDesignModule, 'distinctBoldDisplays').mockImplementation(design => {
       const out = real(design);
-      return { ...out, concepts: out.concepts.map(c => c.card!.slot === 3 ? { ...c, dna: { ...c.dna!, type: { ...c.dna!.type, display: 'outfit' } } } : c) };
+      return { ...out, concepts: out.concepts.map(c => c.card!.slot === 1 ? { ...c, dna: { ...c.dna!, type: { ...c.dna!.type, display: 'outfit' } } } : c) };
     });
-    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    const planned = [0, 1].map(() => deferred<designModule.SourceDesign>());
     explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
-    writeStyleHero.mockImplementation((args: any) => args.concept.card.slot === 3 ? new Promise((_ok, fail) => args.signal.addEventListener('abort', () => fail(args.signal.reason))) : fontHero(args));
+    writeStyleHero.mockImplementation((args: any) => args.concept.card.slot === 1 ? new Promise((_ok, fail) => args.signal.addEventListener('abort', () => fail(args.signal.reason))) : fontHero(args));
     const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
-    await until(() => explore.mock.calls.length === 4);
-    planned[3].resolve(laneDesign(3));
+    await until(() => explore.mock.calls.length === 2);
+    planned[1].resolve(laneDesign(1));
     await until(() => writeStyleHero.mock.calls.length === 1);
-    [0, 1, 2].forEach(slot => planned[slot].resolve(laneDesign(slot)));
+    planned[0].resolve(laneDesign(0));
     await run;
-    expect(writeStyleHero.mock.calls.find(c => c[0].concept.card.slot === 3)![0].signal.aborted).toBe(true);
+    expect(writeStyleHero.mock.calls.find(c => c[0].concept.card.slot === 1)![0].signal.aborted).toBe(true);
     const final: StyleProposal = finalWrite().data.proposal;
-    expect(final.design!.concepts[3].dna!.type.display).toBe('outfit');
-    expect(final.heroes[3]).toMatchObject({ source: 'template', html: expect.stringContaining('assets/outfit.ttf') });
-    expect(final.heroPending).toEqual([false, false, false, false]);
+    expect(final.design!.concepts[1].dna!.type.display).toBe('outfit');
+    expect(final.heroes[1]).toMatchObject({ source: 'template', html: expect.stringContaining('assets/outfit.ttf') });
+    expect(final.heroPending).toEqual([false, false]);
     fontsAgree(final);
   });
 
   it('clears every pending flag in the final save, also for a card whose lane broke before its hero landed', async () => {
     lanes();
     writeStyleHero.mockImplementation(async (args: any) => { if (args.concept.card.slot === 1) throw new Error('lane broke'); return fontHero(args); });
-    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 4 } });
+    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 2 } });
     expect(proposals().some(p => p.heroPending?.[1] === true)).toBe(true);
     const final: StyleProposal = finalWrite().data.proposal;
-    expect(final.heroPending).toEqual([false, false, false, false]);
+    expect(final.heroPending).toEqual([false, false]);
     expect(final.heroes[1]!.source).toBe('template');
   });
 
@@ -221,57 +210,57 @@ describe('style proposal mode', () => {
     lanes();
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     const writes = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => 'proposal' in c.data);
-    // Each lane saves its card with the template hero, then with the model hero; one save after every lane has its
-    // concept (dedupe, recommendation), and the final AWAITING_STYLE save.
-    expect(writes.length).toBe(10);
+    // Each of the two lanes saves its card with the template hero, then with the model hero; one save after both lanes
+    // have their concept (dedupe, recommendation), and the final AWAITING_STYLE save.
+    expect(writes.length).toBe(6);
     expect(writes.every((c: any) => c.where.activeStoreId === 's1')).toBe(true);
     expect(writes.every((c: any) => c.where.status === 'RUNNING' && c.where.id === 'run-1')).toBe(true);
   });
 
   it('builds directly with the only card the lanes kept, on its own drawn slot, and retires the shown card', async () => {
-    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    const planned = [0, 1].map(() => deferred<designModule.SourceDesign>());
     explore.mockImplementation((args: any) => args.styleSlots ? planned[args.styleSlots[0].slot].promise : Promise.resolve(threeConceptDesign));
-    // The kept card's model hero is still being written when the other lanes fail: the build does not wait for it.
+    // The kept card's model hero is still being written when the other lane fails: the build does not wait for it.
     writeStyleHero.mockImplementation((args: any) => new Promise((_ok, fail) => args.signal.addEventListener('abort', () => fail(args.signal.reason))));
     const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
-    await until(() => explore.mock.calls.length === 4);
-    planned[2].resolve(laneDesign(2));
+    await until(() => explore.mock.calls.length === 2);
+    planned[1].resolve(laneDesign(1));
     await until(() => writeStyleHero.mock.calls.length === 1);
-    [0, 1, 3].forEach(slot => planned[slot].reject(new Error('lane failed')));
+    planned[0].reject(new Error('lane failed'));
     const result = await run;
     expect('styleProposal' in result).toBe(false);
     expect(writeStyleHero.mock.calls[0][0].signal.aborted).toBe(true);
     expect(authorPrompt()).toContain('BOLD BY DEFAULT');
-    expect(explore).toHaveBeenCalledTimes(4);
+    expect(explore).toHaveBeenCalledTimes(2);
     expect(proposals().at(-1)!.status).toBe('SUPERSEDED');
     expect(finalWrite()).toBeUndefined();
     expect(projects.save).toHaveBeenCalledTimes(1);
-    const drawn = draws.mock.results[0].value[2].file;
+    const drawn = draws.mock.results[0].value[1].file;
     expect(projects.save.mock.calls[0][2].files).toContainEqual(drawn);
   });
 
   it('falls back to today when the style planner fails, and reports that styles were attempted', async () => {
-    lanes([0, 1, 2, 3]);
+    lanes([0, 1]);
     const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     expect('styleProposal' in result).toBe(false);
-    expect(explore).toHaveBeenCalledTimes(5);
-    expect(explore.mock.calls[4][0].styleSlots).toBeUndefined();
+    expect(explore).toHaveBeenCalledTimes(3);
+    expect(explore.mock.calls[2][0].styleSlots).toBeUndefined();
     expect(writeStyleHero).not.toHaveBeenCalled();
     expect(proposals()).toEqual([]);
     expect((result as any).generation.styleAttempted).toBe(true);
   });
 
-  it('runs the four lanes at once: the second lane plans while the first lane\'s hero is still being written', async () => {
-    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+  it('runs the two lanes at once: the second lane plans while the first lane\'s hero is still being written', async () => {
+    const planned = [0, 1].map(() => deferred<designModule.SourceDesign>());
     explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
-    const heroes = [0, 1, 2, 3].map(() => deferred<{ html: string; source: 'model' }>());
+    const heroes = [0, 1].map(() => deferred<{ html: string; source: 'model' }>());
     writeStyleHero.mockImplementation((args: any) => heroes[args.concept.card.slot].promise);
     const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     await until(() => explore.mock.calls.length >= 1);
     planned[0].resolve(laneDesign(0));
     await until(() => writeStyleHero.mock.calls.length === 1);
-    // Lane 0's hero has not finished, and every other lane's planner call is already out.
-    expect(explore.mock.calls.map(c => c[0].styleSlots[0].slot)).toEqual([0, 1, 2, 3]);
+    // Lane 0's hero has not finished, and the other lane's planner call is already out.
+    expect(explore.mock.calls.map(c => c[0].styleSlots[0].slot)).toEqual([0, 1]);
     // The card is on screen already, with the template hero, marked pending.
     await until(() => proposals().length >= 1);
     const first = proposals().at(-1)!;
@@ -285,18 +274,18 @@ describe('style proposal mode', () => {
     heroes[0].resolve({ html: '<header data-store-name>modelo 0</header>', source: 'model' });
     await until(() => proposals().at(-1)!.heroes[0]?.source === 'model');
     expect(proposals().at(-1)!.heroPending).toEqual([false]);
-    [1, 2, 3].forEach(slot => { planned[slot].resolve(laneDesign(slot)); heroes[slot].resolve({ html: `<header data-store-name>modelo ${slot}</header>`, source: 'model' }); });
-    expect(await run).toEqual({ styleProposal: { generationId: 'run-1', cards: 4 } });
-    expect(finalWrite().data.proposal.heroPending).toEqual([false, false, false, false]);
+    planned[1].resolve(laneDesign(1)); heroes[1].resolve({ html: '<header data-store-name>modelo 1</header>', source: 'model' });
+    expect(await run).toEqual({ styleProposal: { generationId: 'run-1', cards: 2 } });
+    expect(finalWrite().data.proposal.heroPending).toEqual([false, false]);
   });
 
   it('saves slot-ordered, aligned arrays when lanes finish out of order', async () => {
-    const planned = [0, 1, 2, 3].map(() => deferred<designModule.SourceDesign>());
+    const planned = [0, 1].map(() => deferred<designModule.SourceDesign>());
     explore.mockImplementation((args: any) => planned[args.styleSlots[0].slot].promise);
     writeStyleHero.mockImplementation(async (args: any) => ({ html: `<header data-store-name>hero ${args.concept.card.slot}</header>`, source: 'model' }));
     const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
-    await until(() => explore.mock.calls.length === 4);
-    for (const slot of [3, 1, 0, 2]) {
+    await until(() => explore.mock.calls.length === 2);
+    for (const slot of [1, 0]) {
       planned[slot].resolve(laneDesign(slot));
       await until(() => proposals().some(p => p.design?.concepts.some(c => c.card!.slot === slot)));
     }
@@ -309,21 +298,64 @@ describe('style proposal mode', () => {
       proposal.heroes.forEach((hero, i) => { if (hero?.source === 'model') expect(hero.html).toContain(`hero ${slots[i]}`); });
       proposal.heroPalettes!.forEach((palette, i) => expect(palette!.paper).toBe(proposal.slots[slots[i]].palette!.paper));
     }
-    expect(saved.find(p => p.design!.concepts.length === 1)!.design!.concepts[0].card!.slot).toBe(3);
-    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 1, 2, 3]);
+    expect(saved.find(p => p.design!.concepts.length === 1)!.design!.concepts[0].card!.slot).toBe(1);
+    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 1]);
   });
 
-  it('drops only the card of a failed lane', async () => {
-    lanes([1]);
-    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 3 } });
-    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 2, 3]);
-    expect(writeStyleHero).toHaveBeenCalledTimes(3);
+  /** A lane error like the planner's when the ChatGPT plan refuses a call: a plain message, the refusal as its cause. */
+  const refused = () => new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.', { cause: new ServiceUnavailableException('YAPI no pudo continuar: ChatGPT rechazó la autorización. Vuelve a conectar tu cuenta de ChatGPT. No se cambió a una API de pago. Tu sitio sigue guardado.') });
+  /** The 3 s retry pause runs at once here; the delays the service asked for are kept. */
+  const fastRetries = () => {
+    const real = global.setTimeout;
+    return jest.spyOn(global, 'setTimeout').mockImplementation(((fn: (...args: any[]) => void, ms?: number, ...args: any[]) => real(fn, ms === 3000 ? 0 : ms, ...args)) as any);
+  };
+
+  it('waits 3 s and plans a lane again once when the provider refused its planner call, and keeps both cards', async () => {
+    const timers = fastRetries();
+    let refusals = 0;
+    explore.mockImplementation(async (args: any) => {
+      const slot = args.styleSlots[0].slot;
+      if (slot === 1 && refusals++ === 0) throw refused();
+      return laneDesign(slot);
+    });
+    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 2 } });
+    expect(explore.mock.calls.map(c => c[0].styleSlots[0].slot)).toEqual([0, 1, 1]);
+    expect(timers.mock.calls.some(call => call[1] === 3000)).toBe(true);
+    expect(finalWrite().data.proposal.design.concepts.map((c: any) => [c.card.slot, c.card.mode])).toEqual([[0, 'calm'], [1, 'bold']]);
   });
 
-  it('drops a later lane whose opening repeats an earlier slot\'s', async () => {
-    lanes([], (slot, design) => slot === 2 ? { ...design, concepts: [{ ...design.concepts[0], opening: '  MENU   opening ' }] } : design);
-    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: 'run-1', cards: 3 } });
-    expect(finalWrite().data.proposal.design.concepts.map((c: any) => c.card.slot)).toEqual([0, 1, 3]);
+  it('never plans a lane again after a validation failure: its card is lost and the one card left is built', async () => {
+    const timers = fastRetries();
+    explore.mockImplementation(async (args: any) => {
+      if (!args.styleSlots) return threeConceptDesign;
+      if (args.styleSlots[0].slot === 1) throw new BadGatewayException('YAPI no logró armar estilos válidos en este intento.');
+      return laneDesign(0);
+    });
+    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect('styleProposal' in result).toBe(false);
+    expect(explore.mock.calls.map(c => c[0].styleSlots?.[0].slot)).toEqual([0, 1]);
+    expect(timers.mock.calls.some(call => call[1] === 3000)).toBe(false);
+    expect(savedFiles()).toContainEqual(draws.mock.results[0].value[0].file);
+  });
+
+  it('plans a lane at most twice when the provider keeps refusing it', async () => {
+    fastRetries();
+    explore.mockImplementation(async (args: any) => {
+      if (!args.styleSlots) return threeConceptDesign;
+      if (args.styleSlots[0].slot === 0) throw refused();
+      return laneDesign(1);
+    });
+    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect('styleProposal' in result).toBe(false);
+    expect(explore.mock.calls.map(c => c[0].styleSlots?.[0].slot)).toEqual([0, 1, 0]);
+  });
+
+  it('drops the bold lane when its opening repeats the calm card\'s, and builds the calm card directly', async () => {
+    lanes([], (slot, design) => slot === 1 ? { ...design, concepts: [{ ...design.concepts[0], opening: '  MENU   opening ' }] } : design);
+    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect('styleProposal' in result).toBe(false);
+    expect(finalWrite()).toBeUndefined();
+    expect(savedFiles()).toContainEqual(draws.mock.results[0].value[0].file);
   });
 
   it('recommends the first calm card with its premise\'s first sentence, or the first bold one when the merchant asked for bold', async () => {
@@ -332,24 +364,24 @@ describe('style proposal mode', () => {
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     expect(finalWrite().data.proposal.design).toMatchObject({ selected: 0, selection: { source: 'planner', rationale: 'Premisa 0: una idea clara.' } });
     ({ service, prisma, projects, config, metering } = setup());
-    lanes([2], premise);
+    lanes([], premise);
     await service.generate('m1', 's1', { ...dto, instruction: 'Quiero una tienda atrevida para mi cafetería' }, new SourceRequestBudget(25), [], progress, { styleProposal: true });
     const bold = finalWrite().data.proposal.design;
-    expect(bold.concepts[bold.selected].card.slot).toBe(3);
-    expect(bold.selection).toEqual({ source: 'planner', rationale: 'Premisa 3: una idea clara.' });
+    expect(bold.concepts[bold.selected].card.slot).toBe(1);
+    expect(bold.selection).toEqual({ source: 'planner', rationale: 'Premisa 1: una idea clara.' });
     ({ service, prisma, projects, config, metering } = setup());
-    lanes([0, 1], (_slot, design) => ({ ...design, concepts: [{ ...design.concepts[0], premise: 'x'.repeat(300) }] }));
+    lanes([], (_slot, design) => ({ ...design, concepts: [{ ...design.concepts[0], premise: 'x'.repeat(300) }] }));
     await service.generate('m1', 's1', dto, new SourceRequestBudget(25), [], progress, { styleProposal: true });
     expect(finalWrite().data.proposal.design.selected).toBe(0);
     expect(finalWrite().data.proposal.design.selection.rationale).toHaveLength(200);
   });
 
-  it('writes the heroes on the fast model while the planner keeps the run model', async () => {
+  it('writes the calm hero on the fast model and the intense hero on the run model, which the planner keeps', async () => {
     lanes();
     await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
     const runModel = explore.mock.calls[0][0].model;
     expect(runModel).toMatch(/^gpt-/);
-    expect(writeStyleHero.mock.calls.map(c => [c[0].heroModel, c[0].model])).toEqual(Array(4).fill(['gpt-5.6-luna', runModel]));
+    expect(writeStyleHero.mock.calls.map(c => [c[0].facts.mode, c[0].heroModel, c[0].model])).toEqual([['calm', 'gpt-5.6-luna', runModel], ['bold', undefined, runModel]]);
   });
 
   it('skips styles on an ineligible run without claiming it tried, and warns once', async () => {
@@ -376,21 +408,21 @@ describe('style proposal mode', () => {
 
   it('builds the picked card: forced concept, its draw as the frame, its palette, bold mode and hero to Sep-5, no planner call', async () => {
     const proposal = savedProposal();
-    expect([proposal.slots[3].mode, Boolean(proposal.slots[3].palette)]).toEqual(['bold', true]);
-    const result = await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 3 } });
+    expect([proposal.slots[1].mode, Boolean(proposal.slots[1].palette)]).toEqual(['bold', true]);
+    const result = await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 1 } });
     expect(explore).not.toHaveBeenCalled();
     expect('styleProposal' in result).toBe(false);
     const prompt = authorPrompt()!;
-    expect(prompt).toContain(proposal.slots[3].paragraph);
+    expect(prompt).toContain(proposal.slots[1].paragraph);
     expect(prompt).toContain('BOLD BY DEFAULT');
     expect(prompt).toContain('PICKED HEADER AND HERO');
-    expect(prompt).toContain(proposal.heroes[3]!.html);
-    expect(prompt).not.toContain(proposal.heroes[2]!.html);
+    expect(prompt).toContain(proposal.heroes[1]!.html);
+    expect(prompt).not.toContain(proposal.heroes[0]!.html);
     const files = savedFiles();
-    expect(files.find(f => f.path === 'frame-draw.json')!.content).toBe(proposal.slots[3].file.content);
+    expect(files.find(f => f.path === 'frame-draw.json')!.content).toBe(proposal.slots[1].file.content);
     const design = JSON.parse(files.find(f => f.path === 'design-direction.json')!.content);
-    expect([design.selected, design.selection.source]).toEqual([3, 'forced']);
-    expect(files.find(f => f.path === 'brand.css')!.content).toContain(proposal.slots[3].palette!.paper);
+    expect([design.selected, design.selection.source]).toEqual([1, 'forced']);
+    expect(files.find(f => f.path === 'brand.css')!.content).toContain(proposal.slots[1].palette!.paper);
     expect(projects.recentDesignFingerprints).not.toHaveBeenCalled();
     expect(projects.recentCompositionFingerprints).not.toHaveBeenCalled();
   });

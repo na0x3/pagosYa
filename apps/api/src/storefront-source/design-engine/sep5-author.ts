@@ -55,7 +55,7 @@ export function sep5Products(value: unknown, instruction: string, allowedImages:
 }
 
 /** The style card the merchant picked (spec 2026-10-11): the store keeps this header and hero. */
-export const SEP5_KEEP_HERO = (html: string) => `PICKED HEADER AND HERO: The merchant chose this design from four. Keep this header and first screen exactly as given (markup and CSS), move its CSS into styles.css, keep [data-store-name], and build the rest of the store in the same fonts, colours and language. Replace preview-only links with real ones (index.html, buscar.html, the catalog, Mi cuenta with data-pagosya-account="login", the cart button with [data-cart-count]).\n${html}`;
+export const SEP5_KEEP_HERO = (html: string) => `PICKED HEADER AND HERO: The merchant chose this design from the styles YAPI offered. Keep this header and first screen exactly as given (markup and CSS), move its CSS into styles.css, keep [data-store-name], and build the rest of the store in the same fonts, colours and language. Replace preview-only links with real ones (index.html, buscar.html, the catalog, Mi cuenta with data-pagosya-account="login", the cart button with [data-cart-count]).\n${html}`;
 
 export function sep5AuthorPrompt(input: {
   brief: unknown; instruction: string; data: unknown; assetLegend: unknown;
