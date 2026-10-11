@@ -418,7 +418,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
           const stop = watchBuildProgress(selectedStore, job.requestId);
           try { await api.waitSourceChatJob(selectedStore, job); transitionBuild({ type: 'complete' }); await load(); }
-          finally { stop(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); }
+          finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
         }); }, 0);
       }
     }
@@ -474,7 +474,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return () => { controller.abort(); window.clearTimeout(timer); };
   }
   /** Elige tu estilo: the four cards the API proposed. Hero paths are API-relative, so they are pointed at Studio's API base. */
-  async function loadStyleProposal(force = false) {
+  /** `showPicker`: the stage just turned to styles, so the canvas must switch to the picker even before any card exists. */
+  async function loadStyleProposal(showPicker = false) {
     const selectedStore = storeId, base = new URL(API_BASE_URL, location.href).href;
     const proposal = (await api.styleProposal(selectedStore).catch(() => ({ proposal: null }))).proposal;
     if (storeId !== selectedStore) return;
@@ -482,16 +483,23 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     // Re-rendering reloads every card iframe, so a poll that brings nothing new leaves them alone.
     const changed = JSON.stringify(next) !== JSON.stringify(styleView);
     styleView = next;
-    if (styleView?.status !== 'RUNNING' && stylePoll) { clearInterval(stylePoll); stylePoll = undefined; }
-    if (changed || force) render();
+    // A RUNNING row left by a crashed worker must not keep the poll alive once the build is over.
+    if (styleView?.status !== 'RUNNING' || !building()) stopStylePoll();
+    if (changed || showPicker && !app.querySelector('.style-pick')) render();
   }
-  function watchStyleProposal() { if (stylePoll) return; stylePoll = window.setInterval(() => void loadStyleProposal(), 1500); void loadStyleProposal(true); }
+  function stopStylePoll() { if (stylePoll) { window.clearInterval(stylePoll); stylePoll = undefined; } }
+  function watchStyleProposal() {
+    if (stylePoll || styleView?.status === 'AWAITING_STYLE') return;
+    stylePoll = window.setInterval(() => void loadStyleProposal(), 1500); void loadStyleProposal(true);
+  }
   async function pickStyle(pick: { index?: number; auto?: boolean }) {
-    if (!styleView || busy) return;
+    if (!styleView || busy || dirty() || historical()) return;
     const chosen = styleView.cards.find(card => card.index === (pick.auto ? styleView!.recommended : pick.index));
     const stylePick = { generationId: styleView.generationId, ...pick };
     styleView = null; styleOpen = null;
-    await send(`Usar el estilo «${chosen?.name ?? 'elegido'}»`, undefined, [], undefined, undefined, { text: '', assetUrls: [], currentPage: 'index.html', stylePick });
+    const accepted = await send(`Usar el estilo «${chosen?.name ?? 'elegido'}»`, undefined, [], undefined, undefined, { text: '', assetUrls: [], currentPage: 'index.html', stylePick });
+    // The pick never became a job (upload, flush or network failure): bring the cards back.
+    if (!accepted) void loadStyleProposal();
   }
   /** "Guardar borrador": finish the preserved run with its own request (resumeDraft), so its design is saved instead of rebuilt
    *  from the saved revision. True once a new revision is saved. */
@@ -513,9 +521,11 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     instruction = pending.text; assets = pending.assets;
     if (saved) await send(instruction); else render();
   }
-  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string, retry?: RetrySubmission) {
+  /** Resolves true once the API accepted the request as a job. */
+  async function send(text: string, setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo', retryAssetUrls?: string[], templateId?: string, directionId?: string, retry?: RetrySubmission): Promise<boolean> {
     if (!text.trim() && assets.length) text = 'Te comparto estas imágenes para el sitio.';
-    if (!text.trim() || busy || dirty() || historical()) return;
+    if (!text.trim() || busy || dirty() || historical()) return false;
+    let accepted = false;
     if (!retry && navigationChoice) {
       text += navigationChoice === 'dropdown'
         ? '\n\nNavegación elegida: menú Tienda desplegable con enlaces reales a categorías o colecciones dentro del mismo sitio. Accesible con teclado y móvil. No abrir ventanas nuevas ni inventar categorías.'
@@ -555,7 +565,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, retry?.resumeDraft || retry?.stylePick ? { ...(retry.resumeDraft ? { resumeDraft: true } : {}), ...(retry.stylePick ? { stylePick: retry.stylePick } : {}) } : undefined);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, retry?.resumeDraft || retry?.stylePick ? { ...(retry.resumeDraft ? { resumeDraft: true } : {}), ...(retry.stylePick ? { stylePick: retry.stylePick } : {}) } : undefined);
         stopProgress();
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';
@@ -604,12 +614,13 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         }
         throw e;
       } finally {
-        stopProgress();
+        stopProgress(); stopStylePoll();
         if (assets !== submittedAssets) submittedAssets.forEach(asset => URL.revokeObjectURL(asset.src));
         pendingSubmission = null; if (building()) transitionBuild({ type: 'interrupt' }); scheduleEstimate();
         if (usage !== null) await api.sourceUsage(storeId).then(result => { usage = result.runs; aiUsage = result.aiUsage || []; }).catch(() => { usage = null; });
       }
     });
+    return accepted;
   }
   function checkKey() { return JSON.stringify([storeId, version?.revision, version ? previewSnapshot().files : []]); }
   function checksPassed() { return !showingDraft() && !dirty() && !checking && checksKey === checkKey() && Boolean(checks?.length) && !sourceChecksBlockPublishing(checks!); }
@@ -805,7 +816,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
           <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><button class="button" id="source-boceto-close" aria-pressed="true" title="Desactivar edición manual" ${disabled(locked)}>Editar en Boceto</button><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft() || bocetoPhase())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button>${bocetoPhase() ? `<button id="source-boceto-tab" aria-pressed="false" title="Activar edición manual" ${disabled(locked || showingDraft() || historical())}>Editar en Boceto</button>` : ''}</div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="${browserHint()}" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${bocetoPhase() ? `<button class="button button--publish" id="source-boceto-generate" ${disabled(locked || historical() || showingDraft())}>Generar sitio</button>` : `${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}`}</div>`}</header>
           <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>${draftRetry ? 'Este borrador todavía no está guardado. Guárdalo para seguir trabajando sobre él.' : 'Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.'}</span>${draftRetry ? `<button class="button button--primary" id="source-save-draft" ${disabled(locked)}>Guardar borrador</button>` : ''}<button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}</div>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showStyles ? renderStylePicker(styleView, { open: styleOpen, device: styleDevice, storeName: store?.name || '', busy }) : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showStyles ? renderStylePicker(styleView, { open: styleOpen, device: styleDevice, storeName: store?.name || '', busy: locked }) : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}${bocetoPhase() && bocetoConfirm ? `<div class="boceto-confirm" role="dialog" aria-modal="true" aria-labelledby="boceto-confirm-title"><div class="boceto-confirm__card"><h2 id="boceto-confirm-title">Generar sitio</h2><p>Tu boceto se convertirá en sitio web. Después ya no podrás editarlo por bloques; podrás pedirle cambios a YAPI y ver el código.</p><div class="boceto-confirm__actions"><button type="button" class="button" data-boceto-confirm="cancel">Cancelar</button><button type="button" class="button button--publish" data-boceto-confirm="go">Generar sitio</button></div></div></div>` : ''}

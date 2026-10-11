@@ -5,7 +5,7 @@
 .style-card:disabled { cursor: progress; } .style-card:not(:disabled):hover { border-color: var(--ink, #111); }
 .style-card--empty { min-height: 260px; animation: style-pulse 1.4s ease-in-out infinite; background: var(--line, #eee); }
 .style-frame { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--line, #f2f2f2); }
-.style-frame iframe { position: absolute; inset: 0 auto auto 0; border: 0; transform-origin: 0 0; transform: scale(var(--frame-scale, .3)); pointer-events: none; }
+.style-frame iframe { position: absolute; left: 50%; top: 50%; border: 0; transform-origin: center; transform: translate(-50%, -50%) scale(var(--frame-scale, .3)); pointer-events: none; }
 .style-frame--empty { animation: style-pulse 1.4s ease-in-out infinite; }
 .style-card__meta { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 0 14px 14px; align-items: center; }
 .style-card__meta small { grid-column: 1 / -1; color: var(--muted, #666); }

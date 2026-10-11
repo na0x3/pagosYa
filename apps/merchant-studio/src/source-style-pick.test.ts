@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apiHeroUrls, heroSrcdoc, renderStylePicker, type StyleProposalView } from './source-style-pick';
+import { apiHeroUrls, fitStyleFrames, frameScale, heroSrcdoc, renderStylePicker, type StyleProposalView } from './source-style-pick';
 
 const card = (index: number, mode: 'calm' | 'bold') => ({ index, slot: index, name: `Estilo ${index}`, mode, vibe: 'Vibra', inspiration: ['Uno', 'Dos', 'Tres'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff', '#111111', '#ff0000', '#eeeeee'], html: '<header data-store-name>Buna</header>', source: 'model' as const });
 const view: StyleProposalView = { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 2, cards: [card(0, 'calm'), card(1, 'calm'), card(2, 'bold'), card(3, 'bold')] };
@@ -59,5 +59,25 @@ describe('hero API urls', () => {
   it('leaves absolute URLs and text mentioning v1 alone', () => {
     const html = '<img src="https://cdn.test/v1/uploads/a.jpg"><p>v1/uploads/ es texto</p><a href="/v1/stores/x">x</a>';
     expect(apiHeroUrls(html, base)).toBe(html);
+  });
+});
+
+describe('frame fit', () => {
+  it('shrinks a page to fit the box whole, by the tighter side, and never enlarges it', () => {
+    expect(frameScale(640, 400, 1280, 800)).toBe(0.5);
+    expect(frameScale(640, 1000, 1280, 800)).toBe(0.5);
+    expect(frameScale(800, 422, 390, 844)).toBe(0.5);
+    expect(frameScale(4000, 4000, 1280, 800)).toBe(1);
+    expect(frameScale(0, 0, 390, 844)).toBe(0);
+  });
+  it('sets --frame-scale on each sized frame from its box', () => {
+    const set: Array<[string, string]> = [];
+    const frame = { clientWidth: 800, clientHeight: 422, dataset: { frameWidth: '390', frameHeight: '844' }, style: { setProperty: (name: string, value: string) => set.push([name, value]) } };
+    fitStyleFrames({ querySelectorAll: () => [frame] } as unknown as ParentNode);
+    expect(set).toEqual([['--frame-scale', '0.5']]);
+  });
+  it('gives the phone preview a full phone page and the cards a desktop page', () => {
+    expect(renderStylePicker(view, { ...state, open: 1, device: 'phone' })).toContain('style="width:390px;height:844px"');
+    expect(renderStylePicker(view, state)).toContain('style="width:1280px;height:800px"');
   });
 });
