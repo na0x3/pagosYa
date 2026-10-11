@@ -131,6 +131,14 @@ it('refuses a pick once the store moved past the revision the styles were made f
   expect(prisma.storeSourceGeneration.updateMany).not.toHaveBeenCalled();
 });
 
+it('"Elige tú" explains its choice in the chat; a merchant\'s own pick does not', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  const auto: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Elige tú', stylePick: { generationId: 'g1', auto: true }, requestId: uuid() });
+  expect(auto.assistantMessage.content.startsWith('Elegí «Estilo 1»: r Guardé')).toBe(true);
+  const own: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 2 }, requestId: uuid() });
+  expect(own.assistantMessage.content.startsWith('Elegí')).toBe(false);
+});
+
 it('offers the same style again when the build itself fails', async () => {
   prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
   generate.mockRejectedValueOnce(new Error('provider down'));

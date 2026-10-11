@@ -510,7 +510,9 @@ export class SourceChatService {
       const build = () => this.generation.generate(merchantId, storeId, { ...proposal.request.dto, revision: input.revision }, this.generation.newBudget(input.maxCredits), proposal.request.imageUses, workflow.report, { ...(proposal.request.redesign ? { redesign: true } : {}), style: { proposal, index } });
       const revision = await (context && original ? sourceRequestContext.run({ ...context, request: original }, build) : build());
       if ('styleProposal' in revision) throw new BadRequestException('No se pudo construir el estilo elegido.');
-      return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, proposal.request.imageUses, proposal.request.dto.assetUrls ?? []);
+      // "Elige tú" says in one sentence why YAPI chose this card.
+      const rationale = input.stylePick!.auto ? proposal.design.selection?.rationale?.trim() : '';
+      return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, proposal.request.imageUses, proposal.request.dto.assetUrls ?? [], rationale ? `Elegí «${proposal.design.concepts[index].card?.name ?? proposal.design.concepts[index].name}»: ${rationale} ` : '');
     } catch (error) {
       await workflow.finish('failed');
       const shown = merchantFacingSourceFailure(error);
