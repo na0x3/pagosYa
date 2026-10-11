@@ -23,3 +23,35 @@ export function checkSourceProviderQuota(status: number, body: any, provider = '
     throw new SourceProviderQuotaException(provider);
   }
 }
+
+/** The ChatGPT-plan refusals that a second try can clear: the bridge refuses a call beyond its ~2 concurrent ones this way. */
+const PLAN_REJECTION = /ChatGPT rechazó la autorización|ChatGPT indicó un límite de uso/;
+
+/** A provider refusal (quota, ChatGPT authorization rejected, usage limit), also when it is the cause of a wrapped error.
+ * A validation failure, a timeout or an abort is not one. */
+export function isProviderRejection(error: unknown, depth = 0): boolean {
+  if (!error || typeof error !== 'object' || depth > 3) return false;
+  if (error instanceof SourceProviderQuotaException) return true;
+  if (error instanceof Error && PLAN_REJECTION.test(error.message)) return true;
+  return isProviderRejection((error as { cause?: unknown }).cause, depth + 1);
+}
+
+/** How long a rejected style-lane call waits before its one retry (spec 2026-10-11 amendment "two cards"). */
+export const PROVIDER_RETRY_DELAY_MS = 3000;
+
+/** The 3 s pause before that one retry; an abort ends it at once (it rejects with the signal's reason). */
+export const providerRetryPause = (signal?: AbortSignal, ms = PROVIDER_RETRY_DELAY_MS) => new Promise<void>((resolve, reject) => {
+  if (signal?.aborted) return reject(signal.reason);
+  const onAbort = () => { clearTimeout(timer); reject(signal!.reason); };
+  const timer = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve(); }, ms);
+  signal?.addEventListener('abort', onAbort, { once: true });
+});
+
+/** Runs `call`; when the provider rejects it, waits 3 s and runs it once more. Anything else (or an abort) is thrown as is. */
+export async function retryProviderRejection<T>(call: () => Promise<T>, options: { signal?: AbortSignal } = {}): Promise<T> {
+  try { return await call(); } catch (error) {
+    if (!isProviderRejection(error) || options.signal?.aborted) throw error;
+    await providerRetryPause(options.signal);
+    return call();
+  }
+}

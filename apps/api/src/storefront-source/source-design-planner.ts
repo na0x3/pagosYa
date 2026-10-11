@@ -49,7 +49,7 @@ export class SourceDesignPlanner {
     const schemaConcepts = style ? styleConceptsSchema(conceptsSchema, count) : conceptsSchema;
     const cardText = `Give it a cardName (two or three words in the merchant's language, e.g. "Tostador de barrio"), a vibe paragraph from its signature idea, and three to five inspiration lines taken from the merchant's own facts (story, products, place), never generic.`;
     const countLine = style?.length === 1
-      ? `You are planning only. Return exactly one fully developed concept and NO source files: it is built on the CONCEPT below, its frame, colours and playbook exactly; wherever a contract above says three concepts, read one. The other cards are planned separately. ${cardText} Set selection.index to 0 and cite the merchant's facts it serves in a short rationale.\n${style[0].direction}\n`
+      ? `You are planning only. Return exactly one fully developed concept and NO source files: it is built on the CONCEPT below, its frame, colours and playbook exactly; wherever a contract above says three concepts, read one. The other card is planned separately. ${cardText} Set selection.index to 0 and cite the merchant's facts it serves in a short rationale.\n${style[0].direction}\n`
       : style && count < 4
       ? `You are planning only. Return exactly ${count} fully developed concepts and NO source files: concepts[i] is built on the i-th CONCEPT below, its frame, colours and playbook exactly; wherever a contract above says three concepts, read ${count}. Give each a cardName (two or three words in the merchant's language, e.g. "Tostador de barrio"), a vibe paragraph from its signature idea, and three to five inspiration lines taken from the merchant's own facts (story, products, place), never generic. Then select the concept that best fits the merchant's explicit choices, catalog and imagery, and cite those facts in a short rationale.\n${style.map(slot => slot.direction).join('\n\n')}\n`
       : style
@@ -108,7 +108,8 @@ export class SourceDesignPlanner {
         return result;
       } catch (error) {
         attempt.failureReason ??= (error instanceof Error ? error.message : 'Exploration failed').slice(0, 300);
-        throw error instanceof BadGatewayException ? error : new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.');
+        // The merchant reads the plain message; the cause keeps a provider refusal visible, so a style lane can retry it.
+        throw error instanceof BadGatewayException ? error : new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.', { cause: error });
       } finally {
         attempt.durationMs = Date.now() - started;
         await input.record?.(body, attempt);

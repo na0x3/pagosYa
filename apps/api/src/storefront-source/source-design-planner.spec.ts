@@ -6,6 +6,7 @@ import { SOURCE_DNA_DIRECTION, SOURCE_DNA_SCHEMA } from './source-dna';
 import { validDna } from './fixtures/dna';
 import { SOURCE_SIGNATURE_PLANNING } from './source-signature';
 import { SOURCE_CONCEPT_ENERGY_DIRECTION } from './source-design';
+import { isProviderRejection } from './source-provider-error';
 
 const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
   composition: { family: 'menu-led', rationale: 'The cafe needs a clear menu for quick ordering.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Choose from the real menu.', sections: [{ id: 'menu', intent: 'Choose products and order.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Order' }] }] },
@@ -34,6 +35,16 @@ it('does not accept truncated concepts or hide the cost of a failed planning res
   const request = input();
   await expect(new SourceDesignPlanner().explore(request)).rejects.toThrow('exploración visual');
   expect(request.attempts[0]).toMatchObject({ phase: 'design', status: 'FAILED', usage: { outputTokens: 3000 } });
+});
+
+it('keeps a provider rejection as the cause of its plain error, so a style lane can retry it (spec amendment "two cards")', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: { code: 'chatgpt_authentication_rejected' } }), { status: 401 }));
+  const request = { ...input(), provider: { name: 'ChatGPT plan', endpoint: 'http://127.0.0.1:4319/v1/responses' } };
+  const error: any = await new SourceDesignPlanner().explore(request).catch(failure => failure);
+  expect(error.message).toBe('No se completó la exploración visual. Tu revisión anterior sigue guardada.');
+  expect(error.cause?.message).toContain('ChatGPT rechazó la autorización');
+  expect(isProviderRejection(error)).toBe(true);
+  expect(request.attempts).toHaveLength(1);
 });
 
 it('repairs an inconsistent completed plan once with an actionable layout diagnostic', async () => {
@@ -222,32 +233,33 @@ describe('style slots', () => {
   });
 
   it('plans one concept for one lane: one-item schema, the one-concept wording and the lane\'s real slot on the card', async () => {
-    const one = styled()[2];
+    const one = styled()[1];
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: [one], selection: { index: 0, rationale: 'Fits' } }));
-    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: [{ slot: 2, mode: 'bold', direction: 'CONCEPT 3 of 4 (bold' }] });
+    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: [{ slot: 1, mode: 'bold', direction: 'CONCEPT 2 of 2 (bold' }] });
     const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     expect([body.text.format.schema.properties.concepts.minItems, body.text.format.schema.properties.concepts.maxItems]).toEqual([1, 1]);
     expect(body.text.format.schema.properties.selection.properties.index.maximum).toBe(0);
     const prompt = body.input[0].content[0].text as string;
     expect(prompt).toContain('Return exactly one fully developed concept and NO source files: it is built on the CONCEPT below');
-    expect(prompt).toContain('CONCEPT 3 of 4 (bold');
+    expect(prompt).toContain('CONCEPT 2 of 2 (bold');
+    expect(prompt).toContain('The other card is planned separately.');
     expect(prompt).not.toContain('Return exactly four');
     expect(prompt).not.toContain('Two are calm and two are bold');
     expect(prompt).not.toContain(SOURCE_CONCEPT_ENERGY_DIRECTION);
     expect(result.concepts).toHaveLength(1);
-    expect(result.concepts[0].card).toMatchObject({ slot: 2, mode: 'bold', name: 'Estilo 3' });
+    expect(result.concepts[0].card).toMatchObject({ slot: 1, mode: 'bold', name: 'Estilo 2' });
     expect(result.selected).toBe(0);
   });
 
-  it('plans two lanes at once with their own slots and a two-concept schema', async () => {
+  it('plans the two cards jointly with their own slots and a two-concept schema', async () => {
     const value = styled();
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: [value[1], value[3]], selection: { index: 1, rationale: 'Fits' } }));
-    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: [{ slot: 1, mode: 'calm', direction: 'CONCEPT 2 of 4 (calm' }, { slot: 3, mode: 'bold', direction: 'CONCEPT 4 of 4 (bold' }] });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(reply({ concepts: [value[0], value[1]], selection: { index: 1, rationale: 'Fits' } }));
+    const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: [{ slot: 0, mode: 'calm', direction: 'CONCEPT 1 of 2 (calm' }, { slot: 1, mode: 'bold', direction: 'CONCEPT 2 of 2 (bold' }] });
     const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     expect(body.text.format.schema.properties.concepts.minItems).toBe(2);
     expect(body.text.format.schema.properties.selection.properties.index.maximum).toBe(1);
     expect(body.input[0].content[0].text).toContain('Return exactly 2 fully developed concepts');
-    expect(result.concepts.map(c => [c.card!.slot, c.card!.mode])).toEqual([[1, 'calm'], [3, 'bold']]);
+    expect(result.concepts.map(c => [c.card!.slot, c.card!.mode])).toEqual([[0, 'calm'], [1, 'bold']]);
     expect(result.selected).toBe(1);
   });
 
