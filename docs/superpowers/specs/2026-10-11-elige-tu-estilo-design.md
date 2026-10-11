@@ -1,6 +1,6 @@
 # Part C: "Elige tu estilo", with a first-store walkthrough
 
-Status: draft for owner review, 2026-10-11.
+Status: built 2026-10-11 (flags default off); amended the same day with four parallel lanes after the first live run.
 Programme: `2026-10-10-choose-your-style-design.md` (part C of four). Part A (logo and favicon) and part B (themed fonts) are built. The business playbook (`2026-10-11-business-playbook-design.md`) is built and is the source of the calm style families used here.
 
 ## Why
@@ -134,6 +134,19 @@ The proposal runs inside an ordinary `StoreSourceChatJob`, like any generation. 
 The proposal stays until the merchant picks or asks for another full redesign. It never expires on its own. Reloading Studio while a proposal is waiting shows the cards again.
 
 Both new columns (`Store.onboarding`, `StoreSourceGeneration.proposal`) ship in one migration. The owner applies it on dev. Agents never run `prisma migrate`, `diff` or `reset` against the dev database.
+
+### Amendment 2026-10-11: four parallel lanes (owner-approved after the first live run)
+
+The first live run took about 6.5 minutes before any card: one planner call wrote all four concepts (164 s), then four hero calls on the run model (67–180 s, two cut by the timeout). Now each card has its own lane, and the four lanes run in parallel:
+- **Plan.** The lane plans ONE concept for its slot (the planner accepts 1–4 slots). It moves the display font off the other bold card's font before drawing anything.
+- **Show at once.** The card appears immediately with its template hero, marked pending ("Mejorando diseño…").
+- **Write the hero.** The model hero is written on `gpt-5.6-luna` (4000 tokens, 120 s), retried once on the run model if the provider refuses luna, and then replaces the template.
+
+Concepts and heroes are kept by slot and saved in slot order, one save at a time, all guarded as before. "Usar este estilo" is enabled only once every lane has finished.
+
+**Recommendation.** The planner no longer compares the four cards, so "Elige tú" uses a fixed rule: the first bold card if the merchant's words ask for bold, otherwise the first calm card. The rationale is that concept's premise.
+
+**Errors.** A failed job never shows database or internal error text to the merchant. Merchant-facing 503s (quota, ChatGPT plan) still pass through.
 
 ### The cards in Studio
 
