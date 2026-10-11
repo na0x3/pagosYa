@@ -2,6 +2,7 @@ import { SourceChatJobsService } from './source-chat-jobs.service';
 import { SketchStudioController } from './sketch-studio.controller';
 import { SketchStudioService } from './sketch-studio.service';
 import { SourceChatJobsController } from './source-chat-jobs.controller';
+import { SourceFontsController } from './source-fonts.controller';
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
@@ -34,7 +35,7 @@ import { SourceTemplatesService } from "./source-templates.service";
 import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, ProductPageModule],
-  controllers: [SketchStudioController, SourceChatJobsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController],
+  controllers: [SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController],
   providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })

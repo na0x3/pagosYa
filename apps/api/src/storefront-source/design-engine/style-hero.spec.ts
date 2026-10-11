@@ -1,0 +1,63 @@
+import { sanitizeHeroHtml, templateHero, heroFontFaces, writeStyleHero, type HeroFacts } from './style-hero';
+import { SourceRequestBudget } from '../source-request-budget';
+
+const facts: HeroFacts = { storeName: 'Café Buna', photoPath: 'assets/photo-1.webp', headline: 'Café de altura, tostado aquí', line: 'Granos de Caranavi.', action: 'Ver productos', palette: { paper: '#ffffff', ink: '#161616', accent: '#8f1d14', accent2: '#f4efe9' }, fonts: { display: 'outfit', text: 'outfit' }, mode: 'calm' };
+afterEach(() => jest.restoreAllMocks());
+
+it('strips scripts, handlers, javascript: links and foreign URLs, and keeps the layout', () => {
+  const html = sanitizeHeroHtml('<style>@import url(https://x.y/a.css); .h{background:url(https://evil.test/a.png)} .p{background:url(assets/photo-1.webp)}</style><header data-store-name onclick="x()">Café</header><a href="javascript:alert(1)">Ver</a><script>alert(1)</script><iframe src="x"></iframe><img src="assets/photo-1.webp" onerror="x()">');
+  expect(html).not.toMatch(/<script|onclick|onerror|javascript:|<iframe|@import|evil\.test/i);
+  expect(html).toContain('url(assets/photo-1.webp)');
+  expect(html).toContain('src="assets/photo-1.webp"');
+  expect(html).toContain('data-store-name');
+});
+
+it('handles scripts with attributes, uppercase tags, unquoted and slash-separated handlers, and rebuilt tags', () => {
+  const html = sanitizeHeroHtml('<div data-store-name>x</div><script src=//evil.test/a.js type="module">alert(1)</script ><SCRIPT>alert(2)</SCRIPT><IMG SRC=assets/a.png ONERROR=alert(3)><img/onerror=alert(4) src="assets/a.png"><a HREF=javascript:alert(5)>a</a><scr<script>ipt>alert(6)</scr</script>ipt><svg onload=alert(7)></svg>')!;
+  expect(html).not.toMatch(/<script|<\/script|alert|onerror|onload|javascript:|evil\.test/i);
+  expect(html).toContain('data-store-name');
+});
+
+it('drops srcset and other URL attributes that point outside the local assets', () => {
+  const html = sanitizeHeroHtml('<div data-store-name></div><img src="assets/a.png" srcset="assets/a.png 1x, https://evil.test/b.png 2x"><img srcset="assets/a.png 1x, assets/b.png 2x"><img src=https://evil.test/c.png><video poster="https://evil.test/p.png"></video><button formaction="https://evil.test/f">x</button><div style="background:image-set(\'https://evil.test/i.png\' 1x)"></div>')!;
+  expect(html).not.toMatch(/evil\.test/);
+  expect(html).toContain('srcset="assets/a.png 1x, assets/b.png 2x"');
+});
+
+it('rejects empty, oversized or nameless answers', () => {
+  expect(sanitizeHeroHtml('')).toBeNull();
+  expect(sanitizeHeroHtml('<div data-store-name>' + 'x'.repeat(60_000) + '</div>')).toBeNull();
+  expect(sanitizeHeroHtml('<div>Café</div>')).toBeNull();
+});
+
+it('builds a template hero in the concept fonts and colours, with or without a photo', () => {
+  const html = templateHero(facts);
+  expect(html).toContain('assets/outfit.ttf');
+  expect(html).toContain('#8f1d14');
+  expect(html).toContain('Café Buna');
+  expect(html).toContain('assets/photo-1.webp');
+  expect(templateHero({ ...facts, photoPath: undefined })).not.toContain('<img class="th-photo"');
+  expect(templateHero({ ...facts, storeName: '<b>x</b>' })).not.toContain('<b>x</b>');
+  expect(sanitizeHeroHtml(templateHero(facts))).not.toBeNull();
+});
+
+it('declares each font once with self-hosted files', () => {
+  expect(heroFontFaces({ display: 'outfit', text: 'outfit' }).match(/@font-face/g)).toHaveLength(1);
+  expect(heroFontFaces({ display: 'young-serif', text: 'instrument' })).toContain('assets/young-serif.ttf');
+});
+
+it('falls back to the template hero when the call fails or returns unusable HTML', async () => {
+  const base = { facts, concept: { name: 'x' } as any, direction: 'CONCEPT 1 of 4', model: 'gpt-5.6-terra' as const, provider: { endpoint: 'https://api.openai.com/v1/responses', name: 'OpenAI' }, apiKey: 'k', budget: new SourceRequestBudget(200), signal: new AbortController().signal };
+  jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ html: '' }) }] }] })));
+  expect((await writeStyleHero({ ...base, attempts: [] })).source).toBe('template');
+  jest.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('down'));
+  const attempts: any[] = [];
+  expect((await writeStyleHero({ ...base, attempts })).source).toBe('template');
+  expect(attempts[0]).toMatchObject({ status: 'FAILED', failureReason: expect.any(String) });
+});
+
+it('keeps a usable model hero', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ html: '<header><span data-store-name>Café Buna</span></header><section><h1>Hola</h1></section>' }) }] }] })));
+  const out = await writeStyleHero({ facts, concept: { name: 'x' } as any, direction: 'd', model: 'gpt-5.6-terra', provider: { endpoint: 'https://api.openai.com/v1/responses', name: 'OpenAI' }, apiKey: 'k', budget: new SourceRequestBudget(200), signal: new AbortController().signal, attempts: [] });
+  expect(out).toEqual({ html: expect.stringContaining('<h1>Hola</h1>'), source: 'model' });
+});
