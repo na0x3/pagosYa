@@ -50,15 +50,18 @@ export function renderStylePicker(view: StyleProposalView | null, state: { open:
         <h3>Vibe</h3><p>${escape(open.vibe)}</p>
         <h3>Inspiración</h3><ul>${open.inspiration.map(line => `<li>${escape(line)}</li>`).join('')}</ul>
         <h3>Tipografía</h3><p class="style-type"><strong>Aa</strong> ${escape(open.fonts.displayFamily)}<br><span>${escape(state.storeName)}</span> ${escape(open.fonts.textFamily)}</p>
-        <button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy ? 'disabled' : ''}>Usar este estilo</button></aside></section>`;
+        <button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy || running ? 'disabled' : ''}>Usar este estilo</button>${running ? '<small class="style-preview__wait">Podrás elegirlo cuando estén listos todos los estilos.</small>' : ''}</aside></section>`;
   }
   const placeholders = running ? Math.max(0, 4 - cards.length) : 0;
+  const calm = cards.filter(card => card.mode === 'calm').length;
+  // The cards actually shown: a lane that failed leaves fewer than four.
+  const count = calm === 2 && cards.length === 4 ? 'dos tranquilos y dos atrevidos' : cards.length === 1 ? '1 estilo' : cards.length ? `${cards.length} estilos` : '';
   const picked = view?.status === 'PICKED' ? cards.find(card => card.index === view.picked) : undefined;
   const footer = running ? '' : picked
     ? `<footer><button type="button" class="button button--primary" data-style-retry="${Number(picked.index)}" ${state.busy ? 'disabled' : ''}>Reintentar con «${escape(picked.name)}»</button></footer>`
     : `<footer><button type="button" class="button" data-style-auto ${state.busy ? 'disabled' : ''}>Elige tú</button></footer>`;
   return `<section class="style-pick" aria-label="Elige tu estilo" aria-busy="${running}">
-    <header><h2>${running ? 'Preparando tus estilos…' : picked ? 'Tu estilo quedó elegido' : 'Elige tu estilo'}</h2><p>${picked ? 'La tienda no se terminó de construir. Reintenta con tu estilo o elige otro.' : `${escape(state.storeName)}: dos tranquilos y dos atrevidos.`}</p></header>
+    <header><h2>${running ? 'Preparando tus estilos…' : picked ? 'Tu estilo quedó elegido' : 'Elige tu estilo'}</h2><p>${picked ? 'La tienda no se terminó de construir. Reintenta con tu estilo o elige otro.' : count ? `${escape(state.storeName)}: ${count}.` : escape(state.storeName)}</p></header>
     <div class="style-grid">${cards.map(card => `<button type="button" class="style-card${card === picked ? ' style-card--picked' : ''}" data-style-card="${Number(card.index)}" ${card === picked ? 'aria-current="true" ' : ''}${card.html ? '' : 'disabled'}>${frame(card, DESKTOP)}<span class="style-card__meta"><strong>${escape(card.name)}</strong>${tag(card.mode)}${card === picked ? '<span class="style-tag style-tag--picked">Elegido</span>' : ''}<small>${escape(card.fonts.displayFamily)} · ${escape(card.fonts.textFamily)}</small><span class="style-dots">${dots(card.palette)}</span>${card.pending ? '<small class="style-card__pending" data-style-pending>Mejorando diseño…</small>' : ''}</span></button>`).join('')}${'<div class="style-card style-card--empty" data-style-placeholder aria-hidden="true"></div>'.repeat(placeholders)}</div>
     ${footer}</section>`;
 }

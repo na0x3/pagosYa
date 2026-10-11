@@ -37,6 +37,19 @@ describe('style picker', () => {
     expect(html.match(/data-style-placeholder/g)).toHaveLength(2);
     expect(renderStylePicker(view, state)).not.toContain('Mejorando diseño');
   });
+  it('keeps Usar este estilo disabled in the preview while the proposal is still running', () => {
+    const running = { ...view, status: 'RUNNING' as const };
+    expect(renderStylePicker(running, { ...state, open: 1 })).toMatch(/data-style-use="1" disabled/);
+    expect(renderStylePicker(view, { ...state, open: 1 })).not.toMatch(/data-style-use="1" disabled/);
+  });
+  it('counts the cards actually shown in the header', () => {
+    expect(renderStylePicker(view, state)).toContain('Café Buna: dos tranquilos y dos atrevidos.');
+    const three = renderStylePicker({ ...view, cards: [card(0, 'calm'), card(2, 'bold'), card(3, 'bold')] }, state);
+    expect(three).toContain('Café Buna: 3 estilos.');
+    expect(three).not.toContain('dos tranquilos');
+    expect(renderStylePicker({ ...view, cards: [card(0, 'calm'), card(1, 'calm'), card(2, 'calm'), card(3, 'bold')] }, state)).toContain('Café Buna: 4 estilos.');
+    expect(renderStylePicker({ ...view, status: 'RUNNING', cards: [card(2, 'bold')] }, state)).toContain('Café Buna: 1 estilo.');
+  });
   it('opens a preview with vibe, inspiration, typography and the use button', () => {
     const html = renderStylePicker(view, { ...state, open: 1 });
     expect(html).toContain('Vibe');

@@ -16,6 +16,7 @@
 .style-pick--preview { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 .style-preview__stage .style-frame { aspect-ratio: auto; height: 70vh; } .style-preview__toggle { display: flex; gap: 8px; margin-bottom: 10px; }
 .style-preview__side h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #666); }
+.style-preview__wait { display: block; margin-top: 8px; color: var(--muted, #666); }
 @media (max-width: 720px) { .style-grid, .style-pick--preview { grid-template-columns: 1fr; } .style-pick { padding: 16px; } }
 @media (prefers-reduced-motion: reduce) { .style-card--empty, .style-frame--empty { animation: none; } }
 @keyframes style-pulse { 50% { opacity: .55; } }
