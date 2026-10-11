@@ -95,6 +95,7 @@ it('builds from a pick with the saved request, marks it picked, and "Elige tú" 
 it('builds a picked redesign as a redesign', async () => {
   const proposal = awaitingProposal();
   proposal.request.redesign = true;
+  proposal.request.dto.revision = 4;
   prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal });
   currentRevision(4);
   await chat.send('m1', 's1', { revision: 4, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 3 }, requestId: uuid() });
@@ -119,6 +120,15 @@ it('refuses a pick outside the proposal or one that is no longer offered, and sa
   expect(prisma.storeSourceGeneration.updateMany).not.toHaveBeenCalled();
   const failure = prisma.storeAgentMessage.create.mock.calls.at(-1)[0].data;
   expect(failure).toMatchObject({ role: 'ASSISTANT', content: 'Ese estilo ya no está disponible. Pide un nuevo diseño.', metadata: { failed: true, styleProposal: { generationId: 'g1' } } });
+});
+
+it('refuses a pick once the store moved past the revision the styles were made for', async () => {
+  // e.g. a Shopify import or a template landed revision 1 while the cards waited.
+  prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
+  currentRevision(1);
+  await expect(chat.send('m1', 's1', { revision: 1, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() })).rejects.toThrow('Ese estilo ya no está disponible. Pide un nuevo diseño.');
+  expect(generate).not.toHaveBeenCalled();
+  expect(prisma.storeSourceGeneration.updateMany).not.toHaveBeenCalled();
 });
 
 it('offers the same style again when the build itself fails', async () => {

@@ -494,7 +494,8 @@ export class SourceChatService {
     try {
       const row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: input.stylePick!.generationId, storeId }, select: { id: true, proposal: true, requestJobId: true } });
       const proposal = row ? styleProposalFrom(row.proposal) : null;
-      if (!proposal?.design || !['AWAITING_STYLE', 'PICKED'].includes(proposal.status)) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
+      // A pick builds on the revision the styles were made for; an import or template that landed since makes them stale.
+      if (!proposal?.design || !['AWAITING_STYLE', 'PICKED'].includes(proposal.status) || proposal.request.dto.revision !== input.revision) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
       const index = input.stylePick!.auto ? proposal.design.selected : input.stylePick!.index ?? proposal.picked ?? proposal.design.selected;
       if (!proposal.design.concepts[index]) throw new BadRequestException('Elige uno de los estilos de la propuesta.');
       await this.prisma.storeSourceGeneration.updateMany({ where: { id: row!.id }, data: { proposal: { ...proposal, status: 'PICKED', picked: index } as unknown as Prisma.InputJsonValue } });
