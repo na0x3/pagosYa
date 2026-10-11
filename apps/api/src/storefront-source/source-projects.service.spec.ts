@@ -375,3 +375,24 @@ describe('recent frame draws', () => {
     expect(query.values).toContain('frame-draw.json');
   });
 });
+
+describe('recent style cards', () => {
+  it('reads the slots and display fonts of recent proposals (the merchant\'s and the same kind\'s), defensively', async () => {
+    const { service, prisma } = setup();
+    prisma.$queryRaw = jest.fn().mockResolvedValue([
+      { mine: true, slots: [{ kind: 'cafe-food', mode: 'calm', slot: 0, draw: { header: 'info-bar', hero: 'illustration', family: 'cafe-shop', kind: 'cafe-food' } }, { kind: 'cafe-food', mode: 'bold', slot: 1, draw: { header: 'side-rail', hero: 'made-up' }, device: 'stamp' }], fonts: [{ slot: 0, display: 'outfit' }, { slot: 1, display: 7 }] },
+      { mine: false, slots: [{ kind: 'cafe-food', mode: 'weird', slot: 0, draw: {} }, { kind: 'cafe-food', mode: 'bold', slot: 1, draw: null, device: 'laser' }], fonts: null },
+      { mine: false, slots: null, fonts: null },
+    ]);
+    expect(await service.recentStyleCards('m1', 'cafe-food', new Date('2026-10-11T12:00:00Z'))).toEqual([
+      { kind: 'cafe-food', mode: 'calm', draw: { header: 'info-bar', hero: 'illustration', family: 'cafe-shop', kind: 'cafe-food' }, mine: true, display: 'outfit' },
+      { kind: 'cafe-food', mode: 'bold', draw: { header: 'side-rail' }, mine: true, device: 'stamp' },
+      { kind: 'cafe-food', mode: 'bold', draw: {} },
+    ]);
+    const query = prisma.$queryRaw.mock.calls[0][0];
+    expect(query.text).toContain('"StoreSourceGeneration"');
+    expect(query.text).toContain('proposal IS NOT NULL');
+    expect(query.text).toContain('UNION');
+    expect(query.values).toEqual(expect.arrayContaining(['m1', 'cafe-food', 20]));
+  });
+});

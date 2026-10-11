@@ -127,6 +127,42 @@ describe('style proposal mode', () => {
     expect(projects.save).not.toHaveBeenCalled();
   });
 
+  it('feeds the cards recent proposals showed into the draw: a calm card the merchant was shown is not shown again', async () => {
+    const shownCalm = { header: 'info-bar', hero: 'illustration', footer: 'directory', kind: 'cafe-food', family: 'cafe-shop' };
+    projects.recentStyleCards = jest.fn().mockResolvedValue([
+      { kind: 'cafe-food', mode: 'calm', draw: shownCalm, display: 'outfit', mine: true },
+      { kind: 'cafe-food', mode: 'bold', draw: { header: 'side-rail', hero: 'offset-frame' }, device: 'stamp', mine: true },
+    ]);
+    lanes();
+    await service.generate('m1', 's1', { ...dto, brief: { ...dto.brief, businessInformation: 'Café de 1.800 msnm desde 2015.' } }, budget, [], progress, { styleProposal: true });
+    expect(projects.recentStyleCards).toHaveBeenCalledWith('m1', draws.mock.calls[0][0].kind, expect.any(Date), 20);
+    expect(draws.mock.calls[0][0].shown).toEqual(await projects.recentStyleCards.mock.results[0].value);
+    const [calmSlot, boldSlot] = draws.mock.results[0].value;
+    expect(calmSlot.draw.header).not.toBe('info-bar');
+    expect(calmSlot.draw.hero).not.toBe('illustration');
+    expect(boldSlot.device).toBeDefined();
+    expect(boldSlot.device).not.toBe('stamp');
+    // The device is saved on the proposal's slot, so the next proposal reads it back and avoids it.
+    expect(finalWrite().data.proposal.slots[1].device).toBe(boldSlot.device);
+    // Each hero gets its card's drawn frame, and the bold one its device and the brief's real numbers.
+    const heroFacts = writeStyleHero.mock.calls.map(c => c[0].facts);
+    expect(heroFacts[0].frame).toEqual({ header: calmSlot.draw.header, hero: calmSlot.draw.hero });
+    expect(heroFacts[1]).toMatchObject({ frame: { header: boldSlot.draw.header, hero: boldSlot.draw.hero }, device: boldSlot.device, numbers: [{ value: '1.800', label: 'msnm' }, { value: '2015', label: '' }] });
+    // The calm lane's planner is told which display fonts recent cards used.
+    const calmDirection = explore.mock.calls.map(c => c[0]).find(call => call.styleSlots?.[0].mode === 'calm').styleSlots[0].direction;
+    expect(calmDirection).toContain('avoid these display fonts: outfit');
+  });
+
+  it('still proposes when the shown-cards lookup fails', async () => {
+    projects.recentStyleCards = jest.fn().mockRejectedValue(new Error('db down'));
+    lanes();
+    const result = await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    expect(result).toEqual({ styleProposal: { generationId: expect.any(String), cards: 2 } });
+    expect(draws.mock.calls[0][0].shown).toEqual([]);
+    projects.recentStyleCards = jest.fn(() => { throw new Error('sync throw'); });
+    expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: expect.any(String), cards: 2 } });
+  });
+
   it('saves the palette each hero was drawn with, also for a slot without one', async () => {
     draws.mockRestore();
     const real = styleDrawsModule.styleDraws;

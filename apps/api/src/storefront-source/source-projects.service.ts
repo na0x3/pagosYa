@@ -1,5 +1,6 @@
 import { sourceRequestContext } from './source-request-context';
 import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
+import { isSignatureDevice, type ShownStyleCard } from './design-engine/style-draws';
 import { assertPreparedSource, type PreparedSourceArtifact } from './source-prepared-artifact';
 import { DesignRetryableConflict } from './source-design-errors';
 import { savedSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
@@ -104,6 +105,40 @@ export class SourceProjectsService {
       WHERE f->>'path' = ${FRAME_DRAW_FILE}
     `);
     return rows.map(row => parseFrameDraw(row.content)).filter(draw => Object.keys(draw).length > 0);
+  }
+
+  /** The style cards recent proposals SHOWED, built or not (2026-10-11 variety): the merchant's last `limit` proposals and the
+   *  last `limit` of the same kind across stores (30 days), newest first. Only the draw, device and display font travel. */
+  async recentStyleCards(merchantId: string, kind: string, now = new Date(), limit = 20): Promise<ShownStyleCard[]> {
+    const since = new Date(now.getTime() - 30 * 86_400_000);
+    const rows = await this.prisma.$queryRaw<Array<{ slots: unknown; fonts: unknown; mine: boolean }>>(Prisma.sql`
+      WITH mine AS (
+        SELECT g.id, g."createdAt" FROM "StoreSourceGeneration" g JOIN "Store" s ON s.id = g."storeId"
+        WHERE s."merchantId" = ${merchantId} AND g.proposal IS NOT NULL AND g."createdAt" >= ${since}
+        ORDER BY g."createdAt" DESC LIMIT ${limit}
+      ), same AS (
+        SELECT g.id, g."createdAt" FROM "StoreSourceGeneration" g
+        WHERE g.proposal IS NOT NULL AND g."createdAt" >= ${since} AND g.proposal->'slots'->0->>'kind' = ${kind}
+        ORDER BY g."createdAt" DESC LIMIT ${limit}
+      ), ids AS (SELECT id, "createdAt" FROM mine UNION SELECT id, "createdAt" FROM same)
+      SELECT s."merchantId" = ${merchantId} AS mine,
+        (SELECT jsonb_agg(jsonb_build_object('kind', x->'kind', 'mode', x->'mode', 'slot', x->'slot', 'draw', x->'draw', 'device', x->'device'))
+          FROM jsonb_array_elements(CASE WHEN jsonb_typeof(g.proposal->'slots') = 'array' THEN g.proposal->'slots' ELSE '[]'::jsonb END) x) AS slots,
+        (SELECT jsonb_agg(jsonb_build_object('slot', c->'card'->'slot', 'display', c->'dna'->'type'->'display'))
+          FROM jsonb_array_elements(CASE WHEN jsonb_typeof(g.proposal->'design'->'concepts') = 'array' THEN g.proposal->'design'->'concepts' ELSE '[]'::jsonb END) c) AS fonts
+      FROM ids JOIN "StoreSourceGeneration" g ON g.id = ids.id JOIN "Store" s ON s.id = g."storeId"
+      ORDER BY ids."createdAt" DESC
+    `);
+    return rows.flatMap(row => {
+      const fonts = Array.isArray(row.fonts) ? row.fonts as Array<{ slot?: unknown; display?: unknown }> : [];
+      const slots = Array.isArray(row.slots) ? row.slots as Array<{ kind?: unknown; mode?: unknown; slot?: unknown; draw?: unknown; device?: unknown }> : [];
+      return slots.flatMap((slot): ShownStyleCard[] => {
+        if (slot.mode !== 'calm' && slot.mode !== 'bold') return [];
+        const draw = parseFrameDraw(JSON.stringify(slot.draw ?? null));
+        const display = fonts.find(font => font.slot === slot.slot)?.display;
+        return [{ ...(typeof slot.kind === 'string' ? { kind: slot.kind } : {}), mode: slot.mode, draw, ...(row.mine === true ? { mine: true } : {}), ...(isSignatureDevice(slot.device) ? { device: slot.device } : {}), ...(typeof display === 'string' && display ? { display } : {}) }];
+      });
+    });
   }
 
   async current(merchantId: string, storeId: string) {

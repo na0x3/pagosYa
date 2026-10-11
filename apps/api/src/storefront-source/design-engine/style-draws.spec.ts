@@ -1,4 +1,4 @@
-import { styleDraws, styleSlotDirection } from './style-draws';
+import { SIGNATURE_DEVICES, styleDraws, styleSlotDirection } from './style-draws';
 import { FRAME_CATALOGUE, PALETTES, type FrameAvailable } from './frame-draw';
 import { PLAYBOOK, playbookDirection } from './playbook';
 
@@ -69,4 +69,98 @@ it('writes a slot direction that names the slot, its mode and its drawn frame', 
   expect(styleSlotDirection(bold, playbook, { lane: true })).toContain(bold.paragraph);
   expect(playbook).toContain('fonts free from the self-hosted catalogue');
   expect(playbook).not.toContain(`${bold.family.fonts[0].display} + `);
+});
+
+describe('variety across proposals (2026-10-11: "always the same two templates")', () => {
+  const calmIds = (part: 'header' | 'hero') => FRAME_CATALOGUE[part].filter(entry => !entry.bold).map(entry => entry.id);
+  /** The dev-DB situation: every calm header but info-bar and every calm hero but illustration already built once, so
+   *  the old least-used rule landed on info-bar + illustration every time. */
+  const stable = [
+    ...calmIds('header').filter(id => id !== 'info-bar').map(header => ({ header, kind: 'cafe-food', family: 'cafe-shop' })),
+    ...calmIds('hero').filter(id => id !== 'illustration').map(hero => ({ hero, kind: 'cafe-food', family: 'cafe-shop' })),
+  ];
+  const combo = (slot: { draw: { header?: string; hero?: string } }) => `${slot.draw.header}/${slot.draw.hero}`;
+
+  it('avoids a calm card this merchant was shown, and a shown card joins the history like a built one', () => {
+    const [first] = styleDraws({ ...base, random: seeded(4) });
+    const shown = [{ kind: 'cafe-food', mode: 'calm' as const, draw: first.draw, mine: true }];
+    for (let seed = 1; seed < 40; seed++) {
+      const [calm] = styleDraws({ ...base, shown, random: seeded(seed) });
+      expect(calm.draw.header).not.toBe(first.draw.header);
+      expect(calm.draw.hero).not.toBe(first.draw.hero);
+      // The family the merchant just saw on the calm card counts too: the next calm card takes the other one.
+      expect(calm.family.id).not.toBe(first.family.id);
+    }
+    // Another store's shown card counts once, like a built store: shown twice, it is past the spread.
+    const others = [{ kind: 'cafe-food', mode: 'calm' as const, draw: { header: 'info-bar' } }, { kind: 'cafe-food', mode: 'calm' as const, draw: { header: 'info-bar' } }];
+    for (let seed = 1; seed < 40; seed++) expect(styleDraws({ ...base, shown: others, random: seeded(seed) })[0].draw.header).not.toBe('info-bar');
+    expect(new Set(Array.from({ length: 40 }, (_, seed) => styleDraws({ ...base, shown: others.slice(0, 1), random: seeded(seed + 1) })[0].draw.header))).toContain('info-bar');
+  });
+
+  it('gives the calm slot at least three header/hero combinations over 30 seeds with a fixed history', () => {
+    const combos = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) combos.add(combo(styleDraws({ ...base, recent: stable, random: seeded(seed) })[0]));
+    expect(combos.size).toBeGreaterThanOrEqual(3);
+    // The same history with the three identical shown calm cards of the dev DB: still varied, never that card again.
+    const repeated = Array.from({ length: 3 }, () => ({ kind: 'cafe-food', mode: 'calm' as const, draw: { header: 'info-bar', hero: 'illustration', footer: 'directory', family: 'cafe-shop', kind: 'cafe-food' }, display: 'outfit', mine: true }));
+    const after = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      const [calm] = styleDraws({ ...base, recent: stable, shown: repeated, random: seeded(seed) });
+      after.add(combo(calm));
+      expect(combo(calm)).not.toBe('info-bar/illustration');
+    }
+    expect(after.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('rotates the calm card\'s font pairs and tells the planner which display fonts to avoid', () => {
+    const shown = Array.from({ length: 2 }, () => ({ kind: 'cafe-food', mode: 'calm' as const, draw: { family: 'cafe-editorial' }, display: 'outfit', mine: true }));
+    const displays = new Set<string>();
+    for (let seed = 1; seed < 30; seed++) {
+      const [calm] = styleDraws({ ...base, shown, recentFamilies: ['cafe-editorial', 'cafe-editorial'], random: seeded(seed) });
+      expect(calm.family.id).toBe('cafe-shop');
+      expect(calm.fonts!.display).not.toBe('outfit');
+      expect(calm.family.fonts.map(pair => pair.display)).toContain(calm.fonts!.display);
+      displays.add(calm.fonts!.display);
+      const direction = styleSlotDirection(calm, playbookDirection(PLAYBOOK['cafe-food'], calm.family, { fonts: calm.fonts }), { lane: true });
+      expect(direction).toContain('avoid these display fonts: outfit');
+      expect(direction).toContain(`display ${calm.fonts!.display} with text ${calm.fonts!.text}`);
+      // The playbook names the drawn pair alone, so the planner cannot fall back to the family's first font.
+      expect(direction).toContain(`fonts ${calm.fonts!.display} + ${calm.fonts!.text},`);
+    }
+    expect(displays.size).toBe(2);
+    // Without history the pair still rotates across seeds.
+    const fresh = new Set(Array.from({ length: 30 }, (_, seed) => styleDraws({ ...base, recentFamilies: ['cafe-editorial'], random: seeded(seed + 1) })[0].fonts!.display));
+    expect(fresh.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('draws a signature device for the bold card only, rotating and avoiding recent devices', () => {
+    const all = Object.keys(SIGNATURE_DEVICES);
+    const fresh = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const [calm, bold] = styleDraws({ ...base, random: seeded(seed) });
+      expect(calm.device).toBeUndefined();
+      expect(all).toContain(bold.device);
+      fresh.add(bold.device!);
+    }
+    expect(fresh.size).toBeGreaterThanOrEqual(4);
+    const recent = ['stamp', 'marquee', 'stickers', 'numbers', 'ticket'].map(device => ({ kind: 'cafe-food', mode: 'bold' as const, draw: {}, device }));
+    for (let seed = 1; seed <= 30; seed++) expect(['torn-edge', 'polaroids', 'outline-wordmark']).toContain(styleDraws({ ...base, shown: recent, random: seeded(seed) })[1].device);
+    // Without photos or facts: never a photo device, never invented numbers.
+    for (let seed = 1; seed <= 30; seed++) expect(['stamp', 'marquee', 'stickers', 'ticket', 'outline-wordmark']).toContain(styleDraws({ ...base, available: bare, random: seeded(seed) })[1].device);
+    // The device rides on the slot (saved with the proposal) and in the bold lane's direction.
+    const [, bold] = styleDraws({ ...base, random: seeded(3) });
+    expect(styleSlotDirection(bold, 'PLAYBOOK', { lane: true })).toContain(`Signature device of this card (its one memorable move, drawn for it): ${SIGNATURE_DEVICES[bold.device!].label}`);
+    expect(JSON.parse(JSON.stringify(bold)).device).toBe(bold.device);
+  });
+
+  it('chains: each proposal\'s shown bold device is avoided by the next', () => {
+    const shown: Array<{ kind: string; mode: 'bold'; draw: Record<string, string>; device: string; mine: boolean }> = [];
+    const devices: string[] = [];
+    for (let round = 0; round < 8; round++) {
+      const [, bold] = styleDraws({ ...base, shown, random: seeded(round + 11) });
+      devices.push(bold.device!);
+      shown.unshift({ kind: 'cafe-food', mode: 'bold', draw: {}, device: bold.device!, mine: true });
+    }
+    expect(new Set(devices).size).toBe(8);
+  });
 });

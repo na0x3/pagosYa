@@ -70,7 +70,9 @@ const fits = (entry: FrameEntry, available: FrameAvailable) => {
   }
 };
 
-export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], available: FrameAvailable, allowed: Partial<Record<FramePart, readonly string[]>> = {}): FrameDraw {
+/** `spread`: how far above the least-used count an option may still be drawn. 0 (ordinary runs) takes only the least used;
+ *  the style cards pass 1, so a stable history no longer lands on the same option every time. */
+export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], available: FrameAvailable, allowed: Partial<Record<FramePart, readonly string[]>> = {}, spread = 0): FrameDraw {
   const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
   const draw = {} as FrameDraw;
   for (const part of PARTS) {
@@ -81,7 +83,7 @@ export function drawFrame(random: () => number, recent: Partial<FrameDraw>[], av
     if (part === 'cart') { draw[part] = pick(options).id; continue; }
     const uses = new Map(options.map(entry => [entry.id, recent.filter(item => item[part] === entry.id).length]));
     const fewest = Math.min(...uses.values());
-    draw[part] = pick(options.filter(entry => uses.get(entry.id) === fewest)).id;
+    draw[part] = pick(options.filter(entry => uses.get(entry.id)! <= fewest + spread)).id;
   }
   return draw;
 }
@@ -144,7 +146,7 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -157,7 +159,8 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   }
   // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
   const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
-  const recent = Object.keys(own).length ? [own, ...input.recent] : input.recent;
+  // With a spread (style cards) it counts past it, so the store's own last parts still lose to every other option.
+  const recent = Object.keys(own).length ? [...Array.from({ length: 1 + (input.spread ?? 0) }, () => own), ...input.recent] : input.recent;
   // Professional by default: inside a playbook family only conventional headers, unless the merchant asked for bold.
   const conventional = Boolean(input.playbook && !input.playbook.bold);
   const calm = (list: readonly FrameEntry[]) => list.filter(entry => !entry.bold).map(entry => entry.id);
@@ -167,12 +170,12 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const headerAllowed: Partial<Record<FramePart, readonly string[]>> = conventional
     ? { header: CONVENTIONAL_HEADERS, cart: calm(FRAME_CATALOGUE.cart), footer: ['directory', 'contact-card', 'statement-band', 'wordmark-signoff'], hero: calm(FRAME_CATALOGUE.hero) }
     : input.boldStyle ? { header: loud(FRAME_CATALOGUE.header), hero: loud(FRAME_CATALOGUE.hero) } : {};
-  const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed);
+  const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed, input.spread ?? 0);
   const frameOmit = frameOverrides(input.request);
   const playbookFields: Record<string, string> = input.playbook ? { kind: input.playbook.kind, family: input.playbook.family.id } : {};
   if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
   const category = input.playbook?.kind ?? input.category ?? '';
-  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) });
+  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) }, input.spread ?? 0);
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
   const draw = { ...frame, ...design, category, ...playbookFields };
@@ -316,7 +319,7 @@ const designOptions = (part: DesignPart, available: FrameAvailable, allowed: Des
 const allPalettes = (): Palette[] => [...PALETTES, ...Object.values(PLAYBOOK).flatMap(entry => entry.families.flatMap(family => family.palettes))];
 const DESIGN_AVOID = new Set<DesignPart>(['palette', 'angle', 'structure', 'button']);
 
-export function drawDesign(random: () => number, recent: Array<Partial<DesignDraw> & { category?: string }>, available: FrameAvailable, category: string, allowed: DesignAllowed = {}): DesignDraw {
+export function drawDesign(random: () => number, recent: Array<Partial<DesignDraw> & { category?: string }>, available: FrameAvailable, category: string, allowed: DesignAllowed = {}, spread = 0): DesignDraw {
   const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
   const draw = {} as DesignDraw;
   for (const part of DESIGN_PARTS) {
@@ -326,7 +329,7 @@ export function drawDesign(random: () => number, recent: Array<Partial<DesignDra
     const weight = (item: { category?: string }) => (category && item.category === category ? 2 : 1);
     const uses = new Map(options.map(option => [option.id, recent.filter(item => item[part] === option.id).reduce((sum, item) => sum + weight(item), 0)]));
     const fewest = Math.min(...uses.values());
-    draw[part] = pick(options.filter(option => uses.get(option.id) === fewest)).id;
+    draw[part] = pick(options.filter(option => uses.get(option.id)! <= fewest + spread)).id;
   }
   return draw;
 }

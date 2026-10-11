@@ -69,7 +69,7 @@ import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
 import { styleDraws, styleSlotDirection, type StyleSlot } from './design-engine/style-draws';
-import { templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
+import { numbersIn, templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
 import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
@@ -561,8 +561,11 @@ export class SourceGenerationService {
     // The chat says "No pude preparar los estilos" only when the style planner actually ran and no proposal came of it.
     let styleAttempted = false;
     const styleKind = kind ?? 'general';
-    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request })
-      .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold' }) })) : [];
+    // The cards recent proposals showed (built or not) join the history, so a card shown and not picked is not shown again.
+    // Never blocks the run: a failed lookup only loses that history.
+    const shownCards = styleOn ? await Promise.resolve().then(() => this.projects.recentStyleCards(merchantId, styleKind, new Date(), 20)).then(cards => Array.isArray(cards) ? cards : []).catch(() => []) : [];
+    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards })
+      .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold', ...(slot.mode === 'calm' && slot.fonts ? { fonts: slot.fonts } : {}) }) })) : [];
     // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
     let styleBold = false;
     const useSlot = (slot: StyleSlot & { playbook: string }) => {
@@ -1641,7 +1644,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
     const photoPath = photo ? input.assetLegend.find(entry => entry.original === photo.url)?.path : undefined;
     const logoPath = input.logoUrl ? input.assetLegend.find(entry => entry.original === input.logoUrl)?.path : undefined;
-    const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, eyebrow: concept.story?.eyebrow || undefined, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot], fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode, buttons: slot.family.buttons, radius: slot.family.radius });
+    // Real numbers for the numbers device come from the merchant's own business text only.
+    const businessText = (input.dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation;
+    const briefNumbers = typeof businessText === 'string' ? numbersIn(businessText) : [];
+    const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, eyebrow: concept.story?.eyebrow || undefined, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot], fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode, buttons: slot.family.buttons, radius: slot.family.radius,
+      frame: { header: slot.draw.header, hero: slot.draw.hero }, ...(slot.device ? { device: slot.device } : {}), ...(briefNumbers.length ? { numbers: briefNumbers } : {}) });
     const live = () => input.styleSlots.filter(slot => slotConcepts[slot.slot]);
     const proposal = (status: StyleProposalStatus): StyleProposal => {
       const order = live(), concepts = order.map(slot => slotConcepts[slot.slot]!);
