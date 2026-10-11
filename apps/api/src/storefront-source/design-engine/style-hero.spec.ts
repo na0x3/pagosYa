@@ -170,3 +170,61 @@ it('records every hero call for metering, on success and on the template fallbac
   expect((await writeStyleHero({ ...base, record })).source).toBe('model');
   expect(record).toHaveBeenCalledTimes(3);
 });
+
+describe('hero model', () => {
+  const okBody = { status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ html: '<header><span data-store-name>Café Buna</span></header><section><h1>Hola</h1></section>' }) }] }] };
+  const base = () => ({ facts, concept: { name: 'x' } as any, direction: 'd', model: 'gpt-5.6-terra' as const, heroModel: 'gpt-5.6-luna' as const, provider: { endpoint: 'https://api.openai.com/v1/responses', name: 'OpenAI' }, apiKey: 'k', budget: new SourceRequestBudget(200), signal: new AbortController().signal, attempts: [] as any[] });
+  const sent = (fetchMock: jest.SpyInstance) => fetchMock.mock.calls.map(call => JSON.parse(call[1].body as string));
+
+  it('writes the hero on the fast model with a 4000-token cap, low reasoning and a 120 s timeout, and meters that model', async () => {
+    const timeout = jest.spyOn(AbortSignal, 'timeout');
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    const record = jest.fn().mockResolvedValue(undefined);
+    const input = { ...base(), record };
+    expect((await writeStyleHero(input)).source).toBe('model');
+    const [body] = sent(fetchMock);
+    expect(body.model).toBe('gpt-5.6-luna');
+    expect(body.max_output_tokens).toBeLessThanOrEqual(4000);
+    expect(body.reasoning).toEqual({ effort: 'low' });
+    expect(timeout).toHaveBeenCalledWith(120_000);
+    expect(input.attempts).toEqual([expect.objectContaining({ model: 'gpt-5.6-luna', status: 'COMPLETED' })]);
+    expect(record).toHaveBeenCalledWith(okBody, expect.objectContaining({ model: 'gpt-5.6-luna' }));
+  });
+
+  it('retries once on the run model when the provider rejects the fast model', async () => {
+    const rejected = { error: { message: "The model 'gpt-5.6-luna' is not supported when using Codex with a ChatGPT account.", type: 'invalid_request_error' } };
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(rejected), { status: 400 })).mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    const record = jest.fn().mockResolvedValue(undefined);
+    const input = { ...base(), record };
+    expect((await writeStyleHero(input)).source).toBe('model');
+    expect(sent(fetchMock).map(body => body.model)).toEqual(['gpt-5.6-luna', 'gpt-5.6-terra']);
+    expect(input.attempts.map(attempt => [attempt.model, attempt.status])).toEqual([['gpt-5.6-luna', 'FAILED'], ['gpt-5.6-terra', 'COMPLETED']]);
+    expect(record.mock.calls.map(call => call[1].model)).toEqual(['gpt-5.6-luna', 'gpt-5.6-terra']);
+  });
+
+  it('retries a 404 unknown model only once, and falls back to the template when the run model also fails', async () => {
+    const unknown = () => new Response(JSON.stringify({ error: { message: 'Unknown model: gpt-5.6-luna' } }), { status: 404 });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(unknown()).mockResolvedValueOnce(unknown());
+    expect((await writeStyleHero(base())).source).toBe('template');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a timeout, a server error or a 400 about something else', async () => {
+    for (const response of [new Response(JSON.stringify({ error: { message: 'overloaded' } }), { status: 500 }), new Response(JSON.stringify({ error: { message: "Unsupported parameter: 'reasoning.effort'" } }), { status: 400 })]) {
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response);
+      expect((await writeStyleHero(base())).source).toBe('template');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      fetchMock.mockRestore();
+    }
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'));
+    expect((await writeStyleHero(base())).source).toBe('template');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the run model when no hero model is given', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    const { heroModel, ...input } = base();
+    await writeStyleHero(input);
+    expect(sent(fetchMock)[0].model).toBe('gpt-5.6-terra');
+  });
+});

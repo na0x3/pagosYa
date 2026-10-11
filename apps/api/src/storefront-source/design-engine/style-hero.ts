@@ -112,7 +112,13 @@ export function templateHero(facts: HeroFacts): string {
 
 const HERO_SCHEMA = { type: 'object', additionalProperties: false, required: ['html'], properties: { html: { type: 'string' } } };
 
-export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceDesignConcept; direction: string; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; /** Meters the call, like the planner's record; a failure here never costs the card. */ record?: (body: unknown, attempt: DesignPlanningAttempt) => Promise<unknown> }): Promise<{ html: string; source: 'model' | 'template' }> {
+/** A 400/404 that names the model: the provider (or the ChatGPT bridge) does not offer the fast hero model. */
+const modelRejected = (status: number, text: string) => (status === 400 || status === 404) && /model/i.test(text);
+
+/** The hero is a short fragment, so it goes to the fast model by default (spec 2026-10-11 speed-up): small cap, short timeout. */
+const HERO_OUTPUT_TOKENS = 4000, HERO_TIMEOUT_MS = 120_000;
+
+export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceDesignConcept; direction: string; /** The run model: used when `heroModel` is absent, and once more when the provider rejects `heroModel`. */ model: SourceModel; /** The model the hero is written on (e.g. gpt-5.6-luna); metering records whichever model actually answered. */ heroModel?: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; /** Meters each call (attempt.model is the model called), like the planner's record; a failure here never costs the card. */ record?: (body: unknown, attempt: DesignPlanningAttempt) => Promise<unknown> }): Promise<{ html: string; source: 'model' | 'template' }> {
   const { facts } = input;
   const prompt = [
     'Write ONLY the header and the first screen (hero) of this storefront as one self-contained HTML fragment: a <style> block followed by markup. No <script>, no external URLs, no event handlers. It is a preview card, so nothing needs to work; it must look like the real store.',
@@ -125,30 +131,40 @@ export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceD
     input.direction,
     `Concept (reference data): ${JSON.stringify({ name: input.concept.name, opening: input.concept.opening, typography: input.concept.typography, imagery: input.concept.imagery, signature: input.concept.signature, story: input.concept.story && { eyebrow: input.concept.story.eyebrow, headline: input.concept.story.headline, primaryAction: input.concept.story.primaryAction } })}`,
   ].join('\n');
-  const attempt: DesignPlanningAttempt = { model: input.model, phase: 'design', durationMs: 0, status: 'FAILED', usage: null, reasoningEffort: 'low' };
-  input.attempts.push(attempt);
-  const started = Date.now();
-  let body: any = null;
-  try {
-    const allocation = input.budget.reserve(input.model, Math.ceil(prompt.length / 3) + 500, 9000, 500);
+  /** One provider call, one attempt, one metering record. `retry`: the provider rejected this model, so another may answer. */
+  const call = async (model: SourceModel): Promise<{ html: string } | { retry: true } | null> => {
+    const attempt: DesignPlanningAttempt = { model, phase: 'design', durationMs: 0, status: 'FAILED', usage: null, reasoningEffort: 'low' };
+    input.attempts.push(attempt);
+    const started = Date.now();
+    let body: any = null, rejected = false;
     try {
-      const response = await fetch(input.provider.endpoint, { method: 'POST', signal: AbortSignal.any([input.signal, AbortSignal.timeout(180_000)]), headers: { Authorization: `Bearer ${input.apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: input.model, store: false, input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'style_hero', strict: true, schema: HERO_SCHEMA } } }) });
-      body = await response.json().catch(() => null);
-      if (!response.ok || body?.status !== 'completed') throw new BadGatewayException('hero incompleto');
-    } finally { allocation.settle(body?.usage); }
-    attempt.usage = sourceUsage(input.model, body?.usage);
-    const html = sanitizeHeroHtml((sourceResponseJson(body) as { html?: string })?.html ?? '');
-    if (!html) throw new Error('hero inutilizable');
-    attempt.status = 'COMPLETED';
-    return { html, source: 'model' };
-  } catch (error) {
-    input.signal.throwIfAborted();
-    attempt.failureReason = (error instanceof Error ? error.message : 'hero falló').slice(0, 300);
-    attempt.usage ??= sourceUsage(input.model, body?.usage);
-    return { html: templateHero(facts), source: 'template' };
-  } finally {
-    attempt.durationMs = Date.now() - started;
-    await Promise.resolve().then(() => input.record?.(body, attempt)).catch(() => undefined);
-  }
+      const allocation = input.budget.reserve(model, Math.ceil(prompt.length / 3) + 500, HERO_OUTPUT_TOKENS, 500);
+      try {
+        const response = await fetch(input.provider.endpoint, { method: 'POST', signal: AbortSignal.any([input.signal, AbortSignal.timeout(HERO_TIMEOUT_MS)]), headers: { Authorization: `Bearer ${input.apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, store: false, input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'low' }, text: { format: { type: 'json_schema', name: 'style_hero', strict: true, schema: HERO_SCHEMA } } }) });
+        const text = await response.text().catch(() => '');
+        try { body = JSON.parse(text); } catch { body = null; }
+        rejected = modelRejected(response.status, text);
+        if (!response.ok || body?.status !== 'completed') throw new BadGatewayException(rejected ? `modelo rechazado (${response.status})` : 'hero incompleto');
+      } finally { allocation.settle(body?.usage); }
+      attempt.usage = sourceUsage(model, body?.usage);
+      const html = sanitizeHeroHtml((sourceResponseJson(body) as { html?: string })?.html ?? '');
+      if (!html) throw new Error('hero inutilizable');
+      attempt.status = 'COMPLETED';
+      return { html };
+    } catch (error) {
+      input.signal.throwIfAborted();
+      attempt.failureReason = (error instanceof Error ? error.message : 'hero falló').slice(0, 300);
+      attempt.usage ??= sourceUsage(model, body?.usage);
+      return rejected ? { retry: true } : null;
+    } finally {
+      attempt.durationMs = Date.now() - started;
+      await Promise.resolve().then(() => input.record?.(body, attempt)).catch(() => undefined);
+    }
+  };
+  const first = input.heroModel ?? input.model;
+  let result = await call(first);
+  // The bridge may not offer the fast model: one more try on the run model, never a loop.
+  if (result && 'retry' in result && first !== input.model) result = await call(input.model);
+  return result && 'html' in result ? { html: result.html, source: 'model' } : { html: templateHero(facts), source: 'template' };
 }
