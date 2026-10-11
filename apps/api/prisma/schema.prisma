@@ -736,6 +736,8 @@ model Store {
   tagline                      String?
   // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
   logoUrl                      String?
+  // First-store walkthrough answers and progress (spec 2026-10-11 Elige tu estilo, C1). Null = never started.
+  onboarding                   Json?
   // Wide header image, separate from logoUrl (which stays small/square).
   bannerUrl                    String?
   // "#RRGGBB", validated at the DTO layer only.
@@ -1282,6 +1284,8 @@ model StoreSourceGeneration {
   attempts       Json      @default("[]")
   // Private unfinished agent work, reusable only for the same request and source digest.
   checkpoint     Json?
+  // "Elige tu estilo" (spec 2026-10-11): four draws, concepts and heroes awaiting the merchant's pick.
+  proposal       Json?
   durationMs     Int?
   // Who paid for the run when the merchant did not, e.g. "shopify-import" (spec 2026-09-27 §3). Null = the merchant.
   sponsor        String?

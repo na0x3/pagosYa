@@ -88,6 +88,10 @@ export interface AppConfig {
   /** Business playbook (spec 2026-10-11): kind detection, style families, craft profiles, bold only when asked. Default
    *  on; YAPI_PLAYBOOK=off returns to the design draw without them. */
   yapiPlaybook: boolean;
+  /** "Elige tu estilo" (spec 2026-10-11): four drawn concepts shown as heroes before a new store or full redesign. Default off; YAPI_STYLE_PICK=1. */
+  yapiStylePick: boolean;
+  /** First-store walkthrough in the dashboard (spec 2026-10-11, C1). Default off; ONBOARDING_WALKTHROUGH=1. */
+  onboardingWalkthrough: boolean;
   sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
@@ -411,6 +415,8 @@ export default (): { app: AppConfig } => {
     yapiFrameDraw: process.env.YAPI_FRAME_DRAW !== 'off',
     yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',
     yapiPlaybook: process.env.YAPI_PLAYBOOK !== 'off',
+    yapiStylePick: process.env.YAPI_STYLE_PICK === '1',
+    onboardingWalkthrough: process.env.ONBOARDING_WALKTHROUGH === '1',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,
     sep5Author,
