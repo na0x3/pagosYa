@@ -24,6 +24,39 @@ it('drops srcset and other URL attributes that point outside the local assets', 
   expect(html).toContain('srcset="assets/a.png 1x, assets/b.png 2x"');
 });
 
+it('checks an attribute glued to a kept one', () => {
+  const html = sanitizeHeroHtml('<div data-store-name></div><a src="assets/a.png"href="javascript:alert(1)">Ver</a><a src=\'assets/a.png\'href=\'javascript:alert(1)\'></a><img src="assets/a.png"srcset="https://evil.test/b.png 2x"><a href="page.html"ping="https://evil.test/p"></a><b onclick="a"onfocus=x>t</b>')!;
+  expect(html).not.toMatch(/javascript|evil\.test|onfocus|onclick|ping/i);
+});
+
+it('sanitises pathological 40 KB inputs in under 200 ms', () => {
+  for (const unit of ['url(', 'image-set(', '<script', '<style>', '<div style="', '<a href="', '<set ', 'url("']) {
+    const started = Date.now();
+    sanitizeHeroHtml(unit.repeat(Math.ceil(39_000 / unit.length)));
+    expect(Date.now() - started).toBeLessThan(200);
+  }
+});
+
+it('fails closed on CSS that can hide an external fetch', () => {
+  const wrap = (css: string) => `<div data-store-name></div><style>${css}</style>`;
+  for (const bad of [wrap('.a{background:\\75 rl(https://evil.test/a.png)}'), wrap('@\\69mport "https://evil.test/a.css";'), wrap('.a{background:url("https://evil.test/a)b.png")}'), '<div data-store-name></div><style>.a{background:url(https://evil.test/a.png}', '<div data-store-name style="background:&#117;rl(https://evil.test/a.png)"></div>', '<div data-store-name style="background:\\75rl(x)"></div>', '<div data-store-name><p>//evil.test/x</p></div>']) expect(sanitizeHeroHtml(bad)).toBeNull();
+  expect(sanitizeHeroHtml('<div data-store-name><a href="//evil.test/x">a</a></div>')).not.toMatch(/evil/);
+  expect(sanitizeHeroHtml('<div data-store-name><svg xmlns="http://www.w3.org/2000/svg"></svg></div>')).not.toBeNull();
+});
+
+it('removes SVG animation elements that can set an href', () => {
+  const html = sanitizeHeroHtml('<div data-store-name></div><svg><a><animate attributeName="href" values="javascript:alert(1)"/><set attributeName="href" to="javascript:alert(2)"/><animateMotion/><animateTransform/></a></svg>')!;
+  expect(html).not.toMatch(/animate|<set|javascript/i);
+});
+
+it('rejects hostile palette values in the template hero', () => {
+  const html = templateHero({ ...facts, palette: { paper: 'red;}</style><script>x()</script>', ink: 'url(https://evil.test)', accent: '#12345', accent2: '#ABCDEF' } });
+  expect(html).not.toMatch(/evil|<script/);
+  expect(html).toContain('#ffffff');
+  expect(html).toContain('#111111');
+  expect(sanitizeHeroHtml(html)).not.toBeNull();
+});
+
 it('rejects empty, oversized or nameless answers', () => {
   expect(sanitizeHeroHtml('')).toBeNull();
   expect(sanitizeHeroHtml('<div data-store-name>' + 'x'.repeat(60_000) + '</div>')).toBeNull();
