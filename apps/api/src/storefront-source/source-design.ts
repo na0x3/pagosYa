@@ -27,7 +27,8 @@ export type SourceMotionChoreography = {
   mode: 'subtle' | 'expressive'; scrollFeel: SourceScrollFeel; entrance: typeof SOURCE_ENTRANCE_KINDS[number];
   scenes: Array<{ section: string; kind: typeof SOURCE_SCENE_KINDS[number]; intensity: 1 | 2 | 3 }>;
 };
-export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna; composition?: SourceCompositionPlan; signature?: SourceSignature };
+export type SourceConceptCard = { slot: number; mode: 'calm' | 'bold'; name: string; vibe: string; inspiration: string[] };
+export type SourceDesignConcept = Record<(typeof fields)[number], string> & { layout?: SourceDesignLayout; story?: SourceStoryPlan; motion?: SourceMotionChoreography; dna?: SourceDesignDna; composition?: SourceCompositionPlan; signature?: SourceSignature; card?: SourceConceptCard };
 export type SourceDesign = { concepts: SourceDesignConcept[]; selected: number; selection?: { source: 'planner' | 'forced'; rationale: string | null } };
 export const sourceDesignSchema = {
   type: 'object', additionalProperties: false, required: ['concepts', 'selected'], properties: {
@@ -63,88 +64,97 @@ export function sourceDesignExploration(selected?: number) {
 }
 
 
+export function validateSourceConcept(concept: any, index: number, requireLayout: boolean, requireNarrative: boolean, dnaOptions: { seed?: string; repairs?: string[]; requireComposition?: boolean } = {}): SourceDesignConcept {
+  const fail = (detail = ''): never => { throw new BadGatewayException('La propuesta necesita tres composiciones distintas y una dirección de diseño válida.' + (detail ? ' ' + detail : '')); };
+  // Prose a little past the limit is a formatting slip, not a bad design: keep it, cut at a sentence or word.
+  // Losing a paid run over a 540-character premise helps nobody. Runaway text still fails below.
+  if (concept && typeof concept === 'object') concept = { ...concept, ...Object.fromEntries(fields.filter(field => field !== 'name' && typeof concept[field] === 'string' && concept[field].trim().length > 500 && concept[field].length <= 2000).map(field => [field, fitProse(concept[field].trim(), 500)])) };
+  const invalidField = fields.find(field => !concept || typeof concept[field] !== 'string' || !concept[field].trim() || concept[field].length > (field === 'name' ? 80 : 500));
+  if (invalidField) return fail(`concepts[${index}].${invalidField}: texto obligatorio, máximo ${invalidField === 'name' ? 80 : 500} caracteres.`);
+  const result = Object.fromEntries(fields.map(field => [field, concept[field].trim()])) as SourceDesignConcept;
+  const layout = concept.layout;
+  if (requireLayout || layout !== undefined) {
+    if (!layout || !Array.isArray(layout.sections) || !layout.sections.length || layout.sections.length > 12
+      || layout.sections.some((id: unknown) => typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(id))
+      || new Set(layout.sections).size !== layout.sections.length || !layout.sections.includes(layout.catalogSection)
+      || typeof layout.standaloneIntro !== 'boolean' || typeof layout.productsInOpening !== 'boolean') return fail(`concepts[${index}].layout: 1–12 IDs únicos válidos, catalogSection incluido y ambos indicadores booleanos.`);
+    // The section order is the composition the model actually planned; a contradicting flag is the slip.
+    // An intro before the catalog is by definition a standalone intro, so the flag follows the order.
+    const standaloneIntro = layout.standaloneIntro || layout.sections[0] !== layout.catalogSection;
+    if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa ${SOURCE_PRODUCT_PAGE_STYLES.join(', ')}.`);
+    result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
+  }
+  if (dnaOptions.requireComposition || concept.composition !== undefined) {
+    if (!result.layout) return fail(`concepts[${index}].composition requires layout.`);
+    result.composition = validateSourceCompositionPlan(concept.composition, result.layout.sections);
+  }
+  // The signature is direction, never a reason to reject three finished concepts: repaired in code and reported.
+  if (concept.signature !== undefined) {
+    const normalized = normalizeSourceSignature(concept.signature, result.layout?.sections, `concepts[${index}]`);
+    if (normalized.signature) result.signature = normalized.signature;
+    dnaOptions.repairs?.push(...normalized.repairs);
+  }
+  const story = concept.story;
+  const choreography = concept.motion;
+  if (requireNarrative || story !== undefined || choreography !== undefined) {
+    if (!result.layout || !story || !choreography) return fail(`concepts[${index}]: story, motion y layout deben planearse juntos.`);
+    const short = (text: unknown, max: number) => typeof text === 'string' && text.trim().length > 0 && text.trim().length <= max;
+    // A beat may open with its content or device instead of a heading (spec 2026-10-09): empty or absent is valid.
+    const optionalShort = (text: unknown, max: number) => text === undefined || (typeof text === 'string' && text.trim().length <= max);
+    // The eyebrow is optional: an empty (or, in older plans, absent) one is the default, not a slip.
+    const eyebrow = story.eyebrow ?? '';
+    if (!short(story.promise, 140) || typeof eyebrow !== 'string' || eyebrow.trim().length > 40 || !short(story.headline, 100) || !short(story.support, 240) || !short(story.primaryAction, 60)
+      || !Array.isArray(story.beats) || !story.beats.length || story.beats.length > 12) return fail(`concepts[${index}].story: completa promesa, apertura, acción y 1–12 beats breves.`);
+    const beatSections = story.beats.map((beat: any) => beat?.section);
+    const exactStory = JSON.stringify(beatSections) === JSON.stringify(result.layout.sections);
+    const savedSubset = beatSections.every((section: string, beatIndex: number) => result.layout!.sections.indexOf(section) > (beatIndex ? result.layout!.sections.indexOf(beatSections[beatIndex - 1]) : -1));
+    if (story.beats.some((beat: any) => !result.layout!.sections.includes(beat?.section) || !SOURCE_STORY_ROLES.includes(beat?.role) || !SOURCE_STORY_MEDIA.includes(beat?.media) || !optionalShort(beat?.headline, 100))
+      || (requireNarrative ? !exactStory : !savedSubset)) return fail(`concepts[${index}].story.beats: usa cada section en el orden del layout con roles, titulares y medios válidos.`);
+    const offerBeat = story.beats.find((beat: any) => beat.section === result.layout!.catalogSection);
+    if (!offerBeat) return fail(`concepts[${index}].story: incluye un beat para la sección del catálogo.`);
+    // The catalog section presents the offer by definition, so any other role on
+    // it is a labelling slip rather than a design failure. Correct it in place:
+    // rejecting the plan discards three finished concepts, and the bounded repair
+    // reproduces the same slip, so the merchant pays the full wait for nothing.
+    const offerRole = (beat: any) => beat === offerBeat && !['offer', 'proof'].includes(beat.role) ? 'offer' : beat.role;
+    const scenes = choreography.scenes;
+    if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel)
+      || !Array.isArray(scenes) || scenes.length > 2 || scenes.some((scene: any) => !result.layout!.sections.includes(scene?.section) || !SOURCE_SCENE_KINDS.includes(scene?.kind) || ![1, 2, 3].includes(scene?.intensity))
+      || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa hasta dos escenas en sections distintas.`);
+    result.story = { promise: story.promise.trim(), eyebrow: eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: String(beat.headline ?? '').trim(), media: beat.media })) };
+    result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: 'none', scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
+  }
+  // Planned concepts always carry a DNA; saved ones only when they already had it, so old revisions stay byte-equal.
+  if (requireLayout || concept.dna !== undefined) {
+    // A bad DNA is repaired in code and reported: it never costs the paid planning retry.
+    const { dna, repairs } = normalizeDna(concept.dna, dnaOptions.seed !== undefined ? `${dnaOptions.seed}:${index}` : result.name);
+    // One source for the product page: a DNA product the model chose wins; a defaulted one follows the planned layout.
+    if (result.layout?.productPage) {
+      if (SOURCE_PRODUCT_PAGE_STYLES.includes(concept.dna?.surfaces?.product)) result.layout.productPage = dna.surfaces.product;
+      else dna.surfaces.product = result.layout.productPage;
+    }
+    result.dna = dna;
+    dnaOptions.repairs?.push(...repairs.map(repair => `concepts[${index}].${repair}`));
+  }
+  const card = concept.card;
+  if (card && Number.isInteger(card.slot) && card.slot >= 0 && card.slot <= 3 && ['calm', 'bold'].includes(card.mode)
+    && typeof card.name === 'string' && card.name.trim() && card.name.length <= 40 && typeof card.vibe === 'string' && card.vibe.trim() && card.vibe.length <= 500
+    && Array.isArray(card.inspiration) && card.inspiration.length >= 1 && card.inspiration.length <= 5 && card.inspiration.every((line: unknown) => typeof line === 'string' && line.trim() && line.length <= 140)) {
+    result.card = { slot: card.slot, mode: card.mode, name: card.name.trim(), vibe: card.vibe.trim(), inspiration: card.inspiration.map((line: string) => line.trim()) };
+  }
+  return result;
+}
+
 /** dnaOptions.seed (the store id) seeds field defaults per concept; repairs collects what was fixed in code. */
-export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[]; requireComposition?: boolean } = {}): SourceDesign {
+export function validateSourceDesign(value: any, selected?: number, requireLayout = false, requireNarrative = false, dnaOptions: { seed?: string; repairs?: string[]; requireComposition?: boolean } = {}, counts: { min: number; max: number } = { min: 3, max: 3 }): SourceDesign {
   const fail = (detail = '') => { throw new BadGatewayException('La propuesta necesita tres composiciones distintas y una dirección de diseño válida.' + (detail ? ' ' + detail : '')); };
-  if (!value || !Number.isInteger(value.selected) || value.selected < 0 || value.selected > 2 || (selected !== undefined && value.selected !== selected)
-    || !Array.isArray(value.concepts) || value.concepts.length !== 3) return fail();
-  const concepts = value.concepts.map((concept: any, index: number) => {
-    // Prose a little past the limit is a formatting slip, not a bad design: keep it, cut at a sentence or word.
-    // Losing a paid run over a 540-character premise helps nobody. Runaway text still fails below.
-    if (concept && typeof concept === 'object') concept = { ...concept, ...Object.fromEntries(fields.filter(field => field !== 'name' && typeof concept[field] === 'string' && concept[field].trim().length > 500 && concept[field].length <= 2000).map(field => [field, fitProse(concept[field].trim(), 500)])) };
-    const invalidField = fields.find(field => !concept || typeof concept[field] !== 'string' || !concept[field].trim() || concept[field].length > (field === 'name' ? 80 : 500));
-    if (invalidField) return fail(`concepts[${index}].${invalidField}: texto obligatorio, máximo ${invalidField === 'name' ? 80 : 500} caracteres.`);
-    const result = Object.fromEntries(fields.map(field => [field, concept[field].trim()])) as SourceDesignConcept;
-    const layout = concept.layout;
-    if (requireLayout || layout !== undefined) {
-      if (!layout || !Array.isArray(layout.sections) || !layout.sections.length || layout.sections.length > 12
-        || layout.sections.some((id: unknown) => typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(id))
-        || new Set(layout.sections).size !== layout.sections.length || !layout.sections.includes(layout.catalogSection)
-        || typeof layout.standaloneIntro !== 'boolean' || typeof layout.productsInOpening !== 'boolean') return fail(`concepts[${index}].layout: 1–12 IDs únicos válidos, catalogSection incluido y ambos indicadores booleanos.`);
-      // The section order is the composition the model actually planned; a contradicting flag is the slip.
-      // An intro before the catalog is by definition a standalone intro, so the flag follows the order.
-      const standaloneIntro = layout.standaloneIntro || layout.sections[0] !== layout.catalogSection;
-      if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa ${SOURCE_PRODUCT_PAGE_STYLES.join(', ')}.`);
-      result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
-    }
-    if (dnaOptions.requireComposition || concept.composition !== undefined) {
-      if (!result.layout) return fail(`concepts[${index}].composition requires layout.`);
-      result.composition = validateSourceCompositionPlan(concept.composition, result.layout.sections);
-    }
-    // The signature is direction, never a reason to reject three finished concepts: repaired in code and reported.
-    if (concept.signature !== undefined) {
-      const normalized = normalizeSourceSignature(concept.signature, result.layout?.sections, `concepts[${index}]`);
-      if (normalized.signature) result.signature = normalized.signature;
-      dnaOptions.repairs?.push(...normalized.repairs);
-    }
-    const story = concept.story;
-    const choreography = concept.motion;
-    if (requireNarrative || story !== undefined || choreography !== undefined) {
-      if (!result.layout || !story || !choreography) return fail(`concepts[${index}]: story, motion y layout deben planearse juntos.`);
-      const short = (text: unknown, max: number) => typeof text === 'string' && text.trim().length > 0 && text.trim().length <= max;
-      // A beat may open with its content or device instead of a heading (spec 2026-10-09): empty or absent is valid.
-      const optionalShort = (text: unknown, max: number) => text === undefined || (typeof text === 'string' && text.trim().length <= max);
-      // The eyebrow is optional: an empty (or, in older plans, absent) one is the default, not a slip.
-      const eyebrow = story.eyebrow ?? '';
-      if (!short(story.promise, 140) || typeof eyebrow !== 'string' || eyebrow.trim().length > 40 || !short(story.headline, 100) || !short(story.support, 240) || !short(story.primaryAction, 60)
-        || !Array.isArray(story.beats) || !story.beats.length || story.beats.length > 12) return fail(`concepts[${index}].story: completa promesa, apertura, acción y 1–12 beats breves.`);
-      const beatSections = story.beats.map((beat: any) => beat?.section);
-      const exactStory = JSON.stringify(beatSections) === JSON.stringify(result.layout.sections);
-      const savedSubset = beatSections.every((section: string, beatIndex: number) => result.layout!.sections.indexOf(section) > (beatIndex ? result.layout!.sections.indexOf(beatSections[beatIndex - 1]) : -1));
-      if (story.beats.some((beat: any) => !result.layout!.sections.includes(beat?.section) || !SOURCE_STORY_ROLES.includes(beat?.role) || !SOURCE_STORY_MEDIA.includes(beat?.media) || !optionalShort(beat?.headline, 100))
-        || (requireNarrative ? !exactStory : !savedSubset)) return fail(`concepts[${index}].story.beats: usa cada section en el orden del layout con roles, titulares y medios válidos.`);
-      const offerBeat = story.beats.find((beat: any) => beat.section === result.layout!.catalogSection);
-      if (!offerBeat) return fail(`concepts[${index}].story: incluye un beat para la sección del catálogo.`);
-      // The catalog section presents the offer by definition, so any other role on
-      // it is a labelling slip rather than a design failure. Correct it in place:
-      // rejecting the plan discards three finished concepts, and the bounded repair
-      // reproduces the same slip, so the merchant pays the full wait for nothing.
-      const offerRole = (beat: any) => beat === offerBeat && !['offer', 'proof'].includes(beat.role) ? 'offer' : beat.role;
-      const scenes = choreography.scenes;
-      if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel)
-        || !Array.isArray(scenes) || scenes.length > 2 || scenes.some((scene: any) => !result.layout!.sections.includes(scene?.section) || !SOURCE_SCENE_KINDS.includes(scene?.kind) || ![1, 2, 3].includes(scene?.intensity))
-        || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa hasta dos escenas en sections distintas.`);
-      result.story = { promise: story.promise.trim(), eyebrow: eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: String(beat.headline ?? '').trim(), media: beat.media })) };
-      result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: 'none', scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
-    }
-    // Planned concepts always carry a DNA; saved ones only when they already had it, so old revisions stay byte-equal.
-    if (requireLayout || concept.dna !== undefined) {
-      // A bad DNA is repaired in code and reported: it never costs the paid planning retry.
-      const { dna, repairs } = normalizeDna(concept.dna, dnaOptions.seed !== undefined ? `${dnaOptions.seed}:${index}` : result.name);
-      // One source for the product page: a DNA product the model chose wins; a defaulted one follows the planned layout.
-      if (result.layout?.productPage) {
-        if (SOURCE_PRODUCT_PAGE_STYLES.includes(concept.dna?.surfaces?.product)) result.layout.productPage = dna.surfaces.product;
-        else dna.surfaces.product = result.layout.productPage;
-      }
-      result.dna = dna;
-      dnaOptions.repairs?.push(...repairs.map(repair => `concepts[${index}].${repair}`));
-    }
-    return result;
-  });
+  if (!value || !Array.isArray(value.concepts) || value.concepts.length < counts.min || value.concepts.length > counts.max
+    || !Number.isInteger(value.selected) || value.selected < 0 || value.selected >= value.concepts.length || (selected !== undefined && value.selected !== selected)) return fail();
+  const concepts = value.concepts.map((concept: any, index: number) => validateSourceConcept(concept, index, requireLayout, requireNarrative, dnaOptions));
   const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').trim();
   // Catch copied proposals without pretending a string comparison measures visual originality.
-  if (new Set(concepts.map((c: SourceDesignConcept) => normalize(c.opening))).size !== 3
-    || new Set(concepts.map((c: SourceDesignConcept) => normalize(c.flow))).size !== 3) return fail('Los tres opening y los tres flow deben ser distintos.');
+  if (new Set(concepts.map((c: SourceDesignConcept) => normalize(c.opening))).size !== concepts.length
+    || new Set(concepts.map((c: SourceDesignConcept) => normalize(c.flow))).size !== concepts.length) return fail('Los tres opening y los tres flow deben ser distintos.');
   const metadata = value.selection;
   const selection = metadata && ['planner', 'forced'].includes(metadata.source)
     ? { source: metadata.source as 'planner' | 'forced', rationale: typeof metadata.rationale === 'string' && metadata.rationale.trim().length <= 400 ? metadata.rationale.trim() || null : null } : undefined;
@@ -207,7 +217,7 @@ export function validateSourceDesignImplementation(design: SourceDesign, files: 
 }
 
 export function savedSourceDesign(files: SourceProjectFileDto[] = []): SourceDesign | null {
-  try { return validateSourceDesign(JSON.parse(files.find(f => f.path === SOURCE_DESIGN_FILE && f.encoding !== 'base64')?.content || '')); }
+  try { return validateSourceDesign(JSON.parse(files.find(f => f.path === SOURCE_DESIGN_FILE && f.encoding !== 'base64')?.content || ''), undefined, false, false, {}, { min: 1, max: 4 }); }
   catch { return null; }
 }
 
