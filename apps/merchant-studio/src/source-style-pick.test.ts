@@ -129,4 +129,11 @@ describe('frame fit', () => {
     expect(css).toMatch(/\.style-preview__side \{[^}]*position: ?sticky/);
     expect(css).toMatch(/\.style-pick footer \{[^}]*position: ?sticky/);
   });
+  it('shows the commerce line in the preview side panel, escaped, and nothing when empty', () => {
+    const open = { ...state, open: 0 };
+    const withLine = (commerce: string): StyleProposalView => ({ ...view, cards: [{ ...card(0, 'calm'), commerce }, card(1, 'bold')] });
+    expect(renderStylePicker(withLine('Cuenta: dividida · Pago: <b>ticket</b>'), open)).toContain('<p class="style-preview__commerce">Cuenta: dividida · Pago: &lt;b&gt;ticket&lt;/b&gt;</p>');
+    expect(renderStylePicker(withLine(''), open)).not.toContain('style-preview__commerce');
+  });
 });
+

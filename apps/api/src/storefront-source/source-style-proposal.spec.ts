@@ -49,3 +49,9 @@ it('marks each card whose model hero is still being written as pending', () => {
   // Only a proposal still being drawn has pending cards: a stale flag never keeps "Mejorando diseño…" on screen.
   for (const status of ['AWAITING_STYLE', 'PICKED'] as const) expect(styleProposalView('gen1', { ...value, status, picked: 0 }).cards.map(card => card.pending)).toEqual([false, false]);
 });
+
+it('each card carries its commerce line, empty for a slot drawn before commerce draws', () => {
+  const value = proposal();
+  value.slots[2] = { ...value.slots[2], commerce: { account: 'split', checkout: 'ticket', fields: 'pill', cartSurface: 'sheet', added: 'stamp' } };
+  expect(styleProposalView('g1', value).cards.map(card => [card.slot, card.commerce])).toEqual([[0, ''], [2, 'Cuenta: dividida · Pago: ticket · Carrito: hoja']]);
+});

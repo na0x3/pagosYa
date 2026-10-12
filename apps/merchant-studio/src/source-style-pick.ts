@@ -3,7 +3,9 @@ import './source-style-pick.css';
 
 export type StyleCard = { index: number; slot: number; name: string; mode: 'calm' | 'bold'; vibe: string; inspiration: string[]; fonts: { display: string; text: string; displayFamily: string; textFamily: string }; palette: string[]; html: string | null; source: 'model' | 'template' | null;
   /** The card shows its template hero while YAPI is still writing the real one. */
-  pending?: boolean };
+  pending?: boolean;
+  /** Where account, payment and cart go with this card ("Cuenta: dividida · Pago: ticket · Carrito: hoja"). */
+  commerce?: string };
 /** PICKED: the merchant's pick whose build failed; the cards stay, with that card marked, so it can be retried. */
 export type StyleProposalView = { generationId: string; status: 'RUNNING' | 'AWAITING_STYLE' | 'PICKED'; recommended: number; picked?: number; cards: StyleCard[] };
 
@@ -51,6 +53,7 @@ export function renderStylePicker(view: StyleProposalView | null, state: { open:
         <h3>Vibe</h3><p>${escape(open.vibe)}</p>
         <h3>Inspiración</h3><ul>${open.inspiration.map(line => `<li>${escape(line)}</li>`).join('')}</ul>
         <h3>Tipografía</h3><p class="style-type"><strong>Aa</strong> ${escape(open.fonts.displayFamily)}<br><span>${escape(state.storeName)}</span> ${escape(open.fonts.textFamily)}</p>
+        ${open.commerce ? `<p class="style-preview__commerce">${escape(open.commerce)}</p>` : ''}
       </aside></section>`;
   }
   // A proposal offers two cards, one calm and one bold (spec 2026-10-11 amendment "two cards").

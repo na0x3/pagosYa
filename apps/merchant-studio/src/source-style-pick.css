@@ -21,3 +21,4 @@
 @media (max-width: 720px) { .style-grid, .style-pick--preview { grid-template-columns: 1fr; } .style-pick { padding: 16px; } .style-pick footer { margin: 0 -16px -16px; } .style-preview__side { position: static; max-height: none; overflow-y: visible; } }
 @media (prefers-reduced-motion: reduce) { .style-card--empty, .style-frame--empty { animation: none; } }
 @keyframes style-pulse { 50% { opacity: .55; } }
+.style-preview__commerce { margin: 14px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted, #666); }
