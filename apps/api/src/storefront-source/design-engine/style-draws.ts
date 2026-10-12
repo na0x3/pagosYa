@@ -9,6 +9,7 @@
  * the bold card draws one signature device.
  */
 import { frameForRun, parseFrameDraw, type FrameAvailable, type Palette } from './frame-draw';
+import { cartWordFor, drawCommerce, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
 import { PLAYBOOK, pickFamily, type PlaybookKind, type StyleFamily } from './playbook';
 
 export type StyleMode = 'calm' | 'bold';
@@ -33,7 +34,11 @@ export type StyleSlot = { slot: number; mode: StyleMode; kind: PlaybookKind; fam
   /** Calm card: the family's font pair drawn for it. */
   fonts?: { display: string; text: string };
   /** Display fonts recent cards of this kind and mode showed, for the planner to stay off. */
-  avoidDisplay?: string[] };
+  avoidDisplay?: string[];
+  /** Account, checkout, fields and cart path drawn for this card (spec 2026-10-11 commerce surfaces). Saved in file and draw. */
+  commerce?: CommerceDraw;
+  /** The cart's word for this kind of business. */
+  cartWord?: string };
 
 /** One card a recent proposal showed (built or not): what `SourceProjectsService.recentStyleCards` reads back. */
 export type ShownStyleCard = { kind?: string; mode: StyleMode; draw: ReturnType<typeof parseFrameDraw>; device?: string; display?: string;
@@ -90,7 +95,7 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
   const history = [...input.recent, ...weighted(shown, card => card.draw)];
   const displaysShown = (mode: StyleMode) => weighted(sameKind.filter(card => card.mode === mode && card.display), card => card.display!);
   const taken: ReturnType<typeof parseFrameDraw>[] = [];
-  return plan.map(({ mode, family }, slot) => {
+  const slots: StyleSlot[] = plan.map(({ mode, family }, slot) => {
     const recent = [...Array.from({ length: TAKEN_WEIGHT }, () => taken).flat(), ...history];
     const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD });
     const draw = parseFrameDraw(run.file?.content);
@@ -108,6 +113,17 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
       extra = { device: rotate(devices, id => recentDevices.filter(device => device === id).length, random, 0), avoidDisplay: [...new Set(used)].slice(0, AVOID_FONTS) };
     }
     return { slot, mode, kind: input.kind, family, file: run.file!, paragraph: run.paragraph, ...(run.dna ? { dna: run.dna } : {}), ...(run.palette ? { palette: run.palette } : {}), draw, ...extra };
+  });
+  // Commerce draws after every frame, so the header, hero and design each slot drew are unchanged by it.
+  const commerceTaken: Array<Partial<CommerceDraw>> = [];
+  const commerceHistory = history.map(parseCommerceDraw);
+  const cartWord = cartWordFor(input.kind);
+  const cartLine = cartWord ? `- Cart label: the header's cart reads «${cartWord}» followed by the count in [data-cart-count]; never another word for the cart.` : '';
+  return slots.map(slot => {
+    const commerce = drawCommerce(random, [...commerceTaken, ...commerceHistory], slot.mode, STYLE_SPREAD);
+    commerceTaken.push(commerce);
+    const saved = { ...JSON.parse(slot.file.content), ...commerce };
+    return { ...slot, file: { ...slot.file, content: JSON.stringify(saved, null, 2) + '\n' }, draw: { ...slot.draw, ...commerce }, commerce, ...(cartWord ? { cartWord } : {}), paragraph: [slot.paragraph, cartLine].filter(Boolean).join('\n') };
   });
 }
 

@@ -1,5 +1,6 @@
 import { SHOWN_CARDS_TIMEOUT_MS, SIGNATURE_DEVICES, styleDraws, styleSlotDirection, withinOr } from './style-draws';
-import { FRAME_CATALOGUE, PALETTES, type FrameAvailable } from './frame-draw';
+import { FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, frameForRun, parseFrameDraw, type FrameAvailable } from './frame-draw';
+import { COMMERCE_LEAN } from './commerce-draw';
 import { PLAYBOOK, playbookDirection } from './playbook';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -188,4 +189,41 @@ it('bounds the shown-cards lookup: a slow, failing or throwing lookup falls back
   expect(await withinOr(async () => ['fast'], 1500, [] as string[])).toEqual(['fast']);
   expect(await withinOr(async () => { throw new Error('db'); }, 1500, [] as string[])).toEqual([]);
   expect(await withinOr(() => { throw new Error('sync'); }, 1500, [] as string[])).toEqual([]);
+});
+
+describe('style cards draw the commerce surfaces', () => {
+  it('each slot draws its mode\'s commerce, saved in its frame-draw file and draw', () => {
+    for (let seed = 1; seed < 20; seed++) for (const slot of styleDraws({ ...base, random: seeded(seed) })) {
+      expect(slot.commerce).toBeDefined();
+      for (const [part, id] of Object.entries(slot.commerce!)) expect(COMMERCE_LEAN[slot.mode][part as keyof typeof COMMERCE_LEAN.calm]).toContain(id);
+      expect(parseFrameDraw(slot.file.content)).toMatchObject(slot.commerce!);
+      expect(slot.draw).toMatchObject(slot.commerce!);
+    }
+  });
+  it('carries the kind\'s cart word into the slot and its paragraph', () => {
+    const [calm] = styleDraws({ ...base, kind: 'clothing', random: seeded(2) });
+    expect(calm.cartWord).toBe('Tu bolsa');
+    expect(calm.paragraph).toContain('«Tu bolsa»');
+  });
+  it('avoids the commerce parts recent shown cards used', () => {
+    const shown = Array.from({ length: 3 }, () => ({ kind: 'cafe-food', mode: 'calm' as const, draw: { account: 'card', checkout: 'columns', fields: 'boxed', cartSurface: 'drawer', added: 'toast' } as any }));
+    for (let seed = 1; seed < 10; seed++) {
+      const [calm] = styleDraws({ ...base, shown, random: seeded(seed) });
+      expect(calm.commerce).toEqual({ account: 'minimal', checkout: 'steps', fields: 'underline', cartSurface: 'page', added: 'inline' });
+    }
+  });
+});
+
+describe('frameForRun keeps a saved commerce draw on an edit', () => {
+  const run = { enabled: true, designEnabled: true, recent: [], available: rich, request: '' };
+  it('returns the saved commerce, not fresh, with the kind\'s cart word', () => {
+    const previous = [{ path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'stacked', kind: 'clothing', account: 'split', checkout: 'ticket', fields: 'pill', cartSurface: 'sheet', added: 'stamp' }) }];
+    expect(frameForRun({ ...run, fresh: false, previous }).commerce).toEqual({ draw: { account: 'split', checkout: 'ticket', fields: 'pill', cartSurface: 'sheet', added: 'stamp' }, fresh: false, cartWord: 'Tu bolsa' });
+    expect(frameForRun({ ...run, designEnabled: false, fresh: false, previous }).commerce?.draw.checkout).toBe('ticket');
+  });
+  it('returns no commerce for a saved draw without it, nor for a fresh ordinary run', () => {
+    const previous = [{ path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'stacked' }) }];
+    expect(frameForRun({ ...run, fresh: false, previous }).commerce).toBeUndefined();
+    expect(frameForRun({ ...run, fresh: true, previous: [] }).commerce).toBeUndefined();
+  });
 });

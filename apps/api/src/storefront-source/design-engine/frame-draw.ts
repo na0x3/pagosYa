@@ -3,6 +3,7 @@
  * random: given the same kind of brief it lands on the same header every time. The platform rolls these four parts
  * per new store or redesign, avoiding what recent stores got, and YAPI builds them in the store's own language.
  */
+import { cartWordFor, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
 import { CONVENTIONAL_HEADERS, PLAYBOOK, type StyleFamily } from './playbook';
 
 export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'product' | 'facts';
@@ -123,11 +124,11 @@ export function frameOverrides(text: string): { header: boolean; hero: boolean }
   return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }
 
-export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw> & { category?: string; kind?: string; family?: string } {
+export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw & CommerceDraw> & { category?: string; kind?: string; family?: string } {
   let value: unknown;
   try { value = typeof content === 'string' ? JSON.parse(content) : undefined; } catch { return {}; }
   if (!value || typeof value !== 'object') return {};
-  const out: Partial<FrameDraw & DesignDraw> & { category?: string; kind?: string; family?: string } = {};
+  const out: Partial<FrameDraw & DesignDraw & CommerceDraw> & { category?: string; kind?: string; family?: string } = {};
   for (const part of PARTS) {
     const id = (value as Record<string, unknown>)[part];
     if (typeof id === 'string' && FRAME_CATALOGUE[part].some(entry => entry.id === id)) out[part] = id;
@@ -141,21 +142,27 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
     const text = (value as Record<string, unknown>)[key];
     if (typeof text === 'string' && text.trim()) (out as Record<string, string>)[key] = text.trim().slice(0, 40);
   }
+  // Account, checkout and the cart path a style card drew (spec 2026-10-11 commerce surfaces).
+  Object.assign(out, parseCommerceDraw(value));
   return out;
 }
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string } } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
     if (!saved) return { paragraph: '' };
-    if (!input.designEnabled) return { file: saved, paragraph: '' };
-    // An ordinary edit keeps what the fresh design drew: its buttons in the DNA and its colour world in brand.css.
     const kept = parseFrameDraw(saved.content);
+    // A small edit keeps what the picked card drew for account, checkout and the cart path (spec 2026-10-11 commerce surfaces).
+    const keptCommerce = parseCommerceDraw(kept);
+    const cartWord = cartWordFor(kept.kind);
+    const commerce = Object.keys(keptCommerce).length ? { commerce: { draw: keptCommerce, fresh: false, ...(cartWord ? { cartWord } : {}) } } : {};
+    if (!input.designEnabled) return { file: saved, paragraph: '', ...commerce };
+    // An ordinary edit keeps what the fresh design drew: its buttons in the DNA and its colour world in brand.css.
     const keptPalette = input.brandColours ? undefined : allPalettes().find(entry => entry.id === kept.palette);
-    return { file: saved, paragraph: '', ...(kept.button && kept.hover ? { dna: { button: kept.button, hover: kept.hover } } : {}), ...(keptPalette ? { palette: keptPalette } : {}) };
+    return { file: saved, paragraph: '', ...(kept.button && kept.hover ? { dna: { button: kept.button, hover: kept.hover } } : {}), ...(keptPalette ? { palette: keptPalette } : {}), ...commerce };
   }
   // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
   const own = parseFrameDraw(input.previous.find(file => file.path === FRAME_DRAW_FILE)?.content);
@@ -207,20 +214,25 @@ export function frameInputs(input: {
   items: Array<{ imageUrls?: string[] }>; locations?: unknown[]; businessInformation?: unknown;
 }): { request: string; available: FrameAvailable } {
   const request = input.merchantInstruction?.trim() || input.composedInstruction.split(MERCHANT_MARKER).at(-1) || '';
-  const photos = new Set(input.assetLegend.filter(asset => {
-    if (!DISPLAY_IMAGE.test(asset.path) || (input.logoUrl && asset.original === input.logoUrl)) return false;
-    const role = input.imageUses.find(use => use.url === asset.original)?.role;
-    return !role || !NOT_PHOTOS.has(role);
-  }).map(asset => asset.path));
+
   const info = typeof input.businessInformation === 'string' ? input.businessInformation : '';
   return {
     request,
     available: {
-      photos: photos.size,
+      photos: storePhotoPaths(input).length,
       products: input.items.filter(item => item.imageUrls?.length).length,
       facts: Boolean(input.locations?.length) || FACT.test(info),
     },
   };
+}
+
+/** The store's own display photos, in legend order: not the logo, not a reference or unused image. */
+export function storePhotoPaths(input: { assetLegend: Array<{ original: string; path: string }>; imageUses: Array<{ url: string; role?: string }>; logoUrl?: string | null }): string[] {
+  return [...new Set(input.assetLegend.filter(asset => {
+    if (!DISPLAY_IMAGE.test(asset.path) || (input.logoUrl && asset.original === input.logoUrl)) return false;
+    const role = input.imageUses.find(use => use.url === asset.original)?.role;
+    return !role || !NOT_PHOTOS.has(role);
+  }).map(asset => asset.path))];
 }
 
 /** Draw only where the paragraph is actually built: the Sep-5 author or the agent builder, never the sketch-first
