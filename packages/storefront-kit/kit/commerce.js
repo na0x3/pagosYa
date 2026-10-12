@@ -59,6 +59,29 @@
   if (hasDna) {
     for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
   }
+  // Account, checkout and the cart path drawn per store (spec 2026-10-11 commerce surfaces). Runtime-only values, never in
+  // DNA_VALUES (the API's planner and seed must not see them); a test pins them to COMMERCE_RUNTIME_ENUMS.
+  const COMMERCE_DNA = {
+    checkout: ['columns', 'steps', 'ticket', 'brand'],
+    fields: ['boxed', 'underline', 'filled', 'pill'],
+  };
+  if (hasDna) for (const name of Object.keys(COMMERCE_DNA)) if (COMMERCE_DNA[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+  // The brand checkout's panel photo: only a bundled asset path, so nothing can leave the url().
+  const CHECKOUT_PHOTO = typeof config.checkoutPhoto === 'string' && /^assets\/[a-z0-9][a-z0-9._/-]*\.(?:png|jpe?g|webp|avif|gif)$/i.test(config.checkoutPhoto) && !config.checkoutPhoto.includes('..') ? config.checkoutPhoto : '';
+  if (CHECKOUT_PHOTO && document.documentElement.getAttribute('data-dna-checkout') === 'brand') document.documentElement.style.setProperty('--checkout-panel', `center / cover no-repeat url("${CHECKOUT_PHOTO}")`);
+  // The cart's own word (Tu bolsa, Tu ramo…): short plain words only, else today's label.
+  const CART_WORD = typeof config.cartWord === 'string' && /^[\p{L} ]{2,24}$/u.test(config.cartWord.trim()) ? config.cartWord.trim() : '';
+  // The kit pages' header says "Mi pedido (n)"; with a word of its own the store says "Tu bolsa (n)". The count element stays.
+  if (CART_WORD) document.querySelectorAll('a[href="checkout.html"]').forEach(link => {
+    const first = link.firstChild;
+    if (first && first.nodeType === 3 && /^\s*Mi pedido\s*\($/.test(first.textContent) && link.querySelector('[data-cart-count]')) first.textContent = `${CART_WORD} (`;
+  });
+  // The kit pages' order panel beside the product or catalogue.
+  if (CART_WORD) document.querySelectorAll('aside.commerce-order').forEach(panel => {
+    panel.setAttribute('aria-label', CART_WORD);
+    const title = panel.querySelector(':scope>h2');
+    if (title && title.textContent.trim() === 'Tu pedido') title.textContent = CART_WORD;
+  });
   /* DNA motifs (sub-project 3): small line drawings the kit places next to the product title, in a corner of matching
    * cards and in the cart header, and animates with its own keyframes on the --motion-* tokens. The API sanitised the
    * markup; it is verified again against the same allow-lists (a test pins them) and imported as nodes, never as HTML.
@@ -1284,7 +1307,8 @@
 [data-account-gate] [data-part=field]{display:grid;gap:6px}
 [data-account-gate] [data-part=label]{font-size:.85em;font-weight:600}
 [data-account-gate] [data-part=input]{box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
-[data-account-gate] [data-part=submit]{min-height:48px;background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0;font:inherit;font-weight:700;cursor:pointer}
+[data-account-gate] [data-part=submit]{min-height:48px;font:inherit;font-weight:700;cursor:pointer}
+:root:not([data-dna-button]) [data-account-gate] [data-part=submit]{background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
 [data-account-gate] [data-part=link]{color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
 [data-account-gate] [data-part=error]:empty{display:none}
 [data-account-gate] [data-part=error]{margin:0;color:#b42318;font-weight:600}
@@ -1974,7 +1998,7 @@
   const cartDrawer = document.createElement('dialog');
   cartDrawer.className = 'cart-drawer';
   cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title');
-  cartDrawer.innerHTML = '<header class="cart-drawer__header"><h2 id="cart-drawer-title">Tu pedido</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>';
+  cartDrawer.innerHTML = `<header class="cart-drawer__header"><h2 id="cart-drawer-title">${escape(CART_WORD || 'Tu pedido')}</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>`;
   document.body.append(cartDrawer);
   // A bottom-sheet cart shows a grab handle; the element only exists for stores with a DNA.
   if (hasDna) cartDrawer.querySelector('.cart-drawer__header').insertAdjacentHTML('afterbegin', '<span class="cart-drawer__grip" aria-hidden="true"></span>');
@@ -2010,7 +2034,7 @@
     cartDrawer.showModal(); renderCart();
     const templated = Boolean(drawerSlot.querySelector('[data-cart-panel]'));
     cartDrawer.toggleAttribute('data-template', templated);
-    if (templated) { cartDrawer.removeAttribute('aria-labelledby'); cartDrawer.setAttribute('aria-label', 'Tu pedido'); }
+    if (templated) { cartDrawer.removeAttribute('aria-labelledby'); cartDrawer.setAttribute('aria-label', CART_WORD || 'Tu pedido'); }
     else { cartDrawer.removeAttribute('aria-label'); cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title'); }
     analytics('cart_open');
     (cartDrawer.querySelector('[data-cart-panel] [data-cart-close]') || cartDrawer.querySelector('[data-cart-close]')).focus();
@@ -3387,7 +3411,7 @@
         el.classList.add('checkout-review'); el.setAttribute('data-review-template', '');
       } else if (review) {
         const summary = document.createElement('aside'); summary.className = 'checkout-review__summary';
-        summary.innerHTML = `<h2>Tu pedido</h2>${count ? `<p class="checkout-review__count">${count} ${count === 1 ? 'producto' : 'productos'}</p>` : ''}`;
+        summary.innerHTML = `<h2>${escape(CART_WORD || 'Tu pedido')}</h2>${count ? `<p class="checkout-review__count">${count} ${count === 1 ? 'producto' : 'productos'}</p>` : ''}`;
         for (const child of [...el.children]) if (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note')) summary.append(child);
         const fields = document.createElement('section'); fields.className = 'checkout-review__fields';
         // With nothing to choose, the action button already says what happens next; a heading repeating it is noise.
@@ -3499,7 +3523,7 @@
   // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
   // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a
   // store without one renders exactly as before. Surfaces read one shared token set.
-  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit])';
+  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit],[data-account-gate] [data-part=submit])';
   const KIT_STEPPERS = ':where(.quantity button,.product-detail__quantity,.product-detail__box-stepper button)';
   /* The product page is platform-owned: its kit styles are unlayered and authored rules on its hooks are released
    * (releaseProductPageStyles), so the DNA reaches its buttons with an unlayered, product-scoped copy of the rules. */
@@ -3688,6 +3712,24 @@
     `@media(prefers-reduced-motion:no-preference){@keyframes pd-enter-fade-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes pd-enter-slide{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}@keyframes pd-enter-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}`
       + [['fade-up'], ['slide'], ['pop']].map(([name]) => `:root[data-dna-enter=${name}] ${PC} :is([data-part=gallery],[data-part=eyebrow],[data-part=title],[data-part=intro],[data-part=highlights],[data-part=blocks]){animation:pd-enter-${name} var(--motion-slow,520ms) var(--motion-ease-settle,ease) both}`).join('') + '}',
   ];
+  // Fields: checkout's .order-field controls and the account inputs; checkboxes and radios (terms, delivery choice) keep their look.
+  const DRAWN_FIELD = ':is([data-pagosya-checkout] .order-field :is(input,select,textarea),[data-pagosya-cart][data-checkout-review] .order-field :is(input,select,textarea),[data-account-gate] [data-part=input])';
+  const DRAWN_TEXT_FIELD = `${DRAWN_FIELD}:not([type=checkbox],[type=radio])`;
+  const COMMERCE_DRAW_CSS = [
+    `:root[data-dna-fields] ${DRAWN_TEXT_FIELD}{box-sizing:border-box;min-height:48px;font:inherit;color:var(--kit-ink)}`,
+    `:root[data-dna-fields] ${DRAWN_FIELD}:focus-visible{outline:2px solid var(--kit-accent);outline-offset:2px}`,
+    `:root[data-dna-fields=boxed] ${DRAWN_TEXT_FIELD}{border:1px solid var(--kit-line);border-radius:var(--kit-radius);background:var(--kit-paper);padding:0 14px}`,
+    `:root[data-dna-fields=underline] ${DRAWN_TEXT_FIELD}{border:0;border-bottom:2px solid color-mix(in srgb,var(--kit-ink) 55%,var(--kit-paper));border-radius:0;background:transparent;padding:0 2px}`,
+    `:root[data-dna-fields=filled] ${DRAWN_TEXT_FIELD}{border:0;border-bottom:2px solid color-mix(in srgb,var(--kit-ink) 40%,var(--kit-paper));border-radius:var(--kit-radius) var(--kit-radius) 0 0;background:color-mix(in srgb,var(--kit-ink) 7%,var(--kit-paper));padding:0 14px}`,
+    `:root[data-dna-fields=filled] ${DRAWN_TEXT_FIELD}:focus{border-bottom-color:var(--kit-accent)}`,
+    `:root[data-dna-fields=pill] ${DRAWN_TEXT_FIELD}{border:1.5px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);padding:0 18px}`,
+    `:root[data-dna-fields] ${DRAWN_FIELD}:is(textarea){min-height:96px;padding-block:12px}:root[data-dna-fields=pill] ${DRAWN_FIELD}:is(textarea){border-radius:22px}`,
+    // Steps numbers the review's sections; ticket tears the summary's bottom edge; brand sets a panel beside the page.
+    ':root[data-dna-checkout=steps] .checkout-review{counter-reset:checkout-step}',
+    ':root[data-dna-checkout=steps] :is(.checkout-review__summary,.checkout-review__fields)>h2::before{counter-increment:checkout-step;content:counter(checkout-step);display:inline-grid;place-items:center;width:1.7em;height:1.7em;margin-right:.5em;border-radius:50%;background:var(--kit-accent);color:var(--kit-on-accent);font-size:.8em;vertical-align:.1em}',
+    ':root[data-dna-checkout=ticket] .checkout-review__summary{font-variant-numeric:tabular-nums;-webkit-mask:linear-gradient(black 0 0) top/100% calc(100% - 10px) no-repeat,conic-gradient(from -45deg at bottom,transparent,black 1deg 89deg,transparent 90deg) bottom/20px 10px repeat-x;mask:linear-gradient(black 0 0) top/100% calc(100% - 10px) no-repeat,conic-gradient(from -45deg at bottom,transparent,black 1deg 89deg,transparent 90deg) bottom/20px 10px repeat-x}',
+    '@media(min-width:900px){:root[data-dna-checkout=brand] [data-pagosya-checkout] .checkout-page__inner{display:grid;grid-template-columns:minmax(180px,.42fr) minmax(0,1fr);column-gap:clamp(24px,4vw,56px);max-width:1280px}:root[data-dna-checkout=brand] [data-pagosya-checkout] .checkout-page__inner::before{content:"";grid-column:1;grid-row:1 / span 3;min-height:min(70vh,640px);border-radius:var(--kit-radius-panel);background:var(--checkout-panel,color-mix(in srgb,var(--kit-accent) 82%,var(--kit-paper)))}:root[data-dna-checkout=brand] [data-pagosya-checkout] .checkout-page__inner>*{grid-column:2;min-width:0}}',
+  ].join('\n');
   const DNA_PAGE_CSS = [
     ...PRODUCT_CARD_CSS,
     ...dnaButtonRules(PAGE_BUTTONS, PAGE_STEPPERS), ...dnaIdentityButtonRules(PAGE_BUTTONS),
@@ -3700,6 +3742,14 @@
     // Every variant sits in the pagosya-dna layer: above the kit defaults, below the store's own (unlayered) CSS.
     dnaStyle.textContent = `@layer pagosya-dna {\n${[...DNA_CSS, DNA_REDUCED_MOTION].join('\n')}\n}\n${DNA_PAGE_CSS.join('\n')}`;
     document.head.append(dnaStyle);
+    // Drawn checkout layout and field style (spec 2026-10-11 commerce surfaces), unlayered like DNA_PAGE_CSS. The field rules
+    // out-rank the account CSS by specificity (it is appended later, on demand), so order does not matter. Only with a draw.
+    if (document.documentElement.hasAttribute('data-dna-checkout') || document.documentElement.hasAttribute('data-dna-fields')) {
+      const drawStyle = document.createElement('style');
+      drawStyle.dataset.pagosyaKit = 'commerce-draw';
+      drawStyle.textContent = COMMERCE_DRAW_CSS;
+      document.head.append(drawStyle);
+    }
     /* Product theme: guarded CSS the API sanitized (product-theme-css.ts) before it reached config.dna.productCss. This check is
      * defence in depth only, a coarse refusal of what the sanitizer never emits; it does not re-implement the sanitizer.
      * It goes after the kit's own styles so an equally specific theme rule wins. */
