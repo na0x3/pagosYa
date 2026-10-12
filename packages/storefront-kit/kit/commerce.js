@@ -1958,7 +1958,7 @@
     [data-pagosya-checkout] .checkout-page__summary h2{margin:0 0 20px;font-size:22px}
     [data-pagosya-checkout] .order-items{list-style:none;padding:0;margin:0}
     [data-pagosya-checkout] .order-item{display:block;padding:16px 0;border-bottom:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
-    [data-pagosya-checkout] .order-item>div:first-child{display:flex;justify-content:space-between;gap:16px;line-height:1.5}
+    [data-pagosya-checkout] .order-item>div:first-child:not(.order-item__body){display:flex;justify-content:space-between;gap:16px;line-height:1.5}
     [data-pagosya-checkout] .quantity{display:flex;align-items:center;gap:12px;margin-top:12px}
     [data-pagosya-checkout] .quantity button{width:44px;min-height:44px;background:transparent;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));border-radius:50%;font:inherit;color:inherit;cursor:pointer}
     [data-pagosya-checkout] .order-field{display:grid;gap:8px;margin:20px 0;font:inherit}
