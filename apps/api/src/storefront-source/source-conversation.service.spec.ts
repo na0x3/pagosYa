@@ -1,4 +1,5 @@
-import { SOURCE_CONVERSATION_PLAN_TIMEOUT_MS, SOURCE_CONVERSATION_TIMEOUT_MS } from './source-conversation-failure';
+import { sourceRequestContext } from './source-request-context';
+import { SOURCE_CONVERSATION_TIMEOUT_MS } from './source-conversation-failure';
 import { SourceConversationService } from './source-conversation.service';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
@@ -195,11 +196,11 @@ describe('Source conversation interpretation', () => {
     expect(context.recentConversation[0].assetUrls).toEqual([]);
     expect(body.text.format.schema.properties.imageUses.items.properties.url.enum).toEqual([photo]);
   });
-  it('recovers once from incomplete output under the same timeout', async () => {
+  it('recovers once from incomplete output under a fresh deadline', async () => {
     const {service} = setup(); respond(reply(),'incomplete'); respond(reply());
     expect((await service.decide('merchant',input())).action).toBe('reply');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1][1].signal).toBe(fetchMock.mock.calls[0][1].signal);
+    expect(fetchMock.mock.calls[1][1].signal).not.toBe(fetchMock.mock.calls[0][1].signal);
   });
   it('stops after two invalid replies and never accepts foreign image references', async () => {
     const {service} = setup();
@@ -240,22 +241,41 @@ describe('Source conversation interpretation', () => {
     fetchMock.mockRejectedValueOnce(new Error('connection reset')).mockRejectedValueOnce(new Error('connection reset'));
     await expect(service.decide('merchant', input())).rejects.toThrow('problema de conexión');
   });
-  it('uses a 120-second deadline, reports timeout without a retry and records safe diagnostics', async () => {
+  it('gives each attempt its own 120-second deadline, retries a hung call once and records safe diagnostics', async () => {
     const { prisma, uploads, config } = setup();
     const record = jest.fn();
     const service = new SourceConversationService(prisma, uploads, config, undefined, { record } as any);
-    const controller = new AbortController();
-    const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
-    fetchMock.mockImplementationOnce(async () => { controller.abort(); throw new Error('private provider details'); });
+    const first = new AbortController(), second = new AbortController();
+    const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(first.signal).mockReturnValueOnce(second.signal);
+    fetchMock.mockImplementationOnce(async () => { first.abort(); throw new Error('private provider details'); })
+      .mockImplementationOnce(async () => { second.abort(); throw new Error('private provider details'); });
     try {
       await expect(service.decide('merchant', { ...input(), storeId: 's' })).rejects.toMatchObject({
-        message: expect.stringContaining('120 segundos'), diagnostic: { code: 'timeout', attempt: 1, timeoutMs: 120000 },
+        message: expect.stringContaining('120 segundos'), diagnostic: { code: 'timeout', attempt: 2, timeoutMs: 120000 },
       });
-      expect(timeout).toHaveBeenCalledWith(SOURCE_CONVERSATION_TIMEOUT_MS);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(timeout).toHaveBeenNthCalledWith(1, SOURCE_CONVERSATION_TIMEOUT_MS);
+      expect(timeout).toHaveBeenNthCalledWith(2, SOURCE_CONVERSATION_TIMEOUT_MS);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(record).toHaveBeenCalledWith('s', 'conversation', expect.any(String), null, expect.any(Number), 'FAILED', expect.objectContaining({ code: 'timeout', timeoutMs: 120000 }));
       expect(JSON.stringify(record.mock.calls)).not.toContain('private provider details');
     } finally { timeout.mockRestore(); }
+  });
+  it('answers from the retry when the first call hung (2026-10-12: one bridge call stalled at 120 s, a retry worked)', async () => {
+    const { service } = setup();
+    const hung = new AbortController();
+    const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(hung.signal).mockReturnValueOnce(new AbortController().signal);
+    fetchMock.mockImplementationOnce(async () => { hung.abort(); throw new Error('aborted'); }); respond(reply());
+    try {
+      await expect(service.decide('merchant', input())).resolves.toMatchObject({ action: 'reply' });
+      expect(JSON.parse(fetchMock.mock.calls[1][1].body).instructions).not.toContain('The last reply was invalid');
+    } finally { timeout.mockRestore(); }
+  });
+  it('does not retry when the merchant cancelled the request', async () => {
+    const { service } = setup();
+    const cancelled = new AbortController();
+    fetchMock.mockImplementationOnce(async () => { cancelled.abort(); throw new Error('aborted'); });
+    await expect(sourceRequestContext.run({ signal: cancelled.signal } as any, () => service.decide('merchant', input()))).rejects.toMatchObject({ diagnostic: { code: 'timeout', attempt: 1 } });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it('records HTTP status and request identifier without including provider error text', async () => {
     const { prisma, uploads, config } = setup(); const record = jest.fn();
@@ -324,20 +344,4 @@ it('stops on a ChatGPT authorization outage and preserves its safe diagnostic', 
   fetchMock.mockResolvedValue({ok:false,status:503,headers:new Headers(),json:async()=>({error:{code:'chatgpt_authentication_unavailable',upstreamStatus:500,message:'private upstream details'}})});
   await expect(service.decide('merchant',input())).rejects.toMatchObject({diagnostic:{code:'provider_http',providerCode:'chatgpt_authentication_unavailable',upstreamStatus:500}});
   expect(fetchMock).toHaveBeenCalledTimes(1);
-});
-
-it('waits the longer ChatGPT plan deadline, which a 5000-token decision at the bridge pace needs, and reports it', async () => {
-  const { prisma, uploads, config } = setup(); const record = jest.fn();
-  config.get.mockImplementation((key:string)=>key==='app.chatgptPlan'?{url:'http://127.0.0.1:1234/v1/responses',secret:'local-test'}:key==='app.environment'?'development':key==='app.openAi.apiKey'?'unused':key==='app.openAi.enabled'?true:'gpt-5.6-sol');
-  const service = new SourceConversationService(prisma, uploads, config, undefined, { record } as any);
-  const controller = new AbortController();
-  const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
-  fetchMock.mockImplementationOnce(async () => { controller.abort(); throw new Error('aborted'); });
-  try {
-    await expect(service.decide('merchant', { ...input(), storeId: 's' })).rejects.toMatchObject({
-      message: expect.stringContaining('300 segundos'), diagnostic: { code: 'timeout', timeoutMs: SOURCE_CONVERSATION_PLAN_TIMEOUT_MS },
-    });
-    expect(timeout).toHaveBeenCalledWith(SOURCE_CONVERSATION_PLAN_TIMEOUT_MS);
-    expect(record).toHaveBeenCalledWith('s', 'conversation', expect.any(String), null, expect.any(Number), 'FAILED', expect.objectContaining({ timeoutMs: SOURCE_CONVERSATION_PLAN_TIMEOUT_MS }));
-  } finally { timeout.mockRestore(); }
 });
