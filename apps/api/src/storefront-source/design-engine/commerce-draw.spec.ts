@@ -50,7 +50,7 @@ describe('cart words, runtime DNA and summary', () => {
   });
   it('maps a draw to runtime DNA, the checkout picking the review it builds on', () => {
     expect(commerceRuntimeDna({ account: 'split', checkout: 'steps', fields: 'pill', cartSurface: 'sheet', added: 'stamp' })).toEqual({ cart: 'sheet', added: 'stamp', review: 'stacked', checkout: 'steps', fields: 'pill' });
-    expect(commerceRuntimeDna({ checkout: 'brand' })).toEqual({ review: 'split', checkout: 'brand' });
+    expect(commerceRuntimeDna({ checkout: 'brand' })).toEqual({ review: 'stacked', checkout: 'brand' });
     expect(commerceRuntimeDna({})).toEqual({});
   });
   it('writes the preview line in Spanish', () => {

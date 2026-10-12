@@ -54,8 +54,9 @@ export const CART_WORDS: Record<PlaybookKind, string> = {
 };
 export const cartWordFor = (kind: unknown): string | undefined => typeof kind === 'string' && Object.prototype.hasOwnProperty.call(CART_WORDS, kind) ? CART_WORDS[kind as PlaybookKind] : undefined;
 
-/** The checkout layout builds on one of the runtime's review arrangements; data-dna-checkout adds the rest. */
-export const REVIEW_FOR_CHECKOUT: Record<CommerceDraw['checkout'], 'split' | 'stacked' | 'ticket'> = { columns: 'split', steps: 'stacked', ticket: 'ticket', brand: 'split' };
+/** The checkout layout builds on one of the runtime's review arrangements; data-dna-checkout adds the rest. Brand is one column
+ *  beside its panel: a two-column review next to the panel leaves the summary too narrow for its rows. */
+export const REVIEW_FOR_CHECKOUT: Record<CommerceDraw['checkout'], 'split' | 'stacked' | 'ticket'> = { columns: 'split', steps: 'stacked', ticket: 'ticket', brand: 'stacked' };
 /** Runtime-only DNA values (never in SOURCE_DNA_ENUMS: the planner and the seed must not see them). Pinned against commerce.js. */
 export const COMMERCE_RUNTIME_ENUMS = { checkout: COMMERCE_OPTIONS.checkout, fields: COMMERCE_OPTIONS.fields } as const;
 

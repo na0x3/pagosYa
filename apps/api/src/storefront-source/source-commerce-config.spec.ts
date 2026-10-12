@@ -2,7 +2,7 @@ import { commerceConfig } from './source-commerce-config';
 
 describe('commerceConfig', () => {
   const draw = { account: 'split', checkout: 'brand', fields: 'filled', cartSurface: 'sheet', added: 'ribbon' } as const;
-  const dna = { cart: 'sheet', added: 'ribbon', review: 'split', checkout: 'brand', fields: 'filled' };
+  const dna = { cart: 'sheet', added: 'ribbon', review: 'stacked', checkout: 'brand', fields: 'filled' };
   it('a fresh draw sets the account layout with the first store photo, the brand checkout photo and the word', () => {
     expect(commerceConfig({ commerce: { draw, fresh: true, cartWord: 'Tu caja' }, photos: ['assets/a.jpg', 'assets/b.jpg'] }))
       .toEqual({ dna, accountTheme: { layout: 'split', photo: 'assets/a.jpg' }, checkoutPhoto: 'assets/a.jpg', cartWord: 'Tu caja' });
