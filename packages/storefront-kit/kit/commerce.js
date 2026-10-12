@@ -1308,7 +1308,7 @@
 [data-account-gate] [data-part=label]{font-size:.85em;font-weight:600}
 [data-account-gate] [data-part=input]{box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
 [data-account-gate] [data-part=submit]{min-height:48px;font:inherit;font-weight:700;cursor:pointer}
-:root:not([data-dna-button]) [data-account-gate] [data-part=submit]{background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
+:root:not([data-dna-fields]) [data-account-gate] [data-part=submit]{background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
 [data-account-gate] [data-part=link]{color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
 [data-account-gate] [data-part=error]:empty{display:none}
 [data-account-gate] [data-part=error]{margin:0;color:#b42318;font-weight:600}
@@ -3523,7 +3523,7 @@
   // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
   // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a
   // store without one renders exactly as before. Surfaces read one shared token set.
-  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit],[data-account-gate] [data-part=submit])';
+  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit],[data-dna-fields] [data-account-gate] [data-part=submit])';
   const KIT_STEPPERS = ':where(.quantity button,.product-detail__quantity,.product-detail__box-stepper button)';
   /* The product page is platform-owned: its kit styles are unlayered and authored rules on its hooks are released
    * (releaseProductPageStyles), so the DNA reaches its buttons with an unlayered, product-scoped copy of the rules. */

@@ -1538,7 +1538,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
       ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
     // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
-    const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }) });
+    const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
+    const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
     const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna };
     // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
     const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));

@@ -19,4 +19,10 @@ describe('commerceConfig', () => {
   it('nothing without a commerce draw', () => {
     expect(commerceConfig({ commerce: undefined, photos: ['assets/a.jpg'] })).toEqual({ dna: {} });
   });
+  it('a kept brand draw keeps the photo it was built with, never a newly attached one', () => {
+    expect(commerceConfig({ commerce: { draw, fresh: false }, photos: ['assets/new.jpg'], keptPhoto: 'assets/a.jpg' }).checkoutPhoto).toBe('assets/a.jpg');
+    expect(commerceConfig({ commerce: { draw, fresh: false }, photos: ['assets/new.jpg'] }).checkoutPhoto).toBeUndefined();
+    expect(commerceConfig({ commerce: { draw, fresh: true }, photos: ['assets/new.jpg'], keptPhoto: 'assets/a.jpg' }).checkoutPhoto).toBe('assets/new.jpg');
+  });
 });
+

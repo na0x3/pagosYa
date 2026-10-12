@@ -75,8 +75,10 @@ describe('commerce surfaces drawn per store (runtime)', () => {
     }
     expect(boot({ ...DNA, checkout: 'ticket' }, { settings: { checkoutPhoto: 'assets/hero-1.jpg' } }).doc.documentElement.style.getPropertyValue('--checkout-panel')).toBe('');
   });
-  it('the account submit follows the button DNA', () => {
-    expect(commerce).toMatch(/const KIT_BUTTONS = '[^']*\[data-account-gate\] \[data-part=submit\]/);
+  it('the account submit follows the button DNA only on a store with a commerce draw; other stores keep today\'s button', () => {
+    expect(commerce).toMatch(/const KIT_BUTTONS = '[^']*\[data-dna-fields\] \[data-account-gate\] \[data-part=submit\]/);
+    expect(commerce).not.toMatch(/const KIT_BUTTONS = '[^']*,\[data-account-gate\] \[data-part=submit\]/);
+    expect(commerce).toContain(':root:not([data-dna-fields]) [data-account-gate] [data-part=submit]{background:var(--acc-accent)');
   });
   it('names the drawer with the store\'s word, keeps "Tu pedido" without one, refuses markup', () => {
     expect(boot(DNA, { settings: { cartWord: 'Tu bolsa' } }).doc.querySelector('#cart-drawer-title')?.textContent).toBe('Tu bolsa');
