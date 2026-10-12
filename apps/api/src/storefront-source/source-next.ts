@@ -75,7 +75,7 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
     if (!file || typeof file.path !== 'string' || !nextSourceFile(file.path) || seen.has(file.path.toLowerCase()) || typeof file.content !== 'string' || file.content.length > 180000 || file.encoding === 'base64') throw new BadGatewayException(`Archivo React no permitido: ${file?.path}`);
     seen.add(file.path.toLowerCase());
     if (file.path.endsWith('.css')) {
-      const root = postcss.parse(file.content);
+      const root = postcss.parse(file.content, { from: file.path });
       root.walkAtRules(rule => { if (['import', 'plugin', 'config', 'source'].includes(rule.name.toLowerCase())) throw new BadGatewayException('Usa CSS y fuentes locales; no se permiten imports ni plugins de estilos.'); });
       continue;
     }

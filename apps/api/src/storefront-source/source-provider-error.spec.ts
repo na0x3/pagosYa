@@ -1,5 +1,5 @@
 import { BadGatewayException, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
-import {checkSourceProviderQuota, isProviderRejection, retryProviderRejection, SourceProviderQuotaException, SourceProviderRefusedException} from './source-provider-error';
+import {checkSourceProviderQuota, isProviderRejection, isProviderTransient, retryProviderRejection, SourceProviderQuotaException, SourceProviderRefusedException, SourceProviderTransientException} from './source-provider-error';
 it('distinguishes an authorization outage from rejection, quota and connection failures',()=>{
  for(const [status,code,text] of [[503,'chatgpt_authentication_unavailable','renovar la sesión'],[503,'chatgpt_authentication_rejected','rechazó la autorización'],[429,'limit','límite de uso'],[503,'chatgpt_connection_unavailable','conectar con ChatGPT']] as const){
   expect(()=>checkSourceProviderQuota(status,{error:{code}},'ChatGPT plan')).toThrow(text);
@@ -69,6 +69,22 @@ describe('provider rejection retry (spec 2026-10-11 amendment "two cards")', () 
     const aborted = jest.fn().mockRejectedValue(rejected());
     await expect(retryProviderRejection(aborted, { signal: controller.signal })).rejects.toThrow('rechazó la autorización');
     expect(aborted).toHaveBeenCalledTimes(1);
+  });
+
+  it('knows a call that broke off on the way (a cut ChatGPT stream), also as a cause, and plans it once more', async () => {
+    jest.useFakeTimers();
+    let cut: unknown;
+    try { checkSourceProviderQuota(502, { error: { code: 'chatgpt_stream_interrupted' } }, 'ChatGPT plan'); } catch (error) { cut = error; }
+    expect(cut).toBeInstanceOf(SourceProviderTransientException);
+    expect((cut as Error).message).toContain('se interrumpió antes de completarse');
+    expect(isProviderTransient(new BadGatewayException('No se completó la exploración visual.', { cause: cut }))).toBe(true);
+    expect(isProviderTransient(rejected())).toBe(false);
+    expect(isProviderTransient(new BadGatewayException('YAPI no logró armar estilos válidos en este intento: concepts[1]: x'))).toBe(false);
+    const call = jest.fn().mockRejectedValueOnce(new BadGatewayException('No se completó la exploración visual.', { cause: cut })).mockResolvedValueOnce('ok');
+    const result = retryProviderRejection(call);
+    await jest.advanceTimersByTimeAsync(3000);
+    await expect(result).resolves.toBe('ok');
+    expect(call).toHaveBeenCalledTimes(2);
   });
 
   it('stops waiting when the signal aborts during the pause', async () => {

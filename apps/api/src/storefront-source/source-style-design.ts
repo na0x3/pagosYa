@@ -50,7 +50,8 @@ export function validateStyleDesign(value: any, modes: Array<'calm' | 'bold'>, o
       kept.push({ ...result, card: { slot, mode: modes[index], name: concept.cardName.trim(), vibe: concept.vibe.trim(), inspiration: concept.inspiration.map((line: string) => line.trim()) } });
     } catch (error) { dropped.push(`concepts[${slot}]: ${(error instanceof Error ? error.message : 'inválido').slice(0, 200)}`); }
   });
-  if (!kept.length) throw new BadGatewayException('YAPI no logró armar estilos válidos en este intento.');
+  // The reasons ride along: they reach the attempt record and the planner's one repair, which is blind without them.
+  if (!kept.length) throw new BadGatewayException(`YAPI no logró armar estilos válidos en este intento: ${dropped.join(' | ') || 'sin conceptos'}`.slice(0, 600));
   const proposed = Number.isInteger(value?.selection?.index) ? options.slots?.[value.selection.index] ?? value.selection.index : undefined;
   const recommended = kept.findIndex(concept => concept.card!.slot === proposed);
   const rationale = typeof value?.selection?.rationale === 'string' && value.selection.rationale.trim().length <= 400 ? value.selection.rationale.trim() || null : null;

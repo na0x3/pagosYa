@@ -1,4 +1,4 @@
-import { honorImageContent, requestsImageContent } from './source-image-intent';
+import { honorImageContent, requestsImageContent, unusedPhotoDiagnostic } from './source-image-intent';
 
 const photo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
 it.each(['use these pictures', 'include my photos', 'usa estas imágenes', 'quiero lujo juvenil, use these pictures'])('honors content intent: %s', instruction => {
@@ -14,4 +14,16 @@ it('keeps product roles and unrelated reference images intact', () => {
 it('recognizes creation with supplied images as content authorization', () => {
   expect(requestsImageContent('créame un sitio con estas imágenes')).toBe(true);
   expect(requestsImageContent('crea una tienda con estas imágenes de referencia')).toBe(false);
+});
+
+it.each(['Usa estas 4 fotos: el pistacho es la foto del Vasito', 'usa estas dos fotos en la portada', 'use these 3 photos', 'crea mi tienda con estas 4 fotos'])('honors a request that counts its photos: %s', instruction => {
+  expect(requestsImageContent(instruction)).toBe(true);
+});
+it('still declines a counted reference', () => {
+  expect(requestsImageContent('usa estas 4 fotos como referencia')).toBe(false);
+});
+it('names each unused photo, its role and where a product photo goes', () => {
+  const note = unusedPhotoDiagnostic(['assets/image-14614d93e843.webp'], [{ original: photo, path: 'assets/image-14614d93e843.webp' }], [{ url: photo, role: 'product', description: 'Pote de tumbo' }]);
+  expect(note).toContain(`${photo} (assets/image-14614d93e843.webp), product: Pote de tumbo`);
+  expect(note).toContain('productOperations[].changes.imageUrls');
 });

@@ -1,5 +1,5 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
-import { withStaticStandardPages, withStaticNavSlot } from './source-static-pages';
+import { SOURCE_STATIC_ACCOUNT_PAGES, staticAccountGateProblems, withStaticStandardPages, withStaticNavSlot } from './source-static-pages';
 import { validateLegacySources } from './source-legacy';
 import { validateGeneratedSource } from './source-generation.service';
 
@@ -108,6 +108,29 @@ it('adds the login and account gates in the store own shell', () => {
   expect(login).toContain('class="site-header"');
   expect(login).not.toContain('data-pagosya-catalog');
   expect(files.find(file => file.path === 'cuenta-pedidos.html')!.content).toContain('data-account-gate="orders"');
+});
+
+// 2026-10-12: asked for a prettier sign-up form, YAPI rebuilt the register page's fallback card around the button. The
+// runtime wiped it and drew the real form in the narrow first column of the authored grid.
+describe('account gates the runtime fills', () => {
+  const withRegister = (gate: string) => {
+    const { files } = withStaticStandardPages(store());
+    return files.map(file => file.path === 'acceso-registro.html' ? { ...file, content: file.content.replace(/<section class="ui-account-gate"[\s\S]*<\/section>/, gate) } : file);
+  };
+  it('accepts the platform gate and decoration around its slot', () => {
+    expect(staticAccountGateProblems(withStaticStandardPages(store()).files)).toEqual([]);
+    expect(staticAccountGateProblems(withRegister('<section class="ui-account-gate register-gate" data-account-gate="register"><aside class="perks"><ul><li>Pedidos</li></ul></aside><div class="ui-container"><h1>Crea tu cuenta</h1><p>Hola</p><a class="ui-button" href="#" data-pagosya-account="register">Crear cuenta</a></div></section>'))).toEqual([]);
+  });
+  it('refuses authored markup inside the slot, and a page that lost its gate', () => {
+    const files = withRegister('<section class="ui-account-gate" data-account-gate="register"><div class="ui-container register-shell"><aside class="register-intro"><p>MI CUENTA</p></aside><div class="register-card"><h1>Crea tu cuenta</h1><a data-pagosya-account="register">Crear cuenta</a></div></div></section>');
+    expect(staticAccountGateProblems(files)).toEqual([expect.stringMatching(/^acceso-registro\.html puso <aside>, <div> dentro de \[data-account-gate\] \.ui-container.*\[data-part=…\]/)]);
+    expect(() => validateGeneratedSource(files, 'shop')).toThrow('acceso-registro.html puso <aside>, <div>');
+    expect(staticAccountGateProblems(withRegister('<section class="signup"><h1>Crea tu cuenta</h1></section>'))).toEqual([expect.stringContaining('acceso-registro.html perdió <section data-account-gate="register">')]);
+  });
+  it('tells a static generation how to restyle the drawn form', () => {
+    expect(SOURCE_STATIC_ACCOUNT_PAGES).toContain('acceso-registro.html');
+    expect(SOURCE_STATIC_ACCOUNT_PAGES).toContain('[data-account-gate] [data-part=account|media|card|title|lead|notice|form|field|label|input|hint|error|submit|link]');
+  });
 });
 
 // The 24-file cap bounds what a model writes; 19 platform pages on top of an authored project must not trip it.

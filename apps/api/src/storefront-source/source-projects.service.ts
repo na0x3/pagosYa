@@ -110,7 +110,7 @@ export class SourceProjectsService {
     return rows.map(row => parseFrameDraw(row.content)).filter(draw => Object.keys(draw).length > 0);
   }
 
-  /** The style cards recent proposals SHOWED, built or not (2026-10-11 variety): the merchant's last `limit` proposals and the
+  /** The style cards recent proposals SHOWED, built or not (2026-10-11 variety), never a slot whose card was not shown: the merchant's last `limit` proposals and the
    *  last `limit` of the same kind across stores (30 days), newest first. Only the draw, device and display font travel. */
   async recentStyleCards(merchantId: string, kind: string, now = new Date(), limit = 20): Promise<ShownStyleCard[]> {
     const since = new Date(now.getTime() - 30 * 86_400_000);
@@ -137,6 +137,9 @@ export class SourceProjectsService {
       const slots = Array.isArray(row.slots) ? row.slots as Array<{ kind?: unknown; mode?: unknown; slot?: unknown; draw?: unknown; device?: unknown }> : [];
       return slots.flatMap((slot): ShownStyleCard[] => {
         if (slot.mode !== 'calm' && slot.mode !== 'bold') return [];
+        // A slot whose lane failed was drawn but never shown (its proposal kept one card): counting it would tilt the
+        // rotation, e.g. a phantom bold 'ticket' checkout pushing every next bold card to 'brand'.
+        if (!fonts.some(font => font.slot === slot.slot)) return [];
         const draw = parseFrameDraw(JSON.stringify(slot.draw ?? null));
         const display = fonts.find(font => font.slot === slot.slot)?.display;
         return [{ ...(typeof slot.kind === 'string' ? { kind: slot.kind } : {}), mode: slot.mode, draw, ...(row.mine === true ? { mine: true } : {}), ...(isSignatureDevice(slot.device) ? { device: slot.device } : {}), ...(typeof display === 'string' && display && (row.mine === true || FONT_IDS.has(display)) ? { display } : {}) }];

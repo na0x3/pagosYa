@@ -7,7 +7,7 @@ import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
 import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
-import { STATIC_STANDARD_PAGE_PATHS, withStaticStandardPages } from './source-static-pages';
+import { SOURCE_STATIC_ACCOUNT_PAGES, STATIC_STANDARD_PAGE_PATHS, staticAccountGateProblems, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
@@ -37,7 +37,7 @@ import { sketchImageRole } from './sketch/sketch-assets';
 import { BUNDLED_PHOTO, authoredUploadReferences, bundledPhotoPath, productPhotoReferences, rewriteAuthoredUploads, rewriteProductPhotos, uploadPath } from './source-product-photos';
 import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
-import { requestsImageContent } from './source-image-intent';
+import { requestsImageContent, unusedPhotoDiagnostic } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
 import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign, type SourceDesignConcept } from './source-design';
@@ -105,6 +105,7 @@ import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
 import { readFile } from "node:fs/promises";
 import { Script } from "node:vm";
+import postcss, { CssSyntaxError } from "postcss";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
@@ -177,7 +178,16 @@ export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: 
     if (file.path.endsWith(".js")) {
       try { new Script(file.content, { filename: file.path }); } catch { throw new BadGatewayException(`Error de sintaxis en ${file.path}. Vuelve a generar.`); }
     }
+    // A browser drops every rule after an unclosed bracket, string, comment or block, so one typo unstyles the whole store.
+    if (file.path.endsWith(".css")) {
+      try { postcss.parse(file.content, { from: file.path }); } catch (error) {
+        const where = error instanceof CssSyntaxError ? `línea ${error.line}, columna ${error.column}: ${error.reason}` : 'no se pudo leer';
+        throw new BadGatewayException(`Error de sintaxis CSS en ${file.path} (${where}). Cierra cada paréntesis, comilla, comentario y llave.`);
+      }
+    }
   }
+  const gateProblems = staticAccountGateProblems(files);
+  if (gateProblems.length) throw new BadGatewayException(gateProblems.join(' '));
   const html = files.find((f) => f.path === "index.html")?.content || "";
   const missingFiles = ['index.html', 'styles.css', 'site.js'].filter(path => !files.some(f => f.path === path));
   const missingHooks = (purpose === 'shop' ? ['data-pagosya-catalog', 'data-pagosya-cart', 'data-pagosya-status'] : ['data-pagosya-status', 'data-pagosya-contact']).filter(hook => !html.includes(hook));
@@ -644,6 +654,7 @@ export class SourceGenerationService {
       SOURCE_PURCHASE_CONTROL_FORM,
       SOURCE_ORDER_EMAIL_DIRECTION,
       SOURCE_KIT_CSS_DIRECTION,
+      useNext ? '' : SOURCE_STATIC_ACCOUNT_PAGES,
       SOURCE_MOTION_PERSONALITY_DIRECTION,
       "The runtime positions .menu-add relatively above the product-detail overlay and resets its inset to auto. Use normal grid or flex flow with gaps for the price and add button; never rely on absolute offsets. Runtime classes to style: menu-item, menu-item__image, menu-item__copy h3/p, menu-item__price, menu-add, sold-out, order-items, order-empty, order-item, quantity button/output, order-field select, order-total, order-note, checkout-button, catalog-empty. A product that offers Compra única vs. Suscríbete y ahorra also renders product-detail__subscription (a fieldset with a legend, two radio labels and a frequency select), product-detail__subscription-price and product-detail__subscription-conflict; style that group in the store’s own language. A membership product (fulfillmentType MEMBERSHIP) renders product-detail__membership (a fieldset of period radios with prices), a \"Hacerme miembro\" link (product-detail__buy) and product-detail__membership-note; its card button reads \"Hacerme miembro\" and opens the product. Style them in the same language as the subscription group, and never add a cart button for it. data-category buttons need visible pressed state. Use comfortable reading sizes, 44px controls, clear keyboard focus, responsive mobile order and reduced-motion support. Do not hide content before JS. Avoid empty decorative cards, generic badges, fake rating stars and unnecessary motion. Typography and image crops must feel deliberate.",
       "Catalog cards link to the supplied full-screen product page in new projects; legacy projects may use an accessible product dialog with all available product photos, thumbnails, arrow keys, mobile swipe and an add-to-order action. Keep the menu-item__details overlay button and menu-add usable; do not intercept their clicks. The runtime supplies base product-detail__ styles; restyle them only in styles/kit.css. Do not hide the gallery or invent extra photos.",
@@ -1463,6 +1474,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               generated.files = applySourceEdits(oldFiles || [], generated, { allowUnchanged: products.length > 0 || productOperations.length > 0, replaceablePaths, ...(useNext ? { appendPaths: ['styles/globals.css'] } : {}), ...(targetedEditPaths ? { allowedEditPaths: targetedEditPaths } : {}) });
             }
             await acceptCandidate();
+            // Photos the merchant asked to use that landed nowhere (no page, no product) spend the one repair: a skipped
+            // product photo used to pass silently (2026-10-12, "Usa estas 4 fotos" left two products bare).
+            if (unusedImagePaths.length && index + 1 < sourceAttemptLimit && !signal.aborted) throw new BadGatewayException(unusedPhotoDiagnostic(unusedImagePaths, assetLegend, imageUses));
             attempt.status = 'COMPLETED';
             break;
           } catch (error) {
@@ -1679,7 +1693,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const lane = laneControllers.get(slot.slot)!;
       return (async () => {
         try {
-          // A refusal from the provider (two lanes reached the bridge at the same second) is planned once more after 3 s.
+          // A refusal from the provider (two lanes reached the bridge at the same second) or a call that broke off on the way
+          // (a cut ChatGPT stream) is planned once more after 3 s.
           const concept = (await retryProviderRejection(() => input.plan(slot), { signal: AbortSignal.any([input.signal, lane.signal]) })).concepts[0];
           if (!concept?.card) return;
           // A bold lane moves off another bold card's display font before its hero is drawn (a no-op with one bold card).
@@ -1689,7 +1704,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
           slotHeroes[slot.slot] = { html: templateHero(factsFor(slotConcepts[slot.slot]!, slot)), source: 'template' };
           slotPending[slot.slot] = true;
         } catch (error) {
-          if (!input.signal.aborted) this.logger.warn(JSON.stringify({ event: 'style_lane_failed', generationId: input.runId, slot: slot.slot }));
+          if (!input.signal.aborted) this.logger.warn(JSON.stringify({ event: 'style_lane_failed', generationId: input.runId, slot: slot.slot, reason: error instanceof Error ? error.message.slice(0, 300) : 'unknown' }));
           return;
         } finally { ready(); }
         shown = true;

@@ -11,7 +11,7 @@ import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-referenc
 import { sourceResponseJson } from './source-response';
 import { sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-generation-policy';
 import { SourceRequestBudget } from './source-request-budget';
-import { checkSourceProviderQuota } from './source-provider-error';
+import { checkSourceProviderQuota, SourceProviderTransientException } from './source-provider-error';
 
 export type DesignPlanningAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; failureReason?: string; reasoningEffort?: string; selectedIndex?: number; selectionSource?: 'planner' | 'forced'; tellsKept?: string[] };
 
@@ -74,7 +74,13 @@ export class SourceDesignPlanner {
         allocation.settle(body?.usage);
         attempt.usage = sourceUsage(input.model, body?.usage);
         checkSourceProviderQuota(response.status, body, input.provider.name);
-        if (!response.ok || body?.status !== 'completed') throw new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.');
+        if (!response.ok || body?.status !== 'completed') {
+          // A response that failed or stopped incomplete on the way (or a server error) may succeed when planned again.
+          const transient = response.status >= 500 || (response.ok && ['failed', 'incomplete'].includes(body?.status));
+          const detail = `status ${response.status} ${body?.status ?? 'sin cuerpo'}${body?.error?.code ? ` ${body.error.code}` : ''}${body?.incomplete_details?.reason ? ` ${body.incomplete_details.reason}` : ''}`;
+          attempt.failureReason = `No se completó la exploración visual (${detail}).`.slice(0, 300);
+          throw new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.', transient ? { cause: new SourceProviderTransientException(detail) } : undefined);
+        }
         let result: SourceDesign;
         let candidate: unknown;
         const dnaRepairs: string[] = [];

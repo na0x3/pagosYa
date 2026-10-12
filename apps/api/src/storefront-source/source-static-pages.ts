@@ -1,5 +1,6 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { parse, type DefaultTreeAdapterMap } from 'parse5';
 
 /**
  * The standard pages for a store the generator WROTE, rather than one the engine renders from React
@@ -41,6 +42,41 @@ const GATE_COPY: Record<string, { title: string; lead: string; action: string }>
   subscriptions: { title: 'Mis suscripciones', lead: 'Revisa y administra tus entregas recurrentes.', action: 'Ver mis suscripciones' },
 };
 const GATE_CSS = '.ui-account-gate{box-sizing:border-box;min-height:45vh;padding-block:clamp(40px,6vw,88px)}.ui-account-gate>.ui-container{box-sizing:border-box;width:calc(100% - 48px);max-width:1120px;margin-inline:auto}.ui-account-gate h1{max-width:22ch;margin:0 0 28px;font-size:clamp(32px,4.5vw,60px);line-height:1.08;text-wrap:balance}.ui-account-gate p{font-size:clamp(17px,1.4vw,21px);line-height:1.6;max-width:48ch;margin:0 0 32px}.ui-account-gate .ui-button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:48px;max-width:100%;padding:14px 24px;font:inherit;font-weight:700;text-decoration:none;border:1px solid currentColor;color:inherit}.ui-account-gate .ui-button[aria-disabled=true]{opacity:.55}@media(max-width:600px){.ui-account-gate>.ui-container{width:calc(100% - 32px)}.ui-account-gate .ui-button{width:100%}}';
+/** The form parts a static store styles from styles.css; the runtime draws them (packages/storefront-kit/kit/commerce.js). */
+export const ACCOUNT_FORM_PARTS = ['account', 'media', 'card', 'title', 'lead', 'notice', 'form', 'field', 'label', 'input', 'hint', 'error', 'submit', 'link'] as const;
+
+/** What a static generation must know about the account pages: the form is the platform's, its look is the store's CSS. */
+export const SOURCE_STATIC_ACCOUNT_PAGES = `ACCOUNT PAGES (${ACCOUNT_PAGES.map(page => page.url).join(', ')}): the platform draws the real sign-in, sign-up and account forms at run time, replacing everything inside the [data-account-gate] element's .ui-container (the heading, line and button there are only the fallback for an exported site). Never add markup inside that .ui-container, and never remove the [data-account-gate] element: it would be wiped or the form would vanish. When the merchant asks to change a form ("el formulario de crear cuenta", "el login"), restyle the drawn form in styles.css through its parts: [data-account-gate] [data-part=${ACCOUNT_FORM_PARTS.join('|')}] (e.g. [data-account-gate="register"] [data-part=input]). Decoration may sit around it, inside [data-account-gate] but outside .ui-container.`;
+
+type Element = DefaultTreeAdapterMap['element'];
+const elementsOf = (node: { childNodes?: unknown[] }): Element[] => (node.childNodes ?? []).filter((child): child is Element => typeof (child as Element).tagName === 'string');
+const attr = (element: Element, name: string) => element.attrs.find(item => item.name === name)?.value;
+function findElement(node: { childNodes?: unknown[] }, test: (element: Element) => boolean): Element | undefined {
+  for (const child of elementsOf(node)) {
+    if (test(child)) return child;
+    const inner = findElement(child.tagName === 'template' ? (child as any).content : child, test);
+    if (inner) return inner;
+  }
+  return undefined;
+}
+
+/** The account pages of a static store keep the slot the runtime fills (spec 2026-10-08): one [data-account-gate] for the
+ *  page's view, and inside its .ui-container (or the gate itself, as the runtime picks it) only the fallback heading, lines
+ *  and links. Anything else there is wiped when the form is drawn, or squeezes the form into the authored layout. */
+export function staticAccountGateProblems(files: SourceProjectFileDto[]): string[] {
+  const problems: string[] = [];
+  for (const page of ACCOUNT_PAGES.filter(page => GATE_COPY[page.view])) {
+    const file = files.find(item => item.path === page.url && item.encoding !== 'base64');
+    if (!file) continue;
+    const gate = findElement(parse(file.content), element => attr(element, 'data-account-gate') !== undefined);
+    if (!gate || attr(gate, 'data-account-gate') !== page.view) { problems.push(`${page.url} perdió <section data-account-gate="${page.view}">: sin él la plataforma no puede dibujar el formulario.`); continue; }
+    const slot = findElement(gate, element => (attr(element, 'class') ?? '').split(/\s+/).includes('ui-container')) ?? gate;
+    const authored = elementsOf(slot).filter(element => !['h1', 'h2', 'p', 'a', 'style'].includes(element.tagName)).map(element => element.tagName);
+    if (authored.length) problems.push(`${page.url} puso <${[...new Set(authored)].join('>, <')}> dentro de [data-account-gate] .ui-container, que la plataforma reemplaza por el formulario real. Deja ahí solo el título, el texto y el botón de respaldo; para cambiar el formulario escribe CSS en styles.css sobre [data-account-gate] [data-part=…] (${ACCOUNT_FORM_PARTS.join(', ')}).`);
+  }
+  return problems;
+}
+
 const gateMarkup = (view: string) => {
   const copy = GATE_COPY[view];
   return `<section class="ui-account-gate" data-account-gate="${view}"><style data-pagosya-standard-pages>${GATE_CSS}</style><div class="ui-container"><h1>${copy.title}</h1><p>${copy.lead}</p><a class="ui-button" href="#" data-pagosya-account="${view}">${copy.action}</a></div></section>`;

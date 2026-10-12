@@ -50,6 +50,13 @@ it('permits static service pricing while rejecting authored commerce prices', ()
   expect(() => validateGeneratedSource(source, 'shop')).toThrow('Precios estáticos');
 });
 
+it('rejects a stylesheet the browser would drop after an unclosed bracket, string, comment or block', () => {
+  const withCss = (css: string) => files().map(file => file.path === 'styles.css' ? { ...file, content: css } : file);
+  expect(() => validateGeneratedSource(withCss(':root{--wide:min(1220px,calc(100% - 128px)}\n.a{color:red}'))).toThrow(/Error de sintaxis CSS en styles\.css \(línea 1, columna \d+: Unclosed bracket\)/);
+  for (const broken of ['.a{content:"x}', '/* open', '.a{color:red', '.a{color:red}}']) expect(() => validateGeneratedSource(withCss(broken))).toThrow('Error de sintaxis CSS');
+  expect(() => validateGeneratedSource(withCss(':root{--wide:min(1220px,calc(100% - 128px))}'))).not.toThrow();
+});
+
 it('accepts DNA motif drawings in a static generation, and no other new file type', () => {
   expect(() => validateGeneratedSource([...files(), { path: 'motifs/lampara.svg', content: '<svg/>' }])).not.toThrow();
   expect(() => validateGeneratedSource([...files(), { path: 'assets/lampara.svg', content: '<svg/>' }])).toThrow('archivo reservado');
@@ -957,6 +964,21 @@ describe('Independent source generation',()=>{
     uploads.getBuffer.mockImplementation(async (name: string) => upload.endsWith(name) ? bytes : Buffer.from('otra foto'));
     await service.generate('m','s',{...input,instruction:'Crea el producto Matcha por Bs 22 con mi foto'});
     expect(projects.save.mock.calls[0][3].products).toMatchObject([{ name: 'Matcha', imageUrls: [upload] }]);
+  });
+  it('spends the repair on a photo the merchant asked to use that the candidate left out of every page and product', async () => {
+    const { createHash } = await import('node:crypto');
+    const upload = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000012.jpg', bytes = Buffer.from('pote de tumbo');
+    const bundled = `assets/image-${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.jpg`;
+    const respond = (value: unknown) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }));
+    const shown = files().map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('<h1>Menú</h1>', `<h1>Menú</h1><img src="${bundled}" alt="Pote de tumbo">`) } : file);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(respond({ design: design(), label: 'Sin foto', files: files(), products: [] })).mockResolvedValueOnce(respond({ design: design(), label: 'Con foto', files: shown, products: [] }));
+    const { service, projects, prisma, uploads } = setup();
+    prisma.mediaAsset.findMany.mockResolvedValue([{ url: upload }]);
+    uploads.getBuffer.mockResolvedValue(bytes);
+    await service.generate('m', 's', { ...input, instruction: 'Usa estas 1 fotos: tumbo en la portada', assetUrls: [upload] }, undefined, [{ url: upload, role: 'business', description: 'Pote de tumbo' }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]!.body as string).toContain('no aparecen en ninguna página ni producto');
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'index.html').content).toContain(bundled);
   });
   it('still rejects a product photo the merchant does not own', async () => {
     const generated = {design: design(), label:'Catálogo',files:files(), products:[{name:'Matcha',description:'Galleta',amount:2200,currency:'BOB',priceText:'Bs 22',imageUrls:['assets/image-ffffffffffff.jpg']}]};

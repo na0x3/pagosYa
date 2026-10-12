@@ -84,3 +84,9 @@ it('moves a bold concept off a display font another bold concept already uses, t
   expect(distinctBoldDisplay(calm, [boldA])).toBe(calm);
   expect(distinctBoldDisplays(design).concepts[3].dna!.type.display).toBe(distinctBoldDisplay(boldB, design.concepts.slice(0, 3)).dna!.type.display);
 });
+
+it('says why when no concept survives, so the planner repair knows what to fix', () => {
+  const value = four().slice(0, 1);
+  (value[0].layout as any).catalogSection = 'missing';
+  expect(() => validateStyleDesign({ concepts: value, selection: { index: 0, rationale: 'r' } }, ['bold'], { narrative: true, slots: [1] })).toThrow(/estilos válidos en este intento: concepts\[1\]: .+/);
+});

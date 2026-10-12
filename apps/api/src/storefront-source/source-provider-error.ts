@@ -12,6 +12,12 @@ export class SourceProviderRefusedException extends ServiceUnavailableException 
   readonly code = 'provider_refused';
 }
 
+/** The call broke off on the way (stream cut, response incomplete or failed, connection lost, bridge timeout). Planning it
+ * again can succeed, unlike a refusal by validation. Detected by type and `code`, never by the merchant text. */
+export class SourceProviderTransientException extends ServiceUnavailableException {
+  readonly code = 'provider_transient';
+}
+
 /** An exhausted balance cannot recover through a repair or a model switch. */
 export function checkSourceProviderQuota(status: number, body: any, provider = 'OpenAI'): void {
   if (provider === 'ChatGPT plan') {
@@ -24,7 +30,7 @@ export function checkSourceProviderQuota(status: number, body: any, provider = '
       : code === 'chatgpt_request_timeout' ? 'ChatGPT no respondió dentro del tiempo disponible.'
       : typeof code === 'string' && code.startsWith('chatgpt_stream_') ? 'La respuesta de ChatGPT se interrumpió antes de completarse.' : null;
     const message = `YAPI no pudo continuar: ${detail} No se cambió a una API de pago. Tu sitio sigue guardado.`;
-    if (detail) throw refused ? new SourceProviderRefusedException(message) : new ServiceUnavailableException(message);
+    if (detail) throw refused ? new SourceProviderRefusedException(message) : new SourceProviderTransientException(message);
   }
   if (status === 429 && (body?.error?.code === 'credit_balance_exhausted'
     || body?.error?.code === 'insufficient_quota' || body?.error?.type === 'insufficient_quota')) {
@@ -41,6 +47,13 @@ export function isProviderRejection(error: unknown, depth = 0): boolean {
   return isProviderRejection((error as { cause?: unknown }).cause, depth + 1);
 }
 
+/** A call that broke off on the way (see SourceProviderTransientException), also when it is the cause of a wrapped error. */
+export function isProviderTransient(error: unknown, depth = 0): boolean {
+  if (!error || typeof error !== 'object' || depth > 3) return false;
+  if ((error as { code?: unknown }).code === 'provider_transient') return true;
+  return isProviderTransient((error as { cause?: unknown }).cause, depth + 1);
+}
+
 /** How long a rejected style-lane call waits before its one retry (spec 2026-10-11 amendment "two cards"). */
 export const PROVIDER_RETRY_DELAY_MS = 3000;
 
@@ -52,10 +65,11 @@ export const providerRetryPause = (signal?: AbortSignal, ms = PROVIDER_RETRY_DEL
   signal?.addEventListener('abort', onAbort, { once: true });
 });
 
-/** Runs `call`; when the provider rejects it, waits 3 s and runs it once more. Anything else (or an abort) is thrown as is. */
+/** Runs `call`; when the provider rejects it or the call breaks off on the way, waits 3 s and runs it once more.
+ * Anything else (a validation failure, an abort) is thrown as is. */
 export async function retryProviderRejection<T>(call: () => Promise<T>, options: { signal?: AbortSignal } = {}): Promise<T> {
   try { return await call(); } catch (error) {
-    if (!isProviderRejection(error) || options.signal?.aborted) throw error;
+    if (!(isProviderRejection(error) || isProviderTransient(error)) || options.signal?.aborted) throw error;
     await providerRetryPause(options.signal);
     return call();
   }
