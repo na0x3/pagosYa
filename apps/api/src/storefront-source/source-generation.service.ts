@@ -14,7 +14,8 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs } from './design-engine/frame-draw';
+import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, storePhotoPaths } from './design-engine/frame-draw';
+import { commerceConfig } from './source-commerce-config';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
@@ -570,7 +571,7 @@ export class SourceGenerationService {
     // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
     let styleBold = false;
     const useSlot = (slot: StyleSlot & { playbook: string }) => {
-      frame = { file: slot.file, paragraph: slot.paragraph, ...(slot.dna ? { dna: slot.dna } : {}), ...(slot.palette ? { palette: slot.palette } : {}) };
+      frame = { file: slot.file, paragraph: slot.paragraph, ...(slot.dna ? { dna: slot.dna } : {}), ...(slot.palette ? { palette: slot.palette } : {}), ...(slot.commerce ? { commerce: { draw: slot.commerce, fresh: true, ...(slot.cartWord ? { cartWord: slot.cartWord } : {}) } } : {}) };
       playbookText = slot.playbook;
       boldAsked = slot.mode === 'bold';
       styleBold = boldAsked;
@@ -1533,16 +1534,19 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
     // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
     const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
-    const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press'];
+    const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
     const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
       ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
-    const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}) };
+    // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
+    const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }) });
+    const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna };
     // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
     const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
     const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));
     const runtimeMotifs = sourceMotifConfig(designMotifs(acceptedDesign), acceptedMotifFiles);
     // The account pages' theme (spec 2026-10-08): what YAPI set this run, otherwise what the store already had.
-    const accountTheme = agentAccountTheme ?? normalizeAccountTheme(previousConfig.accountTheme);
+    // A freshly drawn account layout wins over the saved one; a kept draw leaves the saved theme (and its CSS) as it is.
+    const accountTheme = agentAccountTheme ?? drawnCommerce.accountTheme ?? normalizeAccountTheme(previousConfig.accountTheme);
     // The store-wide motif pack: YAPI's choice this run (null removes it), otherwise the one the store had.
     const motifPack = chosenMotifPack(agentMotifPack, previousConfig.motifPack);
     // Policies YAPI rewrote, merged with Ajustes as it is now (the merchant may have edited another one meanwhile).
@@ -1551,7 +1555,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
       // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
       : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
-      : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
+      : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;

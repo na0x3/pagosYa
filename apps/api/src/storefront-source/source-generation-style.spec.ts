@@ -479,4 +479,25 @@ describe('style proposal mode', () => {
     expect(prompt).not.toContain('BOLD BY DEFAULT');
     expect(prompt).toContain(proposal.heroes[0]!.html);
   });
+  const savedConfig = () => JSON.parse(savedFiles().find(f => f.path === 'config.js')!.content.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+
+  it('carries the picked card\'s account, checkout, fields and cart path into config.js', async () => {
+    const proposal = savedProposal();
+    proposal.slots[1].commerce = { account: 'panel', checkout: 'ticket', fields: 'pill', cartSurface: 'overlay', added: 'stamp' };
+    proposal.slots[1].cartWord = 'Tu pedido';
+    await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 1 } });
+    const config = savedConfig();
+    expect(config.dna).toMatchObject({ cart: 'overlay', added: 'stamp', review: 'ticket', checkout: 'ticket', fields: 'pill' });
+    expect(config.accountTheme).toEqual({ layout: 'panel' });
+    expect(config.cartWord).toBe('Tu pedido');
+    expect(config.checkoutPhoto).toBeUndefined();
+  });
+
+  it('builds a pick from a proposal saved before commerce draws exactly as before', async () => {
+    const proposal = savedProposal();
+    for (const slot of proposal.slots) { delete slot.commerce; delete slot.cartWord; }
+    await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 0 } });
+    const config = savedConfig();
+    expect([config.dna.checkout, config.dna.fields, 'cartWord' in config, 'accountTheme' in config]).toEqual([undefined, undefined, false, false]);
+  });
 });
