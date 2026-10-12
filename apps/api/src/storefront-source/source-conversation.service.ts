@@ -4,7 +4,7 @@ import { sourceSitePurpose, sourceSitePurposePrompt } from './source-site-purpos
 import { sourceWebsiteReferenceContext, sourceWebsiteReferenceCaptures } from './source-website-reference';
 import { STORE_KNOWLEDGE_RULES, type StoreKnowledge } from '../store-knowledge/store-knowledge';
 import { SOURCE_PRODUCT_OPTIONS } from './source-product-options';
-import { SOURCE_CONVERSATION_TIMEOUT_MS, SourceConversationFailure, safeConversationDiagnostic, type ConversationDiagnostic } from './source-conversation-failure';
+import { SOURCE_CONVERSATION_PLAN_TIMEOUT_MS, SOURCE_CONVERSATION_TIMEOUT_MS, SourceConversationFailure, safeConversationDiagnostic, type ConversationDiagnostic } from './source-conversation-failure';
 import { sourceVideo, MAX_SOURCE_VIDEO_BYTES } from './source-media';
 import { sourceProvider } from './source-provider';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
@@ -188,7 +188,8 @@ export class SourceConversationService {
     // Use explicit caching for the supported generation models; preserve API
     // compatibility for other conversation models configured by an operator.
     const explicitCache = Object.hasOwn(SOURCE_MODELS, model);
-    const signal = AbortSignal.any([AbortSignal.timeout(SOURCE_CONVERSATION_TIMEOUT_MS), ...[sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
+    const timeoutMs = provider.name === 'ChatGPT plan' ? SOURCE_CONVERSATION_PLAN_TIMEOUT_MS : SOURCE_CONVERSATION_TIMEOUT_MS;
+    const signal = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...[sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
     for (let attempt = 0; attempt < 2; attempt++) {
       const estimatedInput = 2500 + Math.ceil((SOURCE_CONVERSATION_INSTRUCTIONS.length + JSON.stringify(context).length + JSON.stringify(confirmedBrand).length + JSON.stringify(schema).length) / 2) + (inspect.filter(url => !sourceVideo(url)).length + referenceCaptures.length) * 3000;
       const instructions = SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + '\n' + SOURCE_TEMPLATE_CATALOG + '\n' + sourceSitePurposePrompt(sourceSitePurpose(input.draft)) + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : '');
@@ -246,8 +247,8 @@ export class SourceConversationService {
           : httpStatus !== undefined && httpStatus >= 400 ? 'provider_http'
           : error instanceof Error && ['Incomplete conversation response', 'Incomplete response'].includes(error.message) ? 'incomplete_response'
           : responseBody !== null || httpStatus !== undefined || error instanceof SyntaxError ? 'invalid_response' : 'network';
-        diagnostic = { code, attempt: attempt + 1, timeoutMs: SOURCE_CONVERSATION_TIMEOUT_MS, httpStatus, requestId,
-          ...(provider.name === 'ChatGPT plan' ? { ...safeConversationDiagnostic({ code, attempt: attempt + 1, timeoutMs: SOURCE_CONVERSATION_TIMEOUT_MS, providerCode: responseBody?.error?.code, upstreamStatus: responseBody?.error?.upstreamStatus }) } : {}),
+        diagnostic = { code, attempt: attempt + 1, timeoutMs, httpStatus, requestId,
+          ...(provider.name === 'ChatGPT plan' ? { ...safeConversationDiagnostic({ code, attempt: attempt + 1, timeoutMs, providerCode: responseBody?.error?.code, upstreamStatus: responseBody?.error?.upstreamStatus }) } : {}),
           providerStatus: responseBody?.status, incompleteReason: responseBody?.incomplete_details?.reason };
         this.logger.warn(JSON.stringify({ stage: 'source-conversation', ...safeConversationDiagnostic(diagnostic), durationMs: Date.now() - started }));
         if (error instanceof SourceProviderQuotaException) throw error;

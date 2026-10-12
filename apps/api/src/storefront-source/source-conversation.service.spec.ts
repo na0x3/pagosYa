@@ -1,4 +1,4 @@
-import { SOURCE_CONVERSATION_TIMEOUT_MS } from './source-conversation-failure';
+import { SOURCE_CONVERSATION_PLAN_TIMEOUT_MS, SOURCE_CONVERSATION_TIMEOUT_MS } from './source-conversation-failure';
 import { SourceConversationService } from './source-conversation.service';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
@@ -324,4 +324,20 @@ it('stops on a ChatGPT authorization outage and preserves its safe diagnostic', 
   fetchMock.mockResolvedValue({ok:false,status:503,headers:new Headers(),json:async()=>({error:{code:'chatgpt_authentication_unavailable',upstreamStatus:500,message:'private upstream details'}})});
   await expect(service.decide('merchant',input())).rejects.toMatchObject({diagnostic:{code:'provider_http',providerCode:'chatgpt_authentication_unavailable',upstreamStatus:500}});
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it('waits the longer ChatGPT plan deadline, which a 5000-token decision at the bridge pace needs, and reports it', async () => {
+  const { prisma, uploads, config } = setup(); const record = jest.fn();
+  config.get.mockImplementation((key:string)=>key==='app.chatgptPlan'?{url:'http://127.0.0.1:1234/v1/responses',secret:'local-test'}:key==='app.environment'?'development':key==='app.openAi.apiKey'?'unused':key==='app.openAi.enabled'?true:'gpt-5.6-sol');
+  const service = new SourceConversationService(prisma, uploads, config, undefined, { record } as any);
+  const controller = new AbortController();
+  const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+  fetchMock.mockImplementationOnce(async () => { controller.abort(); throw new Error('aborted'); });
+  try {
+    await expect(service.decide('merchant', { ...input(), storeId: 's' })).rejects.toMatchObject({
+      message: expect.stringContaining('300 segundos'), diagnostic: { code: 'timeout', timeoutMs: SOURCE_CONVERSATION_PLAN_TIMEOUT_MS },
+    });
+    expect(timeout).toHaveBeenCalledWith(SOURCE_CONVERSATION_PLAN_TIMEOUT_MS);
+    expect(record).toHaveBeenCalledWith('s', 'conversation', expect.any(String), null, expect.any(Number), 'FAILED', expect.objectContaining({ timeoutMs: SOURCE_CONVERSATION_PLAN_TIMEOUT_MS }));
+  } finally { timeout.mockRestore(); }
 });

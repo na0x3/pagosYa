@@ -2,6 +2,8 @@ import { HttpException } from '@nestjs/common';
 
 /** One deadline shared by interpretation and its optional response repair. */
 export const SOURCE_CONVERSATION_TIMEOUT_MS = 120_000;
+/** The ChatGPT plan bridge streams ~25 tok/s, so a 5000-token decision alone needs ~200 s (2026-10-12 a chat job died at 120 s). */
+export const SOURCE_CONVERSATION_PLAN_TIMEOUT_MS = 300_000;
 export const CONVERSATION_FAILURE_CODES = ['timeout', 'network', 'provider_http', 'provider_quota', 'incomplete_response', 'invalid_response'] as const;
 export type ConversationFailureCode = typeof CONVERSATION_FAILURE_CODES[number];
 export type ConversationDiagnostic = {
@@ -36,7 +38,7 @@ export function safeConversationDiagnostic(value: ConversationDiagnostic) {
   return {
     code: CONVERSATION_FAILURE_CODES.includes(value.code) ? value.code : 'invalid_response',
     attempt: value.attempt === 2 ? 2 : 1,
-    timeoutMs: SOURCE_CONVERSATION_TIMEOUT_MS,
+    timeoutMs: value.timeoutMs === SOURCE_CONVERSATION_PLAN_TIMEOUT_MS ? SOURCE_CONVERSATION_PLAN_TIMEOUT_MS : SOURCE_CONVERSATION_TIMEOUT_MS,
     ...(Number.isInteger(value.httpStatus) && value.httpStatus! >= 100 && value.httpStatus! <= 599 ? { httpStatus: value.httpStatus } : {}),
     ...(typeof value.requestId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value.requestId) ? { requestId: value.requestId } : {}),
     ...(['chatgpt_authentication_unavailable','chatgpt_authentication_rejected','chatgpt_connection_unavailable','chatgpt_request_timeout','chatgpt_stream_interrupted','chatgpt_request_cancelled'].includes(value.providerCode || '') ? { providerCode: value.providerCode } : {}),
