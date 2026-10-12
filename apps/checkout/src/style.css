@@ -2010,6 +2010,14 @@ body.store-page .merchant-header {
   .promo-code-status { grid-column: 1; margin-top: -7px; }
 }
 
+/* A phone row is too narrow for photo, name and the 110px quantity side by side (the name got 66px at 320px):
+   the quantity moves under the name, with "Quitar" at its end. */
+@media (max-width: 420px) {
+  .cart-review-line { grid-template-columns: 68px minmax(0, 1fr); }
+  .cart-review-quantity { grid-column: 2; grid-row: 3; justify-self: start; }
+  .cart-review-remove { grid-column: 2; grid-row: 3; justify-self: end; }
+}
+
 .tab {
   display: flex;
   flex-direction: column;
