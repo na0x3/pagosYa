@@ -1527,7 +1527,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     }
     if (useNext && !tokenCss) generated.files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
     const useCommercePages = sitePurpose === 'shop' && (useNext || !previous || generated.files.some(file => file.path === "product.html") && generated.files.some(file => file.path === "checkout.html"));
-    const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(!useCommercePages && useNext ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html", "commerce-pages.css"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
+    // commerce-pages.css is platform CSS (never authored), so like commerce.js every save takes the kit's current copy:
+    // kept from the first build, kit fixes never reached existing stores (2026-10-12, the checkout row fix).
+    const refreshPagesCss = useCommercePages || useNext || generated.files.some(file => file.path === "commerce-pages.css");
+    if (refreshPagesCss) generated.files = generated.files.filter(file => file.path !== "commerce-pages.css");
+    const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(refreshPagesCss ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
     const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
     const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
     const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};

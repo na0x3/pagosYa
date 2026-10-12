@@ -894,6 +894,21 @@ describe('Independent source generation',()=>{
     expect(request.text.format.schema.required).toEqual(['label', 'edits', 'files', 'appends', 'products', 'productOperations']);
     expect(request.input[0].content[0].text).toContain('never permission to redesign the homepage');
   });
+  it('refreshes the platform commerce-pages.css on an edit, like commerce.js, so kit fixes reach existing stores', async () => {
+    // 2026-10-12: Dado Rojo's edit took the fixed commerce.js but kept its first build's commerce-pages.css.
+    const stale = '.commerce-document .order-item>div:first-child{display:flex}';
+    const previous = [...files(), { path: 'commerce-pages.css', content: stale }, { path: 'commerce.js', content: '/* old runtime */' }];
+    const { service, projects } = setup();
+    projects.current.mockResolvedValue({ revision: 1 });
+    projects.version.mockResolvedValue({ snapshot: { files: previous } });
+    const generated = { design: design(), label: 'Enlace de pedido', edits: [{ path: 'index.html', search: '<div data-pagosya-cart></div>', replacement: '<h2>Mi pedido</h2><div data-pagosya-cart></div>' }], files: [] };
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(generated) }] }] })));
+    await service.generate('m', 's', { ...input, revision: 1, instruction: 'Agrega un título a mi pedido' });
+    const saved = projects.save.mock.calls[0][2].files.filter((f: any) => f.path === 'commerce-pages.css');
+    expect(saved).toHaveLength(1);
+    expect(saved[0].content).not.toContain(stale);
+    expect(saved[0].content).toContain('.commerce-document .order-item>div:first-child:not(.order-item__body)');
+  });
   it('refuses a whole-project rewrite in an edit before saving any revision', async () => {
     const { service, projects } = setup();
     projects.current.mockResolvedValue({ revision: 1 });
