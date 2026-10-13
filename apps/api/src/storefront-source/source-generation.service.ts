@@ -1715,6 +1715,18 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     } finally { clearInterval(heartbeat); }
   }
 
+  /** The catalog items revision N saved in config.js, written into `files`' config.js; files unchanged when N has none. */
+  private async withSavedCatalog(merchantId: string, storeId: string, revision: number, files: SourceProjectFileDto[]): Promise<SourceProjectFileDto[]> {
+    const configOf = (content: string | undefined) => { try { return content ? JSON.parse(content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;?\s*$/, '')) : null; } catch { return null; } };
+    const version = await Promise.resolve().then(() => this.projects.version(merchantId, storeId, revision)).catch(() => null);
+    const items = configOf((version?.snapshot as { files?: SourceProjectFileDto[] } | undefined)?.files?.find(file => file.path === 'config.js')?.content)?.data?.items;
+    if (!Array.isArray(items)) return files;
+    return files.map(file => {
+      const config = file.path === 'config.js' ? configOf(file.content) : null;
+      return config ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data: { ...config.data, items } })};\n` } : file;
+    });
+  }
+
   /**
    * YAPI's self-review of a Sep-5 store, after revision N is saved and shown (spec 2026-10-12 faster generation, part 2).
    * It runs in this API process, outside the chat request that saved N, on its own REVIEWING row:
@@ -1758,7 +1770,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
           }
           if (introduced.length) throw new SourceReviewDiscarded(headerCoverProblems(introduced).join(' '));
         }
-        const saved = await this.projects.save(input.merchantId, input.storeId, { ...outcome.saveInput, revision: input.revision, label: SOURCE_REVIEW_LABEL }, undefined, async tx => {
+        // N's save rewrote config.js with the catalog this run created (append); the review assembled its config from the
+        // run's start, before those products existed, so N+1 carries N's catalog instead of an empty one.
+        const files = await this.withSavedCatalog(input.merchantId, input.storeId, input.revision, outcome.saveInput.files);
+        const saved = await this.projects.save(input.merchantId, input.storeId, { ...outcome.saveInput, files, revision: input.revision, label: SOURCE_REVIEW_LABEL }, undefined, async tx => {
           const held = await tx.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { status: 'COMPLETED', revision: input.revision + 1, credits, ...record() } });
           if (held.count !== 1) throw new SourceReviewCancelled('la revisión se canceló antes de guardarse');
         });

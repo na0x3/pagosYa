@@ -214,4 +214,14 @@ describe('Sep-5 self-review after the save', () => {
     expect(ending('CANCELLED').data).toMatchObject({ credits: 0 });
     expect(projects.save).toHaveBeenCalledTimes(1);
   });
+
+  // Final review: N's save rewrote config.js with the catalog the run created; N+1 keeps that catalog.
+  it('keeps the catalog revision N saved in config.js when the review saves N+1', async () => {
+    projects.version.mockImplementation(async (_m: string, _s: string, rev: number) => ({ revision: rev, snapshot: { files: [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"slug":"cafe","data":{"storeName":"Café","items":[{"id":"p1","name":"Latte"}]}};' }] } }));
+    await generateN();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    const config = projects.save.mock.calls[1][2].files.find((file: any) => file.path === 'config.js').content;
+    expect(JSON.parse(config.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, '')).data.items).toEqual([{ id: 'p1', name: 'Latte' }]);
+  });
 });
