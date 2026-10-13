@@ -125,7 +125,7 @@ test('retired sections are absent and old view selections fall back to the overv
   await page.screenshot({ path: '.test-artifacts/retired-sections-mobile.png', fullPage: false });
 });
 
-test('store opens the shared editor; setup and an unsent message survive product management and reload', async ({ page }) => {
+test('store opens the shared editor full screen; an unsent message survives product management', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const { editor, products, requests } = await workspace(page);
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'workspace');
@@ -133,17 +133,13 @@ test('store opens the shared editor; setup and an unsent message survive product
   await expect(page.locator('#merchantStoreTabs')).not.toBeVisible();
   await expect(page.locator('.dashboard-sidebar')).toBeVisible();
   const bounds = await page.locator('#merchantStudioFrame').boundingBox();
-  // The frame fills everything right of the rail. Its exact width is pinned by
-  // the compact-navigation test; here only the relationship matters.
-  const rail = (await page.locator('.dashboard-sidebar').boundingBox()).width;
-  expect(bounds).toEqual({ x: rail, y: 0, width: page.viewportSize().width - rail, height: page.viewportSize().height });
+  // Diseñar sitio owns the whole screen; the sidebar waits off-canvas behind the
+  // edge handle (the compact-navigation test opens it).
+  expect(bounds).toEqual({ x: 0, y: 0, width: page.viewportSize().width, height: page.viewportSize().height });
   await expect(editor.locator('#source-store')).not.toBeVisible();
+  // The step-by-step setup chat this test used to walk was retired (messages go out as chat jobs since 2026-10-02 and
+  // setup is a form); what stays guarded is the frame, the unsent message and the trip to products and back.
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
-  await composer.fill('Café de especialidad para el barrio'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('.remote-agent-note').last()).toContainText('logo');
-  await page.reload(); await expect(editor.locator('.remote-agent-note').last()).toContainText('logo');
-  await composer.fill('Usar solo mi nombre'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('.remote-agent-note').last()).toContainText('productos');
   await composer.fill('Destacar el café en grano');
   await editor.locator('.store-readiness > summary').click();
   await editor.getByRole('button', { name: 'Revisar productos', exact: true }).click();
@@ -155,11 +151,7 @@ test('store opens the shared editor; setup and an unsent message survive product
   expect(requests.find(r => r.method === 'POST' && r.path.endsWith('/payment_links')).path).toBe('/stores/store_1/payment_links');
   await page.locator('#dashboardNav [data-dashboard-view="workspace"]:not([data-studio-tool])').click();
   await expect(composer).toHaveValue('Destacar el café en grano');
-  await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('.remote-agent-note').last()).toContainText('colores');
-  await composer.fill('Verde bosque y crema'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('.remote-agent-note').last()).toContainText('¿Creamos la primera versión?');
-  expect(requests.filter(r => r.path.endsWith('/messages')).every(r => !r.body.setupAction)).toBe(true);
+  expect(requests.some(r => r.method === 'POST' && /messages|chat-jobs/.test(r.path))).toBe(false);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: '.test-artifacts/merchant-workspace-desktop.png', fullPage: false });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -319,10 +311,17 @@ test('integration logos load and extension details preserve the inventory draft'
 test('compact navigation stays at the edge and the idle canvas keeps the draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
   const { editor, requests } = await workspace(page);
-  const rail = await page.locator('.dashboard-sidebar').boundingBox();
-  // 64px is the <=999px icon rail; at 1440 the labeled sidebar is --sidebar-w.
-  expect(rail.x).toBe(0); expect(rail.width).toBe(196); expect(rail.height).toBe(960);
+  // The sidebar slides away for the full-screen editor; the edge handle pins it back and Escape closes it.
+  const sidebar = page.locator('.dashboard-sidebar'), handle = page.locator('#storeFullscreenNavHandle');
+  await expect.poll(async () => { const box = await sidebar.boundingBox(); return box.x + box.width; }).toBeLessThanOrEqual(0);
+  await handle.click();
+  await expect(handle).toHaveAttribute('aria-expanded', 'true');
+  await expect.poll(async () => (await sidebar.boundingBox()).x).toBe(0);
+  expect((await sidebar.boundingBox()).height).toBe(960);
   await expect(page.getByRole('link', { name: 'Diseñar sitio', exact: true })).toHaveAttribute('aria-current', 'page');
+  await page.keyboard.press('Escape');
+  await expect(handle).toHaveAttribute('aria-expanded', 'false');
+  await expect.poll(async () => { const box = await sidebar.boundingBox(); return box.x + box.width; }).toBeLessThanOrEqual(0);
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Una tienda con mi propia identidad');
   await expect(editor.locator('.source-inspiration')).toBeVisible();
@@ -330,7 +329,7 @@ test('compact navigation stays at the edge and the idle canvas keeps the draft',
   // fact that it carries no controls -- belongs to the studio's own
   // source-face.spec.ts. This test only guards the frame around it.
   await expect(composer).toHaveValue('Una tienda con mi propia identidad');
-  expect(requests.some(r => r.method === 'POST' && /messages|generate/.test(r.path))).toBe(false);
+  expect(requests.some(r => r.method === 'POST' && /messages|generate|chat-jobs/.test(r.path))).toBe(false);
   await page.screenshot({ path: '.test-artifacts/yapi-inspiration-desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(editor.locator('#agent-command')).toBeVisible();
@@ -344,5 +343,6 @@ test('new site purpose is included in the first conversation request', async ({ 
   await editor.locator('#source-site-purpose').selectOption('portfolio');
   await editor.getByRole('textbox', { name: 'Indicación para YAPI' }).fill('Soy fotógrafa de arquitectura y quiero mostrar mis proyectos.');
   await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect.poll(() => requests.find(row => row.path.endsWith('/messages'))?.body.sitePurpose).toBe('portfolio');
+  // Studio messages go out as chat jobs since 2026-10-02.
+  await expect.poll(() => requests.find(row => row.method === 'POST' && row.path.endsWith('/source-project/chat-jobs'))?.body.sitePurpose).toBe('portfolio');
 });
