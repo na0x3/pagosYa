@@ -303,7 +303,7 @@
       try {
         const saved = await api(`carts/${encodeURIComponent(query.get('recover'))}`); saveToken(query.get('recover'));
         if (config.restoreCart) config.restoreCart(saved.items);
-        else document.dispatchEvent(new CustomEvent('pagosya:restore-cart', { detail: { items: saved.items.map(i => ({ id: i.paymentLinkId, ...(i.variantId ? { variantId: i.variantId } : {}), quantity: i.quantity })) } }));
+        else document.dispatchEvent(new CustomEvent('pagosya:restore-cart', { detail: { items: saved.items.map(i => ({ id: i.paymentLinkId, ...(i.variantId ? { variantId: i.variantId } : {}), ...(Array.isArray(i.extraIds) && i.extraIds.length ? { extraIds: i.extraIds } : {}), ...(i.subscriptionCadence ? { subscriptionCadence: i.subscriptionCadence } : {}), quantity: i.quantity })) } }));
         const el = slot('data-pagosya-recovered'); el.innerHTML = '<h2>Retoma tu pedido</h2><p role="status">Recuperamos tus productos disponibles. Revisa las cantidades y los precios actuales antes de pagar.</p>'; el.scrollIntoView({ block: 'center' });
       } catch (error) { const el = slot('data-pagosya-recovered'); el.innerHTML = `<p role="status">${escape(error.message)}</p>`; }
     }

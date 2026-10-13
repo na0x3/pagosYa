@@ -460,6 +460,18 @@ describe('Inline storefront product options', () => {
     expect(serialize()).toEqual([{ id: 'shirt', variantId: 'blue-m', quantity: 1 }]);
   });
 
+  // Owner decision 2026-10-13: a reminder brings a subscription back as a subscription, on published stores too.
+  it('brings a reminder cart back with its subscription cadence', async () => {
+    const coffee = { id: 'coffee', name: 'Café', amount: 3500, currency: 'BOB', stock: null, subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 10 }] };
+    const { w, serialize } = await shop({ mode: 'hosted', items: [coffee, product()], settings: { subscriptionsEnabled: true, checkoutMode: 'payment' } });
+    w.PAGOSYA_HOSTED_REQUEST.mockImplementation(async (action: string, request: any) => ({ ok: true, body: request.path === '' ? { recoveryEnabled: true } : { items: [{ paymentLinkId: 'coffee', quantity: 1, subscriptionCadence: 'MONTHLY' }] } }));
+    w.eval(readFileSync(kitPath('retention.js'), 'utf8'));
+    await new Promise(resolve => setImmediate(resolve));
+    w.PAGOSYA_PREVIEW_QUERY = '?recover=token';
+    await w.PAGOSYA_RETENTION_MOUNT();
+    expect(serialize()).toEqual([{ id: 'coffee', quantity: 1, subscriptionCadence: 'MONTHLY' }]);
+  });
+
   it('tells the shopper when this week’s reminder already went out instead of claiming the cart was saved', async () => {
     const { w, click, choose, query } = await shop({ mode: 'hosted' });
     click('.menu-add'); choose(0, 'Azul'); choose(1, 'M'); click('[data-variant-add]'); click('[data-product-close]');
