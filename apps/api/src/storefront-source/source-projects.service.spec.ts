@@ -283,6 +283,16 @@ describe('adding the standard pages to a store that already exists', () => {
     expect(old.snapshot.files.map((f: any) => f.path)).not.toContain('components/pages/faq.tsx');
   });
 
+  it('gives a static showcase only the showcase pages (spec 2026-10-13)', async () => {
+    const { service } = setup();
+    const page = '<!doctype html><html lang="es"><head><title>deff</title></head><body><header data-pagosya-header></header><main><h1>Arquitectura</h1></main><footer><p>Pie</p></footer></body></html>';
+    await service.save('m1', 's1', { ...input(), brief: { ...input().brief, sitePurpose: 'service' as const }, files: [...input().files, { path: 'index.html', content: page }] });
+    await service.addStandardPages('m1', 's1', 1);
+    const paths = ((await service.version('m1', 's1', 2)) as any).snapshot.files.map((f: any) => f.path);
+    for (const html of ['nosotros.html', 'faq.html', '404.html']) expect(paths).toContain(html);
+    for (const html of ['buscar.html', 'acceso-ingresar.html', 'envios.html']) expect(paths).not.toContain(html);
+  });
+
   it('refuses when there is nothing to add, when there is no Shell, for a missing site and for a store it does not own', async () => {
     const { service } = setup();
     await service.save('m1', 's1', project([shell]));

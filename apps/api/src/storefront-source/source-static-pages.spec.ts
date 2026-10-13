@@ -1,5 +1,5 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
-import { SOURCE_STATIC_ACCOUNT_PAGES, staticAccountGateProblems, withStaticStandardPages, withStaticNavSlot } from './source-static-pages';
+import { SOURCE_STATIC_ACCOUNT_PAGES, staticAccountGateProblems, staticStandardPagePaths, withStaticStandardPages, withStaticNavSlot } from './source-static-pages';
 import { validateLegacySources } from './source-legacy';
 import { validateGeneratedSource } from './source-generation.service';
 
@@ -207,5 +207,22 @@ describe('in-page anchors on standard pages', () => {
     const out = withStaticStandardPages(stale);
     expect(out.refreshed).toContain('nosotros.html');
     expect(out.files.find(file => file.path === 'nosotros.html')!.content).toContain('href="index.html#catalogo"');
+  });
+});
+
+describe('a showcase gets only the pages a business that does not sell needs (spec 2026-10-13)', () => {
+  const SHOWCASE = ['nosotros.html', 'contacto.html', 'faq.html', 'privacidad.html', 'terminos.html', 'cookies.html', '404.html'];
+
+  it('adds Nosotros, Contacto, Preguntas frecuentes, the policies and 404, and nothing a shop needs', () => {
+    const { files, added } = withStaticStandardPages(store(), 'service');
+    expect(added).toEqual(SHOWCASE);
+    for (const path of ['buscar.html', 'colecciones.html', 'envios.html', 'reembolsos.html', 'acceso-ingresar.html', 'cuenta-pedidos.html']) expect(files.some(file => file.path === path)).toBe(false);
+    expect(files.find(file => file.path === 'faq.html')!.content).toContain('data-pagosya-page="faq"');
+  });
+
+  it('is the same set for every purpose that is not a shop, and the full set for a shop', () => {
+    for (const purpose of ['service', 'portfolio', 'editorial']) expect(staticStandardPagePaths(purpose)).toEqual(SHOWCASE);
+    expect(staticStandardPagePaths('shop')).toEqual(expect.arrayContaining([...SHOWCASE, 'buscar.html', 'acceso-ingresar.html', 'envios.html']));
+    expect(staticStandardPagePaths()).toEqual(staticStandardPagePaths('shop'));
   });
 });

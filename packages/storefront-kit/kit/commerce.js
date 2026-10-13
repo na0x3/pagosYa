@@ -1244,6 +1244,10 @@
     ['faq', 'faq.html', 'Preguntas frecuentes'], ['refund', 'reembolsos.html', 'Cambios y devoluciones'], ['privacy', 'privacidad.html', 'Privacidad'],
     ['terms', 'terminos.html', 'Términos y condiciones'], ['cookies', 'cookies.html', 'Cookies y almacenamiento'],
   ];
+  // A showcase (spec 2026-10-13) sells nothing online: its footer never links search, collections, shipping, refunds or a
+  // shopper account. A store saved before sitePurpose was written into config.js is a shop.
+  const SHOWCASE = typeof config.sitePurpose === 'string' && config.sitePurpose !== 'shop';
+  const SHOP_ONLY_INFO = new Set(['collections', 'search', 'shipping', 'refund']);
   // The shopper's account is served by the checkout app on its own origin, never inside the store, where authored code runs.
   const accountUrl = () => { try { return config.slug && config.checkoutOrigin ? new URL(`/cuenta/${encodeURIComponent(config.slug)}`, config.checkoutOrigin).href : ''; } catch { return ''; } };
   // The gate pages (components/auth, components/account) only point at the trusted account app; this fills in where.
@@ -1252,7 +1256,7 @@
     const base = accountEntry();
     // Account access is a platform baseline even when an authored shell omits it.
     // Existing local account navigation and the information slot remain authoritative.
-    if (base && !document.querySelector('[data-pagosya-pages],a[data-pagosya-account],a[href="acceso-ingresar.html"],a[href="cuenta-perfil.html"]')) {
+    if (base && !SHOWCASE && !document.querySelector('[data-pagosya-pages],a[data-pagosya-account],a[href="acceso-ingresar.html"],a[href="cuenta-perfil.html"]')) {
       const nav = document.createElement('nav');
       nav.className = 'pagosya-info-nav';
       nav.setAttribute('aria-label', 'Cuenta de cliente');
@@ -1495,8 +1499,8 @@
     renderAccountGates();
     const live = force || ready;
     if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
-      const account = accountEntry();
-      slot.innerHTML = INFO_LINKS.filter(([kind]) => infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '');
+      const account = SHOWCASE ? '' : accountEntry();
+      slot.innerHTML = INFO_LINKS.filter(([kind]) => !(SHOWCASE && SHOP_ONLY_INFO.has(kind)) && infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '');
       slot.hidden = !slot.innerHTML;
     });
     let unavailable = false;

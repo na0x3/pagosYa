@@ -124,6 +124,12 @@ describe('links to pages the platform adds after the repair', () => {
     expect(platformSuppliedPages('portfolio')).toContain('nosotros.html');
   });
 
+  it('promises a showcase only its own standard pages (spec 2026-10-13)', () => {
+    expect(platformSuppliedPages('service')).toEqual(expect.arrayContaining(['nosotros.html', 'contacto.html', 'faq.html', '404.html']));
+    for (const path of ['buscar.html', 'acceso-ingresar.html', 'cuenta-pedidos.html', 'envios.html', 'product.html']) expect(platformSuppliedPages('service')).not.toContain(path);
+    expect(platformSuppliedPages('shop')).toEqual(expect.arrayContaining(['buscar.html', 'acceso-ingresar.html', 'product.html']));
+  });
+
   it('passes the preflight once the platform pages are known, and still flags a page nobody supplies', () => {
     const diagnostic = (run: () => unknown) => { try { run(); return ''; } catch (error) { return (error as { diagnostic?: string }).diagnostic ?? String(error); } };
     const files = [file('index.html', '<h1>Huerta Viva</h1><a href="nosotros.html">Nosotros</a><a href="productos.html">Catálogo</a>'), file('styles.css', 'a{color:red}')];

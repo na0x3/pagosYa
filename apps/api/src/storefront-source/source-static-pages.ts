@@ -28,6 +28,13 @@ const ACCOUNT_PAGES = STOREFRONT_PAGES.filter(page => page.owner === 'account').
  *  so a redesign leaves them out of what it shows the model. */
 export const STATIC_STANDARD_PAGE_PATHS: readonly string[] = [...PAGES, ...ACCOUNT_PAGES].map(page => page.url);
 
+/** A showcase (spec 2026-10-13) has nothing to search, collect, ship, refund or sign in to: it keeps Nosotros, Contacto,
+ *  Preguntas frecuentes, the three policies and 404. Every purpose that is not a shop gets this set. */
+const SHOWCASE_PAGE_KINDS = new Set(['about', 'contact', 'faq', 'privacy', 'terms', 'cookies', 'notfound']);
+export function staticStandardPagePaths(purpose: string = 'shop'): string[] {
+  return purpose === 'shop' ? [...STATIC_STANDARD_PAGE_PATHS] : PAGES.filter(page => SHOWCASE_PAGE_KINDS.has(page.kind)).map(page => page.url);
+}
+
 /** The copy and gate rules of the kit's AccountGatePage (packages/storefront-kit/kit/ui.tsx), which an authored store
  *  cannot import. The store runtime draws the account forms in the container where a trusted parent answers its account
  *  bridge (Studio, full-window preview, published store); an exported site keeps the button, pointed at the account app. */
@@ -142,7 +149,7 @@ function mainInner(html: string): string | null {
   return openEnd < 0 || openEnd > close ? null : html.slice(openEnd + 1, close).trim();
 }
 
-export function withStaticStandardPages(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; added: string[]; refreshed: string[]; slotAdded: boolean } {
+export function withStaticStandardPages(files: SourceProjectFileDto[], purpose: string = 'shop'): { files: SourceProjectFileDto[]; added: string[]; refreshed: string[]; slotAdded: boolean } {
   const index = files.find(file => file.path === 'index.html' && file.encoding !== 'base64');
   if (!index) return { files, added: [], refreshed: [], slotAdded: false };
 
@@ -154,7 +161,8 @@ export function withStaticStandardPages(files: SourceProjectFileDto[]): { files:
     ...PAGES.map(page => ({ url: page.url, label: page.label, mount: `<div data-pagosya-page="${page.kind}"></div>` })),
     ...ACCOUNT_PAGES.filter(page => GATE_COPY[page.view]).map(page => ({ url: page.url, label: page.label, mount: gateMarkup(page.view) })),
   ];
-  for (const page of standard) {
+  const allowed = new Set(staticStandardPagePaths(purpose));
+  for (const page of standard.filter(entry => allowed.has(entry.url))) {
     const existing = files.find(file => file.path === page.url);
     if (existing && (existing.encoding === 'base64' || mainInner(existing.content) !== page.mount.trim())) continue;
     // The slot is applied to the shell first, so every page this adds carries the footer navigation too.

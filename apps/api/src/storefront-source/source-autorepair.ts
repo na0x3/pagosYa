@@ -1,7 +1,7 @@
 import { posix } from 'node:path';
 import postcss from 'postcss';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
-import { STATIC_STANDARD_PAGE_PATHS } from './source-static-pages';
+import { staticStandardPagePaths } from './source-static-pages';
 
 /**
  * Contracts that a model does not need to be asked about twice.
@@ -41,7 +41,7 @@ const COMMERCE_KIT_PAGES = ['product.html', 'checkout.html', 'productos.html', '
 
 /** Pages the platform adds after this repair runs, so a link to one is live, not dead: the standard pages always, the commerce pages for a shop. */
 export function platformSuppliedPages(sitePurpose: string): string[] {
-  return [...STATIC_STANDARD_PAGE_PATHS, ...(sitePurpose === 'shop' ? COMMERCE_KIT_PAGES : [])];
+  return [...staticStandardPagePaths(sitePurpose), ...(sitePurpose === 'shop' ? COMMERCE_KIT_PAGES : [])];
 }
 
 const escapeAttribute = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
