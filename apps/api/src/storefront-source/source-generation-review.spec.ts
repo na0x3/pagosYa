@@ -165,4 +165,53 @@ describe('Sep-5 self-review after the save', () => {
     expect(reviewCalls()).toHaveLength(0);
     expect(projects.save).toHaveBeenCalledTimes(1);
   });
+
+  /** A review call that waits until its signal aborts. */
+  const hangingReview = (seen: { signal?: AbortSignal }) => respond(init => { seen.signal = init.signal; return new Promise((_ok, fail) => init.signal.addEventListener('abort', () => fail(init.signal.reason))); });
+
+  it('a new request cancels the running review before it takes the lease; the cancelled review saves nothing and costs nothing', async () => {
+    const seen: { signal?: AbortSignal } = {};
+    fetchMock.mockImplementation(hangingReview(seen) as any);
+    await generateN();
+    await eventually(() => Boolean(seen.signal));
+    const cancel = jest.spyOn(service, 'cancelReview');
+    stores.getStorePublic.mockRejectedValueOnce(new Error('tienda no disponible'));
+    await expect(service.generate('m1', 's1', { ...dto, revision: 1 }, new SourceRequestBudget(25), [], progress)).rejects.toThrow('tienda no disponible');
+    expect(cancel).toHaveBeenCalledWith('s1');
+    expect(cancel.mock.invocationCallOrder[0]).toBeLessThan(stores.getStorePublic.mock.invocationCallOrder.at(-1)!);
+    await service.reviewSettled('s1');
+    expect(seen.signal!.aborted).toBe(true);
+    expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith({ where: { storeId: 's1', status: 'REVIEWING' }, data: { status: 'CANCELLED', completedAt: expect.any(Date) } });
+    expect(ending('CANCELLED').data).toMatchObject({ credits: 0 });
+    expect(projects.save).toHaveBeenCalledTimes(1);
+    expect(prisma.storeAgentMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('leaves the review alone for a private visual-repair candidate', async () => {
+    const seen: { signal?: AbortSignal } = {};
+    fetchMock.mockImplementation(hangingReview(seen) as any);
+    await generateN();
+    await eventually(() => Boolean(seen.signal));
+    const cancel = jest.spyOn(service, 'cancelReview');
+    stores.getStorePublic.mockRejectedValueOnce(new Error('tienda no disponible'));
+    await expect(service.generate('m1', 's1', { ...dto, revision: 1 }, new SourceRequestBudget(25), [], progress, { candidate: true })).rejects.toThrow('tienda no disponible');
+    expect(cancel).not.toHaveBeenCalled();
+    expect(seen.signal!.aborted).toBe(false);
+    await service.cancelReview('s1');
+    await service.reviewSettled('s1');
+  });
+
+  it('keeps the review row beating while it runs, and stops the review when another process retired the row', async () => {
+    (service as any).reviewHeartbeatMs = 5;
+    const seen: { signal?: AbortSignal } = {};
+    fetchMock.mockImplementation(hangingReview(seen) as any);
+    await generateN();
+    await eventually(() => reviewWrites().some((c: any) => 'heartbeatAt' in c.data));
+    expect(reviewWrites().find((c: any) => 'heartbeatAt' in c.data)).toEqual({ where: { id: 'review-1', status: 'REVIEWING' }, data: { heartbeatAt: expect.any(Date) } });
+    prisma.storeSourceGeneration.updateMany.mockImplementation(async (args: any) => ({ count: 'heartbeatAt' in args.data ? 0 : 1 }));
+    await service.reviewSettled('s1');
+    expect(seen.signal!.aborted).toBe(true);
+    expect(ending('CANCELLED').data).toMatchObject({ credits: 0 });
+    expect(projects.save).toHaveBeenCalledTimes(1);
+  });
 });

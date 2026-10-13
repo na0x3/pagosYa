@@ -398,6 +398,9 @@ export class SourceGenerationService {
     const current = await this.projects.current(merchantId, storeId);
     const owner = current;
     if (current.revision !== dto.revision) throw new ConflictException("El proyecto cambió. Recarga antes de generar.");
+    // A new request stops YAPI's background polish of the last store before it takes the lease (spec 2026-10-12): the polish
+    // would only be discarded by this run's save. A private visual-repair candidate saves nothing, so it leaves it running.
+    if (!execution?.candidate) await this.cancelReview(storeId);
     const plan = sourceGenerationPlan(dto.model, dto.revision, dto.instruction);
     // Claude runs only the tool-using agent; the design planner and any single-call fallback keep an OpenAI companion.
     const claude = isClaude(plan.model);
