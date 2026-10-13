@@ -6,7 +6,8 @@ import { sourceAsksForRestraint, type SourceMotionMode } from '../source-motion'
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { SOURCE_FONT_CHOICES } from '../source-fonts';
 import { requestedSourceProducts, sourceProductsSchema, type SourceProduct } from '../source-products';
-import type { SourceSitePurpose } from '../source-site-purpose';
+import { sourceSitePurposePrompt, type SourceSitePurpose } from '../source-site-purpose';
+import { primaryActionLink, type PrimaryAction } from '../source-primary-action';
 
 /**
  * The Sep-5 generator as a plan source.
@@ -107,6 +108,8 @@ export function sep5AuthorPrompt(input: {
   card?: string;
   /** The site purpose (spec 2026-10-13). 'shop' or absent keeps the prompt byte-identical; the self-review wording follows it. */
   purpose?: SourceSitePurpose;
+  /** A showcase's main action (Task 1's sourcePrimaryAction); every call to action on the site uses it. Default: the form. */
+  action?: PrimaryAction;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -117,7 +120,9 @@ export function sep5AuthorPrompt(input: {
     'The portable runtime renders the verified catalog into [data-pagosya-catalog], categories into [data-pagosya-categories], cart into [data-pagosya-cart], item count into [data-cart-count], status messages into [data-pagosya-status] (role=status aria-live=polite), and store name into [data-store-name]. You MUST include catalog, cart and status, and link a clear primary action to the catalog. Never hardcode product cards or prices; the runtime renders these from current API data. The runtime owns purchasing behavior but you fully style the markup. It emits document event pagosya:ready with detail.store, preview, demo for additional presentation.',
     'Runtime classes to style: menu-item, menu-item__image, menu-item__copy h3/p, menu-item__price, menu-add, sold-out, order-items, order-empty, order-item, quantity button/output, order-field select, order-total, order-note, checkout-button, catalog-empty. data-category buttons need visible pressed state. Use comfortable reading sizes, 44px controls, clear keyboard focus, responsive mobile order and reduced-motion support. Do not hide content before JS. Avoid empty decorative cards, generic badges, fake rating stars and unnecessary motion. Typography and image crops must feel deliberate.',
     "If assets are unavailable use the business's public product images or a deliberate typography-led composition; never invent a URL. For an edit, preserve unrelated copy, navigation, and design decisions. Return the whole project, not a diff. Keep code concise enough for 18000 output tokens.",
-    ...(input.storeShell ? [SEP5_STORE_SHELL] : []),
+    ...(input.storeShell ? (input.purpose && input.purpose !== 'shop'
+      ? [SEP5_SHOWCASE_SHELL, sourceSitePurposePrompt(input.purpose), sep5MainAction(input.action ?? { kind: 'form' })]
+      : [SEP5_STORE_SHELL]) : []),
     ...(input.frame?.trim() ? [input.frame.trim()] : []),
     ...(input.hero?.trim() ? [SEP5_KEEP_PICKED_HERO(input.hero.trim())] : []),
     ...(input.card?.trim() ? [input.card.trim()] : []),
@@ -177,6 +182,16 @@ export const SEP5_STORE_SHELL = 'STORE SHELL: The platform draws the header on e
 /** Kept for callers that still name it: with the platform header there is one shell, framed or not (spec 2026-10-13). */
 export const SEP5_STORE_SHELL_FRAMED = SEP5_STORE_SHELL;
 
+/** A business that does not sell online (spec 2026-10-13): the site shows it and leads to one main action. */
+export const SEP5_SHOWCASE_SHELL = 'SITE SHELL: This business does not sell online; the site shows the business and leads to one main action. The platform draws the header on every page, so do not write one: make <header data-pagosya-header></header> the first element inside <body> of every page, empty, exactly like that; the platform fills it with the business name, the menu and the main action button. Put data-nav-label="…" (a short Spanish menu label) and an id on each top-level section of index.html that belongs in the menu, at most six. Declare --store-background, --store-foreground, --store-accent, --store-accent-foreground, --store-heading-font and --store-body-font in :root of styles.css; the header takes its colours and fonts from them. Never write a catalog, cart, checkout, search or account link, product cards or prices. Keep <p data-pagosya-status role="status" aria-live="polite"></p> on every page and <section data-pagosya-contact hidden></section> on index.html. The footer contains <nav data-pagosya-pages aria-label="Información" hidden></nav>, which the runtime fills with the information pages. pages/ paths use ../ for these links too.';
+
+/** Every call to action on a showcase leads to its main action, with the very link the platform header uses. */
+export function sep5MainAction(action: PrimaryAction): string {
+  const link = primaryActionLink(action);
+  const what = action.kind === 'whatsapp' ? 'a WhatsApp chat' : action.kind === 'booking' ? 'its booking page' : action.kind === 'phone' ? 'a phone call' : 'the platform contact form';
+  return `MAIN ACTION: This business's main action is ${what}. Every call to action on the site (the hero button, a closing band, the contact section) uses exactly this link, with your own short Spanish label if you like: <a href="${link.href}"${link.attributes}>${link.label}</a>.${action.kind === 'form' ? ' The platform opens its contact form from that link; never build a form yourself.' : ''}`;
+}
+
 /**
  * The draft the model just wrote, shown back to it rendered. One look-and-fix pass: the author writes blind
  * (it has never seen a pixel of its own CSS), and the measured facts are what a screenshot cannot show
@@ -230,10 +245,13 @@ export function applySep5Edits<F extends { path: string; content: string }>(draf
 }
 
 /** Sep-5's own guard: a project missing these never rendered commerce correctly. */
-export function sep5ProjectIsUsable(files: Sep5Files['files']): boolean {
+export function sep5ProjectIsUsable(files: Sep5Files['files'], purpose: SourceSitePurpose = 'shop'): boolean {
   const html = files.find(file => file.path === 'index.html')?.content ?? '';
-  return files.some(file => file.path === 'styles.css')
-    && /data-pagosya-catalog/.test(html) && /data-pagosya-cart/.test(html) && /data-pagosya-status/.test(html);
+  if (!files.some(file => file.path === 'styles.css') || !/data-pagosya-status/.test(html)) return false;
+  if (purpose === 'shop') return /data-pagosya-catalog/.test(html) && /data-pagosya-cart/.test(html);
+  // A showcase needs its main action, never a catalog or cart (spec 2026-10-13): the header slot the platform fills with it,
+  // or a call to action that already links it.
+  return /<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])/i.test(html) || /href=["'](?:https:\/\/wa\.me\/|tel:)|data-pagosya-contact-open/i.test(html);
 }
 
 /**

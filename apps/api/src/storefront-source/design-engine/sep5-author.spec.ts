@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
+import { sep5AuthorPrompt, SEP5_SHOWCASE_SHELL, sep5MainAction, sep5CardLook, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -315,4 +315,53 @@ it('describes the picked card when its hero was not finished, and stays byte-ide
   expect(prompt).toContain(card);
   expect(prompt).not.toContain('PICKED HERO');
   expect(sep5CardLook({ name: 'Solo texto', fonts: { display: 'fraunces', text: 'instrument' }, headline: 'Hola' })).not.toContain('colours background');
+});
+
+describe('a showcase author (spec 2026-10-13)', () => {
+  const base = { brief: { businessType: 'Arquitectura' }, instruction: 'Crea el sitio de mi estudio', data: {}, assetLegend: [], storeShell: true };
+
+  it('drops the shop shell for the showcase shell, the purpose override and the main action, and asks for no products', () => {
+    const prompt = sep5AuthorPrompt({ ...base, purpose: 'service', action: { kind: 'booking', value: 'https://cal.com/deff' }, products: false, motionPlan: 'MOTION CHOREOGRAPHY: subtle.' });
+    expect(prompt).toContain(SEP5_SHOWCASE_SHELL);
+    expect(prompt).not.toContain(SEP5_STORE_SHELL);
+    expect(prompt).toContain('SITE PURPOSE OVERRIDE: service');
+    expect(prompt).toContain('MAIN ACTION:');
+    expect(prompt).toContain('<a href="https://cal.com/deff" target="_blank" rel="noopener">Agenda una cita</a>');
+    expect(prompt).not.toContain('PRODUCTS:');
+    expect(prompt.indexOf('SITE SHELL')).toBeLessThan(prompt.indexOf('MAIN ACTION'));
+    expect(prompt.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
+  });
+
+  it('asks for the slot, the menu marks and the platform hooks, and no catalog, cart, checkout, search or account', () => {
+    expect(SEP5_SHOWCASE_SHELL).toContain('<header data-pagosya-header></header>');
+    expect(SEP5_SHOWCASE_SHELL).toContain('data-nav-label');
+    expect(SEP5_SHOWCASE_SHELL).toContain('<section data-pagosya-contact hidden></section>');
+    expect(SEP5_SHOWCASE_SHELL).toContain('data-pagosya-status');
+    expect(SEP5_SHOWCASE_SHELL).toMatch(/Never write a catalog, cart, checkout, search or account link/);
+  });
+
+  it('points every call to action at the main action, and lets the platform open its form', () => {
+    expect(sep5MainAction({ kind: 'whatsapp', value: '59170012345' })).toContain('<a href="https://wa.me/59170012345" target="_blank" rel="noopener">Escríbenos</a>');
+    expect(sep5MainAction({ kind: 'phone', value: '59122441234' })).toContain('<a href="tel:+59122441234">Llámanos</a>');
+    const form = sep5MainAction({ kind: 'form' });
+    expect(form).toContain('<a href="contacto.html" data-pagosya-contact-open>Pide una cotización</a>');
+    expect(form).toContain('never build a form yourself');
+    expect(sep5AuthorPrompt({ ...base, purpose: 'portfolio' })).toContain('<a href="contacto.html" data-pagosya-contact-open>');
+  });
+
+  it('keeps the shop prompt byte-identical', () => {
+    expect(sep5AuthorPrompt({ ...base, purpose: 'shop', action: { kind: 'form' } })).toBe(sep5AuthorPrompt(base));
+  });
+
+  it('judges a showcase by its main action, never by a catalog or cart', () => {
+    const styles = { path: 'styles.css', content: ':root{}' };
+    const page = (body: string) => [{ path: 'index.html', content: `${body}<p data-pagosya-status></p>` }, styles];
+    expect(sep5ProjectIsUsable(page('<header data-pagosya-header></header><main>Hola</main>'), 'service')).toBe(true);
+    expect(sep5ProjectIsUsable(page('<main><a href="https://wa.me/59170012345">Escríbenos</a></main>'), 'service')).toBe(true);
+    expect(sep5ProjectIsUsable(page('<main><a href="contacto.html" data-pagosya-contact-open>Cotiza</a></main>'), 'portfolio')).toBe(true);
+    expect(sep5ProjectIsUsable(page('<main>Hola</main>'), 'service')).toBe(false);
+    expect(sep5ProjectIsUsable([{ path: 'index.html', content: '<header data-pagosya-header></header>' }, styles], 'service')).toBe(false);
+    expect(sep5ProjectIsUsable(page('<header data-pagosya-header></header>'), 'shop')).toBe(false);
+    expect(sep5ProjectIsUsable(page('<div data-pagosya-catalog></div><div data-pagosya-cart></div>'))).toBe(true);
+  });
 });
