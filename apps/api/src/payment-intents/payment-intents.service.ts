@@ -907,16 +907,22 @@ export class PaymentIntentsService {
       const body = `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`;
       // A failed lookup costs the threading, never the receipt.
       const threaded = await this.receiptThreading(order?.storeId ?? null, intent).catch(() => null);
-      await this.email.send({
-        to: intent.customerEmail,
-        ...(html ? { html } : {}),
-        subject: sentSubject,
-        body,
-        // failLoudly: a provider rejection must throw here (caught below), so a receipt that never
-        // left is not filed into the order's thread as if the buyer had it.
-        ...(threaded ? { from: threaded.from, replyTo: threaded.replyTo, headers: { "Message-ID": `<${threaded.messageId}>` }, failLoudly: true } : {}),
-      });
-      return threaded ? { subject: sentSubject, body, messageId: threaded.messageId, from: threaded.from } : null;
+      const plain = { to: intent.customerEmail, ...(html ? { html } : {}), subject: sentSubject, body };
+      if (threaded) {
+        try {
+          // failLoudly: a provider rejection must throw here, so a receipt that never left is not filed
+          // into the order's thread as if the buyer had it.
+          await this.email.send({ ...plain, from: threaded.from, replyTo: threaded.replyTo, headers: { "Message-ID": `<${threaded.messageId}>` }, failLoudly: true });
+          return { subject: sentSubject, body, messageId: threaded.messageId, from: threaded.from };
+        } catch (err) {
+          // A domain still "verified" in settings that the provider refuses (DNS changed, a 429 or 5xx) must not
+          // cost the buyer the receipt: it goes out once more from the default sender. That copy carries no
+          // Message-ID of ours, so nothing is filed into the thread.
+          this.logger.warn(`Receipt for ${intent.id} was refused from the store's domain, sending it plainly: ${(err as Error).message}`);
+        }
+      }
+      await this.email.send(plain);
+      return null;
     } catch (err) {
       this.logger.warn(`Failed to send receipt email for ${intent.id}: ${(err as Error).message}`);
       return null;

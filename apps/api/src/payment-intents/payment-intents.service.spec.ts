@@ -694,7 +694,21 @@ describe("PaymentIntentsService receipt from the store's verified domain", () =>
 
     await expect((service as any).sendReceiptEmail(intent(), "Tienda")).resolves.toBeNull();
 
-    expect(email.send).toHaveBeenCalledTimes(1);
+    // One try from the store's domain, one plain fallback; neither went out, so nothing is filed.
+    expect(email.send).toHaveBeenCalledTimes(2);
+  });
+
+  // A domain still "verified" in settings that the provider now refuses (DNS changed, a 429 or 5xx) must not leave the
+  // buyer without a receipt: it goes out once more from the default sender, without our Message-ID, and nothing is filed.
+  it("sends the receipt plainly when the store's domain is refused, and files nothing", async () => {
+    const { service, email } = receiptService(verified, jest.fn().mockRejectedValueOnce(new Error("Email delivery failed: domain not verified")).mockResolvedValueOnce(undefined));
+
+    await expect((service as any).sendReceiptEmail(intent(), "Tienda")).resolves.toBeNull();
+
+    expect(email.send).toHaveBeenCalledTimes(2);
+    const [domain, plain] = email.send.mock.calls.map(([call]: any) => call);
+    expect(domain).toMatchObject({ from: "Tienda <notificaciones@tienda.test>", failLoudly: true });
+    expect(plain).toEqual({ to: domain.to, subject: domain.subject, body: domain.body, ...(domain.html ? { html: domain.html } : {}) });
   });
 
   it("still sends the receipt when the sender lookup fails", async () => {
