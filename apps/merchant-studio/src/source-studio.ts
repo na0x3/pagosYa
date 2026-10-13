@@ -795,7 +795,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const inBoceto = Boolean(bocetoOpen && version && mode === 'preview');
     // A RUNNING proposal only shows while its build runs; once the cards are ready they wait for the pick.
     // A picked style whose build failed shows again for Reintentar, but not while that build (or another) is running.
-    const showStyles = !inBoceto && mode === 'preview' && (styleView ? styleView.status === 'PICKED' ? !building() : styleView.status === 'AWAITING_STYLE' || building() : building() && buildProgress?.steps.at(-1)?.stage === 'styles');
+    // Choosable cards (spec 2026-10-12) stay on screen after the request ended, while their heroes are still being drawn.
+    const showStyles = !inBoceto && mode === 'preview' && (styleView ? styleView.status === 'PICKED' ? !building() : styleView.status === 'AWAITING_STYLE' || (styleView.status === 'RUNNING' && styleView.pickable === true) || building() : building() && buildProgress?.steps.at(-1)?.stage === 'styles');
     if (!sessionStorage.getItem(SESSION_STORAGE_KEY)) {
       if (embedded) { notifyParent({ type: 'pagosya:session-expired' }); app.innerHTML = '<p>Tu sesión terminó. Vuelve a entrar desde el panel.</p>'; return; }
       app.innerHTML = renderStudioLogin({ busy, error });

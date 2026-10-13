@@ -620,3 +620,16 @@ it('shows the polishing note while YAPI reviews, then loads the polished store a
   await vi.waitFor(() => expect(app.textContent).toContain('Pulí tu tienda: Agrandé el título.'), { timeout: 9000 });
   expect(app.querySelector('[data-review-note]')).toBeNull();
 }, 15000);
+
+// Final review (spec 2026-10-12): the chat job ends when the cards become choosable, so the canvas must show them while
+// their heroes still draw, with no request running.
+it('shows choosable cards whose heroes are still drawing after the request ended, and sends the pick', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'RUNNING', pickable: true, recommended: 0, cards: [0, 1].map(styleCard) } } as any);
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2));
+  app.querySelector<HTMLButtonElement>('[data-style-card="0"]')!.click();
+  app.querySelector<HTMLButtonElement>('[data-style-use="0"]')!.click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 0 } });
+});
