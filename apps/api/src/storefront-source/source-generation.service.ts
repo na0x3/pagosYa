@@ -169,7 +169,9 @@ export function sourceMarqueeEditPaths(files: SourceProjectFileDto[]): string[] 
   return paths.length ? [...new Set(paths)] : undefined;
 }
 
-export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop'): void {
+/** `previous` is the saved revision an edit starts from: a problem it already had is not this save's to fix (the edit may not
+ * even reach that file), so only the problems a save brings in block it (2026-10-12, Pistacho Loco's sign-up page). */
+export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop', previous: SourceProjectFileDto[] = []): void {
   // The cap bounds what a model writes. The standard pages are the platform's own copies of index.html, so they do not count.
   if (!Array.isArray(files) || files.filter(file => !STATIC_STANDARD_PAGE_PATHS.includes(file?.path)).length > 24) throw new BadGatewayException("La generación no devolvió un proyecto válido.");
   if (purpose === 'shop') validateSourcePriceClaims(files);
@@ -179,14 +181,15 @@ export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: 
       try { new Script(file.content, { filename: file.path }); } catch { throw new BadGatewayException(`Error de sintaxis en ${file.path}. Vuelve a generar.`); }
     }
     // A browser drops every rule after an unclosed bracket, string, comment or block, so one typo unstyles the whole store.
-    if (file.path.endsWith(".css")) {
+    if (file.path.endsWith(".css") && !previous.some(saved => saved.path === file.path && saved.content === file.content)) {
       try { postcss.parse(file.content, { from: file.path }); } catch (error) {
         const where = error instanceof CssSyntaxError ? `línea ${error.line}, columna ${error.column}: ${error.reason}` : 'no se pudo leer';
         throw new BadGatewayException(`Error de sintaxis CSS en ${file.path} (${where}). Cierra cada paréntesis, comilla, comentario y llave.`);
       }
     }
   }
-  const gateProblems = staticAccountGateProblems(files);
+  const savedGateProblems = new Set(staticAccountGateProblems(previous));
+  const gateProblems = staticAccountGateProblems(files).filter(problem => !savedGateProblems.has(problem));
   if (gateProblems.length) throw new BadGatewayException(gateProblems.join(' '));
   const html = files.find((f) => f.path === "index.html")?.content || "";
   const missingFiles = ['index.html', 'styles.css', 'site.js'].filter(path => !files.some(f => f.path === path));
@@ -892,7 +895,7 @@ export class SourceGenerationService {
         else delete generated.design;
         if (useNext) { compiledNext = await compileNextPreview(generated.files, sitePurpose); if (generated.design && !lenient) validateNextDesign(generated.files, generated.design, sitePurpose); }
         else {
-          validateGeneratedSource(generated.files, sitePurpose);
+          validateGeneratedSource(generated.files, sitePurpose, oldFiles);
           if (generated.design && !lenient) validateSourceDesignImplementation(generated.design, generated.files, sitePurpose);
         }
         await this.bundleAuthoredUploads(merchantId, generated.files, assets);

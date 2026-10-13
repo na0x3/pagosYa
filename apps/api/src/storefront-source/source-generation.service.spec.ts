@@ -57,6 +57,19 @@ it('rejects a stylesheet the browser would drop after an unclosed bracket, strin
   expect(() => validateGeneratedSource(withCss(':root{--wide:min(1220px,calc(100% - 128px))}'))).not.toThrow();
 });
 
+it('blocks only the problems a save brings in, never ones the saved store already had', () => {
+  // 2026-10-12: Pistacho Loco's saved sign-up page had an <aside> inside the form slot, so a homepage button edit failed
+  // the account check twice; the edit could not even touch that page.
+  const register = (slot: string) => ({ path: 'acceso-registro.html', content: `<!doctype html><main><section data-account-gate="register"><div class="ui-container">${slot}<h1>Crea tu cuenta</h1></div></section></main>` });
+  const crowded = register('<aside>Beneficios</aside>');
+  const brokenCss = { path: 'styles.css', content: '.a{color:red' };
+  const saved = [...files().filter(file => file.path !== 'styles.css'), crowded, brokenCss];
+  expect(() => validateGeneratedSource(saved, 'shop', saved)).not.toThrow();
+  expect(() => validateGeneratedSource([...files(), crowded])).toThrow('acceso-registro.html puso <aside>');
+  expect(() => validateGeneratedSource([...files(), crowded], 'shop', [...files(), register('')])).toThrow('acceso-registro.html puso <aside>');
+  expect(() => validateGeneratedSource([...saved.filter(file => file.path !== 'styles.css'), { path: 'styles.css', content: '.a{color:blue' }], 'shop', saved)).toThrow('Error de sintaxis CSS');
+});
+
 it('accepts DNA motif drawings in a static generation, and no other new file type', () => {
   expect(() => validateGeneratedSource([...files(), { path: 'motifs/lampara.svg', content: '<svg/>' }])).not.toThrow();
   expect(() => validateGeneratedSource([...files(), { path: 'assets/lampara.svg', content: '<svg/>' }])).toThrow('archivo reservado');
