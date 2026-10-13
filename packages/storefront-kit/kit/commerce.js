@@ -2599,6 +2599,8 @@
     /* Order lines: photo, then name + line total, option, unit price and stock under it. */
     .order-items .order-item[data-has-image]{display:grid;grid-template-columns:72px minmax(0,1fr);gap:16px;align-items:start}
     .order-items .order-item>.order-item__body{display:block;min-width:0;margin:0}
+    /* A store grid drawn for a photo column (78px 1fr) would put a photo-less line's text in that column: span it. */
+    .order-items .order-item:not([data-has-image])>.order-item__body{grid-column:1/-1}
     .order-item__photo{display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;background:color-mix(in srgb,currentColor 6%,transparent)}
     .order-item__head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;line-height:1.4;overflow-wrap:anywhere}
     .order-item__head>span{flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
