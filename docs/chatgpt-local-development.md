@@ -34,3 +34,27 @@ References: [local app integration](https://developers.openai.com/siwc/token-sha
 Run offline checks with `pnpm test:chatgpt`. A real account sign-in and completed inference are still required to verify account eligibility end to end.
 
 If a previously working session reports a connection failure, restart the development launcher with `pnpm dev:chatgpt --skip-setup` after stopping the old launcher. This reuses the prepared database and shared-type build without running migrations. The development stack shuts down when its ChatGPT bridge disappears, so the API cannot keep serving with a dead bridge address.
+
+## Record a run, replay it offline
+
+A real YAPI evaluation takes about 12 minutes of plan allowance. Most changes worth checking happen after the model answers (validators, repairs, header/DNA, compilation, kit CSS, preflight, saving), so `apps/api/scripts/evaluate-yapi-agent.ts` can record a real run once and replay it as often as needed with no model at all.
+
+**Record** a real run with `--record <dir>`. Through the plan launcher (its evaluation runs from `apps/api`, so paths are relative to it):
+
+```sh
+node scripts/chatgpt-plan.mjs evaluate --merchant <id> --store <id> --engine agent \
+  --suite scripts/fixtures/yapi-everyday-suite.json --record ../../.yapi-evaluation/recordings/everyday-2026-10-13
+```
+
+Keep recordings under the ignored `.yapi-evaluation/recordings/`: they hold the store's brief, snapshot and catalogue as sent to the model (credentials are never written). Each recording has `recording.json` (engine, store, model, provider, suite) and one folder per case, `cases/<case>--run<n>/`: `case.json` (brief, snapshot, revision, model), `calls/0001.json`… (each model request and response, in order), `chance.json` (the run's `Math.random` draws and "recent designs" lookups, so a replay draws the same frame, style and sketch) and `outcome.json` (what the real run reported).
+
+**Replay** the same cases with `--replay <dir>`. It makes no model calls, so it needs neither `--i-accept-costs`, the ChatGPT bridge nor port 3001:
+
+```sh
+cd apps/api
+npx ts-node --transpile-only scripts/evaluate-yapi-agent.ts --replay ../../.yapi-evaluation/recordings/everyday-2026-10-13
+```
+
+Store, engine, model, runs and suite come from the recording. Everything after the model runs for real, including writing the candidate generation to the dev database as a real evaluation does, so the database must be running. Every case prints one line in both modes (passed or failed, the reason, code repairs, failed model attempts, duration, and on replay the calls served and the recorded outcome), so two replays, or a replay and its recording, can be compared; `--out`, `--shot` and `--candidate-out` work as usual.
+
+**Recordings go stale.** A replay serves a recorded answer only to the same request: same endpoint, model, response format, tools, prompt and input (ids, dates and clock readings are ignored). When a prompt changes, or the store's revision or catalogue changed since recording, the first call that differs fails the case loudly as `replay_mismatch`, naming the case, the call number and where the request first differs, and no later call is served. That is expected: re-record. A code change that alters a tool result the agent reads back also changes the next request; `--replay-loose` serves such calls anyway and lists them as drift, knowing the recorded answer may no longer fit. A run that asks for fewer calls than recorded passes and reports the unused ones.
