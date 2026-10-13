@@ -180,3 +180,21 @@
   .growth-skeleton span { animation: none; }
   .growth[aria-busy="true"] { transition: none; }
 }
+
+/* Crecer › Carritos abandonados (abandoned-carts-panel.mjs): reuses the growth tokens, period picker, skeleton and errors. */
+.carts { display: grid; gap: 16px; }
+.carts-anonymous { color: var(--pg-text-muted); font-size: 14px; line-height: 1.45; }
+.carts-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.carts-row { display: grid; gap: 8px; padding: 14px 16px; border: 2px solid var(--g-line); border-radius: 14px; background: var(--pg-surface, #fff); }
+.carts-who { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.carts-who strong { font-size: 16px; overflow-wrap: anywhere; }
+.carts-who span, .carts-items { color: var(--pg-text-muted); font-size: 14px; line-height: 1.45; }
+.carts-items strong { color: var(--pg-text); }
+.carts-tags, .carts-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.carts-tag { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: var(--g-soft); font-size: 12.5px; font-weight: 700; }
+.carts-tag.is-sent { background: var(--g-good-soft); color: var(--g-good); }
+.carts-tag.is-scheduled { background: var(--g-accent-soft); color: var(--g-accent); }
+.carts-actions a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 2px solid var(--g-line); border-radius: 999px; color: var(--pg-text); font-weight: 700; text-decoration: none; }
+.carts-actions a:focus-visible, .carts button:focus-visible { outline: 3px solid var(--g-accent); outline-offset: 2px; }
+.carts-empty { padding: 18px 16px; border: 2px dashed var(--g-line); border-radius: 14px; color: var(--pg-text-muted); }
+@media (min-width: 560px) { .carts-anonymous { text-align: right; } }

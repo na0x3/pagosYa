@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // Every view must open without a script error; removals in dashboard.js
 // surface here first, because one stale element lookup stops the whole script.
-const VIEWS = ["overview", "stores", "store-settings", "connect-ai", "products", "media", "marketing", "experiments", "integrations", "charge-links", "cobros", "proposals", "contracts", "inbox", "payments", "payouts", "account", "compliance", "workspace"];
+const VIEWS = ["overview", "stores", "store-settings", "connect-ai", "products", "media", "marketing", "experiments", "integrations", "abandoned-carts", "charge-links", "cobros", "proposals", "contracts", "inbox", "payments", "payouts", "account", "compliance", "workspace"];
 
 test("every dashboard view opens without script errors", async ({ page }) => {
   const errors = [];
@@ -25,6 +25,7 @@ test("every dashboard view opens without script errors", async ({ page }) => {
     else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
     else if (path.endsWith("/source-project")) body = { revision: 0, versions: [], nextBefore: null };
     else if (path.endsWith("/domain-shop")) body = { available: false, sandbox: true, tlds: [], orders: [] };
+    else if (path.endsWith("/abandoned-carts")) body = { anonymousSessions: 0, carts: [] };
     return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("/#dashboard-overview");
