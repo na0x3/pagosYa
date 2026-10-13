@@ -259,6 +259,8 @@ test('Comeback, campaigns and customers show distinct pages with the current fon
   const frame = page.frameLocator('#storeMarketingFrame');
   await expect(frame.getByRole('heading', { name: 'Comeback Card', exact: true })).toBeVisible();
   await expect(frame.locator('.comeback-card')).toBeVisible();
+  // The welcome, reminder and review switches live only with their emails, in Correos y marketing › Correos.
+  await expect(frame.locator('[name=welcomeEnabled], [name=recoveryEnabled], [name=recoveryHours], [name=reviewRequestsEnabled]')).toHaveCount(0);
   await expect(frame.locator('body')).not.toContainText('Cargando las herramientas');
   expect(await frame.locator('.retention-dialog').evaluate(el => getComputedStyle(el).fontFamily)).toContain('Arial');
   await page.screenshot({ path: '/tmp/pagosya-comeback-desktop.png', fullPage: true });

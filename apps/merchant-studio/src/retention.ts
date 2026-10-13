@@ -78,9 +78,7 @@ export async function openRetention(api: MerchantStudioApi, storeId: string, onC
         <section class="retention-section"><h3>02 / Tu comunidad</h3>${toggle('signupEnabled', 'Mostrar formulario de suscripción', s.signupEnabled)}
         <p>Se abre como una ventana con una foto de tus productos y los colores de tu tienda. Puede llamarse “Club de beneficios”, “Acceso anticipado” o lo que tenga sentido para tu negocio. Solo anuncia descuentos que hayas configurado.</p>
         <div class="brand-fields"><label>Título<input name="signupTitle" required maxlength="100" value="${esc(s.signupTitle)}"></label><label>Descripción<textarea name="signupBody" maxlength="500">${esc(s.signupBody)}</textarea></label><label>Texto del botón<input name="signupButton" required maxlength="60" value="${esc(s.signupButton)}"></label></div>
-        ${toggle('welcomeEnabled', 'Enviar correo de bienvenida al suscribirse', s.welcomeEnabled)}<div class="brand-fields"><label>Asunto de bienvenida<input name="welcomeSubject" required maxlength="160" value="${esc(s.welcomeSubject)}"></label><label>Mensaje de bienvenida<textarea name="welcomeBody" required rows="4" maxlength="5000">${esc(s.welcomeBody)}</textarea></label></div><p>Puedes usar {{store}} para incluir el nombre del negocio. Todos los correos comerciales incluyen un enlace para darse de baja.</p></section>
-        <section class="retention-section"><h3>03 / Recuperar carritos</h3>${toggle('recoveryEnabled', 'Ofrecer un recordatorio por correo', s.recoveryEnabled)}<p>El cliente deja su correo y acepta recibir un recordatorio. Recupera los productos guardados con un enlace; si ya pagó, el correo se cancela.</p><label>Horas de espera<input type="number" name="recoveryHours" required min="1" max="168" value="${s.recoveryHours}"></label><p>Se envía un solo recordatorio por carrito, con un máximo de uno por cliente cada siete días. No lo suscribe a campañas.</p></section>
-        <section class="retention-section"><h3>04 / Reseñas después de la entrega</h3>${toggle('reviewRequestsEnabled', 'Pedir una reseña 24 horas después de entregar', s.reviewRequestsEnabled)}<p>Se envía un solo correo por pedido entregado, con un enlace privado para reseñar los productos comprados. Las reseñas quedan pendientes de moderación y nunca se publican automáticamente.</p></section>
+        <p>El correo de bienvenida para quienes se suscriben, el recordatorio de carrito y la solicitud de reseña se configuran en Correos y marketing › Correos.</p></section>
         <button class="button--publish" type="submit">Guardar configuración</button>
       </form>` : view === 'campaigns' ? `<section><h3>Un correo para tu comunidad</h3><p>Escribe el mensaje, guárdalo y revisa el borrador antes de enviarlo a los suscriptores activos.</p>
         <form data-campaign><div class="brand-fields"><label>Asunto<input name="subject" required maxlength="160"></label><label>Mensaje<textarea name="body" rows="6" required maxlength="10000"></textarea></label></div><button type="submit">Guardar borrador</button></form>
@@ -94,9 +92,12 @@ export async function openRetention(api: MerchantStudioApi, storeId: string, onC
     dialog.querySelector('[data-settings]')?.addEventListener('input', updatePreview);
     dialog.querySelector('[data-settings]')?.addEventListener('submit', e => {
       e.preventDefault(); const form = new FormData(e.target as HTMLFormElement); const data: Record<string, any> = { revision: s.revision };
-      for (const key of ['comebackEnabled', 'signupEnabled', 'welcomeEnabled', 'recoveryEnabled', 'reviewRequestsEnabled']) data[key] = form.has(key);
-      for (const key of ['visitsRequired', 'recoveryHours']) data[key] = Number(form.get(key));
-      for (const key of ['rewardLabel', 'timezone', 'signupTitle', 'signupBody', 'signupButton', 'welcomeSubject', 'welcomeBody']) data[key] = String(form.get(key) || '').trim();
+      for (const key of ['comebackEnabled', 'signupEnabled']) data[key] = form.has(key);
+      data.visitsRequired = Number(form.get('visitsRequired'));
+      for (const key of ['rewardLabel', 'timezone', 'signupTitle', 'signupBody', 'signupButton']) data[key] = String(form.get(key) || '').trim();
+      // The welcome, cart-reminder and review emails are edited in Correos y marketing › Correos. This PUT
+      // still replaces every setting at once (RetentionSettingsDto requires them), so they go back as loaded.
+      for (const key of ['welcomeEnabled', 'welcomeSubject', 'welcomeBody', 'recoveryEnabled', 'recoveryHours', 'reviewRequestsEnabled']) data[key] = s[key];
       void run(async () => { await api.writeRetention(storeId, '', 'PUT', data); onChanged?.(); message = 'Configuración guardada. Las secciones activadas aparecen en la tienda.'; });
     });
     dialog.querySelector('[data-campaign]')?.addEventListener('submit', e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target as HTMLFormElement)); void run(async () => { const draft = await api.writeRetention(storeId, 'campaigns', 'POST', values); selected = draft.id; message = 'Borrador guardado. Revisa el mensaje antes de enviarlo.'; }); });

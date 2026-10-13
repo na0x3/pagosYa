@@ -91,10 +91,10 @@ test('merchant configures retention and reviews a campaign before explicit sendi
     return route.fulfill({ json: state });
   });
   await page.evaluate(async () => { const { openRetention } = await import('/src/retention.ts'); const { MerchantStudioApi } = await import('/src/api.ts'); await openRetention(new MerchantStudioApi(), 's1'); });
-  await page.getByLabel('Activar tarjeta digital').check(); await page.getByLabel('Compras en días distintos').fill('4'); await page.getByLabel('Mostrar formulario de suscripción').check(); await page.getByLabel('Ofrecer un recordatorio por correo').check();
+  await page.getByLabel('Activar tarjeta digital').check(); await page.getByLabel('Compras en días distintos').fill('4'); await page.getByLabel('Mostrar formulario de suscripción').check(); await expect(page.getByLabel('Ofrecer un recordatorio por correo')).toHaveCount(0);
   await page.getByRole('button', { name: 'Guardar configuración' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Configuración guardada' })).toBeVisible();
-  expect(state.settings).toMatchObject({ comebackEnabled: true, visitsRequired: 4, signupEnabled: true, recoveryEnabled: true });
+  expect(state.settings).toMatchObject({ comebackEnabled: true, visitsRequired: 4, signupEnabled: true, recoveryEnabled: false, recoveryHours: 24 });
   await page.locator('dialog').evaluate(el => el.scrollTop = 0);
   await page.screenshot({ path: '.test-artifacts/retention-desktop.png' });
   await page.getByRole('button', { name: 'Campañas', exact: true }).click();

@@ -53,4 +53,16 @@ describe('Comeback workspaces', () => {
     await vi.waitFor(() => expect(host.querySelector('.comeback-reward')?.textContent).toBe('Mi premio'));
     expect(host.querySelector<HTMLButtonElement>('[type=submit]')!.disabled).toBe(false);
   });
+  it('leaves the welcome, reminder and review emails to Correos y marketing and saves them unchanged', async () => {
+    const loaded = state();
+    Object.assign(loaded.settings, { welcomeEnabled: true, welcomeSubject: 'Hola {{store}}', welcomeBody: 'Bienvenida', recoveryEnabled: true, recoveryHours: 48, reviewRequestsEnabled: true });
+    vi.mocked(api.retention).mockResolvedValue(loaded);
+    await openRetention(api, 's1', undefined, { host, view: 'program' });
+    for (const name of ['welcomeEnabled', 'welcomeSubject', 'welcomeBody', 'recoveryEnabled', 'recoveryHours', 'reviewRequestsEnabled']) expect(host.querySelector(`[name=${name}]`)).toBeNull();
+    expect(host.textContent).toContain('Correos y marketing');
+    input('rewardLabel', 'Un postre');
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(api.writeRetention).toHaveBeenCalled());
+    expect(vi.mocked(api.writeRetention).mock.calls[0][3]).toMatchObject({ rewardLabel: 'Un postre', welcomeEnabled: true, welcomeSubject: 'Hola {{store}}', welcomeBody: 'Bienvenida', recoveryEnabled: true, recoveryHours: 48, reviewRequestsEnabled: true });
+  });
 });

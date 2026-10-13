@@ -18,7 +18,7 @@ const icon = (name: string) => `<span class="business-icon"><svg viewBox="0 0 24
 const money = (amount: number, currency: string) => new Intl.NumberFormat('es-BO', { style: 'currency', currency }).format(amount / 100);
 export async function mountBusinessWorkspace(app: HTMLDivElement) {
     document.body.className = 'store-resource-body business-workspace-body';
-    const params = new URLSearchParams(location.search), storeId = params.get('store') || '', kind = params.get('library'), tab = params.get('tab') || 'templates';
+    const params = new URLSearchParams(location.search), storeId = params.get('store') || '', kind = params.get('library'), tab = params.get('tab') || 'staff';
     const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
     let busy = false, dirty = false, message = '';
     let recoverConflict: (() => Promise<void>) | undefined;
@@ -75,7 +75,7 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
             return;
         }
         if (kind === 'marketing') {
-            let state = await api.businessWorkspace(storeId), editing: string | null = null;
+            let state = await api.businessWorkspace(storeId);
             recoverConflict = async () => { state = await api.businessWorkspace(storeId); if (tab === 'domain' && state.domain) {
                 dirty = false;
                 renderMail();
@@ -84,26 +84,9 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
             function renderMail() {
                 app.innerHTML = `<header class="business-heading"><div><strong>${esc(state.storeName)}</strong><p>Mensajes que acompañan cada compra.</p></div><span class="business-badge ${state.emailConfigured ? 'is-ready' : ''}">${state.emailConfigured ? 'Proveedor configurado' : 'Envío sin configurar'}</span></header><p data-business-status role="status">${esc(message)}</p><div data-mail-body></div>`;
                 const host = app.querySelector<HTMLElement>('[data-mail-body]')!;
-                if (tab === 'templates' || tab === 'flows') {
-                    if (editing) {
-                        const item = state.templates.find((row: any) => row.id === editing);
-                        host.innerHTML = `<button type="button" data-mail-back>← Todas las plantillas</button><form class="business-edit" data-template-form><header>${icon('mail')}<div><h2>${esc(item.name)}</h2><p>${esc(item.trigger)}</p></div></header><label class="business-switch"><input type="checkbox" name="enabled" ${item.enabled ? 'checked' : ''} ${!item.supported ? 'disabled' : ''}>Activar este correo</label>${!item.supported ? `<p class="business-note">${esc(item.trigger)}. Puedes preparar el mensaje; el envío aún no está disponible.</p>` : ''}<label>Asunto<input name="subject" value="${esc(item.subject)}" maxlength="160" required></label><label>Mensaje<textarea name="body" rows="7" maxlength="5000" required>${esc(item.body)}</textarea></label><p class="business-help">Variables: {{store}}${['WELCOME', 'RECOVERY', 'REVIEW_REQUEST'].includes(item.id) ? '' : ' · {{customer}} · {{order}} · {{amount}}'}. Los enlaces necesarios se conservan en los correos de recuperación y reseñas.</p><div class="business-actions"><button class="business-primary" type="submit">Guardar plantilla</button><button type="button" data-preview-email>Vista previa</button></div><article class="email-preview" data-email-preview hidden></article></form>`;
-                        host.querySelector('[data-mail-back]')!.addEventListener('click', () => { if (canLeave()) {
-                            dirty = false;
-                            editing = null;
-                            renderMail();
-                        } });
-                        const form = host.querySelector<HTMLFormElement>('form')!;
-                        form.addEventListener('input', () => { dirty = true; });
-                        form.addEventListener('submit', event => { event.preventDefault(); const data = new FormData(form); void run(async () => { await api.businessWorkspace(storeId, `/templates/${item.id}`, 'PUT', { revision: state.revision, enabled: item.supported && data.has('enabled'), subject: data.get('subject'), body: data.get('body') }); dirty = false; }, reload); });
-                        host.querySelector('[data-preview-email]')!.addEventListener('click', () => { const data = new FormData(form), preview = host.querySelector<HTMLElement>('[data-email-preview]')!; const text = (value: unknown) => String(value).replace(/\{\{store\}\}/g, () => state.storeName).replace(/\{\{customer\}\}/g, 'María').replace(/\{\{order\}\}/g, 'PEDIDO-123').replace(/\{\{amount\}\}/g, 'Bs 180,00'); preview.innerHTML = `<small>Ejemplo · no se enviará</small><h3>${esc(text(data.get('subject')))}</h3><p>${esc(text(data.get('body')))}</p>`; preview.hidden = false; });
-                    }
-                    else {
-                        host.innerHTML = `<div class="email-groups ${tab === 'flows' ? 'is-flows' : ''}">${[['transactional', 'Correos transaccionales', 'Acompaña los momentos de cada pedido.'], ['marketing', 'Comunidad y recuperación', 'Invita a tus clientes a volver.']].map(([group, title, description]) => `<section><h2>${title} <span>${state.templates.filter((item: any) => item.group === group).length}</span></h2><p>${description}</p><div>${state.templates.filter((item: any) => item.group === group).map((item: any) => `<button type="button" class="email-template-row" data-template="${item.id}">${icon(item.id === 'GIFT_CARD' ? 'gift' : 'mail')}<span><strong>${esc(item.name)}</strong><small>${esc(item.trigger)}${item.delayHours ? ` · ${item.delayHours} h` : ''}</small>${tab === 'templates' ? `<small>Asunto: ${esc(item.subject)}</small>` : ''}</span><span class="business-badge ${item.enabled && state.emailConfigured ? 'is-ready' : ''}">${!item.supported ? 'Por conectar' : item.enabled ? state.emailConfigured ? 'Activo' : 'Preparado' : 'Desactivado'}</span><span aria-hidden="true">›</span></button>`).join('')}</div></section>`).join('')}</div>`;
-                        host.querySelectorAll<HTMLButtonElement>('[data-template]').forEach(button => button.onclick = () => { editing = button.dataset.template!; renderMail(); });
-                    }
-                }
-                else if (tab === 'staff') {
+                // Correos (the list of every email and both editors) is drawn by the dashboard since 2026-10-13;
+                // this page keeps Equipo, Remitente and Registros.
+                if (tab === 'staff') {
                     host.innerHTML = `<form data-staff-form class="business-edit"><header>${icon('mail')}<div><h2>Notificaciones al equipo</h2><p>Elige quién recibe novedades de esta tienda. Estos destinatarios no obtienen acceso al panel.</p></div></header><label class="business-switch"><input type="checkbox" name="enabled" ${state.staff.enabled ? 'checked' : ''}>Activar notificaciones</label><div data-recipients></div><button type="button" data-add-recipient>+ Añadir destinatario</button><p class="business-help">El resumen semanal se prepara los lunes desde las 08:00, en la zona horaria de la tienda.</p><button class="business-primary" type="submit">Guardar destinatarios</button></form>`;
                     const recipients = structuredClone(state.staff.recipients) as Array<{
                         email: string;
@@ -219,7 +202,7 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                 app.querySelector('[data-integration-category]')!.addEventListener('change', event => { category = (event.target as HTMLSelectElement).value; drawIntegrations(); });
                 app.querySelector('[data-only-connected]')!.addEventListener('change', event => { installed = (event.target as HTMLInputElement).checked; drawIntegrations(); });
                 app.querySelectorAll<HTMLButtonElement>('[data-open-integration]').forEach(button => button.onclick = () => { const item = catalog.find(item => item.id === button.dataset.openIntegration)!; selectedExtension = undefined; if (item.view)
-                    send({ type: 'pagosya:workspace', view: item.view, tab: item.id === 'comeback' ? 'program' : 'templates' });
+                    send({ type: 'pagosya:workspace', view: item.view, tab: item.id === 'comeback' ? 'program' : 'emails' });
                 else if (item.open)
                     void item.open();
                 else if (item.action)

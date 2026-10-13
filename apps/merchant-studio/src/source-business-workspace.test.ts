@@ -54,10 +54,14 @@ beforeEach(() => {
     mocks.workspace.mockResolvedValue({ storeName: 'Tienda A', revision: 2, emailConfigured: true, staff: { enabled: false, recipients: [] }, templates: [{ id: 'SHIPPED', name: 'Pedido enviado', group: 'transactional', trigger: 'Al enviar', supported: true, enabled: false, subject: 'En camino', body: 'Hola {{customer}}' }], logs: { items: [], nextBefore: null } });
 });
 describe('marketing workspaces', () => {
-    it('keeps a failed template draft and blocks navigation during save', async () => {
+    it('no longer draws email templates: Correos lives in the dashboard', async () => {
         await mount('library=marketing&tab=templates');
-        click('[data-template]');
-        input('[name=subject]', 'Mi asunto editado');
+        expect(app.querySelector('[data-template], .email-groups, [data-template-form]')).toBeNull();
+    });
+    it('keeps a failed recipients draft and blocks navigation during save', async () => {
+        await mount('library=marketing&tab=staff');
+        click('[data-add-recipient]');
+        input('[data-recipient-email="0"]', 'equipo@tienda.test');
         let reject!: (error: Error) => void;
         mocks.workspace.mockReturnValueOnce(new Promise((_, no) => { reject = no; }));
         submit('form');
@@ -65,21 +69,27 @@ describe('marketing workspaces', () => {
         expect((app.querySelector('[type=submit]') as HTMLButtonElement).disabled).toBe(true);
         reject(Error('Conflicto de revisión'));
         await vi.waitFor(() => expect(app.textContent).toContain('Conflicto de revisión'));
-        expect((app.querySelector('[name=subject]') as HTMLInputElement).value).toBe('Mi asunto editado');
+        expect((app.querySelector('[data-recipient-email="0"]') as HTMLInputElement).value).toBe('equipo@tienda.test');
         expect((app.querySelector('[type=submit]') as HTMLButtonElement).disabled).toBe(false);
-        expect(mocks.workspace).toHaveBeenLastCalledWith('store-a', '/templates/SHIPPED', 'PUT', expect.objectContaining({ subject: 'Mi asunto editado', revision: 2 }));
+        expect(mocks.workspace).toHaveBeenLastCalledWith('store-a', '/staff', 'PUT', expect.objectContaining({ revision: 2, recipients: [{ email: 'equipo@tienda.test', events: ['NEW_ORDER'] }] }));
     });
-    it('refreshes a conflicted revision without losing the draft before retry', async () => {
-        await mount('library=marketing&tab=templates');
-        click('[data-template]');
-        input('[name=subject]', 'Mi cambio');
+    it('refreshes a conflicted revision without losing the recipients draft before retry', async () => {
+        await mount('library=marketing&tab=staff');
+        click('[data-add-recipient]');
+        input('[data-recipient-email="0"]', 'equipo@tienda.test');
         mocks.workspace.mockRejectedValueOnce(Object.assign(Error('La configuración cambió.'), { status: 409 }));
         mocks.workspace.mockResolvedValueOnce({ revision: 3 });
         submit('form');
         await vi.waitFor(() => expect(app.textContent).toContain('conservamos tu borrador'));
-        expect((app.querySelector('[name=subject]') as HTMLInputElement).value).toBe('Mi cambio');
+        expect((app.querySelector('[data-recipient-email="0"]') as HTMLInputElement).value).toBe('equipo@tienda.test');
         submit('form');
-        await vi.waitFor(() => expect(mocks.workspace).toHaveBeenCalledWith('store-a', '/templates/SHIPPED', 'PUT', expect.objectContaining({ revision: 3, subject: 'Mi cambio' })));
+        await vi.waitFor(() => expect(mocks.workspace).toHaveBeenCalledWith('store-a', '/staff', 'PUT', expect.objectContaining({ revision: 3, recipients: [{ email: 'equipo@tienda.test', events: ['NEW_ORDER'] }] })));
+    });
+    it('sends the email card to the dashboard Correos tab', async () => {
+        const send = vi.spyOn(window.parent, 'postMessage');
+        await mount('library=integrations');
+        click('[data-open-integration=email]');
+        expect(send).toHaveBeenCalledWith({ type: 'pagosya:workspace', view: 'marketing', tab: 'emails', storeId: 'store-a' }, location.origin);
     });
     it('preserves connection drafts through gallery filters and reports actual synchronization', async () => {
         mocks.connections.mockResolvedValue([{ id: 'old', name: 'Inventario anterior', kind: 'POS', lastSyncAt: null }]);
