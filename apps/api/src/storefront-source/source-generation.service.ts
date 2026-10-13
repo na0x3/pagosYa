@@ -74,6 +74,7 @@ import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type 
 import { numbersIn, templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
 import { styleDecision, type StyleDecision } from './source-style-proposal';
+import { SourceReviewRegistry, SOURCE_REVIEW_STATUS, reviewPendingWhere } from './source-background-review';
 import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota, retryProviderRejection } from './source-provider-error';
@@ -237,6 +238,8 @@ export class SourceGenerationService {
   protected stylePickPollMs = 1_000;
   /** How long a picked card's model hero may still land before the build goes on without it. */
   protected pickHeroWaitMs = 15_000;
+  /** Background reviews of this process, by store (spec 2026-10-12): a new request aborts its store's review. */
+  private readonly reviews = new SourceReviewRegistry();
 
   /** Reward credits are a courtesy discount: a failure here must never fail the merchant's generation. */
   private async coverWithRewardCredits(merchantId: string, generationId: string, credits: number) {
@@ -367,6 +370,23 @@ export class SourceGenerationService {
     const aiUsage = this.metering ? await this.prisma.storeAiUsage.findMany({ where: { storeId }, orderBy: { createdAt: 'desc' }, take: 100 }) : [];
     return { aiUsage, models: Object.entries(SOURCE_MODELS).map(([id, model]) => ({ id, label: model.label })), defaultModel: 'auto', defaultMaxCredits: DEFAULT_MAX_CREDITS, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', runs };
   }
+
+  /** Stops the store's background review: the one in this process at once, and one in another API process at its next
+   *  heartbeat or save, which both need its REVIEWING row. Never blocks or fails the caller. True when one ran here. */
+  async cancelReview(storeId: string): Promise<boolean> {
+    const here = this.reviews.cancel(storeId);
+    await Promise.resolve().then(() => this.prisma.storeSourceGeneration.updateMany({ where: { storeId, status: SOURCE_REVIEW_STATUS }, data: { status: 'CANCELLED', completedAt: new Date() } })).catch(() => undefined);
+    return here;
+  }
+
+  /** Studio's «YAPI está puliendo tu tienda…»: a review of this revision with a heartbeat at most 5 minutes old. */
+  async reviewPending(storeId: string, revision: number): Promise<boolean> {
+    if (!revision) return false;
+    return Boolean(await Promise.resolve().then(() => this.prisma.storeSourceGeneration.findFirst({ where: reviewPendingWhere(storeId, revision), select: { id: true } })).catch(() => null));
+  }
+
+  /** Resolves when the store's background review in this process has ended (tests and tools). */
+  reviewSettled(storeId: string): Promise<void> { return this.reviews.settled(storeId); }
 
   async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: called once both cards are planned and choosable, before their heroes finish (spec 2026-10-12). */ onPickable?: (result: StyleProposalResult) => void; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
     execution?.signal?.throwIfAborted();

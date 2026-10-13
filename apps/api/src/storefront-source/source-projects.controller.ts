@@ -110,8 +110,18 @@ export class SourceProjectsController {
 
   @Get()
   @Header("Cache-Control", "private, no-store")
-  state(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Query("before", new ParseIntPipe({ optional: true })) before?: number) {
-    return this.projects.state(merchant.id, storeId, before);
+  async state(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Query("before", new ParseIntPipe({ optional: true })) before?: number) {
+    const state = await this.projects.state(merchant.id, storeId, before);
+    // Spec 2026-10-12: Studio shows «YAPI está puliendo tu tienda…» and polls this every 4 s while it is true.
+    return { ...state, reviewPending: await this.generation.reviewPending(storeId, state.revision) };
+  }
+
+  // Studio stops YAPI's background polish when the merchant starts editing, so the polish never lands over their work.
+  @Post('review/cancel')
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  async cancelReview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string) {
+    await this.projects.current(merchant.id, storeId);
+    return { cancelled: await this.generation.cancelReview(storeId) };
   }
 
   @Patch("file")
