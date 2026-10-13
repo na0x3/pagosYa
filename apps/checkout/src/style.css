@@ -762,6 +762,9 @@ body.payment-page #app {
 .delivery-request-toggle strong { font-size: .8rem; }
 .delivery-request-toggle small { margin-top: 3px; color: #525252; font-size: .64rem; line-height: 1.35; }
 .delivery-request-toggle input { width: 22px; height: 22px; accent-color: var(--debt-ink); }
+.reminder-consent { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .8rem; line-height: 1.35; cursor: pointer; }
+.reminder-consent input { flex: none; width: 18px; height: 18px; accent-color: var(--debt-ink); }
+.reminder-consent:has(input:disabled) { opacity: .55; cursor: default; }
 .delivery-request-fields { padding: 16px 14px 14px; border-top: 2px dashed var(--debt-ink); }
 .delivery-request-fields[hidden] { display: none; }
 .delivery-request-fields .field { margin-bottom: 10px; }

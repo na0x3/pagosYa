@@ -25,6 +25,8 @@ export interface CheckoutSession {
   } | null;
   trackingToken: string | null;
   international?: { available: boolean };
+  /** «Avísame» may be offered: a store-cart payment of a store with cart reminders on. */
+  reminderAvailable?: boolean;
 }
 
 // Callers that need to branch on the API's error code (e.g. to show a
@@ -522,6 +524,8 @@ export interface CustomerContact {
   customerLatitude?: number;
   customerLongitude?: number;
   customerLocationAccuracy?: number;
+  /** «Avísame»: one cart reminder by email if this payment is not completed. */
+  reminderConsent?: boolean;
 }
 
 export async function confirmPaymentIntent(
@@ -550,6 +554,7 @@ export async function confirmPaymentIntent(
       customerLatitude: customer.customerLatitude,
       customerLongitude: customer.customerLongitude,
       customerLocationAccuracy: customer.customerLocationAccuracy,
+      ...(customer.reminderConsent && customerEmail ? { reminderConsent: true } : {}),
       ...(international ?? {}),
       ...(legal ?? {}),
     }),

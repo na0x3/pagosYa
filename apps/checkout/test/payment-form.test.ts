@@ -262,3 +262,57 @@ describe("confirm refusal (merchant over its payment limit)", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("«Avísame» reminder box", () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+  const cart = { storeId: "s1", cart: [{ paymentLinkId: "item_1", name: "Café", quantity: 1, unitAmount: 5000 }] };
+  const type = (id: string, value: string) => { const input = document.querySelector<HTMLInputElement>(id)!; input.value = value; input.dispatchEvent(new Event("input")); };
+
+  it("is offered only for a store cart whose store has reminders on", async () => {
+    mockSession({ metadata: cart, reminderAvailable: false });
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    expect(document.querySelector("#reminderConsent")).toBeNull();
+    mockSession({ metadata: null, reminderAvailable: true });
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    expect(document.querySelector("#reminderConsent")).toBeNull();
+  });
+
+  it("sits under the email, unticked, disabled until there is an email, and unticks when the email is cleared", async () => {
+    mockSession({ metadata: cart, reminderAvailable: true });
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    const box = document.querySelector<HTMLInputElement>("#reminderConsent")!;
+    expect(box.closest(".field")?.querySelector("#customerEmail")).toBeTruthy();
+    expect(box.closest("label")?.textContent).toContain("Avísame por correo si no termino la compra");
+    expect(box.checked).toBe(false); expect(box.disabled).toBe(true);
+    type("#customerEmail", "ana@example.com");
+    expect(box.disabled).toBe(false);
+    box.click(); expect(box.checked).toBe(true);
+    type("#customerEmail", "");
+    expect(box.disabled).toBe(true); expect(box.checked).toBe(false);
+  });
+
+  it("sends reminderConsent with the confirm only when ticked", async () => {
+    const confirmBodies: Record<string, unknown>[] = [];
+    vi.doMock("../src/api", async () => {
+      const actual = await vi.importActual<typeof import("../src/api")>("../src/api");
+      return { ...actual, assetUrl: (p: string | null) => p, fetchSession: vi.fn().mockResolvedValue({
+        id: "pi_1", amount: 5000, currency: "BOB", status: "REQUIRES_PAYMENT_METHOD", description: "Café", merchantName: "Casa Luz",
+        metadata: cart, recipient: null, trackingToken: null, reminderAvailable: true,
+      } satisfies CheckoutSession) };
+    });
+    vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
+      if (String(url).endsWith("/payment_intents/pi_1/confirm")) confirmBodies.push(JSON.parse(String(init?.body)));
+      return Promise.resolve(new Response(JSON.stringify({ statusCode: 500, message: "network down" }), { status: 500 }));
+    }));
+    for (const tick of [false, true]) {
+      await loadCheckout("/?client_secret=pi_1_secret_abc");
+      type("#customerName", "Ana Rojas"); type("#customerEmail", "ana@example.com"); type("#customerPhone", "+591 70000000");
+      if (tick) document.querySelector<HTMLInputElement>("#reminderConsent")!.click();
+      document.querySelector<HTMLButtonElement>("#pay")!.click();
+      await vi.waitFor(() => { if (confirmBodies.length < (tick ? 2 : 1)) throw new Error("not sent yet"); });
+    }
+    expect(confirmBodies[0]).not.toHaveProperty("reminderConsent");
+    expect(confirmBodies[1]).toMatchObject({ customerEmail: "ana@example.com", reminderConsent: true });
+    vi.unstubAllGlobals();
+  });
+});

@@ -12,6 +12,7 @@ import { app } from "../ui/app";
 import { escapeHtml, formatAmount, initials } from "../ui/html";
 import { checkoutRecipientDetails, isStoreCheckout, renderSuccess, contactBlockHtml, backToStoreHtml, renderFailed, closePendingIntlPopup, renderRequiresAction } from "./payment-result";
 import { customerContact, contactFieldErrors, EMAIL_PATTERN, PHONE_PATTERN } from "./customer-contact";
+import { reminderConsentHtml } from "./reminder-consent";
 import { ICON_LOCK, ICON_X } from "../ui/icons";
 
 export const DOMESTIC_METHOD_TYPES: DomesticMethodType[] = [
@@ -121,6 +122,7 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
   const shipping = session.metadata?.shipping as { address?: string } | undefined;
   const confirmedMethod = shipping ? 'delivery' : fulfillment?.method;
   if (state.fulfillmentSessionId !== session.id) {
+    customerContact.reminderConsent = false; // A new payment asks again.
     state.fulfillmentSessionId = session.id;
     if (confirmedMethod === 'delivery' || confirmedMethod === 'pickup') {
       customerContact.deliveryRequested = confirmedMethod === 'delivery';
@@ -166,6 +168,7 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
             <input id="customerEmail" type="email" autocomplete="email" placeholder="tu@gmail.com" value="${escapeHtml(customerContact.email)}" aria-describedby="customerEmailError"${invalid("customerEmail")}${subscriptionCheckout ? " required" : ""} />
             ${subscriptionCheckout ? '<p class="field-hint">Te enviaremos aquí los enlaces de tus próximas entregas.</p>' : ""}
             ${fieldError("customerEmail")}
+            ${reminderConsentHtml(Boolean(session.reminderAvailable), Boolean(customerContact.reminderConsent), customerContact.email)}
           </div>
           <div class="field">
             <label for="customerPhone">Teléfono de contacto</label>
@@ -270,7 +273,15 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
   const deliveryToggle = app.querySelector<HTMLInputElement>("#deliveryRequested");
   const addressInput = app.querySelector<HTMLTextAreaElement>("#deliveryAddress");
   nameInput?.addEventListener("input", () => (customerContact.name = nameInput.value));
-  emailInput?.addEventListener("input", () => (customerContact.email = emailInput.value));
+  const reminderBox = app.querySelector<HTMLInputElement>("#reminderConsent");
+  emailInput?.addEventListener("input", () => {
+    customerContact.email = emailInput.value;
+    // «Avísame» needs an address to write to.
+    if (!reminderBox) return;
+    reminderBox.disabled = !emailInput.value.trim();
+    if (reminderBox.disabled) { reminderBox.checked = false; customerContact.reminderConsent = false; }
+  });
+  reminderBox?.addEventListener("change", () => (customerContact.reminderConsent = reminderBox.checked));
   phoneInput?.addEventListener("input", () => (customerContact.phone = phoneInput.value));
   deliveryToggle?.addEventListener("change", () => {
     customerContact.deliveryRequested = deliveryToggle.checked;
@@ -375,6 +386,7 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
       document: storeCheckout ? customerContact.document : recipient?.document ?? undefined,
       email: storeCheckout ? email : (recipient?.email || email),
       phone: storeCheckout ? phone : recipient?.phone ?? "",
+      ...(storeCheckout && session.reminderAvailable && customerContact.reminderConsent && email ? { reminderConsent: true } : {}),
       ...(storeCheckout && customerContact.deliveryRequested ? {
         deliveryRequested: true,
         deliveryAddress: (customerContact.deliveryAddress || "").trim(),
