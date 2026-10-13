@@ -114,4 +114,9 @@ export class ConfirmPaymentIntentDto {
   @Min(0)
   @Max(100000)
   customerLocationAccuracy?: number;
+
+  @ApiPropertyOptional({ description: "The shopper ticked «Avísame por correo si no termino la compra»: one cart reminder by email if this payment is not completed." })
+  @IsOptional()
+  @IsBoolean()
+  reminderConsent?: boolean;
 }

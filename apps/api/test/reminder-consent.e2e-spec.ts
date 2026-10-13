@@ -73,4 +73,31 @@ describe('«Avísame»: a reminder cart saved from the payment form', () => {
     await recovery(true);
     expect(await db.storeSavedCart.count({ where: { storeId: store.id, email: { in: ['paid@example.com', 'cobro@example.com', 'renewal@example.com', 'spoof@example.com', 'off@example.com'] } } })).toBe(0);
   });
+
+  const confirm = (pi: { id: string; clientSecret: string }, body: Record<string, unknown>) => request(app.getHttpServer()).post(`/v1/payment_intents/${pi.id}/confirm`)
+    .set({ Authorization: `Bearer ${pi.clientSecret}` }).send({ paymentMethod: { type: 'CARD', token: 'tok_visa_decline' }, customerName: 'Bea', customerEmail: 'Bea@Example.com', customerPhone: '+591 70000002', ...body });
+
+  it('tells the payment form when to offer the box', async () => {
+    const session = async (clientSecret: string) => (await request(app.getHttpServer()).post('/v1/checkout/session').send({ clientSecret }).expect(200)).body.reminderAvailable;
+    const pi = await cartPayment();
+    expect(await session(pi.clientSecret)).toBe(true);
+    await recovery(false);
+    expect(await session(pi.clientSecret)).toBe(false);
+    await recovery(true);
+    expect(await session((await cartPayment({ metadata: { storeId: store.id, businessDocument: { documentId: 'd1' } } })).clientSecret)).toBe(false);
+  });
+
+  it('saves the reminder when the shopper ticked it and pressed Pagar, and never fails the payment', async () => {
+    const ticked = await cartPayment();
+    expect((await confirm(ticked, { reminderConsent: true }).expect(201)).body.paymentIntent.status).toBe('FAILED');
+    expect(await db.storeSavedCart.findFirst({ where: { storeId: store.id, email: 'bea@example.com' } })).toMatchObject({ paymentIntentId: ticked.id });
+    await confirm(await cartPayment(), { customerEmail: 'carlos@example.com' }).expect(201);
+    await confirm(await cartPayment(), { customerEmail: 'dora@example.com', reminderConsent: true, paymentMethod: { type: 'CARD', token: 'tok_visa_success' } }).expect(201);
+    expect(await db.storeSavedCart.count({ where: { storeId: store.id, email: { in: ['carlos@example.com', 'dora@example.com'] } } })).toBe(0);
+    const failing = jest.spyOn(service, 'saveCart').mockRejectedValueOnce(new Error('db down'));
+    expect((await confirm(await cartPayment(), { customerEmail: 'eva@example.com', reminderConsent: true }).expect(201)).body.paymentIntent.status).toBe('FAILED');
+    expect(failing).toHaveBeenCalled(); failing.mockRestore();
+    expect(await db.storeSavedCart.count({ where: { storeId: store.id, email: 'eva@example.com' } })).toBe(0);
+    await confirm(await cartPayment(), { reminderConsent: 'yes' }).expect(400);
+  });
 });

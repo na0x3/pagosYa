@@ -1,10 +1,10 @@
 import { BadRequestException } from "@nestjs/common";
 import { PaymentIntentsController } from "./payment-intents.controller";
 
-function setup(documents: unknown = null) {
+function setup(documents: unknown = null, retention?: unknown) {
   const paymentIntents = { confirm: jest.fn().mockResolvedValue({ paymentIntent: {}, railResult: {} }) };
   const terms = { resolveBuyerDocuments: jest.fn().mockResolvedValue(documents) };
-  return { paymentIntents, terms, controller: new PaymentIntentsController(paymentIntents as any, terms as any) };
+  return { paymentIntents, terms, controller: new PaymentIntentsController(paymentIntents as any, terms as any, retention as any) };
 }
 
 const dto = { paymentMethod: { type: "QR", token: "tok_qr" } };
@@ -39,5 +39,30 @@ describe("PaymentIntentsController.confirm", () => {
 
     await expect(controller.confirm("pi_1", { ...dto, buyerTermsVersion: "old" } as any, { headers: {} })).rejects.toThrow(BadRequestException);
     expect(paymentIntents.confirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("PaymentIntentsController.confirm with «Avísame»", () => {
+  const ticked = { ...dto, reminderConsent: true };
+
+  it("saves the reminder cart after a confirm that did not pay, and only when the shopper ticked it", async () => {
+    const retention = { saveCartFromPayment: jest.fn().mockResolvedValue({ saved: true }) };
+    const { controller, paymentIntents } = setup(null, retention);
+    paymentIntents.confirm.mockResolvedValue({ paymentIntent: { id: "pi_1", status: "REQUIRES_ACTION" }, railResult: {} });
+    await controller.confirm("pi_1", dto as any, { headers: {} });
+    expect(retention.saveCartFromPayment).not.toHaveBeenCalled();
+    await controller.confirm("pi_1", ticked as any, { headers: {} });
+    expect(retention.saveCartFromPayment).toHaveBeenCalledWith("pi_1");
+    paymentIntents.confirm.mockResolvedValue({ paymentIntent: { id: "pi_1", status: "SUCCEEDED" }, railResult: {} });
+    await controller.confirm("pi_1", ticked as any, { headers: {} });
+    expect(retention.saveCartFromPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers with the payment even when saving the reminder fails", async () => {
+    const retention = { saveCartFromPayment: jest.fn().mockRejectedValue(new Error("db down")) };
+    const { controller, paymentIntents } = setup(null, retention);
+    const outcome = { paymentIntent: { id: "pi_1", status: "REQUIRES_ACTION" }, railResult: { status: "requires_action" } };
+    paymentIntents.confirm.mockResolvedValue(outcome);
+    await expect(controller.confirm("pi_1", ticked as any, { headers: {} })).resolves.toBe(outcome);
   });
 });

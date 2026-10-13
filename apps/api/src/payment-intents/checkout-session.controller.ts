@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, Optional, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PaymentIntent } from "@prisma/client";
 import { ClientSecretGuard } from "../auth/guards/client-secret.guard";
@@ -6,6 +6,7 @@ import { PublishableApiKeyGuard } from "../auth/guards/publishable-api-key.guard
 import { PaymentIntentsService } from "./payment-intents.service";
 import { CheckoutSessionDto, WidgetSessionDto } from "./dto/checkout-session.dto";
 import { InternationalPaymentsService } from "../international/international-payments.service";
+import { RetentionService } from "../retention/retention.service";
 
 /**
  * Unauthenticated-but-secret-bearing: the checkout iframe has no API key,
@@ -18,6 +19,7 @@ export class CheckoutSessionController {
   constructor(
     private readonly paymentIntents: PaymentIntentsService,
     private readonly international: InternationalPaymentsService,
+    @Optional() private readonly retention?: RetentionService,
   ) {}
 
   @Post("session")
@@ -51,6 +53,8 @@ export class CheckoutSessionController {
       recipient: await this.paymentIntents.checkoutRecipient(intent),
       trackingToken: await this.paymentIntents.trackingTokenForPaymentIntent(intent.id),
       international: { available: await this.international.availableForIntent(intent) },
+      // «Avísame» under the email field: a store-page cart of a store with cart reminders on (the form cannot know).
+      reminderAvailable: intent.status !== "SUCCEEDED" && (await this.retention?.reminderAvailable(intent)) === true,
     };
   }
 

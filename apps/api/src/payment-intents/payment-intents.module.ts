@@ -20,9 +20,10 @@ import { LegalModule } from "../legal/legal.module";
 import { LimitsModule } from "../limits/limits.module";
 import { InboxModule } from "../inbox/inbox.module";
 import { StoreEmailModule } from "../store-emails/store-email.module";
+import { RetentionModule } from "../retention/retention.module";
 
 @Module({
-  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule, RefundsModule, LegalModule, LimitsModule, InboxModule, StoreEmailModule, SettlementModule],
+  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule, RefundsModule, LegalModule, LimitsModule, InboxModule, StoreEmailModule, SettlementModule, RetentionModule],
   controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController, BanecoQrWebhookController, DlocalWebhookController],
   providers: [PaymentIntentsService, DlocalReconciliationWorker],
   exports: [PaymentIntentsService],
