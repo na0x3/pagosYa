@@ -3,6 +3,9 @@ import { EmailWorkspaceService } from './email-workspace.service';
 import { queueStoreEmail, workspaceSender } from './email-workspace.config';
 import { RetentionService } from '../retention/retention.service';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { EmailTemplateDto } from './email-workspace.dto';
 const domains = { create: jest.fn(), remove: jest.fn().mockResolvedValue({}), verify: jest.fn(), get: jest.fn() };
 jest.mock('resend', () => ({ Resend: jest.fn().mockImplementation(() => ({ domains })) }));
 function harness(settings: any = {}, revision = 2) {
@@ -129,5 +132,31 @@ describe('per-store email workspace', () => {
         await retention.save('merchant', 'store-a', { ...DEFAULT_RETENTION, revision: 2, comebackEnabled: true });
         expect(row.settings.emailWorkspace.templates.SHIPPED.enabled).toBe(true);
         expect(row.settings.comebackEnabled).toBe(true);
+    });
+    it('saves the cart reminder wait with its email, and only there', async () => {
+        const { service, row } = harness({ recoveryHours: 24 });
+        await service.template('merchant', 'store-a', 'RECOVERY', { revision: 2, enabled: true, subject: 'Tu carrito', body: 'Vuelve', recoveryHours: 72 });
+        expect(row.settings).toMatchObject({ recoveryEnabled: true, recoveryHours: 72 });
+        await service.template('merchant', 'store-a', 'SHIPPED', { revision: 3, enabled: true, subject: 'Enviado', body: 'Va en camino', recoveryHours: 5 });
+        expect(row.settings.recoveryHours).toBe(72);
+    });
+    it('keeps the stored wait when the reminder is saved without one', async () => {
+        const { service, row } = harness({ recoveryHours: 36 });
+        await service.template('merchant', 'store-a', 'RECOVERY', { revision: 2, enabled: false, subject: 'Tu carrito', body: 'Vuelve' });
+        expect(row.settings).toMatchObject({ recoveryEnabled: false, recoveryHours: 36 });
+    });
+    it('reports the reminder wait in the overview', async () => {
+        const { service } = harness({ recoveryEnabled: true, recoveryHours: 48 });
+        const overview = await service.overview('merchant', 'store-a');
+        expect(overview.templates.find((item: any) => item.id === 'RECOVERY')).toMatchObject({ enabled: true, delayHours: 48 });
+    });
+    it('accepts a reminder wait of 1 to 168 whole hours', async () => {
+        const errors = async (recoveryHours: unknown) => (await validate(plainToInstance(EmailTemplateDto, { revision: 1, enabled: true, subject: 'a', body: 'b', recoveryHours }))).map(error => error.property);
+        expect(await errors(1)).toEqual([]);
+        expect(await errors(168)).toEqual([]);
+        expect(await errors(undefined)).toEqual([]);
+        expect(await errors(0)).toEqual(['recoveryHours']);
+        expect(await errors(169)).toEqual(['recoveryHours']);
+        expect(await errors(2.5)).toEqual(['recoveryHours']);
     });
 });

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 export class EmailTemplateDto {
     @IsInt()
     @Min(0)
@@ -14,6 +14,13 @@ export class EmailTemplateDto {
     @MinLength(1)
     @MaxLength(5000)
     body!: string;
+    /** Carrito abandonado's wait before the reminder. Saved with its email since 2026-10-13, when it
+     *  left the Comeback form; the same `recoveryHours` setting the cart worker reads. */
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(168)
+    recoveryHours?: number;
 }
 class EmailRecipientDto {
     @IsEmail()

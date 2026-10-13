@@ -56,8 +56,11 @@ export class EmailWorkspaceService {
                 settings.welcomeSubject = dto.subject;
                 settings.welcomeBody = dto.body;
             }
-            if (key === 'RECOVERY')
+            if (key === 'RECOVERY') {
                 settings.recoveryEnabled = dto.enabled;
+                if (dto.recoveryHours !== undefined)
+                    settings.recoveryHours = dto.recoveryHours;
+            }
             if (key === 'REVIEW_REQUEST')
                 settings.reviewRequestsEnabled = dto.enabled;
         });
