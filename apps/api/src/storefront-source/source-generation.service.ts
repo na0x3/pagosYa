@@ -55,9 +55,6 @@ const SEP5_CLIENT_TIMEOUT_MS = 900_000;
  *  only sufficed because its model's reasoning fit inside it. The prompt still tells the model to write for
  *  18,000; this is the headroom that keeps a thinking model from truncating the project mid-file. */
 const SEP5_MAX_OUTPUT_TOKENS = 32_000;
-/** The self-review is skipped rather than started when less than this is left of the run: a second whole-project
- *  write takes minutes, and one cut off by the run's own deadline would fail a store that was already good. */
-const SEP5_REVIEW_MIN_MS = 300_000;
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
@@ -74,7 +71,7 @@ import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type 
 import { numbersIn, templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
 import { styleDecision, type StyleDecision } from './source-style-proposal';
-import { SourceReviewRegistry, SOURCE_REVIEW_STATUS, reviewPendingWhere } from './source-background-review';
+import { SourceReviewCancelled, SourceReviewDiscarded, SourceReviewRegistry, SOURCE_REVIEW_HEARTBEAT_MS, SOURCE_REVIEW_LABEL, SOURCE_REVIEW_STATUS, reviewMessage, reviewPendingWhere } from './source-background-review';
 import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota, retryProviderRejection } from './source-provider-error';
@@ -116,7 +113,7 @@ import { PublicStoresService } from "../stores/public-stores.service";
 import { sourcePublicApiUrl, sourceStoreConfigData } from "./source-store-config";
 import { SourceProjectsService } from "./source-projects.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
-import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
+import type { SaveSourceProjectDto, SourceProjectFileDto } from "./dto/save-source-project.dto";
 import { repairCommercePageWiring } from "./commerce-page-wiring";
 
 import { Prisma } from '@prisma/client';
@@ -147,6 +144,10 @@ const outputSchema = {
 
 /** What a proposal-mode generate returns: the run now waits for the merchant to pick a card. */
 export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
+/** One provider call of a run (or of its background review), as the row's attempts record it. */
+export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
+/** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. */
+type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
 /** Credits for the calls that completed: unknown provider usage is never invented or billed, and a free run costs nothing. */
 export function completedCredits(attempts: ReadonlyArray<{ status: string; usage: ReturnType<typeof sourceUsage> }>, maxCredits: number, free: boolean): number {
   const successful = attempts.filter(attempt => attempt.status === 'COMPLETED');
@@ -240,6 +241,7 @@ export class SourceGenerationService {
   protected pickHeroWaitMs = 15_000;
   /** Background reviews of this process, by store (spec 2026-10-12): a new request aborts its store's review. */
   private readonly reviews = new SourceReviewRegistry();
+  protected reviewHeartbeatMs = SOURCE_REVIEW_HEARTBEAT_MS;
 
   /** Reward credits are a courtesy discount: a failure here must never fail the merchant's generation. */
   private async coverWithRewardCredits(merchantId: string, generationId: string, credits: number) {
@@ -756,10 +758,10 @@ export class SourceGenerationService {
     // Sep-5 authors a whole project in one call and averaged 250s over the nine benchmark stores, so the
     // 240s default aborted the run before an average generation finished. apps/api/sep5-run.mjs, which made
     // those measurements, allowed 900s; the port carries that budget rather than the single-call default.
-    // The self-review is a second whole-project write, so it gets a second such budget.
-    const runTimeout = sep5Author ? (sep5SelfReview ? 1_500_000 : 900_000) : agentEngine ? agentRunHeadroom(agentLimits(chatgptPlan).wallMs) : 240_000;
+    // The self-review runs after the save (spec 2026-10-12), on its own budget, so the run keeps the one Sep-5 allowance.
+    const runTimeout = sep5Author ? 900_000 : agentEngine ? agentRunHeadroom(agentLimits(chatgptPlan).wallMs) : 240_000;
     const signal = AbortSignal.any([leaseController.signal, AbortSignal.timeout(runTimeout), ...[execution?.signal, sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
-    const attempts: Array<{ model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> }> = [];
+    const attempts: SourceGenerationAttempt[] = [];
     let sketchFile: SourceProjectFileDto | null = null;
     let creativeSummary: string | undefined;
     let websiteDesignFile: SourceProjectFileDto | null = null;
@@ -870,6 +872,10 @@ export class SourceGenerationService {
       // lenient: a draft the agent could not finish cleanly is still saved when it builds. Design opinions (artwork, edit scope,
       // presentation, visual system, design match) are skipped; compilation, the source contract, uploads and preflight stay.
       let lenient = false;
+      /** Spec 2026-10-12: true while the background review re-runs acceptance after the chat request already finished. */
+      let reviewing = false;
+      /** The Sep-5 self-review, built below and started after revision N is saved. */
+      let sep5Review: Sep5Review | undefined;
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
       // Header controls a static edit covers (2026-10-12: Ramo Ramón's header trapped in an isolated poster, Rampa's own invisible
@@ -896,7 +902,7 @@ export class SourceGenerationService {
           generated.files = markup.files;
           autoRepairs.push(...markup.repairs);
         }
-        await progress?.('validating');
+        if (!reviewing) await progress?.('validating');
         const declaredMotifs = designMotifs(committedDesign ?? previousDesign);
         const motifs = extractSourceMotifs(generated.files, declaredMotifs);
         generated.files = motifs.files;
@@ -1011,9 +1017,10 @@ export class SourceGenerationService {
         const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph, hero: pickedHero, card: pickedCard };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
-        const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {
-          const attempt: (typeof attempts)[number] = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
-          attempts.push(attempt);
+        const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[] } = {}) => {
+          const callSignal = options.signal ?? signal;
+          const attempt: SourceGenerationAttempt = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
+          (options.attempts ?? attempts).push(attempt);
           let body: any = null;
           const callStarted = Date.now();
           try {
@@ -1021,12 +1028,12 @@ export class SourceGenerationService {
             try {
               // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
               // and this one writes the entire store.
-              const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([callSignal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
               body = await response.json().catch(() => null);
             } finally { allocation.settle(body?.usage); }
           } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
-          signal.throwIfAborted();
+          callSignal.throwIfAborted();
           attempt.durationMs = Date.now() - callStarted;
           attempt.usage = sourceUsage(model, body?.usage);
           // A truncated project and a refused one fail identically without these, which is how an "incomplete
@@ -1063,59 +1070,12 @@ export class SourceGenerationService {
         // would reject the designs this path exists to reproduce. The project contract still applies.
         lenient = true;
         try { await acceptCandidate(); } finally { lenient = false; }
-        // Self-review: the author writes blind, never seeing its own CSS render. It is shown the draft once, at
-        // desktop and phone widths, with what the browser measured, and the corrected project replaces the draft
-        // only if it passes the same acceptance. Anything going wrong keeps the draft that already passed.
-        const remaining = started + runTimeout - Date.now();
-        if (sep5SelfReview && remaining > SEP5_REVIEW_MIN_MS) {
-          const draft = { generated, repairs: autoRepairs.length, motifs: motifFiles, preview: acceptedPreviewFiles, unused: unusedImagePaths };
-          let review: (typeof attempts)[number] | undefined;
-          try {
-            await progress?.('validating');
-            // The same config a new store saves with, so the runtime renders the live catalog into the draft.
-            const config = { sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data };
-            const preview = await currentSourceRuntime({ brief: dto.brief, files: [
-              ...acceptedPreviewFiles.filter(file => !['config.js', 'commerce.js'].includes(file.path)),
-              { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
-              { path: 'commerce.js', content: '' },
-            ] } as unknown as SourceProjectSnapshot);
-            const { shots, facts } = await captureSep5Draft(preview, signal);
-            // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
-            const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
-            const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
-            await progress?.('repairing');
-            const reviewPrompt = sep5ReviewPrompt({ ...authorInput, draft: authored.data.files, measured });
-            const reviewed = await sep5Call('review', reviewPrompt, shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, Math.min(SEP5_CLIENT_TIMEOUT_MS, remaining - 60_000));
-            review = reviewed.attempt;
-            const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
-            if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${review.responseStatus || 'sin estado'}${review.incompleteReason ? `: ${review.incompleteReason}` : ''})`);
-            if (result.data.edits.length) {
-              // Edits on the draft the review was shown; one that does not apply cleanly is skipped, never fatal.
-              const edited = applySep5Edits(authored.data.files, result.data.edits);
-              if (edited.skipped.length) autoRepairs.push(`review edits skipped: ${edited.skipped.join('; ').slice(0, 300)}`);
-              if (!sep5ProjectIsUsable(edited.files)) throw new Error('la revisión dejó el proyecto sin catálogo, carrito o estilos');
-              const reviewed = sep5AuthorableFiles(edited.files);
-              if (reviewed.dropped.length) autoRepairs.push(`dropped platform files the review returned: ${reviewed.dropped.join(', ')}`);
-              generated = { label: result.data.label.slice(0, 120) || draft.generated.label, files: reviewed.files };
-              lenient = true;
-              try { await acceptCandidate(); } finally { lenient = false; }
-              autoRepairs.push(...result.data.notes.map(note => `Revisión visual: ${note.slice(0, 200)}`));
-            }
-            review.status = 'COMPLETED';
-            this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
-          } catch (error) {
-            signal.throwIfAborted();
-            generated = draft.generated; autoRepairs.length = draft.repairs; motifFiles = draft.motifs; acceptedPreviewFiles = draft.preview; unusedImagePaths = draft.unused;
-            const reason = ((error as Error)?.message || 'sin respuesta').slice(0, 300);
-            if (review) review.failureReason ??= reason;
-            this.logger.warn(JSON.stringify({ event: 'sep5_self_review_kept_draft', generationId: run.id, reason }));
-          }
-        }
         // The standard pages (Buscar, Nosotros, Contacto, the policies) and the footer slot that links them, on
         // every authored store instead of only when the merchant later asks. Built from the final index.html, so
         // they share its header, footer and stylesheet; a store whose markup declines the surgery keeps without.
-        const pages = withStaticStandardPages(generated.files);
-        if (pages.added.length || pages.refreshed.length || pages.slotAdded) {
+        const addSep5StandardPages = async () => {
+          const pages = withStaticStandardPages(generated.files);
+          if (!pages.added.length && !pages.refreshed.length && !pages.slotAdded) return;
           const before = { generated, repairs: autoRepairs.length, motifs: motifFiles, preview: acceptedPreviewFiles, unused: unusedImagePaths };
           generated = { ...generated, files: pages.files };
           lenient = true;
@@ -1124,7 +1084,45 @@ export class SourceGenerationService {
             generated = before.generated; autoRepairs.length = before.repairs; motifFiles = before.motifs; acceptedPreviewFiles = before.preview; unusedImagePaths = before.unused;
             this.logger.warn(JSON.stringify({ event: 'sep5_standard_pages_declined', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
           } finally { lenient = false; }
+        };
+        // Self-review after the save (spec 2026-10-12 faster generation). The author writes blind, never seeing its own CSS
+        // render; the review is shown the draft once, at desktop and phone widths, with what the browser measured. The draft
+        // that just passed is saved as revision N and shown first; startSep5Review runs this afterwards and saves the corrected
+        // project as N+1 only if it passes the same acceptance and the store is still on N.
+        if (sep5SelfReview) {
+          const draftFiles = authored.data.files, draftPreview = acceptedPreviewFiles;
+          sep5Review = async review => {
+            // The same config a new store saves with, so the runtime renders the live catalog into the draft.
+            const config = { sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data };
+            const preview = await currentSourceRuntime({ brief: dto.brief, files: [
+              ...draftPreview.filter(file => !['config.js', 'commerce.js'].includes(file.path)),
+              { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
+              { path: 'commerce.js', content: '' },
+            ] } as unknown as SourceProjectSnapshot);
+            const { shots, facts } = await captureSep5Draft(preview, review.signal);
+            // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
+            const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
+            const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
+            const reviewed = await sep5Call('review', sep5ReviewPrompt({ ...authorInput, draft: draftFiles, measured }), shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_CLIENT_TIMEOUT_MS, review);
+            const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
+            if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${reviewed.attempt.responseStatus || 'sin estado'}${reviewed.attempt.incompleteReason ? `: ${reviewed.attempt.incompleteReason}` : ''})`);
+            this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
+            // Edits on the draft the review was shown; one that does not apply cleanly is skipped, never fatal.
+            const edited = applySep5Edits(draftFiles, result.data.edits);
+            // Nothing to change, or no edit applied: revision N stays the store and no empty «Revisión de YAPI» is saved.
+            if (edited.files.every((file, index) => file.content === draftFiles[index]?.content)) { reviewed.attempt.status = 'COMPLETED'; return null; }
+            if (!sep5ProjectIsUsable(edited.files)) throw new Error('la revisión dejó el proyecto sin catálogo, carrito o estilos');
+            const kept = sep5AuthorableFiles(edited.files);
+            reviewing = true;
+            generated = { label: result.data.label.slice(0, 120) || generated.label, files: kept.files };
+            lenient = true;
+            try { await acceptCandidate(); } finally { lenient = false; }
+            await addSep5StandardPages();
+            reviewed.attempt.status = 'COMPLETED';
+            return { saveInput: await assembleSave(), notes: result.data.notes };
+          };
         }
+        await addSep5StandardPages();
       } else if (sketchFirst) {
         await progress?.('building');
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
@@ -1570,87 +1568,92 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         }
       }
       }
-    const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
-    if (sectionScope) visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), acceptedDesign);
-    // Carry forward previously bundled assets on an edit, without carrying old private configuration.
-    const previousAssets = retainedAssets;
-    const assetPaths = new Set(assets.map((f) => f.path));
-    assets.push(...previousAssets.filter((f) => !assetPaths.has(f.path)));
-    const previousBrand = (previous?.snapshot as any)?.files?.find((file: SourceProjectFileDto) => file.path === 'brand.css');
-    // Confirmed brand colours win; otherwise a fresh design's drawn colour world becomes the brand tokens.
-    // The rule lives in designBrandCss (tested): confirmed colours, else the drawn world, never a stale drawn block.
-    const tokenCss = designBrandCss({ palette: frame.palette, brandColours: brandHasColours(brand?.data), confirmedCss: brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '', brandRevision: brand?.revision ?? 0, previousBrand: previousBrand?.content });
-    if (useNext) generated.files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(generated.files, sitePurpose)));
-    if (tokenCss) {
-      generated.files = generated.files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);
-      generated.files.push({ path: 'brand.css', content: tokenCss });
-    }
-    if (useNext && !tokenCss) generated.files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
-    const useCommercePages = sitePurpose === 'shop' && (useNext || !previous || generated.files.some(file => file.path === "product.html") && generated.files.some(file => file.path === "checkout.html"));
-    // commerce-pages.css is platform CSS (never authored), so like commerce.js every save takes the kit's current copy:
-    // kept from the first build, kit fixes never reached existing stores (2026-10-12, the checkout row fix).
-    const refreshPagesCss = useCommercePages || useNext || generated.files.some(file => file.path === "commerce-pages.css");
-    if (refreshPagesCss) generated.files = generated.files.filter(file => file.path !== "commerce-pages.css");
-    const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(refreshPagesCss ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
-    const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
-    const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
-    const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
-    let productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
-    // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
-    // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
-    // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
-    let sketchTheme: Record<string, string> | null = null;
-    let sketchAssurances: ReturnType<typeof sanitizeProductAssurances>['items'] = [];
-    if (!agentTheme && sketchFile) {
-      try {
-        const parsedSketch = JSON.parse(sketchFile.content);
-        sketchTheme = { ...productThemeRuntime((await resolveProductTheme(sketchProductTheme(parsedSketch.product))).dna), ...sketchKitDna(parsedSketch) };
-        if (SOURCE_PRODUCT_PAGE_STYLES.includes(parsedSketch.product?.layout)) productPageStyle = parsedSketch.product.layout;
-        sketchAssurances = sanitizeProductAssurances(parsedSketch.product?.assurances).items;
-      } catch { /* a malformed sketch keeps the seeded DNA */ }
-    }
-    // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
-    // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
-    const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
-    const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
-    const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
-      ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
-    // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
-    const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
-    const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
-    const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna };
-    // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
-    const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
-    const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));
-    const runtimeMotifs = sourceMotifConfig(designMotifs(acceptedDesign), acceptedMotifFiles);
-    // The account pages' theme (spec 2026-10-08): what YAPI set this run, otherwise what the store already had.
-    // A freshly drawn account layout wins over the saved one; a kept draw leaves the saved theme (and its CSS) as it is.
-    const accountTheme = agentAccountTheme ?? drawnCommerce.accountTheme ?? normalizeAccountTheme(previousConfig.accountTheme);
-    // The store-wide motif pack: YAPI's choice this run (null removes it), otherwise the one the store had.
-    const motifPack = chosenMotifPack(agentMotifPack, previousConfig.motifPack);
     // Policies YAPI rewrote, merged with Ajustes as it is now (the merchant may have edited another one meanwhile).
     const agentPolicyChange = Object.keys(agentPolicies).length > 0;
-    if (agentPolicyChange) data.policies = mergeAgentPolicies((await this.prisma.store.findUnique({ where: { id: storeId }, select: { policies: true } }))?.policies, agentPolicies);
-    const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
-      // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
-      : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
-      : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
+    /** Everything a save carries besides the model's authored files: kit files, assets, design and visual-system files,
+     *  config.js. Built from `generated` as it is when called: once for revision N, and again by the background review. */
+    const assembleSave = async () => {
+      const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
+      if (sectionScope) visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), acceptedDesign);
+      // Carry forward previously bundled assets on an edit, without carrying old private configuration.
+      const previousAssets = retainedAssets;
+      const assetPaths = new Set(assets.map((f) => f.path));
+      assets.push(...previousAssets.filter((f) => !assetPaths.has(f.path)));
+      const previousBrand = (previous?.snapshot as any)?.files?.find((file: SourceProjectFileDto) => file.path === 'brand.css');
+      // Confirmed brand colours win; otherwise a fresh design's drawn colour world becomes the brand tokens.
+      // The rule lives in designBrandCss (tested): confirmed colours, else the drawn world, never a stale drawn block.
+      const tokenCss = designBrandCss({ palette: frame.palette, brandColours: brandHasColours(brand?.data), confirmedCss: brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '', brandRevision: brand?.revision ?? 0, previousBrand: previousBrand?.content });
+      if (useNext) generated.files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(generated.files, sitePurpose)));
+      if (tokenCss) {
+        generated.files = generated.files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);
+        generated.files.push({ path: 'brand.css', content: tokenCss });
+      }
+      if (useNext && !tokenCss) generated.files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
+      const useCommercePages = sitePurpose === 'shop' && (useNext || !previous || generated.files.some(file => file.path === "product.html") && generated.files.some(file => file.path === "checkout.html"));
+      // commerce-pages.css is platform CSS (never authored), so like commerce.js every save takes the kit's current copy:
+      // kept from the first build, kit fixes never reached existing stores (2026-10-12, the checkout row fix).
+      const refreshPagesCss = useCommercePages || useNext || generated.files.some(file => file.path === "commerce-pages.css");
+      if (refreshPagesCss) generated.files = generated.files.filter(file => file.path !== "commerce-pages.css");
+      const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(refreshPagesCss ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
+      const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
+      const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
+      const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
+      let productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
+      // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
+      // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
+      // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
+      let sketchTheme: Record<string, string> | null = null;
+      let sketchAssurances: ReturnType<typeof sanitizeProductAssurances>['items'] = [];
+      if (!agentTheme && sketchFile) {
+        try {
+          const parsedSketch = JSON.parse(sketchFile.content);
+          sketchTheme = { ...productThemeRuntime((await resolveProductTheme(sketchProductTheme(parsedSketch.product))).dna), ...sketchKitDna(parsedSketch) };
+          if (SOURCE_PRODUCT_PAGE_STYLES.includes(parsedSketch.product?.layout)) productPageStyle = parsedSketch.product.layout;
+          sketchAssurances = sanitizeProductAssurances(parsedSketch.product?.assurances).items;
+        } catch { /* a malformed sketch keeps the seeded DNA */ }
+      }
+      // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
+      // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
+      const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
+      const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
+      const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
+        ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
+      // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
+      const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
+      const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
+      const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna };
+      // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
+      const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
+      const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));
+      const runtimeMotifs = sourceMotifConfig(designMotifs(acceptedDesign), acceptedMotifFiles);
+      // The account pages' theme (spec 2026-10-08): what YAPI set this run, otherwise what the store already had.
+      // A freshly drawn account layout wins over the saved one; a kept draw leaves the saved theme (and its CSS) as it is.
+      const accountTheme = agentAccountTheme ?? drawnCommerce.accountTheme ?? normalizeAccountTheme(previousConfig.accountTheme);
+      // The store-wide motif pack: YAPI's choice this run (null removes it), otherwise the one the store had.
+      const motifPack = chosenMotifPack(agentMotifPack, previousConfig.motifPack);
+      if (agentPolicyChange) data.policies = mergeAgentPolicies((await this.prisma.store.findUnique({ where: { id: storeId }, select: { policies: true } }))?.policies, agentPolicies);
+      const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
+        // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
+        : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
+        : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
+      return { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
+        ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
+        ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
+        ...(sketchFile ? [sketchFile] : []),
+        ...(websiteDesignFile ? [websiteDesignFile] : []),
+        ...(frame.file ? [frame.file] : []),
+        { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
+        { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
+        ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
+        { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
+      ], previousFiles, assetLegend, imageUses, photoFacts))), motion) };
+    };
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
     const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
-    const saveInput = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
-      ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
-      ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
-      ...(sketchFile ? [sketchFile] : []),
-      ...(websiteDesignFile ? [websiteDesignFile] : []),
-      ...(frame.file ? [frame.file] : []),
-      { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
-      { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
-      ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
-      { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
-    ], previousFiles, assetLegend, imageUses, photoFacts))), motion) };
+    const saveInput = await assembleSave();
     signal.throwIfAborted();
     // Validate the assembled result, including final asset rewrites and runtime configuration.
     // Draft evidence alone cannot certify a different saved snapshot.
@@ -1691,6 +1694,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     void this.emailKits?.designAfterSite(storeId);
     // New stores and redesigns get long product pages for products that have none (spec 2026-10-09), in the background.
     if (fillsProductPagesAfterSave(!previous, redesign)) void this.pageWriter?.fillStore(storeId).catch(() => undefined);
+    // The Sep-5 self-review runs after the store is shown (spec 2026-10-12 faster generation) and lands as N+1 if still wanted.
+    if (sep5Review) await this.startSep5Review({ merchantId, storeId, revision: saved.revision, brief: dto.brief, savedFiles: saveInput.files, model, requestedModel: plan.requestedModel, maxCredits, freeRun, review: sep5Review });
     await this.prisma.storeSourceGeneration.updateMany({ where: { storeId, OR: [{ baseRevision: { lte: dto.revision } }, { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60_000) } }] }, data: { checkpoint: Prisma.DbNull } }).catch(() => { this.logger.warn('No se pudieron limpiar los borradores privados antiguos; la revisión ya está guardada.'); });
     receipt.rewardCreditsCovered = freeRun ? 0 : await this.coverWithRewardCredits(merchantId, run.id, credits);
     return { ...saved, generation: receipt, ...(agentOutcome ? { agent: agentOutcome } : {}), ...({} as { candidate?: SourceProjectSnapshot; agent?: typeof agentOutcome }) };
@@ -1705,6 +1710,66 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // would otherwise reach the merchant verbatim. Every exit goes through the gate.
       throw merchantFacingSourceFailure(error);
     } finally { clearInterval(heartbeat); }
+  }
+
+  /**
+   * YAPI's self-review of a Sep-5 store, after revision N is saved and shown (spec 2026-10-12 faster generation, part 2).
+   * It runs in this API process, outside the chat request that saved N, on its own REVIEWING row:
+   * - no lease, so a new request cancels it instead of waiting;
+   * - a heartbeat, which Studio's reviewPending reads;
+   * - the row flips to COMPLETED in the same transaction that saves N+1 «Revisión de YAPI».
+   * The save keeps the optimistic revision check, so a merchant change, template or restore since N discards the result
+   * silently. Credits are charged on the row only when the review's answer is used. Resolves once the row exists.
+   */
+  private async startSep5Review(input: { merchantId: string; storeId: string; revision: number; brief: SaveSourceProjectDto['brief']; savedFiles: SourceProjectFileDto[]; model: SourceModel; requestedModel: string; maxCredits: number; freeRun: boolean; review: Sep5Review }): Promise<void> {
+    const row = await this.prisma.storeSourceGeneration.create({ data: { storeId: input.storeId, baseRevision: input.revision, requestedModel: input.requestedModel, model: input.model, maxCredits: input.maxCredits, status: SOURCE_REVIEW_STATUS } })
+      .catch(error => { this.logger.warn(JSON.stringify({ event: 'sep5_review_not_started', storeId: input.storeId, reason: ((error as Error)?.message || '').slice(0, 300) })); return null; });
+    if (!row) return;
+    // Outside the request's context: its lease fence and progress reporter belong to a chat job that has finished.
+    void this.reviews.start(input.storeId, cancel => sourceRequestContext.exit(async () => {
+      const started = Date.now(), attempts: SourceGenerationAttempt[] = [], lost = new AbortController();
+      const heartbeat = setInterval(() => {
+        void this.prisma.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { heartbeatAt: new Date() } }).then(result => { if (!result.count) lost.abort(); }).catch(() => undefined);
+      }, this.reviewHeartbeatMs);
+      const record = () => ({ attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - started, completedAt: new Date() });
+      try {
+        const signal = AbortSignal.any([cancel, lost.signal, AbortSignal.timeout(SEP5_CLIENT_TIMEOUT_MS)]);
+        const outcome = await input.review({ signal, attempts });
+        signal.throwIfAborted();
+        const credits = completedCredits(attempts, input.maxCredits, input.freeRun);
+        if (!outcome) {
+          await this.prisma.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { status: 'COMPLETED', credits, ...record() } });
+          this.logger.log(JSON.stringify({ event: 'sep5_review_unchanged', generationId: row.id }));
+          return;
+        }
+        // Header controls the review covers, judged against revision N, like an edit: only covers it brings in block.
+        if (this.config.get<boolean>('app.headerClickGate') === true) {
+          let introduced: HeaderCover[] = [];
+          try {
+            const covers = async (files: SourceProjectFileDto[]) => captureHeaderCovers(await currentSourceRuntime({ brief: input.brief, files } as unknown as SourceProjectSnapshot), signal);
+            const saved = await covers(input.savedFiles);
+            introduced = introducedHeaderCovers(await covers(outcome.saveInput.files), saved);
+          } catch (error) {
+            signal.throwIfAborted();
+            this.logger.warn(JSON.stringify({ event: 'header_click_check_failed', generationId: row.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
+          }
+          if (introduced.length) throw new SourceReviewDiscarded(headerCoverProblems(introduced).join(' '));
+        }
+        const saved = await this.projects.save(input.merchantId, input.storeId, { ...outcome.saveInput, revision: input.revision, label: SOURCE_REVIEW_LABEL }, undefined, async tx => {
+          const held = await tx.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { status: 'COMPLETED', revision: input.revision + 1, credits, ...record() } });
+          if (held.count !== 1) throw new SourceReviewCancelled('la revisión se canceló antes de guardarse');
+        });
+        const thread = await this.prisma.storeAgentThread.findUnique({ where: { storeId: input.storeId }, select: { id: true } }).catch(() => null);
+        if (thread) await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: reviewMessage(outcome.notes, outcome.saveInput.label), metadata: { sourceRevision: saved.revision, label: SOURCE_REVIEW_LABEL, review: true } } }).catch(() => undefined);
+        if (credits) await this.coverWithRewardCredits(input.merchantId, row.id, credits);
+        this.logger.log(JSON.stringify({ event: 'sep5_review_saved', generationId: row.id, revision: saved.revision, notes: outcome.notes.length }));
+      } catch (error) {
+        const status = cancel.aborted || lost.signal.aborted || error instanceof SourceReviewCancelled ? 'CANCELLED'
+          : error instanceof ConflictException || error instanceof SourceReviewDiscarded ? 'DISCARDED' : 'FAILED';
+        await this.prisma.storeSourceGeneration.updateMany({ where: { id: row.id, status: { in: [SOURCE_REVIEW_STATUS, 'CANCELLED'] } }, data: { status, credits: 0, ...record() } }).catch(() => undefined);
+        this.logger.warn(JSON.stringify({ event: 'sep5_review_kept_draft', generationId: row.id, status, reason: ((error as Error)?.message || 'sin respuesta').slice(0, 300) }));
+      } finally { clearInterval(heartbeat); }
+    }));
   }
 
   /**
