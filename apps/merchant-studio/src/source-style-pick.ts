@@ -7,7 +7,15 @@ export type StyleCard = { index: number; slot: number; name: string; mode: 'calm
   /** Where account, payment and cart go with this card ("Cuenta: dividida · Pago: ticket · Carrito: hoja"). */
   commerce?: string };
 /** PICKED: the merchant's pick whose build failed; the cards stay, with that card marked, so it can be retried. */
-export type StyleProposalView = { generationId: string; status: 'RUNNING' | 'AWAITING_STYLE' | 'PICKED'; recommended: number; picked?: number; cards: StyleCard[] };
+export type StyleProposalView = { generationId: string; status: 'RUNNING' | 'AWAITING_STYLE' | 'PICKED'; recommended: number; picked?: number;
+  /** RUNNING but choosable: both cards are planned and only their heroes are still being drawn (spec 2026-10-12). */
+  pickable?: boolean; cards: StyleCard[] };
+
+/** Choosable cards keep drawing heroes after the request ended; this bounds a row a crashed worker left running. */
+export const STYLE_POLL_MAX_MS = 360_000;
+export function keepStylePolling(view: StyleProposalView | null, pollingFor: number): boolean {
+  return view?.status === 'RUNNING' && pollingFor < STYLE_POLL_MAX_MS;
+}
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const dots = (palette: string[]) => palette.filter(colour => HEX.test(colour)).map(colour => `<i style="background:${colour}"></i>`).join('');
@@ -44,12 +52,13 @@ export function fitStyleFrames(root: ParentNode): void {
 export function renderStylePicker(view: StyleProposalView | null, state: { open: number | null; device: 'desktop' | 'phone'; storeName: string; busy: boolean }): string {
   const cards = view?.cards ?? [];
   const running = !view || view.status === 'RUNNING';
+  const choosable = Boolean(view) && (!running || view!.pickable === true);
   const open = state.open !== null ? cards.find(card => card.index === state.open && card.html) : undefined;
   if (open) {
     return `<section class="style-pick style-pick--preview" aria-label="${escape(open.name)}">
       <div class="style-preview__stage"><div class="style-preview__toggle" role="group" aria-label="Tamaño"><button type="button" data-style-device="desktop" aria-pressed="${state.device === 'desktop'}">Escritorio</button><button type="button" data-style-device="phone" aria-pressed="${state.device === 'phone'}">Celular</button></div>${frame(open, state.device === 'phone' ? PHONE : DESKTOP)}</div>
       <aside class="style-preview__side"><button type="button" class="link" data-style-close>← Ver los ${cards.length} estilos</button><h2>${escape(open.name)} ${tag(open.mode)}</h2>
-        <div class="style-preview__action"><button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy || running ? 'disabled' : ''}>Usar este estilo</button>${running ? '<small class="style-preview__wait">Podrás elegirlo cuando estén listos todos los estilos.</small>' : ''}</div>
+        <div class="style-preview__action"><button type="button" class="button button--primary" data-style-use="${Number(open.index)}" ${state.busy || !choosable ? 'disabled' : ''}>Usar este estilo</button>${!choosable ? '<small class="style-preview__wait">Podrás elegirlo cuando estén listos todos los estilos.</small>' : ''}</div>
         <h3>Vibe</h3><p>${escape(open.vibe)}</p>
         <h3>Inspiración</h3><ul>${open.inspiration.map(line => `<li>${escape(line)}</li>`).join('')}</ul>
         <h3>Tipografía</h3><p class="style-type"><strong>Aa</strong> ${escape(open.fonts.displayFamily)}<br><span>${escape(state.storeName)}</span> ${escape(open.fonts.textFamily)}</p>
@@ -57,16 +66,16 @@ export function renderStylePicker(view: StyleProposalView | null, state: { open:
       </aside></section>`;
   }
   // A proposal offers two cards, one calm and one bold (spec 2026-10-11 amendment "two cards").
-  const placeholders = running ? Math.max(0, 2 - cards.length) : 0;
+  const placeholders = !choosable ? Math.max(0, 2 - cards.length) : 0;
   const calm = cards.filter(card => card.mode === 'calm').length;
   // The cards actually shown: a lane that failed leaves one.
   const count = calm === 1 && cards.length === 2 ? 'uno tranquilo y uno atrevido' : cards.length === 1 ? '1 estilo' : cards.length ? `${cards.length} estilos` : '';
   const picked = view?.status === 'PICKED' ? cards.find(card => card.index === view.picked) : undefined;
-  const footer = running ? '' : picked
+  const footer = !choosable ? '' : picked
     ? `<footer><button type="button" class="button button--primary" data-style-retry="${Number(picked.index)}" ${state.busy ? 'disabled' : ''}>Reintentar con «${escape(picked.name)}»</button></footer>`
     : `<footer><button type="button" class="button" data-style-auto ${state.busy ? 'disabled' : ''}>Elige tú</button></footer>`;
-  return `<section class="style-pick" aria-label="Elige tu estilo" aria-busy="${running}">
-    <header><h2>${running ? 'Preparando tus estilos…' : picked ? 'Tu estilo quedó elegido' : 'Elige tu estilo'}</h2><p>${picked ? 'La tienda no se terminó de construir. Reintenta con tu estilo o elige otro.' : count ? `${escape(state.storeName)}: ${count}.` : escape(state.storeName)}</p></header>
+  return `<section class="style-pick" aria-label="Elige tu estilo" aria-busy="${!choosable}">
+    <header><h2>${!choosable ? 'Preparando tus estilos…' : picked ? 'Tu estilo quedó elegido' : 'Elige tu estilo'}</h2><p>${picked ? 'La tienda no se terminó de construir. Reintenta con tu estilo o elige otro.' : count ? `${escape(state.storeName)}: ${count}.` : escape(state.storeName)}</p></header>
     <div class="style-grid">${cards.map(card => `<button type="button" class="style-card${card === picked ? ' style-card--picked' : ''}" data-style-card="${Number(card.index)}" ${card === picked ? 'aria-current="true" ' : ''}${card.html ? '' : 'disabled'}>${frame(card, DESKTOP)}<span class="style-card__meta"><strong>${escape(card.name)}</strong>${tag(card.mode)}${card === picked ? '<span class="style-tag style-tag--picked">Elegido</span>' : ''}<small>${escape(card.fonts.displayFamily)} · ${escape(card.fonts.textFamily)}</small><span class="style-dots">${dots(card.palette)}</span>${card.pending ? '<small class="style-card__pending" data-style-pending>Mejorando diseño…</small>' : ''}</span></button>`).join('')}${'<div class="style-card style-card--empty" data-style-placeholder aria-hidden="true"></div>'.repeat(placeholders)}</div>
     ${footer}</section>`;
 }

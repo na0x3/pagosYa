@@ -11,7 +11,7 @@ import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
-import { apiHeroUrls, fitStyleFrames, renderStylePicker, type StyleProposalView } from './source-style-pick';
+import { apiHeroUrls, fitStyleFrames, keepStylePolling, renderStylePicker, type StyleProposalView } from './source-style-pick';
 import { merchantSafeText, merchantMessageText } from './source-merchant-copy';
 import { renderBuildStage, mountBuildStage, type BuildStageState } from './source-build-stage';
 import { mountFace, renderFaceMark } from './source-face';
@@ -81,7 +81,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let productForm: ReturnType<typeof createProductForm> | null = null;
   let buildProgress: BuildProgress | null = null;
   let buildStatus = '';
-  let styleView: StyleProposalView | null = null; let styleOpen: number | null = null; let styleDevice: 'desktop' | 'phone' = 'desktop'; let stylePoll: number | undefined;
+  let styleView: StyleProposalView | null = null; let styleOpen: number | null = null; let styleDevice: 'desktop' | 'phone' = 'desktop'; let stylePoll: number | undefined; let stylePollStarted = 0;
   window.addEventListener('resize', () => fitStyleFrames(app));
   app.addEventListener('click', event => {
     const target = event.target as Node;
@@ -483,13 +483,16 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     // Re-rendering reloads every card iframe, so a poll that brings nothing new leaves them alone.
     const changed = JSON.stringify(next) !== JSON.stringify(styleView);
     styleView = next;
-    // A RUNNING row left by a crashed worker must not keep the poll alive once the build is over.
-    if (styleView?.status !== 'RUNNING' || !building()) stopStylePoll();
+    // Choosable cards keep drawing their heroes after the request ended (spec 2026-10-12), so a running proposal keeps the
+    // poll alive; STYLE_POLL_MAX_MS bounds a row a crashed worker left running.
+    if (styleView?.status === 'RUNNING' && !stylePoll) watchStyleProposal();
+    else if (!keepStylePolling(styleView, Date.now() - stylePollStarted)) stopStylePoll();
     if (changed || showPicker && !app.querySelector('.style-pick')) render();
   }
   function stopStylePoll() { if (stylePoll) { window.clearInterval(stylePoll); stylePoll = undefined; } }
   function watchStyleProposal() {
     if (stylePoll || styleView?.status === 'AWAITING_STYLE') return;
+    stylePollStarted = Date.now();
     stylePoll = window.setInterval(() => void loadStyleProposal(), 1500); void loadStyleProposal(true);
   }
   async function pickStyle(pick: { index?: number; auto?: boolean }) {

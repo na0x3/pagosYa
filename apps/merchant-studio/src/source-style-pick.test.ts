@@ -1,12 +1,34 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { apiHeroUrls, fitStyleFrames, frameScale, heroSrcdoc, renderStylePicker, type StyleProposalView } from './source-style-pick';
+import { apiHeroUrls, fitStyleFrames, frameScale, heroSrcdoc, keepStylePolling, renderStylePicker, STYLE_POLL_MAX_MS, type StyleProposalView } from './source-style-pick';
 
 const card = (index: number, mode: 'calm' | 'bold') => ({ index, slot: index, name: `Estilo ${index}`, mode, vibe: 'Vibra', inspiration: ['Uno', 'Dos', 'Tres'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff', '#111111', '#ff0000', '#eeeeee'], html: '<header data-store-name>Buna</header>', source: 'model' as const });
 const view: StyleProposalView = { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 0, cards: [card(0, 'calm'), card(1, 'bold')] };
 const state = { open: null, device: 'desktop' as const, storeName: 'Café Buna', busy: false };
 
 describe('style picker', () => {
+  // Spec 2026-10-12 faster generation: choosable once both cards are planned, while their heroes are still being drawn.
+  it('lets the merchant choose a card whose hero is still being drawn, once both cards are planned', () => {
+    const choosable: StyleProposalView = { ...view, status: 'RUNNING', pickable: true, cards: [{ ...card(0, 'calm'), source: 'template', pending: true }, card(1, 'bold')] };
+    const grid = renderStylePicker(choosable, state);
+    expect(grid).toContain('Elige tu estilo');
+    expect(grid).not.toContain('Preparando tus estilos…');
+    expect(grid).toContain('data-style-auto');
+    expect(grid).not.toContain('data-style-placeholder');
+    expect(grid).toContain('Mejorando diseño…');
+    const preview = renderStylePicker(choosable, { ...state, open: 0 });
+    expect(preview).toMatch(/data-style-use="0" >/);
+    expect(preview).not.toContain('Podrás elegirlo cuando estén listos todos los estilos.');
+    expect(renderStylePicker(choosable, { ...state, open: 0, busy: true })).toMatch(/data-style-use="0" disabled/);
+  });
+  it('keeps polling a running proposal for at most STYLE_POLL_MAX_MS, and never one that stopped running', () => {
+    const running: StyleProposalView = { ...view, status: 'RUNNING' };
+    expect(keepStylePolling(running, 0)).toBe(true);
+    expect(keepStylePolling(running, STYLE_POLL_MAX_MS - 1)).toBe(true);
+    expect(keepStylePolling(running, STYLE_POLL_MAX_MS)).toBe(false);
+    expect(keepStylePolling(view, 0)).toBe(false);
+    expect(keepStylePolling(null, 0)).toBe(false);
+  });
   it('shows the two cards, one calm and one bold, with mode tags, font names, palette dots and an Elige tú button', () => {
     const html = renderStylePicker(view, state);
     expect(html.match(/data-style-card=/g)).toHaveLength(2);
