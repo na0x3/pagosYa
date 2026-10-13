@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
-import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
+import { sep5AuthorPrompt, sep5CardLook, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { SOURCE_STATIC_ACCOUNT_PAGES, STATIC_STANDARD_PAGE_PATHS, staticAccountGateProblems, withStaticStandardPages } from './source-static-pages';
@@ -605,7 +605,15 @@ export class SourceGenerationService {
     const pickedConcept = picked?.proposal.design?.concepts[picked.index];
     const pickedSlot = pickedConcept?.card ? picked!.proposal.slots[pickedConcept.card.slot] : undefined;
     if (pickedSlot) useSlot(pickedSlot);
-    const pickedHero = picked ? picked.proposal.heroes[picked.index]?.html ?? '' : '';
+    // Only a hero the model finished is kept (spec 2026-10-12): a template hero is a placeholder, so a pick whose hero was still
+    // being drawn, or whose lane failed, builds from the card's design instead.
+    const pickedEntry = picked ? picked.proposal.heroes[picked.index] : null;
+    const pickedHero = pickedEntry?.source === 'model' ? pickedEntry.html : '';
+    const pickedCard = picked && !pickedHero && pickedConcept?.card && pickedSlot ? sep5CardLook({
+      name: pickedConcept.card.name, fonts: { display: pickedConcept.dna?.type?.display ?? 'bricolage', text: pickedConcept.dna?.type?.text ?? 'instrument' },
+      palette: pickedSlot.palette ?? picked.proposal.heroPalettes?.[picked.index] ?? undefined, header: pickedSlot.draw.header, hero: pickedSlot.draw.hero,
+      eyebrow: pickedConcept.story?.eyebrow || undefined, headline: pickedConcept.story?.headline || pickedConcept.name, support: pickedConcept.story?.support || undefined, action: pickedConcept.story?.primaryAction || undefined,
+    }) : '';
     const pickedDesign: SourceDesign | undefined = picked?.proposal.design && pickedConcept ? { ...picked.proposal.design, selected: picked.index, selection: { source: 'forced', rationale: null } } : undefined;
     // Fit complete compositions to actual imagery/catalog. No new suggestions are introduced on local edits.
     const compositionAssets = sourceAssetInventory([...new Map([...previousFiles, ...assets].map(file => [file.path, file])).values()]).map(asset => {
@@ -980,7 +988,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph, hero: pickedHero };
+        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph, hero: pickedHero, card: pickedCard };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number) => {

@@ -56,6 +56,18 @@ export function sep5Products(value: unknown, instruction: string, allowedImages:
 
 /** The style card the merchant picked (spec 2026-10-11): the store keeps this header and hero. */
 export const SEP5_KEEP_HERO = (html: string) => `PICKED HEADER AND HERO: The merchant chose this design from the styles YAPI offered. Keep this header and first screen exactly as given (markup and CSS), move its CSS into styles.css, keep [data-store-name], and build the rest of the store in the same fonts, colours and language. Replace preview-only links with real ones (index.html, buscar.html, the catalog, Mi cuenta with data-pagosya-account="login", the cart button with [data-cart-count]).\n${html}`;
+/** The picked style card when its model hero was not finished (spec 2026-10-12 faster generation): the author draws the
+ *  header and first screen itself in the card's look. The template hero the card showed is a placeholder, never a design. */
+export function sep5CardLook(card: { name: string; fonts: { display: string; text: string }; palette?: { paper: string; ink: string; accent: string; accent2: string }; header?: string; hero?: string; eyebrow?: string; headline: string; support?: string; action?: string }): string {
+  const family = (id: string) => SOURCE_FONT_CATALOG.find(font => font.id === id)?.family ?? id;
+  const words = [card.eyebrow ? `eyebrow "${card.eyebrow}"` : '', `headline "${card.headline}"`, card.support ? `line "${card.support}"` : '', card.action ? `action "${card.action}"` : ''].filter(Boolean).join(', ');
+  return [
+    `PICKED STYLE: The merchant chose the style card «${card.name}». Draw the header and first screen yourself in that card's look: display type ${family(card.fonts.display)}, text ${family(card.fonts.text)}`,
+    card.palette ? `, colours background ${card.palette.paper}, text ${card.palette.ink}, accent ${card.palette.accent}, panels ${card.palette.accent2}` : '',
+    card.header || card.hero ? `, header "${card.header ?? ''}" and hero "${card.hero ?? ''}" as the frame above describes them` : '',
+    `. Open with the card's own words: ${words}. Build the rest of the store in the same fonts, colours and language.`,
+  ].join('');
+}
 
 export function sep5AuthorPrompt(input: {
   brief: unknown; instruction: string; data: unknown; assetLegend: unknown;
@@ -87,6 +99,8 @@ export function sep5AuthorPrompt(input: {
   products?: boolean;
   /** The header and hero of the style card the merchant picked (SEP5_KEEP_HERO, spec 2026-10-11). Absent or blank, the prompt stays byte-identical. */
   hero?: string;
+  /** The picked card's design when its model hero was not finished (sep5CardLook). Absent or blank, the prompt stays byte-identical. */
+  card?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -100,6 +114,7 @@ export function sep5AuthorPrompt(input: {
     ...(input.storeShell ? [input.frame?.trim() ? SEP5_STORE_SHELL_FRAMED : SEP5_STORE_SHELL] : []),
     ...(input.frame?.trim() ? [input.frame.trim()] : []),
     ...(input.hero?.trim() ? [SEP5_KEEP_HERO(input.hero.trim())] : []),
+    ...(input.card?.trim() ? [input.card.trim()] : []),
     ...(input.playbook?.trim() ? [input.playbook.trim()] : []),
     ...(input.products ? [SEP5_PRODUCTS] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),

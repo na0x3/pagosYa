@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
+import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -298,4 +298,20 @@ it('appends the picked header and hero, and stays byte-identical without one', (
   const prompt = sep5AuthorPrompt({ ...base, hero: '<header data-store-name>Buna</header>' });
   expect(prompt).toContain('PICKED HEADER AND HERO');
   expect(prompt).toContain('<header data-store-name>Buna</header>');
+});
+
+// Spec 2026-10-12 faster generation: a pick whose model hero was still being drawn builds from the card's design.
+it('describes the picked card when its hero was not finished, and stays byte-identical without one', () => {
+  const base = { brief: {}, instruction: 'x', data: {}, assetLegend: [] };
+  expect(sep5AuthorPrompt({ ...base, card: '' })).toBe(sep5AuthorPrompt(base));
+  const card = sep5CardLook({ name: 'Barra de barrio', fonts: { display: 'fraunces', text: 'instrument' }, palette: { paper: '#fff8ee', ink: '#1a1a1a', accent: '#d2462b', accent2: '#f3e3cf' }, header: 'wordmark-band', hero: 'poster', eyebrow: 'Hecho en Sopocachi', headline: 'Café para compartir', support: 'Tostado cada mañana.', action: 'Ver menú' });
+  expect(card).toContain('PICKED STYLE: The merchant chose the style card «Barra de barrio»');
+  expect(card).toContain('display type Fraunces, text Instrument Sans');
+  expect(card).toContain('background #fff8ee, text #1a1a1a, accent #d2462b, panels #f3e3cf');
+  expect(card).toContain('header "wordmark-band" and hero "poster"');
+  expect(card).toContain('eyebrow "Hecho en Sopocachi", headline "Café para compartir", line "Tostado cada mañana.", action "Ver menú"');
+  const prompt = sep5AuthorPrompt({ ...base, card });
+  expect(prompt).toContain(card);
+  expect(prompt).not.toContain('PICKED HEADER AND HERO');
+  expect(sep5CardLook({ name: 'Solo texto', fonts: { display: 'fraunces', text: 'instrument' }, headline: 'Hola' })).not.toContain('colours background');
 });
