@@ -91,3 +91,56 @@ describe('the platform header on a Sep-5 store', () => {
     expect(warned('source_header_shape_fallback')).toBe(false);
   });
 });
+
+describe('a showcase store (spec 2026-10-13)', () => {
+  let service: SourceGenerationService, prisma: any, projects: any, fetchMock: jest.SpyInstance;
+  const showcaseFiles = () => [
+    { path: 'index.html', content: shell('<section id="servicios" data-nav-label="Servicios"><h1>Arquitectura</h1><a href="https://cal.com/estudio-deff">Agenda una cita</a></section><section id="proyectos" data-nav-label="Proyectos"><h2>Proyectos</h2></section><p data-pagosya-status role="status" aria-live="polite"></p>') },
+    { path: 'styles.css', content: 'body { color: #222; }' }, { path: 'site.js', content: 'globalThis.__generatedSourceExecuted = true;' },
+  ];
+  const showcaseDto = { ...dto, brief: { ...dto.brief, businessType: 'Estudio de arquitectura', sitePurpose: 'service' }, instruction: 'Crea el sitio de mi estudio de arquitectura' };
+  const saved = () => projects.save.mock.calls[0][2].files as Array<{ path: string; content: string }>;
+  const file = (path: string) => saved().find(entry => entry.path === path)?.content;
+  const authorBody = () => fetchMock.mock.calls.map(call => JSON.parse(call[1].body)).find(body => body.text?.format?.name === 'independent_storefront');
+  beforeEach(() => {
+    ({ service, prisma, projects } = setup());
+    prisma.store.findFirst.mockResolvedValue({ slug: 'deff', onboarding: { version: 1, primaryAction: { kind: 'booking', value: 'https://cal.com/estudio-deff' } } });
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => answer({ label: 'deff', files: showcaseFiles() }));
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('asks the author for a showcase with its booking action and no products', async () => {
+    await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    const body = authorBody();
+    const prompt: string = body.input[0].content[0].text;
+    expect(prompt).toContain('SITE SHELL:');
+    expect(prompt).toContain('SITE PURPOSE OVERRIDE: service');
+    expect(prompt).toContain('<a href="https://cal.com/estudio-deff" target="_blank" rel="noopener">Agenda una cita</a>');
+    expect(prompt).not.toContain('PRODUCTS:');
+    expect(body.text.format.schema.required).toEqual(['label', 'files']);
+  });
+
+  it('saves a showcase with the action in its header and config.js, its contact slot, and only the showcase pages', async () => {
+    const result: any = await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    expect(result.revision).toBe(1);
+    expect(file('index.html')).toContain('data-purpose="showcase"');
+    expect(file('index.html')).toContain('<a class="pyh-action" href="https://cal.com/estudio-deff" target="_blank" rel="noopener">Agenda una cita</a>');
+    expect(file('index.html')).not.toContain('data-cart-open');
+    expect(file('index.html')).toContain('<section data-pagosya-contact hidden></section>');
+    for (const path of ['nosotros.html', 'contacto.html', 'faq.html', 'privacidad.html', 'terminos.html', 'cookies.html', '404.html']) expect(file(path)).toContain('data-purpose="showcase"');
+    for (const path of ['buscar.html', 'colecciones.html', 'envios.html', 'reembolsos.html', 'acceso-ingresar.html', 'cuenta-pedidos.html', 'product.html', 'productos.html', 'coleccion.html', 'checkout.html']) expect(file(path)).toBeUndefined();
+    const config = JSON.parse(file('config.js')!.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+    expect(config).toMatchObject({ sitePurpose: 'service', primaryAction: { kind: 'booking', value: 'https://cal.com/estudio-deff' } });
+  });
+
+  it('falls back to the contact form when the setup answer is unusable', async () => {
+    prisma.store.findFirst.mockResolvedValue({ slug: 'deff', onboarding: { version: 1, primaryAction: { kind: 'booking', value: 'http://inseguro.test' } } });
+    await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    expect(file('index.html')).toContain('<a class="pyh-action" href="contacto.html" data-pagosya-contact-open>Pide una cotización</a>');
+    expect(JSON.parse(file('config.js')!.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]).primaryAction).toEqual({ kind: 'form' });
+  });
+});

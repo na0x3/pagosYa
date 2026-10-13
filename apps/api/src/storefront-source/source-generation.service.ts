@@ -8,6 +8,7 @@ import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATI
 import { sep5AuthorPrompt, sep5CardLook, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
 import { emptySourceHeaders, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSourceHeader } from './source-header';
+import { savedPrimaryAction, sourcePrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { SOURCE_STATIC_ACCOUNT_PAGES, STATIC_STANDARD_PAGE_PATHS, staticAccountGateProblems, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
@@ -521,6 +522,12 @@ export class SourceGenerationService {
     const redesign = !execution?.candidate && (execution?.redesign === true || sourceRedesignRequested(dto.instruction));
     const requestProfile = sourceRequestContext.getStore()?.request.profile || sourceRequestProfile(dto.instruction, Boolean(previous));
     const previousFiles: SourceProjectFileDto[] = (previous?.snapshot as any)?.files || [];
+    // Spec 2026-10-13: a showcase's main action. A saved store keeps the one in its config.js; a new one starts from the setup
+    // form's answer (Store.onboarding.primaryAction), else WhatsApp when the store has a number, else the contact form.
+    const keptAction = savedPrimaryAction(previousFiles);
+    const setupRow = sitePurpose === 'shop' || keptAction !== undefined ? null
+      : await Promise.resolve().then(() => this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } })).catch(() => null);
+    const primaryAction = sitePurpose === 'shop' ? undefined : sourcePrimaryAction(keptAction ?? (setupRow?.onboarding as any)?.primaryAction, (data as { contactPhone?: string | null }).contactPhone);
     // Sep-5 wrote whole static sites, and the static pipeline is what rendered them: the kit supplies the
     // product, checkout and collection pages, the commerce runtime and the static validators. The flag selects
     // that pipeline end to end, so a store comes out as it did before the Next migration rather than being
@@ -894,7 +901,7 @@ export class SourceGenerationService {
       const headerNotes = new Set<string>();
       const platformHeader = (files: SourceProjectFileDto[], platformPages: string[]) => {
         const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
-        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles });
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles });
         if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
         if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
         return result.files;
@@ -948,7 +955,9 @@ export class SourceGenerationService {
           const wiring = repairCommercePageWiring(generated.files);
           generated.files = wiring.files;
           autoRepairs.push(...wiring.repairs);
-          // Spec 2026-10-13: the draft is checked, previewed and reviewed with the platform header drawn, never with an empty slot.
+          // Spec 2026-10-13: the draft is checked, previewed and reviewed with the platform header drawn, never with an empty slot,
+          // and a showcase home always has the contact slot its form action and the publish contract need.
+          if (sitePurpose !== 'shop') generated.files = withShowcaseContactSlot(generated.files);
           generated.files = platformHeader(generated.files, platformSuppliedPages(sitePurpose));
         }
         const validationErrors: string[] = [];
@@ -1033,7 +1042,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: framePlatformHeader(frame.paragraph), hero: pickedHero, card: pickedCard };
+        const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: framePlatformHeader(frame.paragraph), hero: pickedHero, card: pickedCard };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[] } = {}) => {
@@ -1063,19 +1072,20 @@ export class SourceGenerationService {
           await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
           return { attempt, body };
         };
-        const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(true), SEP5_CLIENT_TIMEOUT_MS);
+        const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(sitePurpose === 'shop'), SEP5_CLIENT_TIMEOUT_MS);
         const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
         // Sep-5's own guard. There is deliberately no fallback to the engine here: a store rendered from a
         // plan is the output this path exists to avoid, so a failed author stage fails the generation and the
         // merchant's previous revision stays untouched.
-        if (!authored.success || !sep5ProjectIsUsable(authored.data.files)) {
+        if (!authored.success || !sep5ProjectIsUsable(authored.data.files, sitePurpose)) {
           attempt.failureReason ??= `la respuesta no incluyó un proyecto utilizable (${attempt.responseStatus || 'sin estado'}${attempt.incompleteReason ? `: ${attempt.incompleteReason}` : ''})`;
           this.logger.warn(JSON.stringify({ event: 'sep5_author_unusable', generationId: run.id, status: attempt.responseStatus, reason: attempt.incompleteReason, outputTokens: body?.usage?.output_tokens, reasoningTokens: attempt.reasoningTokens, maxOutputTokens: SEP5_MAX_OUTPUT_TOKENS }));
           throw new BadGatewayException('La generación no devolvió una tienda completa. Vuelve a intentarlo.');
         }
         attempt.status = 'COMPLETED';
         // The products the merchant listed with their prices go to the real catalog; a rejected list never fails the store.
-        const listed = sep5Products(authored.data.products, dto.instruction, ownedUrls);
+        // A showcase sells nothing online: it never creates products, whatever the author returned.
+        const listed: { products: typeof products; note?: string } = sitePurpose === 'shop' ? sep5Products(authored.data.products, dto.instruction, ownedUrls) : { products: [] };
         products = listed.products;
         if (listed.note) autoRepairs.push(listed.note);
         // `motion` says whether the choreography was actually sent, so a store that came out static can be
@@ -1093,7 +1103,7 @@ export class SourceGenerationService {
         // every authored store instead of only when the merchant later asks. Built from the final index.html, so
         // they share its header, footer and stylesheet; a store whose markup declines the surgery keeps without.
         const addSep5StandardPages = async () => {
-          const pages = withStaticStandardPages(generated.files);
+          const pages = withStaticStandardPages(generated.files, sitePurpose);
           if (!pages.added.length && !pages.refreshed.length && !pages.slotAdded) return;
           const before = { generated, repairs: autoRepairs.length, motifs: motifFiles, preview: acceptedPreviewFiles, unused: unusedImagePaths };
           generated = { ...generated, files: pages.files };
@@ -1130,7 +1140,7 @@ export class SourceGenerationService {
             const edited = applySep5Edits(draftFiles, result.data.edits);
             // Nothing to change, or no edit applied: revision N stays the store and no empty «Revisión de YAPI» is saved.
             if (edited.files.every((file, index) => file.content === draftFiles[index]?.content)) { reviewed.attempt.status = 'COMPLETED'; return null; }
-            if (!sep5ProjectIsUsable(edited.files)) throw new Error('la revisión dejó el proyecto sin catálogo, carrito o estilos');
+            if (!sep5ProjectIsUsable(edited.files, sitePurpose)) throw new Error(sitePurpose === 'shop' ? 'la revisión dejó el proyecto sin catálogo, carrito o estilos' : 'la revisión dejó el sitio sin su acción principal o sin estilos');
             const kept = sep5AuthorableFiles(edited.files);
             reviewing = true;
             generated = { label: result.data.label.slice(0, 120) || generated.label, files: kept.files };
@@ -1654,7 +1664,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
         // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
         : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
-        : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
+        : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), ...(primaryAction ? { primaryAction } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
       return { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(platformHeader(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
         ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
         ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),

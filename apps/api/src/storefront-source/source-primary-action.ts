@@ -50,3 +50,20 @@ export function primaryActionLink(action: PrimaryAction): { href: string; label:
     default: return { href: 'contacto.html', label: 'Pide una cotización', attributes: ' data-pagosya-contact-open' };
   }
 }
+
+/** The action a saved store keeps in config.js (`window.PAGOSYA_CONFIG.primaryAction`); undefined when it has none. */
+export function savedPrimaryAction(files: Array<{ path: string; content: string }>): unknown {
+  const match = files.find(file => file.path === 'config.js')?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
+  if (!match) return undefined;
+  try { return (JSON.parse(match[1]) as { primaryAction?: unknown }).primaryAction; } catch { return undefined; }
+}
+
+const CONTACT_SLOT = '<section data-pagosya-contact hidden></section>';
+/** A showcase home needs the platform contact slot (the publish contract and the form action rely on it): added once, never fatal. */
+export function withShowcaseContactSlot<F extends { path: string; content: string; encoding?: string }>(files: F[]): F[] {
+  return files.map(file => {
+    if (file.path !== 'index.html' || file.encoding === 'base64' || /data-pagosya-contact(?:\s|=|>)/.test(file.content)) return file;
+    const at = file.content.lastIndexOf('</main>') >= 0 ? file.content.lastIndexOf('</main>') : file.content.lastIndexOf('</body>');
+    return { ...file, content: at >= 0 ? `${file.content.slice(0, at)}${CONTACT_SLOT}${file.content.slice(at)}` : `${file.content}${CONTACT_SLOT}` };
+  });
+}
