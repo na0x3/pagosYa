@@ -7,6 +7,7 @@ import { escapeHtml as esc } from "/src/html.mjs";
 import { isUnfinishedStore, runWalkthrough, showWalkthroughChoice, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
+import { openStoreBulkDelete } from "/src/store-bulk-delete.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
@@ -436,6 +437,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   let paymentPage = 1;
   const PAYMENT_PAGE_SIZE = 20;
   let lastStores = [];
+  // The ids picked in the stores list while "Seleccionar" is on; null when it is off.
+  let storeSelection = null, visibleStoreIds = [];
   let storeSettings = null;
   let emailStudio = null;
   let settingsTabs = null;
@@ -1471,6 +1474,41 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   }));
 
   document.getElementById("shopifyImportOpen").addEventListener("click", () => openImportedStore());
+  function toggleStoreSelection(id, picked) {
+    if (!storeSelection) return;
+    if (picked) storeSelection.add(id); else storeSelection.delete(id);
+    const row = document.querySelector(`.store-row[data-id="${CSS.escape(id)}"]`);
+    row?.classList.toggle("selected", picked);
+    const box = row?.querySelector(".store-select");
+    if (box) box.checked = picked;
+    syncStoreBulkBar();
+  }
+  function syncStoreBulkBar() {
+    const count = storeSelection?.size ?? 0;
+    const toggle = document.getElementById("storeSelectToggle");
+    toggle.setAttribute("aria-pressed", String(!!storeSelection));
+    // The floating YAPI prompt sits where the selection bar does; selecting is a short, focused task.
+    document.body.classList.toggle("selecting-stores", !!storeSelection);
+    document.getElementById("storeBulkBar").hidden = !storeSelection;
+    document.getElementById("storeBulkCount").textContent = `${count} ${count === 1 ? "seleccionada" : "seleccionadas"}`;
+    document.getElementById("storeBulkDelete").disabled = !count;
+  }
+  const setStoreSelection = value => { storeSelection = value; renderStoreRows(lastStores); };
+  document.getElementById("storeSelectToggle").addEventListener("click", () => setStoreSelection(storeSelection ? null : new Set()));
+  document.getElementById("storeBulkCancel").addEventListener("click", () => setStoreSelection(null));
+  // Only the stores the current search and filter show.
+  document.getElementById("storeSelectAll").addEventListener("click", () => setStoreSelection(new Set([...(storeSelection ?? []), ...visibleStoreIds])));
+  document.getElementById("storeBulkDelete").addEventListener("click", () => {
+    const ids = [...(storeSelection ?? [])];
+    if (!ids.length || (ids.includes(currentStoreId) && !canLeaveMerchantStudio())) return;
+    openStoreBulkDelete({
+      ids,
+      names: new Map(lastStores.map(store => [store.id, store.name])),
+      remove: id => api(`/stores/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      archive: id => api(`/stores/${encodeURIComponent(id)}/archive`, { method: "POST" }),
+      onFinished: async () => { storeSelection = null; await refresh(); },
+    });
+  });
   document.getElementById("storeLibrarySearch").addEventListener("input", () => renderStoreRows(lastStores));
   document.getElementById("storeLibraryStatus").addEventListener("change", () => renderStoreRows(lastStores));
   document.getElementById("sidebarStorePicker").addEventListener("change", async event => {
@@ -2108,13 +2146,17 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     const filter = document.getElementById("storeLibraryStatus").value;
     const statusFor = storePublicationState;
     const visible = stores.filter(store => (!search || store.name.toLocaleLowerCase().includes(search)) && (!filter || statusFor(store) === filter));
+    visibleStoreIds = visible.map(store => store.id);
+    if (storeSelection) storeSelection = new Set([...storeSelection].filter(id => stores.some(store => store.id === id)));
     document.getElementById("storeLibraryCount").textContent = `${visible.length} de ${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}`;
     document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button><button class="store-create-tile" id="openShopifyImport" type="button"><span aria-hidden="true">↧</span><strong>Traer mi tienda de Shopify</strong><small>Productos, fotos y páginas</small></button>` + visible.map(store => {
       const revision = store.sourceProject?.revision || store.publishedSourceRevision;
       const cover = store.bannerUrl || store.heroSlides?.[0]?.imageUrl || store.publicityImageUrl;
       const preview = revision ? `<iframe data-thumbnail-src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
       const state = statusFor(store), stateLabel = { published: "Publicada", draft: "Borrador", archived: "Archivada" }[state];
-      return `<article class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
+      const picked = !!storeSelection?.has(store.id);
+      return `<article class="store-row ${store.id === currentStoreId ? "active" : ""} ${picked ? "selected" : ""}" data-id="${esc(store.id)}">
+        ${storeSelection ? `<input class="store-select" type="checkbox" data-id="${esc(store.id)}" aria-label="Seleccionar ${esc(store.name)}" ${picked ? "checked" : ""}>` : ""}
         <div class="store-card-preview">${preview}</div>
         <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === currentStoreId ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store, onboardingEnabled) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
         ${isUnfinishedStore(store, onboardingEnabled) ? `<button class="primary continue-store store-card-edit" data-id="${esc(store.id)}" type="button">Continuar</button>` : '<span class="store-card-edit">Abrir editor ↗</span>'}
@@ -2125,11 +2167,18 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     document.querySelectorAll(".store-card-menu").forEach(menu => menu.addEventListener("click", event => event.stopPropagation()));
     watchStoreThumbnails();
 
+    document.getElementById("storeRows").classList.toggle("selecting", !!storeSelection);
+    syncStoreBulkBar();
+    document.querySelectorAll(".store-select").forEach(box => {
+      box.addEventListener("click", event => event.stopPropagation());
+      box.addEventListener("change", () => toggleStoreSelection(box.dataset.id, box.checked));
+    });
     document.querySelectorAll(".store-row").forEach((row) => {
       row.setAttribute("tabindex", "0");
-      row.setAttribute("aria-label", `Administrar ${stores.find(store => store.id === row.dataset.id)?.name || "tienda"}`);
+      row.setAttribute("aria-label", `${storeSelection ? "Seleccionar" : "Administrar"} ${stores.find(store => store.id === row.dataset.id)?.name || "tienda"}`);
       row.addEventListener("keydown", event => { if (event.target === row && ["Enter", " "].includes(event.key)) { event.preventDefault(); row.click(); } });
       row.addEventListener("click", async () => {
+        if (storeSelection) { toggleStoreSelection(row.dataset.id, !storeSelection.has(row.dataset.id)); return; }
         const changingStore = row.dataset.id !== currentStoreId;
         if (changingStore && !canLeaveMerchantStudio()) return;
         selectStore(row.dataset.id);

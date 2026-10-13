@@ -127,6 +127,20 @@ body.is-logged-in #storeRows .store-row-name { display: block; margin: 0; font: 
 .store-card-status[data-status="published"] { color: var(--pg-success); }
 .store-card-current { color: var(--pg-accent); }
 .store-card-edit { display: inline-block; margin: 8px 4px; font-size: 12px; font-weight: 600; }
+/* Selecting stores to delete several at once: a checkbox on each card, a bar at the bottom. */
+#storeRows.selecting .store-card-menu, #storeRows.selecting .store-card-edit, #storeRows.selecting .continue-store { visibility: hidden; }
+.store-select { position: absolute; z-index: 3; top: 12px; left: 12px; width: 22px; height: 22px; margin: 0; accent-color: var(--pg-text); cursor: pointer; }
+#storeRows.selecting .store-row.selected .store-card-preview { border-color: var(--pg-text); box-shadow: 0 0 0 2px var(--pg-text); }
+.store-bulk-bar { position: sticky; bottom: 16px; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 24px; padding: 12px 16px; background: var(--pg-surface); border: 1px solid var(--pg-border-strong); border-radius: 12px; box-shadow: var(--bento-shadow-sm); }
+.store-bulk-bar[hidden] { display: none; }
+body.is-logged-in.selecting-stores .workspace-yapi { display: none !important; }
+#storeSelectToggle[aria-pressed="true"] { background: var(--pg-text); border-color: var(--pg-text); color: var(--pg-surface); }
+.store-bulk-bar #storeBulkCount { flex: 1 1 auto; font-weight: 600; }
+.store-bulk-names { max-height: 180px; overflow: auto; margin: 0; padding-left: 20px; }
+.store-bulk-status:empty, #storeBulkDeleteDialog [hidden] { display: none; }
+.store-bulk-skipped { display: grid; gap: 10px; margin: 0 0 12px; padding: 0; list-style: none; }
+.store-bulk-skipped li { display: grid; gap: 2px; padding: 10px 12px; background: var(--pg-error-soft); border-radius: 8px; }
+.store-bulk-skipped span { color: var(--pg-text-muted, var(--pg-text)); font-size: 13px; }
 .store-card-menu { position: relative; }
 .store-card-menu summary { list-style: none; cursor: pointer; padding: 6px; min-width: 30px; }
 .store-card-menu > div { position: absolute; z-index: 5; right: 0; top: 32px; display: grid; width: 185px; padding: 8px; background: var(--pg-surface); border: 1px solid var(--pg-border-strong); border-radius: var(--bento-radius); box-shadow: var(--bento-shadow-sm); }

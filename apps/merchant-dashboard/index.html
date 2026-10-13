@@ -389,7 +389,7 @@
           <h2>Mi tienda</h2>
           <p class="muted" style="margin:4px 0 0">Todos tus negocios en un perfil. Cada tienda conserva su diseño, enlace y catálogo.</p>
         </div>
-        <div class="store-library-tools"><label><span class="sr-only">Buscar tiendas</span><input id="storeLibrarySearch" type="search" placeholder="Buscar tiendas" autocomplete="off"></label><label><span class="sr-only">Estado de las tiendas</span><select id="storeLibraryStatus"><option value="">Todos los estados</option><option value="published">Publicadas</option><option value="draft">Borradores</option><option value="archived">Archivadas</option></select></label><span id="storeLibraryCount" aria-live="polite"></span></div>
+        <div class="store-library-tools"><label><span class="sr-only">Buscar tiendas</span><input id="storeLibrarySearch" type="search" placeholder="Buscar tiendas" autocomplete="off"></label><label><span class="sr-only">Estado de las tiendas</span><select id="storeLibraryStatus"><option value="">Todos los estados</option><option value="published">Publicadas</option><option value="draft">Borradores</option><option value="archived">Archivadas</option></select></label><span id="storeLibraryCount" aria-live="polite"></span><button class="ghost" id="storeSelectToggle" type="button" aria-pressed="false">Seleccionar</button></div>
         <dialog id="createStoreDialog" class="create-store-dialog" aria-labelledby="createStoreTitle">
           <form class="inline" id="createStoreForm">
             <header><h2 id="createStoreTitle">Crea otra tienda</h2><p>Un nuevo espacio para tu negocio, dentro de tu perfil.</p></header>
@@ -448,6 +448,25 @@
           <input id="checkoutOrigin" style="width:220px;display:inline-block" value="http://localhost:5175">
         </p>
         <div class="store-list" id="storeRows"></div>
+        <div class="store-bulk-bar" id="storeBulkBar" role="region" aria-label="Tiendas seleccionadas" hidden>
+          <span id="storeBulkCount" aria-live="polite">0 seleccionadas</span>
+          <button class="ghost" id="storeSelectAll" type="button">Seleccionar todas</button>
+          <button class="ghost" id="storeBulkCancel" type="button">Cancelar</button>
+          <button class="account-delete-confirm" id="storeBulkDelete" type="button" disabled>Eliminar</button>
+        </div>
+        <dialog class="account-delete-dialog" id="storeBulkDeleteDialog" aria-labelledby="storeBulkDeleteTitle">
+          <form id="storeBulkDeleteForm">
+            <div class="account-delete-head"><h2 id="storeBulkDeleteTitle">Eliminar tiendas</h2><button class="account-delete-close" type="button" data-bulk-close aria-label="Cerrar">×</button></div>
+            <div class="account-delete-body">
+              <p id="storeBulkDeleteWarning">Se eliminarán sus productos, fotos y páginas. Esta acción no se puede deshacer.</p>
+              <ul class="store-bulk-names" id="storeBulkDeleteNames"></ul>
+              <label id="storeBulkDeleteWord" for="storeBulkDeleteConfirmation">Escribe ELIMINAR para confirmar<input id="storeBulkDeleteConfirmation" autocomplete="off" spellcheck="false"></label>
+              <p class="store-bulk-status" id="storeBulkDeleteStatus" role="status"></p>
+              <div id="storeBulkDeleteResult" hidden></div>
+            </div>
+            <div class="account-delete-actions"><button class="ghost" type="button" data-bulk-close>Cerrar</button><button class="account-delete-confirm" id="storeBulkDeleteConfirm" type="submit" disabled>Eliminar</button></div>
+          </form>
+        </dialog>
       </div>
     </section>
 
