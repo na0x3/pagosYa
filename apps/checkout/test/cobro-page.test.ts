@@ -70,7 +70,10 @@ describe("the customer's cobro page (/d/:token)", () => {
   });
 
   it("shows the store, the number, the items, the total and the due date", async () => {
-    const fetchMock = await loadCobroPage(openCobro());
+    // The page calls a past due date overdue, so today is pinned before the fixture's 2 October due date.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-29T12:00:00.000Z"));
+    const fetchMock = await loadCobroPage(openCobro()).finally(() => vi.useRealTimers());
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/documents\/public\/tok_1$/);
     const page = document.querySelector("[data-cobro-page]")!;
     expect(page.textContent).toContain("Estudio Illimani");
