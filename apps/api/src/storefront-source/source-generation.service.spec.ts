@@ -193,7 +193,8 @@ describe('Independent source generation',()=>{
   });
   it('steers planning away from recent fingerprints and repairs a colliding chosen DNA in code', async () => {
     const { service, projects } = setup('next');
-    const planned = design(); planned.concepts[0].dna = validDna();
+    // The repair only moves plans without a composition; structured plans keep theirs (next test).
+    const planned = design(); planned.concepts.forEach(concept => { delete concept.composition; }); planned.concepts[0].dna = validDna();
     const taken = dnaFingerprint(validDna());
     projects.recentDesignFingerprints = jest.fn().mockResolvedValue([taken, 'pill|drawer|toast|oswald+instrument']);
     jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
@@ -209,6 +210,20 @@ describe('Independent source generation',()=>{
     expect(configOf(saved).dna).toEqual({ ...dnaRuntimeConfig(savedDna), product: configOf(saved).productPageStyle });
     expect(result.generation.autoRepairs.some((repair: string) => repair.startsWith(`dna: fingerprint ${taken} was used by a recent store`))).toBe(true);
     expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).toContain(JSON.stringify(savedDna.buttons));
+  });
+  it('keeps a structured plan\'s DNA even when its fingerprint was used by a recent store', async () => {
+    const { service, projects } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna();
+    const taken = dnaFingerprint(validDna());
+    projects.recentDesignFingerprints = jest.fn().mockResolvedValue([taken]);
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockResolvedValue(planned);
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    const result = await service.generate('m', 's', input);
+    if ('styleProposal' in result) throw new Error('unexpected style proposal');
+    const saved = projects.save.mock.calls[0][2];
+    const savedDna = JSON.parse(saved.files.find((f: any) => f.path === 'design-direction.json').content).concepts[0].dna;
+    expect(dnaFingerprint(savedDna)).toBe(taken);
+    expect(result.generation.autoRepairs.some((repair: string) => repair.startsWith('dna: fingerprint'))).toBe(false);
   });
   it('plans without memory when the fingerprint lookup fails', async () => {
     const { service, projects } = setup('next');
