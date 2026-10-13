@@ -1,32 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WALKTHROUGH_STEPS, isUnfinishedStore, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
+import { WALKTHROUGH_STEPS, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
-test('seven steps, only the first two required', () => {
-  assert.deepEqual(WALKTHROUGH_STEPS.map(s => s.id), ['name', 'what', 'logo', 'photos', 'products', 'story', 'contact']);
-  assert.deepEqual(WALKTHROUGH_STEPS.filter(s => !s.optional).map(s => s.id), ['name', 'what']);
+test('eight steps; name, what and the sell question are required', () => {
+  assert.deepEqual(WALKTHROUGH_STEPS.map(s => s.id), ['name', 'what', 'sell', 'logo', 'photos', 'products', 'story', 'contact']);
+  assert.deepEqual(WALKTHROUGH_STEPS.filter(s => !s.optional).map(s => s.id), ['name', 'what', 'sell']);
+  assert.equal(WALKTHROUGH_STEPS[2].title, '¿Vas a vender en línea?');
 });
 
 test('cannot advance a required step while empty; optional steps can be skipped', () => {
   assert.equal(nextState(start, { type: 'next' }).error, 'Escribe el nombre de tu negocio.');
   const named = nextState(nextState(start, { type: 'field', name: 'name', value: 'Café Buna' }), { type: 'next' });
   assert.equal(named.step, 1);
-  assert.equal(nextState({ ...named, step: 2 }, { type: 'skip' }).step, 3);
+  assert.equal(nextState({ ...named, step: 3 }, { type: 'skip' }).step, 4);
   assert.equal(nextState(start, { type: 'skip' }).step, 0);
   assert.equal(nextState(named, { type: 'back' }).step, 0);
 });
 
 test('one question per screen with progress, Atrás, Siguiente and Saltar only when optional', () => {
-  const html = walkthroughView({ ...start, step: 2, values: { name: 'Café Buna' } });
-  assert.match(html, /aria-valuenow="3"/);
+  const html = walkthroughView({ ...start, step: 3, values: { name: 'Café Buna' } });
+  assert.match(html, /aria-valuenow="4"/);
   assert.match(html, /Saltar/);
   assert.match(html, /No tengo, YAPI te hace uno/);
   assert.doesNotMatch(walkthroughView(start), /Saltar/);
   assert.match(walkthroughView(start), /¿Vienes de Shopify\?/);
-  assert.match(walkthroughView({ ...start, step: 6 }), /Crear mi tienda/);
+  assert.match(walkthroughView({ ...start, step: 7 }), /Crear mi tienda/);
   assert.doesNotMatch(walkthroughView({ ...start, values: { name: '"><img src=x>' } }), /<img src=x>/);
 });
 
@@ -65,7 +66,7 @@ async function drive(step, { fail = () => false, uploadFail = () => false } = {}
 const posts = (calls, suffix) => calls.filter(c => c.method === 'POST' && c.path.endsWith(suffix));
 
 test('products are created once, across Atrás/Siguiente and after a partial failure', async () => {
-  const w = await drive(4);
+  const w = await drive(5);
   await w.type('p0-name', 'Café'); await w.type('p0-price', '45'); await w.type('p1-name', 'Taza'); await w.type('p1-price', '30');
   await w.submit(); await w.back(); await w.submit();
   assert.equal(posts(w.calls, '/payment_links').length, 2);
@@ -78,7 +79,7 @@ test('products are created once, across Atrás/Siguiente and after a partial fai
   assert.equal(w.calls.filter(c => c.method === 'PATCH' && c.path.includes('/payment_links/')).length, 1);
 
   let failRow2 = true;
-  const f = await drive(4, { fail: c => failRow2 && c.body?.name === 'Taza' });
+  const f = await drive(5, { fail: c => failRow2 && c.body?.name === 'Taza' });
   await f.type('p0-name', 'Café'); await f.type('p0-price', '45'); await f.type('p1-name', 'Taza'); await f.type('p1-price', '30');
   await f.submit();
   assert.match(f.root.innerHTML, /No pudimos guardar/);
@@ -88,7 +89,7 @@ test('products are created once, across Atrás/Siguiente and after a partial fai
 
 test('the chat job is posted before the store is finished, with one requestId across retries', async () => {
   let failJob = true;
-  const w = await drive(6, { fail: c => failJob && c.path.endsWith('/chat-jobs') });
+  const w = await drive(7, { fail: c => failJob && c.path.endsWith('/chat-jobs') });
   await w.type('whatsapp', '+59170000000');
   await w.submit();
   assert.equal(w.calls.some(c => c.body?.finished), false);
@@ -98,12 +99,13 @@ test('the chat job is posted before the store is finished, with one requestId ac
   const job = posts(w.calls, '/chat-jobs')[0].body;
   assert.equal(job.instruction, 'BRIEF');
   assert.ok(job.requestId);
+  assert.equal('sitePurpose' in job, false);
   assert.equal(w.done(), 's1');
 });
 
 test('a failing finish PATCH is retried alone and never re-posts the job', async () => {
   let failFinish = true;
-  const w = await drive(6, { fail: c => failFinish && c.body?.finished });
+  const w = await drive(7, { fail: c => failFinish && c.body?.finished });
   await w.submit();
   assert.match(w.root.innerHTML, /No pudimos guardar/);
   assert.equal(w.done(), null);
@@ -116,7 +118,7 @@ const image = name => ({ name, type: 'image/jpeg' });
 
 test('dropping photos keeps image files only, shows them before Siguiente, and survives a failed upload', async () => {
   let failOnce = true;
-  const w = await drive(3, { uploadFail: () => (failOnce ? ((failOnce = false), true) : false) });
+  const w = await drive(4, { uploadFail: () => (failOnce ? ((failOnce = false), true) : false) });
   assert.equal(w.drop('dragover', []).prevented, true);
   const dropped = w.drop('drop', [image('tienda.jpg'), { name: 'menu.pdf', type: 'application/pdf' }, image('equipo.jpg')]);
   assert.equal(dropped.prevented, true);
@@ -130,7 +132,7 @@ test('dropping photos keeps image files only, shows them before Siguiente, and s
 });
 
 test('photos picked with the file input show at once; at most 20 are kept', async () => {
-  const w = await drive(3);
+  const w = await drive(4);
   w.pick('photos', [image('a.jpg')]);
   assert.match(w.root.innerHTML, /a\.jpg/);
   w.drop('drop', Array.from({ length: 25 }, (_, i) => image(`d${i}.jpg`)));
@@ -140,12 +142,12 @@ test('photos picked with the file input show at once; at most 20 are kept', asyn
 });
 
 test('a dropped logo is used on the logo step; a drop on another step is only blocked', async () => {
-  const w = await drive(2);
+  const w = await drive(3);
   w.drop('drop', [image('logo.png')]);
   assert.match(w.root.innerHTML, /logo\.png/);
   await w.submit();
   assert.ok(w.calls.some(c => c.body?.logoUrl === '/v1/uploads/logo.png'));
-  const s = await drive(5);
+  const s = await drive(6);
   assert.equal(s.drop('drop', [image('x.jpg')]).prevented, true);
   assert.doesNotMatch(s.root.innerHTML, /x\.jpg/);
 });
@@ -229,7 +231,7 @@ test('list badge: not for archived stores or with the walkthrough disabled', () 
 });
 
 test('resuming with only {step} and skipping photos and contact sends no photos or contact keys', async () => {
-  const d = await drive(4);
+  const d = await drive(5);
   await d.submit(); // products step, nothing typed
   await d.submit(); // story step
   await d.submit(); // contact step: nothing typed
@@ -239,8 +241,66 @@ test('resuming with only {step} and skipping photos and contact sends no photos 
 });
 
 test('resuming at the photos step and skipping it sends no photos key', async () => {
-  const d = await drive(3);
+  const d = await drive(4);
   await d.submit();
   const c = d.calls.filter(x => x.method === 'PATCH' && x.body);
   assert.ok(c.length && c.every(x => !('photos' in x.body)));
+});
+
+test('the sell screen arrives answered by a local guess on the description, and Siguiente keeps it (spec 2026-10-13)', () => {
+  assert.equal(guessSitePurpose('Estudio de arquitectura y diseño de interiores'), 'showcase');
+  for (const what of ['Consultora contable en La Paz', 'Clínica dental', 'Abogados laborales', 'Fotógrafa de bodas', 'Servicios profesionales de ingeniería']) assert.equal(guessSitePurpose(what), 'showcase', what);
+  for (const what of ['Café de especialidad tostado en Sopocachi', 'Ropa de bebé', '', undefined]) assert.equal(guessSitePurpose(what), 'shop', String(what));
+  const html = walkthroughView({ ...start, step: 2, values: { what: 'Clínica dental' } });
+  assert.match(html, /Sí, quiero vender/);
+  assert.match(html, /No, solo mostrar mi negocio/);
+  assert.match(html, /value="showcase" checked/);
+  assert.match(walkthroughView({ ...start, step: 2, values: { what: 'Clínica dental', sell: 'shop' } }), /value="shop" checked/);
+  const moved = nextState({ ...start, step: 2, values: { what: 'Clínica dental' } }, { type: 'next' });
+  assert.equal(moved.values.sell, 'showcase');
+  assert.equal(moved.step, 3);
+});
+
+test('a showcase passes over «Agrega hasta 5 productos» both ways; a shop does not', () => {
+  const showcase = { ...start, values: { sell: 'showcase' } };
+  assert.equal(nextState({ ...showcase, step: 4 }, { type: 'next' }).step, 6);
+  assert.equal(nextState({ ...showcase, step: 4 }, { type: 'skip' }).step, 6);
+  assert.equal(nextState({ ...showcase, step: 6 }, { type: 'back' }).step, 4);
+  assert.equal(nextState({ ...start, values: { sell: 'shop' }, step: 4 }, { type: 'next' }).step, 5);
+});
+
+test('a showcase chooses what its main button does: WhatsApp with a number, else the form; a booking link needs https', () => {
+  const contact = { ...start, step: 7, values: { sell: 'showcase' } };
+  assert.match(walkthroughView(contact), /¿Qué hace el botón principal\?/);
+  for (const label of ['WhatsApp', 'Formulario de contacto', 'Enlace de reservas', 'Llamada']) assert.match(walkthroughView(contact), new RegExp(label));
+  assert.match(walkthroughView(contact), /value="form" checked/);
+  assert.match(walkthroughView({ ...contact, values: { sell: 'showcase', whatsapp: '+591 70000000' } }), /value="whatsapp" checked/);
+  assert.match(walkthroughView({ ...contact, values: { sell: 'showcase', action: 'booking' } }), /name="booking"/);
+  assert.doesNotMatch(walkthroughView({ ...contact, values: { sell: 'shop' } }), /botón principal/);
+  assert.deepEqual(mainAction({ whatsapp: '+591 70000000' }), { kind: 'whatsapp', value: '+591 70000000' });
+  assert.deepEqual(mainAction({}), { kind: 'form' });
+  assert.match(nextState({ ...contact, values: { sell: 'showcase', action: 'booking', booking: 'http://cal.com/x' } }, { type: 'next' }).error, /https:\/\//);
+  assert.match(nextState({ ...contact, values: { sell: 'showcase', action: 'phone', phone: '12' } }, { type: 'next' }).error, /número/);
+  assert.equal(nextState({ ...contact, values: { sell: 'showcase', action: 'booking', booking: 'https://cal.com/deff' } }, { type: 'next' }).error, null);
+});
+
+test('a showcase skips products, saves its main action and builds as a service site', async () => {
+  const w = await drive(2);
+  await w.type('sell', 'showcase');
+  await w.submit(); // sell → logo
+  await w.submit(); // logo → photos
+  await w.submit(); // photos → story (products passed over)
+  await w.submit(); // story → contact
+  await w.type('action', 'booking');
+  await w.submit();
+  assert.match(w.root.innerHTML, /Escribe el enlace de reservas completo/);
+  await w.type('booking', 'https://cal.com/deff');
+  await w.submit();
+  const patches = w.calls.filter(c => c.method === 'PATCH' && c.path === '/stores/s1/onboarding').map(c => c.body);
+  assert.deepEqual(patches[0], { step: 3, done: ['sell'], purpose: 'showcase' });
+  assert.equal(patches.find(b => b.done?.includes('photos')).step, 6);
+  assert.equal(posts(w.calls, '/payment_links').length, 0);
+  assert.deepEqual(patches.find(b => b.brief).primaryAction, { kind: 'booking', value: 'https://cal.com/deff' });
+  assert.equal(posts(w.calls, '/chat-jobs')[0].body.sitePurpose, 'service');
+  assert.equal(w.done(), 's1');
 });

@@ -4,6 +4,7 @@ import { escapeHtml } from './html.mjs';
 export const WALKTHROUGH_STEPS = [
   { id: 'name', title: '¿Cómo se llama tu negocio?', optional: false },
   { id: 'what', title: '¿Qué vendes o a qué te dedicas?', optional: false },
+  { id: 'sell', title: '¿Vas a vender en línea?', optional: false },
   { id: 'logo', title: '¿Tienes logo?', optional: true },
   { id: 'photos', title: 'Sube fotos de tu negocio', optional: true },
   { id: 'products', title: 'Agrega hasta 5 productos', optional: true },
@@ -13,14 +14,54 @@ export const WALKTHROUGH_STEPS = [
 const REQUIRED = { name: 'Escribe el nombre de tu negocio.', what: 'Cuéntanos en una frase qué vendes.' };
 const LAST = WALKTHROUGH_STEPS.length - 1;
 
+// A showcase (spec 2026-10-13) shows a business instead of selling online. These words in «¿Qué vendes o a qué te dedicas?»
+// pre-select «No, solo mostrar mi negocio»: a local guess, never a model call, and the merchant confirms it on the next screen.
+const SHOWCASE_WORDS = [/\barquitect/, /\bconsultor/, /\bclinica/, /\babogad/, /\bfotograf/, /\bestudio de\b/, /\bdiseno de interiores\b/, /\bservicios profesionales\b/, /\bodontolog/, /\bdentist/, /\bpsicolog/, /\bcontador/, /\bnotari/, /\basesor/, /\bagencia de\b/];
+export function guessSitePurpose(what) {
+  const text = String(what || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return SHOWCASE_WORDS.some(word => word.test(text)) ? 'showcase' : 'shop';
+}
+
+// What «¿Qué hace el botón principal?» saves. WhatsApp uses the number field above it; with nothing chosen, WhatsApp when a
+// number is given, otherwise the contact form.
+export function mainAction(values) {
+  const digits = String(values.whatsapp || '').replace(/\D/g, '');
+  const kind = values.action || (digits.length >= 7 ? 'whatsapp' : 'form');
+  if (kind === 'whatsapp') return { kind, value: String(values.whatsapp || '').trim() };
+  if (kind === 'booking') return { kind, value: String(values.booking || '').trim() };
+  if (kind === 'phone') return { kind, value: String(values.phone || '').trim() };
+  return { kind: 'form' };
+}
+
+function actionProblem(step, values) {
+  if (step.id !== 'contact' || values.sell !== 'showcase') return null;
+  const action = mainAction(values);
+  const digits = String(action.value || '').replace(/\D/g, '').length;
+  if (action.kind === 'whatsapp' && digits < 7) return 'Escribe tu número de WhatsApp o elige otro botón.';
+  if (action.kind === 'phone' && digits < 7) return 'Escribe el número al que te llaman.';
+  if (action.kind === 'booking' && !/^https:\/\/[^\s/]+\.[^\s]+$/i.test(action.value)) return 'Escribe el enlace de reservas completo, empezando con https://';
+  return null;
+}
+
+// «Agrega hasta 5 productos» is passed over, both ways, once the merchant said they will not sell online.
+const move = (from, by, values) => {
+  let to = Math.min(LAST, Math.max(0, from + by));
+  if (WALKTHROUGH_STEPS[to].id === 'products' && values.sell === 'showcase') to = Math.min(LAST, Math.max(0, to + by));
+  return to;
+};
+
 export function nextState(state, action) {
   const step = WALKTHROUGH_STEPS[state.step];
   if (action.type === 'field') return { ...state, error: null, values: { ...state.values, [action.name]: action.value } };
-  if (action.type === 'back') return { ...state, error: null, step: Math.max(0, state.step - 1) };
-  if (action.type === 'skip') return step.optional ? { ...state, error: null, step: Math.min(LAST, state.step + 1) } : state;
+  if (action.type === 'back') return { ...state, error: null, step: move(state.step, -1, state.values) };
+  if (action.type === 'skip') return step.optional ? { ...state, error: null, step: move(state.step, 1, state.values) } : state;
   if (action.type === 'next') {
-    if (!step.optional && !String(state.values[step.id] || '').trim()) return { ...state, error: REQUIRED[step.id] };
-    return { ...state, error: null, step: Math.min(LAST, state.step + 1) };
+    // The sell screen arrives answered with the guess; Siguiente without touching it keeps the guess.
+    const values = step.id === 'sell' && !state.values.sell ? { ...state.values, sell: guessSitePurpose(state.values.what) } : state.values;
+    if (!step.optional && !String(values[step.id] || '').trim()) return { ...state, error: REQUIRED[step.id] };
+    const problem = actionProblem(step, values);
+    if (problem) return { ...state, error: problem };
+    return { ...state, values, error: null, step: move(state.step, 1, values) };
   }
   return state;
 }
@@ -47,7 +88,18 @@ const field = (step, values, pending = {}) => {
     case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${(values.photos || []).map(url => `<img src="${escapeHtml(url)}" alt="">`).join('')}${pendingView(pending.photos)}</div>`;
     case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product"><input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
     case 'story': return `<textarea class="wt-input" name="story" maxlength="1200" rows="5" placeholder="Desde cuándo, dónde y qué hace único a tu negocio">${v('story')}</textarea>`;
-    case 'contact': return `<input class="wt-input" name="whatsapp" inputmode="tel" placeholder="WhatsApp: +591 70000000" value="${v('whatsapp')}"><input class="wt-input" name="city" placeholder="Ciudad" value="${v('city')}">`;
+    case 'sell': {
+      const chosen = values.sell || guessSitePurpose(values.what);
+      const option = (value, label) => `<label class="wt-choice"><input type="radio" name="sell" value="${value}" ${chosen === value ? 'checked' : ''}> ${label}</label>`;
+      return `<div class="wt-choices" role="radiogroup" aria-label="¿Vas a vender en línea?">${option('shop', 'Sí, quiero vender')}${option('showcase', 'No, solo mostrar mi negocio')}</div><p class="wt-aside">Sin ventas en línea tu sitio no tiene carrito ni productos: muestra tu negocio y lleva a tus clientes a contactarte.</p>`;
+    }
+    case 'contact': {
+      const base = `<input class="wt-input" name="whatsapp" inputmode="tel" placeholder="WhatsApp: +591 70000000" value="${v('whatsapp')}"><input class="wt-input" name="city" placeholder="Ciudad" value="${v('city')}">`;
+      if (values.sell !== 'showcase') return base;
+      const chosen = mainAction(values).kind;
+      const option = (kind, label) => `<label class="wt-choice"><input type="radio" name="action" value="${kind}" ${chosen === kind ? 'checked' : ''}> ${label}</label>`;
+      return `${base}<fieldset class="wt-choices"><legend>¿Qué hace el botón principal?</legend>${option('whatsapp', 'WhatsApp')}${option('form', 'Formulario de contacto')}${option('booking', 'Enlace de reservas')}${option('phone', 'Llamada')}</fieldset>${chosen === 'booking' ? `<input class="wt-input" name="booking" inputmode="url" placeholder="https://tu-agenda.com/tu-negocio" value="${v('booking')}">` : ''}${chosen === 'phone' ? `<input class="wt-input" name="phone" inputmode="tel" placeholder="Teléfono: +591 2 2000000" value="${v('phone')}">` : ''}`;
+    }
     default: return '';
   }
 };
@@ -109,7 +161,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
   const resume = resumeStore !== undefined ? { store: resumeStore } : await api('/stores/onboarding').catch(() => ({ store: null }));
   const saved = resume.store?.onboarding;
   let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [] } },
-    ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city } } : {}) };
+    ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city, sell: saved?.purpose, action: saved?.primaryAction?.kind, booking: saved?.primaryAction?.kind === 'booking' ? saved.primaryAction.value : undefined, phone: saved?.primaryAction?.kind === 'phone' ? saved.primaryAction.value : undefined } } : {}) };
   const paint = () => { root.innerHTML = walkthroughView(state); root.querySelector('[autofocus]')?.focus(); };
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
   // Per run: product rows already created (index -> { id, name, amount }), and the one chat-job id, so retries never duplicate.
@@ -138,9 +190,10 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     state = { ...state, pending: { ...state.pending, [name]: [] } };
   }
 
-  async function save(skipped, picked) {
+  // `next` is the step the merchant lands on, which passes over products for a showcase.
+  async function save(skipped, picked, next) {
     const id = WALKTHROUGH_STEPS[state.step].id;
-    const mark = { step: state.step + 1, ...(skipped ? { skipped: [id] } : { done: [id] }) };
+    const mark = { step: next, ...(skipped ? { skipped: [id] } : { done: [id] }) };
     if (id === 'name' && !state.storeId) {
       const store = await api('/stores', { method: 'POST', body: JSON.stringify({ name: state.values.name.trim() }) });
       state = { ...state, storeId: store.id };
@@ -148,6 +201,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     }
     if (skipped) return patch(mark);
     if (id === 'what') return patch({ ...mark, what: state.values.what });
+    if (id === 'sell') return patch({ ...mark, purpose: state.values.sell });
     if (id === 'logo' && picked.logo[0]) { await api(`/stores/${state.storeId}`, { method: 'PATCH', body: JSON.stringify({ logoUrl: await uploadFile(picked.logo[0]) }) }); clearPending('logo'); }
     if (id === 'photos') {
       const urls = [...(state.values.photos || []), ...await Promise.all(picked.photos.slice(0, MAX_PHOTOS).map(file => uploadFile(file)))].slice(0, MAX_PHOTOS);
@@ -174,8 +228,10 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     if (id === 'contact') {
       // Order matters: the job exists before the store is marked finished, so a reload never strands a finished store.
       if (!jobPosted) {
-        brief = (await patch({ ...mark, ...(touched.has('whatsapp') || touched.has('city') ? { contact: { whatsapp: state.values.whatsapp, city: state.values.city } } : {}), brief: true }))?.brief;
-        await api(`/stores/${state.storeId}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction: brief || `Mi negocio se llama ${state.values.name}.\nCrea mi tienda.`, assetUrls: state.values.photos || [], revision: 0, setupAction: 'generate', requestId }) });
+        // A showcase (spec 2026-10-13) saves its main action and builds as a service site: no products, no cart.
+        const showcase = state.values.sell === 'showcase';
+        brief = (await patch({ ...mark, ...(touched.has('whatsapp') || touched.has('city') ? { contact: { whatsapp: state.values.whatsapp, city: state.values.city } } : {}), ...(showcase ? { primaryAction: mainAction(state.values) } : {}), brief: true }))?.brief;
+        await api(`/stores/${state.storeId}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction: brief || `Mi negocio se llama ${state.values.name}.\nCrea mi tienda.`, assetUrls: state.values.photos || [], revision: 0, setupAction: 'generate', requestId, ...(showcase ? { sitePurpose: 'service' } : {}) }) });
         jobPosted = true;
       }
       return patch({ step: WALKTHROUGH_STEPS.length, finished: true });
@@ -187,10 +243,11 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     const moved = skipped ? nextState(state, { type: 'skip' }) : nextState(state, { type: 'next' });
     if (moved.error) { state = moved; return paint(); }
     const picked = { logo: state.pending.logo.map(p => p.file), photos: state.pending.photos.map(p => p.file) };
-    state = { ...state, busy: true, error: null }; paint();
+    // The sell screen's guess becomes the answer here, so the step saves what the merchant saw.
+    state = { ...state, values: moved.values, busy: true, error: null }; paint();
     try {
       const last = state.step === LAST;
-      await save(skipped, picked);
+      await save(skipped, picked, moved.step);
       if (last) return onDone(state.storeId);
       state = { ...moved, storeId: state.storeId, values: state.values, pending: state.pending, busy: false };
     } catch (error) {
@@ -199,7 +256,8 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     paint();
   }
 
-  listen('input', event => { if (event.target.name && event.target.type !== 'file') { touched.add(event.target.name); state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); } });
+  // Choosing the main button repaints, so the booking link or phone field it needs appears.
+  listen('input', event => { if (event.target.name && event.target.type !== 'file') { touched.add(event.target.name); state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); if (event.target.name === 'action') paint(); } });
   listen('change', event => { if (event.target.type === 'file' && ['logo', 'photos'].includes(event.target.name)) choose(event.target.name, event.target.files); });
   // A file dropped anywhere on the overlay must never navigate the browser away; only the logo and photos steps take it.
   listen('dragover', event => event.preventDefault());
