@@ -21,6 +21,16 @@ describe('style picker', () => {
     expect(preview).not.toContain('Podrás elegirlo cuando estén listos todos los estilos.');
     expect(renderStylePicker(choosable, { ...state, open: 0, busy: true })).toMatch(/data-style-use="0" disabled/);
   });
+
+  // Spec 2026-10-13: the API swaps the platform header into each card; the sandboxed card shows it as built, its menu closed.
+  it('shows the platform header a card carries, inert in the sandboxed frame', () => {
+    const header = '<header data-pagosya-header data-shape="side-rail" data-purpose="shop" class="pyh pyh--side-rail"><div class="pyh-menu" id="pyh-menu" data-pagosya-header-menu hidden></div></header>';
+    const withHeader = { ...card(0, 'calm'), html: `${header}<section><h1>Hola</h1></section>` };
+    const grid = renderStylePicker({ ...view, cards: [withHeader, card(1, 'bold')] }, state);
+    expect(grid).toContain('sandbox=""');
+    expect(grid).toContain(heroSrcdoc(withHeader.html));
+    expect(heroSrcdoc(withHeader.html)).toContain('data-pagosya-header-menu hidden');
+  });
   it('keeps polling a running proposal for at most STYLE_POLL_MAX_MS, and never one that stopped running', () => {
     const running: StyleProposalView = { ...view, status: 'RUNNING' };
     expect(keepStylePolling(running, 0)).toBe(true);

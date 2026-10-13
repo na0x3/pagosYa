@@ -247,11 +247,11 @@ export class SourceChatService {
   /** The cards Studio shows: the newest proposal still drawing or waiting for the pick, on a run that did not fail. A pick whose
    * build failed stays shown, with its pick, until the store moves past the revision the styles were made for, so it can be retried. */
   async styleProposal(merchantId: string, storeId: string) {
-    const [, current] = await Promise.all([this.owner(merchantId, storeId), this.projects.current(merchantId, storeId)]);
+    const [store, current] = await Promise.all([this.owner(merchantId, storeId), this.projects.current(merchantId, storeId)]);
     const row = await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, proposal: { not: Prisma.DbNull } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, proposal: true } });
     const proposal = row && ['RUNNING', 'AWAITING_STYLE'].includes(row.status) ? styleProposalFrom(row.proposal) : null;
     const shown = proposal && (['RUNNING', 'AWAITING_STYLE'].includes(proposal.status) || retryablePick(proposal, row!.status, current.revision));
-    return { proposal: shown ? styleProposalView(row!.id, proposal) : null };
+    return { proposal: shown ? styleProposalView(row!.id, proposal, store.name) : null };
   }
 
   async send(merchantId: string, storeId: string, input: SendSourceMessageDto) {

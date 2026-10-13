@@ -72,3 +72,31 @@ it('reads the merchant decision on a running proposal: a pick with its card, or 
   expect(styleDecision(null)).toBeNull();
   expect(styleDecision({ version: 2 })).toBeNull();
 });
+
+describe('the cards preview the platform header that will be built (spec 2026-10-13)', () => {
+  const withDraw = (header: string, purpose?: string) => {
+    const value = proposal();
+    value.slots = value.slots.map(slot => ({ ...slot, draw: { header } })) as any;
+    value.heroes = [{ html: '<style>.th-bar{display:flex}</style><header class="th-bar"><span data-store-name>Buna &amp; Co</span><span>Carrito (0)</span></header><section><h1>Hola</h1></section>', source: 'model' }, null];
+    if (purpose) value.request = { ...value.request, dto: { ...value.request.dto, brief: { sitePurpose: purpose } } as any };
+    return value;
+  };
+
+  it('swaps the hero header for the platform header in the card shape, with the store name', () => {
+    const html = styleProposalView('gen1', withDraw('side-rail'), 'Café Buna').cards[0].html!;
+    expect(html).toContain('<header data-pagosya-header data-shape="side-rail" data-purpose="shop"');
+    expect(html).toContain('<span data-store-name>Café Buna</span>');
+    expect(html).toContain('data-cart-open');
+    expect(html).not.toContain('Carrito (0)');
+    expect(html).toContain('<section><h1>Hola</h1></section>');
+    expect(html.match(/<header\b/g)).toHaveLength(1);
+  });
+
+  it('shows a showcase card with the main action and no cart, falls back to menu-button, and keeps the hero name without a store name', () => {
+    const html = styleProposalView('gen1', withDraw('', 'service')).cards[0].html!;
+    expect(html).toContain('data-shape="menu-button" data-purpose="showcase"');
+    expect(html).toContain('Pide una cotización');
+    expect(html).not.toContain('data-cart-open');
+    expect(html).toContain('<span data-store-name>Buna &amp; Co</span>');
+  });
+});

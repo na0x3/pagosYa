@@ -5,6 +5,11 @@ import type { GenerateSourceProjectDto } from './dto/generate-source-project.dto
 import type { SourceImageUse } from './source-setup';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { commerceSummary } from './design-engine/commerce-draw';
+import { decodeEntities, FALLBACK_HEADER_SHAPE, HEADER_SHAPES, headerFact, renderSourceHeader, swapPreviewHeader, type HeaderShape } from './source-header';
+import { sourceSitePurpose } from './source-site-purpose';
+
+/** Spec 2026-10-13: the menu a card shows before any section exists; the built store links its own marked sections. */
+const PREVIEW_LINKS = { shop: ['Productos', 'Nosotros', 'Contacto'], showcase: ['Servicios', 'Nosotros', 'Contacto'] };
 
 export type StyleProposalStatus = 'RUNNING' | 'AWAITING_STYLE' | 'PICKED' | 'SUPERSEDED';
 export type StyleProposal = { version: 1; status: StyleProposalStatus; slots: Array<StyleSlot & { playbook: string }>; design: SourceDesign | null; heroes: Array<{ html: string; source: 'model' | 'template' } | null>; assetMap: Array<{ original: string; path: string }>; request: { dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean }; picked?: number; createdAt: string;
@@ -30,7 +35,16 @@ export function cardHtmlForPreview(html: string, assetMap: StyleProposal['assetM
   return out;
 }
 
-export function styleProposalView(generationId: string, proposal: StyleProposal) {
+export function styleProposalView(generationId: string, proposal: StyleProposal, storeName = '') {
+  const brief = (proposal.request.dto.brief ?? {}) as { sitePurpose?: unknown; businessInformation?: unknown };
+  const purpose = sourceSitePurpose(brief);
+  const previewHeader = (slot: number, heroHtml: string) => {
+    const drawn = proposal.slots[slot]?.draw?.header ?? '';
+    const shape = (HEADER_SHAPES as readonly string[]).includes(drawn) ? drawn as HeaderShape : FALLBACK_HEADER_SHAPE;
+    const name = storeName || decodeEntities(heroHtml.match(/data-store-name[^>]*>([^<]{1,80})</)?.[1]?.trim() ?? '');
+    const links = PREVIEW_LINKS[purpose === 'shop' ? 'shop' : 'showcase'].map(label => ({ href: '#', label }));
+    return renderSourceHeader({ shape, purpose, storeName: name, links, fact: headerFact(brief.businessInformation), search: true });
+  };
   const cards: StyleCardView[] = (proposal.design?.concepts ?? []).map((concept, index) => {
     const slot = concept.card!.slot;
     const palette = proposal.slots[slot]?.palette ?? proposal.heroPalettes?.[index] ?? undefined;
@@ -39,7 +53,7 @@ export function styleProposalView(generationId: string, proposal: StyleProposal)
     return { index, slot, name: concept.card!.name, mode: concept.card!.mode, vibe: concept.card!.vibe, inspiration: concept.card!.inspiration,
       fonts: { display, text, displayFamily: family(display), textFamily: family(text) },
       palette: palette ? [palette.paper, palette.ink, palette.accent, palette.accent2] : [],
-      html: hero ? cardHtmlForPreview(hero.html, proposal.assetMap) : null, source: hero?.source ?? null, pending: proposal.status === 'RUNNING' && proposal.heroPending?.[index] === true,
+      html: hero ? cardHtmlForPreview(swapPreviewHeader(hero.html, previewHeader(slot, hero.html)), proposal.assetMap) : null, source: hero?.source ?? null, pending: proposal.status === 'RUNNING' && proposal.heroPending?.[index] === true,
       commerce: commerceSummary(proposal.slots[slot]?.commerce ?? {}) };
   });
   return { generationId, status: proposal.status, recommended: proposal.design?.selected ?? 0, ...(proposal.status === 'PICKED' && proposal.picked !== undefined ? { picked: proposal.picked } : {}),
