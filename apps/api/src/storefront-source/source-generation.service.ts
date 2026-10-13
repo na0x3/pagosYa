@@ -73,6 +73,7 @@ import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design
 import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type ShownStyleCard, type StyleSlot } from './design-engine/style-draws';
 import { numbersIn, templateHero, writeStyleHero, type HeroFacts } from './design-engine/style-hero';
 import type { StyleProposal, StyleProposalStatus } from './source-style-proposal';
+import { styleDecision, type StyleDecision } from './source-style-proposal';
 import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecommendation } from './source-style-design';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota, retryProviderRejection } from './source-provider-error';
@@ -145,6 +146,11 @@ const outputSchema = {
 
 /** What a proposal-mode generate returns: the run now waits for the merchant to pick a card. */
 export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
+/** Credits for the calls that completed: unknown provider usage is never invented or billed, and a free run costs nothing. */
+export function completedCredits(attempts: ReadonlyArray<{ status: string; usage: ReturnType<typeof sourceUsage> }>, maxCredits: number, free: boolean): number {
+  const successful = attempts.filter(attempt => attempt.status === 'COMPLETED');
+  return free ? 0 : successful.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successful.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
+}
 
 /** The merchant's confirmed colours as a card palette, for a hero whose slot drew none; undefined without any. */
 function brandPalette(data: BrandProfile | undefined | null): HeroFacts['palette'] | undefined {
@@ -227,6 +233,10 @@ export const fillsProductPagesAfterSave = (isNewStore: boolean, redesign: boolea
 export class SourceGenerationService {
   constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner(), @Optional() private readonly rewards?: RewardsService, @Optional() private readonly emailKits?: EmailKitService, @Optional() private readonly pageWriter?: ProductPageWriterService) {}
   private readonly logger = new Logger(SourceGenerationService.name);
+  /** Spec 2026-10-12 faster generation: how often a style run with choosable cards reads its row for the merchant's pick. */
+  protected stylePickPollMs = 1_000;
+  /** How long a picked card's model hero may still land before the build goes on without it. */
+  protected pickHeroWaitMs = 15_000;
 
   /** Reward credits are a courtesy discount: a failure here must never fail the merchant's generation. */
   private async coverWithRewardCredits(merchantId: string, generationId: string, credits: number) {
@@ -358,7 +368,7 @@ export class SourceGenerationService {
     return { aiUsage, models: Object.entries(SOURCE_MODELS).map(([id, model]) => ({ id, label: model.label })), defaultModel: 'auto', defaultMaxCredits: DEFAULT_MAX_CREDITS, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', runs };
   }
 
-  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
+  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: called once both cards are planned and choosable, before their heroes finish (spec 2026-10-12). */ onPickable?: (result: StyleProposalResult) => void; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
     execution?.signal?.throwIfAborted();
     // On the merchant's own ChatGPT plan nothing is billed: no credit allowance, no credits charged, more time per run.
     const chatgptPlan = Boolean(this.config.get('app.chatgptPlan')), freeRun = Boolean(execution?.free) || chatgptPlan;
@@ -788,7 +798,7 @@ export class SourceGenerationService {
             styleAttempted = true;
             const styleContext = contextFor(true);
             // One planner lane per slot (spec 2026-10-11 speed-up): each card is planned, shown and drawn on its own.
-            const proposed = await this.proposeStyles({ runId: run.id, storeId, dto, imageUses, redesign, styleSlots, boldAsked: asksForBold(merchantWords), assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits,
+            const proposed = await this.proposeStyles({ runId: run.id, storeId, dto, imageUses, redesign, styleSlots, boldAsked: asksForBold(merchantWords), assetLegend, storeName: data.storeName || owner.slug, logoUrl: (data as { logoUrl?: string | null }).logoUrl ?? null, brandPalette: brandPalette(brand?.data), model, provider, apiKey, budget, signal, attempts, started, freeRun, maxCredits, onPickable: execution?.onPickable,
               plan: slot => this.designPlanner.explore({ ...plannerArgs, selected: undefined, styleSlots: [{ slot: slot.slot, mode: slot.mode, direction: styleSlotDirection(slot, slot.playbook, { lane: true }) }], context: styleContext }) });
             if ('styleProposal' in proposed) return proposed;
             styled = proposed.design;
@@ -1676,12 +1686,14 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
    * is tried once more; any other failure costs only its card. Two cards wait for the pick; one card or none come back to
    * the caller, which builds that card or replans as before.
    */
-  private async proposeStyles(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; plan: (slot: StyleSlot & { playbook: string }) => Promise<SourceDesign>; boldAsked: boolean; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number }): Promise<StyleProposalResult | { design?: SourceDesign }> {
+  private async proposeStyles(input: { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; plan: (slot: StyleSlot & { playbook: string }) => Promise<SourceDesign>; boldAsked: boolean; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number; onPickable?: (result: StyleProposalResult) => void }): Promise<StyleProposalResult | { design?: SourceDesign }> {
     // Lanes finish out of order, so everything is kept by drawn slot and compacted, in slot order, on each save.
     const slotConcepts: Array<SourceDesignConcept | undefined> = [];
     const slotHeroes: StyleProposal['heroes'] = [];
     const slotPalettes: Array<HeroFacts['palette']> = [];
     const slotPending: boolean[] = [];
+    // Both cards planned: choosable while their heroes are still being drawn (spec 2026-10-12 faster generation).
+    let pickable = false;
     const laneControllers = new Map(input.styleSlots.map(slot => [slot.slot, new AbortController()]));
     // Heroes are offered the fast model; writeStyleHero writes the intense one on the run model, and falls back to the run
     // model when the provider refuses the fast one.
@@ -1700,15 +1712,18 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const order = live(), concepts = order.map(slot => slotConcepts[slot.slot]!);
       return { version: 1, status, slots: input.styleSlots, design: concepts.length ? { concepts, ...styleRecommendation(concepts, input.boldAsked) } : null,
         heroes: order.map(slot => slotHeroes[slot.slot] ?? null), heroPalettes: order.map(slot => slotPalettes[slot.slot] ?? null), heroPending: order.map(slot => status === 'RUNNING' && slotPending[slot.slot] === true),
-        assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt };
+        assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt, ...(pickable ? { pickable: true } : {}) };
     };
     // Saves run one after another and each writes the state at its own turn, so a slow write never lands an older proposal.
     // Once the outcome is decided (closed), lane saves stop. Only a row this run still holds is written: after a sweep or
     // a lost lease the writes match nothing and the proposal is never revived.
     let queue: Promise<unknown> = Promise.resolve(), closed = false, shown = false;
+    // From the offer on, a pick may land on the row (the chat writes PICKED into the proposal), so every later write needs
+    // the proposal still running: a slow lane never turns a pick back into a running proposal.
     const save = (status: StyleProposalStatus = 'RUNNING', data: Record<string, unknown> = {}) => {
+      // The guard is read when the write runs, like the proposal it writes: a save queued before the offer can run after it.
       const write = queue.catch(() => undefined).then(() => closed && status === 'RUNNING' ? { count: 0 }
-        : this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: { proposal: proposal(status) as unknown as Prisma.InputJsonValue, ...data } }));
+        : this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId, ...(pickable ? { proposal: { path: ['status'], equals: 'RUNNING' } } : {}) }, data: { proposal: proposal(status) as unknown as Prisma.InputJsonValue, ...data } }));
       queue = write;
       return write;
     };
@@ -1775,14 +1790,59 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const only = order[0] && slotConcepts[order[0].slot];
       return { design: only ? { concepts: [only], selected: 0, selection: { source: 'forced', rationale: null } } : undefined };
     }
-    await save();
-    await Promise.all(lanes);
+    // Both cards are planned: choosable now, while their heroes are still being drawn (spec 2026-10-12). The caller answers
+    // the merchant at once; this run keeps the store until the heroes land, the merchant picks, or a new request retires them.
+    pickable = true;
+    const offered = await save() as { count: number };
+    if (offered.count === 1) input.onPickable?.({ styleProposal: { generationId: input.runId, cards: live().length } });
+    const watch = new AbortController();
+    let decision = await Promise.race([Promise.all(lanes).then(() => null), this.watchStyleDecision(input.runId, watch.signal)]);
+    watch.abort();
     input.signal.throwIfAborted();
+    const finished = () => ({ status: 'AWAITING_STYLE', activeStoreId: null, credits: completedCredits(input.attempts, input.maxCredits, input.freeRun), attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() });
+    if (!decision) {
+      closed = true;
+      const completed = await save('AWAITING_STYLE', finished()) as { count: number };
+      if (completed.count === 1) return { styleProposal: { generationId: input.runId, cards: live().length } };
+      // The guarded write matched nothing: a pick or a new request reached the row between the last hero and this write.
+      decision = styleDecision((await this.prisma.storeSourceGeneration.findFirst({ where: { id: input.runId }, select: { proposal: true } }).catch(() => null))?.proposal);
+      if (!decision) throw new ConflictException('La generación expiró. Tu revisión anterior sigue guardada.');
+    }
+    const pickedSlot = decision.status === 'PICKED' ? live()[decision.picked]?.slot : undefined;
+    for (const [slot, controller] of laneControllers) if (slot !== pickedSlot) controller.abort();
+    if (pickedSlot !== undefined && slotPending[pickedSlot]) {
+      // The picked card's model hero may still land; past pickHeroWaitMs the build goes on with the card's design instead.
+      const waitStarted = Date.now();
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([lanes[input.styleSlots.findIndex(slot => slot.slot === pickedSlot)], new Promise(resolve => { timer = setTimeout(resolve, this.pickHeroWaitMs); })]);
+      clearTimeout(timer);
+      if (slotPending[pickedSlot]) {
+        laneControllers.get(pickedSlot)!.abort();
+        slotPending[pickedSlot] = false;
+        this.logger.warn(JSON.stringify({ event: 'style_hero_skipped', generationId: input.runId, slot: pickedSlot, waitedMs: Date.now() - waitStarted }));
+      }
+    }
     closed = true;
-    const successful = input.attempts.filter(attempt => attempt.status === 'COMPLETED');
-    const credits = input.freeRun ? 0 : successful.every(attempt => attempt.usage) ? Math.min(input.maxCredits, Math.ceil(successful.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const completed = await save('AWAITING_STYLE', { status: 'AWAITING_STYLE', activeStoreId: null, credits, attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() }) as { count: number };
-    if (completed.count !== 1) throw new ConflictException('La generación expiró. Tu revisión anterior sigue guardada.');
+    // The pick's build waits for this release, then reads the heroes written here.
+    const released = await this.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: {
+      ...(decision.status === 'PICKED' ? { proposal: { ...proposal('PICKED'), picked: decision.picked } as unknown as Prisma.InputJsonValue } : {}), ...finished() } });
+    if (released.count !== 1) throw new ConflictException('La generación expiró. Tu revisión anterior sigue guardada.');
     return { styleProposal: { generationId: input.runId, cards: live().length } };
+  }
+
+  /** Reads the run's own row every stylePickPollMs for the merchant's decision on choosable cards, until `stop` aborts. */
+  private async watchStyleDecision(runId: string, stop: AbortSignal): Promise<StyleDecision | null> {
+    while (!stop.aborted) {
+      await new Promise<void>(resolve => {
+        const done = () => { clearTimeout(timer); stop.removeEventListener('abort', done); resolve(); };
+        const timer = setTimeout(done, this.stylePickPollMs);
+        stop.addEventListener('abort', done);
+      });
+      if (stop.aborted) return null;
+      const row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: runId }, select: { proposal: true } }).catch(() => null);
+      const decision = styleDecision(row?.proposal);
+      if (decision) return decision;
+    }
+    return null;
   }
 }

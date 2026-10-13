@@ -55,6 +55,8 @@ const laneDesign = (slot: number) => designWith([slot]);
 const deferred = <T>() => { let resolve!: (value: T) => void, reject!: (error: unknown) => void; const promise = new Promise<T>((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; };
 /** Waits (on real macrotask turns) until the service has reached a state. */
 const until = async (check: () => boolean) => { for (let i = 0; i < 500 && !check(); i++) await new Promise(resolve => setImmediate(resolve)); expect(check()).toBe(true); };
+/** Waits on real time, for waits measured in milliseconds (the decision poll, the hero wait). */
+const eventually = async (check: () => boolean, ms = 3000) => { const end = Date.now() + ms; while (!check() && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 5)); expect(check()).toBe(true); };
 
 function setup() {
   const prisma: any = { storeRetention: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceGeneration: { create: jest.fn().mockResolvedValue({ id: 'run-1' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, store: { findFirst: jest.fn().mockResolvedValue({ slug: 'cafe' }), findUnique: jest.fn().mockResolvedValue(null) }, mediaAsset: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) } };
@@ -245,7 +247,7 @@ describe('style proposal mode', () => {
     await expect(service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).rejects.toThrow();
     const awaiting = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => c.data.status === 'AWAITING_STYLE');
     expect(awaiting).toHaveLength(1);
-    expect(awaiting[0].where).toEqual({ id: 'run-1', status: 'RUNNING', activeStoreId: 's1' });
+    expect(awaiting[0].where).toEqual({ id: 'run-1', status: 'RUNNING', activeStoreId: 's1', proposal: { path: ['status'], equals: 'RUNNING' } });
     expect(projects.save).not.toHaveBeenCalled();
   });
 
@@ -447,6 +449,92 @@ describe('style proposal mode', () => {
     expect(explore).toHaveBeenCalledTimes(1);
     expect(progress).not.toHaveBeenCalledWith('styles');
     expect(authorPrompt()).not.toContain('BOLD BY DEFAULT');
+  });
+
+  // Spec 2026-10-12 faster generation, part 1: pick a style as soon as the cards appear.
+  /** A hero that lands when its deferred resolves, or rejects when its lane is aborted. */
+  const heldHeroes = () => {
+    const heroes = [0, 1].map(() => deferred<{ html: string; source: 'model' }>());
+    writeStyleHero.mockImplementation((args: any) => new Promise((ok, fail) => { heroes[args.concept.card.slot].promise.then(ok); args.signal.addEventListener('abort', () => fail(args.signal.reason)); }));
+    return heroes;
+  };
+  const heroSignal = (slot: number): AbortSignal => writeStyleHero.mock.calls.find(c => c[0].concept.card.slot === slot)![0].signal;
+
+  it('offers the cards as soon as both are planned, before their heroes finish, and tells the caller', async () => {
+    lanes();
+    const heroes = heldHeroes();
+    const onPickable = jest.fn();
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true, onPickable });
+    await eventually(() => onPickable.mock.calls.length === 1);
+    expect(onPickable).toHaveBeenCalledWith({ styleProposal: { generationId: 'run-1', cards: 2 } });
+    const offered = proposals().at(-1)!;
+    expect(offered).toMatchObject({ status: 'RUNNING', pickable: true, heroPending: [true, true] });
+    heroes.forEach((hero, slot) => hero.resolve({ html: `<header data-store-name>modelo ${slot}</header>`, source: 'model' }));
+    expect(await run).toEqual({ styleProposal: { generationId: 'run-1', cards: 2 } });
+    expect(finalWrite().data.proposal).toMatchObject({ status: 'AWAITING_STYLE', pickable: true, heroPending: [false, false] });
+    expect(onPickable).toHaveBeenCalledTimes(1);
+  });
+
+  it('never lets a lane overwrite a pick: every write from the offer on requires a running proposal', async () => {
+    lanes();
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true, onPickable: jest.fn() });
+    const writes = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).filter((c: any) => 'proposal' in c.data);
+    const offeredAt = writes.findIndex((c: any) => c.data.proposal.pickable === true);
+    expect(offeredAt).toBeGreaterThan(-1);
+    expect(writes.slice(0, offeredAt).every((c: any) => !('proposal' in c.where))).toBe(true);
+    expect(writes.slice(offeredAt).every((c: any) => JSON.stringify(c.where.proposal) === JSON.stringify({ path: ['status'], equals: 'RUNNING' }))).toBe(true);
+  });
+
+  it('a pick while heroes draw stops the other card at once, keeps the picked hero that lands within the wait, and releases the run as picked', async () => {
+    (service as any).stylePickPollMs = 2; (service as any).pickHeroWaitMs = 2_000;
+    lanes();
+    const heroes = heldHeroes();
+    const onPickable = jest.fn();
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true, onPickable });
+    await eventually(() => onPickable.mock.calls.length === 1);
+    const offered = proposals().at(-1)!;
+    prisma.storeSourceGeneration.findFirst.mockResolvedValue({ proposal: { ...offered, status: 'PICKED', picked: 1 } });
+    await eventually(() => heroSignal(0).aborted);
+    expect(heroSignal(1).aborted).toBe(false);
+    heroes[1].resolve({ html: '<header data-store-name>modelo 1</header>', source: 'model' });
+    expect(await run).toEqual({ styleProposal: { generationId: 'run-1', cards: 2 } });
+    const release = finalWrite();
+    expect(release.where).toEqual({ id: 'run-1', status: 'RUNNING', activeStoreId: 's1' });
+    expect(release.data).toMatchObject({ status: 'AWAITING_STYLE', activeStoreId: null, proposal: { status: 'PICKED', picked: 1, heroPending: [false, false] } });
+    expect(release.data.proposal.heroes[1]).toEqual({ html: '<header data-store-name>modelo 1</header>', source: 'model' });
+  });
+
+  it('gives up on a picked hero still drawing after the wait: the run releases with its template hero and logs style_hero_skipped', async () => {
+    (service as any).stylePickPollMs = 2; (service as any).pickHeroWaitMs = 30;
+    lanes();
+    heldHeroes();
+    const onPickable = jest.fn();
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true, onPickable });
+    await eventually(() => onPickable.mock.calls.length === 1);
+    prisma.storeSourceGeneration.findFirst.mockResolvedValue({ proposal: { ...proposals().at(-1)!, status: 'PICKED', picked: 1 } });
+    await run;
+    expect(heroSignal(1).aborted).toBe(true);
+    const release = finalWrite();
+    expect(release.data.proposal).toMatchObject({ status: 'PICKED', picked: 1, heroPending: [false, false] });
+    expect(release.data.proposal.heroes[1].source).toBe('template');
+    const skipped = (Logger.prototype.warn as jest.Mock).mock.calls.map(c => String(c[0])).find(line => line.includes('"event":"style_hero_skipped"'));
+    expect(JSON.parse(skipped!)).toMatchObject({ generationId: 'run-1', slot: 1 });
+    expect(JSON.parse(skipped!).waitedMs).toBeGreaterThanOrEqual(25);
+  });
+
+  it('stops both lanes when a new request supersedes the cards, and releases the run without touching the proposal', async () => {
+    (service as any).stylePickPollMs = 2;
+    lanes();
+    heldHeroes();
+    const onPickable = jest.fn();
+    const run = service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true, onPickable });
+    await eventually(() => onPickable.mock.calls.length === 1);
+    prisma.storeSourceGeneration.findFirst.mockResolvedValue({ proposal: { ...proposals().at(-1)!, status: 'SUPERSEDED' } });
+    await run;
+    expect([heroSignal(0).aborted, heroSignal(1).aborted]).toEqual([true, true]);
+    const release = finalWrite();
+    expect(release.data).toMatchObject({ status: 'AWAITING_STYLE', activeStoreId: null });
+    expect('proposal' in release.data).toBe(false);
   });
 
   it('builds the picked card: forced concept, its draw as the frame, its palette, bold mode and hero to Sep-5, no planner call', async () => {
