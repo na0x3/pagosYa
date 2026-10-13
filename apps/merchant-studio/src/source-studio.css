@@ -192,3 +192,4 @@
 .source-mode .source-frame-wrap { min-height: 0; }
 
 .source-job-status { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 12px; font-size:12px; background:var(--surface); }
+.source-review-note { margin: 0; padding: 8px 16px; font-size: 13px; line-height: 1.5; color: #4b5563; background: var(--surface); border-bottom: 1px solid #e5e7eb; }

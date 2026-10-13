@@ -331,6 +331,10 @@ export class MerchantStudioApi {
   styleProposal(storeId: string): Promise<{ proposal: import('./source-style-pick').StyleProposalView | null }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/style-proposal`);
   }
+  /** Stops YAPI's background polish (spec 2026-10-12), when the merchant starts editing. */
+  cancelSourceReview(storeId: string): Promise<{ cancelled: boolean }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/review/cancel`, { method: 'POST', body: '{}' });
+  }
 
   latestSourceChatJob(storeId: string): Promise<{ job: SourceChatJob | null }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`);
@@ -519,7 +523,7 @@ export interface SourcePublication {
   contactFormEnabled?: boolean; revision: number | null; version: number; publishedAt: string | null; active: boolean; slug: string;
   experiment: null | { id: string; status: string; startedAt: string; controlRevision: number; variantRevision: number; winner: string | null; evidence: { winner: string | null; reason: string }; variants: Array<{ variant: string; revision: number; visitors: number; buyers: number; paidOrders: number; conversionRate: number; revenue: Array<{ currency: string; amount: number }> }> };
 }
-export interface SourceState { publication?: SourcePublication; revision: number; versions: SourceRevision[]; nextBefore: number | null }
+export interface SourceState { publication?: SourcePublication; revision: number; versions: SourceRevision[]; nextBefore: number | null; /** YAPI is polishing this revision in the background (spec 2026-10-12). */ reviewPending?: boolean }
 export interface SourceVersion extends SourceRevision { snapshot: import("@pagosya/storefront-preview").SourceSnapshot }
 
 export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualProposal | null): string {

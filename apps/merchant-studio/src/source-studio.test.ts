@@ -605,3 +605,18 @@ it('does not re-arm the proposal poll once the cards are waiting for the pick', 
   expect(proposal.mock.calls.length).toBe(fetched);
   finish({ userMessage: { id: 'u', role: 'USER', content: 'Hola' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Primero elige un estilo' } });
 });
+
+it('shows the polishing note while YAPI reviews, then loads the polished store and its chat line when it lands', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState')
+    .mockResolvedValueOnce({ revision: 2, versions: [version], nextBefore: null, reviewPending: true })
+    .mockResolvedValue({ revision: 3, versions: [version], nextBefore: null, reviewPending: false });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation')
+    .mockResolvedValueOnce({ messages: [] })
+    .mockResolvedValue({ messages: [{ id: 'r1', role: 'ASSISTANT', content: 'Pulí tu tienda: Agrandé el título.', metadata: { sourceRevision: 3, label: 'Revisión de YAPI', review: true }, createdAt: '2026-10-12T12:00:00Z' }] } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockImplementation(async (_store: string, revision: number) => ({ ...version, revision }));
+  await mountSourceStudio(app);
+  expect(app.querySelector('[data-review-note]')?.textContent).toBe('YAPI está puliendo tu tienda…');
+  await vi.waitFor(() => expect(app.textContent).toContain('Pulí tu tienda: Agrandé el título.'), { timeout: 9000 });
+  expect(app.querySelector('[data-review-note]')).toBeNull();
+}, 15000);
