@@ -79,3 +79,16 @@ describe("onboardingState with storeId", () => {
     for (const id of ["s2", "s3", "s4", "s5", "missing"]) expect((await service.onboardingState("m_1", true, id)).store).toBeNull();
   });
 });
+
+describe("saveOnboarding (spec 2026-10-13)", () => {
+  it("keeps the showcase answers, turns the contact form on when it is the main action, and briefs a site", async () => {
+    const update = jest.fn(async () => ({}));
+    const prisma = { store: { findFirst: jest.fn(async () => ({ name: "deff", onboarding: { version: 1, step: 7, done: [], skipped: [] } })), update }, paymentLink: { findMany: jest.fn(async () => []) } };
+    const service = new StoresService(prisma as any, undefined as any, undefined as any);
+    const result: any = await service.saveOnboarding("m_1", "s_1", { step: 8, done: ["contact"], purpose: "showcase", primaryAction: { kind: "form" }, brief: true });
+    expect(update).toHaveBeenCalledWith({ where: { id: "s_1" }, data: expect.objectContaining({ contactFormEnabled: true, onboarding: expect.objectContaining({ purpose: "showcase", primaryAction: { kind: "form" } }) }) });
+    expect(result.brief).toContain("Crea mi sitio.");
+    await service.saveOnboarding("m_1", "s_1", { primaryAction: { kind: "booking", value: "https://cal.com/deff" } });
+    expect((update.mock.calls[1] as any[])[0].data).not.toHaveProperty("contactFormEnabled");
+  });
+});
