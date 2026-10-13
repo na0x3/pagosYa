@@ -1,4 +1,4 @@
-import { cardHtmlForPreview, styleProposalFrom, styleProposalView, type StyleProposal } from './source-style-proposal';
+import { cardHtmlForPreview, styleDecision, styleProposalFrom, styleProposalView, type StyleProposal } from './source-style-proposal';
 
 const proposal = (): StyleProposal => ({ version: 1, status: 'AWAITING_STYLE', createdAt: '2026-10-11T00:00:00.000Z', assetMap: [{ original: '/v1/uploads/abc.webp', path: 'assets/photo-1.webp' }],
   request: { dto: { revision: 0, instruction: 'x', brief: {} } as any, imageUses: [], redesign: false },
@@ -54,4 +54,21 @@ it('each card carries its commerce line, empty for a slot drawn before commerce 
   const value = proposal();
   value.slots[2] = { ...value.slots[2], commerce: { account: 'split', checkout: 'ticket', fields: 'pill', cartSurface: 'sheet', added: 'stamp' } };
   expect(styleProposalView('g1', value).cards.map(card => [card.slot, card.commerce])).toEqual([[0, ''], [2, 'Cuenta: dividida · Pago: ticket · Carrito: hoja']]);
+});
+
+// Spec 2026-10-12 faster generation: cards are choosable while their heroes are still being drawn.
+it('marks a running proposal choosable once its cards are planned, and never a finished one', () => {
+  const running: StyleProposal = { ...proposal(), status: 'RUNNING', pickable: true };
+  expect(styleProposalView('gen1', running).pickable).toBe(true);
+  expect('pickable' in styleProposalView('gen1', { ...running, pickable: undefined })).toBe(false);
+  expect('pickable' in styleProposalView('gen1', { ...proposal(), pickable: true })).toBe(false);
+});
+
+it('reads the merchant decision on a running proposal: a pick with its card, or a new request', () => {
+  expect(styleDecision({ ...proposal(), status: 'PICKED', picked: 1 })).toEqual({ status: 'PICKED', picked: 1 });
+  expect(styleDecision({ ...proposal(), status: 'SUPERSEDED' })).toEqual({ status: 'SUPERSEDED' });
+  expect(styleDecision({ ...proposal(), status: 'RUNNING' })).toBeNull();
+  expect(styleDecision({ ...proposal(), status: 'PICKED' })).toBeNull();
+  expect(styleDecision(null)).toBeNull();
+  expect(styleDecision({ version: 2 })).toBeNull();
 });
