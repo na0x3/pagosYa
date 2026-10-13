@@ -7,6 +7,7 @@ import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
 import { sep5AuthorPrompt, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
+import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { SOURCE_STATIC_ACCOUNT_PAGES, STATIC_STANDARD_PAGE_PATHS, staticAccountGateProblems, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
@@ -833,6 +834,11 @@ export class SourceGenerationService {
       let lenient = false;
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
+      // Header controls a static edit covers (2026-10-12: Ramo Ramón's header trapped in an isolated poster, Rampa's own invisible
+      // cart drawer), judged in a browser against the saved revision, rendered once per run: only covers the edit brings in block (524dfd73).
+      const headerGate = this.config.get<boolean>('app.headerClickGate') === true;
+      let savedHeaderCovers: Promise<HeaderCover[]> | undefined;
+      const headerPreview = (files: SourceProjectFileDto[]) => currentSourceRuntime({ brief: dto.brief, files: [...previousFiles.filter(file => !files.some(next => next.path === file.path)), ...files] } as unknown as SourceProjectSnapshot);
       const acceptCandidate = async () => {
         websiteDesignFile = generated.files.find(file => file.path === 'website-design.json') ?? websiteDesignFile;
         generated.files = generated.files.filter(file => file.path !== 'website-design.json');
@@ -933,6 +939,19 @@ export class SourceGenerationService {
             ...productOperations.flatMap(operation => operation.variantOperations?.flatMap(variant => variant.changes?.imageUrl ? [variant.changes.imageUrl] : []) || []),
           ].map(url => assetLegend.find(asset => asset.original === url)?.path || url),
         });
+        if (headerGate && editExisting && !useNext && !lenient) {
+          let introduced: HeaderCover[] = [];
+          try {
+            // One browser at a time: the saved revision first (cached for the run's repair attempt), then this draft.
+            const saved = await (savedHeaderCovers ??= headerPreview([]).then(snapshot => captureHeaderCovers(snapshot, signal)));
+            introduced = introducedHeaderCovers(await captureHeaderCovers(await headerPreview(preflightFiles), signal), saved);
+          } catch (error) {
+            // A render that fails says nothing about the header: the check never blocks on its own failure.
+            signal.throwIfAborted();
+            this.logger.warn(JSON.stringify({ event: 'header_click_check_failed', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
+          }
+          if (introduced.length) throw new BadGatewayException(headerCoverProblems(introduced).join(' '));
+        }
         unusedImagePaths = preflight.unusedImagePaths;
         acceptedPreviewFiles = preflightFiles;
       };

@@ -153,6 +153,11 @@ export interface AppConfig {
    * second whole-project call, so roughly double the time and tokens of an authored run.
    */
   sep5SelfReview: boolean;
+  /**
+   * Render a static edit and the saved revision in a browser and send the edit back for repair when it leaves a header
+   * control that something covers (2026-10-12). Only covers the edit brings in block. On unless YAPI_HEADER_CLICK_GATE=0.
+   */
+  headerClickGate: boolean;
   /** Claude models for YAPI's agent (they run only on the tool-using engine). */
   anthropic: { apiKey: string };
   openAi: {
@@ -421,6 +426,7 @@ export default (): { app: AppConfig } => {
     chatgptPlan,
     sep5Author,
     sep5SelfReview,
+    headerClickGate: process.env.YAPI_HEADER_CLICK_GATE !== '0',
     anthropic: { apiKey: chatgptPlan ? '' : process.env.ANTHROPIC_API_KEY ?? "" },
     openAi: {
       apiKey: chatgptPlan ? '' : process.env.OPENAI_API_KEY ?? "",

@@ -210,3 +210,24 @@ it('lets a card photo bled with negative margins reach both card edges', async (
   expect(facts[0].narrowPhoto).toBe(0);
   expect(sep5MeasuredFacts([{ ...facts[0], narrowPhoto: 2 }]).join(' ')).toMatch(/foto.*más angosta/);
 });
+
+// Rampa (qu3usw8r), 2026-10-12: its own never-opened cart drawer lay invisible over Buscar / Mi cuenta / Tu bolsa.
+it('reports header controls something covers, at desktop and phone widths, for the self-review', async () => {
+  const drawer = '<aside class="bag-drawer" data-cart-drawer aria-hidden="true">Tu bolsa</aside><p style="height:1500px">Relleno</p>';
+  const { facts } = await captureSep5Draft(await store(completeHeader, '', drawer, 'body{margin:0}header{display:flex;justify-content:flex-end;gap:16px;padding:12px}.bag-drawer{position:fixed;top:0;right:0;width:min(460px,100%);height:100vh;z-index:30;opacity:0;background:#fff}'));
+  const covers = facts.flatMap(fact => fact.headerCovers ?? []);
+  expect(covers).toEqual(expect.arrayContaining([
+    expect.objectContaining({ width: 1440, control: 'Buscar', cover: 'aside.bag-drawer', drawer: true }),
+    expect.objectContaining({ width: 390, control: 'Buscar', cover: 'aside.bag-drawer', drawer: true }),
+  ]));
+  expect(covers.every(cover => [1440, 390].includes(cover.width))).toBe(true);
+  const measured = sep5MeasuredFacts(facts).join('\n');
+  expect(measured).toMatch(/^1440px: los controles .*«Buscar».* del encabezado no se pueden pulsar: arriba de la página los tapa aside\.bag-drawer/m);
+  expect(measured).toMatch(/^390px: .*aside\.bag-drawer/m);
+  expect(measured).toContain('pointer-events:none');
+});
+
+it('says nothing about header controls when nothing covers them', async () => {
+  const { facts } = await captureSep5Draft(await store(completeHeader, '', '<p style="height:1500px">Relleno</p>', 'body{margin:0}header{position:sticky;top:0;z-index:5;background:#fff}'));
+  expect(facts.flatMap(fact => fact.headerCovers ?? [])).toEqual([]);
+});

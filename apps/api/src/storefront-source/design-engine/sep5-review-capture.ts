@@ -2,9 +2,10 @@
 import { withVisualSandbox } from '../source-visual-capture';
 import { sourceVisualState } from '../source-visual-state';
 import type { SourceProjectSnapshot } from '../source-project';
+import { headerCoverProblems, measureHeaderCovers, type HeaderCover } from './header-clickable';
 
 export type Sep5ReviewShot = { width: 1280 | 390; y: number; image: string };
-export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string; priceOffset?: number; addSymbolTwice?: number; narrowPhoto?: number };
+export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages: number; search: boolean; account: boolean; cart: boolean; brokenWords: string[]; errors: string[]; decorEmoji?: number; fakeCircle?: number; overlaps?: string[]; h1Size?: number; bodySize?: number; pageText?: string; priceOffset?: number; addSymbolTwice?: number; narrowPhoto?: number; headerCovers?: HeaderCover[] };
 
 // Emoji presentation only: arrows, ticks and close glyphs (↗ ✔ ✖) are functional symbols, and a glyph inside a
 // button or a labelled control is an icon.
@@ -40,6 +41,8 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
     ...(fact.addSymbolTwice ? [`${fact.width}px: en ${fact.addSymbolTwice} tarjeta(s) el botón de añadir es solo un ícono «+» y tu CSS le agrega otro símbolo con ::before/::after; no decores .menu-add con un símbolo propio.`] : []),
     ...(fact.narrowPhoto ? [`${fact.width}px: en ${fact.narrowPhoto} tarjeta(s) la foto es más angosta que la tarjeta (sangra a la izquierda con margen negativo pero un max-width:100% la corta); pon max-width:none en .menu-item__image.`] : []),
     ...(fact.overlaps?.length ? [`${fact.width}px: un texto se superpone a otro: ${fact.overlaps.join('; ')}.`] : []),
+    // Each cover carries its own width: the desktop sweep runs at 1440 on the 1280 page.
+    ...headerCoverProblems(fact.headerCovers ?? []),
     ...fact.errors.map(error => `${fact.width}px: error de JavaScript: ${error}`),
   ]);
 }
@@ -153,7 +156,14 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           })(),
         };
       });
-      facts.push({ width, ...header, errors });
+      // Header controls something covers (2026-10-12, Ramo Ramón and Rampa), swept at the shopper's desktop width and on the phone.
+      let headerCovers: HeaderCover[] | undefined;
+      if (width !== 1024) {
+        if (width === 1280) { await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(150); }
+        // A sweep that fails costs only its own fact, never the screenshots and measurements already taken.
+        try { headerCovers = await measureHeaderCovers(page); } catch { signal?.throwIfAborted(); }
+      }
+      facts.push({ width, ...header, errors, ...(headerCovers ? { headerCovers } : {}) });
       await page.close();
     }
   }, 'no-preference');

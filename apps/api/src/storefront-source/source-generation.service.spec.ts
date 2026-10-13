@@ -5,6 +5,7 @@ import { nextStoreFiles } from './fixtures/next-store';
 import { creativeStoreFiles } from './fixtures/creative-store';
 import { SourceDesignPlanner } from './source-design-planner';
 import * as designModule from './source-design';
+import * as headerModule from './design-engine/header-clickable';
 import { merchantFacingSourceFailure, SourceGenerationService, sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation.service';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
@@ -300,6 +301,57 @@ describe('Independent source generation',()=>{
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }) }] }] })));
     await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
     expect(configOf(projects.save.mock.calls[1][2]).dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
+  });
+  // 2026-10-12: Ramo Ramón and Rampa shipped header buttons nothing could click. A static edit that covers one is sent back
+  // for repair; one the saved store already had never blocks (524dfd73).
+  describe('header controls a static edit covers', () => {
+    const covered: headerModule.HeaderCover = { width: 1440, control: 'Tu bolsa', cover: 'aside.bag-drawer', section: '', atTop: true, invisible: 'opacity:0', drawer: true };
+    const drawer = '<aside class="bag-drawer" data-cart-drawer></aside>';
+    const gated = () => {
+      const context = setup();
+      const base = context.config.get.getMockImplementation();
+      context.config.get.mockImplementation((key: string) => key === 'app.headerClickGate' ? true : base(key));
+      const capture = jest.spyOn(headerModule, 'captureHeaderCovers').mockImplementation(async (snapshot: any) => snapshot.files.find((f: any) => f.path === 'index.html')?.content.includes('bag-drawer') ? [covered] : []);
+      return { ...context, capture };
+    };
+    const respond = (body: object) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(body) }] }] }));
+    it('fails the attempt of an edit that covers a header control, naming the control and the cause for the repair', async () => {
+      const { service, projects, prisma, capture } = gated();
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: files() }));
+      await service.generate('m', 's', input);
+      // A new store has no saved revision to compare with: the self-review reports it instead of the gate.
+      expect(capture).not.toHaveBeenCalled();
+      const saved = projects.save.mock.calls[0][2];
+      projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
+      fetchMock.mockResolvedValue(respond({ label: 'Carrito', edits: [{ path: 'index.html', search: '<p data-pagosya-status></p>', replacement: `<p data-pagosya-status></p>${drawer}` }], files: [] }));
+      await expect(service.generate('m', 's', { ...input, revision: 1, instruction: 'Añade un carrito lateral' })).rejects.toThrow();
+      expect(projects.save).toHaveBeenCalledTimes(1);
+      const failed = prisma.storeSourceGeneration.updateMany.mock.calls.find((call: any) => call[0].data.status === 'FAILED')[0].data.attempts;
+      expect(failed.map((attempt: any) => attempt.failureReason)).toEqual(expect.arrayContaining([expect.stringContaining('el control «Tu bolsa» del encabezado no se puede pulsar')]));
+    });
+    it('never blocks an edit on a cover the saved store already had', async () => {
+      const { service, projects, capture } = gated();
+      const withDrawer = files().map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('<p data-pagosya-status></p>', `<p data-pagosya-status></p>${drawer}`) } : file);
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: withDrawer }));
+      await service.generate('m', 's', input);
+      const saved = projects.save.mock.calls[0][2];
+      projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
+      fetchMock.mockResolvedValue(respond({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }));
+      await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
+      expect(projects.save).toHaveBeenCalledTimes(2);
+      // The edit's draft and the saved revision, each rendered once.
+      expect(capture).toHaveBeenCalledTimes(2);
+    });
+    it('stays off unless app.headerClickGate is on', async () => {
+      const { service, projects } = setup();
+      const capture = jest.spyOn(headerModule, 'captureHeaderCovers').mockResolvedValue([covered]);
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: files() }));
+      await service.generate('m', 's', input);
+      projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: projects.save.mock.calls[0][2] });
+      fetchMock.mockResolvedValue(respond({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }));
+      await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
+      expect(capture).not.toHaveBeenCalled();
+    });
   });
   it('generates a presentation site without silently adding product or checkout pages', async () => {
     const { service, projects } = setup('next');
