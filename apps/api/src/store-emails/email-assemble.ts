@@ -46,6 +46,9 @@ function fillImage(el: Element, image: EmailImage | null, placeholder = true) {
   setAttr(el, 'alt', image.alt);
   if (!attrOf(el, 'width')) setAttr(el, 'width', '64');
   if (!placeholder) { detach(el); return; }
+  // A blocked photo shows its alt text: small and clipped to the box, not in the row's big type.
+  const own = attrOf(el, 'style')?.value ?? '';
+  if (!/font-size/i.test(own)) setAttr(el, 'style', `${own ? `${own.replace(/;+$/, '')};` : ''}font-size:11px;line-height:14px;color:#6b6b6b;overflow:hidden`);
   // The quiet background goes on the photo's cell when it has one: a client that blocks images hides the <img> box too.
   const parent: any = (el as any).parentNode;
   const target: Element = parent?.tagName === 'td' || parent?.tagName === 'th' ? parent : el;

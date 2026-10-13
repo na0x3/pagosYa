@@ -35,6 +35,12 @@ describe('assembleEmail', () => {
     expect(html).toMatch(/<td style="background:#eeeeee"><img[^>]*src="https:\/\/api\.example\/v1\/uploads\/a\.webp"/);
   });
 
+  it("keeps a blocked photo's alt text small and inside its box instead of the row's big type", () => {
+    const kit: ValidEmailKit = { ...floor, blocks: { ...floor.blocks, items: '<table data-block="items"><tr data-item><td><img data-item-image width="64" style="display:block;border-radius:8px"></td><td><span data-item-name></span><span data-item-quantity></span><span data-item-amount></span></td></tr><tr><td data-items-total></td></tr></table>' } };
+    const { html } = assembleEmail(kit, floor, [items], layoutData);
+    expect(html).toMatch(/<img[^>]*style="display:block;border-radius:8px;font-size:11px;line-height:14px;color:#6b6b6b;overflow:hidden"/);
+  });
+
   it('uses the floor block when the store kit lacks one', () => {
     const kit: ValidEmailKit = { ...floor, blocks: { heading: '<table data-block="heading"><tr><td><h1 data-block-title style="color:#c00;background:#fff"></h1></td></tr></table>' } };
     const { html, repairs } = assembleEmail(kit, floor, [{ block: 'heading', title: 'Hola', text: null }, items], layoutData);
