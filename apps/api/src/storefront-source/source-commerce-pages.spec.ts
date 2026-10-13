@@ -76,8 +76,8 @@ describe('Inline storefront product options', () => {
   async function shop({ items = [product()] as any[], mode = 'preview', fullPage = false, template = '', saved = [] as any[], settings = {}, refreshedItems = items, onStart, content, configure }: { items?: any[]; mode?: string; fullPage?: boolean; template?: string; saved?: any[]; settings?: Record<string, unknown>; refreshedItems?: any[]; onStart?: (w: any) => void; configure?: (w: any) => void; content?: any } = {}) {
     const virtualConsole = new VirtualConsole();
     virtualConsole.on('jsdomError', (error: Error) => {
-      // jsdom does not implement cascade layers; runtime and event errors still fail.
-      if (!error.message.includes('Could not parse CSS stylesheet')) errors.push(error);
+      // jsdom does not implement cascade layers or ::before/::after styles; runtime and event errors still fail.
+      if (!/Could not parse CSS stylesheet|Not implemented: window\.getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error);
     });
     const dom = new JSDOM(`<html><head></head><body>${template}<button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog></section><section data-pagosya-cart></section>${fullPage ? '<main data-pagosya-product-page></main>' : ''}<p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/product.html?id=shirt', runScripts: 'outside-only', virtualConsole });
     const w = dom.window; windows.push(w);
@@ -460,6 +460,17 @@ describe('Inline storefront product options', () => {
     expect(serialize()).toEqual([{ id: 'shirt', variantId: 'blue-m', quantity: 1 }]);
   });
 
+  it('tells the shopper when this week’s reminder already went out instead of claiming the cart was saved', async () => {
+    const { w, click, choose, query } = await shop({ mode: 'hosted' });
+    click('.menu-add'); choose(0, 'Azul'); choose(1, 'M'); click('[data-variant-add]'); click('[data-product-close]');
+    w.PAGOSYA_HOSTED_REQUEST.mockImplementation(async (action: string, request: any) => ({ ok: true, body: request.path === '' ? { recoveryEnabled: true } : { saved: false } }));
+    w.eval(readFileSync(kitPath('retention.js'), 'utf8'));
+    await new Promise(resolve => setImmediate(resolve));
+    query('[data-retention-recovery] form').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+    await new Promise(resolve => setImmediate(resolve));
+    expect(query('[data-retention-recovery] [role=status]').textContent).toBe('Ya te enviamos un recordatorio de esta tienda esta semana, así que no programamos otro.');
+  });
+
   it('preserves simple-product adding, quantity changes and preview simulation', async () => {
     const { w, query, click, serialize } = await shop({ items: [{ id: 'coffee', name: 'Café', amount: 1000, stock: 2 }] });
     click('.menu-add'); click('.order-items [data-add]');
@@ -545,7 +556,9 @@ describe('Inline storefront product options', () => {
     expect(hosted.query('[data-product-rating]').hidden).toBe(true);
     expect(hosted.query('[data-product-reviews]').hidden).toBe(true);
     const preview = await shop({ fullPage: true, content: { reviews: [], reviewSummary: { shirt: { count: 3, average: 5 } } } });
-    expect(preview.query('[data-product-rating]').hidden).toBe(true);
+    // The Studio preview shows a labelled example, never the store's real totals.
+    expect(preview.query('[data-product-rating]').textContent).toContain('· ejemplo');
+    expect(preview.query('[data-product-rating]').textContent).not.toContain('3 reseñas');
     expect(preview.w.PAGOSYA_HOSTED_REQUEST).not.toHaveBeenCalledWith('content', expect.anything());
     expect(preview.query('.product-detail__related')).toBeNull();
   });
