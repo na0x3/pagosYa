@@ -4,7 +4,8 @@ import type { Store } from '../src/api';
 
 const analytics = vi.hoisted(() => ({ record: vi.fn(), flush: vi.fn(), dispose: vi.fn(), created: [] as unknown[][] }));
 vi.mock('../src/privacy', () => ({ privacy: { mount: vi.fn(), analyticsAllowed: () => true } }));
-vi.mock('../src/store-funnel', () => ({ createStoreFunnel: () => ({ track: vi.fn(), token: () => undefined, sessionId: () => '3b241101-e2bb-4255-8caf-4136c566a962' }) }));
+const funnel = vi.hoisted(() => ({ track: vi.fn(), token: () => undefined, sessionId: () => '3b241101-e2bb-4255-8caf-4136c566a962' }));
+vi.mock('../src/store-funnel', () => ({ createStoreFunnel: () => funnel }));
 vi.mock('../src/store-analytics', () => ({ createStoreAnalytics: (...args: unknown[]) => { analytics.created.push(args); return analytics; } }));
 vi.mock('../src/trusted-form', () => ({ collectPersonalFields: vi.fn(async () => ({})), withoutPersonalFields: (_action: string, body: object) => body }));
 vi.mock('@pagosya/storefront-preview', async importOriginal => ({ ...await importOriginal<typeof import('@pagosya/storefront-preview')>(), createPreviewImageLoader: () => async (snapshot: unknown) => snapshot }));
@@ -51,4 +52,14 @@ it('marks the contact step when pagosYa\'s secure form opens and the payment ste
   await vi.waitFor(() => expect(onPayment).toHaveBeenCalledWith('secret'));
   expect(analytics.record.mock.calls.map(([event]) => event)).toEqual([{ type: 'checkout_step', step: 'contact' }, { type: 'checkout_step', step: 'payment' }]);
   expect(analytics.flush.mock.invocationCallOrder[0]).toBeLessThan(onPayment.mock.invocationCallOrder[0]);
+});
+
+it('ignores the funnel steps an older store kit still posts: only the visit reaches /funnel', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => site() }));
+  funnel.track.mockClear();
+  await mountPublishedSource(document.querySelector('#app')!, 'tienda', store, vi.fn(), false);
+  const frame = document.querySelector('iframe')!;
+  send(frame, { type: 'pagosya:funnel', event: 'add_to_cart' });
+  send(frame, { type: 'pagosya:funnel', event: 'delivery_selected', method: 'pickup' });
+  expect(funnel.track.mock.calls).toEqual([['visit']]);
 });

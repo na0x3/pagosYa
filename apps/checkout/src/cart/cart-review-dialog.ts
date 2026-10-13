@@ -312,7 +312,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
       const selectedFulfillment = quotedFulfillment ? quotedFulfillment() : fulfillment.selectedLocation && fulfillment.method
         ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method }
         : undefined;
-      if (selectedFulfillment?.fulfillmentMethod) { state.activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod); state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'delivery' }); }
+      if (selectedFulfillment?.fulfillmentMethod) state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'delivery' });
       const result = await (subscriptionCadence
         ? checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token(), true)
         : checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token()));
@@ -337,7 +337,7 @@ export function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, 
 
 export function openCartReview(slug: string, store: Store, options: { preview?: boolean; allowEmpty?: boolean } = {}): void {
   if (cartCount() === 0 && !options.allowEmpty) return;
-  if (!options.preview) { state.activeStoreFunnel?.track('checkout_started'); state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'review' }); }
+  if (!options.preview) state.activeStoreAnalytics?.record({ type: 'checkout_step', step: 'review' });
   document.querySelector(".cart-review-dialog")?.remove();
   const dialog = document.createElement("dialog");
   dialog.className = "cart-review-dialog";

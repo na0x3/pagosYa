@@ -1,7 +1,10 @@
 import { privacy } from './privacy';
 import { API_BASE_URL } from './api';
-const events = new Set(['visit', 'product_view', 'add_to_cart', 'checkout_started', 'delivery_selected']);
-/** Hosted-store analytics stays outside authored pages and never receives customer fields. */
+/**
+ * Hosted-store analytics stays outside authored pages and never receives customer fields. Only `visit` is sent: its
+ * token links a paid order to the session. The checkout steps are G1 analytics events (store-analytics.ts), counted on
+ * the server from those events alone (spec 2026-10-13-abandoned-carts).
+ */
 export function createStoreFunnel(slug: string, preview: boolean) {
   let token: string | undefined, activeId = '', queue = Promise.resolve();
   const sent = new Set<string>();
@@ -17,8 +20,8 @@ export function createStoreFunnel(slug: string, preview: boolean) {
       return saved.id as string;
     } catch { return; }
   }
-  function track(event: string, method?: unknown) {
-    if (!events.has(event) || event === 'delivery_selected' && !['delivery', 'pickup'].includes(String(method))) return;
+  function track(event: 'visit') {
+    if (event !== 'visit') return;
     const sessionId = session(); if (!sessionId || sent.has(event)) return;
     sent.add(event);
     queue = queue.then(async () => {
@@ -26,7 +29,7 @@ export function createStoreFunnel(slug: string, preview: boolean) {
       try {
         const response = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/funnel`, {
           method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, event, ...(event === 'delivery_selected' ? { method } : {}) }),
+          body: JSON.stringify({ sessionId, event }),
           signal: AbortSignal.timeout(2500),
         });
         if (!response.ok) throw new Error();
@@ -35,6 +38,6 @@ export function createStoreFunnel(slug: string, preview: boolean) {
       } catch { sent.delete(event); /* Analytics must never interrupt buying. */ }
     });
   }
-  // The session id is shared with store analytics (G1) so events and funnel visits carry the same hash.
+  // The session id is shared with store analytics (G1); the server keys the two hashes differently, so they never join.
   return { track, token: () => { session(); return allowed() ? token : undefined; }, sessionId: () => session() };
 }

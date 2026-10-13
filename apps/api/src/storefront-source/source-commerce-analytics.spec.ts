@@ -46,7 +46,7 @@ function boot({ hosted = true, settings = {} as Record<string, unknown>, page = 
   const click = (selector: string) => { expect($(selector)).not.toBeNull(); $(selector).click(); };
   const flush = () => { w.dispatchEvent(new w.Event('pagehide')); return messages.filter(m => m.type === 'pagosya:analytics'); };
   const events = () => flush().flatMap(m => m.events || []);
-  return { w, $, click, flush, events, observed, intersect: (targets: any[]) => intersect(targets.map(target => ({ target, isIntersecting: true }))), errors };
+  return { w, $, click, flush, events, messages, observed, intersect: (targets: any[]) => intersect(targets.map(target => ({ target, isIntersecting: true }))), errors };
 }
 
 describe('kit analytics events (hosted stores)', () => {
@@ -135,6 +135,16 @@ describe('kit analytics events (hosted stores)', () => {
     const shop = boot();
     shop.click('[data-track="hero-cta"]'); shop.click('[data-add="lamp"]'); shop.click('[data-cart-open]');
     for (const event of shop.events()) expect(ANALYTICS_EVENT_TYPES).toContain(event.type);
+  });
+
+  it('hands the host page no funnel steps: the steps travel as analytics events only', async () => {
+    const shop = boot();
+    shop.click('[data-add="lamp"]'); shop.click('[data-cart-open]'); shop.click('.cart-drawer [data-checkout]');
+    shop.w.dispatchEvent(new shop.w.HashChangeEvent('hashchange'));
+    shop.click('[data-checkout-review] [data-pay]');
+    await new Promise(resolve => setImmediate(resolve));
+    expect(shop.messages.filter(message => message.type === 'pagosya:funnel')).toEqual([]);
+    expect(shop.events().map(e => e.type)).toEqual(expect.arrayContaining(['add_to_cart', 'checkout_step', 'pay_click']));
   });
 });
 

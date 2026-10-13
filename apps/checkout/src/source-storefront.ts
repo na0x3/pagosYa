@@ -185,7 +185,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       }
       return;
     }
-    if (data?.type === 'pagosya:funnel') { funnel.track(data.event, data.method); return; }
+    if (data?.type === 'pagosya:funnel') return; // Older kits still post steps; the steps arrive as pagosya:analytics.
     if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) data.events.slice(0, 40).forEach(analytics.record); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
       try {

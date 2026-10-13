@@ -20,7 +20,6 @@ export type DomesticMethodType = Exclude<PaymentMethodType, PaymentMethodType.LO
 
 export const state = {
   activeStoreFunnel: null as ReturnType<typeof createStoreFunnel> | null,
-  funnelCartCount: 0 as number,
   /** G1 analytics for a published store shown by the legacy catalog, sharing the funnel session. */
   activeStoreAnalytics: null as ReturnType<typeof createStoreAnalytics> | null,
   analyticsCartQuantities: new Map<string, number>(),

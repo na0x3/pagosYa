@@ -136,13 +136,12 @@
   const packMotif = placement => MOTIFS.findIndex(motif => motif.pack && motif.placement === placement);
   let motifObserver = null;
   const hosted = window.PAGOSYA_HOSTED === true;
-  // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
-  // and the merchant's measurement tags. Those tags exist only after the shopper accepted
-  // statistics — see privacy.js and the gate the API puts in the head — so a missing
-  // gtag/fbq/ttq here is that refusal, and the event is dropped rather than queued.
+  // The merchant's measurement tags only: pagosYa's own checkout steps travel as G1 analytics events (analytics()
+  // below; spec 2026-10-13-abandoned-carts). Those tags exist only after the shopper accepted statistics — see
+  // privacy.js and the gate the API puts in the head — so a missing gtag/fbq/ttq here is that refusal, and the event
+  // is dropped rather than queued.
   const PIXEL_EVENTS = { product_view: ['view_item', 'ViewContent'], add_to_cart: ['add_to_cart', 'AddToCart'], checkout_started: ['begin_checkout', 'InitiateCheckout'] };
   const track = (event, method, detail) => {
-    if (hosted) parent.postMessage({ type: 'pagosya:funnel', event, ...(method ? { method } : {}) }, '*');
     const names = PIXEL_EVENTS[event];
     if (!names) return;
     // Amounts are integer centavos here; every provider expects major units.
