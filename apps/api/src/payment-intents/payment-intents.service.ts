@@ -1,5 +1,5 @@
 import { SettlementHoldService } from "../settlement/settlement-hold.service";
-import { queueStoreEmail } from '../email-workspace/email-workspace.config';
+import { queueStoreEmail, receiptMessageId, workspaceMail, workspaceSender } from '../email-workspace/email-workspace.config';
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
@@ -26,7 +26,7 @@ import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration
 import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "../international/fx";
 import { LimitsService } from "../limits/limits.service";
 import { LimitsWarningService } from "../limits/limits-warning.service";
-import { InboxService } from "../inbox/inbox.service";
+import { InboxService, type SentReceipt } from "../inbox/inbox.service";
 import { markBusinessDocumentPaid } from "../business-documents/cobro-payment";
 import { emitStoreEvent, orderEventPayload } from "../extensions/store-events";
 import { applyRenewalPaid, createSubscriptionsFromOrder } from "../operations/subscription-enrollment";
@@ -671,7 +671,7 @@ export class PaymentIntentsService {
       let subscriptionBlock = "";
       // Collected here, acted on after the transaction commits — see the call
       // site below for why it must not happen inside this callback.
-      let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receiptSourceId: string } | null = null;
+      let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null } | null = null;
       if (result.status === "succeeded") {
         const lines = this.ledger.buildCaptureJournal({
           merchantId,
@@ -717,10 +717,9 @@ export class PaymentIntentsService {
           // store's designed receipt, sent after commit by sendReceiptEmail; a plain-text
           // ORDER_CONFIRMATION a store switched on before 2026-10-13 is ignored by queueStoreEmail.
           await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency)},{email:updated.customerEmail,name:updated.customerName});
-          // receiptSourceId is the sourceId queueStoreEmail was just called with,
-          // which is what lets the thread find that receipt row again once this
-          // transaction has committed and file it into the conversation.
-          if (updated.customerEmail) inboxOrder = { id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName, receiptSourceId: updated.id };
+          // The thread is opened after commit (see below); the receipt it files is the one
+          // sendReceiptEmail reports it sent.
+          if (updated.customerEmail) inboxOrder = { id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName };
         }
         if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
           await tx.storeOrder.update({
@@ -778,9 +777,10 @@ export class PaymentIntentsService {
     // Sent outside the transaction — it's a real network call (unlike the
     // webhook/invoice enqueues above, which just write an outbox row), so it
     // must never hold a DB row lock open while it runs.
+    let receipt: SentReceipt | null = null;
     if (outcome.railResult.status === "succeeded") {
       // The designed receipt is the order confirmation, always (2026-10-13): nothing upstream stands in for it.
-      await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName, outcome.subscriptionBlock);
+      receipt = await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName, outcome.subscriptionBlock);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
 
@@ -803,7 +803,10 @@ export class PaymentIntentsService {
     // so there are no orphan threads for reverted payments, and the pool is
     // touched with nothing held. Best-effort by design: a failure here must
     // never turn a captured payment into a failed confirm() response.
-    if (outcome.inboxOrder) await this.inbox?.threadForOrder(outcome.inboxOrder).catch(() => undefined);
+    //
+    // The receipt is filed only when sendReceiptEmail reports it went out from the store's verified
+    // domain with our Message-ID; a reply to any other receipt can never reach this thread.
+    if (outcome.inboxOrder) await this.inbox?.threadForOrder({ ...outcome.inboxOrder, receipt }).catch(() => undefined);
 
     return { paymentIntent: outcome.paymentIntent, railResult: outcome.railResult };
   }
@@ -811,11 +814,16 @@ export class PaymentIntentsService {
   /**
    * This is the customer's own receipt for their order — sent on the
    * store/merchant's behalf (subject line, no pagosYa branding), same as the
-   * WhatsApp/email contact shown on the checkout receipt screen. Both
+   * WhatsApp/email contact shown on the checkout receipt screen. Since
+   * 2026-10-13 it is the only order confirmation a buyer gets. Both
    * EmailProvider implementations already catch and log send failures
    * internally, but the try/catch here is a second layer: nothing in this
    * method — a malformed cart, a missing field — should ever be able to turn
    * an already-succeeded payment into a failed confirm() response.
+   *
+   * Returns what was sent when it went out from the store's verified domain
+   * (receiptThreading), so the inbox can file it into the order's thread;
+   * null otherwise, including when the provider rejected it.
    */
   private async sendReceiptEmail(
     intent: {
@@ -829,8 +837,8 @@ export class PaymentIntentsService {
     },
     merchantName: string,
     subscriptionBlock = "",
-  ): Promise<void> {
-    if (!intent.customerEmail) return;
+  ): Promise<SentReceipt | null> {
+    if (!intent.customerEmail) return null;
     try {
       const cart = (intent.metadata as { cart?: CartInventoryLine[] } | null)?.cart;
       const appointment = (intent.metadata as { appointment?: { offeringName?: string; startsAt?: string } } | null)?.appointment;
@@ -895,15 +903,42 @@ export class PaymentIntentsService {
         this.logger.warn(`Order email render failed for ${intent.id}: ${(err as Error).message}`);
       }
 
+      const sentSubject = subject ?? (appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`);
+      const body = `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`;
+      // A failed lookup costs the threading, never the receipt.
+      const threaded = await this.receiptThreading(order?.storeId ?? null, intent).catch(() => null);
       await this.email.send({
         to: intent.customerEmail,
         ...(html ? { html } : {}),
-        subject: subject ?? (appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`),
-        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`,
+        subject: sentSubject,
+        body,
+        // failLoudly: a provider rejection must throw here (caught below), so a receipt that never
+        // left is not filed into the order's thread as if the buyer had it.
+        ...(threaded ? { from: threaded.from, replyTo: threaded.replyTo, headers: { "Message-ID": `<${threaded.messageId}>` }, failLoudly: true } : {}),
       });
+      return threaded ? { subject: sentSubject, body, messageId: threaded.messageId, from: threaded.from } : null;
     } catch (err) {
       this.logger.warn(`Failed to send receipt email for ${intent.id}: ${(err as Error).message}`);
+      return null;
     }
+  }
+
+  /**
+   * The buyer's receipt is the ONLY thing most order threads ever contain, so it is the message their
+   * reply answers. Sent from the store's verified domain, with Reply-To on its inbound address and our
+   * own Message-ID, the reply comes back to us and lands in the order's thread; sent without, it goes
+   * to the merchant's personal mailbox. The same three fields the plain-text receipt carried until
+   * 2026-10-13, and the same Message-ID, so replies to receipts sent before then still thread.
+   *
+   * Only for a verified domain (no inbound address otherwise) and a live payment (a test payment opens
+   * no thread): every other receipt goes out exactly as before.
+   */
+  private async receiptThreading(storeId: string | null, intent: { id: string; livemode?: boolean }) {
+    if (!storeId || !intent.livemode || typeof this.prisma.storeRetention?.findUnique !== "function") return null;
+    const row = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } });
+    const from = workspaceSender(row?.settings), domain = workspaceMail(row?.settings).domain;
+    if (!from || !domain) return null;
+    return { from, replyTo: `hola@inbound.${domain.name}`, messageId: receiptMessageId(storeId, intent.id) };
   }
 
   private async sendDebtPaymentNotification(

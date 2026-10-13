@@ -2,6 +2,7 @@ import { BadRequestException } from "@nestjs/common";
 import { PaymentIntentStatus, PaymentLinkStatus } from "@prisma/client";
 import { PaymentIntentsService } from "./payment-intents.service";
 import { productSubscriptionKey } from "../operations/subscription-pricing";
+import { receiptMessageId } from "../email-workspace/email-workspace.config";
 
 function noopConfig() {
   return { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) } as any;
@@ -647,6 +648,66 @@ describe("PaymentIntentsService receipt subscription block", () => {
   });
 });
 
+describe("PaymentIntentsService receipt from the store's verified domain", () => {
+  const verified = { emailWorkspace: { domain: { id: "d1", name: "tienda.test", senderName: "Tienda", status: "verified", records: [] } } };
+  const config = { get: jest.fn((key: string) => key === "app.checkoutOrigin" ? "https://pagar.test" : key === "app.orderTrackingSecret" ? "secret" : { bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
+  function receiptService(settings: unknown, send: jest.Mock = jest.fn()) {
+    const prisma = {
+      storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", storeId: "store_1" }) },
+      storeRetention: { findUnique: jest.fn().mockResolvedValue({ settings }) },
+    };
+    const email = { send };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, { recordCapture: jest.fn() } as any);
+    return { service, email, prisma };
+  }
+  const intent = (livemode = true) => ({ id: "pi_9", livemode, amount: 5000, currency: "BOB", customerEmail: "ana@example.com", customerName: "Ana", metadata: { cart: [{ paymentLinkId: "link_1", name: "Café", quantity: 1, unitAmount: 5000 }] } });
+
+  it("sends from the store's domain, with Reply-To on its inbound address and the receipt's Message-ID", async () => {
+    const { service, email } = receiptService(verified);
+
+    const receipt = await (service as any).sendReceiptEmail(intent(), "Tienda");
+
+    const sent = email.send.mock.calls[0][0];
+    expect(sent).toMatchObject({ to: "ana@example.com", from: "Tienda <notificaciones@tienda.test>", replyTo: "hola@inbound.tienda.test", headers: { "Message-ID": `<${receiptMessageId("store_1", "pi_9")}>` }, failLoudly: true });
+    expect(receipt).toEqual({ subject: sent.subject, body: sent.body, messageId: receiptMessageId("store_1", "pi_9"), from: "Tienda <notificaciones@tienda.test>" });
+  });
+
+  it("sends exactly as before when the domain is not verified, and hands nothing to the inbox", async () => {
+    const { service, email } = receiptService({ emailWorkspace: { domain: { ...verified.emailWorkspace.domain, status: "pending" } } });
+
+    expect(await (service as any).sendReceiptEmail(intent(), "Tienda")).toBeNull();
+
+    expect(Object.keys(email.send.mock.calls[0][0]).sort()).toEqual(["body", "subject", "to"]);
+  });
+
+  it("leaves a test-mode receipt alone even with a verified domain", async () => {
+    const { service, email, prisma } = receiptService(verified);
+
+    expect(await (service as any).sendReceiptEmail(intent(false), "Tienda")).toBeNull();
+
+    expect(email.send.mock.calls[0][0].from).toBeUndefined();
+    expect(prisma.storeRetention.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("files nothing when the provider rejects the receipt", async () => {
+    const { service, email } = receiptService(verified, jest.fn().mockRejectedValue(new Error("Email delivery failed: rejected")));
+
+    await expect((service as any).sendReceiptEmail(intent(), "Tienda")).resolves.toBeNull();
+
+    expect(email.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("still sends the receipt when the sender lookup fails", async () => {
+    const { service, email, prisma } = receiptService(verified);
+    prisma.storeRetention.findUnique.mockRejectedValue(new Error("connection reset"));
+
+    expect(await (service as any).sendReceiptEmail(intent(), "Tienda")).toBeNull();
+
+    expect(email.send).toHaveBeenCalledTimes(1);
+    expect(email.send.mock.calls[0][0].from).toBeUndefined();
+  });
+});
+
 describe("PaymentIntentsService carrier shipments", () => {
   it("arms a pending carrier shipment when store credit pays the whole order", async () => {
     const tx: any = {
@@ -687,7 +748,7 @@ describe("PaymentIntentsService carrier shipments", () => {
 });
 
 describe("PaymentIntentsService subscription enrollment", () => {
-  function harness(settings: unknown, livemode = true, settlementMode = "T0") {
+  function harness(settings: unknown, livemode = true, settlementMode = "T0", inbox?: unknown) {
     const activeKey = productSubscriptionKey("store_1", { paymentLinkId: "p1", variantId: null, extraIds: [] }, "ana@mail.com");
     const metadata = {
       storeId: "store_1",
@@ -720,7 +781,7 @@ describe("PaymentIntentsService subscription enrollment", () => {
     const settlement = { recordCapture: jest.fn() };
     const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any,
       ledger as any,
-      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, settlement as any);
+      { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, { send: jest.fn() } as any, config as any, inertLimits() as any, { notify: jest.fn() } as any, settlement as any, inbox as any);
     for (const method of ["decrementStockForCart", "recordCartSales", "recordProductStats", "sendReceiptEmail", "sendDebtPaymentNotification"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
     return { tx, service, activeKey, ledger, settlement, pay: () => (service as any).applyRailResult("pi_1", "m1", "rail_1", { status: "succeeded", railReference: "ref_1", raw: {} }, "AUTHORIZATION") };
   }
@@ -769,6 +830,27 @@ describe("PaymentIntentsService subscription enrollment", () => {
     const { service, pay } = harness({}, false);
     await pay();
     expect((service as any).sendReceiptEmail).toHaveBeenCalledWith(expect.anything(), "Tienda", expect.stringContaining("Administra tu suscripción"));
+  });
+
+  it("files the receipt it sent into the order's thread, after the payment commits", async () => {
+    const inbox = { threadForOrder: jest.fn().mockResolvedValue({ id: "thread_1" }) };
+    const { service, pay } = harness({}, true, "T0", inbox);
+    const receipt = { subject: "Recibo", body: "Hola Ana", messageId: "receipt.store_1.pi_1@pagosya", from: "Tienda <notificaciones@tienda.test>" };
+    (service as any).sendReceiptEmail.mockResolvedValue(receipt);
+
+    await pay();
+
+    expect(inbox.threadForOrder).toHaveBeenCalledWith({ id: "order_1", storeId: "store_1", merchantId: "m1", customerEmail: "ana@mail.com", customerName: "Ana", receipt });
+  });
+
+  it("opens the order's thread without a receipt when none went out from the store's domain", async () => {
+    const inbox = { threadForOrder: jest.fn().mockResolvedValue({ id: "thread_1" }) };
+    const { service, pay } = harness({}, true, "T0", inbox);
+    (service as any).sendReceiptEmail.mockResolvedValue(null);
+
+    await pay();
+
+    expect(inbox.threadForOrder).toHaveBeenCalledWith(expect.objectContaining({ id: "order_1", receipt: null }));
   });
 });
 

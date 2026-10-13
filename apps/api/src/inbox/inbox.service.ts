@@ -2,9 +2,16 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { htmlToText, parseReferences, stripUnstorable } from "./inbox-correlation";
-import { workspaceMail, workspaceSender, workspaceDedupeKey } from "../email-workspace/email-workspace.config";
+import { workspaceMail, workspaceSender } from "../email-workspace/email-workspace.config";
 
 export interface InboundHeaders { inReplyTo: string | null; references: string | null }
+
+/**
+ * The buyer's receipt as it was actually sent from the store's verified domain. PaymentIntentsService
+ * hands it over after the send, so the order's thread shows the exact text the shopper received (the
+ * receipt's text alternative) under the exact Message-ID (no angle brackets) their reply will quote.
+ */
+export type SentReceipt = { subject: string; body: string; messageId: string; from: string };
 
 @Injectable()
 export class InboxService {
@@ -152,7 +159,7 @@ export class InboxService {
    * An order opens a thread so the buyer's reply to their receipt has somewhere
    * to land. Nobody has written yet, so it does not start unread.
    */
-  async threadForOrder(order: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receiptSourceId?: string }) {
+  async threadForOrder(order: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receipt?: SentReceipt | null }) {
     const customerEmail = order.customerEmail.trim().toLowerCase();
     const { thread } = await this.findOrCreateThread(
       { storeId: order.storeId, customerEmail, orderId: order.id },
@@ -161,48 +168,30 @@ export class InboxService {
         customerEmail, customerName: order.customerName, orderId: order.id, unreadForMerchant: false,
       },
     );
-    if (order.receiptSourceId) await this.recordQueuedReceipt(thread, order.receiptSourceId, customerEmail);
+    if (order.receipt) await this.recordSentReceipt(thread, order.receipt, customerEmail);
     return thread;
   }
 
   /**
    * Files the order receipt into the thread it belongs to.
    *
-   * The receipt row was written by queueStoreEmail inside the payment's
-   * $transaction, and this runs after that transaction commits, so the row is
-   * read back by its dedupe key rather than handed over. Reading it back is
-   * what makes the thread show the EXACT text the shopper will receive: the
-   * template rendering happens once, in the outbox, and is never duplicated
-   * here to drift away from it later.
-   *
-   * The row's own messageIdHeader becomes the StoreInboxMessage.messageId, so
+   * The receipt's own Message-ID becomes the StoreInboxMessage.messageId, so
    * when the shopper answers their receipt the In-Reply-To they quote resolves
    * through resolveInboundThread to this very thread — the same correlation a
    * dashboard reply gets, over the same two columns.
    *
-   * Entirely best-effort: a receipt that was never queued (unverified domain,
-   * template disabled, no customer email) simply leaves the thread as it was.
+   * Only a receipt sent from the store's verified domain is handed over: one
+   * sent without our Message-ID cannot be answered into this thread, and
+   * recording it would promise a conversation the mail cannot deliver.
    */
-  private async recordQueuedReceipt(thread: { id: string; storeId: string }, sourceId: string, customerEmail: string) {
-    const delivery = await this.prisma.storeEmailDelivery.findUnique({
-      where: { dedupeKey: workspaceDedupeKey(thread.storeId, "WORKSPACE_ORDER_CONFIRMATION", sourceId, customerEmail) },
-      select: { subject: true, body: true, messageIdHeader: true },
-    });
-    // No Message-ID means the receipt went out without one (domain not
-    // verified), so a reply to it cannot reach us and there is nothing here to
-    // correlate against. Recording it would only promise a conversation the
-    // mail cannot deliver.
-    if (!delivery?.messageIdHeader) return;
-    const retention = await this.prisma.storeRetention.findUnique({ where: { storeId: thread.storeId } });
-    const domain = workspaceMail(retention?.settings).domain;
-    const sender = workspaceSender(retention?.settings);
-    const fromEmail = sender?.match(/<([^<>]+)>/)?.[1]?.trim() || sender || `notificaciones@${domain?.name ?? ""}`;
+  private async recordSentReceipt(thread: { id: string }, receipt: SentReceipt, customerEmail: string) {
+    const fromEmail = receipt.from.match(/<([^<>]+)>/)?.[1]?.trim() || receipt.from;
     try {
       await this.prisma.storeInboxMessage.create({
         data: {
           threadId: thread.id, direction: "OUTBOUND", fromEmail, toEmail: customerEmail,
-          body: `${delivery.subject}\n\n${delivery.body}`,
-          messageId: delivery.messageIdHeader, inReplyTo: null, hadAttachments: false,
+          body: `${receipt.subject}\n\n${receipt.body}`,
+          messageId: receipt.messageId, inReplyTo: null, hadAttachments: false,
         },
       });
     } catch (error) {

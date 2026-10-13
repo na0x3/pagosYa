@@ -46,24 +46,17 @@ export function workspaceMail(settings: any): WorkspaceMail {
 }
 export function renderEmailText(text: string, values: Record<string, string>) { return text.replace(/\{\{(store|order|customer|amount)\}\}/g, (_, key) => values[key] || ''); }
 export function workspaceSender(settings: any) { const domain = workspaceMail(settings).domain; return domain?.status === 'verified' ? `${domain.senderName.replace(/[<>\r\n]/g, '')} <notificaciones@${domain.name}>` : undefined; }
-/** The outbox dedupe key for a workspace mail. Exported because the inbox has to
- * find the receipt row again after the payment transaction commits, and two
- * hand-built copies of this string would drift the first time it changed. */
+/** The outbox dedupe key for a workspace mail: one row per store, kind, source and recipient. */
 export function workspaceDedupeKey(storeId: string, kind: string, sourceId: string, recipient: string) {
     return `workspace:${storeId}:${kind}:${sourceId}:${recipient.toLowerCase()}`;
 }
 /**
  * The RFC 5322 Message-ID the order receipt is sent with, without angle brackets.
  *
- * A PURE FUNCTION of values both sides already hold, on purpose. The receipt is
- * queued inside the payment's $transaction; the inbox thread is opened after
- * that transaction commits (see payment-intents.service.ts, which explains at
- * length why it must not move back inside). So the two halves cannot pass a
- * generated id to each other without plumbing a value across that boundary.
- * Deriving it from (storeId, sourceId) instead means each side computes the
- * same string independently, and a retried confirm() recomputes the very same
- * one — which is exactly what the unique index on StoreInboxMessage.messageId
- * and the outbox dedupe key both want.
+ * A PURE FUNCTION of (storeId, paymentIntentId) on purpose: a retried confirm() recomputes the very
+ * same id, which is what the unique index on StoreInboxMessage.messageId wants, and a buyer's reply
+ * quoting it resolves to the order's thread (InboxService.resolveInboundThread). The format is the one
+ * the plain-text receipt used until 2026-10-13, so replies to receipts sent before then still thread.
  */
 export function receiptMessageId(storeId: string, sourceId: string) {
     return `receipt.${storeId}.${sourceId}@pagosya`;

@@ -1,4 +1,4 @@
-import { queueStoreEmail, receiptMessageId, workspaceDedupeKey } from "../email-workspace/email-workspace.config";
+import { queueStoreEmail, receiptMessageId } from "../email-workspace/email-workspace.config";
 import { InboxService } from "./inbox.service";
 
 /**
@@ -50,21 +50,22 @@ describe("plain-text workspace mail after the designed receipt took over", () =>
   });
 });
 
-describe("InboxService.threadForOrder — filing the receipt into the thread", () => {
-  function db(delivery: unknown) {
+describe("InboxService.threadForOrder — filing the sent receipt into the thread", () => {
+  function db() {
     return {
       storeInboxThread: { findFirst: jest.fn().mockResolvedValue({ id: "thread-2", storeId: "store-1" }), create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
-      storeInboxMessage: { create: jest.fn().mockResolvedValue({ id: "msg-1" }) },
-      storeEmailDelivery: { findUnique: jest.fn().mockResolvedValue(delivery) },
-      storeRetention: { findUnique: jest.fn().mockResolvedValue({ settings: verified }) },
+      storeInboxMessage: { create: jest.fn().mockResolvedValue({ id: "msg-1" }), findFirst: jest.fn() },
+      storeEmailDelivery: { findUnique: jest.fn() },
+      storeRetention: { findUnique: jest.fn() },
     };
   }
-  const order = { id: "order-1", storeId: "store-1", merchantId: "m-1", customerEmail: "Ana@Gmail.test", customerName: "Ana", receiptSourceId: "payment-1" };
+  const receipt = { subject: "Recibo de tu compra en Tienda", body: "Hola Ana,\n\nTu pago fue confirmado.", messageId: receiptMessageId("store-1", "payment-1"), from: "Tienda <notificaciones@tienda.test>" };
+  const order = { id: "order-1", storeId: "store-1", merchantId: "m-1", customerEmail: "Ana@Gmail.test", customerName: "Ana", receipt };
 
-  it("records the receipt under the id it was actually sent with", async () => {
-    const prisma = db({ subject: "Pedido order-1 · Tienda", body: "Hola Ana", messageIdHeader: receiptMessageId("store-1", "payment-1") });
+  it("records the receipt under the id it was sent with, from the store's sender", async () => {
+    const prisma = db();
 
-    await new InboxService(prisma as any).threadForOrder(order as any);
+    await new InboxService(prisma as any).threadForOrder(order);
 
     const recorded = prisma.storeInboxMessage.create.mock.calls[0][0].data;
     // This exact string is what the shopper's client quotes back in
@@ -73,47 +74,44 @@ describe("InboxService.threadForOrder — filing the receipt into the thread", (
     expect(recorded.direction).toBe("OUTBOUND");
     expect(recorded.fromEmail).toBe("notificaciones@tienda.test");
     expect(recorded.toEmail).toBe("ana@gmail.test");
-    expect(recorded.body).toContain("Hola Ana");
+    expect(recorded.body).toBe(`${receipt.subject}\n\n${receipt.body}`);
   });
 
-  it("looks the receipt up by the same dedupe key queueStoreEmail wrote it under", async () => {
-    const prisma = db({ subject: "s", body: "b", messageIdHeader: receiptMessageId("store-1", "payment-1") });
+  it("reads no outbox row and no settings: the receipt is handed over as sent", async () => {
+    const prisma = db();
 
-    await new InboxService(prisma as any).threadForOrder(order as any);
-
-    expect(prisma.storeEmailDelivery.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-      where: { dedupeKey: workspaceDedupeKey("store-1", "WORKSPACE_ORDER_CONFIRMATION", "payment-1", "ana@gmail.test") },
-    }));
-  });
-
-  it("records nothing when the receipt went out without a Message-ID", async () => {
-    const prisma = db({ subject: "s", body: "b", messageIdHeader: null });
-
-    await new InboxService(prisma as any).threadForOrder(order as any);
-
-    expect(prisma.storeInboxMessage.create).not.toHaveBeenCalled();
-  });
-
-  it("records nothing when no receipt was queued at all", async () => {
-    const prisma = db(null);
-
-    await new InboxService(prisma as any).threadForOrder(order as any);
-
-    expect(prisma.storeInboxMessage.create).not.toHaveBeenCalled();
-  });
-
-  it("does not look for a receipt when the caller named no source", async () => {
-    const prisma = db(null);
-
-    await new InboxService(prisma as any).threadForOrder({ ...order, receiptSourceId: undefined } as any);
+    await new InboxService(prisma as any).threadForOrder(order);
 
     expect(prisma.storeEmailDelivery.findUnique).not.toHaveBeenCalled();
+    expect(prisma.storeRetention.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("records nothing when no receipt went out from the store's domain", async () => {
+    const prisma = db();
+
+    await new InboxService(prisma as any).threadForOrder({ ...order, receipt: null });
+
+    expect(prisma.storeInboxMessage.create).not.toHaveBeenCalled();
   });
 
   it("tolerates a retried confirm() recording the same receipt twice (P2002)", async () => {
-    const prisma = db({ subject: "s", body: "b", messageIdHeader: receiptMessageId("store-1", "payment-1") });
+    const prisma = db();
     prisma.storeInboxMessage.create.mockRejectedValue({ code: "P2002" });
 
-    await expect(new InboxService(prisma as any).threadForOrder(order as any)).resolves.toBeTruthy();
+    await expect(new InboxService(prisma as any).threadForOrder(order)).resolves.toBeTruthy();
+  });
+
+  it("a reply quoting the receipt's Message-ID resolves to the order's thread", async () => {
+    const prisma = db();
+    const inbox = new InboxService(prisma as any);
+    await inbox.threadForOrder(order);
+    const recorded = prisma.storeInboxMessage.create.mock.calls[0][0].data.messageId;
+    prisma.storeInboxMessage.findFirst.mockResolvedValue({ threadId: "thread-2" });
+    prisma.storeInboxThread.findUnique.mockResolvedValue({ id: "thread-2", storeId: "store-1", customerEmail: "ana@gmail.test" });
+
+    const thread = await inbox.resolveInboundThread("store-1", { inReplyTo: `<${recorded}>`, references: null }, "Ana@Gmail.test");
+
+    expect(prisma.storeInboxMessage.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { messageId: { in: [recorded] } } }));
+    expect(thread).toMatchObject({ id: "thread-2" });
   });
 });
