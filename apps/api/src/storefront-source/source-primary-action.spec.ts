@@ -1,4 +1,4 @@
-import { dialDigits, primaryActionLink, savedPrimaryAction, sourcePrimaryAction, withShowcaseContactSlot, PRIMARY_ACTION_KINDS } from './source-primary-action';
+import { dialDigits, primaryActionLink, resolveStoreAction, savedPrimaryAction, sourcePrimaryAction, withShowcaseContactSlot, PRIMARY_ACTION_KINDS } from './source-primary-action';
 
 describe('a showcase main action (spec 2026-10-13)', () => {
   it('offers exactly WhatsApp, the contact form, a booking link and a phone call', () => {
@@ -33,7 +33,7 @@ describe('a showcase main action (spec 2026-10-13)', () => {
   it('dials a Bolivian mobile typed without its country code', () => {
     expect(dialDigits('70012345')).toBe('59170012345');
     expect(dialDigits('6 123 4567')).toBe('59161234567');
-    expect(dialDigits('22441234')).toBe('22441234');
+    expect(dialDigits('22441234')).toBe('59122441234');
     expect(primaryActionLink(sourcePrimaryAction({ kind: 'whatsapp', value: '70012345' })).href).toBe('https://wa.me/59170012345');
   });
 
@@ -61,5 +61,25 @@ describe('where a showcase keeps its action and its contact slot', () => {
     expect(withShowcaseContactSlot(once)).toEqual(once);
     const marked = [{ path: 'index.html', content: '<main><a href="contacto.html" data-pagosya-contact-open>Cotiza</a></main>' }];
     expect(withShowcaseContactSlot(marked)[0].content).toContain('<section data-pagosya-contact hidden></section></main>');
+  });
+});
+
+describe('numbers and choices that change after setup (final review, 2026-10-13)', () => {
+  it('dials a Bolivian landline typed without its country code, and drops an international 00', () => {
+    expect(dialDigits('2 2123456')).toBe('59122123456');
+    expect(dialDigits('33456789')).toBe('59133456789');
+    expect(dialDigits('44567890')).toBe('59144567890');
+    expect(dialDigits('00 591 70012345')).toBe('59170012345');
+    expect(primaryActionLink(sourcePrimaryAction({ kind: 'phone', value: '22123456' }))).toMatchObject({ href: 'tel:+59122123456' });
+  });
+
+  it('a WhatsApp button follows the store number as it is now', () => {
+    expect(sourcePrimaryAction({ kind: 'whatsapp', value: '59170012345' }, '+591 71111111')).toEqual({ kind: 'whatsapp', value: '59171111111' });
+  });
+
+  it('re-resolves the merchant setup choice on every save before the action an earlier save kept', () => {
+    expect(resolveStoreAction({ kind: 'whatsapp' }, { kind: 'form' }, '+591 71234567')).toEqual({ kind: 'whatsapp', value: '59171234567' });
+    expect(resolveStoreAction(undefined, { kind: 'phone', value: '59122441234' }, null)).toEqual({ kind: 'phone', value: '59122441234' });
+    expect(resolveStoreAction(undefined, undefined, '+591 71234567')).toEqual({ kind: 'whatsapp', value: '59171234567' });
   });
 });

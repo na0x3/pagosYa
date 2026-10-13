@@ -4308,7 +4308,9 @@
       let last = window.scrollY;
       const onScroll = () => {
         const y = window.scrollY;
-        if (shape === 'shrinking') header.toggleAttribute('data-scrolled', y > 40);
+        // Shrinking moves the page under the bar, so it shrinks past 80px and grows back only near the top: one threshold
+        // would toggle by itself (final review, 2026-10-13).
+        if (shape === 'shrinking') header.toggleAttribute('data-scrolled', header.hasAttribute('data-scrolled') ? y > 8 : y > 80);
         else header.toggleAttribute('data-hidden', y > 120 && y > last && !isOpen());
         last = y;
       };

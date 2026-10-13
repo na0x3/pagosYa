@@ -88,7 +88,11 @@ describe('the platform header in the kit runtime (spec 2026-10-13)', () => {
     const shrink = await store({ shape: 'shrinking' });
     scrollTo(shrink, 200);
     expect($(shrink, 'header[data-pagosya-header]').hasAttribute('data-scrolled')).toBe(true);
+    scrollTo(shrink, 30);
+    expect($(shrink, 'header[data-pagosya-header]').hasAttribute('data-scrolled')).toBe(true);
     scrollTo(shrink, 0);
+    expect($(shrink, 'header[data-pagosya-header]').hasAttribute('data-scrolled')).toBe(false);
+    scrollTo(shrink, 60);
     expect($(shrink, 'header[data-pagosya-header]').hasAttribute('data-scrolled')).toBe(false);
     const reveal = await store({ shape: 'reveal' });
     scrollTo(reveal, 400);

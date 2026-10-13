@@ -8,7 +8,7 @@ import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATI
 import { sep5AuthorPrompt, sep5CardLook, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
 import { emptySourceHeaders, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSourceHeader } from './source-header';
-import { savedPrimaryAction, sourcePrimaryAction, withShowcaseContactSlot } from './source-primary-action';
+import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { SOURCE_STATIC_ACCOUNT_PAGES, STATIC_STANDARD_PAGE_PATHS, staticAccountGateProblems, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
@@ -522,12 +522,12 @@ export class SourceGenerationService {
     const redesign = !execution?.candidate && (execution?.redesign === true || sourceRedesignRequested(dto.instruction));
     const requestProfile = sourceRequestContext.getStore()?.request.profile || sourceRequestProfile(dto.instruction, Boolean(previous));
     const previousFiles: SourceProjectFileDto[] = (previous?.snapshot as any)?.files || [];
-    // Spec 2026-10-13: a showcase's main action. A saved store keeps the one in its config.js; a new one starts from the setup
-    // form's answer (Store.onboarding.primaryAction), else WhatsApp when the store has a number, else the contact form.
-    const keptAction = savedPrimaryAction(previousFiles);
-    const setupRow = sitePurpose === 'shop' || keptAction !== undefined ? null
+    // Spec 2026-10-13: a showcase's main action, resolved again on every save against the store as it is now: the setup form's
+    // answer (Store.onboarding.primaryAction), else the action an earlier save kept in config.js, else WhatsApp when the store
+    // has a number, else the contact form.
+    const setupRow = sitePurpose === 'shop' ? null
       : await Promise.resolve().then(() => this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } })).catch(() => null);
-    const primaryAction = sitePurpose === 'shop' ? undefined : sourcePrimaryAction(keptAction ?? (setupRow?.onboarding as any)?.primaryAction, (data as { contactPhone?: string | null }).contactPhone);
+    const primaryAction = sitePurpose === 'shop' ? undefined : resolveStoreAction((setupRow?.onboarding as any)?.primaryAction, savedPrimaryAction(previousFiles), (data as { contactPhone?: string | null }).contactPhone);
     // Sep-5 wrote whole static sites, and the static pipeline is what rendered them: the kit supplies the
     // product, checkout and collection pages, the commerce runtime and the static validators. The flag selects
     // that pipeline end to end, so a store comes out as it did before the Next migration rather than being
@@ -897,11 +897,12 @@ export class SourceGenerationService {
       let savedHeaderCovers: Promise<HeaderCover[]> | undefined;
       // Spec 2026-10-13: the platform draws the header into <header data-pagosya-header> on every page of a static store, from the
       // drawn shape (frame-draw.json), the store's name and logo, the sections index.html marks with data-nav-label and the brief's
-      // one fact. A store without the slot is left alone. Each note is logged once per run.
+      // one fact. A Sep-5 author run owns the header outright; any other store without the slot is left alone. Each note is
+      // logged once per run.
       const headerNotes = new Set<string>();
       const platformHeader = (files: SourceProjectFileDto[], platformPages: string[]) => {
         const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
-        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles });
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author });
         if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
         if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
         return result.files;

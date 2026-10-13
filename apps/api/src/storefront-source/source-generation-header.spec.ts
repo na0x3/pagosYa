@@ -83,12 +83,14 @@ describe('the platform header on a Sep-5 store', () => {
     expect(authorBody()).toBeDefined();
   });
 
-  it('leaves a store whose author wrote its own header alone, and says nothing about it', async () => {
+  // Final review 2026-10-13: a new store is built under the platform header, so a header the author wrote anyway is taken over.
+  it('takes over a header the author wrote anyway, so a new shop never ships without its cart', async () => {
     fetchMock.mockImplementation(async () => answer({ label: 'Café', files: shopFiles().map(entry => entry.path === 'index.html' ? { ...entry, content: entry.content.replace('<header data-pagosya-header></header>', '<header class="propio"><a href="index.html">Café</a></header>') } : entry), products: [] }));
     await service.generate('m1', 's1', dto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
-    expect(file('index.html')).toContain('<header class="propio">');
-    expect(file('index.html')).not.toContain('data-pagosya-header');
-    expect(warned('source_header_shape_fallback')).toBe(false);
+    expect(file('index.html')).not.toContain('<header class="propio">');
+    expect(file('index.html')).toContain('<header data-pagosya-header data-shape="menu-button" data-purpose="shop"');
+    expect(file('index.html')).toContain('data-cart-open');
+    expect(warned('source_header_slot_missing')).toBe(false);
   });
 });
 

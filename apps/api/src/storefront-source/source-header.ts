@@ -130,9 +130,23 @@ export type SourceHeaderInput = {
   shape?: string; purpose: SourceSitePurpose; storeName: string; logoPath?: string; action?: PrimaryAction; fact?: string;
   /** Pages the platform adds after this step, so the header may link them (buscar.html, contacto.html…). */
   platformPages?: string[];
-  /** The store's saved files: a page whose saved version had the slot gets it back if an edit removed it. */
+  /** The store's saved files: a page whose saved version had the slot gets it back if an edit removed it, and the header keeps
+   *  the logo the saved one showed when this save names none. */
   previous?: Array<{ path: string; content: string }>;
+  /** This build owns the header (a Sep-5 author run): a page the author gave its own header, or none, gets the slot. */
+  claim?: boolean;
 };
+
+/** The slot in place of the page's own top header (the first <header> before <main>), or first in <body> when it has none. */
+function claimSlot(html: string): string {
+  const main = html.search(/<main\b/i);
+  const own = /<header\b[^>]*>/i.exec(html);
+  if (own && (main < 0 || own.index < main)) {
+    const whole = elementAt(html, own.index);
+    if (whole) return html.slice(0, own.index) + EMPTY_SLOT + html.slice(own.index + whole.length);
+  }
+  return html.replace(/<body\b[^>]*>/i, tag => `${tag}${EMPTY_SLOT}`);
+}
 
 /**
  * The platform header on every HTML page of a static store (spec 2026-10-13, B2): the drawn shape, rendered from the store's
@@ -143,8 +157,12 @@ export function withSourceHeader<F extends { path: string; content: string; enco
   const known = (HEADER_SHAPES as readonly string[]).includes(input.shape ?? '');
   const shape = known ? input.shape as HeaderShape : FALLBACK_HEADER_SHAPE;
   const index = files.find(file => file.path === 'index.html' && file.encoding !== 'base64');
-  if (!index || !SLOT.test(index.content)) return { files, rendered: false, shape, fallback: !known, missing: [] };
-  const sections = navSections(index.content);
+  const hadSlot = (path: string) => Boolean(input.previous?.some(saved => saved.path === path && SLOT.test(saved.content)));
+  // The header is the platform's when this build claims it or the saved home had the slot (an edit may have removed it there).
+  if (!index || !(SLOT.test(index.content) || input.claim || hadSlot('index.html'))) return { files, rendered: false, shape, fallback: !known, missing: [] };
+  const savedLogo = input.previous?.find(saved => saved.path === 'index.html')?.content.match(/<img class="pyh-logo" src="([^"]+)"/)?.[1];
+  const logoPath = input.logoPath ?? (savedLogo ? decodeEntities(savedLogo) : undefined);
+  const sections = navSections(SLOT.test(index.content) ? index.content : claimSlot(index.content));
   const exists = new Set([...files.map(file => file.path), ...(input.platformPages ?? [])]);
   const pages: Array<[string, string]> = input.purpose === 'shop' ? [['productos.html', 'Productos'], ['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']] : [['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']];
   const pageLinks = pages.filter(([path]) => exists.has(path)).map(([href, label]) => ({ href, label }));
@@ -153,14 +171,14 @@ export function withSourceHeader<F extends { path: string; content: string; enco
     if (file.encoding === 'base64' || !/\.html$/i.test(file.path) || file.path === ORDER_EMAIL_TEMPLATE_PATH) return file;
     let content = file.content;
     if (!SLOT.test(content) && KIT_PAGE.test(content)) content = replaceElement(content, STOCK_HEADER, EMPTY_SLOT) ?? content;
-    if (!SLOT.test(content) && input.previous?.some(saved => saved.path === file.path && SLOT.test(saved.content))) content = content.replace(/<body\b[^>]*>/i, tag => `${tag}${EMPTY_SLOT}`);
+    if (!SLOT.test(content) && (input.claim || hadSlot(file.path))) content = claimSlot(content);
     for (let panel = SHARED_PANEL.exec(content); panel; panel = SHARED_PANEL.exec(content)) {
       const whole = elementAt(content, panel.index) ?? panel[0];
       content = content.slice(0, panel.index) + content.slice(panel.index + whole.length);
     }
     const home = file.path === 'index.html';
     const links = sections.length ? sections.map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label })) : pageLinks;
-    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath: input.logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1) });
+    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1) });
     const drawn = replaceElement(content, SLOT, header);
     if (drawn === null) { missing.push(file.path); return file; }
     return drawn === file.content ? file : { ...file, content: drawn };

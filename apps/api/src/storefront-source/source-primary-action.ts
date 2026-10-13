@@ -8,10 +8,11 @@ export const PRIMARY_ACTION_KINDS = ['whatsapp', 'form', 'booking', 'phone'] as 
 export type PrimaryActionKind = typeof PRIMARY_ACTION_KINDS[number];
 export type PrimaryAction = { kind: PrimaryActionKind; value?: string };
 
-/** Digits a wa.me or tel: link can dial. A Bolivian mobile typed without its country code (7xxxxxxx, 6xxxxxxx) gets 591. */
+/** Digits a wa.me or tel: link can dial. A Bolivian number typed without its country code (mobiles 6xxxxxxx and 7xxxxxxx,
+ *  landlines 2xxxxxxx, 3xxxxxxx and 4xxxxxxx with their area code) gets 591; an international 00 is dropped. */
 export function dialDigits(value: unknown): string | null {
-  const digits = typeof value === 'string' ? value.replace(/\D/g, '') : '';
-  const full = digits.length === 8 && /^[67]/.test(digits) ? `591${digits}` : digits;
+  const digits = (typeof value === 'string' ? value.replace(/\D/g, '') : '').replace(/^00/, '');
+  const full = digits.length === 8 && /^[2-467]/.test(digits) ? `591${digits}` : digits;
   return full.length >= 7 && full.length <= 15 ? full : null;
 }
 
@@ -31,7 +32,8 @@ export function sourcePrimaryAction(saved: unknown, contactPhone?: string | null
   }
   const choice = typeof saved === 'object' ? saved as { kind?: unknown; value?: unknown } : {};
   if (choice.kind === 'whatsapp' || choice.kind === 'phone') {
-    const digits = dialDigits(choice.value) ?? dialDigits(contactPhone);
+    // WhatsApp follows the store number as it is now (Ajustes can change it after setup); a phone call keeps the number chosen for it.
+    const digits = choice.kind === 'whatsapp' ? dialDigits(contactPhone) ?? dialDigits(choice.value) : dialDigits(choice.value) ?? dialDigits(contactPhone);
     return digits ? { kind: choice.kind, value: digits } : { kind: 'form' };
   }
   if (choice.kind === 'booking') {
@@ -39,6 +41,12 @@ export function sourcePrimaryAction(saved: unknown, contactPhone?: string | null
     return url ? { kind: 'booking', value: url } : { kind: 'form' };
   }
   return { kind: 'form' };
+}
+
+/** The action for this save: the merchant's setup choice, made usable against the store as it is now, before the action an
+ *  earlier save kept in config.js (which is already resolved, so it cannot follow a later change of number). */
+export function resolveStoreAction(setupChoice: unknown, keptAction: unknown, contactPhone?: string | null): PrimaryAction {
+  return sourcePrimaryAction(setupChoice ?? keptAction, contactPhone);
 }
 
 /** The action as a link. `attributes` is trusted markup; `href` is escaped by whoever writes it into HTML. */

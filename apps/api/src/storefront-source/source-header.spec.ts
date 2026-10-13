@@ -165,3 +165,37 @@ describe('withSourceHeader: the save step that draws the header on every page (s
     expect(headerFact(undefined, [])).toBe('');
   });
 });
+
+describe('the platform keeps the header it owns (final review, 2026-10-13)', () => {
+  const page = (main: string, header = '<header data-pagosya-header></header>') => `<!doctype html><html lang="es"><head></head><body>${header}<main>${main}</main></body></html>`;
+  const saved = [{ path: 'index.html', content: page('<section id="a" data-nav-label="Inicio"></section>') }, { path: 'nosotros.html', content: page('<h1>Nosotros</h1>') }];
+  const input = { shape: 'stacked', purpose: 'shop' as const, storeName: 'deff' };
+  const file = (files: Array<{ path: string; content: string }>, path: string) => files.find(entry => entry.path === path)!.content;
+
+  it('puts the slot back on the home page when an edit removed it there, so no page loses its header', () => {
+    const drawn = withSourceHeader(saved, input).files;
+    const edited = emptySourceHeaders(drawn).map(entry => entry.path === 'index.html' ? { ...entry, content: entry.content.replace('<header data-pagosya-header></header>', '') } : entry);
+    const out = withSourceHeader(edited, { ...input, previous: drawn });
+    expect(out.rendered).toBe(true);
+    for (const path of ['index.html', 'nosotros.html']) expect(file(out.files, path)).toContain('<header data-pagosya-header data-shape="stacked"');
+  });
+
+  it('takes over a header the author wrote when this build owns the header, and leaves an older store alone', () => {
+    const own = saved.map(entry => ({ ...entry, content: entry.content.replace('<header data-pagosya-header></header>', '<header class="propio"><a href="index.html">deff</a></header>') }));
+    const out = withSourceHeader(own, { ...input, claim: true });
+    expect(out.rendered).toBe(true);
+    for (const path of ['index.html', 'nosotros.html']) {
+      expect(file(out.files, path)).toContain('<header data-pagosya-header data-shape="stacked"');
+      expect(file(out.files, path)).not.toContain('class="propio"');
+      expect(file(out.files, path).match(/<header\b/g)).toHaveLength(1);
+    }
+    expect(withSourceHeader(own, input).rendered).toBe(false);
+  });
+
+  it('keeps the logo the saved header showed when this save does not name one', () => {
+    const withLogo = withSourceHeader(saved, { ...input, logoPath: 'assets/logo.png' }).files;
+    const again = withSourceHeader(emptySourceHeaders(withLogo), { ...input, previous: withLogo });
+    expect(file(again.files, 'index.html')).toContain('<img class="pyh-logo" src="assets/logo.png" alt="">');
+    expect(file(again.files, 'nosotros.html')).toContain('<img class="pyh-logo" src="assets/logo.png" alt="">');
+  });
+});

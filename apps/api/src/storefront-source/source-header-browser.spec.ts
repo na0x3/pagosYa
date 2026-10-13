@@ -64,3 +64,46 @@ it('a long store name never makes the page wider than a 390px phone', async () =
     } finally { await page.close(); }
   }
 });
+
+// Final review, 2026-10-13: a wide wordmark logo next to the longest main button, and the shrinking shape held still.
+const WIDE_LOGO = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="400" height="100" fill="#b5462a"/></svg>')}`;
+async function openWith(shape: HeaderShape, width: number, extra: Partial<Parameters<typeof renderSourceHeader>[0]>, height = 900): Promise<Page> {
+  const page = await browser.newPage({ viewport: { width, height } });
+  const header = renderSourceHeader({ shape, purpose: 'service', storeName: 'Estudio Montenegro', links, action: { kind: 'form' }, ...extra });
+  await page.setContent(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}section{min-height:900px}</style></head><body>${header}<main><section id="servicios"></section><section></section><section></section></main><p data-pagosya-status></p></body></html>`);
+  await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_CONFIG=${JSON.stringify({ slug: 'm', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, sitePurpose: 'service', data: { storeName: 'Estudio Montenegro', items: [] } })};` });
+  await page.addScriptTag({ content: commerce });
+  await page.waitForFunction(() => Array.from(document.images).every(image => image.complete));
+  return page;
+}
+
+it('a wide logo never covers the main button on a 390px phone', async () => {
+  for (const shape of HEADER_SHAPES) {
+    const page = await openWith(shape, 390, { logoPath: WIDE_LOGO }, 844);
+    try {
+      const overlap = await page.evaluate(() => {
+        const boxes = Array.from(document.querySelectorAll('header .pyh-brand, header .pyh-brand *')).map(node => node.getBoundingClientRect()).filter(box => box.width > 0);
+        const brand = { left: Math.min(...boxes.map(box => box.left)), right: Math.max(...boxes.map(box => box.right)), top: Math.min(...boxes.map(box => box.top)), bottom: Math.max(...boxes.map(box => box.bottom)) };
+        const action = document.querySelector('header .pyh-action')!.getBoundingClientRect();
+        return brand.right > action.left + 1 && brand.left < action.right && brand.bottom > action.top && brand.top < action.bottom;
+      });
+      expect({ shape, overlap }).toEqual({ shape, overlap: false });
+    } finally { await page.close(); }
+  }
+});
+
+it('the shrinking header stays put while the page is held still near where it shrinks', async () => {
+  for (const start of [45, 60, 90]) {
+    const page = await openWith('shrinking', 1440, {});
+    try {
+      await page.evaluate(y => window.scrollTo(0, y), start);
+      const toggles = await page.evaluate(() => new Promise<number>(resolve => {
+        const header = document.querySelector('header[data-pagosya-header]')!;
+        let count = 0;
+        new MutationObserver(() => { count += 1; }).observe(header, { attributes: true, attributeFilter: ['data-scrolled'] });
+        setTimeout(() => resolve(count), 1000);
+      }));
+      expect({ start, steady: toggles <= 1 }).toEqual({ start, steady: true });
+    } finally { await page.close(); }
+  }
+});
