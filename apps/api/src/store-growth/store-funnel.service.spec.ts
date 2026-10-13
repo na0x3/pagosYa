@@ -2,12 +2,18 @@ import { StoreFunnelService } from './store-funnel.service';
 describe('consented storefront funnel', () => {
   const steps = { visitors: 10, productViews: 6, cartAdds: 4, checkoutStarts: 2, deliverySelections: 1, matureCartAdds: 3, cartWithoutCheckout: 2, cartWithoutPay: 1 };
   const mock = () => ({ store: { findFirst: jest.fn().mockResolvedValue({ id: 's1' }) }, storeFunnelVisit: { upsert: jest.fn().mockResolvedValue({ id: 'v1', token: 't'.repeat(32), createdAt: new Date() }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), count: jest.fn().mockResolvedValue(3) }, $queryRaw: jest.fn().mockResolvedValue([steps]) });
-  it('scopes and hashes sessions, and records only the first occurrence on retries', async () => {
+  it('scopes and hashes the visit session and hands back its order-link token', async () => {
     const prisma = mock(); const service = new StoreFunnelService(prisma as any);
-    await service.record('shop', 'anonymous-session', 'delivery_selected', 'pickup');
-    await service.record('shop', 'anonymous-session', 'delivery_selected', 'delivery');
+    await expect(service.record('shop', 'anonymous-session', 'visit')).resolves.toEqual({ token: 't'.repeat(32) });
     expect(prisma.storeFunnelVisit.upsert.mock.calls[0][0]).toMatchObject({ where: { storeId_sessionHash: { storeId: 's1', sessionHash: expect.stringMatching(/^[a-f0-9]{64}$/) } }, update: {} });
-    expect(prisma.storeFunnelVisit.updateMany).toHaveBeenCalledWith({ where: { id: 'v1', deliverySelectedAt: null }, data: { deliverySelectedAt: expect.any(Date), fulfillmentMethod: 'pickup' } });
+  });
+  it('accepts the step events older stores still post and writes nothing for them', async () => {
+    const prisma = mock(); const service = new StoreFunnelService(prisma as any);
+    for (const event of ['product_view', 'add_to_cart', 'checkout_started'] as const) await expect(service.record('shop', 's', event)).resolves.toEqual({});
+    await expect(service.record('shop', 's', 'delivery_selected', 'pickup')).resolves.toEqual({});
+    expect(prisma.store.findFirst).not.toHaveBeenCalled();
+    expect(prisma.storeFunnelVisit.upsert).not.toHaveBeenCalled();
+    expect(prisma.storeFunnelVisit.updateMany).not.toHaveBeenCalled();
   });
   it('rejects unpublished stores and client payment-success events', async () => {
     const prisma = mock(); const service = new StoreFunnelService(prisma as any);

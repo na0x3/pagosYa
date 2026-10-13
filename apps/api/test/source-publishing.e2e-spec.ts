@@ -161,19 +161,23 @@ describe('Published source and two-version sales tests', () => {
     await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/leads`).send({name:'Client',email:'client@example.com',message:'Hello',items:[]}).expect(400);
   });
 
-  it('deduplicates funnel sessions and counts only server-confirmed live payment completions', async () => {
+  it('links an order to its visit, ignores the old step events, and counts only server-confirmed live payment completions', async () => {
     const sessionId = randomUUID(); const endpoint = `/v1/stores/public/${slug}/funnel`;
-    const results = await Promise.all([1,2,3].map(() => request(app.getHttpServer()).post(endpoint).send({sessionId,event:'add_to_cart'}).expect(201)));
+    const results = await Promise.all([1,2,3].map(() => request(app.getHttpServer()).post(endpoint).send({sessionId,event:'visit'}).expect(201)));
     expect(new Set(results.map(row=>row.body.token)).size).toBe(1);
     const funnelToken = results[0].body.token;
+    // Stores published with an older kit still post steps: accepted, nothing written.
+    expect((await request(app.getHttpServer()).post(endpoint).send({sessionId,event:'add_to_cart'}).expect(201)).body).toEqual({});
     await request(app.getHttpServer()).post(endpoint).send({sessionId,event:'checkout_started'}).expect(201);
+    await request(app.getHttpServer()).post(endpoint).send({sessionId,event:'delivery_selected',method:'pickup'}).expect(201);
+    expect(await prisma.storeFunnelVisit.findFirstOrThrow({where:{token:funnelToken}})).toMatchObject({productViewedAt:null,cartAddedAt:null,checkoutStartedAt:null,deliverySelectedAt:null,fulfillmentMethod:null});
     await request(app.getHttpServer()).post(endpoint).send({sessionId,event:'payment_completed'}).expect(400);
     await request(app.getHttpServer()).post(endpoint).send({sessionId,event:'delivery_selected',address:'Must never be stored'}).expect(400);
     const purchase = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send({funnelToken,items:[{paymentLinkId:productId,quantity:1}]}).expect(201)).body;
     const order = await prisma.storeOrder.findUniqueOrThrow({where:{paymentIntentId:purchase.id}});
     expect(order.funnelVisitId).not.toBeNull();
     const summary = async()=> (await request(app.getHttpServer()).get(`/v1/stores/${storeId}/growth/insights`).set(auth()).expect(200)).body.funnel;
-    expect(await summary()).toMatchObject({visitors:1,cartAdds:1,checkoutStarts:1,paymentCompletions:0});
+    expect(await summary()).toMatchObject({paymentCompletions:0});
     await prisma.paymentIntent.update({where:{id:purchase.id},data:{status:'SUCCEEDED'}});
     expect((await summary()).paymentCompletions).toBe(0);
     await prisma.paymentIntent.update({where:{id:purchase.id},data:{livemode:true}});

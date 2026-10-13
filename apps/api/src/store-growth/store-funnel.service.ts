@@ -6,12 +6,17 @@ import { funnelSessions } from './funnel-sessions';
 
 export const FUNNEL_EVENTS = ['visit', 'product_view', 'add_to_cart', 'checkout_started', 'delivery_selected'] as const;
 export type FunnelEvent = typeof FUNNEL_EVENTS[number];
-const fields = { product_view: 'productViewedAt', add_to_cart: 'cartAddedAt', checkout_started: 'checkoutStartedAt', delivery_selected: 'deliverySelectedAt' } as const;
 @Injectable()
 export class StoreFunnelService {
   constructor(private readonly prisma: PrismaService) {}
+  /**
+   * The store page sends only `visit`: its token links a paid order to the session (StoreCheckoutService). Every
+   * checkout step is a G1 analytics event since 2026-10-13. A cached older host page still posts the old steps; they
+   * are accepted, validated as before, and nothing is written for them. The step columns stay in the table, unwritten.
+   */
   async record(slug: string, sessionId: string, event: FunnelEvent, method?: 'delivery' | 'pickup') {
     if (!FUNNEL_EVENTS.includes(event) || event === 'delivery_selected' && !method) throw new BadRequestException('Evento no válido');
+    if (event !== 'visit') return {};
     const store = await this.prisma.store.findFirst({ where: { slug, status: 'ACTIVE', sourcePublicationPaused: false, publishedSourceRevision: { not: null } }, select: { id: true } });
     if (!store) throw new NotFoundException('Tienda no publicada');
     const sessionHash = createHash('sha256').update(sessionId).digest('hex');
@@ -21,12 +26,8 @@ export class StoreFunnelService {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
       return this.prisma.storeFunnelVisit.findUniqueOrThrow({ where: { storeId_sessionHash: { storeId: store.id, sessionHash } } });
     });
-    // First occurrence only, including concurrent retries. A session expires after 24h.
+    // A session expires after 24h.
     if (visit.createdAt.getTime() < Date.now() - 86400000) throw new BadRequestException('Sesión caducada');
-    if (event !== 'visit') {
-      const field = fields[event];
-      await this.prisma.storeFunnelVisit.updateMany({ where: { id: visit.id, [field]: null }, data: { [field]: new Date(), ...(event === 'delivery_selected' ? { fulfillmentMethod: method } : {}) } });
-    }
     return { token: visit.token };
   }
   /**
