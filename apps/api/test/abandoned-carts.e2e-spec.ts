@@ -92,6 +92,17 @@ describe('Crecer › Carritos abandonados', () => {
     expect((await list(30).expect(200)).body.anonymousSessions).toBe(2);
   });
 
+  // saveCart refreshes an open cart in place: the merchant sees when the shopper last left, and a payment made
+  // before that refresh does not hide the new abandonment.
+  it('dates a re-saved cart by its last save, not its first', async () => {
+    const cart = await saved(5 * 24, 'reused@example.com');
+    await paid({ customerEmail: 'reused@example.com', updatedAt: hoursAgo(3 * 24) });
+    await db.storeSavedCart.update({ where: { id: cart.id }, data: { updatedAt: hoursAgo(2) } });
+    const row = (await list(7).expect(200)).body.carts.find((c: any) => c.email === 'reused@example.com');
+    expect(row).toBeDefined();
+    expect(Math.abs(Date.parse(row.leftAt) - hoursAgo(2).getTime())).toBeLessThan(60_000);
+  });
+
   it('refuses another merchant’s store and unknown periods', async () => {
     await request(app.getHttpServer()).get(`/v1/stores/${store.id}/abandoned-carts?days=7`).expect(401);
     await list(7, other).expect(404);

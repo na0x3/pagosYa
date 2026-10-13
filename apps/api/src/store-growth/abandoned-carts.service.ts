@@ -28,7 +28,8 @@ export class AbandonedCartsService {
         select: { items: true, amount: true, currency: true, createdAt: true, paymentIntent: { select: { id: true, customerName: true, customerEmail: true, customerPhone: true, metadata: true } } },
       }),
       // Kind 2: carts saved with consent («¿Prefieres terminar después?» or «Avísame») and still open.
-      this.prisma.storeSavedCart.findMany({ where: { storeId, closedAt: null, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: ROWS, select: { id: true, token: true, email: true, items: true, paymentIntentId: true, createdAt: true, sentAt: true } }),
+      // saveCart refreshes an open cart in place (updatedAt): its last save is when the shopper last left.
+      this.prisma.storeSavedCart.findMany({ where: { storeId, closedAt: null, updatedAt: { gte: since } }, orderBy: { updatedAt: 'desc' }, take: ROWS, select: { id: true, token: true, email: true, items: true, paymentIntentId: true, updatedAt: true, sentAt: true } }),
       // Whoever paid live in this store since: their earlier rows are not abandoned.
       this.prisma.storeOrder.findMany({ where: { storeId, merchantId, paymentIntent: { status: 'SUCCEEDED', livemode: true, updatedAt: { gte: since } } }, take: 5000, select: { paymentIntent: { select: { customerEmail: true, customerPhone: true, updatedAt: true } } } }),
       this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } }),
@@ -54,7 +55,7 @@ export class AbandonedCartsService {
       })),
       saved: saved.map(cart => ({
         ...savedCartLines(cart.items, catalog), id: cart.id, token: cart.token, email: cart.email, name: profiles.get(cart.email)?.name ?? null, phone: profiles.get(cart.email)?.phone ?? null,
-        paymentIntentId: cart.paymentIntentId, leftAt: cart.createdAt, sentAt: cart.sentAt, paymentSucceeded: paidIds.has(cart.paymentIntentId ?? ''),
+        paymentIntentId: cart.paymentIntentId, leftAt: cart.updatedAt, sentAt: cart.sentAt, paymentSucceeded: paidIds.has(cart.paymentIntentId ?? ''),
       })),
       paid: paid.map(order => ({ email: order.paymentIntent.customerEmail, phone: order.paymentIntent.customerPhone, paidAt: order.paymentIntent.updatedAt })),
       recoveryOn: (retention?.settings as { recoveryEnabled?: unknown } | null | undefined)?.recoveryEnabled === true,
