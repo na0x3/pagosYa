@@ -11,7 +11,8 @@
  *   - dragging the handle reorders sections live and posts pagosya:boceto-reorder { id, index }; dragging from empty space
  *     draws a selection box and posts pagosya:boceto-select-many { items, add }; Shift+click posts pagosya:boceto-select with add;
  *   - dragging a sticker ([data-skb-el="sticker"]) moves it freely and posts pagosya:boceto-el-move { id, x, y } in percentages;
- *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text. */
+ *   - double-clicking a [data-skb-field] element edits the text in place and posts pagosya:boceto-text;
+ *   - viewport heights in the store's CSS resolve against a 900px screen (restored when Boceto closes). */
 (function () {
   var swallowClick = false;
   var on = false, ready = false, handle = null, indicator = null, hovered = null, dragging = null, draggingGroup = null, editing = null, elDragging = null;
@@ -31,6 +32,58 @@
   function freeVar(node, name) { var value = parseFloat(node.style.getPropertyValue(name)); return isFinite(value) ? value : null; }
   function clampPct(value, low) { return Math.round(Math.min(100, Math.max(low, value)) * 10) / 10; }
   function grabbable(section, node) { return movableIn(section, node) || canFree(section, node); }
+
+  /** The board sizes the iframe to the whole page, so a hero in viewport heights (100svh, calc(100vh - 142px)…) tracked
+   * the iframe: every size report grew it again until the Studio's 20000px clamp cut the page off. While Boceto is on,
+   * those units resolve against a nominal screen; closing it puts the store's own CSS back. url() and strings are skipped
+   * (inlined fonts and photos are base64 and may contain "12vh"). vmin/vmax pin only their height side. */
+  var SCREEN_H = 900, pinnedVh = [];
+  var VH_TOKEN = /url\([^)]*\)|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|(^|[^\w.-])(-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)(?![\w-])/gi;
+  function pinVh(value) {
+    return value.replace(VH_TOKEN, function (whole, lead, num, unit) {
+      if (num === undefined) return whole;
+      var px = Math.round(parseFloat(num) * SCREEN_H) / 100 + 'px';
+      unit = unit.toLowerCase();
+      if (unit !== 'vmin' && unit !== 'vmax') return lead + px;
+      return lead + (((unit === 'vmin') !== (parseFloat(num) < 0)) ? 'min(' : 'max(') + num + 'vw, ' + px + ')';
+    });
+  }
+  function pinText(read, write, style) {
+    var before = read() || '', after = pinVh(before);
+    if (after === before) return;
+    write(after);
+    pinnedVh.push({ read: read, write: write, style: style, before: before, after: read() });
+  }
+  function pinRules(list) {
+    for (var i = 0; i < list.length; i++) {
+      var rule = list[i];
+      if (rule.style) (function (style) { pinText(function () { return style.cssText; }, function (text) { style.cssText = text; }, style); })(rule.style);
+      if (rule.cssRules) pinRules(rule.cssRules);
+    }
+  }
+  /** Idempotent: a pinned rule has no viewport heights left, so a repeat only picks up sheets added since. */
+  function pinViewportHeights() {
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var rules = null;
+      try { rules = document.styleSheets[i].cssRules; } catch (error) { /* cross-origin sheet: unreadable, left alone */ }
+      if (rules) pinRules(rules);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[style]'), function (node) {
+      pinText(function () { return node.getAttribute('style'); }, function (text) { node.setAttribute('style', text); }, node.style);
+    });
+  }
+  function unpinViewportHeights() {
+    pinnedVh.splice(0).reverse().forEach(function (entry) {
+      if (entry.read() === entry.after) { entry.write(entry.before); return; }
+      // Changed while on (a free spot, a live colour): only declarations still at their pinned value go back.
+      var was = document.createElement('div').style, pinned = document.createElement('div').style, style = entry.style;
+      was.cssText = entry.before; pinned.cssText = entry.after;
+      for (var i = 0; i < was.length; i++) {
+        var name = was[i], value = was.getPropertyValue(name);
+        if (pinned.getPropertyValue(name) !== value && style.getPropertyValue(name) === pinned.getPropertyValue(name)) style.setProperty(name, value, was.getPropertyPriority(name));
+      }
+    });
+  }
 
   /** "Cambiar foto": a chip over the hovered photo; clicking it asks the Studio to open its photo picker. */
   function placePhotoChip(img) {
@@ -815,10 +868,12 @@
     }
     if (event.data.type !== 'pagosya:boceto-mode') return;
     on = event.data.on === true;
+    if (on) pinViewportHeights(); else unpinViewportHeights();
     if (on) {
       // Content height from the body's own box, never the viewport: a forced iframe height would
       // echo back through scrollHeight and the whitespace below the footer could never shrink.
-      var report = function () { try { parent.postMessage({ type: 'pagosya:boceto-size', height: Math.ceil(document.body ? document.body.getBoundingClientRect().height : document.documentElement.scrollHeight) }, '*'); } catch (e) {}
+      // Silent once Boceto closes: the observer and the late timer outlive the mode.
+      var report = function () { if (!on) return; try { parent.postMessage({ type: 'pagosya:boceto-size', height: Math.ceil(document.body ? document.body.getBoundingClientRect().height : document.documentElement.scrollHeight) }, '*'); } catch (e) {}
       };
       report();
       setTimeout(report, 600);

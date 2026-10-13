@@ -560,3 +560,78 @@ it('review: right-clicking inside a selected block keeps a multi-block selection
   w.document.querySelector('[data-skb-el="headline"]').dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 })); await tick();
   expect(posted.at(-1)).toMatchObject({ type: 'pagosya:boceto-context', id: 'h', path: '' });
 });
+
+/** A board page grows to its full height, so a viewport-height hero would track the iframe and grow without end. */
+const vhPage = `<!doctype html><html><head><style>
+.poster{min-height:100svh}
+.hero{min-height:calc(100vh - 142px);padding:5dvh 2vw}
+@media (min-width:1px){.band{height:clamp(200px, 50lvh, 80vh);margin-top:-12.5vh}}
+.square{width:20vmin;height:10vmax}
+.ok{width:100vw;background-image:url(art.png);--label:"50vh"}
+</style></head><body><section data-skb="h" class="poster"><div class="hero" style="height:40vh;color:red">hola</div></section></body></html>`;
+function loadVh() {
+  const dom = new JSDOM(sourcePreviewDocument({ ...(snapshot as any), files: [{ path: 'index.html', content: vhPage }, { path: 'art.png', encoding: 'base64', content: 'ab+12vh/cd' }] } as never, 'index.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const send = (data: unknown) => w.dispatchEvent(new w.MessageEvent('message', { data, source: w }));
+  const rules = () => {
+    const out: any[] = [];
+    const walk = (list: any) => { for (const rule of Array.from(list) as any[]) { if (rule.style) out.push(rule); if (rule.cssRules) walk(rule.cssRules); } };
+    // Only the store's own sheet: Boceto adds a sheet of its own when it turns on.
+    for (const sheet of Array.from(w.document.styleSheets) as any[]) if (Array.from(sheet.cssRules as any[]).some((r: any) => r.selectorText === '.poster')) walk(sheet.cssRules);
+    return out;
+  };
+  const rule = (selector: string) => rules().find(r => r.selectorText === selector);
+  return { w, send, rules, rule };
+}
+
+it('board: viewport heights resolve against a 900px screen while Boceto is on (calc, clamp, @media, inline styles)', async () => {
+  const { w, send, rule } = loadVh();
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  expect(rule('.poster').style.getPropertyValue('min-height')).toBe('900px');
+  expect(rule('.hero').style.getPropertyValue('min-height')).toBe('calc(900px - 142px)');
+  expect(rule('.band').style.getPropertyValue('height')).toBe('clamp(200px, 450px, 720px)');
+  expect(rule('.band').style.getPropertyValue('margin-top')).toBe('-112.5px');
+  // vmin/vmax mix width and height: only the height side is pinned.
+  expect(rule('.square').style.getPropertyValue('width')).toBe('min(20vw, 180px)');
+  expect(rule('.square').style.getPropertyValue('height')).toBe('max(10vw, 90px)');
+  // Width units and anything inside url() or strings (inlined photos are base64) are left alone.
+  expect(rule('.ok').style.cssText).toContain('100vw');
+  expect(rule('.ok').style.cssText).toContain('base64,ab+12vh/cd');
+  expect(rule('.ok').style.cssText).toContain('"50vh"');
+  const inline = w.document.querySelector('.hero');
+  expect(inline.style.getPropertyValue('height')).toBe('360px');
+  expect(inline.style.getPropertyValue('color')).toBe('red');
+});
+
+it('board: closing Boceto puts every stylesheet rule and inline style back exactly as the store wrote it', async () => {
+  const { w, send, rules } = loadVh();
+  const before = rules().map(r => r.style.cssText);
+  const inline = w.document.querySelector('.hero');
+  const inlineBefore = inline.getAttribute('style');
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  expect(rules().map(r => r.style.cssText)).not.toEqual(before);
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  send({ type: 'pagosya:boceto-mode', on: false }); await tick();
+  expect(rules().map(r => r.style.cssText)).toEqual(before);
+  expect(inline.getAttribute('style')).toBe(inlineBefore);
+});
+
+it('board: an inline style the board changed while on keeps that change; only the pinned height goes back', async () => {
+  const { w, send } = loadVh();
+  const inline = w.document.querySelector('.hero');
+  send({ type: 'pagosya:boceto-mode', on: true }); await tick();
+  inline.style.setProperty('--skb-fx', '12');
+  send({ type: 'pagosya:boceto-mode', on: false }); await tick();
+  expect(inline.style.getPropertyValue('height')).toBe('40vh');
+  expect(inline.style.getPropertyValue('--skb-fx')).toBe('12');
+});
+
+it('board: the page stops reporting its size once Boceto closes', async () => {
+  const { w, send } = loadVh();
+  const sizes: number[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:boceto-size') sizes.push(event.data.height); });
+  send({ type: 'pagosya:boceto-mode', on: true });
+  send({ type: 'pagosya:boceto-mode', on: false });
+  await new Promise(resolve => setTimeout(resolve, 700));
+  expect(sizes).toHaveLength(1);
+});
