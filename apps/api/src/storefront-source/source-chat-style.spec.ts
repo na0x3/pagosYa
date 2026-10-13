@@ -224,3 +224,78 @@ it('keeps serving a picked proposal with its pick until the store moves past its
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce(picked);
   expect((await chat.styleProposal('m1', 's1')).proposal).toBeNull();
 });
+
+// Spec 2026-10-12 faster generation, part 1: the cards are choosable while their heroes are still being drawn.
+const drawingProposal = (): StyleProposal => ({ ...awaitingProposal(), status: 'RUNNING', pickable: true });
+
+it('replies as soon as the cards are choosable, while the style run keeps drawing heroes', async () => {
+  generate.mockImplementationOnce((...args: any[]) => { args[6].onPickable({ styleProposal: { generationId: 'g1', cards: 2 } }); return new Promise(() => undefined); });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería en Sopocachi', setupAction: 'generate', requestId: uuid() });
+  expect(out.assistantMessage.content).toBe('Te preparo 2 estilos para Café Buna: uno tranquilo y uno atrevido. Elige uno para construir tu tienda.');
+  expect(out.assistantMessage.metadata).toMatchObject({ styleProposal: { generationId: 'g1' } });
+});
+
+it('never fails the reply when the style run breaks after the cards were offered', async () => {
+  generate.mockImplementationOnce(async (...args: any[]) => { args[6].onPickable({ styleProposal: { generationId: 'g1', cards: 2 } }); await new Promise(resolve => setImmediate(resolve)); throw new Error('hero lane broke'); });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Una cafetería en Sopocachi', setupAction: 'generate', requestId: uuid() });
+  await new Promise(resolve => setImmediate(resolve));
+  expect(out.assistantMessage.metadata).toMatchObject({ styleProposal: { generationId: 'g1' } });
+  expect(prisma.storeAgentMessage.create.mock.calls.some((c: any[]) => c[0].data.metadata?.failed)).toBe(false);
+});
+
+it('builds from a card picked while heroes still draw: claims it, waits for the style run to let go, and builds with the heroes it saved', async () => {
+  (chat as any).styleReleasePollMs = 1;
+  const released = { ...drawingProposal(), status: 'PICKED' as const, picked: 1, heroes: [null, { html: '<header data-store-name>Buna</header>', source: 'model' as const }, null, null] };
+  prisma.storeSourceGeneration.findFirst
+    .mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: drawingProposal() })
+    .mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: { ...drawingProposal(), status: 'PICKED', picked: 1 } })
+    .mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: released });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 1 }, requestId: uuid() });
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith({ where: { id: 'g1', status: 'RUNNING', AND: [{ proposal: { path: ['status'], equals: 'RUNNING' } }, { proposal: { path: ['pickable'], equals: true } }] }, data: { proposal: expect.objectContaining({ status: 'PICKED', picked: 1 }) } });
+  expect(generate.mock.calls[0][6].style).toEqual({ proposal: released, index: 1 });
+});
+
+it('goes on after 20 s with the proposal it claimed when the style run never lets go', async () => {
+  (chat as any).styleReleasePollMs = 1; (chat as any).styleReleaseWaitMs = 5;
+  prisma.storeSourceGeneration.findFirst
+    .mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: drawingProposal() })
+    .mockResolvedValue({ id: 'g1', status: 'RUNNING', proposal: { ...drawingProposal(), status: 'PICKED', picked: 0 } });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() });
+  expect(generate.mock.calls[0][6].style.proposal).toMatchObject({ status: 'PICKED', picked: 0 });
+});
+
+it('honours a pick that lands in the instant the style run finishes', async () => {
+  prisma.storeSourceGeneration.findFirst
+    .mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: drawingProposal() })
+    .mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...awaitingProposal(), pickable: true } });
+  prisma.storeSourceGeneration.updateMany.mockResolvedValueOnce({ count: 0 });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 1 }, requestId: uuid() });
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenLastCalledWith({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'PICKED', picked: 1 }) } });
+  expect(generate.mock.calls[0][6].style).toEqual({ proposal: { ...awaitingProposal(), pickable: true }, index: 1 });
+});
+
+it('refuses a pick on cards still being planned', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: { ...awaitingProposal(), status: 'RUNNING' } });
+  await expect(chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() })).rejects.toThrow('Ese estilo ya no está disponible. Pide un nuevo diseño.');
+  expect(generate).not.toHaveBeenCalled();
+});
+
+it('answers without a model call while choosable cards still draw their heroes', async () => {
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: drawingProposal() });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: '¿y en azul?', requestId: uuid() });
+  expect(out.assistantMessage.content).toBe('Primero elige un estilo; después lo ajustamos juntos.');
+  expect(conversationDecide).not.toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
+});
+
+it('a redesign request retires cards still drawing and waits for their run to let go before building', async () => {
+  (chat as any).styleReleasePollMs = 1;
+  prisma.storeSourceGeneration.findFirst
+    .mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: drawingProposal() })
+    .mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', proposal: { ...drawingProposal(), status: 'SUPERSEDED' } })
+    .mockResolvedValueOnce({ id: 'g1', status: 'AWAITING_STYLE', proposal: { ...drawingProposal(), status: 'SUPERSEDED' } });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Rediseña mi tienda desde cero', requestId: uuid() });
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith({ where: { id: 'g1' }, data: { proposal: expect.objectContaining({ status: 'SUPERSEDED' }) } });
+  expect(prisma.storeSourceGeneration.findFirst).toHaveBeenCalledTimes(3);
+  expect(prisma.storeSourceGeneration.findFirst.mock.invocationCallOrder[2]).toBeLessThan(generate.mock.invocationCallOrder[0]);
+});
