@@ -1,7 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
 import { mountEmailContent } from "./email-content-panel.mjs";
 
-
 /**
  * Correos y marketing › Correos: the store's one email look, for the two designed confirmations. The
  * merchant designs it (or asks for a bolder version), previews each email at phone and desktop width,
