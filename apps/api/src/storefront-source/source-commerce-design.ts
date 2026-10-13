@@ -5,6 +5,20 @@ import { kitPath } from '@pagosya/storefront-kit';
 
 const attribute = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2];
 const block = (html: string, name: string) => html.match(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, 'i'))?.[0];
+// The whole element opening at `start`, counting nested tags of the same name.
+const element = (html: string, start: number) => {
+  const open = html.slice(start).match(/^<([a-z][\w-]*)\b[^>]*>/i);
+  if (!open) return undefined;
+  if (/\/>$/.test(open[0]) || /^(?:area|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i.test(open[1])) return open[0];
+  const tags = new RegExp(`<(\\/?)${open[1]}\\b[^>]*>`, 'gi');
+  tags.lastIndex = start + open[0].length;
+  for (let depth = 1, tag; (tag = tags.exec(html));) {
+    if (tag[1]) depth -= 1; else if (!tag[0].endsWith('/>')) depth += 1;
+    if (!depth) return html.slice(start, tags.lastIndex);
+  }
+};
+const idPattern = (id: string) => new RegExp(`<[a-z][\\w-]*\\b[^>]*\\sid\\s*=\\s*(["'])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1[^>]*>`, 'i');
+const PANEL = /(\s*)(<[a-z][\w-]*\b[^>]*\bdata-pagosya-shared-shell\s*=\s*(["'])header-panel\3[^>]*>)/i;
 // Recognize the previous stock shell too, so existing stores still inherit their brand.
 const normalize = (html: string) => html.replace(/href=(["'])index\.html#catalogo\1/g, 'href="productos.html"').replace(/\s+/g, ' ').trim();
 const STOCK_CATALOG_ORDER = '<aside class="commerce-order" aria-label="Tu pedido"><h2>Tu pedido</h2><div data-pagosya-cart></div></aside>';
@@ -21,6 +35,12 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[], tr
     return attribute(tag, 'rel') === 'stylesheet' && href && files.some(file => file.path === href.replace(/^\.\//, ''));
   });
   const homeHeader = block(home.split(/<main\b/i)[0], 'header');
+  // Panels the header opens (aria-controls) but that live elsewhere in index.html, e.g. a fullscreen menu.
+  const homePanels = homeHeader ? [...new Set([...homeHeader.matchAll(/\baria-controls\s*=\s*(["'])(.*?)\1/gi)].flatMap(match => match[2].split(/\s+/)).filter(Boolean))]
+    .filter(id => !idPattern(id).test(homeHeader)).map(id => {
+      const start = home.search(idPattern(id));
+      return start < 0 ? undefined : { id, html: element(home, start) };
+    }).filter((panel): panel is { id: string; html: string } => Boolean(panel?.html)) : [];
   const homeFooter = block(home.split(/<\/main>/i).at(-1)!, 'footer');
   const homeClasses = attribute(home.match(/<body\b[^>]*>/i)?.[0] || '', 'class');
   const routes = new Set(files.map(file => file.path));
@@ -51,7 +71,17 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[], tr
     for (const [name, shared] of [['header', homeHeader], ['footer', homeFooter]] as const) {
       const current = block(content, name), stock = block(template, name);
       if (shared && current && stock && (normalize(current) === normalize(stock) || attribute(current.match(/^<[^>]*>/)![0], 'data-pagosya-shared-shell') === name)) {
-        content = content.replace(current, rebase(shared.replace(new RegExp(`<${name}\\b`, 'i'), `<${name} data-pagosya-shared-shell="${name}"`)));
+        content = content.replace(current, () => rebase(shared.replace(new RegExp(`<${name}\\b`, 'i'), `<${name} data-pagosya-shared-shell="${name}"`)));
+        if (name === 'header') {
+          // Drop last save's copies first, so a re-run replaces them and an authored panel still wins.
+          for (let match; (match = content.match(PANEL));) {
+            const start = match.index! + match[1].length;
+            content = content.slice(0, match.index) + content.slice(start + (element(content, start) ?? match[2]).length);
+          }
+          const panels = homePanels.filter(panel => !idPattern(panel.id).test(content)).map(panel => '\n' + rebase(panel.html.replace(/^<[a-z][\w-]*\b/i, tag => `${tag} data-pagosya-shared-shell="header-panel"`)));
+          const header = block(content, 'header')!;
+          if (panels.length) content = content.replace(header, () => header + panels.join(''));
+        }
         stockShell = true;
       }
     }

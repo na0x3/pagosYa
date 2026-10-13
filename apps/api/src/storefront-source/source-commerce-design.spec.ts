@@ -95,3 +95,52 @@ it('keeps the stock full catalog distinct from the order summary, including lega
   expect(result.find(f => f.path === 'commerce-pages.css')!.content).toContain('.commerce-catalog-title');
   expect(await withSourceCommerceDesign(result)).toEqual(result);
 });
+
+describe('Header panels outside the shared header', () => {
+  const panel = '<div class="fullscreen-menu" id="menu-completo" role="dialog"><div class="menu-head"><div><span>Edición</span></div><button class="menu-close">Cerrar</button></div><nav class="menu-list"><a href="#inicio">Inicio</a><a href="buscar.html">Buscar</a></nav><p class="menu-foot">Cochabamba</p></div>';
+  const withPanel = (header: string, extra = panel) => files().map(file => file.path === 'index.html' ? { ...file, content: home.replace(/<header[\s\S]*<\/header>/, header).replace('</main>', `</main>${extra}`) } : file);
+  const menuHeader = '<header class="site-header"><a href="index.html">Marca</a><button class="menu-trigger" aria-controls="menu-completo">Menú</button></header>';
+  const page = (result: { path: string; content: string }[], path = 'productos.html') => result.find(file => file.path === path)!.content;
+  const catalog = () => [{ path: 'productos.html', content: kit('productos.html') }];
+
+  it('carries a header-controlled panel onto kit pages, complete, right after the header', async () => {
+    const result = await withSourceCommerceDesign([...withPanel(menuHeader), ...catalog()]);
+    for (const path of ['productos.html', 'product.html', 'checkout.html']) {
+      const content = page(result, path);
+      expect(content.match(/id="menu-completo"/g)).toHaveLength(1);
+      expect(content).toContain('<header data-pagosya-shared-shell="header" class="site-header"><a href="index.html">Marca</a><button class="menu-trigger" aria-controls="menu-completo">Menú</button></header>\n<div data-pagosya-shared-shell="header-panel" class="fullscreen-menu" id="menu-completo"');
+      expect(content).toContain('<a href="index.html#inicio">Inicio</a><a href="buscar.html">Buscar</a></nav><p class="menu-foot">Cochabamba</p></div>');
+    }
+  });
+  it('replaces the copied panel on a later save instead of duplicating it', async () => {
+    const first = await withSourceCommerceDesign([...withPanel(menuHeader), ...catalog()]);
+    expect(await withSourceCommerceDesign(first)).toEqual(first);
+    const edited = await withSourceCommerceDesign(first.map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('Cochabamba', 'La Paz') } : file));
+    expect(page(edited).match(/id="menu-completo"/g)).toHaveLength(1);
+    expect(page(edited)).toContain('La Paz');
+    expect(page(edited)).not.toContain('Cochabamba');
+    const removed = await withSourceCommerceDesign(first.map(file => file.path === 'index.html' ? { ...file, content: file.content.replace(panel, '') } : file));
+    expect(page(removed)).not.toContain('header-panel');
+    expect(page(removed)).toBe(page(await withSourceCommerceDesign([...withPanel(menuHeader, ''), ...catalog()])));
+  });
+  it('leaves a panel the kit page already has, and ignores missing or header-internal targets', async () => {
+    const own = [{ path: 'productos.html', content: kit('productos.html').replace(/<\/main>/i, '<div id="menu-completo">Propio</div></main>') }];
+    const kept = page(await withSourceCommerceDesign([...withPanel(menuHeader), ...own]));
+    expect(kept.match(/id="menu-completo"/g)).toHaveLength(1);
+    expect(kept).toContain('<div id="menu-completo">Propio</div>');
+    const missing = page(await withSourceCommerceDesign([...withPanel(menuHeader, ''), ...catalog()]));
+    expect(missing).not.toContain('header-panel');
+    const internal = '<header class="site-header"><button aria-controls="nav-movil">Menú</button><div id="nav-movil" hidden>Links</div></header>';
+    const inside = page(await withSourceCommerceDesign([...withPanel(internal, ''), ...catalog()]));
+    expect(inside.match(/id="nav-movil"/g)).toHaveLength(1);
+    expect(inside).not.toContain('header-panel');
+  });
+  it('copies every listed target and rebases them for nested pages', async () => {
+    const two = '<header class="site-header"><button aria-controls="menu-completo buscador">Menú</button></header>';
+    const nested = [...withPanel(two, `${panel}<aside id="buscador"><a href="buscar.html">Buscar</a></aside>`)].map(file => file.path === 'product.html' ? { ...file, path: 'pages/item.html' } : file);
+    const content = page(await withSourceCommerceDesign(nested), 'pages/item.html');
+    expect(content.match(/data-pagosya-shared-shell="header-panel"/g)).toHaveLength(2);
+    expect(content).toContain('<a href="../index.html#inicio">Inicio</a>');
+    expect(content).toContain('<aside data-pagosya-shared-shell="header-panel" id="buscador"><a href="../buscar.html">Buscar</a></aside>');
+  });
+});
