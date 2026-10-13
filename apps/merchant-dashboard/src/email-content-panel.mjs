@@ -1,7 +1,7 @@
 import { escapeHtml as esc } from "./html.mjs";
 
 /**
- * Ajustes › Correos › Contenido: what the merchant says in their emails. The announcement, the
+ * Correos y marketing › Correos › Contenido: what the merchant says in their emails. The announcement, the
  * hero photo, the promotion, the brand story, the store note and the recommendations are the
  * same in every email; a per-email switch turns a section off in one email only. Anything left
  * unset is built from the store's own facts. Facts (codes, discounts, prices) come from the
@@ -80,7 +80,7 @@ export function mountEmailContent(container, deps) {
 
       <div class="email-content-row" data-content-row="promo"><span class="email-content-label">Promoción</span>
         <div><select data-content-promo ${off}>${promoOptions()}</select>
-        ${shared().length ? "" : '<small>Marca códigos con «Mostrar en correos» en Descuentos para ofrecerlos aquí.</small>'}</div>
+        ${shared().length ? "" : '<small>Marca códigos con «Mostrar en correos» en Códigos promocionales para ofrecerlos aquí.</small>'}</div>
         ${switchBox("promo")}</div>
 
       <div class="email-content-row" data-content-row="story"><span class="email-content-label">Mensaje de marca</span>

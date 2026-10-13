@@ -183,3 +183,30 @@ test('without the custom look there is no content panel', async () => {
   assert.ok(!calls.some(([, p]) => p.endsWith('/emails/content')));
 });
 
+function mountOwn(api) {
+  const { window } = new JSDOM('<div id="c"></div>');
+  globalThis.document = window.document;
+  const container = window.document.getElementById('c');
+  return { container, panel: mountEmailStudio(container, { api, storeId: () => 'store_1', types: false }) };
+}
+
+test('opened for one email from the Correos list, it shows that email and no switcher of its own', async () => {
+  const calls = [];
+  const { container, panel } = mountOwn(fakeApi(status(), calls));
+  panel.show('appointment_confirmed'); await settle();
+  assert.equal(container.querySelector('[data-email-type]'), null);
+  assert.equal(container.querySelector('.email-studio-head h3').textContent, 'Cita confirmada');
+  assert.ok(calls.some(([, p]) => p.endsWith('/emails/preview?type=appointment_confirmed&which=active')));
+});
+
+test("asked for another email once open, it switches without re-reading the store's look", async () => {
+  const calls = [];
+  const { container, panel } = mountOwn(fakeApi(status(), calls));
+  panel.show('order_confirmation'); await settle();
+  const statusReads = () => calls.filter(([, p]) => p.endsWith('/emails')).length;
+  const before = statusReads();
+  panel.show('appointment_confirmed'); await settle();
+  assert.equal(statusReads(), before);
+  assert.equal(container.querySelector('.email-studio-head h3').textContent, 'Cita confirmada');
+  assert.ok(calls.some(([, p]) => p.endsWith('/emails/copy/appointment_confirmed')));
+});

@@ -1,12 +1,15 @@
 import { escapeHtml as esc } from "./html.mjs";
 import { mountEmailContent } from "./email-content-panel.mjs";
 
+
 /**
- * Ajustes › Correos: the store's one email look. The merchant designs it (or asks for a bolder
- * version), previews each email at phone and desktop width, edits its wording, undoes a
- * redesign and mails themselves a copy. Previews run in fully closed sandboxes: email HTML
- * never needs to run anything. Below it, the content of the emails (email-content-panel.mjs)
- * lives in its own element, so redrawing the studio never wipes what the merchant is typing there.
+ * Correos y marketing › Correos: the store's one email look, for the two designed confirmations. The
+ * merchant designs it (or asks for a bolder version), previews each email at phone and desktop width,
+ * edits its wording, undoes a redesign and mails themselves a copy. Previews run in fully closed
+ * sandboxes: email HTML never needs to run anything. Below it, the content of the emails
+ * (email-content-panel.mjs) lives in its own element, so redrawing the studio never wipes what the
+ * merchant is typing there. Opened from the Correos list (email-list-panel.mjs) with `types: false`,
+ * it shows the email picked there and draws no switcher of its own, so no email is listed twice.
  */
 const WIDTHS = [["Teléfono", 390], ["Escritorio", 640]];
 // The announcement, story and note are edited under "Contenido de tus correos", once for every email.
@@ -56,9 +59,23 @@ export function mountEmailStudio(container, deps) {
   }
 
   function typeList(s) {
-    const groups = [...new Set(s.types.map(t => t.group))];
-    return groups.map(group => `<div class="email-studio-group"><span>${esc(group)}</span>${s.types.filter(t => t.group === group).map(t =>
+    const types = Array.isArray(s.types) ? s.types : [];
+    const groups = [...new Set(types.map(t => t.group))];
+    return groups.map(group => `<div class="email-studio-group"><span>${esc(group)}</span>${types.filter(t => t.group === group).map(t =>
       `<button type="button" data-email-type="${esc(t.type)}" aria-pressed="${t.type === state.type}">${esc(t.label)}</button>`).join("")}</div>`).join("");
+  }
+
+  /** Without its own switcher the panel is titled with the email it shows. */
+  function title(s) {
+    if (deps.types !== false) return "Correos";
+    return (Array.isArray(s.types) ? s.types : []).find(t => t.type === state.type)?.label ?? "Correos";
+  }
+
+  /** Switches the email shown; its preview, wording and the content's per-email switches follow. */
+  function select(type) {
+    state = { ...state, type, edits: {} };
+    content?.render();
+    void loadEmail();
   }
 
   function frames() {
@@ -91,8 +108,8 @@ export function mountEmailStudio(container, deps) {
     const s = state.status;
     if (!s) { view.innerHTML = '<div class="email-studio"><p class="email-studio-status" role="status">Cargando…</p></div>'; return; }
     view.innerHTML = `<div class="email-studio">
-      <div class="email-studio-head"><div><h3>Correos</h3><p>${esc(statusLine(s))}</p></div><div class="email-studio-actions">${actions(s)}</div></div>
-      <div class="email-studio-types">${typeList(s)}</div>
+      <div class="email-studio-head"><div><h3>${esc(title(s))}</h3><p>${esc(statusLine(s))}</p></div><div class="email-studio-actions">${actions(s)}</div></div>
+      ${deps.types === false ? "" : `<div class="email-studio-types">${typeList(s)}</div>`}
       ${frames()}
       ${form()}
       <div class="email-studio-actions"><button type="button" class="ghost" data-email-test ${state.busy ? "disabled" : ""}>Enviar una prueba</button></div>
@@ -107,7 +124,7 @@ export function mountEmailStudio(container, deps) {
     on("[data-email-test]", () => void testSend());
     on("[data-copy-save]", () => void saveCopy());
     // The content's per-email switches follow the selected email.
-    view.querySelectorAll("[data-email-type]").forEach(button => button.addEventListener("click", () => { state = { ...state, type: button.dataset.emailType, edits: {} }; content?.render(); void loadEmail(); }));
+    view.querySelectorAll("[data-email-type]").forEach(button => button.addEventListener("click", () => select(button.dataset.emailType)));
     view.querySelectorAll("[data-copy-restore]").forEach(button => button.addEventListener("click", () => void restore(button.dataset.copyRestore)));
     view.querySelectorAll("[data-copy-field]").forEach(input => input.addEventListener("input", () => {
       state.edits[input.dataset.copyField] = input.value;
@@ -206,13 +223,13 @@ export function mountEmailStudio(container, deps) {
   }
 
   return {
-    show() {
+    show(type) {
       const storeId = deps.storeId();
       if (!storeId) return;
       // Re-fetched when the merchant switches store, not on every visit to the tab.
-      if (shownFor === storeId && state.status) return;
+      if (shownFor === storeId && state.status) { if (type && type !== state.type) select(type); return; }
       shownFor = storeId;
-      state = fresh();
+      state = { ...fresh(), ...(type ? { type } : {}) };
       void load();
     },
     reset() {

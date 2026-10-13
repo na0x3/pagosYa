@@ -109,6 +109,7 @@ test('without shared codes the promo row says where to mark one', async () => {
   const { container, panel } = mount(fakeApi(body({ promos: [{ id: 'p1', code: 'PRIVADO', discount: 'x', shared: false }] })));
   await panel.load();
   assert.match(container.querySelector('[data-content-row="promo"]').textContent, /Mostrar en correos/);
+  assert.match(container.querySelector('[data-content-row="promo"]').textContent, /en Códigos promocionales/);
 });
 
 test('a picked code that is no longer shared is shown as such, not as Automática', async () => {
