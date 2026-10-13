@@ -299,3 +299,14 @@ it('a redesign request retires cards still drawing and waits for their run to le
   expect(prisma.storeSourceGeneration.findFirst).toHaveBeenCalledTimes(3);
   expect(prisma.storeSourceGeneration.findFirst.mock.invocationCallOrder[2]).toBeLessThan(generate.mock.invocationCallOrder[0]);
 });
+
+// Final review: a style run that died while drawing heroes (API restart) stops beating; its cards no longer hold the chat.
+it('lets a message through when the run drawing the cards stopped beating, and refuses a pick on those cards', async () => {
+  const stale = new Date(Date.now() - 5 * 60_000);
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', heartbeatAt: stale, proposal: drawingProposal() });
+  const out: any = await chat.send('m1', 's1', { revision: 0, instruction: '¿y en azul?', requestId: uuid() });
+  expect(out.assistantMessage.content).not.toBe('Primero elige un estilo; después lo ajustamos juntos.');
+  expect(conversationDecide).toHaveBeenCalled();
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', heartbeatAt: stale, proposal: drawingProposal() });
+  await expect(chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() })).rejects.toThrow('Ese estilo ya no está disponible. Pide un nuevo diseño.');
+});

@@ -92,6 +92,9 @@ function offeredDirections(messages: Array<{ role: string; metadata?: unknown }>
 }
 
 /** A pick whose build failed: its run row still waits and the store is on the revision the styles were made for. */
+/** A style run drawing heroes beats like any run; one silent past the 90 s lease sweep died (an API restart), so its cards
+ *  no longer hold the chat and are not choosable. A row read without its heartbeat counts as beating. */
+const styleRunBeating = (row: { heartbeatAt?: Date | string | null }) => !row.heartbeatAt || Date.now() - new Date(row.heartbeatAt).getTime() < 90_000;
 const retryablePick = (proposal: StyleProposal, rowStatus: string, revision: number) => proposal.status === 'PICKED' && Boolean(proposal.design) && rowStatus === 'AWAITING_STYLE' && proposal.request.dto.revision === revision;
 
 @Injectable()
@@ -305,10 +308,10 @@ export class SourceChatService {
     });
     const styleOn = this.config.get<boolean>('app.yapiStylePick') === true;
     if (styleOn && input.stylePick) return this.buildFromStyle(merchantId, storeId, input, thread, userMessage, workflow, setupDraft);
-    const latestProposal = styleOn ? await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, proposal: { not: Prisma.DbNull } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, proposal: true } }) : null;
+    const latestProposal = styleOn ? await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, proposal: { not: Prisma.DbNull } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, heartbeatAt: true, proposal: true } }) : null;
     const latestParsed = latestProposal ? styleProposalFrom(latestProposal.proposal) : null;
     // Cards are choosable while their heroes still draw (spec 2026-10-12): the row is RUNNING and the proposal pickable.
-    const drawingProposal = latestProposal?.status === 'RUNNING' && latestParsed?.status === 'RUNNING' && latestParsed.pickable === true;
+    const drawingProposal = latestProposal?.status === 'RUNNING' && styleRunBeating(latestProposal) && latestParsed?.status === 'RUNNING' && latestParsed.pickable === true;
     const openProposal = latestProposal?.status === 'AWAITING_STYLE' || drawingProposal ? latestParsed : null;
     // A picked style whose build failed is still the merchant's choice: the next message must not pay for new cards.
     const pickedName = openProposal && retryablePick(openProposal, latestProposal!.status, current.revision) ? openProposal.design!.concepts[openProposal.picked ?? openProposal.design!.selected]?.card?.name : undefined;
@@ -515,10 +518,10 @@ export class SourceChatService {
   /** "Elige tu estilo": build the store from the merchant's card with the request the proposal saved, not this message. */
   private async buildFromStyle(merchantId: string, storeId: string, input: SendSourceMessageDto, thread: { id: string }, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, setupDraft: SourceSetupDraft) {
     try {
-      const row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: input.stylePick!.generationId, storeId }, select: { id: true, status: true, proposal: true, requestJobId: true } });
+      const row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: input.stylePick!.generationId, storeId }, select: { id: true, status: true, heartbeatAt: true, proposal: true, requestJobId: true } });
       const proposal = row ? styleProposalFrom(row.proposal) : null;
       // Choosable while its heroes are still drawing (spec 2026-10-12): the row is still RUNNING and the proposal pickable.
-      const drawing = row?.status === 'RUNNING' && proposal?.status === 'RUNNING' && proposal.pickable === true;
+      const drawing = row?.status === 'RUNNING' && styleRunBeating(row) && proposal?.status === 'RUNNING' && proposal.pickable === true;
       // A pick builds on the revision the styles were made for; an import or template that landed since makes them stale.
       if (!proposal?.design || !(drawing || ['AWAITING_STYLE', 'PICKED'].includes(proposal.status)) || proposal.request.dto.revision !== input.revision) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
       const index = input.stylePick!.auto ? proposal.design.selected : input.stylePick!.index ?? proposal.picked ?? proposal.design.selected;
