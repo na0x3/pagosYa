@@ -144,3 +144,15 @@ describe('Header panels outside the shared header', () => {
     expect(content).toContain('<aside data-pagosya-shared-shell="header-panel" id="buscador"><a href="../buscar.html">Buscar</a></aside>');
   });
 });
+
+describe('Platform header (spec 2026-10-13)', () => {
+  it('leaves a platform header to the save step: no header or panel copy, while the footer is still shared', async () => {
+    const platformHome = home.replace(/<header class="site-header">[\s\S]*?<\/header>/, '<header data-pagosya-header data-shape="menu-button" class="pyh pyh--menu-button"><button aria-controls="pyh-menu">Menú</button><div id="pyh-menu" hidden></div></header>');
+    const result = await withSourceCommerceDesign(files().map(file => file.path === 'index.html' ? { ...file, content: platformHome } : file));
+    const page = result.find(file => file.path === 'product.html')!.content;
+    expect(page).toContain('<header class="commerce-header">');
+    expect(page).not.toContain('data-pagosya-shared-shell="header"');
+    expect(page).not.toContain('data-pagosya-shared-shell="header-panel"');
+    expect(page).toContain('class="site-footer"');
+  });
+});

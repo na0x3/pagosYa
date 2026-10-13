@@ -35,8 +35,10 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[], tr
     return attribute(tag, 'rel') === 'stylesheet' && href && files.some(file => file.path === href.replace(/^\.\//, ''));
   });
   const homeHeader = block(home.split(/<main\b/i)[0], 'header');
+  // Spec 2026-10-13: a platform header is drawn on every page by withSourceHeader at save, so it is never copied here, nor its panels.
+  const platformHeader = Boolean(homeHeader && /^<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])/i.test(homeHeader));
   // Panels the header opens (aria-controls) but that live elsewhere in index.html, e.g. a fullscreen menu.
-  const homePanels = homeHeader ? [...new Set([...homeHeader.matchAll(/\baria-controls\s*=\s*(["'])(.*?)\1/gi)].flatMap(match => match[2].split(/\s+/)).filter(Boolean))]
+  const homePanels = homeHeader && !platformHeader ? [...new Set([...homeHeader.matchAll(/\baria-controls\s*=\s*(["'])(.*?)\1/gi)].flatMap(match => match[2].split(/\s+/)).filter(Boolean))]
     .filter(id => !idPattern(id).test(homeHeader)).map(id => {
       const start = home.search(idPattern(id));
       return start < 0 ? undefined : { id, html: element(home, start) };
@@ -68,7 +70,7 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[], tr
         .replace('class="commerce-page-title"', 'class="commerce-catalog-title"');
     }
     let stockShell = false;
-    for (const [name, shared] of [['header', homeHeader], ['footer', homeFooter]] as const) {
+    for (const [name, shared] of [['header', platformHeader ? undefined : homeHeader], ['footer', homeFooter]] as const) {
       const current = block(content, name), stock = block(template, name);
       if (shared && current && stock && (normalize(current) === normalize(stock) || attribute(current.match(/^<[^>]*>/)![0], 'data-pagosya-shared-shell') === name)) {
         content = content.replace(current, () => rebase(shared.replace(new RegExp(`<${name}\\b`, 'i'), `<${name} data-pagosya-shared-shell="${name}"`)));

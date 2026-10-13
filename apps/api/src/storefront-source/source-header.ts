@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 import { primaryActionLink, type PrimaryAction } from './source-primary-action';
 import type { SourceSitePurpose } from './source-site-purpose';
+import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 
 export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'bottom-pill', 'overlay', 'reveal'] as const;
 export type HeaderShape = typeof HEADER_SHAPES[number];
@@ -59,4 +60,110 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
   // A callback, never a replacement string: a store name containing "$&" must stay literal.
   const body = kitText(`${input.shape}.html`).replace(/\{\{(\w+)\}\}/g, (_match, key: string) => parts[key] ?? '');
   return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"><style data-pagosya-header-style>${kitText('headers.css')}</style>${body}</header>`;
+}
+
+const SLOT = /<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])[^>]*>/i;
+const EMPTY_SLOT = '<header data-pagosya-header></header>';
+/** The kit's stock commerce header, or the copy withSourceCommerceDesign used to put there. */
+const STOCK_HEADER = /<header\b[^>]*(?:\bclass\s*=\s*["']commerce-header["']|\bdata-pagosya-shared-shell\s*=\s*["']header["'])[^>]*>/i;
+const SHARED_PANEL = /<([a-z][\w-]*)\b[^>]*\bdata-pagosya-shared-shell\s*=\s*["']header-panel["'][^>]*>/i;
+const KIT_PAGE = /data-pagosya-(?:product|checkout)-page|data-catalog-full/;
+/** The words frameInputs counts as a fact (design-engine/frame-draw.ts): hours, days, delivery and pickup. */
+const FACT_WORDS = /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2}|env[ií]o|delivery|entrega|recojo|retiro|pickup)/i;
+
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'" };
+export const decodeEntities = (value: string) => value.replace(/&(amp|lt|gt|quot|#39|apos);/g, (_match, name: string) => ENTITIES[name]);
+
+/** The whole element that opens at `start`, counting nested tags of the same name; null when it never closes. */
+export function elementAt(html: string, start: number): string | null {
+  const open = html.slice(start).match(/^<([a-z][\w-]*)\b[^>]*>/i);
+  if (!open) return null;
+  const tags = new RegExp(`<(\\/?)${open[1]}\\b[^>]*>`, 'gi');
+  tags.lastIndex = start + open[0].length;
+  for (let depth = 1, tag: RegExpExecArray | null; (tag = tags.exec(html));) {
+    if (tag[1]) depth -= 1; else if (!tag[0].endsWith('/>')) depth += 1;
+    if (!depth) return html.slice(start, tags.lastIndex);
+  }
+  return null;
+}
+
+/** The element `pattern` finds, replaced by `replacement` (the whole element, nested tags included); null when absent. */
+function replaceElement(html: string, pattern: RegExp, replacement: string): string | null {
+  const match = pattern.exec(html);
+  const whole = match ? elementAt(html, match.index) : null;
+  return match && whole ? html.slice(0, match.index) + replacement + html.slice(match.index + whole.length) : null;
+}
+
+/** The sections index.html marks for the menu: data-nav-label with an id, in page order, at most six. */
+function navSections(html: string): Array<{ id: string; label: string }> {
+  const sections: Array<{ id: string; label: string }> = [];
+  for (const match of html.matchAll(/<[a-z][\w-]*\b[^>]*\bdata-nav-label\s*=\s*(["'])(.*?)\1[^>]*>/gi)) {
+    const id = match[0].match(/\sid\s*=\s*(["'])([^"']+)\1/i)?.[2];
+    const label = decodeEntities(match[2]).replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (id && label && !sections.some(section => section.id === id)) sections.push({ id, label });
+    if (sections.length === 6) break;
+  }
+  return sections;
+}
+
+/** The info bar's one real fact (spec: "one real fact from the brief"): a sentence naming hours or delivery, else the address. */
+export function headerFact(businessInformation: unknown, locations: unknown[] = []): string {
+  const text = typeof businessInformation === 'string' ? businessInformation : '';
+  const sentence = text.split(/(?<=[.!?])\s+|\n+/).map(part => part.trim()).find(part => part && FACT_WORDS.test(part));
+  if (sentence) return sentence.length > 90 ? `${sentence.slice(0, 88).replace(/\s+\S*$/, '')}…` : sentence;
+  const place = locations.find((entry): entry is { address?: unknown } => Boolean(entry) && typeof entry === 'object');
+  const address = typeof place?.address === 'string' ? place.address.trim() : '';
+  return address ? `Estamos en ${address}`.slice(0, 90) : '';
+}
+
+/** Every page's platform header back to its empty slot: what an edit works on, so YAPI never edits platform markup. */
+export function emptySourceHeaders<F extends { path: string; content: string; encoding?: string }>(files: F[]): F[] {
+  return files.map(file => {
+    if (file.encoding === 'base64' || !/\.html$/i.test(file.path)) return file;
+    const content = replaceElement(file.content, SLOT, EMPTY_SLOT);
+    return content === null || content === file.content ? file : { ...file, content };
+  });
+}
+
+export type SourceHeaderInput = {
+  /** The drawn shape (frame-draw.json `header`); anything else falls back to FALLBACK_HEADER_SHAPE. */
+  shape?: string; purpose: SourceSitePurpose; storeName: string; logoPath?: string; action?: PrimaryAction; fact?: string;
+  /** Pages the platform adds after this step, so the header may link them (buscar.html, contacto.html…). */
+  platformPages?: string[];
+  /** The store's saved files: a page whose saved version had the slot gets it back if an edit removed it. */
+  previous?: Array<{ path: string; content: string }>;
+};
+
+/**
+ * The platform header on every HTML page of a static store (spec 2026-10-13, B2): the drawn shape, rendered from the store's
+ * name, logo, purpose and action and the sections index.html marks with data-nav-label. A store whose index.html has no slot
+ * (an older store) comes back untouched. Kit commerce pages trade their stock or copied header for the slot. Idempotent.
+ */
+export function withSourceHeader<F extends { path: string; content: string; encoding?: string }>(files: F[], input: SourceHeaderInput): { files: F[]; rendered: boolean; shape: HeaderShape; fallback: boolean; missing: string[] } {
+  const known = (HEADER_SHAPES as readonly string[]).includes(input.shape ?? '');
+  const shape = known ? input.shape as HeaderShape : FALLBACK_HEADER_SHAPE;
+  const index = files.find(file => file.path === 'index.html' && file.encoding !== 'base64');
+  if (!index || !SLOT.test(index.content)) return { files, rendered: false, shape, fallback: !known, missing: [] };
+  const sections = navSections(index.content);
+  const exists = new Set([...files.map(file => file.path), ...(input.platformPages ?? [])]);
+  const pages: Array<[string, string]> = input.purpose === 'shop' ? [['productos.html', 'Productos'], ['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']] : [['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']];
+  const pageLinks = pages.filter(([path]) => exists.has(path)).map(([href, label]) => ({ href, label }));
+  const missing: string[] = [];
+  const out = files.map(file => {
+    if (file.encoding === 'base64' || !/\.html$/i.test(file.path) || file.path === ORDER_EMAIL_TEMPLATE_PATH) return file;
+    let content = file.content;
+    if (!SLOT.test(content) && KIT_PAGE.test(content)) content = replaceElement(content, STOCK_HEADER, EMPTY_SLOT) ?? content;
+    if (!SLOT.test(content) && input.previous?.some(saved => saved.path === file.path && SLOT.test(saved.content))) content = content.replace(/<body\b[^>]*>/i, tag => `${tag}${EMPTY_SLOT}`);
+    for (let panel = SHARED_PANEL.exec(content); panel; panel = SHARED_PANEL.exec(content)) {
+      const whole = elementAt(content, panel.index) ?? panel[0];
+      content = content.slice(0, panel.index) + content.slice(panel.index + whole.length);
+    }
+    const home = file.path === 'index.html';
+    const links = sections.length ? sections.map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label })) : pageLinks;
+    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath: input.logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1) });
+    const drawn = replaceElement(content, SLOT, header);
+    if (drawn === null) { missing.push(file.path); return file; }
+    return drawn === file.content ? file : { ...file, content: drawn };
+  });
+  return { files: out, rendered: true, shape, fallback: !known, missing };
 }
