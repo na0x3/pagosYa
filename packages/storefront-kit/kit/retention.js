@@ -315,6 +315,8 @@
         form(el, `<h3>¿Prefieres terminar después?</h3><form><label>Tu correo<input type="email" name="email" autocomplete="email" maxlength="254" required value="${escape(state.email)}"></label><label class="retention-consent"><input type="checkbox" name="consent" required ${state.consent ? 'checked' : ''}>Acepto recibir un recordatorio de este carrito si no termino la compra.</label><button type="submit">Guardar y recordármelo</button></form>`, async data => {
           state.email = String(data.get('email') ?? state.email ?? '').trim(); state.consent = true;
           const result = await api('carts', { email: state.email || undefined, consent: true, items: getCart(), ...(state.token ? { token: state.token } : {}) }); saveToken(result.token);
+          // One reminder a week per email: a later save is refused, never claimed.
+          if (result.saved === false) return 'Ya te enviamos un recordatorio de esta tienda esta semana, así que no programamos otro.';
           return 'Carrito guardado. Te enviaremos un recordatorio si no completas la compra.';
         });
         secureFields(el.querySelector('form'));

@@ -198,11 +198,13 @@ export class RetentionService {
       await tx.storeNewsletterSubscriber.upsert({ where: { storeId_email: { storeId, email } }, create: { storeId, email, isActive: false }, update: { updatedAt: new Date() } });
       const existing = dto.token ? await tx.storeSavedCart.findFirst({ where: { storeId, email, token: dto.token, sentAt: null, closedAt: null } }) : null;
       const data = { items: dto.items.map(i => ({ ...i })), dueAt: new Date(Date.now() + settings.recoveryHours * 3600000) };
-      // Explicit cart consent permits one reminder, without subscribing to campaigns.
-      const recent = existing || await tx.storeSavedCart.findFirst({ where: { storeId, email, createdAt: { gte: new Date(Date.now() - 7 * 86400000) } }, orderBy: { createdAt: 'desc' } });
-      if (recent && !existing) return { saved: true }; // Never disclose another session's token.
-      const cart = existing ? await tx.storeSavedCart.update({ where: { id: existing.id }, data }) : await tx.storeSavedCart.create({ data: { storeId, email, token: token(), ...data } });
-      return { saved: true, token: cart.token };
+      if (existing) return { saved: true, token: (await tx.storeSavedCart.update({ where: { id: existing.id }, data })).token };
+      // Explicit cart consent permits one reminder a week, without subscribing to campaigns.
+      if (await tx.storeSavedCart.findFirst({ where: { storeId, email, sentAt: { gte: new Date(Date.now() - 7 * 86400000) } }, select: { id: true } })) return { saved: false };
+      // Another session's open cart takes the latest items; its token is never disclosed.
+      const open = await tx.storeSavedCart.findFirst({ where: { storeId, email, sentAt: null, closedAt: null }, orderBy: { createdAt: 'desc' } });
+      if (open) { await tx.storeSavedCart.update({ where: { id: open.id }, data }); return { saved: true }; }
+      return { saved: true, token: (await tx.storeSavedCart.create({ data: { storeId, email, token: token(), ...data } })).token };
     });
   }
   async restoreCart(storeId: string, value: string) {

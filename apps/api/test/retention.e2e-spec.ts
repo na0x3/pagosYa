@@ -150,6 +150,21 @@ describe('Customer retention', () => {
     mail.send.mockClear(); await service.deliver(); expect(mail.send).not.toHaveBeenCalled();
     expect(await db.storeEmailDelivery.findFirst({ where: { sourceId: cart.id } })).toMatchObject({ status: 'PENDING' });
   });
+  it('keeps the latest cart from another session and refuses, rather than claims, a save after this week’s reminder', async () => {
+    const dto = { email: 'devices@example.com', consent: true, items: [{ paymentLinkId: product.id, quantity: 1 }] };
+    const first = await service.saveCart(store.id, dto);
+    // A second device has no token: its cart replaces the open one, whose token stays private.
+    expect(await service.saveCart(store.id, { ...dto, items: [{ paymentLinkId: product.id, quantity: 3 }] })).toEqual({ saved: true });
+    const cart = await db.storeSavedCart.findUniqueOrThrow({ where: { token: first.token! } });
+    expect(cart.items).toEqual([{ paymentLinkId: product.id, quantity: 3 }]);
+    // A cart closed without a reminder (paid, expired) does not use up the week's reminder.
+    await db.storeSavedCart.update({ where: { id: cart.id }, data: { closedAt: new Date() } });
+    const fresh = await service.saveCart(store.id, dto);
+    expect(fresh.token).toHaveLength(64);
+    await db.storeSavedCart.update({ where: { token: fresh.token! }, data: { sentAt: new Date() } });
+    expect(await service.saveCart(store.id, dto)).toEqual({ saved: false });
+    expect(await db.storeSavedCart.count({ where: { storeId: store.id, email: dto.email } })).toBe(2);
+  });
   it('retries delivery failures with the same idempotency key', async () => {
     await service.requestCard(store, 'retry@example.com');
     mail.send.mockRejectedValueOnce(new Error('Provider unavailable'));
