@@ -224,4 +224,21 @@ describe('Sep-5 self-review after the save', () => {
     const config = projects.save.mock.calls[1][2].files.find((file: any) => file.path === 'config.js').content;
     expect(JSON.parse(config.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, '')).data.items).toEqual([{ id: 'p1', name: 'Latte' }]);
   });
+
+  // Final review: the ChatGPT bridge serves about two calls at once, so the polish goes first and the store's email look
+  // and long product pages follow it.
+  it('starts the email look and the product pages only after the background review ends', async () => {
+    const emailKits = { designAfterSite: jest.fn().mockResolvedValue(undefined) };
+    const pageWriter = { fillStore: jest.fn().mockResolvedValue(undefined) };
+    Object.assign(service as any, { emailKits, pageWriter });
+    const seen: { signal?: AbortSignal } = {};
+    fetchMock.mockImplementation(hangingReview(seen) as any);
+    await generateN();
+    await eventually(() => Boolean(seen.signal));
+    expect(emailKits.designAfterSite).not.toHaveBeenCalled();
+    expect(pageWriter.fillStore).not.toHaveBeenCalled();
+    await service.cancelReview('s1');
+    await service.reviewSettled('s1');
+    await eventually(() => emailKits.designAfterSite.mock.calls.length === 1 && pageWriter.fillStore.mock.calls.length === 1);
+  });
 });

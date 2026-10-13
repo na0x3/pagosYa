@@ -1693,12 +1693,15 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const saved = await this.projects.save(merchantId, storeId, saveInput, { id: run.id, ...(!products.length && !productOperations.length ? { prepared: artifact } : {}), enablePayments: dto.revision === 0, products, productOperations, data: { model, credits, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: receipt.durationMs, status: 'COMPLETED', activeStoreId: null, revision: dto.revision + 1, completedAt: new Date() } });
     // Written once the revision is saved, so a failed save never changes Ajustes (the owner chose: live when YAPI saves).
     if (agentPolicyChange) await this.prisma.store.update({ where: { id: storeId }, data: { policies: data.policies as Prisma.InputJsonValue } });
-    // The store's email look is made with its first site (spec 2026-10-07): in the background, so the site never waits for it or fails on it.
-    void this.emailKits?.designAfterSite(storeId);
-    // New stores and redesigns get long product pages for products that have none (spec 2026-10-09), in the background.
-    if (fillsProductPagesAfterSave(!previous, redesign)) void this.pageWriter?.fillStore(storeId).catch(() => undefined);
     // The Sep-5 self-review runs after the store is shown (spec 2026-10-12 faster generation) and lands as N+1 if still wanted.
     if (sep5Review) await this.startSep5Review({ merchantId, storeId, revision: saved.revision, brief: dto.brief, savedFiles: saveInput.files, model, requestedModel: plan.requestedModel, maxCredits, freeRun, review: sep5Review });
+    // The ChatGPT bridge serves about two calls at once: YAPI's polish goes first, and the email look and long product pages
+    // follow it (resolves at once when there is no review).
+    const afterReview = this.reviewSettled(storeId);
+    // The store's email look is made with its first site (spec 2026-10-07): in the background, so the site never waits for it or fails on it.
+    void afterReview.then(() => this.emailKits?.designAfterSite(storeId)).catch(() => undefined);
+    // New stores and redesigns get long product pages for products that have none (spec 2026-10-09), in the background.
+    if (fillsProductPagesAfterSave(!previous, redesign)) void afterReview.then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
     await this.prisma.storeSourceGeneration.updateMany({ where: { storeId, OR: [{ baseRevision: { lte: dto.revision } }, { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60_000) } }] }, data: { checkpoint: Prisma.DbNull } }).catch(() => { this.logger.warn('No se pudieron limpiar los borradores privados antiguos; la revisión ya está guardada.'); });
     receipt.rewardCreditsCovered = freeRun ? 0 : await this.coverWithRewardCredits(merchantId, run.id, credits);
     return { ...saved, generation: receipt, ...(agentOutcome ? { agent: agentOutcome } : {}), ...({} as { candidate?: SourceProjectSnapshot; agent?: typeof agentOutcome }) };
