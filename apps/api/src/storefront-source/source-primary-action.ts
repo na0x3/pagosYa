@@ -1,0 +1,52 @@
+/**
+ * A showcase store's main action (spec docs/superpowers/specs/2026-10-13-showcase-stores-and-header-library-design.md):
+ * WhatsApp, the contact form, a booking link or a phone call. The setup form saves the merchant's answer in Store.onboarding;
+ * every save keeps the resolved action in config.js as `primaryAction`, and the platform header and the page's calls to
+ * action both use primaryActionLink, so they always agree. Anything unusable becomes the contact form.
+ */
+export const PRIMARY_ACTION_KINDS = ['whatsapp', 'form', 'booking', 'phone'] as const;
+export type PrimaryActionKind = typeof PRIMARY_ACTION_KINDS[number];
+export type PrimaryAction = { kind: PrimaryActionKind; value?: string };
+
+/** Digits a wa.me or tel: link can dial. A Bolivian mobile typed without its country code (7xxxxxxx, 6xxxxxxx) gets 591. */
+export function dialDigits(value: unknown): string | null {
+  const digits = typeof value === 'string' ? value.replace(/\D/g, '') : '';
+  const full = digits.length === 8 && /^[67]/.test(digits) ? `591${digits}` : digits;
+  return full.length >= 7 && full.length <= 15 ? full : null;
+}
+
+function bookingUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 300) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' && url.hostname.includes('.') ? url.href : null;
+  } catch { return null; }
+}
+
+/** The action a store uses: its saved choice made usable, or, with no choice at all, WhatsApp when it has a number. */
+export function sourcePrimaryAction(saved: unknown, contactPhone?: string | null): PrimaryAction {
+  if (saved === undefined || saved === null) {
+    const digits = dialDigits(contactPhone);
+    return digits ? { kind: 'whatsapp', value: digits } : { kind: 'form' };
+  }
+  const choice = typeof saved === 'object' ? saved as { kind?: unknown; value?: unknown } : {};
+  if (choice.kind === 'whatsapp' || choice.kind === 'phone') {
+    const digits = dialDigits(choice.value) ?? dialDigits(contactPhone);
+    return digits ? { kind: choice.kind, value: digits } : { kind: 'form' };
+  }
+  if (choice.kind === 'booking') {
+    const url = bookingUrl(choice.value);
+    return url ? { kind: 'booking', value: url } : { kind: 'form' };
+  }
+  return { kind: 'form' };
+}
+
+/** The action as a link. `attributes` is trusted markup; `href` is escaped by whoever writes it into HTML. */
+export function primaryActionLink(action: PrimaryAction): { href: string; label: string; attributes: string } {
+  switch (action.kind) {
+    case 'whatsapp': return { href: `https://wa.me/${action.value}`, label: 'Escríbenos', attributes: ' target="_blank" rel="noopener"' };
+    case 'booking': return { href: action.value ?? 'contacto.html', label: 'Agenda una cita', attributes: ' target="_blank" rel="noopener"' };
+    case 'phone': return { href: `tel:+${action.value}`, label: 'Llámanos', attributes: '' };
+    default: return { href: 'contacto.html', label: 'Pide una cotización', attributes: ' data-pagosya-contact-open' };
+  }
+}
