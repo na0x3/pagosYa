@@ -12,6 +12,7 @@ import { validateStyleDesign } from './source-style-design';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
+import { framePlatformHeader } from './design-engine/frame-draw';
 import { styleProposalView, type StyleProposal } from './source-style-proposal';
 import { heroFontFaces, sanitizeHeroHtml } from './design-engine/style-hero';
 import { BadGatewayException } from '@nestjs/common';
@@ -544,9 +545,10 @@ describe('style proposal mode', () => {
     expect(explore).not.toHaveBeenCalled();
     expect('styleProposal' in result).toBe(false);
     const prompt = authorPrompt()!;
-    expect(prompt).toContain(proposal.slots[1].paragraph);
+    expect(prompt).not.toMatch(/^- Header:/m);
+    expect(prompt).toContain(framePlatformHeader(proposal.slots[1].paragraph));
     expect(prompt).toContain('BOLD BY DEFAULT');
-    expect(prompt).toContain('PICKED HEADER AND HERO');
+    expect(prompt).toContain('PICKED HERO');
     expect(prompt).toContain(proposal.heroes[1]!.html);
     expect(prompt).not.toContain(proposal.heroes[0]!.html);
     const files = savedFiles();
@@ -563,7 +565,7 @@ describe('style proposal mode', () => {
     await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 0 } });
     expect(explore).not.toHaveBeenCalled();
     const prompt = authorPrompt()!;
-    expect(prompt).toContain(proposal.slots[0].paragraph);
+    expect(prompt).toContain(framePlatformHeader(proposal.slots[0].paragraph));
     expect(prompt).not.toContain('BOLD BY DEFAULT');
     expect(prompt).toContain(proposal.heroes[0]!.html);
   });
@@ -573,13 +575,13 @@ describe('style proposal mode', () => {
     proposal.heroes[1] = { html: '<header data-store-name>plantilla</header>', source: 'template' };
     await service.generate('m1', 's1', proposal.request.dto, budget, [], progress, { style: { proposal, index: 1 } });
     const prompt = authorPrompt()!;
-    expect(prompt).not.toContain('PICKED HEADER AND HERO');
+    expect(prompt).not.toContain('PICKED HERO');
     expect(prompt).not.toContain('plantilla</header>');
     const concept = proposal.design!.concepts[1];
     expect(prompt).toContain(`PICKED STYLE: The merchant chose the style card «${concept.card!.name}»`);
     expect(prompt).toContain(`headline "${concept.story!.headline}"`);
     expect(prompt).toContain(proposal.slots[1].palette!.paper);
-    expect(prompt).toContain(proposal.slots[1].paragraph);
+    expect(prompt).toContain(framePlatformHeader(proposal.slots[1].paragraph));
   });
 
   it('builds a pick whose lane lost its hero from the card design too', async () => {

@@ -16,7 +16,7 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
+import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { commerceConfig } from './source-commerce-config';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
@@ -1033,7 +1033,7 @@ export class SourceGenerationService {
         const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
         // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: frame.paragraph, hero: pickedHero, card: pickedCard };
+        const authorInput = { products: true, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: framePlatformHeader(frame.paragraph), hero: pickedHero, card: pickedCard };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
         const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[] } = {}) => {

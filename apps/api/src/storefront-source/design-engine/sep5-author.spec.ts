@@ -96,10 +96,11 @@ it('asks for the store shell when told to, before the choreography', () => {
   expect(sep5AuthorPrompt(base)).not.toContain('STORE SHELL');
   const shelled = sep5AuthorPrompt({ ...base, storeShell: true, motionPlan: 'MOTION CHOREOGRAPHY: subtle.' });
   expect(shelled).toContain(SEP5_STORE_SHELL);
-  expect(SEP5_STORE_SHELL).toContain('data-pagosya-account="login"');
-  expect(SEP5_STORE_SHELL).toContain('href="buscar.html"');
-  expect(SEP5_STORE_SHELL).toContain('data-cart-count');
+  expect(SEP5_STORE_SHELL).toContain('<header data-pagosya-header></header>');
+  expect(SEP5_STORE_SHELL).toContain('data-nav-label');
+  expect(SEP5_STORE_SHELL).toContain('--store-heading-font');
   expect(SEP5_STORE_SHELL).toContain('data-pagosya-pages');
+  expect(SEP5_STORE_SHELL).not.toContain('data-cart-count');
   expect(shelled.indexOf('STORE SHELL')).toBeLessThan(shelled.indexOf('MOTION CHOREOGRAPHY'));
   expect(shelled.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
 });
@@ -186,34 +187,31 @@ it('asks for the fonts before the choreography, keeps them in the self-review, a
 });
 
 // Spec 2026-10-10 frame and hero draw: the ordered shell made every header identical.
-it('builds the drawn frame instead of the ordered shell, and stays byte-identical without one', () => {
+it('keeps one platform shell with or without a drawn frame, and stays byte-identical without one', () => {
   const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
-  const frame = 'FRAME AND HERO: test frame\n- Header: giant wordmark.';
+  const frame = 'FRAME AND HERO: test frame\n- Hero: giant type.';
   const framed = sep5AuthorPrompt({ ...base, storeShell: true, frame, motionPlan: 'MOTION CHOREOGRAPHY: subtle.' });
   expect(framed).toContain(frame);
-  expect(framed).toContain(SEP5_STORE_SHELL_FRAMED);
-  expect(framed).not.toContain(SEP5_STORE_SHELL);
+  expect(framed.split(SEP5_STORE_SHELL)).toHaveLength(2);
+  expect(SEP5_STORE_SHELL_FRAMED).toBe(SEP5_STORE_SHELL);
   expect(framed.indexOf(frame)).toBeLessThan(framed.indexOf('MOTION CHOREOGRAPHY'));
-  expect(SEP5_STORE_SHELL_FRAMED).toContain('href="buscar.html"');
-  expect(SEP5_STORE_SHELL_FRAMED).toContain('data-pagosya-account="login"');
-  expect(SEP5_STORE_SHELL_FRAMED).toContain('[data-cart-count]');
-  expect(SEP5_STORE_SHELL_FRAMED).toContain('data-pagosya-pages');
   expect(sep5AuthorPrompt({ ...base, storeShell: true, frame: '  ' })).toBe(sep5AuthorPrompt({ ...base, storeShell: true }));
   expect(sep5AuthorPrompt({ ...base, frame: '  ' })).toBe(sep5AuthorPrompt(base));
+  expect(sep5AuthorPrompt({ ...base, storeShell: true, purpose: 'shop' })).toBe(sep5AuthorPrompt({ ...base, storeShell: true }));
 });
 
-it('asks the self-review to check the drawn frame only when there is one', () => {
+it('asks the self-review to check the drawn hero only when there is one, and to leave the platform header alone', () => {
   const input = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [], storeShell: true, draft: [], measured: [] };
-  expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).toMatch(/header and hero match FRAME AND HERO/);
+  expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).toMatch(/hero matches FRAME AND HERO/);
+  expect(sep5ReviewPrompt({ ...input, frame: 'FRAME AND HERO: x' })).toContain('leave <header data-pagosya-header> alone');
   expect(sep5ReviewPrompt(input)).not.toMatch(/FRAME AND HERO/);
+  expect(sep5ReviewPrompt(input)).not.toContain('search, account and cart');
+  expect(sep5ReviewPrompt(input)).toContain('whether the catalog and the primary action are easy to find');
 });
 
-it('keeps the cart, Buscar and Mi cuenta reachable on phones even when the merchant overrides the drawn header', () => {
-  expect(SEP5_STORE_SHELL_FRAMED).toMatch(/On mobile all four stay reachable/);
-});
-
-it('keeps the whole store name inside one data-store-name slot', () => {
-  for (const shell of [SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED]) expect(shell).toMatch(/whole store name inside one \[data-store-name\]/);
+it('leaves the header, its menu and the store name to the platform', () => {
+  expect(SEP5_STORE_SHELL).toMatch(/The platform draws the header on every page, so do not write one/);
+  expect(SEP5_STORE_SHELL).not.toMatch(/data-pagosya-account|buscar\.html|data-cart-count|\[data-store-name\]/);
 });
 
 it('asks the self-review to check colours, buttons and photos when there is a design draw', () => {
@@ -296,7 +294,8 @@ it('appends the picked header and hero, and stays byte-identical without one', (
   const base = { brief: {}, instruction: 'x', data: {}, assetLegend: [] };
   expect(sep5AuthorPrompt({ ...base, hero: '' })).toBe(sep5AuthorPrompt(base));
   const prompt = sep5AuthorPrompt({ ...base, hero: '<header data-store-name>Buna</header>' });
-  expect(prompt).toContain('PICKED HEADER AND HERO');
+  expect(prompt).toContain('PICKED HERO');
+  expect(prompt).toContain('start the page with the empty <header data-pagosya-header></header>');
   expect(prompt).toContain('<header data-store-name>Buna</header>');
 });
 
@@ -308,10 +307,12 @@ it('describes the picked card when its hero was not finished, and stays byte-ide
   expect(card).toContain('PICKED STYLE: The merchant chose the style card «Barra de barrio»');
   expect(card).toContain('display type Fraunces, text Instrument Sans');
   expect(card).toContain('background #fff8ee, text #1a1a1a, accent #d2462b, panels #f3e3cf');
-  expect(card).toContain('header "wordmark-band" and hero "poster"');
+  expect(card).toContain('hero "poster"');
+  expect(card).not.toContain('wordmark-band');
+  expect(card).toContain('Draw the first screen yourself');
   expect(card).toContain('eyebrow "Hecho en Sopocachi", headline "Café para compartir", line "Tostado cada mañana.", action "Ver menú"');
   const prompt = sep5AuthorPrompt({ ...base, card });
   expect(prompt).toContain(card);
-  expect(prompt).not.toContain('PICKED HEADER AND HERO');
+  expect(prompt).not.toContain('PICKED HERO');
   expect(sep5CardLook({ name: 'Solo texto', fonts: { display: 'fraunces', text: 'instrument' }, headline: 'Hola' })).not.toContain('colours background');
 });

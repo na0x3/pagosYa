@@ -31,9 +31,6 @@ export function sep5MeasuredFacts(facts: Sep5HeaderFacts[]): string[] {
   return facts.flatMap(fact => [
     ...(fact.pageWidth > fact.width + 2 ? [`${fact.width}px: la página es más ancha que la pantalla (${fact.pageWidth}px).`] : []),
     ...(fact.missingImages ? [`${fact.width}px: ${fact.missingImages} imagen(es) visibles no cargaron.`] : []),
-    ...(fact.search ? [] : [`${fact.width}px: no hay enlace a buscar.html fuera del pie de página.`]),
-    ...(fact.account ? [] : [`${fact.width}px: no hay enlace data-pagosya-account fuera del pie de página.`]),
-    ...(fact.cart ? [] : [`${fact.width}px: no hay botón de carrito con [data-cart-count].`]),
     ...(fact.brokenWords.length ? [`${fact.width}px: un título corta la palabra ${fact.brokenWords.map(word => `«${word}»`).join(', ')} a mitad de línea; dale ancho para que salte solo entre palabras.`] : []),
     ...(fact.decorEmoji ? [`${fact.width}px: ${fact.decorEmoji} emoji usado(s) como decoración; reemplázalo(s) por una ilustración o quítalo(s).`] : []),
     ...(fact.fakeCircle ? [`${fact.width}px: ${fact.fakeCircle} texto(s) circular(es) hecho(s) con un span girado; un texto en círculo necesita un SVG con <textPath>, o quítalo.`] : []),

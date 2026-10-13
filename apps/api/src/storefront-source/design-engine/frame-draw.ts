@@ -109,6 +109,12 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
     'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
 }
 
+/** The drawn frame without its header and cart lines (spec 2026-10-13): the platform draws the header for a static author,
+ *  which is told only the hero and footer. The style cards' "- Cart label:" line goes too. Every other line is kept as it is. */
+export function framePlatformHeader(paragraph: string): string {
+  return paragraph.split('\n').filter(line => !/^- (?:Header|Cart and account|Cart label):/.test(line)).join('\n');
+}
+
 // \b treats accented letters as non-word characters, so "menú" would never match; whole words via letter lookarounds.
 const HEADER_WORDS = /(?<!\p{L})(logo|logotipo|cabecera|encabezado|header|men[uú]|navegaci[oó]n)(?!\p{L})/iu;
 const PLACE_WORDS = /(?<!\p{L})(centrad[oa]|centro|izquierda|derecha|lateral|arriba|abajo|fij[oa]|sticky|flotante)(?!\p{L})/iu;

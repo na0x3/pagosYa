@@ -29,10 +29,8 @@ it('reports a header without search or account even when the footer has both', a
     expect.objectContaining({ width: 1024, search: false, account: false, cart: true }),
     expect.objectContaining({ width: 390, search: false, account: false, cart: true }),
   ]);
-  expect(sep5MeasuredFacts(facts)).toEqual(expect.arrayContaining([
-    '1280px: no hay enlace a buscar.html fuera del pie de página.',
-    '390px: no hay enlace data-pagosya-account fuera del pie de página.',
-  ]));
+  // Spec 2026-10-13: the platform draws the header, so its contents are measured but never worded for the model.
+  expect(sep5MeasuredFacts(facts).join('\n')).not.toMatch(/buscar\.html|data-pagosya-account|\[data-cart-count\]/);
 });
 
 it('says nothing about a complete header', async () => {
@@ -230,4 +228,8 @@ it('reports header controls something covers, at desktop and phone widths, for t
 it('says nothing about header controls when nothing covers them', async () => {
   const { facts } = await captureSep5Draft(await store(completeHeader, '', '<p style="height:1500px">Relleno</p>', 'body{margin:0}header{position:sticky;top:0;z-index:5;background:#fff}'));
   expect(facts.flatMap(fact => fact.headerCovers ?? [])).toEqual([]);
+});
+
+it('never words header contents for the model: the platform draws the header (spec 2026-10-13)', () => {
+  expect(sep5MeasuredFacts([{ width: 390, pageWidth: 390, missingImages: 0, search: false, account: false, cart: false, brokenWords: [], errors: [] }])).toEqual([]);
 });

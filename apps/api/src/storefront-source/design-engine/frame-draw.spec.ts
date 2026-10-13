@@ -1,6 +1,6 @@
 import { SOURCE_RHYTHM_DIRECTION } from '../source-design';
 import { PLAYBOOK } from './playbook';
-import { asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
+import { asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, framePlatformHeader, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const rich: FrameAvailable = { photos: 9, products: 9, facts: true };
@@ -374,4 +374,16 @@ describe('story angles fit the kind of business', () => {
 // Night run 2026-10-11: the angle's own name leaked into copy ("Guía de campo", "Guía de barra").
 it('never hands the author an angle name it could copy onto the page', () => {
   expect(DESIGN_CATALOGUE.angle.find(entry => entry.id === 'field-guide')!.desktop).not.toMatch(/field guide/i);
+});
+
+it('drops the header and cart lines for an author whose header the platform draws (spec 2026-10-13)', () => {
+  const paragraph = frameDirection({ header: 'stacked', cart: 'word-count', footer: 'quiet-line', hero: 'split' });
+  expect(paragraph).toMatch(/^- Header:/m);
+  const stripped = framePlatformHeader(paragraph);
+  expect(stripped).not.toMatch(/^- (Header|Cart and account):/m);
+  expect(stripped).toMatch(/^- Footer:/m);
+  expect(stripped).toMatch(/^- Hero:/m);
+  expect(stripped.startsWith('FRAME AND HERO:')).toBe(true);
+  expect(framePlatformHeader('FRAME AND HERO: x\n- Cart label: the header\'s cart reads «Tu bolsa».\n- Hero: y')).toBe('FRAME AND HERO: x\n- Hero: y');
+  expect(framePlatformHeader('')).toBe('');
 });
