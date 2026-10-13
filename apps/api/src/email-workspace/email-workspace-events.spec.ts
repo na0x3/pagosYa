@@ -30,14 +30,17 @@ function harness(livemode = true) {
     return { db, payment, email };
 }
 describe('email lifecycle hooks', () => {
-    it('queues a paid receipt with selected variant and tracking, without a duplicate default receipt', async () => {
+    // The harness store saved ORDER_CONFIRMATION enabled: that plain-text receipt is ignored now and
+    // the designed receipt (sendReceiptEmail) is the one confirmation the buyer gets.
+    it('sends the designed receipt with variant and tracking, and queues no plain-text confirmation', async () => {
         const { db, payment, email } = harness();
         await (payment as any).applyRailResult('payment-1', 'merchant', 'rail', { status: 'succeeded', raw: {} }, TransactionType.CAPTURE);
-        expect(db.storeEmailDelivery.upsert).toHaveBeenCalledTimes(1);
-        const body = db.storeEmailDelivery.upsert.mock.calls[0][0].create.body;
-        expect(body).toContain('Suéter (Azul / S)');
-        expect(body).toContain('/track/');
-        expect(email.send).not.toHaveBeenCalled();
+        expect(db.storeEmailDelivery.upsert).not.toHaveBeenCalled();
+        expect(email.send).toHaveBeenCalledTimes(1);
+        const sent = email.send.mock.calls[0][0];
+        expect(sent.to).toBe('buyer@example.test');
+        expect(sent.body).toContain('Suéter (Azul / S)');
+        expect(sent.body).toContain('/track/');
     });
     // Without this the merchant gets "a new order arrived" and has no way to
     // answer the buyer: no address in the body, nothing behind Reply.

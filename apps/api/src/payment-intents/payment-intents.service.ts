@@ -668,7 +668,6 @@ export class PaymentIntentsService {
       if (nextStatus === PaymentIntentStatus.SUCCEEDED) await this.limits.settle(tx, paymentIntentId);
       if (nextStatus === PaymentIntentStatus.FAILED) await this.limits.release(tx, paymentIntentId);
 
-      let receiptQueued = false;
       let subscriptionBlock = "";
       // Collected here, acted on after the transaction commits — see the call
       // site below for why it must not happen inside this callback.
@@ -714,12 +713,10 @@ export class PaymentIntentsService {
         }) : null;
         if (membership?.emailBlock) subscriptionBlock = [subscriptionBlock, membership.emailBlock].filter(Boolean).join("\n\n");
         if (order?.storeId && updated.livemode) {
-          const cart = (updated.metadata as {cart?:CartInventoryLine[]} | null)?.cart;
-          const lineCurrency = lineCurrencyFor({ currency: updated.currency, metadata: updated.metadata });
-          const originalTotal = invoiceAmount.currency !== updated.currency ? ` (${formatAmount(invoiceAmount.amount, invoiceAmount.currency)})` : '';
-          const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
-          const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
-          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}${subscriptionBlock ? `\n\n${subscriptionBlock}` : ''}`},{email:updated.customerEmail,name:updated.customerName});
+          // Only the team's NEW_ORDER notice comes out of this call now. The buyer's confirmation is the
+          // store's designed receipt, sent after commit by sendReceiptEmail; a plain-text
+          // ORDER_CONFIRMATION a store switched on before 2026-10-13 is ignored by queueStoreEmail.
+          await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency)},{email:updated.customerEmail,name:updated.customerName});
           // receiptSourceId is the sourceId queueStoreEmail was just called with,
           // which is what lets the thread find that receipt row again once this
           // transaction has committed and file it into the conversation.
@@ -775,14 +772,15 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder, subscriptionBlock };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, inboxOrder, subscriptionBlock };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
     // webhook/invoice enqueues above, which just write an outbox row), so it
     // must never hold a DB row lock open while it runs.
     if (outcome.railResult.status === "succeeded") {
-      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName, outcome.subscriptionBlock);
+      // The designed receipt is the order confirmation, always (2026-10-13): nothing upstream stands in for it.
+      await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName, outcome.subscriptionBlock);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
 

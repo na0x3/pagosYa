@@ -27,40 +27,16 @@ function outbox(settings: unknown) {
   };
 }
 
-async function queueReceipt(settings: unknown) {
-  const { db, upsert } = outbox(settings);
-  await queueStoreEmail(db, "store-1", "ORDER_CONFIRMATION", "payment-1", "ana@gmail.test", { order: "order-1", customer: "Ana", store: "Tienda" });
-  return upsert.mock.calls.map((call) => call[0].create).find((row) => row.kind === "WORKSPACE_ORDER_CONFIRMATION");
-}
+describe("plain-text workspace mail after the designed receipt took over", () => {
+  it("queues no buyer confirmation, even for a store that saved ORDER_CONFIRMATION enabled", async () => {
+    const { db, upsert } = outbox(verified);
 
-describe("order receipt routing", () => {
-  it("sends the receipt with Reply-To on the store's inbound address", async () => {
-    const receipt = await queueReceipt(verified);
+    expect(await queueStoreEmail(db, "store-1", "ORDER_CONFIRMATION", "payment-1", "ana@gmail.test", { order: "order-1", customer: "Ana", store: "Tienda" })).toBe(false);
 
-    expect(receipt.replyTo).toBe("hola@inbound.tienda.test");
+    expect(upsert).not.toHaveBeenCalled();
   });
 
-  it("sends the receipt with a Message-ID the inbox can correlate", async () => {
-    const receipt = await queueReceipt(verified);
-
-    expect(receipt.messageIdHeader).toBe(receiptMessageId("store-1", "payment-1"));
-  });
-
-  it("leaves the receipt exactly as it was when the domain is not verified", async () => {
-    const receipt = await queueReceipt({ emailWorkspace: { ...verified.emailWorkspace, domain: { name: "tienda.test", senderName: "Tienda", status: "pending" } } });
-
-    expect(receipt.replyTo).toBeNull();
-    expect(receipt.messageIdHeader).toBeNull();
-  });
-
-  it("leaves the receipt alone when the store has no mail domain at all", async () => {
-    const receipt = await queueReceipt({ emailWorkspace: { templates: verified.emailWorkspace.templates, staff: { enabled: false, recipients: [] } } });
-
-    expect(receipt.replyTo).toBeNull();
-    expect(receipt.messageIdHeader).toBeNull();
-  });
-
-  it("does not put an inbound Reply-To on other templates", async () => {
+  it("does not put an inbound Reply-To or Message-ID on any template", async () => {
     const { db, upsert } = outbox({ emailWorkspace: {
       ...verified.emailWorkspace,
       templates: { SHIPPED: { enabled: true, subject: "Enviado", body: "Va en camino" } },

@@ -64,16 +64,31 @@ describe('per-store email workspace', () => {
         expect(workspaceSender({ emailWorkspace: { domain } })).toBe('Tienda <notificaciones@mail.store.test>');
     });
     it('queues customer and opted-in staff mail with stable store-scoped idempotency keys', async () => {
-        const { db } = harness({ emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: '{{store}} / {{order}}', body: 'Hola {{customer}}' } }, staff: { enabled: true, recipients: [{ email: 'staff@store.test', events: ['NEW_ORDER'] }, { email: 'refund@store.test', events: ['REFUND'] }] } } });
+        const { db } = harness({ emailWorkspace: { templates: { REFUND: { enabled: true, subject: '{{store}} / {{order}}', body: 'Hola {{customer}}' } }, staff: { enabled: true, recipients: [{ email: 'staff@store.test', events: ['NEW_ORDER'] }, { email: 'refund@store.test', events: ['REFUND'] }] } } });
         const values = { store: 'Merchant profile', order: 'order-1', customer: 'Ana', amount: 'BOB 10', details: 'Private tracking URL' };
-        await queueStoreEmail(db, 'store-a', 'ORDER_CONFIRMATION', 'payment-1', 'Buyer@Example.test', values);
-        await queueStoreEmail(db, 'store-a', 'ORDER_CONFIRMATION', 'payment-1', 'Buyer@Example.test', values);
+        await queueStoreEmail(db, 'store-a', 'REFUND', 'refund-1', 'Buyer@Example.test', values);
+        await queueStoreEmail(db, 'store-a', 'REFUND', 'refund-1', 'Buyer@Example.test', values);
         const calls = db.storeEmailDelivery.upsert.mock.calls.map(([call]: any) => call);
         expect(calls).toHaveLength(4);
         expect(calls[0].where).toEqual(calls[2].where);
-        expect(calls[0].create).toMatchObject({ storeId: 'store-a', email: 'buyer@example.test', subject: 'Tienda A / order-1', body: 'Hola Ana\n\nPrivate tracking URL' });
-        expect(calls[1].create.kind).toBe('STAFF_NEW_ORDER');
-        expect(calls.every((call: any) => call.create.email !== 'refund@store.test')).toBe(true);
+        expect(calls[0].create).toMatchObject({ storeId: 'store-a', email: 'buyer@example.test', subject: 'Tienda A / order-1', body: 'Hola Ana\n\nPrivate tracking URL', replyTo: null, messageIdHeader: null });
+        expect(calls[1].create.kind).toBe('STAFF_REFUND');
+        expect(calls.every((call: any) => call.create.email !== 'staff@store.test')).toBe(true);
+    });
+    // The designed receipt is the one order confirmation (2026-10-13). A store that switched the old
+    // plain-text one on still has it in its JSON; that must not become a second confirmation.
+    it('never queues a buyer order confirmation, even one saved enabled, and still tells the team', async () => {
+        const { db } = harness({ emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: 'Pedido {{order}}', body: 'Hola {{customer}}' } }, staff: { enabled: true, recipients: [{ email: 'staff@store.test', events: ['NEW_ORDER'] }] } } });
+        expect(await queueStoreEmail(db, 'store-a', 'ORDER_CONFIRMATION', 'payment-1', 'buyer@example.test', { store: 'A', order: 'order-1', customer: 'Ana', amount: 'BOB 10' }, { email: 'buyer@example.test', name: 'Ana' })).toBe(false);
+        const rows = db.storeEmailDelivery.upsert.mock.calls.map(([call]: any) => call.create);
+        expect(rows.map((row: any) => row.kind)).toEqual(['STAFF_NEW_ORDER']);
+        expect(rows[0]).toMatchObject({ email: 'staff@store.test', replyTo: 'buyer@example.test' });
+    });
+    it('no longer offers or saves a plain-text order confirmation', async () => {
+        const { service } = harness({ emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: 'x', body: 'y' } }, staff: { enabled: false, recipients: [] } } });
+        const overview = await service.overview('merchant', 'store-a');
+        expect(overview.templates.map((item: any) => item.id)).not.toContain('ORDER_CONFIRMATION');
+        await expect(service.template('merchant', 'store-a', 'ORDER_CONFIRMATION', { revision: 2, enabled: true, subject: 'Pedido', body: 'Hola' })).rejects.toThrow('Plantilla desconocida.');
     });
     it('does not queue customer emails for disabled templates', async () => {
         const { db } = harness();

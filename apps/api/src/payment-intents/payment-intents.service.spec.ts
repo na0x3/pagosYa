@@ -727,12 +727,14 @@ describe("PaymentIntentsService subscription enrollment", () => {
   const enabledTemplate = { emailWorkspace: { templates: { ORDER_CONFIRMATION: { enabled: true, subject: "Pedido {{order}}", body: "Hola {{customer}}" } } } };
 
   it("starts the buyer's subscription when the first order is paid and puts the manage link in the receipt", async () => {
-    const { tx, pay, activeKey } = harness(enabledTemplate);
+    // enabledTemplate is a stored plain-text ORDER_CONFIRMATION: ignored now, the designed receipt carries the block.
+    const { tx, pay, activeKey, service } = harness(enabledTemplate);
     await pay();
 
     expect(tx.customerSubscription.createMany).toHaveBeenCalledWith(expect.objectContaining({ skipDuplicates: true }));
     expect(tx.customerSubscription.createMany.mock.calls[0][0].data[0]).toEqual(expect.objectContaining({ sourceOrderId: "order_1", merchantId: "m1", activeKey }));
-    expect(tx.storeEmailDelivery.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ body: expect.stringContaining("Administra tu suscripción: https://pagar.test/suscripcion/") }) }));
+    expect(tx.storeEmailDelivery.upsert).not.toHaveBeenCalled();
+    expect((service as any).sendReceiptEmail).toHaveBeenCalledWith(expect.anything(), "Tienda", expect.stringContaining("Administra tu suscripción: https://pagar.test/suscripcion/"));
   });
 
   it("hands the subscription block to the fallback receipt when the merchant has no confirmation template", async () => {

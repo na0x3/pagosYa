@@ -1,5 +1,10 @@
+/**
+ * The plain-text emails a store can switch on, edited in Correos y marketing › Correos. The buyer's
+ * order confirmation is NOT one of them: since 2026-10-13 it is always the store's designed receipt
+ * (PaymentIntentsService.sendReceiptEmail). A `templates.ORDER_CONFIRMATION` saved before then stays
+ * in the store's JSON and is ignored.
+ */
 export const EMAIL_TEMPLATES = [
-    { id: 'ORDER_CONFIRMATION', name: 'Confirmación de pedido', group: 'transactional', trigger: 'Después de confirmar el pago', subject: 'Pedido {{order}} confirmado · {{store}}', body: 'Hola {{customer}}, tu pago de {{amount}} fue confirmado. Gracias por comprar en {{store}}.', supported: true },
     { id: 'REFUND', name: 'Confirmación de reembolso', group: 'transactional', trigger: 'Cuando se confirma un reembolso', subject: 'Reembolso confirmado · {{store}}', body: 'Hola {{customer}}, se confirmó un reembolso de {{amount}} para tu pedido {{order}}.', supported: true },
     { id: 'SHIPPED', name: 'Pedido enviado', group: 'transactional', trigger: 'Al marcar el pedido como enviado', subject: 'Tu pedido está en camino · {{store}}', body: 'Hola {{customer}}, tu pedido {{order}} ya fue enviado.', supported: true },
     { id: 'WELCOME', name: 'Bienvenida a la comunidad', group: 'transactional', trigger: 'Cuando el cliente se suscribe a la comunidad', subject: '¡Bienvenido a {{store}}!', body: 'Gracias por unirte a nuestra comunidad.', supported: true },
@@ -70,25 +75,16 @@ export async function queueStoreEmail(db: any, storeId: string, key: string, sou
     const row = await db.storeRetention.findUnique({ where: { storeId } }), mail = workspaceMail(row?.settings), template = mail.templates[key];
     const store = db.store?.findUnique ? await db.store.findUnique({ where: { id: storeId }, select: { name: true } }) : null;
     values = { ...values, store: store?.name || values.store };
-    const enqueue = async (recipient: string, kind: string, subject: string, body: string, replyTo?: string, messageIdHeader?: string) => db.storeEmailDelivery.upsert({ where: { dedupeKey: workspaceDedupeKey(storeId, kind, sourceId, recipient) }, create: { storeId, email: recipient.toLowerCase(), kind, sourceId, subject, body, replyTo: replyTo || null, messageIdHeader: messageIdHeader || null, dedupeKey: workspaceDedupeKey(storeId, kind, sourceId, recipient) }, update: {} });
+    const enqueue = async (recipient: string, kind: string, subject: string, body: string, replyTo?: string) => db.storeEmailDelivery.upsert({ where: { dedupeKey: workspaceDedupeKey(storeId, kind, sourceId, recipient) }, create: { storeId, email: recipient.toLowerCase(), kind, sourceId, subject, body, replyTo: replyTo || null, messageIdHeader: null, dedupeKey: workspaceDedupeKey(storeId, kind, sourceId, recipient) }, update: {} });
     let queued = false;
-    if (email && template?.enabled) {
-        // The buyer's receipt is the ONLY thing most order threads ever contain,
-        // so it is the message their reply answers. Sent with Reply-To on the
-        // store's inbound address it comes back to us and lands in that thread;
-        // sent without, it goes to the merchant's personal mailbox and the
-        // thread this order opened stays empty forever. Same two fields the
-        // dashboard's own reply sets — one path, not two.
-        //
-        // Only when the domain is verified. Without it there is no inbound
-        // address to name and no inbox to receive anything, so the receipt must
-        // keep behaving exactly as it did before.
-        const inbound = mail.domain?.status === 'verified'
-            ? { replyTo: `hola@inbound.${mail.domain.name}`, messageIdHeader: receiptMessageId(storeId, sourceId) }
-            : { replyTo: undefined, messageIdHeader: undefined };
-        await enqueue(email, `WORKSPACE_${key}`, renderEmailText(template.subject, values), renderEmailText(template.body, values) + (values.details ? '\n\n' + values.details : ''), key === 'ORDER_CONFIRMATION' ? inbound.replyTo : undefined, key === 'ORDER_CONFIRMATION' ? inbound.messageIdHeader : undefined);
+    // Only a template the workspace still offers reaches a buyer. ORDER_CONFIRMATION is called for its
+    // team notice alone; the order's inbound Reply-To and Message-ID now travel on the designed receipt.
+    if (email && template?.enabled && EMAIL_TEMPLATES.some(item => item.id === key)) {
+        await enqueue(email, `WORKSPACE_${key}`, renderEmailText(template.subject, values), renderEmailText(template.body, values) + (values.details ? '\n\n' + values.details : ''));
         queued = true;
     }
+    // The team's notices are decided on their own, never by the buyer's template: NEW_ORDER keeps going
+    // out although ORDER_CONFIRMATION no longer sends anything to the buyer.
     const staffEvent = key === 'ORDER_CONFIRMATION' ? 'NEW_ORDER' : key === 'REFUND' ? 'REFUND' : null;
     if (staffEvent && mail.staff.enabled)
         for (const recipient of mail.staff.recipients.filter(item => item.events.includes(staffEvent)))
