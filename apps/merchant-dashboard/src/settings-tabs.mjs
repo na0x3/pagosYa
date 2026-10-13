@@ -1,6 +1,7 @@
-/** Ajustes is one page with tabs. General and Correos are the dashboard's own; Marca, Envíos y retiro and
- * Dominio are the Studio's panels, drawn inline in a same-origin frame that grows with its content. */
-export const SETTINGS_TABS = ["general", "brand", "shipping", "domain", "emails"];
+/** Ajustes is one page with tabs. General is the dashboard's own; Marca, Envíos y retiro and Dominio web are
+ * the Studio's panels, drawn inline in a same-origin frame that grows with its content. The store's emails
+ * moved to Correos y marketing › Correos on 2026-10-13. */
+export const SETTINGS_TABS = ["general", "brand", "shipping", "domain"];
 const STUDIO_SECTIONS = ["brand", "shipping", "domain"];
 
 /** @param {string} storeId @param {string} section */

@@ -8,6 +8,8 @@ test("every dashboard view opens without script errors", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(() => {
+    // Init scripts run in every frame, sandboxed email previews included, where storage throws.
+    if (window !== window.top) return;
     sessionStorage.setItem("pagosya_merchant_session", "smoke");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });

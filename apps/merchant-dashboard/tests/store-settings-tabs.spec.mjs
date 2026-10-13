@@ -87,7 +87,7 @@ async function openSettings(page) {
 
 test("Ajustes is one page with tabs, and General has no collapse buttons or repeated title", async ({ page }) => {
   await openSettings(page);
-  await expect(page.getByRole("tab")).toHaveText(["General", "Marca", "Envíos y retiro", "Dominio", "Correos"]);
+  await expect(page.getByRole("tab")).toHaveText(["General", "Marca", "Envíos y retiro", "Dominio web"]);
   const general = page.locator("#settingsPanelGeneral");
   await expect(general.getByRole("heading", { name: "Identidad" })).toBeVisible();
   await expect(page.locator("#storeSettingsSection").getByRole("button", { name: /^(Ocultar|Mostrar)/ })).toHaveCount(0);
@@ -111,7 +111,7 @@ test("the logo is picked with a real button, not the browser's file control", as
 
 test("Marca, Envíos y retiro and Dominio open inline in the page, for the selected store", async ({ page }) => {
   await openSettings(page);
-  for (const [name, section] of [["Dominio", "domain"], ["Marca", "brand"], ["Envíos y retiro", "shipping"]]) {
+  for (const [name, section] of [["Dominio web", "domain"], ["Marca", "brand"], ["Envíos y retiro", "shipping"]]) {
     await page.getByRole("tab", { name }).click();
     await expect(page.locator("#settingsPanelGeneral")).toBeHidden();
     await expect(page.locator(".settings-embed")).toBeVisible();
@@ -128,7 +128,7 @@ test("a Studio request to open Dominio lands on that tab", async ({ page }) => {
     const studio = /** @type {HTMLIFrameElement} */ (document.getElementById("merchantStudioFrame"));
     /** @type {any} */ (studio.contentWindow).eval(`parent.postMessage({ type: "pagosya:workspace", view: "store-settings", section: "domain" }, ${JSON.stringify(location.origin)})`);
   });
-  await expect(page.getByRole("tab", { name: "Dominio" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Dominio web" })).toHaveAttribute("aria-selected", "true");
 });
 
 test("at phone width the tabs scroll on their own and the page does not scroll sideways", async ({ page }) => {
@@ -141,4 +141,22 @@ test("at phone width the tabs scroll on their own and the page does not scroll s
   const head = await page.locator("#storeSettingsIdentityTitle").boundingBox();
   const name = await page.locator("#storeNameInput").boundingBox();
   expect(name.y).toBeGreaterThan(head.y);
+});
+
+test("General points to Correos y marketing, where the store's emails live", async ({ page }) => {
+  await openSettings(page);
+  await page.locator("#settingsPanelGeneral").getByRole("link", { name: "Correos y marketing" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "marketing");
+  await expect(page.locator('[data-marketing-tab="emails"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#marketingEmails")).toBeVisible();
+});
+
+test("a Studio request for Ajustes › Correos lands on Correos y marketing › Correos", async ({ page }) => {
+  await openSettings(page);
+  await page.evaluate(() => {
+    const studio = /** @type {HTMLIFrameElement} */ (document.getElementById("merchantStudioFrame"));
+    /** @type {any} */ (studio.contentWindow).eval(`parent.postMessage({ type: "pagosya:workspace", view: "store-settings", section: "emails" }, ${JSON.stringify(location.origin)})`);
+  });
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "marketing");
+  await expect(page.locator('[data-marketing-tab="emails"]')).toHaveAttribute("aria-pressed", "true");
 });

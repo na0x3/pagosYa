@@ -574,9 +574,10 @@
     </section>
 
     <section class="block marketing-workspace" data-dashboard-page="marketing" hidden>
-      <nav class="marketing-tabs" id="marketingTabs" aria-label="Herramientas de marketing" data-tab="templates"><button type="button" data-marketing-tab="templates" aria-pressed="true">Plantillas</button><button type="button" data-marketing-tab="flows" aria-pressed="false">Flujos</button><button type="button" data-marketing-tab="staff" aria-pressed="false">Equipo</button><button type="button" data-marketing-tab="domain" aria-pressed="false">Dominio</button><button type="button" data-marketing-tab="logs" aria-pressed="false">Registros</button><button type="button" data-marketing-tab="program" aria-pressed="false">Comeback Card</button><button type="button" data-marketing-tab="campaigns" aria-pressed="false">Campañas</button><button type="button" data-marketing-tab="customers" aria-pressed="false">Clientes</button><button type="button" data-marketing-tab="promotions" aria-pressed="false">Códigos promocionales</button></nav>
+      <nav class="marketing-tabs" id="marketingTabs" aria-label="Herramientas de marketing" data-tab="emails"><button type="button" data-marketing-tab="emails" aria-pressed="true">Correos</button><button type="button" data-marketing-tab="staff" aria-pressed="false">Equipo</button><button type="button" data-marketing-tab="domain" aria-pressed="false">Remitente</button><button type="button" data-marketing-tab="logs" aria-pressed="false">Registros</button><button type="button" data-marketing-tab="program" aria-pressed="false">Comeback Card</button><button type="button" data-marketing-tab="campaigns" aria-pressed="false">Campañas</button><button type="button" data-marketing-tab="customers" aria-pressed="false">Clientes</button><button type="button" data-marketing-tab="promotions" aria-pressed="false">Códigos promocionales</button></nav>
       <iframe id="storeMarketingFrame" title="Correos y marketing de la tienda" class="store-resource-frame"></iframe>
       <p data-resource-empty="marketing" hidden>Selecciona una tienda para configurar su marketing.</p>
+      <div id="marketingEmails"><div class="panel"><div id="marketingEmailsRoot"></div></div></div>
       <div id="marketingPromotions" hidden><div class="panel">
         <section class="promo-code-studio" aria-labelledby="promoCodeTitle">
           <header class="promo-code-head">
@@ -877,12 +878,10 @@
         <button type="button" role="tab" id="settingsTabGeneral" aria-controls="settingsPanelGeneral" data-settings-tab="general">General</button>
         <button type="button" role="tab" id="settingsTabBrand" aria-controls="settingsPanelStudio" data-settings-tab="brand">Marca</button>
         <button type="button" role="tab" id="settingsTabShipping" aria-controls="settingsPanelStudio" data-settings-tab="shipping">Envíos y retiro</button>
-        <button type="button" role="tab" id="settingsTabDomain" aria-controls="settingsPanelStudio" data-settings-tab="domain">Dominio</button>
-        <button type="button" role="tab" id="settingsTabEmails" aria-controls="settingsPanelEmails" data-settings-tab="emails">Correos</button>
+        <button type="button" role="tab" id="settingsTabDomain" aria-controls="settingsPanelStudio" data-settings-tab="domain">Dominio web</button>
       </div>
-      <div role="tabpanel" id="settingsPanelGeneral" aria-labelledby="settingsTabGeneral" data-settings-panel="general"><div id="storeSettingsRoot"></div></div>
+      <div role="tabpanel" id="settingsPanelGeneral" aria-labelledby="settingsTabGeneral" data-settings-panel="general"><p class="settings-emails-moved">Tus correos están en <a href="#dashboard-marketing" data-open-marketing-emails>Correos y marketing</a>.</p><div id="storeSettingsRoot"></div></div>
       <div role="tabpanel" id="settingsPanelStudio" aria-label="Ajustes del Studio" data-settings-panel="studio" hidden><iframe class="settings-embed" title="Ajustes de la tienda"></iframe></div>
-      <div role="tabpanel" id="settingsPanelEmails" aria-labelledby="settingsTabEmails" data-settings-panel="emails" hidden><div id="orderEmailRoot"></div></div>
     </section>
 
     <section class="block" id="connectAiSection" data-dashboard-page="connect-ai">

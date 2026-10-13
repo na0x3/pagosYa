@@ -76,8 +76,8 @@ function correos(state) {
 
 async function openCorreos(page, state) {
   const requests = await openDashboard(page, [store("store_1", "Café Illimani")], correos(state));
-  await navigateDashboard(page, "store-settings");
-  await page.getByRole("tab", { name: "Correos" }).click();
+  await navigateDashboard(page, "marketing");
+  await page.locator('[data-marketing-tab="emails"]').click();
   return requests;
 }
 
@@ -169,7 +169,7 @@ test("wording is edited, saved and restored", async ({ page }) => {
 
 test("the test send goes to the signed-in merchant, naming the selected email and no address", async ({ page }) => {
   const requests = await openCorreos(page, { status: status() });
-  await page.getByRole("button", { name: "Cita confirmada" }).click();
+  await page.locator('[data-email-row="appointment_confirmed"]').click();
   await page.getByRole("button", { name: "Enviar una prueba" }).click();
   await expect(page.getByText("Te enviamos una prueba a tu correo.")).toBeVisible();
   const send = requests.find((r) => r.path === `${BASE}/test-send`);
@@ -183,8 +183,8 @@ test("a failed preview says so instead of showing an empty frame", async ({ page
   await page.route(`http://localhost:3001/v1${BASE}/preview**`, (route) =>
     route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "No pudimos preparar la vista previa." }) }),
   );
-  await navigateDashboard(page, "store-settings");
-  await page.getByRole("tab", { name: "Correos" }).click();
+  await navigateDashboard(page, "marketing");
+  await page.locator('[data-marketing-tab="emails"]').click();
   await expect(page.getByText("No pudimos preparar la vista previa")).toBeVisible();
   await expect(page.locator(".email-studio-frame iframe")).toHaveCount(0);
 });
@@ -213,7 +213,7 @@ test("the content of the emails is edited below the preview, and saving it reloa
   await expect.poll(() => requests.find((r) => r.method === "PUT" && r.path === `${BASE}/content/announcement`)?.body).toEqual({ text: "Envío gratis todo octubre" });
   await expect.poll(previews).toBeGreaterThan(before);
   // A per-email switch saves at once, for the selected email.
-  await page.getByRole("button", { name: "Cita confirmada" }).click();
+  await page.locator('[data-email-row="appointment_confirmed"]').click();
   await page.locator('[data-content-switch="promo"]').click();
   await expect.poll(() => requests.find((r) => r.method === "PUT" && r.path === `${BASE}/content/emails/appointment_confirmed/promo`)?.body).toEqual({ on: false });
 });

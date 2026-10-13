@@ -625,11 +625,15 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   function canLeaveMerchantStudio() {
     try { return ["merchantStudioFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].every(id => document.getElementById(id).contentWindow?.pagosyaStudioCanLeave?.() ?? true); } catch { return false; }
   }
-  /* Deja Correos y marketing en una pestaña concreta; el iframe se recarga con ese tab. */
+  /* Deja Correos y marketing en una pestaña concreta. Correos y Códigos promocionales los dibuja el panel; las demás
+     son el Studio en el iframe, que se recarga con ese tab. Plantillas y Flujos eran las pestañas de correos del
+     Studio hasta 2026-10-13: quien todavía las pida (un Studio sin recompilar, un enlace guardado) llega a Correos. */
   function selectMarketingTab(tab) {
+    if (tab === "templates" || tab === "flows") tab = "emails";
     document.getElementById("marketingTabs").dataset.tab = tab;
     document.querySelectorAll("[data-marketing-tab]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.marketingTab === tab)));
     document.getElementById("marketingPromotions").hidden = tab !== "promotions";
+    document.getElementById("marketingEmails").hidden = tab !== "emails";
     document.getElementById("storeMarketingFrame").removeAttribute("src");
   }
   document.getElementById("marketingTabs").addEventListener("click", event => {
@@ -643,7 +647,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       const frame = document.getElementById(id);
       if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
-      frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && document.getElementById("marketingTabs").dataset.tab === "promotions";
+      frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && ["emails", "promotions"].includes(document.getElementById("marketingTabs").dataset.tab);
       const empty = document.querySelector(`[data-resource-empty="${kind}"]`); if (empty) empty.hidden = Boolean(currentStoreId && sessionToken);
       if (!frame.hidden && !frame.getAttribute("src")) {
         sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
@@ -651,6 +655,8 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         frame.src = `/studio/?embedded=1&${kind === "products" ? "productGuide=1" : `library=${kind}${kind === "marketing" ? `&tab=${document.getElementById("marketingTabs").dataset.tab}` : ""}`}&store=${encodeURIComponent(currentStoreId)}`;
       }
     }
+    // Correos is drawn here, not in the frame: shown for the selected store (loaded once per store).
+    if (view === "marketing" && sessionToken && document.getElementById("marketingTabs").dataset.tab === "emails") emailStudio?.show();
   }
   document.getElementById("startProductGuide").addEventListener("click", () => {
     syncStoreResourceViews("products");
@@ -663,7 +669,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (!frame || frame.dataset.storeId !== currentStoreId || event.data?.storeId !== currentStoreId) return;
     if (event.data.type === "pagosya:workspace" && ["marketing", "integrations", "experiments", "workspace"].includes(event.data.view)) {
       if (!canLeaveMerchantStudio()) return;
-      if (event.data.view === "marketing" && ["program", "templates"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
+      if (event.data.view === "marketing" && ["program", "emails", "templates", "flows"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
       history.pushState(null, "", `#dashboard-${event.data.view}`); setDashboardView(event.data.view); return;
     }
     if (event.data.type === "pagosya:template-applied") {
@@ -728,7 +734,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
     if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments", "store-settings"].includes(event.data.view)) {
-      if (event.data.view === "marketing" && event.data.tab === "program") selectMarketingTab("program");
+      if (event.data.view === "marketing" && ["program", "emails", "templates", "flows"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
       document.getElementById("dashboardWorkspace").scrollIntoView({ block: "start" });
@@ -767,7 +773,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
 
   function setDashboardView(view, { remember = true } = {}) {
     if (view === "content") view = "workspace";
-    if (view === "discounts") { view = "marketing"; document.getElementById("marketingTabs").dataset.tab = "promotions"; document.getElementById("marketingPromotions").hidden = false; document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed",String(tab.dataset.marketingTab === "promotions"))); }
+    if (view === "discounts") { view = "marketing"; selectMarketingTab("promotions"); }
     const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
     const viewChanged = document.body.dataset.dashboardView !== nextView;
     if (viewChanged) {
@@ -796,7 +802,6 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
-    if (nextView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") emailStudio?.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
@@ -3297,19 +3302,28 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
 
   // The settings page lives under "Tu tienda" rather than a top-level entry of
   // its own: everything it edits is scoped to the selected store. Its tabs show
-  // Marca, Envíos y retiro and Dominio as the Studio's own panels, inline.
+  // Marca, Envíos y retiro and Dominio web as the Studio's own panels, inline.
+  // Its emails moved to Correos y marketing › Correos on 2026-10-13.
   import("/src/settings-tabs.mjs").then(({ mountSettingsTabs }) => {
     settingsTabs = mountSettingsTabs(document.getElementById("storeSettingsSection"), {
       storeId: () => currentStoreId,
       // The Studio frame reads the API base from the shared session before it loads.
       beforeLoad: () => sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, "")),
-      onShow: (tab) => { if (tab === "emails" && sessionToken) emailStudio?.show(); },
     });
   });
-  /** Opens Ajustes on one of its tabs, for example when the Studio asks for Dominio. */
+  /** Opens Ajustes on one of its tabs, for example when the Studio asks for Dominio. A request for
+   *  Ajustes › Correos (an older Studio, a saved link) lands on Correos y marketing › Correos. */
   function openSettingsSection(section) {
+    if (section === "emails") { openMarketingEmails(); return; }
     settingsTabs?.select(section);
   }
+  function openMarketingEmails() {
+    if (!canLeaveMerchantStudio()) return;
+    selectMarketingTab("emails");
+    history.pushState(null, "", "#dashboard-marketing");
+    setDashboardView("marketing");
+  }
+  document.querySelector("[data-open-marketing-emails]").addEventListener("click", (event) => { event.preventDefault(); openMarketingEmails(); });
   import("/src/mcp-connect.mjs").then(({ mountMcpConnect, mountMcpConnectDialog }) => {
     mcpConnect = mountMcpConnect(document.getElementById("mcpConnectRoot"), { api, apiBase: () => apiBaseEl.value });
     const connectDialog = mountMcpConnectDialog({ api, apiBase: () => apiBaseEl.value, onCreated: () => { void mcpConnect?.reload(); } });
@@ -3334,11 +3348,13 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
   }).catch(() => {
     document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
   });
-  import("/src/email-studio-panel.mjs").then(({ mountEmailStudio }) => {
-    emailStudio = mountEmailStudio(document.getElementById("orderEmailRoot"), { api, storeId: () => currentStoreId, assetUrl: (path) => `${apiRoot()}${path}` });
-    if (document.body.dataset.dashboardView === "store-settings" && sessionToken && settingsTabs?.current() === "emails") emailStudio.show();
+  // Correos y marketing › Correos: the list of every store email, which mounts the designed editor
+  // (email-studio-panel.mjs) itself. It keeps the `emailStudio` name so selectStore's reset needs no edit.
+  import("/src/email-list-panel.mjs").then(({ mountEmailList }) => {
+    emailStudio = mountEmailList(document.getElementById("marketingEmailsRoot"), { api, storeId: () => currentStoreId, assetUrl: (path) => `${apiRoot()}${path}`, confirm: (message) => window.confirm(message) });
+    if (document.body.dataset.dashboardView === "marketing" && sessionToken && document.getElementById("marketingTabs").dataset.tab === "emails") emailStudio.show();
   }).catch(() => {
-    document.getElementById("orderEmailRoot").textContent = "No pudimos cargar la vista previa del correo. Recarga la página para volver a intentar.";
+    document.getElementById("marketingEmailsRoot").textContent = "No pudimos cargar tus correos. Recarga la página para volver a intentar.";
   });
 
   async function uploadFile(file) {

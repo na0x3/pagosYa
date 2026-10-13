@@ -725,6 +725,8 @@ test("the inbox disables replying until the store has a verified email domain", 
   await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "marketing");
   await expect(page.locator("#marketingTabs")).toHaveAttribute("data-tab", "domain");
   await expect(page.locator('[data-marketing-tab="domain"]')).toHaveAttribute("aria-pressed", "true");
+  // The email sender domain is "Remitente" here; Ajustes' "Dominio web" is the website's domain.
+  await expect(page.locator('[data-marketing-tab="domain"]')).toHaveText("Remitente");
   await expect(page.locator("#storeMarketingFrame")).toHaveAttribute("src", /library=marketing&tab=domain/);
 });
 

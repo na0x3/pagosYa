@@ -7,7 +7,6 @@ const MARKUP = `<div id="root">
   <div role="tablist">${SETTINGS_TABS.map(tab => `<button role="tab" data-settings-tab="${tab}">${tab}</button>`).join('')}</div>
   <div role="tabpanel" data-settings-panel="general"></div>
   <div role="tabpanel" data-settings-panel="studio"><iframe class="settings-embed"></iframe></div>
-  <div role="tabpanel" data-settings-panel="emails"></div>
 </div>`;
 
 function mount(storeId = 's1') {
@@ -44,16 +43,16 @@ test('a Studio tab shows the embedded panel for that section', () => {
 
 test('clicking a tab selects it', () => {
   const { root } = mount();
-  root.querySelector('[data-settings-tab="emails"]').click();
-  assert.deepEqual(selected(root), ['emails']);
-  assert.deepEqual(visible(root), ['emails']);
+  root.querySelector('[data-settings-tab="shipping"]').click();
+  assert.deepEqual(selected(root), ['shipping']);
+  assert.deepEqual(visible(root), ['studio']);
 });
 
 test('arrow keys move between tabs, as a tablist should', () => {
   const { root } = mount();
   const general = root.querySelector('[data-settings-tab="general"]');
   general.dispatchEvent(new general.ownerDocument.defaultView.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-  assert.deepEqual(selected(root), ['emails']);
+  assert.deepEqual(selected(root), ['domain']);
 });
 
 test('switching store reloads the open Studio panel for the new store', () => {
@@ -73,5 +72,12 @@ test('without a store the Studio panel stays empty instead of loading someone el
 test('an unknown tab is ignored', () => {
   const { root, tabs } = mount();
   tabs.select('payouts');
+  assert.deepEqual(selected(root), ['general']);
+});
+
+test('Correos is no longer an Ajustes tab: the emails live in Correos y marketing', () => {
+  assert.deepEqual(SETTINGS_TABS, ['general', 'brand', 'shipping', 'domain']);
+  const { root, tabs } = mount();
+  tabs.select('emails');
   assert.deepEqual(selected(root), ['general']);
 });
