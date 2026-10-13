@@ -1,4 +1,4 @@
-import { buildStoreKnowledge, storeKnowledgeForGeneration, type StoreKnowledgeInput } from './store-knowledge';
+import { buildStoreKnowledge, loadStoreKnowledge, storeKnowledgeForGeneration, type StoreKnowledgeInput } from './store-knowledge';
 
 const now = new Date('2026-09-19T12:00:00Z');
 const product = (id: string, name: string, extra: Partial<StoreKnowledgeInput['products'][number]> = {}) => ({
@@ -56,5 +56,19 @@ describe('el logo del comercio', () => {
     const knowledge = buildStoreKnowledge(input({ store: { ...input().store, logoUrl: null } }));
     expect(knowledge.identity.logo).toBe(false);
     expect(knowledge.gaps).toContain('La tienda no tiene logo cargado.');
+  });
+});
+
+describe('loadStoreKnowledge', () => {
+  it('reads the 30-day funnel from the analytics events, not the funnel visits', async () => {
+    const prisma = {
+      store: { findFirst: jest.fn().mockResolvedValue(input().store) },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([]) }, category: { findMany: jest.fn().mockResolvedValue([]) }, collection: { findMany: jest.fn().mockResolvedValue([]) },
+      storeOrder: { findMany: jest.fn().mockResolvedValue([]) }, storeReview: { findMany: jest.fn().mockResolvedValue([]) }, merchantInvoicingProfile: { findFirst: jest.fn().mockResolvedValue(null) },
+      $queryRaw: jest.fn().mockResolvedValue([{ visitors: 40, productViews: 20, cartAdds: 5, checkoutStarts: 2, deliverySelections: 1, matureCartAdds: 3, cartWithoutCheckout: 1, cartWithoutPay: 1 }]),
+    };
+    const knowledge = await loadStoreKnowledge(prisma as any, 'm1', 's1', now);
+    expect(knowledge!.performance30d).toMatchObject({ visits: 40, productViews: 20, addedToCart: 5, checkoutsStarted: 2, paidOrders: 0 });
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toEqual(expect.arrayContaining(['s1', new Date(now.getTime() - 30 * 86_400_000).toISOString()]));
   });
 });

@@ -5,6 +5,7 @@ import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { EMAIL_PROVIDER } from '../src/dashboard/tokens';
+import { loadStoreKnowledge } from '../src/store-knowledge/store-knowledge';
 
 describe('Store growth: inbox, attribution and owner isolation', () => {
   let app: INestApplication, prisma: PrismaService, token: string, foreignToken: string, storeId: string, slug: string, productId: string, route: string;
@@ -57,5 +58,22 @@ describe('Store growth: inbox, attribution and owner isolation', () => {
     expect((await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paused.id } })).partnerId).toBeNull();
     await request(app.getHttpServer()).get(`${route}/partners`).set(auth(foreignToken)).expect(404);
     await request(app.getHttpServer()).get(`${route}/insights`).set(auth(foreignToken)).expect(404);
+  });
+  it('counts each funnel step once per session from the analytics events, for the insights and the Store Brain', async () => {
+    const ago = (hours: number) => new Date(Date.now() - hours * 3600000);
+    const event = (session: string, type: string, hours: number, target: string | null = null, store = storeId) => ({ storeId: store, sessionHash: session, type, target, device: 'mobile', createdAt: ago(hours) });
+    await prisma.storeAnalyticsEvent.createMany({ data: [
+      event('A', 'page_view', 48), event('A', 'product_view', 48), event('A', 'add_to_cart', 47), event('A', 'checkout_step', 47, 'review'), event('A', 'checkout_step', 47, 'delivery'), event('A', 'pay_click', 47),
+      // Two adds in one session count once; B is old enough and never reached the review.
+      event('B', 'page_view', 30), event('B', 'add_to_cart', 30), event('B', 'add_to_cart', 29),
+      // C added two hours ago: counted, but not yet "mature".
+      event('C', 'page_view', 2), event('C', 'add_to_cart', 2),
+      // Before the 30-day period, and another store.
+      event('D', 'page_view', 40 * 24), event('E', 'page_view', 2, null, 'another-store'),
+    ] });
+    const funnel = (await request(app.getHttpServer()).get(`${route}/insights`).set(auth()).expect(200)).body.funnel;
+    expect(funnel).toMatchObject({ visitors: 3, productViews: 1, cartAdds: 3, checkoutStarts: 1, deliverySelections: 1, paymentCompletions: 0, matureCartAdds: 2, cartWithoutCheckout: 1 });
+    const merchantId = (await prisma.store.findUniqueOrThrow({ where: { id: storeId } })).merchantId;
+    expect((await loadStoreKnowledge(prisma, merchantId, storeId))!.performance30d).toMatchObject({ visits: 3, productViews: 1, addedToCart: 3, checkoutsStarted: 1 });
   });
 });

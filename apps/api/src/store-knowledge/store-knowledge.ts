@@ -1,6 +1,7 @@
 import { storePolicies } from '../stores/store-presentation';
 import type { PrismaService } from '../prisma/prisma.service';
 import { isPublicStore } from '../stores/active-store';
+import { funnelSessions } from '../store-growth/funnel-sessions';
 
 /**
  * Store Brain: one bounded, factual snapshot of the whole business that YAPI reads before it answers,
@@ -157,8 +158,7 @@ export async function loadStoreKnowledge(prisma: PrismaService, merchantId: stri
   } });
   if (!store) return null;
   const since = new Date(now.getTime() - 30 * 86_400_000);
-  const visitsSince = { storeId, createdAt: { gte: since } };
-  const [products, categories, collections, orders, visits, productViews, addedToCart, checkoutsStarted, reviews, invoicing] = await Promise.all([
+  const [products, categories, collections, orders, steps, reviews, invoicing] = await Promise.all([
     prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, orderBy: { createdAt: 'desc' }, take: 400, select: {
       id: true, name: true, description: true, amount: true, currency: true, stock: true, imageUrls: true, tags: true, variants: true,
       discountPercent: true, discountStartsAt: true, discountEndsAt: true, createdAt: true, category: { select: { name: true } },
@@ -167,10 +167,8 @@ export async function loadStoreKnowledge(prisma: PrismaService, merchantId: stri
     prisma.category.findMany({ where: { storeId }, select: { name: true } }),
     prisma.collection.findMany({ where: { storeId }, select: { name: true, _count: { select: { products: true } } }, orderBy: { sortOrder: 'asc' } }),
     prisma.storeOrder.findMany({ where: { storeId, createdAt: { gte: since }, status: { in: [...PAID_STATUSES] } }, select: { items: true, amount: true, currency: true }, take: 5000 }),
-    prisma.storeFunnelVisit.count({ where: visitsSince }),
-    prisma.storeFunnelVisit.count({ where: { ...visitsSince, productViewedAt: { not: null } } }),
-    prisma.storeFunnelVisit.count({ where: { ...visitsSince, cartAddedAt: { not: null } } }),
-    prisma.storeFunnelVisit.count({ where: { ...visitsSince, checkoutStartedAt: { not: null } } }),
+    // One definition of each step: the analytics events (spec 2026-10-13-abandoned-carts).
+    funnelSessions(prisma, storeId, since, now),
     prisma.storeReview.findMany({ where: { storeId, status: 'PUBLISHED' }, select: { productId: true, rating: true }, take: 2000 }),
     prisma.merchantInvoicingProfile.findFirst({ where: { merchantId }, select: { cuis: true } }),
   ]);
@@ -178,7 +176,7 @@ export async function loadStoreKnowledge(prisma: PrismaService, merchantId: stri
     store, invoicingActive: Boolean(invoicing?.cuis),
     products: products as unknown as RawProduct[], categories: categories.map(c => c.name),
     collections: collections.map(c => ({ name: c.name, products: c._count.products })),
-    orders, funnel: { visits, productViews, addedToCart, checkoutsStarted }, reviews, now,
+    orders, funnel: { visits: steps.visitors, productViews: steps.productViews, addedToCart: steps.cartAdds, checkoutsStarted: steps.checkoutStarts }, reviews, now,
   });
 }
 

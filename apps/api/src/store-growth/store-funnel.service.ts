@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { funnelSessions } from './funnel-sessions';
 
 export const FUNNEL_EVENTS = ['visit', 'product_view', 'add_to_cart', 'checkout_started', 'delivery_selected'] as const;
 export type FunnelEvent = typeof FUNNEL_EVENTS[number];
@@ -28,20 +29,18 @@ export class StoreFunnelService {
     }
     return { token: visit.token };
   }
-  async summary(storeId: string, since: Date) {
-    const where = { storeId, createdAt: { gte: since } };
-    const [visitors, productViews, cartAdds, checkoutStarts, deliverySelections, paymentCompletions] = await Promise.all([
-      this.prisma.storeFunnelVisit.count({ where }),
-      ...Object.values(fields).map(field => this.prisma.storeFunnelVisit.count({ where: { ...where, [field]: { not: null } } })),
+  /**
+   * Step counts come from the G1 analytics events (funnelSessions), with the 24-hour "mature" rule. Paid sessions still
+   * come through the order link, the one thing StoreFunnelVisit records now. The two cannot be joined per session
+   * (different hashes), so the old "checkout without payment" count is gone.
+   */
+  async summary(storeId: string, since: Date, now = new Date()) {
+    const [steps, paymentCompletions] = await Promise.all([
+      funnelSessions(this.prisma, storeId, since, now),
       // Only the server's confirmed live payment status counts; clients cannot submit success.
-      this.prisma.storeFunnelVisit.count({ where: { ...where, orders: { some: { paymentIntent: { status: 'SUCCEEDED', livemode: true } } } } }),
+      this.prisma.storeFunnelVisit.count({ where: { storeId, createdAt: { gte: since }, orders: { some: { paymentIntent: { status: 'SUCCEEDED', livemode: true } } } } }),
     ]);
-    const mature = { storeId, createdAt: { gte: since, lt: new Date(Date.now() - 86400000) } };
-    const [matureCartAdds, cartWithoutCheckout, checkoutWithoutPayment] = await Promise.all([
-      this.prisma.storeFunnelVisit.count({ where: { ...mature, cartAddedAt: { not: null } } }),
-      this.prisma.storeFunnelVisit.count({ where: { ...mature, cartAddedAt: { not: null }, checkoutStartedAt: null } }),
-      this.prisma.storeFunnelVisit.count({ where: { ...mature, checkoutStartedAt: { not: null }, orders: { none: { paymentIntent: { status: 'SUCCEEDED', livemode: true } } } } }),
-    ]);
+    const { visitors, productViews, cartAdds, checkoutStarts, deliverySelections, matureCartAdds, cartWithoutCheckout } = steps;
     const rate = (numerator: number, denominator: number) => denominator ? Math.round((numerator / denominator) * 1000) / 10 : 0;
     return {
       visitors,
@@ -59,7 +58,6 @@ export class StoreFunnelService {
       },
       matureCartAdds,
       cartWithoutCheckout,
-      checkoutWithoutPayment,
     };
   }
 }
