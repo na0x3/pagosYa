@@ -7,6 +7,7 @@ import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
 import { sep5AuthorPrompt, sep5CardLook, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
+import { emptySourceHeaders, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSourceHeader } from './source-header';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { SOURCE_STATIC_ACCOUNT_PAGES, STATIC_STANDARD_PAGE_PATHS, staticAccountGateProblems, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
@@ -15,7 +16,7 @@ import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, storePhotoPaths } from './design-engine/frame-draw';
+import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { commerceConfig } from './source-commerce-config';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
@@ -532,7 +533,8 @@ export class SourceGenerationService {
     const agentEngine = useNext && (!execution?.candidate || execution.evaluate === true) && (claude || this.config.get<string>('app.yapiEngine') === 'agent');
     const migrating = useNext && !!previous && !isNextSource(previousFiles);
     const editExisting = !!previous && !migrating;
-    const oldFiles = previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path));
+    // Spec 2026-10-13: the platform header is drawn again at every save, so the files YAPI reads and edits carry only its empty slot.
+    const oldFiles = emptySourceHeaders(previousFiles.filter((f: SourceProjectFileDto) => isNextSource(previousFiles) ? nextSourceFile(f.path) : /\.(html|css|js)$/.test(f.path) && !["config.js", "commerce.js", "brand.css"].includes(f.path)));
     const targetedEditPaths = requestProfile.targetedFeature === 'marquee' ? sourceMarqueeEditPaths(oldFiles) : undefined;
     // The agent is free to change anything the merchant asks for. Only a section the merchant explicitly selected in the Studio
     // narrows its work; a word like "sección" in the message never does (it used to protect sections or reject the request outright).
@@ -721,6 +723,7 @@ export class SourceGenerationService {
       `Artwork matches (only for an explicit current illustration request): ${JSON.stringify(creativeAssets.map(({ path, family, description, tags }) => ({ path, family, description, tags })))}. Use these complete literal paths; only referenced artwork is bundled. The last ${creativeThumbnails.length} attached images are library thumbnails in this order: ${JSON.stringify(creativeThumbnails)}. These are decorative illustrations, never merchant/product photos.`,
       targetedScopePrompt,
       sourceSitePurposePrompt(sitePurpose),
+      oldFiles.some((file: SourceProjectFileDto) => file.path === 'index.html' && file.content.includes('data-pagosya-header')) ? SOURCE_PLATFORM_HEADER_EDIT : '',
       sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }),
       uiComposition ? sourceUiCompositionRecipe(uiComposition) : '',
       previousDesign ? `Previous design direction (reference data): ${JSON.stringify(previousDesign.concepts[previousDesign.selected])}. ${redesign ? 'Develop a materially different composition while honoring current merchant choices.' : 'Preserve this direction for this local edit.'}` : '',
@@ -885,6 +888,17 @@ export class SourceGenerationService {
       // cart drawer), judged in a browser against the saved revision, rendered once per run: only covers the edit brings in block (524dfd73).
       const headerGate = this.config.get<boolean>('app.headerClickGate') === true;
       let savedHeaderCovers: Promise<HeaderCover[]> | undefined;
+      // Spec 2026-10-13: the platform draws the header into <header data-pagosya-header> on every page of a static store, from the
+      // drawn shape (frame-draw.json), the store's name and logo, the sections index.html marks with data-nav-label and the brief's
+      // one fact. A store without the slot is left alone. Each note is logged once per run.
+      const headerNotes = new Set<string>();
+      const platformHeader = (files: SourceProjectFileDto[], platformPages: string[]) => {
+        const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles });
+        if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
+        if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
+        return result.files;
+      };
       const headerPreview = (files: SourceProjectFileDto[]) => currentSourceRuntime({ brief: dto.brief, files: [...previousFiles.filter(file => !files.some(next => next.path === file.path)), ...files] } as unknown as SourceProjectSnapshot);
       const acceptCandidate = async () => {
         websiteDesignFile = generated.files.find(file => file.path === 'website-design.json') ?? websiteDesignFile;
@@ -934,6 +948,8 @@ export class SourceGenerationService {
           const wiring = repairCommercePageWiring(generated.files);
           generated.files = wiring.files;
           autoRepairs.push(...wiring.repairs);
+          // Spec 2026-10-13: the draft is checked, previewed and reviewed with the platform header drawn, never with an empty slot.
+          generated.files = platformHeader(generated.files, platformSuppliedPages(sitePurpose));
         }
         const validationErrors: string[] = [];
         for (const check of [
@@ -1639,7 +1655,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
         : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
         : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
-      return { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
+      return { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(platformHeader(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
         ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
         ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
         ...(sketchFile ? [sketchFile] : []),
@@ -1649,7 +1665,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
         ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
         { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
-      ], previousFiles, assetLegend, imageUses, photoFacts))), motion) };
+      ], previousFiles, assetLegend, imageUses, photoFacts))), []), motion) };
     };
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.

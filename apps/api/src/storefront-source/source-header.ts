@@ -167,3 +167,6 @@ export function withSourceHeader<F extends { path: string; content: string; enco
   });
   return { files: out, rendered: true, shape, fallback: !known, missing };
 }
+
+/** What a static edit of a store that has the slot must know: the header is the platform's, the menu comes from data-nav-label. */
+export const SOURCE_PLATFORM_HEADER_EDIT = 'PLATFORM HEADER: <header data-pagosya-header></header> on every page is filled by the platform at save time with the store name, the menu and the store\'s actions. Leave that element empty and in place; never write, restyle or remove it. To change the menu, add or remove data-nav-label="…" (with an id) on the sections of index.html; to change its colours or fonts, change --store-background, --store-foreground, --store-accent, --store-accent-foreground, --store-heading-font or --store-body-font in styles.css.';
