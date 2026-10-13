@@ -18,6 +18,7 @@
     "test:chatgpt": "node --test scripts/chatgpt-plan/*.test.mjs",
     "dev:db": "node scripts/dev-db.mjs start",
     "dev:db:stop": "node scripts/dev-db.mjs stop",
+    "dev:doctor": "node scripts/dev-doctor.mjs",
     "dev:dashboard": "pnpm --filter @pagosya/merchant-dashboard run dev",
     "dev:studio": "pnpm --filter @pagosya/merchant-studio run dev",
     "storefront:source": "node scripts/storefront-source.mjs",
