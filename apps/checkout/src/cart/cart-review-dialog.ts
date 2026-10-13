@@ -1,5 +1,5 @@
 /** The cart review dialog: line items, fulfillment choice, promo code, and continuing to payment. */
-import { pickedExtrasLabel, parseCartItemKey, cartItemKey } from "../cart-state";
+import { pickedExtrasLabel, parseCartItemKey, cartItemKey, reminderItemKey } from "../cart-state";
 import { refreshStoreSeo } from "../store-seo";
 import { privacy } from "../privacy";
 import { mountCartQuote } from "../cart-quote";
@@ -373,13 +373,13 @@ export function bindCartCheckout(slug: string, store: Store): void {
     slug, apiBaseUrl: API_BASE_URL, preview: storeEditorMode || suppressStoreViewForMerchant(slug),
     isCurrent: () => app.firstElementChild === currentRoot,
     getCart: () => cartLineEntries(store).map(line => ({ paymentLinkId: line.product.id, variantId: line.variant?.id, extraIds: line.extras.map(extra => extra.id), quantity: line.quantity })),
-    restoreCart: (items: Array<{ paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }>) => {
+    restoreCart: (items: Array<{ paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number; subscriptionCadence?: string }>) => {
       cart.clear();
       for (const item of items) {
-        const product = store.items.find(p => p.id === item.paymentLinkId);
-        if (!product || (item.variantId && !product.variants.some(v => v.id === item.variantId))) continue;
+        const key = reminderItemKey(store, item), product = store.items.find(p => p.id === item.paymentLinkId);
+        if (!key || !product) continue;
         const quantity = Math.min(item.quantity, productStockLimit(product) ?? 99);
-        if (quantity > 0) cart.set(cartItemKey(item.paymentLinkId, item.variantId, item.extraIds), quantity);
+        if (quantity > 0) cart.set(key, quantity);
       }
       saveCart(store); updateCartBar(store, store.items[0]?.currency || 'BOB');
     },

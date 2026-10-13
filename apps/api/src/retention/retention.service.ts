@@ -13,6 +13,7 @@ import { EMAIL_PROVIDER } from '../dashboard/tokens';
 import { EmailProvider } from '../dashboard/interfaces/email-provider.interface';
 import { DEFAULT_RETENTION, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
+import { reminderCart } from './reminder-cart';
 const token = () => randomBytes(32).toString('hex');
 const normalized = (email: string) => email.trim().toLowerCase();
 const REVIEW_REQUEST_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -215,6 +216,30 @@ export class RetentionService {
   async attachCheckout(storeId: string, value: string | undefined, paymentIntentId: string) {
     if (!value) return;
     await this.prisma.storeSavedCart.updateMany({ where: { storeId, token: value, closedAt: null }, data: { paymentIntentId } });
+  }
+  /** «Avísame» is offered only for a store-page cart of an active store owned by the payment's merchant, with reminders on. */
+  async reminderAvailable(intent: { merchantId: string; metadata: unknown }) {
+    const cart = reminderCart(intent.metadata);
+    if (!cart) return false;
+    const store = await this.prisma.store.findFirst({ where: { id: cart.storeId, merchantId: intent.merchantId, status: 'ACTIVE' }, select: { id: true } });
+    return Boolean(store && (await this.settings(store.id)).recoveryEnabled);
+  }
+  /**
+   * «Avísame» in the payment form, once the shopper pressed Pagar: remember that payment's cart for one reminder under
+   * saveCart's own rules (reminders on, active products, one reminder a week, the subscriber row created inactive) and
+   * link it to the payment, so its success closes the cart (cartPaid). A paid payment needs no reminder. Null when
+   * nothing applies. The caller runs this outside the payment and never lets it fail the payment.
+   */
+  async saveCartFromPayment(paymentIntentId: string) {
+    const intent = await this.prisma.paymentIntent.findUnique({ where: { id: paymentIntentId }, select: { merchantId: true, status: true, customerEmail: true, metadata: true } });
+    const cart = intent ? reminderCart(intent.metadata) : null;
+    if (!intent || !cart || !intent.customerEmail || intent.status === 'SUCCEEDED' || !(await this.reminderAvailable(intent))) return null;
+    const result = await this.saveCart(cart.storeId, { email: intent.customerEmail, consent: true, items: cart.items } as RetentionCartDto);
+    if (!result.saved) return result;
+    // saveCart may have refreshed another session's open cart without naming it: link the open one it just wrote.
+    const saved = await this.prisma.storeSavedCart.findFirst({ where: { storeId: cart.storeId, email: normalized(intent.customerEmail), sentAt: null, closedAt: null }, orderBy: { updatedAt: 'desc' }, select: { id: true } });
+    if (saved) await this.prisma.storeSavedCart.update({ where: { id: saved.id }, data: { paymentIntentId } });
+    return result;
   }
   private async cartPaid(cart: any) {
     return Boolean(await this.prisma.storeOrder.findFirst({ where: { storeId: cart.storeId, paymentIntent: { status: 'SUCCEEDED', OR: [{ id: cart.paymentIntentId || '' }, { customerEmail: { equals: cart.email, mode: 'insensitive' }, updatedAt: { gte: cart.createdAt } }] } }, select: { id: true } }));

@@ -110,3 +110,15 @@ export function persistCart(storeId: string, cart: Map<string, number>): void {
     else localStorage.setItem(key, JSON.stringify(Object.fromEntries(cart)));
   } catch { /* Shopping remains usable when storage is disabled or full. */ }
 }
+
+/**
+ * A line saved for a cart reminder, as a cart key. Null when its product or option is gone. A subscription comes back
+ * as a subscription (owner, 2026-10-13); a cadence the store no longer offers comes back as a one-time line, the way
+ * restoreCart would drop it on the next load anyway.
+ */
+export function reminderItemKey(store: Store, item: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number; subscriptionCadence?: string }): string | null {
+  const product = store.items.find((candidate) => candidate.id === item.paymentLinkId);
+  if (!product || (item.variantId && !(product.variants ?? []).some((variant) => variant.id === item.variantId))) return null;
+  const cadence = isCartCadence(item.subscriptionCadence) && subscriptionsAvailable(store) && product.subscriptionOptions?.some((option) => option.cadence === item.subscriptionCadence) ? item.subscriptionCadence : undefined;
+  return cartItemKey(item.paymentLinkId, item.variantId, item.extraIds, cadence);
+}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { cartItemKey, restoreCart } from "./cart-state";
+import { cartItemKey, reminderItemKey, restoreCart } from "./cart-state";
 
 const item = { id: "p1", name: "Café", amount: 8000, currency: "BOB", variants: [], extras: [], subscriptionOptions: [{ cadence: "MONTHLY", discountPercent: 10 }] };
 const storeFor = (checkoutMode: string) => ({ storeId: "s1", checkoutMode, subscriptionsEnabled: true, items: [item] }) as never;
@@ -26,5 +26,20 @@ describe("restoreCart memberships", () => {
     const cart = restoreCart(store, () => null, () => null).cart;
     expect([...cart.keys()].some(key => key.includes("club"))).toBe(false);
     expect([...cart.keys()]).toEqual([cartItemKey("p1")]);
+  });
+});
+
+// A reminder link restores the cart it saved, a subscription as a subscription (owner, 2026-10-13).
+describe("reminderItemKey", () => {
+  it("keeps the cadence the store still offers", () => {
+    expect(reminderItemKey(storeFor("payment"), { paymentLinkId: "p1", quantity: 1, subscriptionCadence: "MONTHLY" })).toBe(cartItemKey("p1", undefined, [], "MONTHLY"));
+  });
+  it("brings the product back as a one-time line when the cadence is no longer offered", () => {
+    expect(reminderItemKey(storeFor("payment"), { paymentLinkId: "p1", quantity: 1, subscriptionCadence: "WEEKLY" })).toBe(cartItemKey("p1"));
+    expect(reminderItemKey(storeFor("whatsapp"), { paymentLinkId: "p1", quantity: 1, subscriptionCadence: "MONTHLY" })).toBe(cartItemKey("p1"));
+  });
+  it("skips a product or option that is gone", () => {
+    expect(reminderItemKey(storeFor("payment"), { paymentLinkId: "gone", quantity: 1 })).toBeNull();
+    expect(reminderItemKey(storeFor("payment"), { paymentLinkId: "p1", variantId: "v-gone", quantity: 1 })).toBeNull();
   });
 });
