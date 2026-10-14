@@ -22,6 +22,19 @@ describe('assistant text helpers', () => {
     expect(readReplyNumbers('Tiene 15% de descuento y es 100 por ciento algodón').percents).toEqual([15, 100]);
   });
 
+  it('reads every amount in a range or list after one currency marker', () => {
+    expect(readReplyNumbers('entre Bs 200 y 300').amounts).toEqual([20000, 30000]);
+    expect(readReplyNumbers('desde Bs 100 hasta 500').amounts).toEqual([10000, 50000]);
+    expect(readReplyNumbers('Bs 200 - 300').amounts).toEqual([20000, 30000]);
+    expect(readReplyNumbers('Bs 100 o 150').amounts).toEqual([10000, 15000]);
+    expect(readReplyNumbers('Bs 100/150').amounts).toEqual([10000, 15000]);
+    expect(readReplyNumbers('Bs 100 a 150').amounts).toEqual([10000, 15000]);
+  });
+
+  it('reads space-grouped thousands as one amount', () => {
+    expect(readReplyNumbers('Cuesta Bs 1 250,50').amounts).toEqual([125050]);
+  });
+
   it('does not read quantities, times or phone numbers as money', () => {
     expect(readReplyNumbers('Quedan 3 unidades, abrimos a las 9:30, llama al 70012345')).toEqual({ amounts: [], percents: [] });
   });

@@ -35,9 +35,14 @@ export function parseMoney(raw: string): number | null {
   return Number.isFinite(number) ? Math.round(number * 100) : null;
 }
 
-const NUMBER = String.raw`(\d[\d.,]*\d|\d)`;
-const AMOUNT_BEFORE = new RegExp(String.raw`(?:\bbs\.?|\bbob\b|\$us|\bus\$|\busd\b|\$)\s*` + NUMBER, 'gi');
-const AMOUNT_AFTER = new RegExp(NUMBER + String.raw`\s*(?:bs\b\.?|bolivianos\b|bob\b|d[oó]lares\b|usd\b)`, 'gi');
+/** One number: space-grouped thousands ("1 250", no-break spaces too) or dot/comma grouped. */
+const NUM = String.raw`(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?|\d[\d.,]*\d|\d)`;
+/** A number plus any numbers joined to it by a range or list connector ("200 y 300", "100 - 150"). */
+const CONNECTOR = String.raw`\s*(?:y|o|al?|hasta|-|\u2013|\/)\s*`;
+const CHAIN = String.raw`${NUM}(?:${CONNECTOR}${NUM})*`;
+const AMOUNT_BEFORE = new RegExp(String.raw`(?:\bbs\.?|\bbob\b|\$us|\bus\$|\busd\b|\$)\s*(${CHAIN})`, 'gi');
+const AMOUNT_AFTER = new RegExp(`(${NUM})` + String.raw`\s*(?:bs\b\.?|bolivianos\b|bob\b|d[oó]lares\b|usd\b)`, 'gi');
+const EACH_NUMBER = new RegExp(NUM, 'g');
 const PERCENT = /(\d+(?:[.,]\d+)?)\s*(?:%|por\s*ciento)/gi;
 
 /** Money and percentages a reply states. Quantities, dates, times and phone numbers carry no currency, so they are not read. */
@@ -45,8 +50,10 @@ export function readReplyNumbers(text: string): { amounts: number[]; percents: n
   const amounts: number[] = [];
   for (const pattern of [AMOUNT_BEFORE, AMOUNT_AFTER]) {
     for (const match of text.matchAll(pattern)) {
-      const cents = parseMoney(match[1]);
-      if (cents !== null && !amounts.includes(cents)) amounts.push(cents);
+      for (const number of match[1].matchAll(EACH_NUMBER)) {
+        const cents = parseMoney(number[0]);
+        if (cents !== null && !amounts.includes(cents)) amounts.push(cents);
+      }
     }
   }
   const percents: number[] = [];

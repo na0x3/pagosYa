@@ -22,6 +22,10 @@ describe('number guard', () => {
     expect(checkReply('El gorro cuesta Bs 80,00.', evidence)).toEqual({ ok: false, offending: ['Bs 80'] });
   });
 
+  it('rejects an invented second price in a range', () => {
+    expect(checkReply('Entre Bs 250 y 999', evidence)).toEqual({ ok: false, offending: ['Bs 999'] });
+  });
+
   it('ignores quantities, dates and phone numbers', () => {
     expect(checkReply('Quedan 3, llega el 12 de noviembre, llama al 70012345.', evidence)).toEqual({ ok: true });
   });
