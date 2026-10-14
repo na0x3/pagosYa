@@ -11,6 +11,7 @@ import { openStoreBulkDelete } from "/src/store-bulk-delete.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountAbandonedCartsPanel } from "/src/abandoned-carts-panel.mjs";
+import { mountAssistantPanel } from "/src/assistant-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
 import { nextLevelSentence, nextPayoutLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
@@ -430,6 +431,15 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     store: () => lastStores.find((candidate) => candidate.id === currentStoreId) || null,
     signedIn: () => !!sessionToken,
   });
+  // Crecer › Asistente: settings, test chat, conversations and unanswered questions.
+  const assistantPanel = mountAssistantPanel({
+    api,
+    storeId: () => currentStoreId,
+    store: () => lastStores.find((candidate) => candidate.id === currentStoreId) || null,
+    signedIn: () => !!sessionToken,
+    uploadFile,
+    assetUrl: (path) => `${apiRoot()}${path}`,
+  });
   let lastTotalFinances = null;
   let lastBalances = null;
   let lastSettlement = null;
@@ -595,6 +605,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
     growth: ["Crecimiento", "Qué pasa en tu tienda y qué hacer ahora para vender más."],
     "abandoned-carts": ["Carritos abandonados", "Quién dejó productos sin pagar y cómo escribirle."],
+    "assistant": ["Asistente", "Un chat en tu tienda que responde con tus productos y te pasa a los clientes cuando no sabe."],
     stores: ["Mi tienda", "Tus tiendas, sus diseños y sus catálogos. Todo desde un mismo perfil."],
     discounts: ["Correos y marketing", "Cuida a tus clientes y haz que vuelvan."],
     marketing: ["Correos y marketing", "Mensajes, Comeback y promociones para la tienda seleccionada."],
@@ -810,6 +821,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     if (nextView === "subscriptions") subscriptionsPanel.show();
     if (nextView === "growth") growth.show();
     if (nextView === "abandoned-carts") abandonedCarts.show();
+    if (nextView === "assistant") assistantPanel.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
@@ -1770,6 +1782,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
       subscriptionsPanel.reset();
       growth.reset();
       abandonedCarts.reset();
+      assistantPanel.reset();
       proposals.reset();
       contracts.reset();
       emailStudio?.reset();
