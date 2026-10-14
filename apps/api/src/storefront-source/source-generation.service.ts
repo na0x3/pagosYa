@@ -12,7 +12,7 @@ import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from 
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
-import { carriedTouch, instructionConcernsKitSurfaces, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
+import { carriedTouch, chatTouchKept, instructionConcernsKitSurfaces, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
@@ -20,7 +20,7 @@ import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { measureStoreLook, withMeasuredLook } from './store-look-measure';
-import { readConfigFile } from './store-look';
+import { patchConfigFile, readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { commerceConfig } from './source-commerce-config';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
@@ -131,8 +131,11 @@ import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-genera
 export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
 /** One provider call of a run (or of its background review), as the row's attempts record it. */
 export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review' | 'touch'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
-/** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. */
-type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
+/** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. `deadline` is when
+ * the stage's own signal times out (epoch ms), so a step inside it can keep time for the N+1 save. */
+type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[]; deadline: number }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
+/** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
+const REVIEW_SAVE_MARGIN_MS = 90_000;
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
 export { completedCredits, fillsProductPagesAfterSave } from './source-generation-run';
 export { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
@@ -750,6 +753,8 @@ export class SourceGenerationService {
       let sep5Review: Sep5Review | undefined;
       /** YAPI's guarded touches on the kit pages (spec 2026-10-14), written by the review stage or a chat request. */
       let kitTouch: KitTouchCss | undefined;
+      /** The look revision N was saved with: the review stage's fallback when its own measurement fails. */
+      let revisionLook: StoreLook | undefined;
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
       // Header controls a static edit covers (2026-10-12: Ramo Ramón's header trapped in an isolated poster, Rampa's own invisible
@@ -1030,21 +1035,31 @@ export class SourceGenerationService {
                 changed = true;
               }
             }
+            // The touch reads the home as the review left it; a kept touch does not change the home, so the final save reuses
+            // the look that base measured instead of measuring a third time.
+            let touchedLook: { look: StoreLook | undefined } | undefined;
             if (kitTouchOn) {
-              try {
-                const base = await assembleSave(review.signal);
-                const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, signature: committedDesign?.concepts[committedDesign.selected]?.signature, signal: review.signal, call: touchCall(review) });
-                const surfaces = Object.keys(touch?.css ?? {});
-                if (touch && surfaces.length) { kitTouch = touch.css; notes.push(...touch.notes); changed = true; }
-                this.logger.log(JSON.stringify({ event: surfaces.length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces, dropped: (touch?.dropped ?? []).slice(0, 12), ...(touch ? {} : { reason: 'unusable answer' }) }));
-              } catch (error) {
-                review.signal.throwIfAborted();
-                this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
+              // Its own deadline, like the chat re-run (T8-I2): the review's cancellation still aborts it, but a slow touch is
+              // dropped in time for N+1 to save the review's own edits; with too little time left it is skipped.
+              const budget = touchBudgetMs(review.deadline - Date.now(), REVIEW_SAVE_MARGIN_MS);
+              if (!budget) this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: 'deadline', skipped: true }));
+              else {
+                const touchSignal = AbortSignal.any([review.signal, AbortSignal.timeout(budget)]);
+                try {
+                  const base = await assembleSave(touchSignal, { fallback: revisionLook });
+                  const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, signature: committedDesign?.concepts[committedDesign.selected]?.signature, signal: touchSignal, call: touchCall({ signal: touchSignal, attempts: review.attempts }) });
+                  const surfaces = Object.keys(touch?.css ?? {});
+                  if (touch && surfaces.length) { kitTouch = touch.css; touch.used(); notes.push(...touch.notes); changed = true; touchedLook = { look: sanitizeLook(readConfigFile(base.files).look) }; }
+                  this.logger.log(JSON.stringify({ event: surfaces.length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces, dropped: (touch?.dropped ?? []).slice(0, 12), ...(touch ? {} : { reason: 'unusable answer' }) }));
+                } catch (error) {
+                  review.signal.throwIfAborted();
+                  this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: touchSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+                }
               }
             }
             // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
             if (!changed) return null;
-            return { saveInput: await assembleSave(review.signal), notes };
+            return { saveInput: await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: revisionLook }), notes };
           };
         }
         await addSep5StandardPages();
@@ -1497,7 +1512,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const agentPolicyChange = Object.keys(agentPolicies).length > 0;
     /** Everything a save carries besides the model's authored files: kit files, assets, design and visual-system files,
      *  config.js. Built from `generated` as it is when called: once for revision N, and again by the background review. */
-    const assembleSave = async (assembleSignal: AbortSignal = signal) => {
+    /** `lookChoice.reuse`: a look already measured on this same home (the touch base), written as is without measuring again;
+     *  `lookChoice.fallback`: the look to keep when measuring fails (the review stage's revision N), instead of the previous
+     *  revision's. A new store or a redesign never falls back to the previous revision's look: its design is new. */
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: { reuse?: { look: StoreLook | undefined }; fallback?: StoreLook } = {}) => {
       const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
       // A local copy: the review stage assembles twice (the touch reads a base, then the final save), and brand.css, the Next scaffold and the brand link must not pile up on `generated`.
       let files = [...generated.files];
@@ -1575,7 +1593,12 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
       ], previousFiles, assetLegend, imageUses, photoFacts))), []), motion) };
       // One look per store (spec 2026-10-14): read the final home page and keep it as config.look for the kit pages.
-      const measured = await withMeasuredLook(assembled, { enabled: this.config.get<boolean>('app.yapiLookMeasure') === true, declaredTreatment: parseFrameDraw(frame.file?.content).photos, previousLook: previousConfig.look, brief: dto.brief, signal: assembleSignal, measure: measureStoreLook });
+      if (lookChoice.reuse) {
+        const { look } = lookChoice.reuse;
+        return look ? { ...assembled, files: patchConfigFile(assembled.files, current => ({ ...current, look })) } : assembled;
+      }
+      const fallbackLook = 'fallback' in lookChoice ? lookChoice.fallback : creative ? undefined : previousConfig.look;
+      const measured = await withMeasuredLook(assembled, { enabled: this.config.get<boolean>('app.yapiLookMeasure') === true, declaredTreatment: parseFrameDraw(frame.file?.content).photos, previousLook: fallbackLook, brief: dto.brief, signal: assembleSignal, measure: measureStoreLook });
       this.logger.log(JSON.stringify({ event: measured.outcome === 'measured' ? 'look_measured' : 'look_kept', generationId: run.id, outcome: measured.outcome, ...(measured.reason ? { reason: measured.reason } : {}) }));
       return measured.input;
     };
@@ -1589,11 +1612,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       try {
         const base = await assembleSave(touchSignal);
         const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, instruction: (dto.instruction.split(MERCHANT_MARKER).at(-1) ?? dto.instruction).trim().slice(0, 400), signal: touchSignal, call: touchCall({ signal: touchSignal, attempts }) });
-        const chosen = { ...(touch?.css ?? {}) };
-        if (agentTheme) {
-          delete chosen.productCss;
-          for (const key of ['catalogCss', 'cardCss', 'cartCss'] as const) if (agentTheme[key]) delete chosen[key];
-        }
+        // The agent's theme of this same request wins on the surfaces it set; only CSS that is kept is billed.
+        const { css: chosen, bill } = chatTouchKept(touch?.css ?? {}, agentTheme);
+        if (touch && bill) touch.used();
         const before = readConfigFile(base.files).dna;
         if (Object.keys(chosen).length) kitTouch = { ...(before?.touch === 1 ? pickTouch(before) : {}), ...chosen };
         this.logger.log(JSON.stringify({ event: Object.keys(chosen).length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces: Object.keys(chosen), request: true }));
@@ -1608,6 +1629,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
     const saveInput = await assembleSave();
+    revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);
     signal.throwIfAborted();
     // Validate the assembled result, including final asset rewrites and runtime configuration.
     // Draft evidence alone cannot certify a different saved snapshot.
@@ -1702,8 +1724,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       }, this.reviewHeartbeatMs);
       const record = () => ({ attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - started, completedAt: new Date() });
       try {
+        const deadline = Date.now() + SEP5_CLIENT_TIMEOUT_MS;
         const signal = AbortSignal.any([cancel, lost.signal, AbortSignal.timeout(SEP5_CLIENT_TIMEOUT_MS)]);
-        const outcome = await input.review({ signal, attempts });
+        const outcome = await input.review({ signal, attempts, deadline });
         signal.throwIfAborted();
         const credits = completedCredits(attempts, input.maxCredits, input.freeRun);
         if (!outcome) {

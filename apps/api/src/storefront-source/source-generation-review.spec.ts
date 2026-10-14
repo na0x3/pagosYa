@@ -16,6 +16,8 @@ import { measureStoreLook } from './store-look-measure';
 jest.mock('./product-theme-check', () => ({ ...jest.requireActual('./product-theme-check'), checkProductThemeOnSnapshot: jest.fn().mockResolvedValue([]) }));
 jest.mock('./kit-surface-check', () => ({ checkKitSurfacesOnSnapshot: jest.fn().mockResolvedValue({ catalog: [], card: [], cart: [] }) }));
 import { checkKitSurfacesOnSnapshot } from './kit-surface-check';
+import * as kitTouchModule from './kit-touch';
+const realTouchBudget = kitTouchModule.touchBudgetMs;
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -336,6 +338,99 @@ describe('one look per store: YAPI touches the kit pages in the review stage', (
     await run();
     await service.reviewSettled('s1');
     expect(fetchMock.mock.calls.some(c => JSON.parse((c[1] as any).body).text.format.name === 'storefront_kit_touch')).toBe(false);
+  });
+  const READING = { heading: { families: ['Anton'], weight: 400, transform: 'uppercase', literalUpper: false, letterSpacing: 4, fontSize: 40, italic: false }, loadedFamilies: ['Anton'], labels: [], photos: [], cards: [], buttons: [], sections: [], pageLuminance: 1 };
+
+  it('a touch that outlives its own budget is dropped (reason deadline) and N+1 still saves the review edits', async () => {
+    // The review stage gives the touch min(150 s, time left − 90 s); here that budget is made 1 s.
+    jest.spyOn(kitTouchModule, 'touchBudgetMs').mockImplementation((left: number, margin?: number) => margin === 90_000 ? 1_000 : realTouchBudget(left, margin));
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    let touchAborted = false;
+    jest.spyOn(globalThis, 'fetch').mockImplementation((async (url: unknown, init: any) => {
+      if (JSON.parse(init.body).text.format.name !== 'storefront_kit_touch') return respondWith(REVIEW, TOUCH)(url, init);
+      // A bridge that hangs: it answers only after 5 s unless the touch's own signal aborts it first.
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => resolve(answer(TOUCH)), 5_000);
+        init.signal?.addEventListener('abort', () => { clearTimeout(timer); touchAborted = true; reject(init.signal.reason); });
+      });
+    }) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(touchAborted).toBe(true);
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
+    expect(configOf(projects.save.mock.calls[1]).dna.cardCss).toBeUndefined();
+    expect(warn.mock.calls.map(c => String(c[0])).some(line => line.includes('"event":"kit_touch_dropped"') && line.includes('"reason":"deadline"'))).toBe(true);
+  });
+
+  it('measures the home at most twice in a touched build: the final save reuses the touch base look', async () => {
+    config.set('app.yapiLookMeasure', true);
+    (measureStoreLook as jest.Mock).mockReset().mockResolvedValue(READING);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, TOUCH) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    const saved = configOf(projects.save.mock.calls[1]);
+    expect(saved.dna.cardCss).toContain('rotate(-2deg)');
+    expect(saved.look).toMatchObject({ version: 1, type: { heading: { family: 'Anton', case: 'upper' } } });
+    expect(measureStoreLook).toHaveBeenCalledTimes(2);
+  });
+
+  it('N+1 falls back to the look revision N just measured when its own measurement fails', async () => {
+    config.set('app.yapiLookMeasure', true);
+    config.set('app.yapiKitTouch', false);
+    (measureStoreLook as jest.Mock).mockReset().mockResolvedValueOnce(READING).mockRejectedValue(new Error('chromium crashed'));
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, TOUCH) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    const n = configOf(projects.save.mock.calls[0]).look;
+    expect(n).toMatchObject({ version: 1, type: { heading: { family: 'Anton' } } });
+    expect(configOf(projects.save.mock.calls[1]).look).toEqual(n);
+  });
+
+  it('a redesign whose measurement fails saves no look, even when the previous revision had one', async () => {
+    config.set('app.yapiLookMeasure', true);
+    config.set('app.sep5SelfReview', false);
+    config.set('app.yapiKitTouch', false);
+    (measureStoreLook as jest.Mock).mockReset().mockResolvedValueOnce(READING).mockRejectedValue(new Error('chromium crashed'));
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
+    await run();
+    const saved = projects.save.mock.calls[0][2];
+    expect(configOf(projects.save.mock.calls[0]).look).toBeDefined();
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...saved, revision: 1 }) });
+    await service.generate('m1', 's1', { ...dto, revision: 1, instruction: 'Rediseña toda la tienda desde cero' }, new SourceRequestBudget(25), []);
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[1]).look).toBeUndefined();
+  });
+
+  describe('a chat request about the kit pages re-runs the touch', () => {
+    const OLD = { touch: 1, cardCss: ':root:root:root [data-pagosya-catalog] [data-part="card-name"]{letter-spacing:.1em}', cartCss: ':root:root:root .cart-drawer [data-part="cart-head"]{border-bottom:3px solid #111}' };
+    const EDIT = { label: 'Fotos inclinadas', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] };
+    const touchedStore = async () => {
+      config.set('app.sep5SelfReview', false);
+      config.set('app.yapiKitTouch', false);
+      jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
+      await run();
+      const saved = projects.save.mock.calls[0][2];
+      const files = saved.files.map((f: any) => f.path !== 'config.js' ? f : { ...f, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...configOf(projects.save.mock.calls[0]), dna: { ...configOf(projects.save.mock.calls[0]).dna, ...OLD } })};\n` });
+      projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...saved, files, revision: 1 }) });
+      config.set('app.yapiKitTouch', true);
+      jest.restoreAllMocks();
+      jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+      jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+      return jest.spyOn(globalThis, 'fetch').mockImplementation((async (_url: unknown, init: any) => answer(JSON.parse(init.body).text.format.name === 'storefront_kit_touch' ? TOUCH : EDIT)) as any);
+    };
+    it('saves the new card CSS with touch:1, keeps the untouched surfaces, and bills the touch attempt', async () => {
+      const fetchMock = await touchedStore();
+      const result: any = await service.generate('m1', 's1', { ...dto, revision: 1, instruction: 'Pon las fotos de los productos inclinadas' }, new SourceRequestBudget(500), []);
+      expect(fetchMock.mock.calls.some(c => JSON.parse((c[1] as any).body).text.format.name === 'storefront_kit_touch')).toBe(true);
+      const dna = configOf(projects.save.mock.calls[1]).dna;
+      expect(dna.touch).toBe(1);
+      expect(dna.cardCss).toContain('rotate(-2deg)');
+      expect(dna.cartCss).toBe(OLD.cartCss);
+      expect(result.generation.attempts.find((a: any) => a.phase === 'touch')).toMatchObject({ status: 'COMPLETED' });
+    });
   });
   describe('with a confirmed brand (brand.css is written on every assemble)', () => {
     const brand = { revision: 1, data: { confirmed: [{ field: 'accent', value: '#135724', evidence: 'Manual', source: 'merchant' }], suggested: [] } };

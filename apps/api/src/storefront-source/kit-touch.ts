@@ -17,7 +17,9 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 export const TOUCH_KEYS = { product: 'productCss', catalog: 'catalogCss', card: 'cardCss', cart: 'cartCss' } as const;
 export type TouchSurface = keyof typeof TOUCH_KEYS;
 export type KitTouchCss = Partial<Record<(typeof TOUCH_KEYS)[TouchSurface], string>>;
-export type KitTouchResult = { css: KitTouchCss; notes: string[]; dropped: Array<{ surface: TouchSurface; reason: string }> };
+/** `used` charges the touch attempt: the caller calls it only when the CSS it keeps is non-empty (an agent theme may still
+ * discard surfaces after the check), so discarded CSS is never billed. */
+export type KitTouchResult = { css: KitTouchCss; notes: string[]; dropped: Array<{ surface: TouchSurface; reason: string }>; used: () => void };
 export const KIT_TOUCH_TIMEOUT_MS = 60_000;
 export const KIT_TOUCH_MAX_OUTPUT_TOKENS = 6_000;
 const SURFACES: TouchSurface[] = ['product', 'catalog', 'card', 'cart'];
@@ -57,7 +59,7 @@ export function kitTouchPrompt(input: { storeName: string; look?: StoreLook; sig
     '- At most 40 rules and 3000 characters per surface.',
     `- product parts: ${COSMETIC_PARTS.join(', ')}. Price, options, quantity, the buy button, the seal and the trust row are protected.`,
     `- catalog parts: ${CATALOG_PARTS.join(', ')}. On the container part grid: no animation*, transform, filter, mix-blend-mode, overflow, color or font-size, and nothing that hides or sizes it.`,
-    `- card parts: ${CARD_PARTS.join(', ')}. The price and the add-to-cart button are protected. On the container part card: no animation*, transform, filter, mix-blend-mode, overflow, color or font-size, and nothing that hides or sizes them (style their children instead).`,
+    `- card parts: ${CARD_PARTS.join(', ')}. The price and the add-to-cart button are protected. On the container part card: no animation*, transform, filter, mix-blend-mode, overflow, color or font-size, and nothing that hides or sizes them (style their children instead). No card part is ever positioned or given a z-index (the card's details link covers it).`,
     `- cart parts: ${CART_PARTS.join(', ')}. Quantities, totals, remove and the checkout button are protected. The same container restrictions apply to the part cart-line.`,
     'On catalog, card and cart, ::before/::after are never positioned (no position, inset, top/left/right/bottom, z-index).',
     "A real browser checks every surface at 390px and 1280px: anything that hides, covers, shrinks or fades a protected control, or makes a page scroll sideways, drops that surface's CSS.",
@@ -112,8 +114,7 @@ export async function runKitTouch(deps: KitTouchDeps): Promise<KitTouchResult | 
       }
     }
   }
-  if (Object.keys(css).length) used();
-  return { css, notes: parsed.data.notes.slice(0, 4).map(note => note.slice(0, 200)), dropped };
+  return { css, notes: parsed.data.notes.slice(0, 4).map(note => note.slice(0, 200)), dropped, used };
 }
 
 /** The touch a store's previous save carried (marked dna.touch = 1): kept on an ordinary edit, never on a new store or a
@@ -131,7 +132,7 @@ export const MERCHANT_MARKER = 'Pedido actual del comercio:';
 export function instructionConcernsKitSurfaces(text: string): boolean {
   const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   // The cart's icon, button or header placement is the header's business, not the cart page's.
-  const cart = own.replace(/\b(?:icono|boton|simbolo|logo)s?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
+  const cart = own.replace(/\b(?:icono|boton|simbolo|logo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
   return /\bcarrito\b/.test(cart) || /\bcatalogo\b|\bfotos?\s+de\s+(?:los\s+)?productos?\b|\btarjetas?\s+de(?:l)?\s+productos?\b|\bpagina\s+de(?:l)?\s+productos?\b|\bficha\b|\bproduct\s+(?:page|card)s?\b/.test(own);
 }
 
@@ -141,9 +142,20 @@ export function pickTouch(dna: unknown): KitTouchCss {
   return Object.fromEntries(Object.values(TOUCH_KEYS).filter(key => typeof source[key] === 'string' && source[key]).map(key => [key, source[key] as string]));
 }
 
-/** How long the chat re-run's touch may take (spec 2026-10-14): up to 150 s, always leaving 60 s of the run for saving;
- * 0 (skip it) when less than 60 s would be left to it. */
-export function touchBudgetMs(remainingMs: number): number {
-  const budget = Math.min(150_000, remainingMs - 60_000);
+/** How long a touch may take (spec 2026-10-14): up to 150 s, always leaving `marginMs` of the run for saving (60 s in chat,
+ * 90 s in the review stage); 0 (skip it) when less than 60 s would be left to it. */
+export function touchBudgetMs(remainingMs: number, marginMs = 60_000): number {
+  const budget = Math.min(150_000, remainingMs - marginMs);
   return budget >= 60_000 ? budget : 0;
+}
+
+/** The chat re-run's touch once the agent's own theme of the same request is applied: the agent wins on every kit surface it
+ * set, and on the product page whenever it set a theme (T8-I5). `bill` is true only when CSS is left to save. */
+export function chatTouchKept(css: KitTouchCss, agentTheme: Partial<Record<'catalogCss' | 'cardCss' | 'cartCss', unknown>> | null | undefined): { css: KitTouchCss; bill: boolean } {
+  const kept = { ...css };
+  if (agentTheme) {
+    delete kept.productCss;
+    for (const key of ['catalogCss', 'cardCss', 'cartCss'] as const) if (agentTheme[key]) delete kept[key];
+  }
+  return { css: kept, bill: Object.keys(kept).length > 0 };
 }

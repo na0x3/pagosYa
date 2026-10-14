@@ -1,5 +1,5 @@
 // apps/api/src/storefront-source/kit-touch.spec.ts
-import { carriedTouch, distinctiveCss, instructionConcernsKitSurfaces, kitTouchPrompt, pickTouch, runKitTouch, touchBudgetMs, TOUCH_KEYS } from './kit-touch';
+import { carriedTouch, chatTouchKept, distinctiveCss, instructionConcernsKitSurfaces, kitTouchPrompt, pickTouch, runKitTouch, touchBudgetMs, TOUCH_KEYS } from './kit-touch';
 import { readConfigFile } from './store-look';
 
 const files = [
@@ -36,13 +36,16 @@ describe('kitTouchPrompt', () => {
 });
 
 describe('runKitTouch', () => {
-  it("sanitizes, checks and returns each surface's CSS, and marks the call as used", async () => {
+  it("sanitizes, checks and returns each surface's CSS, and leaves billing to the caller (it returns `used`)", async () => {
     const { deps: d, used } = deps(reply({ card: '[data-part="card-media"]{transform:rotate(-2deg)}', cart: '[data-part="cart-head"]{border-bottom:3px solid #111}', notes: ['Tarjetas inclinadas como en la portada.'] }));
     const result = (await runKitTouch(d))!;
     expect(result.css.cardCss).toContain('[data-pagosya-catalog] [data-part="card-media"]');
     expect(result.css.cartCss).toContain('.cart-drawer [data-part="cart-head"]');
     expect(result.notes).toEqual(['Tarjetas inclinadas como en la portada.']);
-    expect(used).toHaveBeenCalled();
+    // The caller may still discard the CSS (the agent's theme wins), so the touch never bills itself.
+    expect(used).not.toHaveBeenCalled();
+    result.used();
+    expect(used).toHaveBeenCalledTimes(1);
     const checked = (d.checkSurfaces as jest.Mock).mock.calls[0][0];
     expect(readConfigFile(checked.files).dna.cardCss).toBe(result.css.cardCss);
   });
@@ -84,6 +87,8 @@ describe('instructionConcernsKitSurfaces', () => {
     ['Cambia el título del inicio', false], ['Agrega mi horario', false],
     ['Cambia el ícono del carrito', false], ['Un botón del carrito más grande', false], ['El carrito del encabezado en negro', false], ['El carrito del header más pequeño', false], ['El carrito del menú', false],
     ['El ícono del carrito y las tarjetas de producto', true], ['Cambia el carrito', true],
+    ['Los botones del carrito más grandes', false], ['El carrito en el encabezado más pequeño', false], ['Pon el carrito en el menú', false], ['El carrito en el header', false], ['El carrito en la barra', false],
+    ['Los botones del carrito y el catálogo', true],
   ])('%s → %s', (text, expected) => expect(instructionConcernsKitSurfaces(text)).toBe(expected));
 
   it("reads only the merchant's own words after the marker", () => {
@@ -93,6 +98,18 @@ describe('instructionConcernsKitSurfaces', () => {
 
 describe('touchBudgetMs', () => {
   it.each([[600_000, 150_000], [210_000, 150_000], [150_000, 90_000], [120_000, 60_000], [119_999, 0], [0, 0], [-5, 0]])('%d ms left → %d', (left, budget) => expect(touchBudgetMs(left)).toBe(budget));
+  // The review stage keeps 90 s for its own save (N+1).
+  it.each([[600_000, 150_000], [240_000, 150_000], [200_000, 110_000], [150_000, 60_000], [149_999, 0]])('%d ms left with a 90 s margin → %d', (left, budget) => expect(touchBudgetMs(left, 90_000)).toBe(budget));
+});
+
+describe('chatTouchKept (the chat re-run after the agent theme)', () => {
+  const css = { productCss: 'p', cardCss: 'c', cartCss: 't' };
+  it('keeps every surface and bills when no agent theme was set', () => expect(chatTouchKept(css, undefined)).toEqual({ css, bill: true }));
+  it('drops the surfaces the agent set (and the product page) and bills for what is left', () =>
+    expect(chatTouchKept(css, { cardCss: 'agent' })).toEqual({ css: { cartCss: 't' }, bill: true }));
+  it('bills nothing when the agent set every surface the touch wrote', () =>
+    expect(chatTouchKept({ productCss: 'p', cardCss: 'c' }, { cardCss: 'agent' })).toEqual({ css: {}, bill: false }));
+  it('bills nothing for an empty touch', () => expect(chatTouchKept({}, undefined)).toEqual({ css: {}, bill: false }));
 });
 
 it('pickTouch keeps only non-empty touch fields', () => expect(pickTouch({ swatch: 'pill', cardCss: 'x', cartCss: '' })).toEqual({ cardCss: 'x' }));
