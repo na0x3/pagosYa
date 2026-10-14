@@ -102,7 +102,15 @@
   /* Duotone and grain are SVG filters in the page (no store url()): duotone maps luminance onto the store's ink→paper. */
   function lookFilters() {
     if (!LOOK || !['duotone', 'grain'].includes(LOOK.photo?.treatment) || document.getElementById('pagosya-look-filters')) return;
-    const rgb = name => { const probe = document.createElement('span'); probe.style.color = `var(${name})`; document.body.append(probe); const channels = (getComputedStyle(probe).color.match(/[\d.]+/g) || ['0', '0', '0']).slice(0, 3).map(v => Number(v) / 255); probe.remove(); return channels; };
+    // A computed colour may be oklch(), color(srgb …) or lab(), not rgb(): drawing it onto a 1×1 canvas reads true sRGB channels.
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+    const paint = canvas.getContext('2d', { willReadFrequently: true });
+    const rgb = name => {
+      const probe = document.createElement('span'); probe.style.color = `var(${name})`; document.body.append(probe);
+      const color = getComputedStyle(probe).color; probe.remove();
+      if (paint) { paint.clearRect(0, 0, 1, 1); paint.fillStyle = '#000'; paint.fillStyle = color; paint.fillRect(0, 0, 1, 1); const d = paint.getImageData(0, 0, 1, 1).data; return [d[0] / 255, d[1] / 255, d[2] / 255]; }
+      return (color.match(/[\d.]+/g) || ['0', '0', '0']).slice(0, 3).map(v => Number(v) / 255);
+    };
     const luminance = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     let ink = rgb('--lk-ink'), paper = rgb('--lk-paper');
     if (luminance(ink) > luminance(paper)) [ink, paper] = [paper, ink]; // luminance 0 maps to the darker colour, 1 to the lighter, also on a dark store
@@ -3186,7 +3194,8 @@
     mark('[data-pagosya-catalog] .menu-item', 'card');
     mark('[data-pagosya-catalog] .menu-item .menu-item__image', 'card-media');
     mark('[data-pagosya-catalog] .menu-item :is(.menu-item__name,.menu-item__copy h3)', 'card-name');
-    mark('[data-pagosya-catalog] .menu-item :is(.menu-item__description,.menu-item__options,.menu-item__copy p)', 'card-meta');
+    // A custom card's price can sit in .menu-item__copy p: it is protected, never card-meta.
+    mark('[data-pagosya-catalog] .menu-item :is(.menu-item__description,.menu-item__options,.menu-item__copy p):not([data-product-field=price],.menu-item__price)', 'card-meta');
     mark('[data-pagosya-catalog] .menu-item .menu-item__badge', 'card-badge');
     mark('.commerce-page-title', 'page-title');
     mark('[data-pagosya-catalog] .catalog-tabs', 'tabs');
@@ -3820,13 +3829,15 @@
   /* One look per store (spec 2026-10-14). Unlayered, after the DNA styles, before YAPI's guarded CSS: the measured look wins
    * over drawn DNA and YAPI's touches win over both. Colours stay the store's own; protected controls are never selected. */
   const LOOK_FILTERED = ':where(:root:is([data-look-photo=mono],[data-look-photo=sepia],[data-look-photo=duotone],[data-look-photo=grain]))';
-  const lookHeadingRules = target => [
+  // `caseTarget`: where case and italic go when it differs from `target` (the product title: a preset or YAPI touch styles its
+  // case on [data-part=title], which must win over the look, while the kit sets no case of its own there).
+  const lookHeadingRules = (target, caseTarget = target) => [
     `:where(:root[data-look-hf]) ${target}{font-family:var(--lk-hf)}`,
     `:where(:root[data-look-hw]) ${target}{font-weight:var(--lk-hw)}`,
-    `:where(:root[data-look-hc=upper]) ${target}{text-transform:uppercase}`,
-    `:where(:root[data-look-hc=none]) ${target}{text-transform:none}`,
+    `:where(:root[data-look-hc=upper]) ${caseTarget}{text-transform:uppercase}`,
+    `:where(:root[data-look-hc=none]) ${caseTarget}{text-transform:none}`,
     `:where(:root[data-look-ht]) ${target}{letter-spacing:var(--lk-ht)}`,
-    `:where(:root[data-look-hi]) ${target}{font-style:italic}`,
+    `:where(:root[data-look-hi]) ${caseTarget}{font-style:italic}`,
   ];
   const LOOK_BASE_CSS = [
     ':root[data-look]{--lk-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));--lk-paper:var(--store-background,var(--brand-background,var(--paper,#fff)));--lk-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--lk-ink) 16%,var(--lk-paper))))}',
@@ -3836,7 +3847,7 @@
   const LPC = '[data-pagosya-product][data-style]';
   const LOOK_CHIPS = `${LPC} .product-detail__values:not([data-kind=swatch]) [data-product-option]`;
   const LOOK_PDP_CSS = [
-    ...lookHeadingRules(`${LPC} #pagosya-product-title`),
+    ...lookHeadingRules(`${LPC} #pagosya-product-title`, `${LPC} [data-part=title]`),
     `:where(:root[data-look-label]) :is(${LPC} [data-part=eyebrow],${LPC} .product-detail__options legend,${LPC} .product-tabs [role=tab],${LPC} .product-detail__badge){text-transform:uppercase;letter-spacing:var(--lk-lt);font-weight:var(--lk-lw)}`,
     `:root[data-look-rc] [data-pagosya-product]{--pd-radius:var(--lk-rc)}`,
     `:where(:root[data-look-rp]) ${LPC} :is(.product-detail__photo,.product-detail__stack img,.product-detail__related img){border-radius:var(--lk-rp)}`,

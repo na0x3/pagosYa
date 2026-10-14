@@ -163,3 +163,31 @@ test('a sanitized-shape touch beats the look on the same property (kit, DNA, loo
   await openCart(page);
   expect(await style(page, '.cart-drawer .order-item__photo', 'padding-bottom')).toBe('0px');
 });
+
+test('a preset or touch sets the title case; the look still beats the kit', async ({ page }) => {
+  const title = '[data-part=title]';
+  await openKitPage(page, { style: 'editorial', look: { version: 1, type: { heading: { case: 'none', italic: true } } }, dna: { productCss: '[data-pagosya-product][data-style] [data-part="title"]{text-transform:uppercase;font-style:normal}' } });
+  expect(await style(page, title, 'text-transform')).toBe('uppercase');
+  expect(await style(page, title, 'font-style')).toBe('normal');
+  await openKitPage(page, { style: 'editorial', look: { version: 1, type: { heading: { case: 'upper', italic: true } } } });
+  expect(await style(page, title, 'text-transform')).toBe('uppercase');
+  expect(await style(page, title, 'font-style')).toBe('italic');
+});
+
+test('duotone reads store colours written in oklch() and color(srgb …)', async ({ page }) => {
+  await openKitPage(page, { style: 'dense', look: { version: 1, photo: { treatment: 'duotone' } }, tokens: '--store-background:oklch(1 0 0);--store-foreground:color(srgb 0.0863 0.0706 0.0588)' });
+  const values = (await page.locator('#pagosya-look-duotone feColorMatrix').getAttribute('values'))!.trim().split(/\s+/).map(Number);
+  [0.0863, 0.0706, 0.0588].forEach((ink, i) => {
+    expect(values[i * 5 + 4]).toBeCloseTo(ink, 2);
+    expect(values[i * 5]).toBeCloseTo((1 - ink) * 0.2126, 2);
+  });
+});
+
+test("a custom card's price is never marked card-meta", async ({ page }) => {
+  const template = '<template data-pagosya-product-template><article><a data-product-link href="#">Ver</a><div class="menu-item__copy"><h3 data-product-field="name"></h3><p data-product-field="price"></p><p data-product-field="description"></p></div><button type="button" data-product-add>Añadir</button></article></template>';
+  await openKitPage(page, { path: 'productos.html', body: template });
+  const card = page.locator('[data-pagosya-catalog] .menu-item[data-custom-product]').first();
+  await expect(card.locator('[data-product-field=description]')).toHaveAttribute('data-part', 'card-meta');
+  await expect(card.locator('[data-product-field=price]')).not.toHaveAttribute('data-part', /.*/);
+  await expect(page.locator('[data-pagosya-catalog] .menu-item__price[data-part]')).toHaveCount(0);
+});
