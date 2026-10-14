@@ -18,6 +18,8 @@ const CHECKOUT: Record<string, string> = {
   whatsapp: 'El pedido se envía por WhatsApp a la tienda, que confirma el pago.',
   external: 'La tienda recibe el pedido en su propio enlace de contacto.',
 };
+/** One line, capped: merchant-set names must not inject prompt lines. */
+export const oneLine = (value: string | null | undefined, max: number) => (value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 const clip = (value: string | null | undefined, max: number) => {
   const text = (value ?? '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
@@ -29,16 +31,16 @@ export function buildAssistantSummary(store: SummaryStore, profile: AssistantPro
   const delivery = [store.shippingEnabled && 'envío a domicilio', store.shippingPickupEnabled && 'recojo en tienda'].filter(Boolean).join(' y ');
   const published = (Object.keys(POLICY_TITLES) as Array<keyof StorePolicies>).filter((key) => policies[key]).map((key) => POLICY_TITLES[key]);
   const lines = [
-    `Tienda: ${store.name}${store.tagline ? ` — ${clip(store.tagline, 160)}` : ''}`,
+    `Tienda: ${oneLine(store.name, 80)}${store.tagline ? ` — ${clip(store.tagline, 160)}` : ''}`,
     store.aboutText ? `Quiénes somos: ${clip(store.aboutText, 600)}` : '',
     store.announcement ? `Aviso actual: ${clip(store.announcement, 200)}` : '',
     `Cómo se compra: ${CHECKOUT[store.checkoutMode] ?? CHECKOUT.payment}`,
     `Entrega: ${delivery || 'consultar con la tienda'}`,
     ...locationsOf(store).map((location) => {
       const hours = hoursSummary(location.openingHours);
-      return `Local ${location.name}${location.address ? ` (${clip(location.address, 120)})` : ''}${location.pickupEnabled ? ', recojo' : ''}${location.deliveryEnabled ? ', envíos' : ''}${hours ? `; horario: ${hours}` : ''}`;
+      return `Local ${oneLine(location.name, 80)}${location.address ? ` (${clip(location.address, 120)})` : ''}${location.pickupEnabled ? ', recojo' : ''}${location.deliveryEnabled ? ', envíos' : ''}${hours ? `; horario: ${hours}` : ''}`;
     }),
-    store.categories.length ? `Categorías: ${store.categories.slice(0, 30).join(', ')}` : '',
+    store.categories.length ? `Categorías: ${store.categories.slice(0, 30).map((c) => oneLine(c, 60)).join(', ')}` : '',
     `Políticas publicadas: ${published.join(', ') || 'ninguna'} (léelas con buscar_info)`,
     store.contactPhone?.replace(/\D/g, '') ? 'La tienda atiende por WhatsApp.' : 'La tienda no tiene WhatsApp; para hablar con alguien se deja un mensaje.',
     profile.notes.trim() ? `Lo que la tienda quiere que sepas:\n${profile.notes.trim().slice(0, 4000)}` : '',
@@ -46,14 +48,27 @@ export function buildAssistantSummary(store: SummaryStore, profile: AssistantPro
   return lines.filter(Boolean).join('\n');
 }
 
+const MAX_PASSAGE = 1500;
+
+/** Breaks one over-long paragraph at single newlines, then sentence ends, then (last resort) hard chunks, so no text is lost. */
+function breakDown(text: string, separators: string[]): string[] {
+  if (text.length <= MAX_PASSAGE) return [text];
+  const [separator, ...rest] = separators;
+  if (separator === undefined) return Array.from({ length: Math.ceil(text.length / MAX_PASSAGE) }, (_, i) => text.slice(i * MAX_PASSAGE, (i + 1) * MAX_PASSAGE));
+  const parts = text.split(separator);
+  const keep = separator === '. ' ? '.' : '';
+  return parts.flatMap((part, i) => breakDown(i < parts.length - 1 ? `${part}${keep}` : part, rest)).map((part) => part.trim()).filter(Boolean);
+}
+
 /** Long text is split at paragraph breaks into passages of at most 1500 characters. */
 function split(title: string, body: string): Passage[] {
   const passages: Passage[] = [];
   let current = '';
   for (const paragraph of body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)) {
-    const piece = paragraph.slice(0, 1500);
-    if (current && current.length + piece.length + 2 > 1500) { passages.push({ title, body: current }); current = ''; }
-    current = current ? `${current}\n\n${piece}` : piece;
+    for (const piece of breakDown(paragraph, ['\n', '. '])) {
+      if (current && current.length + piece.length + 2 > MAX_PASSAGE) { passages.push({ title, body: current }); current = ''; }
+      current = current ? `${current}\n\n${piece}` : piece;
+    }
   }
   if (current) passages.push({ title, body: current });
   return passages;
@@ -66,8 +81,8 @@ export function storePassages(store: SummaryStore, profile: AssistantProfile): P
     ...(Object.keys(POLICY_TITLES) as Array<keyof StorePolicies>).flatMap((key) => policies[key] ? split(POLICY_TITLES[key], policies[key]!) : []),
     ...locationsOf(store).map((location) => {
       const hours = hoursSummary(location.openingHours);
-      return { title: `Local ${location.name}`, body: [location.address, location.description, hours && `Horario: ${hours}`].filter(Boolean).join('. ') };
-    }),
-    ...profile.notes.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((body) => ({ title: 'Información de la tienda', body: body.slice(0, 1500) })),
+      return { title: `Local ${oneLine(location.name, 80)}`, body: [location.address, location.description, hours && `Horario: ${hours}`].filter(Boolean).join('. ') };
+    }).filter((passage) => passage.body),
+    ...profile.notes.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).flatMap((note) => split('Información de la tienda', note)),
   ];
 }

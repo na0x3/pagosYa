@@ -1,8 +1,10 @@
-import type { AssistantProfile } from './assistant-summary';
+import { oneLine, type AssistantProfile } from './assistant-summary';
 
 /** The summary comes first so OpenAI's prompt cache reuses it across a store's turns. */
-export function assistantInstructions(summary: string, profile: AssistantProfile, storeName: string): string {
-  const who = profile.name?.trim() ? `Eres ${profile.name.trim()}, el asistente automático de ${storeName}` : `Eres el asistente automático de ${storeName}`;
+export function assistantInstructions(summary: string, profile: AssistantProfile, rawStoreName: string): string {
+  const storeName = oneLine(rawStoreName, 80);
+  const assistantName = oneLine(profile.name, 80);
+  const who = assistantName ? `Eres ${assistantName}, el asistente automático de ${storeName}` : `Eres el asistente automático de ${storeName}`;
   return [
     'DATOS DE LA TIENDA',
     summary,
