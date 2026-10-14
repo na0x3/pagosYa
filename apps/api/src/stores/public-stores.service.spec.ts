@@ -151,8 +151,12 @@ describe('top seller badge', () => {
 
 describe('assistant in the public payload', () => {
   it('is null unless the platform flag is on', async () => {
-    const { service } = setup();
+    const { service, prisma } = setup();
+    prisma.storeAssistant = { findUnique: jest.fn() };
+    prisma.assistantConversation = { count: jest.fn() };
     expect((await service.getStorePublic('cafe', { trackView: false })).assistant).toBeNull();
+    expect(prisma.storeAssistant.findUnique).not.toHaveBeenCalled();
+    expect(prisma.assistantConversation.count).not.toHaveBeenCalled();
   });
 
   it('carries the bubble settings when on', async () => {

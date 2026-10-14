@@ -1,7 +1,7 @@
 import { createPasswordGuard, mountSourceAccountBridge } from '@pagosya/storefront-preview';
 import { blockedStoreMessage, createAccountBridgeHandler, takeAccountEmailToken } from './account/account-bridge-handler';
 import { isAccountDestination } from './account-destinations';
-import { assistantRequestBody, leadOrigin } from './assistant-bridge';
+import { assistantRequestBody, leadOrigin, postAssistantChat } from './assistant-bridge';
 import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
@@ -228,8 +228,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       if (data.action === 'assistant') {
         const chat = assistantRequestBody(data.body);
         if (!chat) { reply(false, { message: 'Escribe tu pregunta.' }); return; }
-        const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/assistant/chat`, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chat) });
-        reply(result.ok, await result.json().catch(() => ({ message: 'No se pudo completar la solicitud.' })));
+        const turn = await postAssistantChat(API_BASE_URL, slug, chat);
+        reply(turn.ok, turn.body);
         return;
       }
       // Personal fields are never taken from the design's frame: pagosYa's own dialog collects them.

@@ -15,3 +15,13 @@ export function assistantRequestBody(body: unknown) {
 
 export const leadOrigin = (body: unknown): { origin?: 'assistant' } =>
   body && typeof body === 'object' && (body as Record<string, unknown>).origin === 'assistant' ? { origin: 'assistant' } : {};
+
+/** One chat turn to the API. Aborts after 30 s (the API's own turn limit is 25 s) and fails in Spanish, never with a raw error. */
+export async function postAssistantChat(apiBase: string, slug: string, body: unknown, fetchImpl: typeof fetch = fetch): Promise<{ ok: boolean; body: unknown }> {
+  try {
+    const result = await fetchImpl(`${apiBase}/stores/public/${encodeURIComponent(slug)}/assistant/chat`, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
+    return { ok: result.ok, body: await result.json().catch(() => ({ message: 'No se pudo completar la solicitud.' })) };
+  } catch {
+    return { ok: false, body: { message: 'No pudimos conectar con el asistente. Inténtalo otra vez.' } };
+  }
+}
