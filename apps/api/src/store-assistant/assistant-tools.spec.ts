@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { AssistantToolbox, productCard } from './assistant-tools';
 
 const now = new Date('2026-10-13T15:00:00Z');
@@ -10,7 +11,9 @@ const club = { ...base, id: 'p4', name: 'Club del café', amount: 5000, fulfillm
 const agotado = { ...base, id: 'p5', name: 'Gorro', amount: 8000, stock: 0 };
 
 function setup(overrides: Record<string, any> = {}) {
-  const products = [chompa, polera, caja, club, agotado];
+  const ajeno = { ...base, id: 'px', storeId: 's2', name: 'Ajeno', amount: 1000 };
+  const viejo = { ...base, id: 'pa', status: 'ARCHIVED', name: 'Viejo', amount: 1000 };
+  const products = [chompa, polera, caja, club, agotado, ajeno, viejo];
   const prisma: any = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: 'p1' }, { id: 'p2' }]),
     paymentLink: {
@@ -35,6 +38,10 @@ describe('assistant toolbox', () => {
     expect(productCard(agotado as any, now)).toMatchObject({ inStock: false, addKey: null });
   });
 
+  it('an expired discount no longer shows', () => {
+    expect(productCard(chompa as any, new Date('2026-11-05T12:00:00Z'))).toMatchObject({ price: 'Bs 300,00', originalPrice: null });
+  });
+
   it('buscar_productos returns live products of this store and records evidence', async () => {
     const { box, prisma } = setup();
     const out = JSON.parse(await box.run('buscar_productos', JSON.stringify({ consulta: 'chompa', categoria: null })));
@@ -46,7 +53,12 @@ describe('assistant toolbox', () => {
 
   it('ver_producto refuses another store\'s or an archived product', async () => {
     const { box } = setup();
-    expect(await box.run('ver_producto', JSON.stringify({ id: 'zz' }))).toBe('Ese producto no está disponible en esta tienda.');
+    const refused = 'Ese producto no está disponible en esta tienda.';
+    for (const id of ['zz', 'px', 'pa']) {
+      expect(await box.run('ver_producto', JSON.stringify({ id }))).toBe(refused);
+      expect(await box.run('agregar_al_carrito', JSON.stringify({ id, varianteId: null }))).toBe(refused);
+    }
+    expect(box.addBlocks).toEqual([]);
   });
 
   it('ver_producto lists variants with their own price and availability', async () => {
@@ -85,8 +97,11 @@ describe('assistant toolbox', () => {
   });
 
   it('a tool that throws answers with a soft message and bad JSON is refused', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const { box } = setup({ $queryRaw: jest.fn().mockRejectedValue(new Error('db down')) });
     expect(await box.run('buscar_productos', JSON.stringify({ consulta: 'chompa', categoria: null }))).toBe('No pude consultar ese dato ahora.');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('buscar_productos failed for store s1: db down'));
     expect(await box.run('ver_producto', '{oops')).toBe('Argumentos inválidos.');
+    warn.mockRestore();
   });
 });

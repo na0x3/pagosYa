@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { hoursSummary, money } from '../store-knowledge/store-knowledge';
@@ -59,6 +60,7 @@ export function productCard(p: ProductRow, now: Date): ProductCard {
 }
 
 export class AssistantToolbox {
+  private static readonly logger = new Logger('AssistantToolbox');
   readonly evidence: string[] = [];
   readonly cards = new Map<string, ProductCard>();
   readonly searched: string[] = [];
@@ -74,7 +76,8 @@ export class AssistantToolbox {
       const output = await this.execute(name, args);
       this.evidence.push(output);
       return output;
-    } catch {
+    } catch (error) {
+      AssistantToolbox.logger.warn(`assistant tool ${name} failed for store ${this.deps.store.id}: ${(error as Error).message}`);
       return 'No pude consultar ese dato ahora.';
     }
   }
