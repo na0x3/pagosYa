@@ -58,7 +58,7 @@ export const money = (minor: number, currency: string) => `${currency === 'BOB' 
 const round1 = (value: number) => Math.round(value * 10) / 10;
 const average = (values: number[]) => values.length ? round1(values.reduce((a, b) => a + b, 0) / values.length) : 0;
 
-function hoursSummary(hours: unknown): string | undefined {
+export function hoursSummary(hours: unknown): string | undefined {
   if (!Array.isArray(hours) || !hours.length) return undefined;
   return hours.filter((h: any) => h && Number.isInteger(h.day)).sort((a: any, b: any) => a.day - b.day)
     .map((h: any) => `${DAYS[h.day] ?? h.day} ${h.closed ? 'cerrado' : `${h.open}–${h.close}`}`).join(', ').slice(0, 200) || undefined;
