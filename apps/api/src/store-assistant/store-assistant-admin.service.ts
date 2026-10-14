@@ -30,6 +30,12 @@ export class StoreAssistantAdminService {
     return store;
   }
 
+  /** The merchant's test chat and notes draft call the model too, so the platform switch and spend ceiling apply to them. */
+  private async modelAvailable(now: Date) {
+    if (!this.config.get<boolean>('app.assistant.enabled')) throw new BadRequestException('El asistente todavía no está disponible.');
+    if (!(await this.usage.spendOk(now))) throw new BadRequestException('El asistente está en pausa por ahora. Inténtalo más tarde.');
+  }
+
   async view(merchantId: string, storeId: string, now = new Date()) {
     const store = await this.owned(merchantId, storeId);
     const row = (await this.prisma.storeAssistant.findUnique({ where: { storeId } })) ?? defaults(storeId);
@@ -67,6 +73,7 @@ export class StoreAssistantAdminService {
 
   async test(merchantId: string, storeId: string, dto: AssistantTestDto, now = new Date()) {
     await this.owned(merchantId, storeId);
+    await this.modelAvailable(now);
     const conversation = dto.conversationId ? await this.prisma.assistantConversation.findFirst({ where: { id: dto.conversationId, storeId, preview: true } }) : null;
     if (!conversation && await this.usage.previewUsed(storeId, now) >= PREVIEW_ALLOWANCE) throw new BadRequestException(`Usaste las ${PREVIEW_ALLOWANCE} pruebas de este mes.`);
     const [store, row] = await Promise.all([this.chat.loadTurnStore(storeId), this.prisma.storeAssistant.findUnique({ where: { storeId } })]);
@@ -74,8 +81,9 @@ export class StoreAssistantAdminService {
     return this.chat.converse({ store, assistant: row ?? defaults(storeId), conversation, message: dto.message.trim(), ipHash: 'merchant', preview: true, now });
   }
 
-  async notesDraft(merchantId: string, storeId: string) {
+  async notesDraft(merchantId: string, storeId: string, now = new Date()) {
     await this.owned(merchantId, storeId);
+    await this.modelAvailable(now);
     if (!this.completion) throw new BadRequestException('La redacción con IA no está disponible.');
     const store = await this.chat.loadTurnStore(storeId);
     if (!store) throw new NotFoundException('Tienda no encontrada');

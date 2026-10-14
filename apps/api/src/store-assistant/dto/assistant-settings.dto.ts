@@ -13,7 +13,7 @@ export class AssistantSettingsDto {
 
 export class AssistantTestDto {
   @IsOptional() @IsString() @Matches(/^[a-z0-9]{20,40}$/) conversationId?: string;
-  @IsString() @MinLength(1) @MaxLength(500) @IsSafeText() message!: string;
+  @IsString() @MinLength(1) @MaxLength(500) @Matches(/\S/) @IsSafeText() message!: string;
 }
 
 export class AssistantUnansweredDto {

@@ -4,7 +4,7 @@ import { StoreAssistantAdminService } from './store-assistant-admin.service';
 
 const now = new Date('2026-10-13T15:00:00Z');
 const row = (patch: Record<string, unknown> = {}) => ({ storeId: 's1', enabled: false, name: null, avatarUrl: null, greeting: null, formality: 'tu', notes: '', monthlyCap: 300, ...patch });
-function setup(patch: Record<string, any> = {}) {
+function setup(patch: Record<string, any> = {}, platformEnabled = true) {
   const prisma: any = {
     store: { findFirst: jest.fn().mockResolvedValue({ id: 's1', merchantId: 'm1', name: 'Café', publishedSourceRevision: 2, policies: { privacy: 'Cuidamos tus datos.' } }), update: jest.fn() },
     storeAssistant: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn(async ({ create, update }: any) => row({ ...create, ...update })) },
@@ -13,10 +13,10 @@ function setup(patch: Record<string, any> = {}) {
     assistantUnanswered: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), update: jest.fn() },
     ...patch,
   };
-  const usage: any = { monthlyUsed: jest.fn().mockResolvedValue(12), previewUsed: jest.fn().mockResolvedValue(3) };
+  const usage: any = { monthlyUsed: jest.fn().mockResolvedValue(12), previewUsed: jest.fn().mockResolvedValue(3), spendOk: jest.fn().mockResolvedValue(true) };
   const chat: any = { converse: jest.fn().mockResolvedValue({ conversationId: 'c1', reply: { text: 'ok', blocks: [] } }), loadTurnStore: jest.fn().mockResolvedValue({ id: 's1', name: 'Café', categories: [] }) };
   const completion: any = { structuredCompletion: jest.fn().mockResolvedValue({ data: { notes: 'Tostamos los martes.' } }) };
-  const config: any = { get: (key: string) => key === 'app.assistant.enabled' };
+  const config: any = { get: (key: string) => key === 'app.assistant.enabled' && platformEnabled };
   return { prisma, usage, chat, completion, service: new StoreAssistantAdminService(prisma, config, usage, chat, completion) };
 }
 
@@ -58,6 +58,26 @@ describe('StoreAssistantAdminService', () => {
     usage.previewUsed.mockResolvedValue(1);
     await service.test('m1', 's1', { message: 'hola' }, now);
     expect(chat.converse.mock.calls[0][0]).toMatchObject({ preview: true, message: 'hola' });
+  });
+
+  it('the test chat and the notes draft respect the platform switch', async () => {
+    const { service, chat, completion } = setup({}, false);
+    await expect(service.test('m1', 's1', { message: 'hola' }, now)).rejects.toThrow('El asistente todavía no está disponible.');
+    await expect(service.notesDraft('m1', 's1', now)).rejects.toThrow('El asistente todavía no está disponible.');
+    expect(chat.converse).not.toHaveBeenCalled();
+    expect(completion.structuredCompletion).not.toHaveBeenCalled();
+  });
+
+  it('the test chat and the notes draft pause when the platform spend ceiling is reached', async () => {
+    const { service, chat, completion, usage } = setup();
+    usage.spendOk.mockResolvedValue(false);
+    await expect(service.test('m1', 's1', { message: 'hola' }, now)).rejects.toThrow('El asistente está en pausa por ahora. Inténtalo más tarde.');
+    await expect(service.notesDraft('m1', 's1', now)).rejects.toThrow('El asistente está en pausa por ahora. Inténtalo más tarde.');
+    expect(usage.spendOk).toHaveBeenCalledWith(now);
+    expect(chat.converse).not.toHaveBeenCalled();
+    expect(completion.structuredCompletion).not.toHaveBeenCalled();
+    usage.spendOk.mockResolvedValue(true);
+    await expect(service.notesDraft('m1', 's1', now)).resolves.toEqual({ notes: 'Tostamos los martes.' });
   });
 
   it('masks contact details in the conversation list', async () => {
