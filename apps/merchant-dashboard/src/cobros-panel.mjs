@@ -1,4 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { icon } from "./icons.mjs";
+import { uiOption, uiPill, uiStat } from "./ui-kit.mjs";
 import {
   PAYMENT_METHOD_LABEL,
   STATE_LABEL,
@@ -205,17 +207,9 @@ export function mountCobrosPanel(deps) {
   const testMode = () => Boolean(summary?.testMode);
   const todayInput = () => dueDateInputValue(dueDateFromPreset(0));
   const ICON = {
-    plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1.1-4A8 8 0 1 1 20 12z"/><path d="M9 9.5c.3 2 2 3.8 4.2 4.5l1.1-1.1 1.7.8-.4 1.4c-3.3.3-6.8-3.1-6.6-6.4l1.4-.4.8 1.7z"/></svg>',
-    mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
-    link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>',
-    eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>',
-    doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
-    bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>',
-    flask: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></svg>',
+    plus: icon("plus"), close: icon("x"), whatsapp: icon("message-circle"), mail: icon("mail"), link: icon("link"),
+    eye: icon("eye"), check: icon("check"), doc: icon("file-text"), bell: icon("bell"), alert: icon("triangle-alert"),
+    flask: icon("flask-conical"),
   };
 
   // ── list ─────────────────────────────────────────────────────────────
@@ -363,16 +357,16 @@ export function mountCobrosPanel(deps) {
            ${nextCursor ? `<button type="button" class="cobro-secondary cobros-more" data-cobros-more ${loadingMore ? "disabled" : ""}>${loadingMore ? "Cargando…" : "Cargar más"}</button>` : ""}`
         : `<p class="cobros-filter-empty">${esc(emptyFilter)}</p>`;
     root.innerHTML = `${bannerHtml()}${attentionHtml()}<div class="cobros-head">
-        <dl class="cobros-summary">
-          <div><dt>Por cobrar</dt><dd>${amountLines("owed")}</dd></div>
-          <div class="${overdueAny ? "is-warning" : ""}"><dt>Vencido</dt><dd>${amountLines("overdue")}</dd></div>
-          <div class="is-good"><dt>Cobrado · 30 días</dt><dd>${amountLines("collected")}</dd></div>
+        <dl class="ui-stats cobros-summary">
+          ${uiStat({ label: "Por cobrar", icon: "hand-coins", value: amountLines("owed") })}
+          ${uiStat({ label: "Vencido", icon: "clock-alert", value: amountLines("overdue"), tone: overdueAny ? "warning" : "" })}
+          ${uiStat({ label: "Cobrado · 30 días", icon: "circle-check", value: amountLines("collected"), tone: "good" })}
         </dl>
         <button type="button" class="primary cobros-new" data-cobro-new>${ICON.plus}<span>Nuevo cobro</span></button>
       </div>
       ${testTotal.length ? `<p class="cobros-test-note" data-cobros-test-note>${ICON.flask}<span>Pagos de prueba (30 días): ${testTotal.map((row) => esc(formatMoney(row.testCollected, row.currency))).join(" + ")}. No suman en Cobrado.</span></p>` : ""}
-      <div class="cobros-filters" role="tablist" aria-label="Filtrar cobros">
-        ${FILTERS.map((option) => `<button type="button" role="tab" aria-selected="${filter === option.id}" data-cobro-filter="${option.id}">${esc(option.label)}<span>${Number(counts[option.id] || 0)}</span></button>`).join("")}
+      <div class="ui-tabs" role="tablist" aria-label="Filtrar cobros">
+        ${FILTERS.map((option) => `<button type="button" role="tab" class="ui-tab" aria-selected="${filter === option.id}" data-cobro-filter="${option.id}">${esc(option.label)}<span>${Number(counts[option.id] || 0)}</span></button>`).join("")}
       </div>
       ${list}`;
   }
@@ -471,9 +465,9 @@ export function mountCobrosPanel(deps) {
           </fieldset>
           <fieldset class="cobro-step">
             <legend><span>3</span>Para cuándo</legend>
-            <div class="cobro-presets" role="radiogroup" aria-label="Vencimiento">
-              ${PRESETS.map((option) => `<label class="cobro-preset"><input type="radio" name="duePreset" value="${option.id}" ${draft.preset === option.id ? "checked" : ""}><span>${esc(option.label)}</span></label>`).join("")}
-              <label class="cobro-preset"><input type="radio" name="duePreset" value="custom" ${draft.preset === "custom" ? "checked" : ""}><span>Otra fecha</span></label>
+            <div class="ui-pills" role="radiogroup" aria-label="Vencimiento">
+              ${PRESETS.map((option) => uiPill({ group: "duePreset", value: option.id, label: option.label, checked: draft.preset === option.id })).join("")}
+              ${uiPill({ group: "duePreset", value: "custom", label: "Otra fecha", checked: draft.preset === "custom" })}
             </div>
             <div class="cobro-custom-date" ${draft.preset === "custom" ? "" : "hidden"}><label for="cobroDueDate">Fecha de vencimiento</label><input id="cobroDueDate" type="date" min="${esc(todayInput())}" value="${esc(draft.customDate)}"></div>
             <p class="cobro-due-hint" data-cobro-due-hint>${dueHint(dueAt)}</p>
@@ -482,7 +476,7 @@ export function mountCobrosPanel(deps) {
             <legend><span>4</span>Nota <small>(opcional)</small></legend>
             <label for="cobroNote" class="sr-only">Nota para el cliente</label>
             <textarea id="cobroNote" rows="2" maxlength="1000" placeholder="Ej.: Gracias por tu compra. Transferencias con el número de cobro.">${esc(draft.note)}</textarea>
-            <label class="cobro-toggle"><input type="checkbox" data-cobro-reminders ${draft.autoReminders ? "checked" : ""}><span><strong>Recordatorios automáticos</strong><small>Después de que lo compartas, le avisamos por correo el día que vence y 3 días después si aún no pagó.</small></span></label>
+            ${uiOption({ icon: "bell-ring", attrs: "data-cobro-reminders", checked: draft.autoReminders, title: "Recordatorios automáticos", text: "Por correo al vencer y 3 días después." })}
             ${invoicing}
           </fieldset>
           <div class="cobro-problems" role="alert" data-cobro-problems ${draft.problems.length ? "" : "hidden"}>${draft.problems.map((problem) => `<p>${esc(problem)}</p>`).join("")}</div>
@@ -1037,8 +1031,8 @@ export function mountCobrosPanel(deps) {
     const testNote = state === "paid" && payment.testMode ? `<p class="cobro-sin is-test" data-cobro-test-note>${ICON.flask}<span>Fue un pago de prueba (tu cuenta aún está en verificación): no movió dinero real y no suma en Cobrado.</span></p>` : "";
     const markPaid = open ? `<div class="cobro-mark-paid" data-cobro-mark-paid-box hidden>
         <fieldset><legend>¿Cómo te pagó?</legend>
-          <div class="cobro-presets">
-            ${["cash", "transfer", "other"].map((method, index) => `<label class="cobro-preset"><input type="radio" name="cobroPaidMethod" value="${method}" ${index === 0 ? "checked" : ""}><span>${esc({ cash: "Efectivo", transfer: "Transferencia", other: "Otro" }[method])}</span></label>`).join("")}
+          <div class="ui-pills">
+            ${["cash", "transfer", "other"].map((method, index) => uiPill({ group: "cobroPaidMethod", value: method, label: { cash: "Efectivo", transfer: "Transferencia", other: "Otro" }[method] || method, checked: index === 0 })).join("")}
           </div>
         </fieldset>
         <label for="cobroPaidReference">Nota o referencia <small>(opcional)</small></label>
@@ -1049,7 +1043,7 @@ export function mountCobrosPanel(deps) {
           <button type="button" class="cobro-secondary" data-cobro-action="mark-paid-cancel">Cancelar</button>
         </div>
       </div>` : "";
-    const reminders = open ? `<label class="cobro-toggle cobro-detail-toggle"><input type="checkbox" data-cobro-auto-reminders ${doc.autoReminders ? "checked" : ""}><span><strong>Recordatorios automáticos</strong><small>${doc.customer?.email ? "Por correo el día que vence y 3 días después, si aún no pagó." : "Tu cliente no tiene correo: los recordatorios automáticos solo van por correo."}</small></span></label>` : "";
+    const reminders = open ? uiOption({ icon: "bell-ring", attrs: "data-cobro-auto-reminders", checked: doc.autoReminders, title: "Recordatorios automáticos", text: doc.customer?.email ? "Por correo al vencer y 3 días después." : "Tu cliente no tiene correo para recibirlos." }) : "";
     const chip = payment.testMode && state === "paid" ? `<span class="cobro-chip is-test">Pagado · pago de prueba</span>` : `<span class="cobro-chip is-${state}">${esc(STATE_LABEL[state])}</span>`;
     return `<header class="cobro-sheet-head">
         <div><p class="cobro-kicker">${esc(doc.numberLabel)}</p><h2 id="cobroSheetTitle">${esc(doc.customer?.name || "Sin nombre")}</h2></div>

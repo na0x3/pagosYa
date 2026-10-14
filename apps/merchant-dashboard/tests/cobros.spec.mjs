@@ -337,7 +337,7 @@ for (const width of [390, 1280]) {
       await expect(page.locator("[data-cobros-toast]")).toContainText("Recordatorio enviado a ana@example.com");
       expect(api.requests.find((request) => request.path.endsWith("/remind")).body).toEqual({ channel: "email" });
 
-      await sheet.getByRole("checkbox", { name: /Recordatorios automáticos/ }).uncheck();
+      await sheet.getByRole("switch", { name: /Recordatorios automáticos/ }).uncheck();
       await expect(page.locator("[data-cobros-toast]")).toContainText("Recordatorios automáticos apagados");
       expect(api.requests.find((request) => request.path.endsWith("/reminders")).body).toEqual({ autoReminders: false });
 

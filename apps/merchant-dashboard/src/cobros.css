@@ -17,22 +17,9 @@
 
 /* head: summary + new */
 .cobros-head { display: flex; align-items: stretch; gap: 12px; }
-.cobros-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; flex: 1; margin: 0; }
-.cobros-summary div { padding: 12px 14px; background: var(--pg-surface, #fff); border: 2px solid var(--cobro-line); border-radius: 12px; min-width: 0; }
-.cobros-summary div.is-warning { background: #fff1dc; }
-.cobros-summary div.is-good { background: #e6f4ea; }
-.cobros-summary dt { color: var(--pg-text-muted); font-size: 12px; font-weight: 600; }
-.cobros-summary dd { margin: 4px 0 0; font: 800 clamp(16px, 2.2vw, 22px)/1.1 Arial, sans-serif; letter-spacing: -.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .cobros-new { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; font-size: 15px; font-weight: 800; white-space: nowrap; }
 .cobros-new svg, .cobro-secondary svg, .cobro-icon-button svg, .cobro-share-icon svg, .cobro-sin svg, .cobro-success-mark svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
 
-/* filters */
-.cobros-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-.cobros-filters::-webkit-scrollbar { display: none; }
-.cobros-filters button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 999px; background: var(--pg-surface, #fff); color: var(--pg-text); font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
-.cobros-filters button span { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--cobro-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
-.cobros-filters button[aria-selected="true"] { border-color: var(--cobro-line); background: var(--pg-text, #20211e); color: #fff; }
-.cobros-filters button[aria-selected="true"] span { background: rgba(255,255,255,.18); }
 .cobros-filter-empty { margin: 0; padding: 28px 16px; text-align: center; color: var(--pg-text-muted); background: var(--pg-surface, #fff); border: 2px dashed var(--pg-border, #d8d9ce); border-radius: 12px; }
 
 /* list */
@@ -116,20 +103,8 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-catalog-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cobro-catalog-list button strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-.cobro-presets { display: flex; flex-wrap: wrap; gap: 8px; }
-.cobro-preset { position: relative; margin: 0 !important; }
-/* Visually hidden but still a real, focusable radio (the pill is its label). */
-.cobro-preset input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.cobro-preset span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 999px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font-size: 14px; font-weight: 700; cursor: pointer; }
-.cobro-preset input:checked + span { background: var(--pg-brand, #f3f36b); border-color: var(--cobro-line, #20211e); }
-.cobro-preset input:focus-visible + span { outline: 3px solid var(--pg-accent, #55416e); outline-offset: 2px; }
 .cobro-custom-date[hidden] { display: none; }
 .cobro-due-hint { margin: 0; color: var(--pg-text-muted); font-size: 13px; font-weight: 600; }
-.cobro-toggle { display: flex !important; align-items: flex-start; gap: 10px; margin: 4px 0 0 !important; color: var(--pg-text) !important; cursor: pointer; }
-.cobro-toggle input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--pg-accent, #55416e); flex: 0 0 auto; }
-.cobro-toggle span { display: grid; gap: 2px; }
-.cobro-toggle strong { font-size: 14px; }
-.cobro-toggle small { color: var(--pg-text-muted); font-size: 13px; font-weight: 500; line-height: 1.45; }
 .cobro-sin { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--cobro-soft); color: var(--pg-text-muted); font-size: 13px; line-height: 1.45; }
 .cobro-sin.is-ready { background: #e6f4ea; color: #16603a; }
 .cobro-sin a { color: inherit; font-weight: 700; }
@@ -200,8 +175,6 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobros-attention > div { display: grid; gap: 8px; min-width: 0; }
 .cobros-attention-links { display: flex; flex-wrap: wrap; gap: 6px; }
 .cobros-attention-links .cobro-secondary { min-height: 36px; padding: 0 10px; font-size: 13px; border-color: #8a3b00; color: #6b2f00; background: var(--pg-surface-raised, #fff); }
-.cobros-summary dd span { display: block; }
-.cobros-summary dd span.is-extra { margin-top: 2px; font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--pg-text-muted); }
 .cobros-test-note { display: flex; align-items: center; gap: 8px; margin: 0; color: #1f3d7a; font-size: 13px; font-weight: 600; }
 .cobros-more { justify-self: center; width: min(320px, 100%); }
 .cobro-chip.is-test { background: #e3ecff; color: #1f3d7a; }
@@ -238,7 +211,6 @@ body.cobro-sheet-open { overflow: hidden; }
 .cobro-mark-paid input:not([type="radio"]) { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 8px; background: var(--pg-surface-raised, #fff); color: var(--pg-text); font: inherit; font-size: 16px; }
 .cobro-mark-paid-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .cobro-mark-paid-actions .primary { min-height: 40px; padding: 0 16px; font-weight: 800; }
-.cobro-detail-toggle { padding: 12px 14px; border: 2px solid var(--pg-border, #d8d9ce); border-radius: 12px; background: var(--pg-surface-raised, #fff); }
 
 /* toast */
 .cobros-toast { position: fixed; z-index: 4200; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: min(520px, calc(100vw - 32px)); margin: 0; padding: 12px 16px; border: 2px solid var(--bento-keyline, #20211e); border-radius: 12px; background: #20211e; color: #fff; font-size: 14px; font-weight: 700; box-shadow: 4px 4px 0 rgba(0,0,0,.25); }
@@ -258,12 +230,6 @@ body.cobro-sheet-open { overflow: hidden; }
   .cobros-head { flex-direction: column; }
   /* The action first, full width, then what is owed (big) over overdue and collected. */
   .cobros-new { order: -1; width: 100%; }
-  .cobros-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .cobros-summary div { padding: 10px 12px; }
-  .cobros-summary div:first-child { grid-column: 1 / -1; }
-  .cobros-summary div:first-child dd { font-size: 24px; }
-  .cobros-summary dt { font-size: 12px; }
-  .cobros-summary dd { font-size: 17px; }
   .cobro-card-main small { white-space: normal; }
   .cobro-sheet-layer { place-items: end stretch; }
   .cobro-sheet { width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; border: 0; box-shadow: none; animation-name: cobro-sheet-up; }
