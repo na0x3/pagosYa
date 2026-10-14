@@ -26,6 +26,12 @@
     const digits = String((store && store.contactPhone) || '').replace(/\D/g, '');
     return digits ? 'https://wa.me/' + digits + '?text=' + encodeURIComponent('Hola, vengo del chat de la tienda.' + (summary ? ' ' + summary : '')) : null;
   };
+  // A reply may only point at the store's own WhatsApp number.
+  const ownWhatsapp = url => {
+    const own = String((store && store.contactPhone) || '').replace(/\D/g, '');
+    const match = typeof url === 'string' ? url.match(/^https:\/\/wa\.me\/(\d+)(\?|$)/) : null;
+    return match && own && match[1] === own ? url : null;
+  };
   const openExternal = url => { if (hosted) parent.postMessage({ type: 'pagosya:source-external', url: url }, '*'); else window.open(url, '_blank', 'noopener'); };
 
   const CSS = '@layer pagosya-assistant-base{'
@@ -93,7 +99,7 @@
 
   function handoff(block) {
     const row = h('div', 'pya-row');
-    const url = (block && block.whatsappUrl) || whatsappUrl(block && block.summary);
+    const url = ownWhatsapp(block && block.whatsappUrl) || whatsappUrl(block && block.summary);
     if (url) { const b = button('pya-btn pya-primary', 'Escribir por WhatsApp', { 'data-assistant-whatsapp': '' }); b.dataset.url = url; row.append(b); }
     else row.append(button('pya-btn pya-primary', 'Dejar un mensaje', { 'data-assistant-message': '' }));
     log().append(row); scroll();
@@ -118,8 +124,12 @@
 
   async function request(body) {
     if (hosted) { const result = await window.PAGOSYA_HOSTED_REQUEST('assistant', body); return { ok: result.ok, json: result.body || {} }; }
-    const response = await fetch(apiBase() + '/stores/public/' + encodeURIComponent(config.slug) + '/assistant/chat', { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    return { ok: response.ok, json: await response.json().catch(() => ({})) };
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (controller) controller.abort(); }, 30000);
+    try {
+      const response = await fetch(apiBase() + '/stores/public/' + encodeURIComponent(config.slug) + '/assistant/chat', { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller ? controller.signal : undefined });
+      return { ok: response.ok, json: await response.json().catch(() => ({})) };
+    } finally { clearTimeout(timer); }
   }
 
   async function send(message, retried) {
@@ -134,20 +144,25 @@
     if (conversationId) body.conversationId = conversationId;
     if (product) body.productId = product.id;
     if (added) body.addedToCart = true;
-    let retry = false;
+    let retry = false, result = null;
     try {
-      const result = await request(body);
+      try { result = await request(body); } catch (error) { result = null; }
       typing.remove();
-      if (result.json && result.json.conversationId) { conversationId = result.json.conversationId; write(conversationId); }
-      if (result.ok && result.json.reply) { added = false; render(result.json.reply); }
-      else if (result.ok && result.json.fallback) { say('Ahora no puedo responder. Escríbele a la tienda 👉', 'bot'); handoff(null); }
-      else say(result.json.message || 'No se pudo enviar. Inténtalo otra vez.', 'bot');
-    } catch (error) {
-      typing.remove();
-      if (!retried) retry = true;
-      else {
-        say('Se cortó la conexión.', 'bot');
-        const row = h('div', 'pya-row'); row.append(button('pya-btn', 'Reintentar', { 'data-assistant-retry': '' })); log().append(row);
+      if (!result) {
+        // Hosted stores never re-send: the parent allows one in-flight assistant request.
+        if (!hosted && !retried) retry = true;
+        else {
+          say('Se cortó la conexión.', 'bot');
+          const row = h('div', 'pya-row'); row.append(button('pya-btn', 'Reintentar', { 'data-assistant-retry': '' })); log().append(row);
+        }
+      } else {
+        try {
+          const json = result.json || {};
+          if (json.conversationId) { conversationId = json.conversationId; write(conversationId); }
+          if (result.ok && json.reply) { added = false; render(json.reply); }
+          else if (result.ok && json.fallback) { say('Ahora no puedo responder. Escríbele a la tienda 👉', 'bot'); handoff(null); }
+          else say(json.message || 'No se pudo enviar. Inténtalo otra vez.', 'bot');
+        } catch (error) { say('No pude mostrar la respuesta.', 'bot'); }
       }
     } finally { busy = false; submit.disabled = false; }
     if (retry) await send(message, true);
@@ -155,8 +170,12 @@
 
   function messageForm() {
     if (hosted) {
-      window.PAGOSYA_HOSTED_REQUEST('lead', { items: [], origin: 'assistant' })
-        .then(r => say(r.ok ? 'Mensaje enviado. La tienda te contactará.' : (r.body && r.body.message) || 'No se pudo enviar.', 'bot'));
+      const trigger = root.querySelector('[data-assistant-handoff],[data-assistant-message]');
+      if (trigger) trigger.disabled = true;
+      Promise.resolve().then(() => window.PAGOSYA_HOSTED_REQUEST('lead', { items: [], origin: 'assistant' }))
+        .then(r => say(r.ok ? 'Mensaje enviado. La tienda te contactará.' : (r.body && r.body.message) || 'No se pudo enviar.', 'bot'),
+          () => say('No se pudo enviar. Inténtalo otra vez.', 'bot'))
+        .then(() => { if (trigger) trigger.disabled = false; });
       return;
     }
     const form = h('form', 'pya-lead');
@@ -246,8 +265,8 @@
       else if (target.hasAttribute('data-assistant-retry')) { target.parentNode.remove(); send(lastMessage, true); }
       else if (target.hasAttribute('data-add')) { added = true; setTimeout(showCheckout, 0); }
     });
+    root.addEventListener('keydown', event => { if (event.key === 'Escape' && !panel.hidden) setOpen(false); });
     panel.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { setOpen(false); return; }
       if (event.key !== 'Tab') return;
       const items = [].slice.call(panel.querySelectorAll('button:not([disabled]),textarea,input,a[href]'));
       if (!items.length) return;

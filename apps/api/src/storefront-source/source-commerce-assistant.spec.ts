@@ -86,4 +86,67 @@ describe('kit chat.js', () => {
     expect(seen).toEqual([{ id: 'p1' }]);
     expect(doc.querySelector('.pya-card [data-add]')).toBeNull();
   });
+
+  const typeAndSend = (w: any, doc: Document, text: string) => {
+    (doc.querySelector('[data-assistant-toggle]') as HTMLButtonElement).click();
+    (doc.querySelector('.pya-panel textarea') as HTMLTextAreaElement).value = text;
+    doc.querySelector('.pya-panel form')!.dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+  };
+
+  it('a malformed reply is never re-sent as if the connection dropped', async () => {
+    const { w, doc } = open({ assistant: ASSISTANT }, () => ({ ok: true, body: { conversationId: 'cabcdefghijklmnopqrstuvw', reply: { text: 'x', blocks: [{ type: 'products', items: null }] } } }));
+    typeAndSend(w, doc, 'hola'); await flush();
+    expect(w.PAGOSYA_HOSTED_REQUEST).toHaveBeenCalledTimes(1);
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('No pude mostrar la respuesta.');
+  });
+
+  it('ignores a handoff WhatsApp link that is not the store number', async () => {
+    const { w, doc } = open({ assistant: ASSISTANT }, () => ({ ok: true, body: { conversationId: 'cabcdefghijklmnopqrstuvw', reply: { text: 'x', blocks: [{ type: 'handoff', whatsappUrl: 'https://evil.example/x', summary: 's' }] } } }));
+    typeAndSend(w, doc, 'hola'); await flush();
+    const urls = [...doc.querySelectorAll('[data-assistant-whatsapp]')].map((b: any) => b.dataset.url);
+    expect(urls.length).toBe(1);
+    expect(urls[0]).toMatch(/^https:\/\/wa\.me\/59170000000\?text=/);
+  });
+
+  it('hosted failure shows Reintentar at once without re-sending', async () => {
+    const { w, doc } = open({ assistant: ASSISTANT }, () => { throw new Error('timeout'); });
+    typeAndSend(w, doc, 'hola'); await flush();
+    expect(w.PAGOSYA_HOSTED_REQUEST).toHaveBeenCalledTimes(1);
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('Se cortó la conexión.');
+    expect(doc.querySelector('[data-assistant-retry]')).not.toBeNull();
+  });
+
+  it('a failing hosted lead request is reported and re-enables the button', async () => {
+    const { w, doc } = open({ assistant: { ...ASSISTANT, handoff: 'form' }, contactPhone: '' }, (action) => { if (action === 'lead') return Promise.reject(new Error('x')); return { ok: true, body: {} }; });
+    (doc.querySelector('[data-assistant-toggle]') as HTMLButtonElement).click();
+    const b = doc.querySelector('[data-assistant-handoff]') as HTMLButtonElement; b.click();
+    expect(b.disabled).toBe(true);
+    await flush();
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('No se pudo enviar. Inténtalo otra vez.');
+    expect(b.disabled).toBe(false);
+  });
+
+  it('Escape on the launcher closes the open panel', () => {
+    const { w, doc } = open({ assistant: ASSISTANT });
+    const toggle = doc.querySelector('[data-assistant-toggle]') as HTMLButtonElement; toggle.click();
+    toggle.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(doc.querySelector('.pya-panel')!.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('a hung non-hosted request is aborted after 30 s and ends in the error path', async () => {
+    const { w, doc } = open({ assistant: ASSISTANT });
+    w.PAGOSYA_HOSTED = false; w.PAGOSYA_PREVIEW = false;
+    doc.querySelector('[data-pagosya-assistant]')!.remove();
+    delete w.PAGOSYA_ASSISTANT;
+    let signal: any; const timers: any[] = []; const real = w.setTimeout.bind(w);
+    w.setTimeout = (fn: any, ms: number) => { if (ms === 30000) { timers.push(fn); return 1; } return real(fn, ms); };
+    w.fetch = jest.fn((_u: string, init: any) => { signal = init.signal; return new Promise((_r, rej) => init.signal.addEventListener('abort', () => rej(new Error('abort')))); });
+    w.eval(chat);
+    typeAndSend(w, doc, 'hola');
+    expect(timers.length).toBe(1);
+    timers[0]();
+    expect(signal.aborted).toBe(true);
+    await flush();
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('hola');
+  });
 });

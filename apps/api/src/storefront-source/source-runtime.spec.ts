@@ -55,4 +55,19 @@ describe('runtime bundle integrity', () => {
     bundle.digest = sourceRuntimeBundleDigest(bundle.files);
     await expect(withSourceRuntime(snapshot, bundle)).rejects.toMatchObject({ status: 409 });
   });
+
+  it('still verifies a bundle pinned before chat.js existed, and does not add chat to commerce.js', async () => {
+    const bundle = await currentSourceRuntimeBundle();
+    const files = bundle.files.filter(file => file.path !== 'chat.js');
+    expect(files.length).toBe(bundle.files.length - 1);
+    const old = { digest: sourceRuntimeBundleDigest(files), files };
+    const out = await withSourceRuntime({ ...snapshot, files: [
+      { path: 'commerce.js', encoding: 'utf8', content: '' },
+      { path: 'config.js', encoding: 'utf8', content: 'window.PAGOSYA_CONFIG = {};' },
+    ] }, old);
+    const get = (path: string) => files.find(file => file.path === path)!.content;
+    const commerce = out.files.find(file => file.path === 'commerce.js')!.content;
+    expect(commerce.startsWith([get('privacy.js'), get('commerce.js'), get('retention.js')].join('\n'))).toBe(true);
+    expect(commerce).not.toContain('PAGOSYA_ASSISTANT');
+  });
 });

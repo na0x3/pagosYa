@@ -142,7 +142,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       window.PAGOSYA_HOSTED_REQUEST = (action, body) => new Promise((resolve, reject) => {
         const id = ++sequence;
         const receive = event => { if (event.source !== parent || event.data?.type !== 'pagosya:hosted-response' || event.data.id !== id) return; clearTimeout(timer); window.removeEventListener('message',receive); resolve(event.data.result); };
-        const timer = setTimeout(() => { window.removeEventListener('message',receive); reject(new Error('La solicitud tardó demasiado. Intenta de nuevo.')); }, 20000);
+        const timer = setTimeout(() => { window.removeEventListener('message',receive); reject(new Error('La solicitud tardó demasiado. Intenta de nuevo.')); }, action === 'assistant' ? 35000 : 20000);
         window.addEventListener('message',receive);
         parent.postMessage({type:'pagosya:hosted-request', id, action, body},'*');
       });

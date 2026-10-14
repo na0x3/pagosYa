@@ -47,4 +47,9 @@ describe('hosted stores load bundled assets as files', () => {
     expect(html).toContain('src="data:image/jpeg;base64,Ynl0ZXM="');
     expect(html).toContain('font-src data:;');
   });
+
+  it('gives a slow assistant turn a longer bridge timeout than other actions', () => {
+    const html = sourcePreviewDocument(snapshot as any, 'index.html', { hosted: true, assetSources: [base] });
+    expect(html).toMatch(/action === 'assistant' \? 35000 : 20000/);
+  });
 });
