@@ -4,6 +4,7 @@ import { createStoreBody } from "/src/create-store.mjs";
 import { debtAmountInCents, parseDebtCollectionRows, parseDebtCsv } from "/src/debt-csv.mjs";
 import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
+import { uiSwitch } from "/src/ui-kit.mjs";
 import { isUnfinishedStore, runWalkthrough, showWalkthroughChoice, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "/src/store-import.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
@@ -961,7 +962,7 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
         <button class="ghost" type="button" data-promo-copy="${esc(code.code)}" aria-label="Copiar código ${esc(code.code)}">Copiar</button>
         <button class="ghost" type="button" data-promo-share="${esc(code.code)}" aria-label="Compartir código ${esc(code.code)}">Compartir</button>
         <button class="ghost" type="button" data-promo-toggle="${esc(code.id)}" data-active="${code.isActive}" aria-label="${code.isActive ? "Desactivar" : "Activar"} código ${esc(code.code)}">${code.isActive ? "Desactivar" : "Activar"}</button>
-        <label class="promo-code-email-toggle"><input type="checkbox" data-promo-email="${esc(code.id)}" ${code.showInEmails ? "checked" : ""}> Mostrar en correos</label>
+        ${uiSwitch({ label: "Mostrar en correos", attrs: `data-promo-email="${esc(code.id)}"`, checked: code.showInEmails })}
       </div>
     </article>`).join("");
   }

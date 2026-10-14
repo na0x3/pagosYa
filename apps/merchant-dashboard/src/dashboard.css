@@ -285,10 +285,6 @@
   .pager button { padding: 6px 12px; font-size: 0.8rem; }
   .pager button:disabled { opacity: 0.4; cursor: default; }
 
-  .checkbox-row { display: flex; align-items: center; gap: 8px; min-height: 38px; }
-  .checkbox-row input[type="checkbox"] { min-width: 0; width: 16px; height: 16px; }
-  .checkbox-row input[type="color"] { min-width: 46px; padding: 3px; height: 34px; }
-  .checkbox-row input[type="color"]:disabled { opacity: 0.4; }
 
   .store-link-editor-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
   .store-link-editor-row .link-label { min-width: 150px; }
@@ -338,8 +334,6 @@
   .promo-code-row.is-disabled { opacity: .62; }
   .promo-code-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
   .promo-code-actions button { min-height: 44px; padding: 9px 11px; font-size: .66rem; }
-  .promo-code-email-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: .66rem; font-weight: 600; cursor: pointer; }
-  .promo-code-email-toggle input { width: 16px; height: 16px; margin: 0; }
   .promo-code-identity .promo-code-email { color: var(--pg-success); font-weight: 600; }
   .promo-code-empty { margin: 0; padding: 22px 18px; color: var(--pg-text-muted); font-size: .72rem; }
   @media (max-width: 820px) { .promo-code-form { grid-template-columns: 1fr 1fr; } }
@@ -919,9 +913,7 @@
   }
   .editor-settings-heading h4 { margin: 0; color: var(--pg-text); font-size: 1.04rem; line-height: 1.25; letter-spacing: -.015em; }
   .editor-settings-heading p { grid-column: 1 / -1; margin: 0; max-width: 68ch; color: var(--pg-text-muted); font-size: .82rem; line-height: 1.55; }
-  .editor-settings-heading .checkbox-row { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
   .editor-settings-actions { grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-  .editor-settings-actions .checkbox-row { grid-column: auto; grid-row: auto; }
   .settings-group-toggle { min-height: 34px; padding: 6px 9px; }
   .editor-settings-group-body { display: contents; }
   .editor-settings-group.is-collapsed { padding-bottom: 18px; }
@@ -1247,7 +1239,6 @@
     .editor-settings-group { grid-template-columns: 1fr; gap: 15px; padding: 18px 0 24px; }
     .editor-settings-group > .full, .editor-settings-heading { grid-column: 1; }
     .editor-settings-heading { grid-template-columns: 1fr; }
-    .editor-settings-heading .checkbox-row { grid-column: 1; grid-row: auto; justify-self: start; }
     .store-location-editor-grid { grid-template-columns: 1fr; }
     .store-location-editor-grid .full { grid-column: 1; }
     .store-location-stock-row { grid-template-columns: minmax(0, 1fr) 96px; }
