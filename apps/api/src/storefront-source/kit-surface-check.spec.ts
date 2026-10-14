@@ -35,6 +35,19 @@ describe('checkKitSurfacesOnSnapshot', () => {
     expect(failures.cart.some(f => f.control === 'checkout' && /hidden/.test(f.reason))).toBe(true);
   });
 
+  it('records a card touch that breaks only the full catalog grid as a card failure', async () => {
+    const failures = await checkKitSurfacesOnSnapshot(await themed({ cardCss: 'body:has([data-catalog-full]) [data-pagosya-catalog] .menu-item .menu-add{visibility:hidden}' }));
+    expect(failures.card.some(f => f.control === 'add' && /hidden/.test(f.reason))).toBe(true);
+    expect(failures.catalog).toEqual([]);
+  });
+
+  it('gives the probe product a photo, so card-media and cart-line-media touches reach the check', async () => {
+    // Raw CSS that bites only where the media parts exist: the plain kit's probe card and cart line used to have none.
+    const failures = await checkKitSurfacesOnSnapshot(await themed({ cardCss: '[data-pagosya-catalog] .menu-item:has([data-part="card-media"]) .menu-add{opacity:.2}', cartCss: '.cart-drawer:has([data-part="cart-line-media"]) .checkout-button{opacity:.2}' }));
+    expect(failures.card.some(f => f.control === 'add' && /transparent/.test(f.reason))).toBe(true);
+    expect(failures.cart.some(f => f.control === 'checkout' && /transparent/.test(f.reason))).toBe(true);
+  });
+
   it('reports a card that makes the page scroll sideways', async () => {
     const failures = await checkKitSurfacesOnSnapshot(await themed({ cardCss: '[data-pagosya-catalog] [data-part="card"]{min-width:3000px}' }));
     expect(failures.card.some(f => f.control === 'page' && /overflow/.test(f.reason))).toBe(true);

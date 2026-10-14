@@ -275,10 +275,12 @@ const KIT_VARIABLE_HINT = '--kit-, --store-, --brand- and --lk-';
  * could hide it later), filtered, moved, clipped, or recoloured/resized in a way its children inherit. */
 const CONTAINER_REFUSED = /^(animation(-[a-z-]+)?|filter|mix-blend-mode|transform|overflow(-[xy])?|color|font-size)$/;
 const PSEUDO_REFUSED = /^(position|inset|top|left|right|bottom|z-index)$/;
+const STACKS = /^(position|z-index)$/;
 const HIDES = /^(display|visibility|opacity|clip|clip-path|width|height|max-width|max-height|position|z-index|inset|top|left|right|bottom)$/;
 const KIT_SURFACE_PROFILES: Record<KitSurface, ThemeCssProfile> = {
   catalog: { parts: CATALOG_PARTS, sizedParts: ['grid'], scope: ':root:root:root body:has([data-catalog-full]) ', keyframePrefix: 'kc-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'grid' && (HIDES.test(property) || CONTAINER_REFUSED.test(property)), refusePseudo: property => PSEUDO_REFUSED.test(property) },
-  card: { parts: CARD_PARTS, sizedParts: ['card-media'], scope: ':root:root:root [data-pagosya-catalog] ', keyframePrefix: 'kd-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'card' && (HIDES.test(property) || CONTAINER_REFUSED.test(property)), refusePseudo: property => PSEUDO_REFUSED.test(property) },
+  // The card's details link covers the whole card by design: no card part may be positioned or stacked above it.
+  card: { parts: CARD_PARTS, sizedParts: ['card-media'], scope: ':root:root:root [data-pagosya-catalog] ', keyframePrefix: 'kd-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => STACKS.test(property) || (part === 'card' && (HIDES.test(property) || CONTAINER_REFUSED.test(property))), refusePseudo: property => PSEUDO_REFUSED.test(property) },
   cart: { parts: CART_PARTS, sizedParts: ['cart-line-media'], scope: ':root:root:root .cart-drawer ', keyframePrefix: 'kt-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'cart-line' && (HIDES.test(property) || CONTAINER_REFUSED.test(property)), refusePseudo: property => PSEUDO_REFUSED.test(property) },
 };
 export function sanitizeKitSurfaceCss(surface: KitSurface, input: unknown): ThemeCssReport { return sanitizeThemeCss(input, KIT_SURFACE_PROFILES[surface]); }

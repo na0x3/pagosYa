@@ -26,6 +26,8 @@ const CARD_PROBES: Probe[] = [
   { name: 'card', selector: '[data-pagosya-catalog] .menu-item', target: false, contrast: false },
 ];
 const CATALOG_PROBES: Probe[] = [{ name: 'tabs', selector: '[data-pagosya-catalog] .catalog-tabs a', target: true, contrast: true }, ...CARD_PROBES];
+/** A 1×1 PNG: the probe product's photo, so card-media and cart-line-media touches render and are checked. */
+const PROBE_PHOTO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const CART_PROBES: Probe[] = [
   { name: 'checkout', selector: '.cart-drawer .checkout-button', target: true, contrast: true, min: { width: 120, height: 44 } },
   { name: 'total', selector: '.cart-drawer .order-total', target: false, contrast: true },
@@ -70,7 +72,7 @@ const settle = (page: Page) => page.evaluate(() => new Promise<void>(resolve => 
 export async function checkKitSurfacesOnSnapshot(snapshot: SourceProjectSnapshot, options: { signal?: AbortSignal } = {}): Promise<KitSurfaceFailures> {
   const runtime = await currentSourceRuntime(snapshot);
   const config = parseConfig(runtime);
-  const probe = { id: PROBE_ID, name: 'Producto de comprobación con un nombre largo para validar el diseño', description: 'Dato temporal de prueba.', amount: 12900, currency: 'BOB', stock: 3, imageUrls: [] };
+  const probe = { id: PROBE_ID, name: 'Producto de comprobación con un nombre largo para validar el diseño', description: 'Dato temporal de prueba.', amount: 12900, currency: 'BOB', stock: 3, imageUrls: [PROBE_PHOTO] };
   const data = { ...config.data, items: [probe, ...(config.data?.items ?? [])] };
   const demo = { ...runtime, files: runtime.files.map(f => f.path === 'config.js' ? { ...f, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data, demo: true })};` } : f) };
   const out: KitSurfaceFailures = { catalog: [], card: [], cart: [] };
@@ -94,7 +96,12 @@ export async function checkKitSurfacesOnSnapshot(snapshot: SourceProjectSnapshot
         const open = await page.waitForSelector('.cart-drawer[open]', { timeout: 3000 }).then(() => true, () => false);
         if (open) { await settle(page); judge(await page.evaluate(measureSurface, CART_PROBES), viewport, out.cart); }
         else out.cart.push({ control: 'cart', viewport, reason: 'the cart drawer did not open' });
-        if (hasCatalog && await visit('productos.html')) judge(await page.evaluate(measureSurface, CATALOG_PROBES), viewport, out.catalog);
+        // On the catalog page the cards are still the card touch's business: only the tabs and the page's overflow are the catalog's.
+        if (hasCatalog && await visit('productos.html')) {
+          const reading = await page.evaluate(measureSurface, CATALOG_PROBES);
+          judge({ overflow: reading.overflow, controls: reading.controls.filter(c => c.name === 'tabs') }, viewport, out.catalog);
+          judge({ overflow: false, controls: reading.controls.filter(c => c.name !== 'tabs') }, viewport, out.card);
+        }
       }
     } finally { await page.close(); }
   });

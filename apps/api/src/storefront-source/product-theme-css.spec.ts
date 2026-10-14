@@ -246,6 +246,12 @@ describe('kit surface guards, fix round 1', () => {
     expect(kept('cart', '[data-part="cart-head"]::before{content:"";position:absolute;top:0}')).not.toMatch(/position|top:/);
     expect(sanitizeProductThemeCss('[data-part="gallery"]::after{content:"";position:absolute;inset:0;z-index:1}').css).toContain('position');
   });
+  it('no card part may be positioned or stacked: it could rise above the card\'s full-card details link', () => {
+    const out = sanitizeKitSurfaceCss('card', '[data-part="card-media"]{position:relative;z-index:2}[data-part="card-name"]{position:relative}[data-part="card-badge"]{z-index:1}');
+    expect(out.css).not.toMatch(/position|z-index/);
+    expect(out.dropped.filter(d => /protected part/.test(d.reason))).toHaveLength(4);
+    expect(kept('card', '[data-part="card-media"]{transform:rotate(-3deg)}')).toContain('rotate(-3deg)');
+  });
   it('a near-cap catalog input sanitizes and its output re-sanitizes unchanged', () => {
     const rules = Array.from({ length: 40 }, (_, i) => `[data-part="page-title"], [data-part="tabs"]:nth-child(${(i % 9) + 1}) {\n    letter-spacing: ${(i % 5) / 10}em;\n}`);
     let input = rules.join('\n');
