@@ -53,6 +53,13 @@ describe("PromoCodesService", () => {
     await expect(service.setFlags("merchant_1", "store_1", "promo_1", {})).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it("marks a code the assistant may offer, and nothing else", async () => {
+    const prisma = makePrisma();
+    prisma.promoCode.findFirst.mockResolvedValue({ id: "promo_1" });
+    await new PromoCodesService(prisma as any).setFlags("merchant_1", "store_1", "promo_1", { showInAssistant: true });
+    expect(prisma.promoCode.update).toHaveBeenCalledWith({ where: { id: "promo_1" }, data: { showInAssistant: true } });
+  });
+
   it("does not change another store's code", async () => {
     const prisma = makePrisma();
     prisma.promoCode.findFirst.mockResolvedValue(null);

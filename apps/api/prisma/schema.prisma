@@ -710,10 +710,13 @@ model Store {
   customers                    StoreCustomer[]
   articles                     StoreArticle[]
   bundles                      StoreBundle[]
+  assistant                    StoreAssistant?
+  assistantConversations       AssistantConversation[]
+  assistantUnanswered          AssistantUnanswered[]
   bundlesEnabled               Boolean                          @default(false)
   subscriptionsEnabled         Boolean                          @default(false)
   // Days a membership stays usable after an unpaid renewal before it lapses (0–30).
-  membershipGraceDays     Int      @default(7)
+  membershipGraceDays          Int                              @default(7)
   shippingEnabled              Boolean                          @default(false)
   shippingPickupEnabled        Boolean                          @default(true)
   shippingCarriersEnabled      Boolean                          @default(false)
@@ -1269,7 +1272,7 @@ model StoreVisualProposal {
 // Private generation telemetry. No prompts, source, assets or credentials.
 model StoreSourceGeneration {
   requestJobId   String?
-  heartbeatAt    DateTime @default(now())
+  heartbeatAt    DateTime  @default(now())
   id             String    @id @default(cuid())
   storeId        String
   store          Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -1481,17 +1484,19 @@ enum PromoDiscountType {
 // Shareable, store-scoped codes. FIXED values use minor currency units,
 // matching every other amount in the payment domain.
 model PromoCode {
-  id            String            @id @default(cuid())
-  storeId       String
-  store         Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  code          String
-  discountType  PromoDiscountType
-  discountValue Int
-  isActive      Boolean           @default(true)
+  id              String            @id @default(cuid())
+  storeId         String
+  store           Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  code            String
+  discountType    PromoDiscountType
+  discountValue   Int
+  isActive        Boolean           @default(true)
   /// Only codes the merchant marked for emails can appear in one; a private code never leaks.
-  showInEmails  Boolean           @default(false)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  showInEmails    Boolean           @default(false)
+  /// Only codes the merchant marked for the store assistant can be offered in its chat.
+  showInAssistant Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@unique([storeId, code])
   @@index([storeId, isActive, createdAt])
@@ -3298,25 +3303,25 @@ model StoreCustomerToken {
 
 // A browser connection is not the lifetime of a YAPI request.
 model StoreSourceChatJob {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   storeId               String
-  store                 Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store                 Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   merchantId            String
   requestId             String
   inputDigest           String
   input                 Json
-  status                String   @default("QUEUED")
-  activeStoreId         String?  @unique
+  status                String    @default("QUEUED")
+  activeStoreId         String?   @unique
   leaseToken            String?
   leaseUntil            DateTime?
-  attempt               Int      @default(0)
-  sequence              Int      @default(0)
+  attempt               Int       @default(0)
+  sequence              Int       @default(0)
   result                Json?
   error                 String?
   lastCommittedRevision Int?
   progress              Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@unique([storeId, requestId])
   @@index([status, leaseUntil, createdAt])
@@ -3417,4 +3422,71 @@ model ReserveSeizure {
   createdAt         DateTime @default(now())
 
   @@index([merchantId, createdAt])
+}
+
+/// Storefront chat assistant settings, one per store (spec 2026-10-13-store-assistant-design).
+model StoreAssistant {
+  storeId    String   @id
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  enabled    Boolean  @default(false)
+  name       String?
+  avatarUrl  String?
+  greeting   String?
+  /// "tu" | "usted"
+  formality  String   @default("tu")
+  /// "Lo que el asistente debe saber", ≤ 4000 chars.
+  notes      String   @default("")
+  monthlyCap Int      @default(300)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+/// One buyer chat session. Deleted after 90 days (assistant-retention job).
+model AssistantConversation {
+  id            String             @id @default(cuid())
+  storeId       String
+  store         Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Merchant test chats in Crecer › Asistente; never count toward the monthly cap.
+  preview       Boolean            @default(false)
+  startedAt     DateTime           @default(now())
+  lastMessageAt DateTime           @default(now())
+  buyerMessages Int                @default(0)
+  addedToCart   Boolean            @default(false)
+  handedOff     Boolean            @default(false)
+  pagePath      String?
+  /// Salted SHA-256 of the buyer's IP, for limits only.
+  ipHash        String
+  messages      AssistantMessage[]
+
+  @@index([storeId, startedAt])
+  @@index([lastMessageAt])
+}
+
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  conversationId String
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// "buyer" | "assistant"
+  role           String
+  text           String
+  /// Server-built cards and buttons shown with an assistant reply.
+  blocks         Json?
+  createdAt      DateTime              @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+/// Questions the assistant could not answer; question text only, contact details stripped. Kept after conversations are deleted.
+model AssistantUnanswered {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  question    String
+  count       Int      @default(1)
+  /// "open" | "taught" | "ignored"
+  status      String   @default("open")
+  lastAskedAt DateTime @default(now())
+
+  @@unique([storeId, question])
+  @@index([storeId, status])
 }

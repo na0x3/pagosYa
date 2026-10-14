@@ -40,11 +40,12 @@ export class PromoCodesService {
     return this.prisma.promoCode.findMany({ where: { storeId }, orderBy: [{ isActive: "desc" }, { createdAt: "desc" }] });
   }
 
-  /** Turns a code on or off, and whether it may appear in the store's emails; only the flags given change. */
-  async setFlags(merchantId: string, storeId: string, id: string, flags: { isActive?: boolean; showInEmails?: boolean }) {
+  /** Turns a code on or off, and whether it may appear in the store's emails or its assistant; only the flags given change. */
+  async setFlags(merchantId: string, storeId: string, id: string, flags: { isActive?: boolean; showInEmails?: boolean; showInAssistant?: boolean }) {
     const data = {
       ...(flags.isActive !== undefined && { isActive: flags.isActive }),
       ...(flags.showInEmails !== undefined && { showInEmails: flags.showInEmails }),
+      ...(flags.showInAssistant !== undefined && { showInAssistant: flags.showInAssistant }),
     };
     if (!Object.keys(data).length) throw new BadRequestException("Indica qué cambiar del código.");
     await this.ownedStoreOrThrow(merchantId, storeId);

@@ -12,4 +12,10 @@ export class UpdatePromoCodeDto {
   @IsOptional()
   @IsBoolean()
   showInEmails?: boolean;
+
+  /** Whether the store assistant may offer the code in its chat. Off by default. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  showInAssistant?: boolean;
 }
