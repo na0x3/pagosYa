@@ -18,7 +18,7 @@ const keyframeName = (name: string) => name.startsWith(active.keyframePrefix) ? 
 const SIZED_PARTS = new Set(['swatch', 'thumb', 'thumbs', 'frame', 'decor-a', 'decor-b', 'block', 'block-media', 'block-compare', 'blocks', 'gallery', 'stage']);
 /** What one kind of page may restyle: its parts, the scope every selector is prefixed with, the parts that may be sized,
  * the keyframes prefix, the variables values may read, and parts whose declarations a page refuses outright. */
-export type ThemeCssProfile = { parts: readonly string[]; sizedParts: readonly string[]; scope: string; keyframePrefix: string; variables: RegExp; variableHint: string; refuse?: (part: string, property: string) => boolean };
+export type ThemeCssProfile = { parts: readonly string[]; sizedParts: readonly string[]; scope: string; keyframePrefix: string; variables: RegExp; variableHint: string; refuse?: (part: string, property: string) => boolean; refusePseudo?: (property: string) => boolean };
 type ActiveProfile = ThemeCssProfile & { sized: Set<string>; compound: RegExp };
 const activate = (profile: ThemeCssProfile): ActiveProfile => ({ ...profile, sized: new Set(profile.sizedParts), compound: compoundFor(profile.parts) });
 
@@ -271,11 +271,15 @@ export const CART_PARTS = ['cart-head', 'cart-line', 'cart-line-media'] as const
 export type KitSurface = 'catalog' | 'card' | 'cart';
 const KIT_VARIABLES = /^--(?:kit|store|brand|lk)-[a-z0-9-]+$/i;
 const KIT_VARIABLE_HINT = '--kit-, --store-, --brand- and --lk-';
+/** A container (card, cart line, grid) holds protected controls: it may be restyled but never hidden, animated (keyframes
+ * could hide it later), filtered, moved, clipped, or recoloured/resized in a way its children inherit. */
+const CONTAINER_REFUSED = /^(animation(-[a-z-]+)?|filter|mix-blend-mode|transform|overflow(-[xy])?|color|font-size)$/;
+const PSEUDO_REFUSED = /^(position|inset|top|left|right|bottom|z-index)$/;
 const HIDES = /^(display|visibility|opacity|clip|clip-path|width|height|max-width|max-height|position|z-index|inset|top|left|right|bottom)$/;
 const KIT_SURFACE_PROFILES: Record<KitSurface, ThemeCssProfile> = {
-  catalog: { parts: CATALOG_PARTS, sizedParts: ['grid'], scope: ':root:root:root body:has([data-catalog-full]) ', keyframePrefix: 'kc-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'grid' && HIDES.test(property) },
-  card: { parts: CARD_PARTS, sizedParts: ['card-media'], scope: ':root:root:root [data-pagosya-catalog] ', keyframePrefix: 'kd-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'card' && HIDES.test(property) },
-  cart: { parts: CART_PARTS, sizedParts: ['cart-line-media'], scope: ':root:root:root .cart-drawer ', keyframePrefix: 'kt-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'cart-line' && HIDES.test(property) },
+  catalog: { parts: CATALOG_PARTS, sizedParts: ['grid'], scope: ':root:root:root body:has([data-catalog-full]) ', keyframePrefix: 'kc-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'grid' && (HIDES.test(property) || CONTAINER_REFUSED.test(property)), refusePseudo: property => PSEUDO_REFUSED.test(property) },
+  card: { parts: CARD_PARTS, sizedParts: ['card-media'], scope: ':root:root:root [data-pagosya-catalog] ', keyframePrefix: 'kd-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'card' && (HIDES.test(property) || CONTAINER_REFUSED.test(property)), refusePseudo: property => PSEUDO_REFUSED.test(property) },
+  cart: { parts: CART_PARTS, sizedParts: ['cart-line-media'], scope: ':root:root:root .cart-drawer ', keyframePrefix: 'kt-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'cart-line' && (HIDES.test(property) || CONTAINER_REFUSED.test(property)), refusePseudo: property => PSEUDO_REFUSED.test(property) },
 };
 export function sanitizeKitSurfaceCss(surface: KitSurface, input: unknown): ThemeCssReport { return sanitizeThemeCss(input, KIT_SURFACE_PROFILES[surface]); }
 /** The same guarded sanitizer for another kind of page (the account pages, spec 2026-10-08). Synchronous, so the active
@@ -290,7 +294,7 @@ function sanitizeActive(input: unknown): ThemeCssReport {
   const closed = (reason: string): ThemeCssReport => ({ css: '', dropped: [...dropped, { reason }] });
   if (typeof input !== 'string') return closed('CSS must be text');
   if (!input.trim()) return { css: '', dropped };
-  if (withoutScope(input).length > MAX_CHARS) return closed(`CSS is too long (limit ${MAX_CHARS} characters)`);
+  if (withoutScope(input).replace(/\s+/g, ' ').length > MAX_CHARS) return closed(`CSS is too long (limit ${MAX_CHARS} characters)`);
   let root: ReturnType<typeof postcss.parse>;
   try { root = postcss.parse(input); } catch { return closed('invalid CSS: it could not be parsed'); }
 
@@ -310,6 +314,7 @@ function sanitizeActive(input: unknown): ThemeCssReport {
     const prop = decl.prop.toLowerCase();
     const drop = (reason: string) => { dropped.push({ declaration: `${prop}: ${decl.value}`, reason }); return null; };
     if (active.refuse && ctx.parts.some(part => active.refuse!(part, prop))) return drop('protected part: it must stay visible and usable');
+    if (ctx.pseudo && active.refusePseudo?.(prop)) return drop('a pseudo-element may decorate but not be positioned: it could cover a protected control');
     if (decl.important) return drop('!important is not allowed');
     if (prop.startsWith('--')) return drop('custom properties are not allowed');
     if (prop.startsWith('-')) return drop(`property '${prop}' is not allowed (no vendor properties)`);

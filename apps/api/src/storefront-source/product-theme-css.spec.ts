@@ -219,3 +219,39 @@ describe('kit surface profiles (spec 2026-10-14)', () => {
     expect(sanitizeProductThemeCss('[data-part="gallery"]{border:1px solid var(--pd-line)}').css).toContain('var(--pd-line)');
   });
 });
+
+describe('kit surface guards, fix round 1', () => {
+  const kept = (surface: 'catalog' | 'card' | 'cart', css: string) => sanitizeKitSurfaceCss(surface, css).css;
+  it('containers refuse animation, so keyframes cannot hide them', () => {
+    const hide = '@keyframes hide{to{clip-path:inset(50%)}}';
+    for (const [surface, part] of [['card', 'card'], ['cart', 'cart-line'], ['catalog', 'grid']] as const) {
+      const out = sanitizeKitSurfaceCss(surface, `${hide}[data-part="${part}"]{animation:hide .01s 1.5s forwards}`);
+      expect(out.css).not.toMatch(/animation/);
+      expect(out.dropped.some(d => /protected part/.test(d.reason))).toBe(true);
+      expect(kept(surface, `${hide}[data-part="${part}"]{animation-name:hide}`)).not.toMatch(/animation/);
+    }
+  });
+  it('containers refuse filter, blend, transform, overflow, colour and font-size, inner parts keep them', () => {
+    const card = kept('card', '[data-part="card"]{filter:brightness(.5) contrast(.5);mix-blend-mode:screen;transform:rotate(12deg) skew(8deg)}');
+    expect(card).not.toMatch(/filter|mix-blend-mode|transform/);
+    expect(kept('card', '[data-part="card"]{color:#fefefe;font-size:12px;overflow:hidden}')).not.toMatch(/color|font-size|overflow/);
+    expect(kept('cart', '[data-part="cart-line"]{filter:brightness(.5);transform:translate(50%)}')).not.toMatch(/filter|transform/);
+    expect(kept('card', '[data-part="card-media"]{transform:rotate(-3deg)}')).toContain('rotate(-3deg)');
+    expect(kept('card', '[data-part="card"]{border:2px solid #111}')).toContain('border');
+  });
+  it('pseudo-elements cannot be positioned over controls', () => {
+    const out = kept('card', '[data-part="card-name"]::after{content:"";position:absolute;inset:-100%;z-index:2;background:#fff}');
+    expect(out).not.toMatch(/position|inset|z-index/);
+    expect(kept('card', '[data-part="card-name"]::after{content:"";border-top:2px dashed #111}')).toContain('dashed');
+    expect(kept('cart', '[data-part="cart-head"]::before{content:"";position:absolute;top:0}')).not.toMatch(/position|top:/);
+    expect(sanitizeProductThemeCss('[data-part="gallery"]::after{content:"";position:absolute;inset:0;z-index:1}').css).toContain('position');
+  });
+  it('a near-cap catalog input sanitizes and its output re-sanitizes unchanged', () => {
+    const rules = Array.from({ length: 40 }, (_, i) => `[data-part="page-title"], [data-part="tabs"]:nth-child(${(i % 9) + 1}) {\n    letter-spacing: ${(i % 5) / 10}em;\n}`);
+    let input = rules.join('\n');
+    while (input.replace(/\s+/g, ' ').length > 2950) input = input.slice(0, input.lastIndexOf('}\n') + 1);
+    const once = sanitizeKitSurfaceCss('catalog', input);
+    expect(once.css).not.toBe('');
+    expect(sanitizeKitSurfaceCss('catalog', once.css).css).toBe(once.css);
+  });
+});

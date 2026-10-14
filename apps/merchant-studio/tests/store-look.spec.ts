@@ -147,6 +147,7 @@ test("the kit names its card, catalog and cart parts and injects YAPI's guarded 
   await openKitPage(page, { path: 'productos.html', cart: true, dna });
   await expect(page.locator('[data-pagosya-catalog] .menu-item[data-part=card] [data-part=card-media]').first()).toBeVisible();
   await expect(page.locator('.commerce-page-title[data-part=page-title]')).toHaveCount(1);
+  await expect(page.locator('[data-pagosya-catalog] .menu-item[data-part=card] [data-part=card-meta]').first()).toBeAttached();
   expect(await style(page, '[data-part=card-media]', 'rotate')).toBe('-2deg');
   expect(parseFloat(await style(page, '.commerce-page-title', 'letter-spacing'))).toBeGreaterThan(5);
   await openCart(page);

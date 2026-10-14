@@ -3186,7 +3186,7 @@
     mark('[data-pagosya-catalog] .menu-item', 'card');
     mark('[data-pagosya-catalog] .menu-item .menu-item__image', 'card-media');
     mark('[data-pagosya-catalog] .menu-item :is(.menu-item__name,.menu-item__copy h3)', 'card-name');
-    mark('[data-pagosya-catalog] .menu-item :is(.menu-item__description,.menu-item__options)', 'card-meta');
+    mark('[data-pagosya-catalog] .menu-item :is(.menu-item__description,.menu-item__options,.menu-item__copy p)', 'card-meta');
     mark('[data-pagosya-catalog] .menu-item .menu-item__badge', 'card-badge');
     mark('.commerce-page-title', 'page-title');
     mark('[data-pagosya-catalog] .catalog-tabs', 'tabs');
@@ -3907,7 +3907,7 @@
   const THEME_CSS_KEYS = [['productCss', 'product-theme'], ['catalogCss', 'catalog-theme'], ['cardCss', 'card-theme'], ['cartCss', 'cart-theme']];
   if (hasDna) for (const [key, name] of THEME_CSS_KEYS) {
     const themeCss = config.dna[key];
-    if (typeof themeCss === 'string' && themeCss && themeCss.length <= 8000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|pointer-events|!\s*important/i.test(themeCss)) {
+    if (typeof themeCss === 'string' && themeCss && themeCss.length <= 16000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|pointer-events|!\s*important/i.test(themeCss)) {
       const themeStyle = document.createElement('style');
       themeStyle.dataset.pagosyaKit = name;
       themeStyle.textContent = themeCss;
