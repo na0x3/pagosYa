@@ -38,4 +38,28 @@ describe('reply assembly', () => {
   it('allows an amount the buyer wrote', () => {
     expect(assembleReply({ text: 'Con tus Bs 100 alcanza.', box: box(), evidence: ['tengo Bs 100'], contactPhone: null }).guarded).toBe(false);
   });
+
+  it('matches product names on whole words only', () => {
+    const tea = box({ cards: new Map([['t1', card('t1', 'Té')]]), searched: [] });
+    expect(assembleReply({ text: 'También tenemos café.', box: tea, evidence: [], contactPhone: null }).reply.blocks).toEqual([]);
+    expect(assembleReply({ text: 'El Té verde está bien', box: tea, evidence: [], contactPhone: null }).reply.blocks).toEqual([{ type: 'products', items: [card('t1', 'Té')] }]);
+  });
+
+  it('never matches a card with an empty name', () => {
+    const blank = box({ cards: new Map([['e1', card('e1', '  ')]]), searched: [] });
+    expect(assembleReply({ text: 'Mira estas opciones.', box: blank, evidence: [], contactPhone: null }).reply.blocks).toEqual([]);
+  });
+
+  it('shows one add button per addKey', () => {
+    const add = { type: 'add_to_cart', productId: 'p1', addKey: 'p1', label: 'Chompa', price: 'Bs 255,00' };
+    const { reply } = assembleReply({ text: 'La Chompa cuesta Bs 255,00.', box: box({ addBlocks: [add, { ...add }] }), evidence: [], contactPhone: null });
+    expect(reply.blocks.filter((b) => b.type === 'add_to_cart')).toEqual([add]);
+  });
+
+  it('a guarded reply never carries the model-written handoff summary into the handoff', () => {
+    const handoff = { reason: 'no_se', question: '¿NIT?', summary: 'Te lo dejo en Bs 10' };
+    const { reply, guarded } = assembleReply({ text: 'Te la dejo en Bs 200.', box: box({ handoff }), evidence: [], contactPhone: '70000000' });
+    expect(guarded).toBe(true);
+    expect(reply.blocks).toContainEqual({ type: 'handoff', whatsappUrl: 'https://wa.me/70000000?text=' + encodeURIComponent('Hola, vengo del chat de la tienda.'), summary: '' });
+  });
 });

@@ -15,24 +15,37 @@ const whatsappUrl = (phone: string | null, summary: string) => {
 
 type BoxState = Pick<AssistantToolbox, 'evidence' | 'cards' | 'searched' | 'addBlocks' | 'handoff'>;
 
+/** Lower-case words separated by single spaces, padded, so a name matches only whole words ("Té" is not inside "también"). */
+const wordsOf = (value: string) => ` ${foldText(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+
 /** Cards, buttons and links come only from the toolbox; the model's text only chooses which products to name. */
 export function assembleReply(input: { text: string; box: BoxState; evidence: string[]; contactPhone: string | null }): { reply: AssistantReply; guarded: boolean; offending: string[] } {
   const { box } = input;
   const cards = [...box.cards.values()];
   const check = checkReply(input.text, allowedFrom([...input.evidence, ...box.evidence]));
   const guarded = !check.ok;
-  const folded = foldText(input.text);
+  const replyWords = wordsOf(input.text);
   let shown: ProductCard[];
   if (guarded) shown = cards.slice(0, MAX_CARDS);
   else {
-    const named = cards.filter((card) => folded.includes(foldText(card.name)));
+    const named = cards.filter((card) => { const name = wordsOf(card.name); return name.trim() !== '' && replyWords.includes(` ${name.trim()} `); });
     shown = (named.length ? named : box.searched.map((id) => box.cards.get(id)).filter((c): c is ProductCard => !!c)).slice(0, MAX_CARDS);
   }
   const blocks: AssistantBlock[] = [];
   if (shown.length) blocks.push({ type: 'products', items: shown });
-  if (!guarded) blocks.push(...box.addBlocks);
+  if (!guarded) {
+    const addKeys = new Set<string>();
+    for (const block of box.addBlocks) {
+      if (block.type === 'add_to_cart') {
+        if (addKeys.has(block.addKey)) continue;
+        addKeys.add(block.addKey);
+      }
+      blocks.push(block);
+    }
+  }
   if (box.handoff || (guarded && !shown.length) || !input.text) {
-    const summary = box.handoff?.summary ?? '';
+    // A guarded reply may carry an invented figure, so the handoff text never reuses the model-written summary.
+    const summary = guarded ? '' : (box.handoff?.summary ?? '');
     blocks.push({ type: 'handoff', whatsappUrl: whatsappUrl(input.contactPhone, summary), summary });
   }
   const text = !input.text ? EMPTY_REPLY : guarded ? (shown.length ? SAFE_REPLY_WITH_CARDS : SAFE_REPLY_NO_CARDS) : input.text;
