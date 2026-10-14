@@ -46,7 +46,7 @@ async function page({ items = [product()] as any[], style, settings = {}, fullPa
 describe('photo badge', () => {
   it('shows the merchant text on the photo and on the card, and nothing for "Ninguna"', async () => {
     const own = await page({ items: [product({ badge: 'Edición limitada' })] });
-    expect(own.q('.product-detail__gallery > .product-detail__badge')?.textContent).toBe('Edición limitada');
+    expect(own.q('.product-detail__gallery .product-detail__stage > .product-detail__badge')?.textContent).toBe('Edición limitada');
     expect(own.q('[data-pagosya-catalog] .menu-item__badge')?.textContent).toBe('Edición limitada');
     const none = await page({ items: [product({ badge: '', createdAt: new Date().toISOString() })], settings: { topSellerId: 'cafe' } });
     expect(none.q('.product-detail__badge')).toBeNull();

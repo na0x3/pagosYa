@@ -541,16 +541,17 @@
     [data-pagosya-product][data-style] .product-detail__badge{position:absolute;top:14px;left:14px;z-index:2;max-width:calc(100% - 28px);padding:6px 12px;border-radius:999px;background:var(--pd-accent,#111);color:var(--pd-on-accent,#fff);font-size:13px;font-weight:600;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
     [data-pagosya-product][data-style] .product-detail__photo{display:block;width:100%;height:min(calc(100dvh - 64px),760px);min-height:420px;max-height:none;margin:0;object-fit:cover;border:0;border-radius:0;background:var(--pd-tint);touch-action:pan-y}
     dialog[data-pagosya-product][data-style] .product-detail__photo{height:min(calc(100dvh - 34px),640px);min-height:360px}
-    [data-pagosya-product][data-style] .product-detail__navigation{position:absolute;right:16px;bottom:22px;display:flex;align-items:center;gap:8px;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;font-size:12px;font-variant-numeric:tabular-nums;color:var(--pd-ink);text-shadow:0 0 8px var(--pd-paper)}
-    [data-pagosya-product][data-style] .product-detail__navigation span{order:-1}
-    [data-pagosya-product][data-style] .product-detail__navigation button{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;border:1px solid color-mix(in srgb,var(--pd-ink) 35%,transparent);border-radius:50%;background:color-mix(in srgb,var(--pd-paper) 72%,transparent);color:inherit;font-size:15px;line-height:1}
-    [data-pagosya-product][data-style] .product-detail__thumbnails{position:absolute;left:16px;bottom:16px;display:flex;gap:6px;max-width:calc(100% - 170px);margin:0;padding:5px;overflow-x:auto;border-radius:calc(var(--pd-radius) + 3px);background:color-mix(in srgb,var(--pd-paper) 84%,transparent)}
-    [data-pagosya-product][data-style] .product-detail__thumbnails button{flex:0 0 56px;width:56px;height:56px;padding:0;border:0;border-radius:var(--pd-radius);overflow:hidden;background:var(--pd-tint);outline:1px solid color-mix(in srgb,var(--pd-ink) 12%,transparent);outline-offset:0}
-    [data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]{outline:2px solid var(--pd-ink);outline-offset:1px}
+    [data-pagosya-product][data-style] .product-detail__navigation{position:absolute;right:16px;bottom:22px;display:flex;align-items:center;gap:8px;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;font-size:12px;font-variant-numeric:tabular-nums;color:#1c1917}
+    /* Gallery controls sit on any photo: solid white chips with a soft shadow, never tinted by the store palette. */
+    [data-pagosya-product][data-style] .product-detail__navigation span{order:-1;padding:5px 10px;border-radius:999px;background:#fff;color:#1c1917;font-weight:600;line-height:1;box-shadow:0 1px 3px rgb(0 0 0/.18)}
+    [data-pagosya-product][data-style] .product-detail__navigation button{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;border:0;border-radius:50%;background:#fff;color:#1c1917;font-size:15px;line-height:1;box-shadow:0 1px 3px rgb(0 0 0/.22)}
+    [data-pagosya-product][data-style] .product-detail__thumbnails{position:absolute;left:16px;bottom:16px;display:flex;gap:8px;max-width:calc(100% - 170px);margin:0;padding:2px;overflow-x:auto;border-radius:0;background:none}
+    [data-pagosya-product][data-style] .product-detail__thumbnails button{flex:0 0 56px;width:56px;height:56px;padding:0;border:2px solid #fff;border-radius:max(var(--pd-radius),8px);overflow:hidden;background:var(--pd-tint);box-shadow:0 1px 3px rgb(0 0 0/.22);opacity:.86}
+    [data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]{opacity:1;outline:2px solid var(--pd-ink);outline-offset:1px}
     [data-pagosya-product][data-style] .product-detail__thumbnails img{display:block;width:100%;height:100%;object-fit:cover}
     [data-pagosya-product][data-style=editorial] .product-detail__navigation{display:none}
     [data-pagosya-product][data-style=editorial] .product-detail__thumbnails{left:50%;bottom:14px;max-width:calc(100% - 32px);gap:0;padding:0;border-radius:0;background:none;transform:translateX(-50%)}
-    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button,[data-pagosya-product][data-style=editorial] .product-detail__thumbnails button[aria-pressed=true]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:none;outline:0}
+    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button,[data-pagosya-product][data-style=editorial] .product-detail__thumbnails button[aria-pressed=true]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:none;outline:0;border:0;box-shadow:none;opacity:1}
     [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button::before{content:"";width:6px;height:6px;border-radius:3px;background:#ffffffa6;box-shadow:0 0 0 1px #00000026;transition:width .2s}
     [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button[aria-pressed=true]::before{width:18px;background:#fff}
     [data-pagosya-product][data-style=editorial] .product-detail__thumbnails img{display:none}
@@ -558,7 +559,7 @@
     @media(min-width:900px){
       [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail]{background:none}
       [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__photo{height:min(calc(100dvh - 148px),676px)}
-      [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails{position:static;display:flex;gap:10px;max-width:none;margin:0;padding:12px 0 0;overflow-x:auto;background:none;transform:none}
+      [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails{position:static;display:flex;gap:10px;max-width:none;margin:0;padding:12px clamp(16px,2vw,24px) 0;overflow-x:auto;background:none;transform:none}
       [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails button{display:block;flex:0 0 72px;width:72px;height:72px;padding:0;border-radius:var(--pd-radius);overflow:hidden;background:var(--pd-tint);outline:1px solid color-mix(in srgb,var(--pd-ink) 10%,transparent);outline-offset:0;opacity:.72;transition:opacity .2s}
       [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails button:hover{opacity:1}
       [data-pagosya-product][data-style=editorial][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails button[aria-pressed=true]{opacity:1;outline:1.5px solid var(--pd-ink);outline-offset:2px}
@@ -636,8 +637,8 @@
     [data-pagosya-product][data-style] [data-kind=swatch] [aria-pressed=true] .product-detail__swatch{box-shadow:0 0 0 2px var(--pd-paper),0 0 0 3.5px var(--pd-ink)}
     [data-pagosya-product][data-style=dense] .product-detail__values[data-priced]:not([data-kind=swatch]){display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]{display:grid;grid-template-columns:16px minmax(0,1fr) auto;justify-content:stretch;gap:12px;width:100%;min-height:48px;padding:10px 14px;background:var(--pd-surface);font-size:14px;text-align:left}
-    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]::before{content:"";width:16px;height:16px;border:1.5px solid color-mix(in srgb,var(--pd-ink) 45%,var(--pd-paper));border-radius:50%}
-    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][aria-pressed=true]::before{border:5px solid var(--pd-ink)}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]::before{content:"";box-sizing:border-box;width:16px;height:16px;border:1.5px solid color-mix(in srgb,var(--pd-ink) 45%,var(--pd-paper));border-radius:50%}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][aria-pressed=true]::before{border-color:var(--pd-ink);background:radial-gradient(circle,var(--pd-ink) 0 3.5px,transparent 4px)}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][data-option-price]::after{content:attr(data-option-price);font-size:14px;font-weight:600;color:var(--pd-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]:disabled::after{text-decoration:line-through}
     /* Compra única vs. suscripción: a grouped card between the options and the purchase row. The
@@ -686,6 +687,7 @@
     [data-pagosya-product] .product-detail__checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0;padding:0;list-style:none}
     [data-pagosya-product] .product-detail__checks li{display:flex;align-items:center;gap:8px;min-width:0;padding:10px 12px;border-radius:var(--pd-radius,10px);background:var(--pd-tint);color:var(--pd-ink);font-size:14px;line-height:1.25;overflow-wrap:anywhere}
     [data-pagosya-product] .product-detail__checks li:last-child:nth-child(odd){grid-column:1/-1}
+    [data-pagosya-product] .product-detail__checks li:only-child{padding:0;background:none}
     [data-pagosya-product] .product-detail__check{flex:0 0 20px;width:20px;height:20px}
     [data-pagosya-product] .product-detail__check circle{fill:var(--pd-accent)}
     [data-pagosya-product] .product-detail__check path{fill:none;stroke:var(--pd-on-accent,#fff);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -694,8 +696,8 @@
     /* Narrow phones keep the action on one line; the price above already shows the total. */
     @media(max-width:480px){[data-pagosya-product][data-style=dense] .product-detail__buy-total{display:none}}
     [data-pagosya-product][data-style] .product-detail__status{min-height:20px;margin:0;font-size:13px;line-height:1.5;color:var(--pd-muted)}
-    [data-pagosya-product][data-style] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px 18px;margin:14px 0 0;padding:12px 14px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);list-style:none}
-    [data-pagosya-product][data-style=dense] .product-detail__assurances{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));margin-top:16px;padding:0;border:0}
+    [data-pagosya-product][data-style] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,max(140px,calc((100% - 36px) / 3))),1fr));gap:12px 18px;margin:16px 0 0;padding:14px 0 0;border:0;border-top:1px solid var(--pd-line);border-radius:0;list-style:none}
+    [data-pagosya-product][data-style=dense] .product-detail__assurances{margin-top:16px;padding:0;border:0}
     [data-pagosya-product][data-style] .product-detail__assurances li{display:flex;align-items:center;gap:10px;min-width:0;font-size:12px;line-height:1.4}
     [data-pagosya-product][data-style] .product-detail__assurances svg{flex:0 0 20px;color:var(--pd-ink)}
     [data-pagosya-product][data-style=dense] .product-detail__assurances svg{flex-basis:24px;width:24px;height:24px}
@@ -769,7 +771,7 @@
       [data-pagosya-product][data-style] .product-detail__photo,dialog[data-pagosya-product][data-style] .product-detail__photo{height:auto;min-height:0;max-height:72dvh;aspect-ratio:4/5}
       [data-pagosya-product][data-style] .product-detail__navigation{display:none}
       [data-pagosya-product][data-style] .product-detail__thumbnails{left:50%;bottom:14px;max-width:calc(100% - 32px);gap:0;padding:0;border-radius:0;background:none;transform:translateX(-50%)}
-      [data-pagosya-product][data-style] .product-detail__thumbnails button,[data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:none;outline:0}
+      [data-pagosya-product][data-style] .product-detail__thumbnails button,[data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:none;outline:0;border:0;box-shadow:none;opacity:1}
       [data-pagosya-product][data-style] .product-detail__thumbnails button::before{content:"";width:6px;height:6px;border-radius:3px;background:#ffffffa6;box-shadow:0 0 0 1px #00000026;transition:width .2s}
       [data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]::before{width:18px;background:#fff}
       [data-pagosya-product][data-style] .product-detail__thumbnails img{display:none}
@@ -814,7 +816,8 @@
     /* Image-led: large uncropped photograph beside a compact purchase column.
        Story-led: an expansive photograph followed by a readable single-column product story.
        Both use the same controls, stock, variants and checkout as the established presentations. */
-    [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__photo{object-fit:contain}
+    [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__stage{width:fit-content;max-width:100%;margin-inline:auto}
+    [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__photo{width:auto;height:auto;max-width:100%;max-height:min(calc(100dvh - 64px),760px);min-height:0;aspect-ratio:auto;object-fit:contain}
     [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__thumbnails{position:static;max-width:100%;gap:10px;padding:12px 4px;margin:0;background:none;transform:none;border-radius:0}
     [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__thumbnails button,[data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__thumbnails button[aria-pressed=true]{display:block;flex:0 0 64px;width:64px;height:64px;min-height:44px;border-radius:var(--pd-radius);background:var(--pd-tint);outline:1px solid var(--pd-line);outline-offset:-1px}
     [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__thumbnails button[aria-pressed=true]{outline:2px solid var(--pd-accent);outline-offset:-2px}
@@ -826,7 +829,7 @@
     [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__quantity{min-width:136px}
     [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__quantity button{width:44px}
     [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__gallery{position:relative}
-    [data-pagosya-product][data-style=story-led] .product-detail__thumbnails{justify-content:center}
+    [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__thumbnails{justify-content:center}
     [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__layout{grid-template-columns:minmax(0,1fr)}
     [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__copy{width:100%;max-width:760px;margin-inline:auto;padding:clamp(28px,5vw,64px) 20px}
     [data-pagosya-product][data-style=story-led] .product-detail__intro{max-width:none;font-size:16px;line-height:1.75}
@@ -834,12 +837,12 @@
     @media(min-width:900px){
       [data-pagosya-product][data-style=image-led][data-pagosya-product-page] .product-detail__layout:not([data-no-images]){grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:clamp(24px,3vw,48px)}
       [data-pagosya-product][data-style=image-led][data-pagosya-product-page] .product-detail__copy:not([data-split]){padding:24px clamp(24px,3vw,48px) 24px 0;position:sticky;top:24px}
-      [data-pagosya-product][data-style=image-led] .product-detail__photo{height:auto;aspect-ratio:4/5;min-height:0;max-height:none}
-      [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__photo{height:auto;aspect-ratio:16/9;min-height:0;max-height:56dvh}
+      [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__photo{max-height:56dvh}
       [data-pagosya-product][data-style=story-led] #pagosya-product-title{font-size:clamp(40px,4.5vw,60px)}
     }
     @media(max-width:899px){
-      [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__photo{height:auto;aspect-ratio:1/1;min-height:0;max-height:none}
+      [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__stage{width:100%}
+      [data-pagosya-product]:is([data-style=image-led],[data-style=story-led]) .product-detail__photo{width:100%;height:auto;aspect-ratio:auto;min-height:0;max-height:none}
       [data-pagosya-product][data-style=story-led][data-pagosya-product-page] .product-detail__copy{padding:24px 16px 32px}
     }
     @media(max-width:480px){
@@ -1654,9 +1657,12 @@
    * DOM (hidden by CSS) so showImage and the photo-set swap keep working unchanged. */
   function galleryMarkup(images, p) {
     let html = plainGalleryMarkup(images, p);
-    if (images.length) html = badgeMarkup(p, 'product-detail__badge') + html;
+    const badge = images.length ? badgeMarkup(p, 'product-detail__badge') : '';
     const mode = document.documentElement.getAttribute('data-dna-gallery');
-    if ((mode === 'stack' || mode === 'mosaic') && images.length > 1) {
+    const stacked = (mode === 'stack' || mode === 'mosaic') && images.length > 1;
+    // The badge rides on the photo's own corner; a stacked gallery hides the stage, so there it leads the gallery.
+    html = stacked ? badge + html : html.replace('<div class="product-detail__stage" data-part="stage">', `<div class="product-detail__stage" data-part="stage">${badge}`);
+    if (stacked) {
       const at = html.indexOf('<div class="product-detail__thumbnails"');
       if (at > -1) html = html.slice(0, at) + `<div class="product-detail__stack" data-part="thumbs">${images.map((url, index) => `<img data-part="thumb" src="${escape(url)}"${responsiveAttrs(url, "(max-width: 820px) 100vw, 55vw")} alt="${escape(`${p.name} · imagen ${index + 1} de ${images.length}`)}" loading="${index ? 'lazy' : 'eager'}" />`).join('')}</div>`;
     }
