@@ -51,4 +51,9 @@ describe('POST /v1/stores/public/:slug/assistant/chat', () => {
   it('rejects messages over 500 characters', async () => {
     await chat({ message: 'a'.repeat(501) }).expect(400);
   });
+
+  it('rejects whitespace-only messages and malformed product ids', async () => {
+    await chat({ message: '   ' }).expect(400);
+    await chat({ message: 'hola', productId: 'bad id; drop' }).expect(400);
+  });
 });

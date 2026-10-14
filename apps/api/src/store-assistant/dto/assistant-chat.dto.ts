@@ -6,13 +6,13 @@ export class AssistantChatDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @Matches(/^[a-z0-9]{20,40}$/)
   conversationId?: string;
 
-  @ApiProperty() @IsString() @MinLength(1) @MaxLength(500) @IsSafeText()
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(500) @Matches(/\S/) @IsSafeText()
   message!: string;
 
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200)
   pagePath?: string;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(64)
+  @ApiPropertyOptional() @IsOptional() @IsString() @Matches(/^[A-Za-z0-9_-]{1,64}$/)
   productId?: string;
 
   /** The buyer tapped an "Agregar" button in the chat since the last message. */

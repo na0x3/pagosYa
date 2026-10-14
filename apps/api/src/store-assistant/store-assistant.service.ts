@@ -58,7 +58,6 @@ export class StoreAssistantService {
       ? await this.prisma.assistantConversation.findFirst({ where: { id: dto.conversationId, storeId: base.id, preview: false } })
       : null;
     if (conversation && now.getTime() - conversation.lastMessageAt.getTime() > IDLE_MS) conversation = null;
-    if (conversation && now.getTime() - conversation.lastMessageAt.getTime() < MIN_GAP_MS) throw new HttpException('Espera un momento antes de enviar otro mensaje.', 429);
     if (!conversation && await this.usage.startGate(base.id, assistant.monthlyCap, now) !== 'ok') return fallback;
     if (!(await this.usage.spendOk(now))) return fallback;
     const categories = await this.prisma.category.findMany({ where: { storeId: base.id }, orderBy: { sortOrder: 'asc' }, select: { name: true } });
@@ -71,16 +70,29 @@ export class StoreAssistantService {
   async converse(input: ConverseInput): Promise<ChatResult> {
     const { store, assistant, now } = input;
     const isNew = !input.conversation;
-    const conversation = input.conversation ?? await this.prisma.assistantConversation.create({
-      data: { storeId: store.id, preview: input.preview, ipHash: input.ipHash, pagePath: input.pagePath?.slice(0, 200) ?? null, startedAt: now, lastMessageAt: now },
-    });
     const handoffOnly = (text: string): AssistantReply => ({ text, blocks: [{ type: 'handoff', whatsappUrl: this.whatsapp(store.contactPhone), summary: '' }] });
-    if (conversation.buyerMessages >= MAX_BUYER_MESSAGES) {
-      await this.prisma.assistantConversation.update({ where: { id: conversation.id }, data: { handedOff: true } });
-      return { conversationId: conversation.id, reply: handoffOnly(TOO_LONG) };
+    let conversation: { id: string };
+    if (input.conversation) {
+      // Claim the turn atomically so concurrent posts cannot all pass the gap and the cap.
+      const claimed = await this.prisma.assistantConversation.updateMany({
+        where: { id: input.conversation.id, storeId: store.id, lastMessageAt: { lte: new Date(now.getTime() - MIN_GAP_MS) }, buyerMessages: { lt: MAX_BUYER_MESSAGES } },
+        data: { lastMessageAt: now, buyerMessages: { increment: 1 } },
+      });
+      if (claimed.count === 0) {
+        const current = await this.prisma.assistantConversation.findUnique({ where: { id: input.conversation.id } });
+        if (current && current.buyerMessages >= MAX_BUYER_MESSAGES) {
+          await this.prisma.assistantConversation.update({ where: { id: current.id }, data: { handedOff: true } });
+          return { conversationId: current.id, reply: handoffOnly(TOO_LONG) };
+        }
+        throw new HttpException('Espera un momento antes de enviar otro mensaje.', 429);
+      }
+      conversation = input.conversation;
+    } else {
+      conversation = await this.prisma.assistantConversation.create({
+        data: { storeId: store.id, preview: input.preview, ipHash: input.ipHash, pagePath: input.pagePath?.slice(0, 200) ?? null, startedAt: now, lastMessageAt: now, buyerMessages: 1 },
+      });
     }
     const history = isNew ? [] : await this.prisma.assistantMessage.findMany({ where: { conversationId: conversation.id }, orderBy: { createdAt: 'desc' }, take: HISTORY });
-    await this.prisma.assistantMessage.create({ data: { conversationId: conversation.id, role: 'buyer', text: input.message } });
 
     const profile = { name: assistant.name, notes: assistant.notes, formality: assistant.formality };
     const summary = buildAssistantSummary(store, profile);
@@ -103,21 +115,28 @@ export class StoreAssistantService {
       return { conversationId: isNew ? null : conversation.id, reply: handoffOnly(PROVIDER_DOWN) };
     }
 
+    await this.prisma.assistantMessage.create({ data: { conversationId: conversation.id, role: 'buyer', text: input.message } });
     const { reply, guarded, offending } = assembleReply({ text, box, evidence: [summary, input.message], contactPhone: store.contactPhone });
     if (guarded) await this.metering?.record(store.id, 'assistant-guard', modelName, { offending }, 0, 'REJECTED');
     await this.prisma.assistantMessage.create({ data: { conversationId: conversation.id, role: 'assistant', text: reply.text, blocks: reply.blocks as any } });
     const handedOff = reply.blocks.some((b) => b.type === 'handoff');
     await this.prisma.assistantConversation.update({
       where: { id: conversation.id },
-      data: { buyerMessages: { increment: 1 }, lastMessageAt: now, ...(handedOff && { handedOff: true }), ...(input.addedToCart && { addedToCart: true }) },
+      data: { lastMessageAt: now, ...(handedOff && { handedOff: true }), ...(input.addedToCart && { addedToCart: true }) },
     });
     if (box.handoff?.reason === 'no_se') {
       const question = normaliseQuestion(box.handoff.question || input.message);
-      if (question) await this.prisma.assistantUnanswered.upsert({
-        where: { storeId_question: { storeId: store.id, question } },
-        create: { storeId: store.id, question },
-        update: { count: { increment: 1 }, lastAskedAt: now, status: 'open' },
-      });
+      if (question) {
+        try {
+          await this.prisma.assistantUnanswered.upsert({
+            where: { storeId_question: { storeId: store.id, question } },
+            create: { storeId: store.id, question },
+            update: { count: { increment: 1 }, lastAskedAt: now, status: 'open' },
+          });
+        } catch (error) {
+          this.logger.warn(`could not file unanswered question for store ${store.id}: ${(error as Error).message}`);
+        }
+      }
     }
     return { conversationId: conversation.id, reply };
   }
