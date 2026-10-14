@@ -148,3 +148,19 @@ describe('top seller badge', () => {
     expect(before - where.createdAt.gte.getTime()).toBeGreaterThanOrEqual(90 * 86_400_000 - 1000);
   });
 });
+
+describe('assistant in the public payload', () => {
+  it('is null unless the platform flag is on', async () => {
+    const { service } = setup();
+    expect((await service.getStorePublic('cafe', { trackView: false })).assistant).toBeNull();
+  });
+
+  it('carries the bubble settings when on', async () => {
+    const { prisma } = setup();
+    prisma.store.findUnique.mockResolvedValue({ ...storeRow, publishedSourceRevision: 3, contactPhone: null, logoUrl: null, shippingEnabled: false });
+    prisma.storeAssistant = { findUnique: jest.fn().mockResolvedValue({ enabled: true, name: null, greeting: 'Hola', avatarUrl: '/v1/uploads/me.png', monthlyCap: 300 }) };
+    prisma.assistantConversation = { count: jest.fn().mockResolvedValue(0) };
+    const service = new PublicStoresService(prisma, { get: (key: string) => key === 'app.assistant.enabled' } as any);
+    expect((await service.getStorePublic('cafe', { trackView: false })).assistant).toEqual({ name: 'Asistente de Café', greeting: 'Hola', avatarUrl: '/v1/uploads/me.png', handoff: 'form', suggestions: ['¿Qué me recomiendas?'] });
+  });
+});

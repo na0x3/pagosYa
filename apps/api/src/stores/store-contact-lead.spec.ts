@@ -23,3 +23,27 @@ describe("a contact message from the storefront form", () => {
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ to: "hola@deff.bo", subject: "Nuevo mensaje para deff: Lucía" }));
   });
 });
+
+describe("a contact message left from the store assistant", () => {
+  const build = (assistant: { enabled: boolean } | null) => {
+    const prisma: any = {
+      store: { findUnique: jest.fn().mockResolvedValue({ id: "store_1", merchantId: "m_1", slug: "deff", name: "deff", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true, contactFormEnabled: false, contactFormEmail: null, contactEmail: "hola@deff.bo", checkoutMode: "payment", locations: [] }) },
+      merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m_1", email: "owner@deff.bo" }) },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([]) },
+      storeLead: { create: jest.fn().mockResolvedValue({ id: "lead_1" }) },
+      storeAssistant: { findUnique: jest.fn().mockResolvedValue(assistant) },
+    };
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const inbox = { threadForLead: jest.fn().mockResolvedValue(undefined) };
+    return new StoreCheckoutService(prisma, { create: jest.fn() } as any, email as any, undefined, undefined, inbox as any);
+  };
+  const dto = { items: [], email: "a@b.co", message: "hola", origin: "assistant" as const };
+
+  it("reaches the merchant even when the contact form is switched off, if the assistant is on", async () => {
+    await expect(build({ enabled: true }).submitLead("deff", dto)).resolves.toEqual({ submitted: true, leadId: "lead_1" });
+  });
+
+  it("is still refused when the assistant is off for that store", async () => {
+    await expect(build({ enabled: false }).submitLead("deff", dto)).rejects.toThrow("El formulario de contacto no está habilitado para esta tienda");
+  });
+});

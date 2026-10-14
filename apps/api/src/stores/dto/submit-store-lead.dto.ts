@@ -60,4 +60,10 @@ export class SubmitStoreLeadDto {
   @IsOptional()
   @IsIn(["pickup", "delivery"])
   fulfillmentMethod?: "pickup" | "delivery";
+
+  /** "assistant" when the buyer leaves a message from the store assistant's chat. */
+  @ApiPropertyOptional({ enum: ["assistant"] })
+  @IsOptional()
+  @IsIn(["assistant"])
+  origin?: "assistant";
 }

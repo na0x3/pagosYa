@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { MerchantStatus, PaymentLinkStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { findActiveStoreBySlug, PUBLIC_STORE_WHERE } from "./active-store";
@@ -9,6 +10,7 @@ import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperien
 import { readProductExtras, readStringArray, readProductVariants } from "./product-pricing";
 import { publishedStoreLook } from "./store-dna";
 import { PAID_STATUSES } from "../store-knowledge/store-knowledge";
+import { publicAssistant } from "../store-assistant/assistant-public-settings";
 import { topSellerId, TOP_SELLER_WINDOW_DAYS } from "./top-seller";
 
 /** What shoppers read: a published store with its catalog, the store directory, newsletter sign-ups, and batched view counting. */
@@ -22,6 +24,7 @@ export class PublicStoresService implements OnModuleDestroy {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   private queueStoreView(storeId: string): void {
@@ -245,6 +248,13 @@ export class PublicStoresService implements OnModuleDestroy {
         stock: readLocationStocks(item.locationStocks)[location.id] ?? 0,
       })),
     }));
+    const assistant = await publicAssistant(
+      this.prisma,
+      { id: store.id, name: store.name, logoUrl: store.logoUrl, contactPhone: store.contactPhone, publishedSourceRevision: store.publishedSourceRevision ?? null, shippingEnabled: store.shippingEnabled },
+      items.some((item) => Array.isArray(item.variants) && item.variants.length > 0),
+      Boolean(this.config?.get<boolean>('app.assistant.enabled')),
+      new Date(),
+    );
     return {
       storeId: store.id,
       publishedSourceRevision: store.publishedSourceRevision ?? null,
@@ -322,6 +332,7 @@ export class PublicStoresService implements OnModuleDestroy {
       topSellerId: topSellerId(paidOrders),
       showLowStockToCustomers: store.showLowStockToCustomers,
       policies: storePolicies(store.policies),
+      assistant,
       appointmentOfferings,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
       catalogLayout: readCatalogLayout(store.catalogLayout),

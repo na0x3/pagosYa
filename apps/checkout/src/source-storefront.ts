@@ -1,6 +1,7 @@
 import { createPasswordGuard, mountSourceAccountBridge } from '@pagosya/storefront-preview';
 import { blockedStoreMessage, createAccountBridgeHandler, takeAccountEmailToken } from './account/account-bridge-handler';
 import { isAccountDestination } from './account-destinations';
+import { assistantRequestBody, leadOrigin } from './assistant-bridge';
 import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
@@ -217,13 +218,20 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       } catch {}
       return;
     }
-    if (data?.type !== 'pagosya:hosted-request' || !Number.isSafeInteger(data.id) || !['checkout', 'lead', 'catalog', 'shipping', 'content', 'review', 'retention'].includes(data.action)) return;
+    if (data?.type !== 'pagosya:hosted-request' || !Number.isSafeInteger(data.id) || !['checkout', 'lead', 'catalog', 'shipping', 'content', 'review', 'retention', 'assistant'].includes(data.action)) return;
     const target = event.source as Window;
     const reply = (ok: boolean, body: unknown) => target.postMessage({ type: 'pagosya:hosted-response', id: data.id, result: { ok, body } }, '*');
     if (pending.has(data.action)) { reply(false, { message: 'Ya hay una solicitud en curso.' }); return; }
     pending.add(data.action);
     try {
       if (data.action === 'catalog') { reply(true, hostedCatalogImages(API_BASE_URL).rewrite(store)); return; }
+      if (data.action === 'assistant') {
+        const chat = assistantRequestBody(data.body);
+        if (!chat) { reply(false, { message: 'Escribe tu pregunta.' }); return; }
+        const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/assistant/chat`, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chat) });
+        reply(result.ok, await result.json().catch(() => ({ message: 'No se pudo completar la solicitud.' })));
+        return;
+      }
       // Personal fields are never taken from the design's frame: pagosYa's own dialog collects them.
       const frameBody = withoutPersonalFields(data.action, data.body && typeof data.body === 'object' ? data.body : {});
       const interactive = ['checkout', 'lead', 'review'].includes(data.action) || (data.action === 'retention' && ['subscribe', 'carts', 'cards'].includes(String(frameBody.path)));
@@ -250,7 +258,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       const shipping = data.action === 'shipping', content = data.action === 'content', review = data.action === 'review';
       const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, subscriptionConsent: checkout && body.subscriptionConsent === true ? true : undefined, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, shippingDepartment: body.shippingDepartment, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
         : review ? { trackingToken: body.trackingToken, productId: body.productId, displayName: body.displayName, rating: body.rating, body: body.body }
-        : { items: [], name: body.name, email: body.email, phone: body.phone, message: body.message };
+        : { items: [], name: body.name, email: body.email, phone: body.phone, message: body.message, ...leadOrigin(frameBody) };
       const endpoint = checkout ? 'cart-checkout' : shipping ? 'shipping/quote' : review ? 'content/reviews' : content ? `content?locale=${encodeURIComponent(typeof body.locale === 'string' ? body.locale.slice(0, 8) : 'es')}` : 'leads';
       const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/${endpoint}`, { method: content ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(content ? {} : { body: JSON.stringify(payload) }), signal: AbortSignal.timeout(18000) });
       const json = await result.json();
