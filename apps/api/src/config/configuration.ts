@@ -171,6 +171,8 @@ export interface AppConfig {
     imagePriceLandscape?: number;
     enabled: boolean;
   };
+  /** Storefront chat assistant (spec 2026-10-13-store-assistant-design). Off unless ASSISTANT_ENABLED=true. */
+  assistant: { enabled: boolean; monthlySpendCeilingUsd: number; ipSalt: string };
   google: {
     clientId: string;
     clientSecret: string;
@@ -438,6 +440,11 @@ export default (): { app: AppConfig } => {
       imagePricePortrait: Number(process.env.OPENAI_IMAGE_PRICE_PORTRAIT) || undefined,
       imagePriceLandscape: Number(process.env.OPENAI_IMAGE_PRICE_LANDSCAPE) || undefined,
       enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
+    },
+    assistant: {
+      enabled: process.env.ASSISTANT_ENABLED === 'true',
+      monthlySpendCeilingUsd: Number(process.env.ASSISTANT_MONTHLY_SPEND_CEILING_USD) || 50,
+      ipSalt: process.env.ASSISTANT_IP_SALT ?? 'development-only-assistant-ip-salt',
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
