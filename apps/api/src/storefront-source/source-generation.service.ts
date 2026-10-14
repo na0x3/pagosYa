@@ -18,6 +18,7 @@ import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
+import { measureStoreLook, withMeasuredLook } from './store-look-measure';
 import { commerceConfig } from './source-commerce-config';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
@@ -1005,7 +1006,7 @@ export class SourceGenerationService {
             try { await acceptCandidate(); } finally { lenient = false; }
             await addSep5StandardPages();
             reviewed.attempt.status = 'COMPLETED';
-            return { saveInput: await assembleSave(), notes: result.data.notes };
+            return { saveInput: await assembleSave(review.signal), notes: result.data.notes };
           };
         }
         await addSep5StandardPages();
@@ -1458,7 +1459,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const agentPolicyChange = Object.keys(agentPolicies).length > 0;
     /** Everything a save carries besides the model's authored files: kit files, assets, design and visual-system files,
      *  config.js. Built from `generated` as it is when called: once for revision N, and again by the background review. */
-    const assembleSave = async () => {
+    const assembleSave = async (assembleSignal: AbortSignal = signal) => {
       const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
       if (sectionScope) visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), acceptedDesign);
       // Carry forward previously bundled assets on an edit, without carrying old private configuration.
@@ -1522,7 +1523,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
         : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
         : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), ...(primaryAction ? { primaryAction } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
-      return { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(platformHeader(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
+      const assembled = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(platformHeader(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
         ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
         ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
         ...(sketchFile ? [sketchFile] : []),
@@ -1533,6 +1534,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
         { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
       ], previousFiles, assetLegend, imageUses, photoFacts))), []), motion) };
+      // One look per store (spec 2026-10-14): read the final home page and keep it as config.look for the kit pages.
+      const measured = await withMeasuredLook(assembled, { enabled: this.config.get<boolean>('app.yapiLookMeasure') === true, declaredTreatment: parseFrameDraw(frame.file?.content).photos, previousLook: previousConfig.look, brief: dto.brief, signal: assembleSignal, measure: measureStoreLook });
+      this.logger.log(JSON.stringify({ event: measured.outcome === 'measured' ? 'look_measured' : 'look_kept', generationId: run.id, outcome: measured.outcome, ...(measured.reason ? { reason: measured.reason } : {}) }));
+      return measured.input;
     };
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.

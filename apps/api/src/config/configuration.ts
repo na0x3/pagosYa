@@ -82,6 +82,10 @@ export interface AppConfig {
   /** Frame and hero draw (spec 2026-10-10): the platform rolls header, cart, footer and hero per new store or
    *  redesign. Default on; YAPI_FRAME_DRAW=off returns to the previous prompts and saves no frame-draw.json. */
   yapiFrameDraw: boolean;
+  /** One look per store (spec 2026-10-14): measure the home page at every save. YAPI_LOOK_MEASURE=off disables. */
+  yapiLookMeasure: boolean;
+  /** One look per store: YAPI's guarded touches on the kit pages in Sep-5 builds. YAPI_KIT_TOUCH=off disables. */
+  yapiKitTouch: boolean;
   /** Design draw round 2 (spec 2026-10-10): colour world, story angle, page structure, photo treatment and buttons per
    *  store. Default on; YAPI_DESIGN_DRAW=off drops them, the frame keeps YAPI_FRAME_DRAW. */
   yapiDesignDraw: boolean;
@@ -426,6 +430,8 @@ export default (): { app: AppConfig } => {
     yapiSketchFirst: process.env.YAPI_SKETCH_FIRST !== 'off',
     yapiSignature: process.env.YAPI_SIGNATURE !== 'off',
     yapiFrameDraw: process.env.YAPI_FRAME_DRAW !== 'off',
+    yapiLookMeasure: process.env.YAPI_LOOK_MEASURE !== 'off',
+    yapiKitTouch: process.env.YAPI_KIT_TOUCH !== 'off',
     yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',
     yapiPlaybook: process.env.YAPI_PLAYBOOK !== 'off',
     yapiStylePick: process.env.YAPI_STYLE_PICK === '1',

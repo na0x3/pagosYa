@@ -9,6 +9,9 @@ import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { captureHeaderCovers } from './design-engine/header-clickable';
+// Measuring launches Chromium; these tests exercise what the service does with a reading.
+jest.mock('./store-look-measure', () => ({ ...jest.requireActual('./store-look-measure'), measureStoreLook: jest.fn().mockResolvedValue(null) }));
+import { measureStoreLook } from './store-look-measure';
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
@@ -240,5 +243,41 @@ describe('Sep-5 self-review after the save', () => {
     await service.cancelReview('s1');
     await service.reviewSettled('s1');
     await eventually(() => emailKits.designAfterSite.mock.calls.length === 1 && pageWriter.fillStore.mock.calls.length === 1);
+  });
+});
+
+describe('one look per store: measured at every save', () => {
+  let service: SourceGenerationService, projects: any, config: any;
+  const configOf = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  const reading = { heading: { families: ['Anton'], weight: 400, transform: 'uppercase', literalUpper: false, letterSpacing: 4, fontSize: 40, italic: false }, loadedFamilies: ['Anton'], labels: [], photos: [], cards: [], buttons: [], sections: [], pageLuminance: 1 };
+  beforeEach(() => {
+    ({ service, projects, config } = setup());
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    config.set('app.sep5SelfReview', false);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respond(async () => answer(REVIEW)) as any);
+    (measureStoreLook as jest.Mock).mockReset().mockResolvedValue(null);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('writes the measured look into the saved config.js', async () => {
+    config.set('app.yapiLookMeasure', true);
+    (measureStoreLook as jest.Mock).mockResolvedValue(reading);
+    await service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+    expect(configOf(projects.save.mock.calls[0]).look).toMatchObject({ version: 1, type: { heading: { family: 'Anton', case: 'upper', tracking: 0.1 } } });
+  });
+
+  it('still saves when measuring fails, without a look', async () => {
+    config.set('app.yapiLookMeasure', true);
+    (measureStoreLook as jest.Mock).mockRejectedValue(new Error('chromium crashed'));
+    await service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+    expect(projects.save).toHaveBeenCalledTimes(1);
+    expect(configOf(projects.save.mock.calls[0]).look).toBeUndefined();
+  });
+
+  it('does not measure when YAPI_LOOK_MEASURE is off', async () => {
+    config.set('app.yapiLookMeasure', false);
+    await service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+    expect(measureStoreLook).not.toHaveBeenCalled();
   });
 });
