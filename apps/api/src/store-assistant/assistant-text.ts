@@ -37,18 +37,27 @@ export function parseMoney(raw: string): number | null {
 
 /** One number: space-grouped thousands ("1 250", no-break spaces too) or dot/comma grouped. */
 const NUM = String.raw`(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?|\d[\d.,]*\d|\d)`;
-/** A number plus any numbers joined to it by a range or list connector ("200 y 300", "100 - 150"). */
-const CONNECTOR = String.raw`\s*(?:y|o|al?|hasta|-|\u2013|\/)\s*`;
+/**
+ * A number plus any numbers joined to it by a range or list connector ("200 y 300", "100 - 150", "255, 199 o 99").
+ * A list comma must be followed by whitespace, so the decimal comma in "1.250,50" never splits an amount.
+ */
+const CONNECTOR = String.raw`(?:\s*(?:y|o|al?|hasta|-|\u2013|\/)\s*|,\s+|\s*;\s*)`;
 const CHAIN = String.raw`${NUM}(?:${CONNECTOR}${NUM})*`;
+/** What follows a number that is a percentage or a time of day, not money (used after a whole-number lookahead, so no backtracking into "15" of "15%"). */
+const NOT_MONEY_AFTER = String.raw`(?!\s*(?:%|por\s*ciento|h\b|hs\b|hrs?\b|horas\b|am\b|pm\b|a\.\s?m|p\.\s?m))`;
 const AMOUNT_BEFORE = new RegExp(String.raw`(?:\bbs\.?|\bbob\b|\$us|\bus\$|\busd\b|\$)\s*(${CHAIN})`, 'gi');
-const AMOUNT_AFTER = new RegExp(`(${NUM})` + String.raw`\s*(?:bs\b\.?|bolivianos\b|bob\b|d[oó]lares\b|usd\b)`, 'gi');
+const AMOUNT_AFTER = new RegExp(`(${CHAIN})` + String.raw`\s*(?:bs\b\.?|bolivianos\b|bob\b|d[oó]lares\b|usd\b)`, 'gi');
+/** Explicit price words make a bare number money: "cuesta 200", "a sólo 99,90", "(antes 300)", "Oferta: 120". Not "por" or "desde". */
+const AMOUNT_AFTER_PRICE_WORD = new RegExp(String.raw`\b(?:cuestan?|precios?|valen?|a\s+s[oó]lo|antes|ofertas?|rebajas?)\s*[:=(]?\s*(${CHAIN})(?![.,]?\d)${NOT_MONEY_AFTER}`, 'gi');
+/** A number with exactly two decimals ("99.90", "1.250,50") reads as money, unless it is a percentage or a time ("a las 9.30", "18.30 hrs"). */
+const TWO_DECIMALS = new RegExp(String.raw`(?<![\d.,]|\d[ \u00a0\u202f]|\blas\s)(\d{1,3}(?:[.,]\d{3})+[.,]\d{2}|\d+[.,]\d{2})(?![.,]?\d)${NOT_MONEY_AFTER}`, 'gi');
 const EACH_NUMBER = new RegExp(NUM, 'g');
 const PERCENT = /(\d+(?:[.,]\d+)?)\s*(?:%|por\s*ciento)/gi;
 
 /** Money and percentages a reply states. Quantities, dates, times and phone numbers carry no currency, so they are not read. */
 export function readReplyNumbers(text: string): { amounts: number[]; percents: number[] } {
   const amounts: number[] = [];
-  for (const pattern of [AMOUNT_BEFORE, AMOUNT_AFTER]) {
+  for (const pattern of [AMOUNT_BEFORE, AMOUNT_AFTER, AMOUNT_AFTER_PRICE_WORD, TWO_DECIMALS]) {
     for (const match of text.matchAll(pattern)) {
       for (const number of match[1].matchAll(EACH_NUMBER)) {
         const cents = parseMoney(number[0]);
