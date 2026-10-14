@@ -22,6 +22,23 @@ Success:
 - **Handoff: WhatsApp with the conversation summary pre-typed; "déjanos tu mensaje" into the inbox when the store has no WhatsApp number.** No live takeover.
 - **Approach: short store summary + live tools** (no whole-store prompt, no embeddings). Every price and stock figure is read from the database at answer time.
 
+## Revisions after the planning audit (2026-10-13)
+
+The design was approved before the storefront runtime was read in detail. These changes follow from the code and **override the sections below where they conflict**:
+
+- **R1 — The chat ships inside the kit runtime, not as a head snippet or extension.** Published designs run in a sandboxed `srcdoc` iframe (`connect-src 'none'`); `extensionsHead` goes into the outer checkout page, never into the iframe. So `kit/chat.js` is concatenated into the `commerce.js` bundle (`privacy.js + commerce.js + retention.js + chat.js`) in `source-runtime.ts` and `packages/storefront-preview/src/source-preview.ts`. No extension registry entry.
+- **R2 — Light DOM with a CSS layer, not Shadow DOM.** The kit handles `[data-add]` and `[data-cart-open]` with document-level click delegation; Shadow DOM would retarget those clicks. The panel follows the contact widget's pattern (`@layer pagosya-assistant-base`, `:root[data-dna-*]` overrides).
+- **R3 — No `PAGOSYA_CART` API.** "Agregar" is a `<button data-add="KEY">` (KEY = product id, or `JSON.stringify([id, variantId])`), so the kit's own stock, variant, cadence and feedback rules apply. "Ir a pagar" is a `[data-cart-open]` button that opens the kit's cart, which already continues per checkout mode. Two small kit events are added: `pagosya:open-product` (navigate to a product page) and `pagosya:current-product` (which product the buyer is viewing).
+- **R4 — A JSON response, not an NDJSON stream.** The hosted bridge (`PAGOSYA_HOSTED_REQUEST`) is request/response, and replies are released only after the number guard anyway. The panel shows "Escribiendo…" while waiting.
+- **R5 — No search-index table.** Search runs live in Postgres (`to_tsvector('spanish', …)` with accents folded by `translate()`, so no database extension) over active products, published articles, published reviews, and the store's text passages (about, policies, locations and hours, notes) passed in as arrays. Always current, so there are no rebuild triggers. Part 4 (uploads) adds its own table.
+- **R6 — Hosted stores reach the API through a new `assistant` action** in `apps/checkout/src/source-storefront.ts`. The message-form handoff reuses the existing `lead` action (pagosYa's trusted personal-data dialog) with `origin: 'assistant'`; the leads endpoint accepts a contact message from the assistant even when the store's contact form is off.
+- **R7 — Scope: stores with a published design.** Stores still on the classic checkout storefront (no published design) show no bubble in this release; Crecer › Asistente says so.
+- **R8 — Text written by YAPI inside design source files is not searched in this release.** Standard pages (about, contact, shipping, returns, FAQ) are covered because their text comes from Store fields.
+- **R9 — The merchant tests the bot in Crecer › Asistente ("Probar"),** through an authenticated endpoint that uses the 50/month preview allowance. In the Studio preview the bubble shows, and the panel explains that answers work on the published store.
+- **R10 — Bubble settings travel in the public store payload** (`assistant` field of `getStorePublic`), not a separate GET endpoint.
+- **R11 — The bot's summary is built from public store fields,** not from the Store Brain object (which also holds revenue and per-product sales).
+- **R12 — The per-store cap is changed through an ops API endpoint** (`PATCH /internal/stores/:storeId/assistant`); no ops UI in this release.
+
 ## What exists today (audit, 2026-10-13)
 
 - **Store Brain** — `apps/api/src/store-knowledge/store-knowledge.ts` builds a bounded, private-data-free snapshot (identity, trust, contact, policies, locations with `hours`, catalogue, performance, gaps). Read today by YAPI only (`source-generation.service.ts`, `source-chat.service.ts`, `source-conversation.service.ts`).
