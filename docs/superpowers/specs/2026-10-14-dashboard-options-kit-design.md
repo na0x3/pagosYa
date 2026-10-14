@@ -70,10 +70,15 @@ Loaded after `workspace-design.css`. Uses existing `--pg-*` tokens only.
 | Option grid | `.ui-options` > `label.ui-option` (switch, icon, `strong`, `small`) | 3 columns ≥1100px, 2 ≥700px, 1 below |
 | Choice cards | `.ui-choices` > `label.ui-choice` (radio, icon, `strong`, `small`) | Side by side; selected card gets a dark border |
 | Pill tabs | `.ui-tabs` > `button.ui-tab[role=tab]` (optional icon) | Replaces the five tab styles; selected = raised white pill |
-| Stat card | `.ui-stat` > label, number, corner icon | For summary rows (cobros, subscriptions) |
+| Inline switch | `label.ui-inline-switch` > `.ui-switch`, short label | For row-level toggles ("Cerrado", "Activo") |
+| Pills | `.ui-pills` > `label.ui-pill` (radio, label) | Small presets ("7 días", "Formal"); replaces `cobro-preset` and `proposal-pill` |
+| Stat card | `.ui-stat` > label, number, corner icon | For summary rows (cobros, proposals, contracts) |
 
 Small helpers in `src/ui-kit.mjs` build these strings
-(`uiHead`, `uiOption`, `uiChoice`) so panels don't hand-copy markup.
+(`uiHead`, `uiOption`, `uiSwitch`, `uiChoice`, `uiPill`, `uiStat`) so panels
+don't hand-copy markup. The icon drawings live in a generated
+`src/icon-paths.mjs` (from `lucide-static`, already in the repo for apps/api,
+via `scripts/build-icons.mjs`); `src/icons.mjs` draws them.
 
 ### 3. Copy
 
