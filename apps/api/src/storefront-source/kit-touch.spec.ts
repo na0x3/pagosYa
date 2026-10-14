@@ -1,5 +1,5 @@
 // apps/api/src/storefront-source/kit-touch.spec.ts
-import { carriedTouch, distinctiveCss, instructionConcernsKitSurfaces, kitTouchPrompt, pickTouch, runKitTouch, TOUCH_KEYS } from './kit-touch';
+import { carriedTouch, distinctiveCss, instructionConcernsKitSurfaces, kitTouchPrompt, pickTouch, runKitTouch, touchBudgetMs, TOUCH_KEYS } from './kit-touch';
 import { readConfigFile } from './store-look';
 
 const files = [
@@ -82,11 +82,17 @@ describe('instructionConcernsKitSurfaces', () => {
     ['Pon las fotos de los productos inclinadas', true], ['El carrito con un sello como en la portada', true], ['Cambia el catálogo', true],
     ['La página de producto más parecida a la portada', true], ['Las tarjetas de producto con sombra', true],
     ['Cambia el título del inicio', false], ['Agrega mi horario', false],
+    ['Cambia el ícono del carrito', false], ['Un botón del carrito más grande', false], ['El carrito del encabezado en negro', false], ['El carrito del header más pequeño', false], ['El carrito del menú', false],
+    ['El ícono del carrito y las tarjetas de producto', true], ['Cambia el carrito', true],
   ])('%s → %s', (text, expected) => expect(instructionConcernsKitSurfaces(text)).toBe(expected));
 
   it("reads only the merchant's own words after the marker", () => {
     expect(instructionConcernsKitSurfaces('Resumen: tienda con carrito.\nPedido actual del comercio: cambia el título')).toBe(false);
   });
+});
+
+describe('touchBudgetMs', () => {
+  it.each([[600_000, 150_000], [210_000, 150_000], [150_000, 90_000], [120_000, 60_000], [119_999, 0], [0, 0], [-5, 0]])('%d ms left → %d', (left, budget) => expect(touchBudgetMs(left)).toBe(budget));
 });
 
 it('pickTouch keeps only non-empty touch fields', () => expect(pickTouch({ swatch: 'pill', cardCss: 'x', cartCss: '' })).toEqual({ cardCss: 'x' }));

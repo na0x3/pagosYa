@@ -92,3 +92,41 @@ describe('the theme tool only answers requests that concern the product page', (
     expect(byDefault.pendingTheme).not.toBeNull();
   });
 });
+
+describe('verify checks the kit surface CSS (catalog, cards, cart) in a real browser', () => {
+  const kitFail = { buy: failure };
+  const ok = { catalog: [], card: [], cart: [] };
+  const kitBox = (checkKitSurfaces: (snapshot: any) => Promise<any>) => box(async () => [], { checkKitSurfaces });
+  const cardArgs = { cardCss: '[data-part="card-media"]{transform:rotate(-2deg)}', cartCss: '[data-part="cart-line"]{border-bottom:1px dashed #333}' };
+
+  it('keeps passing surfaces and checks a snapshot that carries their CSS', async () => {
+    const check = jest.fn(async (_snapshot: any) => ok);
+    const b = kitBox(check);
+    await theme(b, { preset: 'plain', ...cardArgs });
+    expect((await b.run('verify', '{}')).output).toBe('Todo en orden.');
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(configOf(check.mock.calls[0][0]).dna.cardCss).toBe(b.pendingTheme!.cardCss);
+    expect(b.pendingTheme!.cardCss).toBeTruthy();
+  });
+
+  it('drops only the failing surface and reports it', async () => {
+    void kitFail;
+    const b = kitBox(async () => ({ ...ok, card: [failure] }));
+    await theme(b, { preset: 'plain', ...cardArgs });
+    const out = (await b.run('verify', '{}')).output;
+    expect(out).toContain('[theme]');
+    expect(out).toContain('buy (mobile): covered by another element');
+    expect(b.pendingTheme!.cardCss).toBeUndefined();
+    expect(b.pendingTheme!.cartCss).toBeTruthy();
+    expect(b.draftIsClean()).toBe(false);
+  });
+
+  it('drops every kit surface when the check cannot run', async () => {
+    const b = kitBox(async () => { throw new Error('sin navegador'); });
+    await theme(b, { preset: 'plain', ...cardArgs });
+    const out = (await b.run('verify', '{}')).output;
+    expect(out).toContain('sin navegador');
+    expect(b.pendingTheme!.cardCss).toBeUndefined();
+    expect(b.pendingTheme!.cartCss).toBeUndefined();
+  });
+});

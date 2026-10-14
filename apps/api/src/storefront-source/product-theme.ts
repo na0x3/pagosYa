@@ -60,7 +60,7 @@ export function snapshotWithProductTheme<T extends { files: Array<{ path: string
       const { productAssurances: previous, ...rest } = config;
       // assurances undefined = untouched; [] clears; a list replaces. The row's platform lines are kit-derived.
       const assurances = theme.assurances === undefined ? previous : theme.assurances.length ? theme.assurances : undefined;
-      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(assurances ? { productAssurances: assurances } : {}), dna: { version: 1, ...(config.dna ?? {}), ...theme.productCard, productCss: theme.productCss } })};` };
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(assurances ? { productAssurances: assurances } : {}), dna: { version: 1, ...(config.dna ?? {}), ...theme.productCard, productCss: theme.productCss, ...(theme.catalogCss ? { catalogCss: theme.catalogCss } : {}), ...(theme.cardCss ? { cardCss: theme.cardCss } : {}), ...(theme.cartCss ? { cartCss: theme.cartCss } : {}) } })};` };
     } catch { return file; }
   }) };
 }

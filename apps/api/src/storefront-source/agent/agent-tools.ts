@@ -8,6 +8,7 @@ import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { verifyAgentDraft, type AgentFinding } from './agent-verify';
 import { checkProductThemeOnSnapshot, type ThemeCheckFailure } from '../product-theme-check';
+import { checkKitSurfacesOnSnapshot, type KitSurfaceFailures } from '../kit-surface-check';
 import { resolveAccountTheme, snapshotWithAccountTheme, type AccountTheme } from '../account-theme';
 import { checkAccountThemeOnSnapshot } from '../account-theme-check';
 import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from './agent-capture';
@@ -38,6 +39,8 @@ export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceP
   onDiagnostic?: (finding: { tool: string; digest: string; durationMs: number; output: string }) => void;
   /** Opens a themed draft in a browser and reports what the theme broke; defaults to the real Playwright check. */
   checkTheme?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<ThemeCheckFailure[]>;
+  /** Opens a draft with kit surface CSS (catalog, cards, cart) in a browser; defaults to the real Playwright check. */
+  checkKitSurfaces?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<KitSurfaceFailures>;
   /** The account pages' browser check; replaceable in tests. */
   checkAccountTheme?: (snapshot: { files: Array<{ path: string; content: string }> }) => Promise<ThemeCheckFailure[]>;
 };
@@ -74,9 +77,9 @@ export const AGENT_TOOLS = [
     preset: nullableEnum(PRESET_IDS), ...Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS.productCard).map(([key, values]) => [key, nullableEnum(values)])),
     assurances: { type: ['array', 'null'], description: 'Hasta 3 garantías REALES del comercio para la ficha (lidera la fila; la plataforma añade entrega y pago sola). [] las quita; null no cambia nada. Nunca inventes envíos, plazos ni certificaciones, ni menciones pagosYa.', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: { type: 'string', maxLength: 40 }, detail: { type: 'string', maxLength: 80 } }, required: ['icon', 'title', 'detail'] } },
     css: { type: ['string', 'null'], description: `CSS con guardas: hasta 20 reglas y 3000 caracteres. Partes permitidas: ${COSMETIC_PARTS.join(', ')}. Usa [data-part="nombre"]. price, buy, quantity y opciones de pago están protegidos: nunca los selecciones.` },
-    catalogCss: { type: ['string', 'null'], description: `CSS con guardas para las páginas de catálogo. Partes: ${CATALOG_PARTS.join(', ')}. null no cambia nada.` },
-    cardCss: { type: ['string', 'null'], description: `CSS con guardas para las tarjetas de producto. Partes: ${CARD_PARTS.join(', ')}. Precio y botón de agregar están protegidos.` },
-    cartCss: { type: ['string', 'null'], description: `CSS con guardas para el carrito. Partes: ${CART_PARTS.join(', ')}. Cantidades, totales y el botón de pagar están protegidos.` },
+    catalogCss: { type: ['string', 'null'], description: `CSS con guardas para las páginas de catálogo. Partes: ${CATALOG_PARTS.join(', ')}. Cada llamada reemplaza el tema completo: envía también el preset y los ajustes actuales junto con catalogCss, cardCss y cartCss.` },
+    cardCss: { type: ['string', 'null'], description: `CSS con guardas para las tarjetas de producto. Partes: ${CARD_PARTS.join(', ')}. Precio y botón de agregar están protegidos. Cada llamada reemplaza el tema completo: envía también el preset y los ajustes actuales junto con catalogCss, cardCss y cartCss.` },
+    cartCss: { type: ['string', 'null'], description: `CSS con guardas para el carrito. Partes: ${CART_PARTS.join(', ')}. Cantidades, totales y el botón de pagar están protegidos. Cada llamada reemplaza el tema completo: envía también el preset y los ajustes actuales junto con catalogCss, cardCss y cartCss.` },
   }),
   tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases), la lista de secciones construidas y, si aplica, tellsKept (hábitos de sitio generado que mantuviste a propósito; puede ir vacío).', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text }, tellsKept: { type: 'array', items: text } }),
 ];
@@ -182,15 +185,31 @@ export class AgentToolbox {
 
   private async checkPendingTheme(): Promise<AgentFinding[]> {
     const theme = this.pendingTheme!;
-    const drop = (messages: string[]): AgentFinding[] => {
-      this.pendingTheme = { ...theme, productCss: '' };
-      return [...messages.map(message => ({ source: 'theme' as const, message })), { source: 'theme' as const, message: 'Se quitó el CSS de la ficha de producto; los ajustes del preset se conservan. Llama de nuevo a set_product_card_theme con otro CSS si lo quieres.' }];
-    };
+    const kitKeys = { catalog: 'catalogCss', card: 'cardCss', cart: 'cartCss' } as const;
+    const messages: string[] = [];
+    const notes: string[] = [];
+    const dropProduct = (reasons: string[]) => { this.pendingTheme = { ...this.pendingTheme!, productCss: '' }; messages.push(...reasons); notes.push('Se quitó el CSS de la ficha de producto; los ajustes del preset se conservan. Llama de nuevo a set_product_card_theme con otro CSS si lo quieres.'); };
+    const dropKit = (surface: keyof typeof kitKeys, reasons: string[]) => { const { [kitKeys[surface]]: _dropped, ...rest } = this.pendingTheme!; this.pendingTheme = rest as typeof theme; messages.push(...reasons); notes.push(`Se quitó el CSS de ${surface === 'catalog' ? 'el catálogo' : surface === 'card' ? 'las tarjetas' : 'el carrito'}.`); };
     try {
       const snapshot = snapshotWithProductTheme(await agentPreviewSnapshot(this.ctx.base, this.workspace.files().filter(f => nextSourceFile(f.path))), theme);
-      const failures = await (this.ctx.checkTheme ?? (snap => checkProductThemeOnSnapshot(snap as never, { signal: this.ctx.signal })))(snapshot);
-      return failures.length ? drop(failures.map(f => `${f.control} (${f.viewport}): ${f.reason}`)) : [];
-    } catch (error) { return drop([`No se pudo comprobar la ficha de producto: ${(error as Error).message.slice(0, 300)}`]); }
+      if (theme.productCss) {
+        try {
+          const failures = await (this.ctx.checkTheme ?? (snap => checkProductThemeOnSnapshot(snap as never, { signal: this.ctx.signal })))(snapshot);
+          if (failures.length) dropProduct(failures.map(f => `${f.control} (${f.viewport}): ${f.reason}`));
+        } catch (error) { dropProduct([`No se pudo comprobar la ficha de producto: ${(error as Error).message.slice(0, 300)}`]); }
+      }
+      const present = (Object.keys(kitKeys) as Array<keyof typeof kitKeys>).filter(surface => theme[kitKeys[surface]]);
+      if (present.length) {
+        try {
+          const failures = await (this.ctx.checkKitSurfaces ?? (snap => checkKitSurfacesOnSnapshot(snap as never, { signal: this.ctx.signal })))(snapshot);
+          for (const surface of present) if (failures[surface]?.length) dropKit(surface, failures[surface].map(f => `${f.control} (${f.viewport}): ${f.reason}`));
+        } catch (error) { for (const surface of present) dropKit(surface, []); messages.push(`No se pudo comprobar el catálogo, las tarjetas y el carrito: ${(error as Error).message.slice(0, 300)}`); }
+      }
+    } catch (error) {
+      if (theme.productCss) dropProduct([`No se pudo comprobar la ficha de producto: ${(error as Error).message.slice(0, 300)}`]);
+      for (const surface of Object.keys(kitKeys) as Array<keyof typeof kitKeys>) if (theme[kitKeys[surface]]) dropKit(surface, []);
+    }
+    return [...messages.map(message => ({ source: 'theme' as const, message })), ...notes.map(message => ({ source: 'theme' as const, message }))];
   }
 
   async run(name: string, rawArgs: string): Promise<{ output: string; image?: string }> {
@@ -309,7 +328,7 @@ export class AgentToolbox {
         let pageErrors = false;
         // The theme is checked in a real browser only on a draft that builds; a theme that hides, covers or shrinks a
         // protected control loses its CSS (the params stay), and the draft is not clean until verified again.
-        if (!findings.length && this.pendingTheme?.productCss) findings.push(...await this.checkPendingTheme());
+        if (!findings.length && (this.pendingTheme?.productCss || this.pendingTheme?.catalogCss || this.pendingTheme?.cardCss || this.pendingTheme?.cartCss)) findings.push(...await this.checkPendingTheme());
         if (!findings.length && this.pendingAccountTheme?.css) findings.push(...await this.checkPendingAccountTheme());
         if (this.ctx.taskRequired && !this.requirements.length) findings.push({ source: 'scope', message: 'Falta plan_task con los requisitos originales.' });
         if (!findings.length) {

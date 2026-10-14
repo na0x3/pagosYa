@@ -126,15 +126,24 @@ export function carriedTouch(previousDna: unknown, creative: boolean): Record<st
   return out;
 }
 
-const MERCHANT_MARKER = 'Pedido actual del comercio:';
+export const MERCHANT_MARKER = 'Pedido actual del comercio:';
 /** Does the merchant's own request concern the kit pages (product page, catalog, cards, cart)? Only their words count. */
 export function instructionConcernsKitSurfaces(text: string): boolean {
   const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  return /\bcarrito\b|\bcatalogo\b|\bfotos?\s+de\s+(?:los\s+)?productos?\b|\btarjetas?\s+de(?:l)?\s+productos?\b|\bpagina\s+de(?:l)?\s+productos?\b|\bficha\b|\bproduct\s+(?:page|card)s?\b/.test(own);
+  // The cart's icon, button or header placement is the header's business, not the cart page's.
+  const cart = own.replace(/\b(?:icono|boton|simbolo|logo)s?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
+  return /\bcarrito\b/.test(cart) || /\bcatalogo\b|\bfotos?\s+de\s+(?:los\s+)?productos?\b|\btarjetas?\s+de(?:l)?\s+productos?\b|\bpagina\s+de(?:l)?\s+productos?\b|\bficha\b|\bproduct\s+(?:page|card)s?\b/.test(own);
 }
 
 /** The touch fields of a dna object (the surfaces the store already had touched), empty ones left out. */
 export function pickTouch(dna: unknown): KitTouchCss {
   const source = dna && typeof dna === 'object' ? dna as Record<string, unknown> : {};
   return Object.fromEntries(Object.values(TOUCH_KEYS).filter(key => typeof source[key] === 'string' && source[key]).map(key => [key, source[key] as string]));
+}
+
+/** How long the chat re-run's touch may take (spec 2026-10-14): up to 150 s, always leaving 60 s of the run for saving;
+ * 0 (skip it) when less than 60 s would be left to it. */
+export function touchBudgetMs(remainingMs: number): number {
+  const budget = Math.min(150_000, remainingMs - 60_000);
+  return budget >= 60_000 ? budget : 0;
 }

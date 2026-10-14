@@ -12,7 +12,7 @@ import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from 
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
-import { carriedTouch, instructionConcernsKitSurfaces, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, pickTouch, runKitTouch, type KitTouchCss } from './kit-touch';
+import { carriedTouch, instructionConcernsKitSurfaces, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
@@ -1309,7 +1309,7 @@ export class SourceGenerationService {
           } } : {}),
           onDiagnostic: diagnostic => { const attempt = attempts.at(-1); if (attempt) (attempt.diagnostics ??= []).push(diagnostic); },
           // A whole-store design may always set the product page theme; a local edit only when it concerns the product page.
-          themeAllowed: isNew || redesign || instructionConcernsProductCard(dto.instruction),
+          themeAllowed: isNew || redesign || instructionConcernsProductCard(dto.instruction) || instructionConcernsKitSurfaces(dto.instruction),
           accountThemeAllowed: isNew || redesign || /cuenta|login|ingres|registro|contraseña|perfil|pedidos|acceso/i.test(dto.instruction),
           motifPackAllowed: isNew || redesign || /motivo|decora|paquete|dibuj|ilustra|sticker|pegatina|tem[aá]tic|divertid|l[uú]dic/i.test(dto.instruction),
           // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
@@ -1579,23 +1579,33 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       this.logger.log(JSON.stringify({ event: measured.outcome === 'measured' ? 'look_measured' : 'look_kept', generationId: run.id, outcome: measured.outcome, ...(measured.reason ? { reason: measured.reason } : {}) }));
       return measured.input;
     };
+    // A chat request about the kit pages (spec 2026-10-14) re-runs only the touch step, with the merchant's words. The new
+    // CSS replaces the surfaces it covers; surfaces it leaves empty keep the store's earlier touch. It runs before the
+    // receipt so a used attempt is billed, on its own deadline (the touch never fails an edit), and an agent theme chosen
+    // in this same request wins over it on the surfaces the theme set.
+    const touchBudget = touchBudgetMs(started + runTimeout - Date.now());
+    if (!creative && !claude && sitePurpose === 'shop' && this.config.get<boolean>('app.yapiKitTouch') === true && instructionConcernsKitSurfaces(dto.instruction) && touchBudget > 0) {
+      const touchSignal = AbortSignal.any([signal, AbortSignal.timeout(touchBudget)]);
+      try {
+        const base = await assembleSave(touchSignal);
+        const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, instruction: (dto.instruction.split(MERCHANT_MARKER).at(-1) ?? dto.instruction).trim().slice(0, 400), signal: touchSignal, call: touchCall({ signal: touchSignal, attempts }) });
+        const chosen = { ...(touch?.css ?? {}) };
+        if (agentTheme) {
+          delete chosen.productCss;
+          for (const key of ['catalogCss', 'cardCss', 'cartCss'] as const) if (agentTheme[key]) delete chosen[key];
+        }
+        const before = readConfigFile(base.files).dna;
+        if (Object.keys(chosen).length) kitTouch = { ...(before?.touch === 1 ? pickTouch(before) : {}), ...chosen };
+        this.logger.log(JSON.stringify({ event: Object.keys(chosen).length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces: Object.keys(chosen), request: true }));
+      } catch (error) {
+        signal.throwIfAborted();
+        this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: touchSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300), request: true }));
+      }
+    }
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
     const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
-    // A chat request about the kit pages (spec 2026-10-14) re-runs only the touch step, with the merchant's words. The new
-    // CSS replaces the surfaces it covers; surfaces it leaves empty keep the store's earlier touch.
-    if (!creative && !claude && sitePurpose === 'shop' && this.config.get<boolean>('app.yapiKitTouch') === true && instructionConcernsKitSurfaces(dto.instruction)) {
-      try {
-        const base = await assembleSave();
-        const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, instruction: (dto.instruction.split('Pedido actual del comercio:').at(-1) ?? dto.instruction).trim().slice(0, 400), signal, call: touchCall({ signal, attempts }) });
-        if (touch && Object.keys(touch.css).length) kitTouch = { ...pickTouch(readConfigFile(base.files).dna), ...touch.css };
-        this.logger.log(JSON.stringify({ event: touch && Object.keys(touch.css).length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces: Object.keys(touch?.css ?? {}), request: true }));
-      } catch (error) {
-        signal.throwIfAborted();
-        this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300), request: true }));
-      }
-    }
     await progress?.('saving');
     const saveInput = await assembleSave();
     signal.throwIfAborted();
