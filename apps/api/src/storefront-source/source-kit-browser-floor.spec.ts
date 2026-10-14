@@ -6,7 +6,7 @@ import { kitPath } from '@pagosya/storefront-kit';
  * floor throws on an older browser. Object.hasOwn in commerce.js's motion lookup broke every pointer add there: the
  * handler aborted before it updated the product status. ES2022+ built-ins stay out; ui.tsx is compiled for syntax only.
  */
-const RUNTIMES = ['commerce.js', 'motion.js', 'privacy.js', 'retention.js', 'video.js', 'ui.tsx'];
+const RUNTIMES = ['chat.js', 'commerce.js', 'motion.js', 'privacy.js', 'retention.js', 'video.js', 'ui.tsx'];
 const BEYOND_FLOOR: Array<[string, RegExp]> = [
   ['Object.hasOwn', /\bObject\.hasOwn\s*\(/],
   ['Array/String .at()', /\.at\s*\(/],

@@ -150,7 +150,7 @@ describe('persisted browser checks gate publication and experiment B', () => {
 
 describe('versioned trusted runtime publications', () => {
   afterEach(() => jest.restoreAllMocks());
-  const runtimePaths = ['privacy.js', 'commerce.js', 'retention.js', 'productos.html', 'coleccion.html', 'video.js', 'motion.js', 'product.html'].sort();
+  const runtimePaths = ['privacy.js', 'commerce.js', 'retention.js', 'chat.js', 'productos.html', 'coleccion.html', 'video.js', 'motion.js', 'product.html'].sort();
   const bundleFiles = () => Promise.all(runtimePaths.map(async path => ({ path, content: await fs.readFile(kitPath(path), 'utf8') })));
   const digestOf = (files: unknown) => createHash('sha256').update(JSON.stringify(files)).digest('hex');
 

@@ -12,7 +12,9 @@ import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { kitPath } from '@pagosya/storefront-kit';
 
 // Include the template used to recognize stock commerce shells and all appended scripts.
-const RUNTIME_PATHS = ['privacy.js', 'commerce.js', 'retention.js', 'productos.html', 'coleccion.html', 'video.js', 'motion.js', 'product.html'].sort();
+// chat.js (2026-10) is optional in verification so bundles pinned before it still load.
+const RUNTIME_PATHS = ['privacy.js', 'commerce.js', 'retention.js', 'chat.js', 'productos.html', 'coleccion.html', 'video.js', 'motion.js', 'product.html'].sort();
+const OPTIONAL_RUNTIME_PATHS = ['chat.js'];
 export type SourceRuntimeFiles = { path: string; content: string }[];
 export type TrustedSourceRuntimeBundle = { digest: string; files: SourceRuntimeFiles };
 
@@ -32,13 +34,16 @@ export async function currentSourceRuntime(snapshot: SourceProjectSnapshot): Pro
 }
 
 export async function withSourceRuntime(snapshot: SourceProjectSnapshot, bundle: TrustedSourceRuntimeBundle): Promise<SourceProjectSnapshot> {
-  if (!Array.isArray(bundle.files) || bundle.files.length !== RUNTIME_PATHS.length ||
-    !RUNTIME_PATHS.every(path => bundle.files.filter(file => file?.path === path && typeof file.content === 'string').length === 1) ||
+  const required = RUNTIME_PATHS.filter(path => !OPTIONAL_RUNTIME_PATHS.includes(path));
+  const once = (path: string) => bundle.files.filter(file => file?.path === path && typeof file.content === 'string').length === 1;
+  if (!Array.isArray(bundle.files) || !required.every(once) ||
+    bundle.files.some(file => !RUNTIME_PATHS.includes(file?.path)) ||
+    OPTIONAL_RUNTIME_PATHS.some(path => bundle.files.filter(file => file?.path === path).length > 1) ||
     sourceRuntimeBundleDigest(bundle.files) !== bundle.digest) {
     throw new ConflictException('No se pudo verificar el runtime publicado.');
   }
-  const content = (path: string) => bundle.files.find(file => file.path === path)!.content;
-  const commerce = ['privacy.js', 'commerce.js', 'retention.js'].map(content).join('\n');
+  const content = (path: string) => bundle.files.find(file => file.path === path)?.content ?? '';
+  const commerce = ['privacy.js', 'commerce.js', 'retention.js', 'chat.js'].map(content).join('\n');
   const prepared = applySourceLayoutBaseline(await withSourceFonts(await withSourceAssets(snapshot.files, snapshot.files)));
   if (!prepared.some(f => f.path === 'commerce.js') || !prepared.some(f => f.path === 'config.js')) return { ...snapshot, files: prepared.map(f => ({ ...f, encoding: f.encoding || 'utf8' })) };
   const substituted = prepared.map(f => {

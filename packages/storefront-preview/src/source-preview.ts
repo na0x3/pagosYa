@@ -4,6 +4,7 @@ import videoLoopRuntime from '@pagosya/storefront-kit/kit/video.js?raw';
 import privacyRuntime from '@pagosya/storefront-kit/kit/privacy.js?raw';
 import commerceRuntime from '@pagosya/storefront-kit/kit/commerce.js?raw';
 import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
+import chatRuntime from '@pagosya/storefront-kit/kit/chat.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
 import editModeRuntime from './source-preview-edit-mode.js?raw';
 import bocetoModeRuntime from './source-preview-boceto-mode.js?raw';
@@ -88,7 +89,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     const file = resolve(src);
     if (!file || !file.path.endsWith(".js")) { el.remove(); return; }
     let content = file.content;
-    if (file.path === "commerce.js") content = `${privacyRuntime}\n${commerceRuntime}\n${retentionRuntime}`;
+    if (file.path === "commerce.js") content = `${privacyRuntime}\n${commerceRuntime}\n${retentionRuntime}\n${chatRuntime}`;
     if (file.path === "config.js") {
       for (const asset of snapshot.files.filter((f) => f.encoding === "base64" || f.encoding === "url")) content = content.split(JSON.stringify(asset.path)).join(JSON.stringify(data(asset)));
       content = compactPreviewImageData(content);

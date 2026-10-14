@@ -460,6 +460,15 @@
     if (event.detail && typeof event.detail === "object") event.detail.items = cartItems();
   });
   document.addEventListener("pagosya:restore-cart", event => { restoreCart(event.detail?.items); renderCart(); });
+  // The store assistant (chat.js) opens product pages and asks which product is on screen.
+  document.addEventListener("pagosya:open-product", event => {
+    const item = products().find(p => p.id === event.detail?.id);
+    if (!item) return;
+    const link = document.createElement('a'); link.href = productHref(item); document.body.append(link); link.click(); link.remove();
+  });
+  document.addEventListener("pagosya:current-product", event => {
+    if (event.detail && typeof event.detail === "object" && fullProductPage && selectedProduct) { event.detail.id = selectedProduct.id; event.detail.name = selectedProduct.name; }
+  });
   const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(Boolean);
   const galleryImages = (p) => {
     const sources = [
@@ -3462,7 +3471,8 @@
   }
   function renderContact() {
     let slot = document.querySelector('[data-pagosya-contact]');
-    if (!store.contactFormEnabled) { if (slot) slot.hidden = true; return; }
+    // The store assistant takes this corner while it is on (spec 2026-10-13-store-assistant-design).
+    if (!store.contactFormEnabled || store.assistant) { if (slot) slot.hidden = true; return; }
     // Only an enabled store setting permits the legacy fallback; new stores default off.
     if (!slot && store.contactFormEnabled === true && !fullProductPage && !fullCheckoutPage && (!window.PAGOSYA_PREVIEW_PAGE || window.PAGOSYA_PREVIEW_PAGE === 'index.html')) {
       slot = document.createElement('section'); slot.setAttribute('data-pagosya-contact', '');
