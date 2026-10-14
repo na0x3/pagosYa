@@ -40,6 +40,26 @@ test('offset edges reach the gallery and the dense buying box', async ({ page })
   await openKitPage(page, { style: 'dense', look: BOLD });
   expect(await style(page, '.product-detail__stage', 'box-shadow')).toMatch(/5px 5px 0px/);
   expect(await style(page, '.product-detail__buybox', 'box-shadow')).toMatch(/5px 5px 0px/);
+  expect(await style(page, '.product-detail__stage', 'border-top-left-radius')).toBe(await style(page, '.product-detail__photo', 'border-top-left-radius'));
+});
+
+test('a selected option keeps its ink ring under an offset edge', async ({ page }) => {
+  await openKitPage(page, { style: 'dense', look: BOLD });
+  const chips = '.product-detail__values:not([data-kind=swatch]) [data-product-option]';
+  const pressed = await page.locator(`${chips}[aria-pressed=true]`).first().evaluate(el => getComputedStyle(el).boxShadow);
+  const idle = await page.locator(`${chips}:not([aria-pressed=true])`).first().evaluate(el => getComputedStyle(el).boxShadow);
+  expect(pressed).toContain('inset');
+  expect(pressed).not.toBe(idle);
+});
+
+test('YAPI touch CSS wins over the look', async ({ page }) => {
+  await openKitPage(page, { style: 'dense', look: BOLD, dna: { productCss: '[data-pagosya-product][data-style] [data-part="stage"]{box-shadow:none}' } });
+  expect(await style(page, '.product-detail__stage', 'box-shadow')).toBe('none');
+});
+
+test('a pill card shape is bounded to 24px', async ({ page }) => {
+  await openKitPage(page, { style: 'dense', look: { version: 1, shape: { card: 'pill' } } });
+  expect(await style(page, '.product-detail__buybox', 'border-top-left-radius')).toBe('24px');
 });
 
 test('gallery controls take the store paper and ink', async ({ page }) => {
@@ -63,4 +83,11 @@ test('duotone draws with the store ink and paper through an inline SVG filter', 
   await expect(page.locator('#pagosya-look-duotone')).toHaveCount(1);
   expect(await style(page, '.product-detail__thumbnails img', 'filter')).toContain('pagosya-look-duotone');
   expect(await style(page, '.product-detail__photo', 'filter')).toBe('none');
+});
+
+test('duotone on a dark store maps luminance 0 to the darker colour', async ({ page }) => {
+  await openKitPage(page, { style: 'dense', look: { version: 1, photo: { treatment: 'duotone' } }, tokens: DARK });
+  const values = (await page.locator('#pagosya-look-duotone feColorMatrix').getAttribute('values'))!.trim().split(/\s+/).map(Number);
+  const offsets = [values[4], values[9], values[14]];
+  [0x16 / 255, 0x12 / 255, 0x0f / 255].forEach((expected, i) => expect(offsets[i]).toBeCloseTo(expected, 2));
 });
