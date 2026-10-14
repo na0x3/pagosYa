@@ -31,6 +31,14 @@ describe('assistant usage', () => {
     await expect(usage.spendOk(new Date(now.getTime() + 61_000))).resolves.toBe(false);
   });
 
+  it('fails closed when the spend query fails, and does not retry for a minute', async () => {
+    const $queryRaw = jest.fn().mockRejectedValue(new Error('db down'));
+    const usage = new AssistantUsage({ $queryRaw } as any, config({ 'app.assistant.monthlySpendCeilingUsd': 50 }));
+    await expect(usage.spendOk(now)).resolves.toBe(false);
+    await expect(usage.spendOk(new Date(now.getTime() + 30_000))).resolves.toBe(false);
+    expect($queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it('hashes IPs with the salt', () => {
     const a = new AssistantUsage({} as any, config({ 'app.assistant.ipSalt': 'one' })).ipHash('1.2.3.4');
     const b = new AssistantUsage({} as any, config({ 'app.assistant.ipSalt': 'two' })).ipHash('1.2.3.4');

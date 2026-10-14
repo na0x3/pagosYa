@@ -442,9 +442,10 @@ export default (): { app: AppConfig } => {
       enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
     },
     assistant: {
-      enabled: process.env.ASSISTANT_ENABLED === 'true',
+      // Production never runs the assistant on the public development salt: an unset or empty salt keeps it off.
+      enabled: process.env.ASSISTANT_ENABLED === 'true' && (environment !== 'production' || Boolean(process.env.ASSISTANT_IP_SALT)),
       monthlySpendCeilingUsd: Number(process.env.ASSISTANT_MONTHLY_SPEND_CEILING_USD) || 50,
-      ipSalt: process.env.ASSISTANT_IP_SALT ?? 'development-only-assistant-ip-salt',
+      ipSalt: process.env.ASSISTANT_IP_SALT || 'development-only-assistant-ip-salt',
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",

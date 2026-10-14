@@ -309,3 +309,52 @@ describe('local test-email address', () => {
     expect(emailTestRecipient('development', '  ')).toBeNull();
   });
 });
+
+describe("storefront assistant configuration", () => {
+  const keys = [...SECURITY_ENV_KEYS, "ASSISTANT_ENABLED", "ASSISTANT_IP_SALT"] as const;
+  const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+
+  afterEach(() => {
+    for (const key of keys) {
+      const value = original[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  it("is off unless ASSISTANT_ENABLED is true", () => {
+    process.env.NODE_ENV = "development";
+    delete process.env.ASSISTANT_ENABLED;
+    expect(configuration().app.assistant.enabled).toBe(false);
+  });
+
+  it("uses the development salt fallback outside production", () => {
+    process.env.NODE_ENV = "development";
+    process.env.ASSISTANT_ENABLED = "true";
+    delete process.env.ASSISTANT_IP_SALT;
+    expect(configuration().app.assistant).toMatchObject({ enabled: true, ipSalt: "development-only-assistant-ip-salt" });
+  });
+
+  it("treats an empty salt as unset outside production", () => {
+    process.env.NODE_ENV = "development";
+    process.env.ASSISTANT_ENABLED = "true";
+    process.env.ASSISTANT_IP_SALT = "";
+    expect(configuration().app.assistant).toMatchObject({ enabled: true, ipSalt: "development-only-assistant-ip-salt" });
+  });
+
+  it("stays off in production when the salt is unset or empty", () => {
+    setStrongProductionEnv();
+    process.env.ASSISTANT_ENABLED = "true";
+    delete process.env.ASSISTANT_IP_SALT;
+    expect(configuration().app.assistant.enabled).toBe(false);
+    process.env.ASSISTANT_IP_SALT = "";
+    expect(configuration().app.assistant.enabled).toBe(false);
+  });
+
+  it("turns on in production only with a real salt", () => {
+    setStrongProductionEnv();
+    process.env.ASSISTANT_ENABLED = "true";
+    process.env.ASSISTANT_IP_SALT = "production-salt-value";
+    expect(configuration().app.assistant).toMatchObject({ enabled: true, ipSalt: "production-salt-value" });
+  });
+});
