@@ -11,7 +11,7 @@ describe('set_product_card_theme', () => {
   it('is declared with a strict schema whose enums come from the DNA and the presets', () => {
     const tool = AGENT_TOOLS.find(t => t.name === 'set_product_card_theme') as any;
     expect(tool.strict).toBe(true);
-    expect(Object.keys(tool.parameters.properties).sort()).toEqual(['blocks', 'css', 'divider', 'enter', 'gallery', 'preset', 'swatch']);
+    expect(Object.keys(tool.parameters.properties).sort()).toEqual(['assurances', 'blocks', 'cardCss', 'cartCss', 'catalogCss', 'css', 'divider', 'enter', 'gallery', 'media', 'preset', 'swatch']);
     expect(tool.parameters.required.sort()).toEqual(Object.keys(tool.parameters.properties).sort());
     expect(tool.parameters.properties.preset.enum).toEqual(expect.arrayContaining(['workshop', 'plain', null]));
     expect(tool.parameters.properties.swatch.enum).toEqual(expect.arrayContaining(['pill', 'photo', null]));

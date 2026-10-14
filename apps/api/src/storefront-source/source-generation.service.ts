@@ -12,7 +12,7 @@ import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from 
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
-import { carriedTouch, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, runKitTouch, type KitTouchCss } from './kit-touch';
+import { carriedTouch, instructionConcernsKitSurfaces, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, pickTouch, runKitTouch, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
@@ -20,6 +20,7 @@ import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { measureStoreLook, withMeasuredLook } from './store-look-measure';
+import { readConfigFile } from './store-look';
 import { commerceConfig } from './source-commerce-config';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
@@ -891,6 +892,44 @@ export class SourceGenerationService {
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
       // Yapi orchestrates bounded Design, Boceto and Critic stages; assembly and commerce stay deterministic.
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
+      // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
+      const sep5Call = async (phase: 'author' | 'review' | 'touch', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[]; maxOutputTokens?: number; effort?: 'low' | 'medium' | 'high' } = {}) => {
+        const callSignal = options.signal ?? signal;
+        const attempt: SourceGenerationAttempt = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
+        (options.attempts ?? attempts).push(attempt);
+        let body: any = null;
+        const callStarted = Date.now();
+        try {
+          const allocation = budget.reserve(model, Math.ceil(text.length / 3) + 1000, options.maxOutputTokens ?? SEP5_MAX_OUTPUT_TOKENS, 500);
+          try {
+            // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
+            // and this one writes the entire store.
+            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([callSignal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: options.effort ?? 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
+            body = await response.json().catch(() => null);
+          } finally { allocation.settle(body?.usage); }
+        } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
+        callSignal.throwIfAborted();
+        attempt.durationMs = Date.now() - callStarted;
+        attempt.usage = sourceUsage(model, body?.usage);
+        // A truncated project and a refused one fail identically without these, which is how an "incomplete
+        // response" reached the merchant with nothing for anyone to act on.
+        if (typeof body?.status === 'string') attempt.responseStatus = body.status;
+        if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
+        if (typeof body?.usage?.output_tokens === 'number') attempt.reasoningTokens = body.usage.output_tokens_details?.reasoning_tokens;
+        await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
+        return { attempt, body };
+      };
+      /** The touch call (spec 2026-10-14): the same metered client, a smaller answer, and one more try after 3 s when the
+       *  bridge gives no completed answer. The attempt is charged only when its CSS is kept (`used`). */
+      const touchCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: Array<{ type: 'input_image'; image_url: string; detail: 'auto' }>) => {
+        for (let tries = 0; ; tries++) {
+          const { attempt, body } = await sep5Call('touch', text, attached as typeof images, 'storefront_kit_touch', KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, { signal: run.signal, attempts: run.attempts, maxOutputTokens: KIT_TOUCH_MAX_OUTPUT_TOKENS, effort: 'medium' });
+          if ((body as { status?: string } | null)?.status === 'completed' || tries === 1) return { body, used: () => { attempt.status = 'COMPLETED'; } };
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          run.signal.throwIfAborted();
+        }
+      };
       if (sep5Author) {
         // The Sep-5 commit (26f889c8) wrote the store instead of filling a schema, and that is where its voice
         // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one
@@ -905,44 +944,6 @@ export class SourceGenerationService {
         // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
         const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: framePlatformHeader(frame.paragraph), hero: pickedHero, card: pickedCard };
         const prompt = sep5AuthorPrompt(authorInput);
-        // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
-        const sep5Call = async (phase: 'author' | 'review' | 'touch', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[]; maxOutputTokens?: number; effort?: 'low' | 'medium' | 'high' } = {}) => {
-          const callSignal = options.signal ?? signal;
-          const attempt: SourceGenerationAttempt = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
-          (options.attempts ?? attempts).push(attempt);
-          let body: any = null;
-          const callStarted = Date.now();
-          try {
-            const allocation = budget.reserve(model, Math.ceil(text.length / 3) + 1000, options.maxOutputTokens ?? SEP5_MAX_OUTPUT_TOKENS, 500);
-            try {
-              // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
-              // and this one writes the entire store.
-              const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([callSignal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: options.effort ?? 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
-              body = await response.json().catch(() => null);
-            } finally { allocation.settle(body?.usage); }
-          } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
-          callSignal.throwIfAborted();
-          attempt.durationMs = Date.now() - callStarted;
-          attempt.usage = sourceUsage(model, body?.usage);
-          // A truncated project and a refused one fail identically without these, which is how an "incomplete
-          // response" reached the merchant with nothing for anyone to act on.
-          if (typeof body?.status === 'string') attempt.responseStatus = body.status;
-          if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
-          if (typeof body?.usage?.output_tokens === 'number') attempt.reasoningTokens = body.usage.output_tokens_details?.reasoning_tokens;
-          await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
-          return { attempt, body };
-        };
-        /** The touch call (spec 2026-10-14): the same metered client, a smaller answer, and one more try after 3 s when the
-         *  bridge gives no completed answer. The attempt is charged only when its CSS is kept (`used`). */
-        const touchCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: Array<{ type: 'input_image'; image_url: string; detail: 'auto' }>) => {
-          for (let tries = 0; ; tries++) {
-            const { attempt, body } = await sep5Call('touch', text, attached as typeof images, 'storefront_kit_touch', KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, { signal: run.signal, attempts: run.attempts, maxOutputTokens: KIT_TOUCH_MAX_OUTPUT_TOKENS, effort: 'medium' });
-            if ((body as { status?: string } | null)?.status === 'completed' || tries === 1) return { body, used: () => { attempt.status = 'COMPLETED'; } };
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            run.signal.throwIfAborted();
-          }
-        };
         const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(sitePurpose === 'shop'), SEP5_CLIENT_TIMEOUT_MS);
         const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
         // Sep-5's own guard. There is deliberately no fallback to the engine here: a store rendered from a
@@ -1528,7 +1529,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
       // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
       // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
-      let sketchTheme: Record<string, string> | null = null;
+      let sketchTheme: Record<string, string | number> | null = null;
       let sketchAssurances: ReturnType<typeof sanitizeProductAssurances>['items'] = [];
       if (!agentTheme && sketchFile) {
         try {
@@ -1582,6 +1583,19 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
     const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
+    // A chat request about the kit pages (spec 2026-10-14) re-runs only the touch step, with the merchant's words. The new
+    // CSS replaces the surfaces it covers; surfaces it leaves empty keep the store's earlier touch.
+    if (!creative && !claude && sitePurpose === 'shop' && this.config.get<boolean>('app.yapiKitTouch') === true && instructionConcernsKitSurfaces(dto.instruction)) {
+      try {
+        const base = await assembleSave();
+        const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, instruction: (dto.instruction.split('Pedido actual del comercio:').at(-1) ?? dto.instruction).trim().slice(0, 400), signal, call: touchCall({ signal, attempts }) });
+        if (touch && Object.keys(touch.css).length) kitTouch = { ...pickTouch(readConfigFile(base.files).dna), ...touch.css };
+        this.logger.log(JSON.stringify({ event: touch && Object.keys(touch.css).length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces: Object.keys(touch?.css ?? {}), request: true }));
+      } catch (error) {
+        signal.throwIfAborted();
+        this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300), request: true }));
+      }
+    }
     await progress?.('saving');
     const saveInput = await assembleSave();
     signal.throwIfAborted();

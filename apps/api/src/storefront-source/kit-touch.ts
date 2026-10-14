@@ -125,3 +125,16 @@ export function carriedTouch(previousDna: unknown, creative: boolean): Record<st
   for (const key of Object.values(TOUCH_KEYS)) if (typeof dna[key] === 'string' && dna[key]) out[key] = dna[key] as string;
   return out;
 }
+
+const MERCHANT_MARKER = 'Pedido actual del comercio:';
+/** Does the merchant's own request concern the kit pages (product page, catalog, cards, cart)? Only their words count. */
+export function instructionConcernsKitSurfaces(text: string): boolean {
+  const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return /\bcarrito\b|\bcatalogo\b|\bfotos?\s+de\s+(?:los\s+)?productos?\b|\btarjetas?\s+de(?:l)?\s+productos?\b|\bpagina\s+de(?:l)?\s+productos?\b|\bficha\b|\bproduct\s+(?:page|card)s?\b/.test(own);
+}
+
+/** The touch fields of a dna object (the surfaces the store already had touched), empty ones left out. */
+export function pickTouch(dna: unknown): KitTouchCss {
+  const source = dna && typeof dna === 'object' ? dna as Record<string, unknown> : {};
+  return Object.fromEntries(Object.values(TOUCH_KEYS).filter(key => typeof source[key] === 'string' && source[key]).map(key => [key, source[key] as string]));
+}

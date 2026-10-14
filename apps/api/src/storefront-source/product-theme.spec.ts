@@ -133,3 +133,12 @@ describe('resolveProductTheme', () => {
     expect(result.report.dropped[0].reason).toMatch(/long|3000/);
   });
 });
+
+describe('kit surface CSS through the product theme (spec 2026-10-14)', () => {
+  it('sanitizes catalog, card and cart CSS and marks the runtime as touched', async () => {
+    const result = await resolveProductTheme({ kitCss: { card: '[data-part="card-media"]{transform:rotate(-2deg)}', cart: '.menu-add{opacity:0}' } });
+    expect(result.dna.cardCss).toContain('[data-pagosya-catalog] [data-part="card-media"]');
+    expect(result.dna.cartCss).toBeUndefined();
+    expect(productThemeRuntime(result.dna)).toMatchObject({ cardCss: result.dna.cardCss, touch: 1 });
+  });
+});

@@ -1,15 +1,15 @@
 import { SOURCE_DNA_ENUMS } from './source-dna';
 import { presetFor, type PresetId, type ProductCardParams } from './source-product-card-presets';
-import { sanitizeProductThemeCss, type ThemeCssReport } from './product-theme-css';
+import { sanitizeKitSurfaceCss, sanitizeProductThemeCss, type ThemeCssReport } from './product-theme-css';
 import type { ThemeCheckFailure } from './product-theme-check';
 import type { SourceDesign } from './source-design';
 
 /** The one entry point for choosing a store's product-card theme (theme plan, D6): a preset, optional per-dimension
  * overrides and optional guarded CSS. The CSS is always sanitized; when a browser check is supplied and reports any
  * failure the CSS is removed while the DNA parameters (safe by construction) stay. Pure apart from the injected check. */
-export type ProductThemeInput = { preset?: PresetId; params?: Partial<ProductCardParams>; css?: string; assurances?: unknown };
+export type ProductThemeInput = { preset?: PresetId; params?: Partial<ProductCardParams>; css?: string; assurances?: unknown; kitCss?: { catalog?: string; card?: string; cart?: string } };
 export type ProductThemeResult = {
-  dna: { productCard: ProductCardParams; productCss: string; assurances?: ProductAssurance[] };
+  dna: { productCard: ProductCardParams; productCss: string; assurances?: ProductAssurance[]; catalogCss?: string; cardCss?: string; cartCss?: string };
   report: { dropped: ThemeCssReport['dropped']; failures: ThemeCheckFailure[]; presetUsed?: PresetId; assuranceNotes?: string[] };
 };
 
@@ -46,8 +46,9 @@ export function applyProductThemeToDesign(design: SourceDesign | undefined, them
 }
 
 /** The same theme as fields of the runtime DNA (config.dna); productCss only when there is one. */
-export function productThemeRuntime(theme: ProductThemeResult['dna']): Record<string, string> {
-  return { ...theme.productCard, ...(theme.productCss ? { productCss: theme.productCss } : {}) };
+export function productThemeRuntime(theme: ProductThemeResult['dna']): Record<string, string | number> {
+  const kit = Object.fromEntries((['catalogCss', 'cardCss', 'cartCss'] as const).filter(key => theme[key]).map(key => [key, theme[key] as string]));
+  return { ...theme.productCard, ...(theme.productCss ? { productCss: theme.productCss } : {}), ...kit, ...(Object.keys(kit).length ? { touch: 1 } : {}) };
 }
 
 /** A snapshot with the theme in its config.js (dna is created when the store has none, or the runtime would ignore the theme). */
@@ -87,5 +88,11 @@ export async function resolveProductTheme(input: ProductThemeInput, options: { c
     failures = await options.check(productCss);
     if (failures.length) productCss = '';
   }
-  return { dna: { productCard, productCss, ...(assured ? { assurances: assured.items } : {}) }, report: { dropped: sanitized.dropped, failures, ...(input.preset ? { presetUsed: input.preset } : {}), ...(assured?.notes.length ? { assuranceNotes: assured.notes } : {}) } };
+  // YAPI's touches on the kit's other surfaces (spec 2026-10-14): sanitized here; the browser check runs in kit-touch.ts.
+  const kit: { catalogCss?: string; cardCss?: string; cartCss?: string } = {};
+  for (const [surface, key] of [['catalog', 'catalogCss'], ['card', 'cardCss'], ['cart', 'cartCss']] as const) {
+    const text = input.kitCss?.[surface];
+    if (typeof text === 'string' && text.trim()) { const report = sanitizeKitSurfaceCss(surface, text); if (report.css) kit[key] = report.css; }
+  }
+  return { dna: { productCard, productCss, ...kit, ...(assured ? { assurances: assured.items } : {}) }, report: { dropped: sanitized.dropped, failures, ...(input.preset ? { presetUsed: input.preset } : {}), ...(assured?.notes.length ? { assuranceNotes: assured.notes } : {}) } };
 }

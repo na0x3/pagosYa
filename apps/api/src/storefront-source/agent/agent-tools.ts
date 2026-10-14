@@ -1,5 +1,5 @@
 import type { SourceMediaPolicy } from '../source-media-design';
-import { COSMETIC_PARTS } from '../product-theme-css';
+import { CARD_PARTS, CART_PARTS, CATALOG_PARTS, COSMETIC_PARTS } from '../product-theme-css';
 import sharp from 'sharp';
 import { agentProjectIndex, assertMerchantTaskCoverage, assertTaskFeasibility, validateTaskRequirements, workspaceDigest, type AgentRequirement, type RequirementEvidence } from './agent-task';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
@@ -74,6 +74,9 @@ export const AGENT_TOOLS = [
     preset: nullableEnum(PRESET_IDS), ...Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS.productCard).map(([key, values]) => [key, nullableEnum(values)])),
     assurances: { type: ['array', 'null'], description: 'Hasta 3 garantías REALES del comercio para la ficha (lidera la fila; la plataforma añade entrega y pago sola). [] las quita; null no cambia nada. Nunca inventes envíos, plazos ni certificaciones, ni menciones pagosYa.', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: { type: 'string', maxLength: 40 }, detail: { type: 'string', maxLength: 80 } }, required: ['icon', 'title', 'detail'] } },
     css: { type: ['string', 'null'], description: `CSS con guardas: hasta 20 reglas y 3000 caracteres. Partes permitidas: ${COSMETIC_PARTS.join(', ')}. Usa [data-part="nombre"]. price, buy, quantity y opciones de pago están protegidos: nunca los selecciones.` },
+    catalogCss: { type: ['string', 'null'], description: `CSS con guardas para las páginas de catálogo. Partes: ${CATALOG_PARTS.join(', ')}. null no cambia nada.` },
+    cardCss: { type: ['string', 'null'], description: `CSS con guardas para las tarjetas de producto. Partes: ${CARD_PARTS.join(', ')}. Precio y botón de agregar están protegidos.` },
+    cartCss: { type: ['string', 'null'], description: `CSS con guardas para el carrito. Partes: ${CART_PARTS.join(', ')}. Cantidades, totales y el botón de pagar están protegidos.` },
   }),
   tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases), la lista de secciones construidas y, si aplica, tellsKept (hábitos de sitio generado que mantuviste a propósito; puede ir vacío).', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text }, tellsKept: { type: 'array', items: text } }),
 ];
@@ -363,8 +366,10 @@ export class AgentToolbox {
         const params = Object.fromEntries(Object.keys(SOURCE_DNA_ENUMS.productCard).filter(key => typeof args[key] === 'string').map(key => [key, args[key]]));
         if (Object.keys(params).length) chosen.params = params as ProductThemeInput['params'];
         if (typeof args.css === 'string' && args.css.trim()) chosen.css = args.css;
+        const kitCss = Object.fromEntries((['catalog', 'card', 'cart'] as const).filter(surface => typeof args[`${surface}Css`] === 'string' && (args[`${surface}Css`] as string).trim()).map(surface => [surface, args[`${surface}Css`] as string]));
+        if (Object.keys(kitCss).length) chosen.kitCss = kitCss;
         if (Array.isArray(args.assurances)) chosen.assurances = args.assurances;
-        if (!chosen.preset && !chosen.params && !chosen.css && chosen.assurances === undefined) return { output: 'No cambió nada: indica un preset, algún ajuste, garantías o CSS.' };
+        if (!chosen.preset && !chosen.params && !chosen.css && !chosen.kitCss && chosen.assurances === undefined) return { output: 'No cambió nada: indica un preset, algún ajuste, garantías o CSS.' };
         try {
           const result = await resolveProductTheme(chosen);
           this.pendingTheme = result.dna;
