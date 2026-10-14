@@ -1498,6 +1498,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
      *  config.js. Built from `generated` as it is when called: once for revision N, and again by the background review. */
     const assembleSave = async (assembleSignal: AbortSignal = signal) => {
       const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
+      // A local copy: the review stage assembles twice (the touch reads a base, then the final save), and brand.css, the Next scaffold and the brand link must not pile up on `generated`.
+      let files = [...generated.files];
       if (sectionScope) visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), acceptedDesign);
       // Carry forward previously bundled assets on an edit, without carrying old private configuration.
       const previousAssets = retainedAssets;
@@ -1507,18 +1509,18 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // Confirmed brand colours win; otherwise a fresh design's drawn colour world becomes the brand tokens.
       // The rule lives in designBrandCss (tested): confirmed colours, else the drawn world, never a stale drawn block.
       const tokenCss = designBrandCss({ palette: frame.palette, brandColours: brandHasColours(brand?.data), confirmedCss: brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '', brandRevision: brand?.revision ?? 0, previousBrand: previousBrand?.content });
-      if (useNext) generated.files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(generated.files, sitePurpose)));
+      if (useNext) files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(files, sitePurpose)));
       if (tokenCss) {
-        generated.files = generated.files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);
-        generated.files.push({ path: 'brand.css', content: tokenCss });
+        files = files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);
+        files.push({ path: 'brand.css', content: tokenCss });
       }
-      if (useNext && !tokenCss) generated.files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
-      const useCommercePages = sitePurpose === 'shop' && (useNext || !previous || generated.files.some(file => file.path === "product.html") && generated.files.some(file => file.path === "checkout.html"));
+      if (useNext && !tokenCss) files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
+      const useCommercePages = sitePurpose === 'shop' && (useNext || !previous || files.some(file => file.path === "product.html") && files.some(file => file.path === "checkout.html"));
       // commerce-pages.css is platform CSS (never authored), so like commerce.js every save takes the kit's current copy:
       // kept from the first build, kit fixes never reached existing stores (2026-10-12, the checkout row fix).
-      const refreshPagesCss = useCommercePages || useNext || generated.files.some(file => file.path === "commerce-pages.css");
-      if (refreshPagesCss) generated.files = generated.files.filter(file => file.path !== "commerce-pages.css");
-      const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(refreshPagesCss ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
+      const refreshPagesCss = useCommercePages || useNext || files.some(file => file.path === "commerce-pages.css");
+      if (refreshPagesCss) files = files.filter(file => file.path !== "commerce-pages.css");
+      const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(refreshPagesCss ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html"] : []).filter(path => !files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
       const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
       const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
       const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
@@ -1539,7 +1541,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
       // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
       const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
-      const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'catalogCss', 'cardCss', 'cartCss', 'touch', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
+      const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
       const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
         ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
       // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
@@ -1556,17 +1558,17 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // The store-wide motif pack: YAPI's choice this run (null removes it), otherwise the one the store had.
       const motifPack = chosenMotifPack(agentMotifPack, previousConfig.motifPack);
       if (agentPolicyChange) data.policies = mergeAgentPolicies((await this.prisma.store.findUnique({ where: { id: storeId }, select: { policies: true } }))?.policies, agentPolicies);
-      const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
+      const config = { ...sourceCommerceRoutes([...files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
         // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
         : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
         : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), ...(primaryAction ? { primaryAction } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
       const assembled = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(platformHeader(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
-        ...generated.files, ...kitFiles, ...assets, ...acceptedMotifFiles,
+        ...files, ...kitFiles, ...assets, ...acceptedMotifFiles,
         ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
         ...(sketchFile ? [sketchFile] : []),
         ...(websiteDesignFile ? [websiteDesignFile] : []),
         ...(frame.file ? [frame.file] : []),
-        { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
+        { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, files, previousScene), null, 2) + '\n' },
         { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
         ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
         { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),

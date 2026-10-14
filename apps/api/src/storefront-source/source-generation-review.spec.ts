@@ -40,7 +40,7 @@ const REVIEW = { label: 'Café pulido', notes: ['Oscurecí el texto para que se 
 const respond = (review: (init: any) => Promise<Response>) => async (_url: unknown, init: any) => JSON.parse(init.body).text.format.name === 'storefront_self_review' ? review(init) : answer({ label: 'Café', files: files(), products: [] });
 const eventually = async (check: () => boolean, ms = 3000) => { const end = Date.now() + ms; while (!check() && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 5)); expect(check()).toBe(true); };
 
-function setup() {
+function setup(brands?: unknown, strict = false) {
   const revision = { current: 0 };
   const prisma: any = {
     storeRetention: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -58,6 +58,7 @@ function setup() {
     // Like SourceProjectsService.save: the optimistic revision check, then the fence, in one transaction.
     save: jest.fn(async (_m: string, _s: string, value: any, _generation: unknown, fence?: (tx: unknown) => Promise<void>) => {
       if (value.revision !== revision.current) throw new ConflictException('El proyecto cambió en otra sesión. Recarga la revisión antes de guardar.');
+      if (strict) sourceProjectSnapshot(value); // the real save rejects duplicate paths
       if (fence) await fence(prisma);
       revision.current += 1;
       return { revision: revision.current, label: value.label, digest: 'd', createdAt: new Date(), restoredFrom: null, createdProducts: [], updatedProducts: [], deletedProducts: [] };
@@ -68,7 +69,7 @@ function setup() {
   const config: any = { get: jest.fn((key: string) => values.get(key)), set: (key: string, value: unknown) => values.set(key, value) };
   const uploads: any = { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') };
   const metering: any = { record: jest.fn().mockResolvedValue(undefined) };
-  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config, undefined, metering), prisma, stores, projects, config, revision };
+  return { service: new SourceGenerationService(prisma, stores, projects, uploads, config, brands as any, metering), prisma, stores, projects, config, revision };
 }
 
 describe('Sep-5 self-review after the save', () => {
@@ -318,14 +319,14 @@ describe('one look per store: YAPI touches the kit pages in the review stage', (
     (checkKitSurfacesOnSnapshot as jest.Mock).mockResolvedValue({ catalog: [], card: [{ control: 'add', viewport: 'mobile', reason: 'covered by another element' }], cart: [] });
     jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
     await run();
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await service.reviewSettled('s1');
     expect(projects.save).toHaveBeenCalledTimes(1);
   });
 
   it('an unusable touch answer leaves revision N as the store', async () => {
     jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, 'not json') as any);
     await run();
-    await new Promise(resolve => setTimeout(resolve, 3600));
+    await service.reviewSettled('s1');
     expect(projects.save).toHaveBeenCalledTimes(1);
   });
 
@@ -333,7 +334,33 @@ describe('one look per store: YAPI touches the kit pages in the review stage', (
     config.set('app.yapiKitTouch', false);
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
     await run();
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await service.reviewSettled('s1');
     expect(fetchMock.mock.calls.some(c => JSON.parse((c[1] as any).body).text.format.name === 'storefront_kit_touch')).toBe(false);
+  });
+  describe('with a confirmed brand (brand.css is written on every assemble)', () => {
+    const brand = { revision: 1, data: { confirmed: [{ field: 'accent', value: '#135724', evidence: 'Manual', source: 'merchant' }], suggested: [] } };
+    const brandCount = (call: any[]) => call[2].files.filter((f: any) => f.path === 'brand.css').length;
+    beforeEach(() => {
+      ({ service, projects, config } = setup({ get: jest.fn().mockResolvedValue(brand) }, true));
+      jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+      jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+      config.set('app.yapiKitTouch', true);
+    });
+    it('saves N+1 with exactly one brand.css when only the touch changes the store', async () => {
+      jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
+      await run();
+      await service.reviewSettled('s1');
+      expect(projects.save).toHaveBeenCalledTimes(2);
+      expect([brandCount(projects.save.mock.calls[0]), brandCount(projects.save.mock.calls[1])]).toEqual([1, 1]);
+      expect(configOf(projects.save.mock.calls[1]).dna.cardCss).toContain('rotate(-2deg)');
+    });
+    it('saves N+1 with exactly one brand.css when the review edits and the touch both apply', async () => {
+      jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, TOUCH) as any);
+      await run();
+      await service.reviewSettled('s1');
+      expect(projects.save).toHaveBeenCalledTimes(2);
+      expect([brandCount(projects.save.mock.calls[0]), brandCount(projects.save.mock.calls[1])]).toEqual([1, 1]);
+      expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
+    });
   });
 });

@@ -31,6 +31,7 @@ describe('kitTouchPrompt', () => {
     const text = kitTouchPrompt({ storeName: 'Café', look: { version: 1, edge: 'offset' }, distinctive: '.stamp{}', instruction: 'fotos inclinadas' });
     for (const word of ['card-media', 'cart-line', 'page-title', 'gallery', 'protected', 'transform', 'fotos inclinadas', '"edge":"offset"']) expect(text).toContain(word);
     expect(text.split('\n').find(line => line.startsWith('- card parts'))).toContain('transform');
+    expect(text.split('\n').find(line => line.startsWith('- catalog parts'))).toContain('transform');
   });
 });
 
