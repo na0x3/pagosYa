@@ -130,7 +130,13 @@ export function mountAssistantPanel(deps) {
     } else if (button.matches("[data-assistant-teach]")) {
       const id = button.dataset.assistantTeach, answer = root.querySelector(`[data-assistant-answer="${CSS.escape(id)}"]`).value.trim();
       if (!answer) { status = "Escribe la respuesta."; render(); return; }
-      try { data = await deps.api(`${base()}/unanswered/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ action: "teach", answer }) }); if (e !== epoch) return; questions = questions.filter((q) => q.id !== id); status = "Respuesta agregada a las notas."; }
+      const question = questions.find((q) => q.id === id)?.question ?? "";
+      try {
+        data = await deps.api(`${base()}/unanswered/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ action: "teach", answer }) }); if (e !== epoch) return;
+        // Unsaved notes would hide (and a later save would drop) the line the server just added, so it joins them too.
+        if (drafts.notes !== undefined) drafts.notes = `${drafts.notes ? `${drafts.notes}\n\n` : ""}Pregunta: ${question}\nRespuesta: ${answer}`;
+        questions = questions.filter((q) => q.id !== id); status = "Respuesta agregada a las notas.";
+      }
       catch (error) { if (e !== epoch) return; status = error.message; if (/ya fue atendida/.test(error.message)) await reloadQuestions(); }
       render();
     } else if (button.matches("[data-assistant-ignore]")) {

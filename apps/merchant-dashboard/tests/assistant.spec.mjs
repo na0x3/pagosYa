@@ -36,7 +36,12 @@ async function open(page) {
     else if (path === "/stores/store_1/assistant/unanswered") body = { questions: answered ? [] : [{ id: "u1", question: XSS, count: 3, lastAskedAt: new Date().toISOString() }] };
     else if (path === "/stores/store_1/assistant/unanswered/u1") {
       if (answered) { status = 409; body = { message: "Esta pregunta ya fue atendida." }; }
-      else { sent.push(json()); body = view; }
+      else {
+        sent.push(json());
+        // Like the API: a taught answer is appended to the saved notes.
+        if (json().action === "teach") { const line = `Pregunta: ${XSS}\nRespuesta: ${json().answer}`; view = { ...view, settings: { ...view.settings, notes: view.settings.notes ? `${view.settings.notes}\n\n${line}` : line } }; }
+        body = view;
+      }
     }
     else if (path === "/merchants/balance") body = { payableBalance: 0 };
     else if (path === "/merchants/kyc") body = { status: "APPROVED" };
@@ -133,4 +138,26 @@ test("an already-answered question reloads the list", async ({ page }) => {
   await page.getByRole("button", { name: "Enseñar respuesta" }).click();
   await expect(page.locator(".assistant-status")).toHaveText("Esta pregunta ya fue atendida.");
   await expect(page.locator("#assistantRoot")).toContainText("Todavía no hay preguntas sin respuesta.");
+});
+
+test("teaching an answer keeps unsaved notes and adds the taught line to them", async ({ page }) => {
+  await open(page);
+  await goToAssistant(page);
+  const notes = page.getByLabel("Lo que el asistente debe saber");
+  await notes.fill("Enviamos los lunes.");
+  await page.locator("[data-assistant-answer]").fill("Sí, con NIT.");
+  await page.getByRole("button", { name: "Enseñar respuesta" }).click();
+  await expect(page.locator(".assistant-status")).toHaveText("Respuesta agregada a las notas.");
+  await expect(notes).toHaveValue(`Enviamos los lunes.\n\nPregunta: ${XSS}\nRespuesta: Sí, con NIT.`);
+  await page.getByRole("button", { name: "Guardar notas" }).click();
+  await expect.poll(() => sent.at(-1)).toEqual({ notes: `Enviamos los lunes.\n\nPregunta: ${XSS}\nRespuesta: Sí, con NIT.` });
+});
+
+test("teaching an answer with no unsaved notes shows the saved notes from the server", async ({ page }) => {
+  await open(page);
+  view.settings.notes = "Tostamos los martes.";
+  await goToAssistant(page);
+  await page.locator("[data-assistant-answer]").fill("Sí, con NIT.");
+  await page.getByRole("button", { name: "Enseñar respuesta" }).click();
+  await expect(page.getByLabel("Lo que el asistente debe saber")).toHaveValue(`Tostamos los martes.\n\nPregunta: ${XSS}\nRespuesta: Sí, con NIT.`);
 });
