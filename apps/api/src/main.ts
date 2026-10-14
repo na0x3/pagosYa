@@ -10,6 +10,7 @@ import helmet from "helmet";
 import { Agent, setGlobalDispatcher } from "undici";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { assistantSaltWarning } from "./config/configuration";
 import { PrismaService } from "./prisma/prisma.service";
 
 const UNSAFE_OBJECT_KEYS = new Set(["__proto__", "prototype", "constructor"]);
@@ -38,6 +39,8 @@ async function bootstrap() {
   app.enableShutdownHooks(["SIGINT", "SIGTERM"]);
   const config = app.get(ConfigService);
   const isProduction = config.get<string>("app.environment") === "production";
+  const assistantWarning = assistantSaltWarning(process.env.NODE_ENV ?? "development", process.env.ASSISTANT_ENABLED, process.env.ASSISTANT_IP_SALT);
+  if (assistantWarning) Logger.warn(assistantWarning, "AssistantBootstrap");
   const trustProxy = config.get<false | number | string>("app.trustProxy") ?? false;
   if (trustProxy !== false) app.set("trust proxy", trustProxy);
 

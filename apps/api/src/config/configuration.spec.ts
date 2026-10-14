@@ -1,4 +1,4 @@
-import configuration, { emailTestRecipient } from "./configuration";
+import configuration, { assistantSaltWarning, emailTestRecipient } from "./configuration";
 
 describe('local ChatGPT plan configuration', () => {
   const keys = ['NODE_ENV', 'YAPI_CHATGPT_PLAN_URL', 'YAPI_CHATGPT_PLAN_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'];
@@ -349,6 +349,23 @@ describe("storefront assistant configuration", () => {
     expect(configuration().app.assistant.enabled).toBe(false);
     process.env.ASSISTANT_IP_SALT = "";
     expect(configuration().app.assistant.enabled).toBe(false);
+  });
+
+  it("treats a whitespace-only salt as unset and trims a real one", () => {
+    setStrongProductionEnv();
+    process.env.ASSISTANT_ENABLED = "true";
+    process.env.ASSISTANT_IP_SALT = "   ";
+    expect(configuration().app.assistant.enabled).toBe(false);
+    process.env.ASSISTANT_IP_SALT = "  production-salt-value \n";
+    expect(configuration().app.assistant).toMatchObject({ enabled: true, ipSalt: "production-salt-value" });
+  });
+
+  it("warns at boot only for production with the assistant asked on and no real salt", () => {
+    expect(assistantSaltWarning("production", "true", undefined)).toContain("ASSISTANT_IP_SALT");
+    expect(assistantSaltWarning("production", "true", "  \t ")).toContain("ASSISTANT_IP_SALT");
+    expect(assistantSaltWarning("production", "true", "real-salt")).toBeNull();
+    expect(assistantSaltWarning("production", undefined, undefined)).toBeNull();
+    expect(assistantSaltWarning("development", "true", undefined)).toBeNull();
   });
 
   it("turns on in production only with a real salt", () => {

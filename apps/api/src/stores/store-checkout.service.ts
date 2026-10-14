@@ -341,8 +341,9 @@ export class StoreCheckoutService {
     const store = await findActiveStoreBySlug(this.prisma, slug);
 
     const isContactMessage = dto.items.length === 0;
-    // The store assistant's "déjanos tu mensaje" reaches the merchant even when the contact form is off.
-    const fromAssistant = dto.origin === "assistant" && Boolean((await this.prisma.storeAssistant.findUnique({ where: { storeId: store.id }, select: { enabled: true } }))?.enabled);
+    // The store assistant's "déjanos tu mensaje" reaches the merchant even when the contact form is off,
+    // only while the assistant is on for the platform and for this store.
+    const fromAssistant = dto.origin === "assistant" && Boolean(this.config?.get<boolean>("app.assistant.enabled")) && Boolean((await this.prisma.storeAssistant.findUnique({ where: { storeId: store.id }, select: { enabled: true } }))?.enabled);
     if (isContactMessage && !store.contactFormEnabled && !fromAssistant) {
       throw new BadRequestException("El formulario de contacto no está habilitado para esta tienda");
     }

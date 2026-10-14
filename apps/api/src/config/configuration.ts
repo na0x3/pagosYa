@@ -230,6 +230,12 @@ export function emailTestRecipient(environment: string, value: string | undefine
   return environment === "production" ? null : value?.trim() || null;
 }
 
+/** One boot-time warning when production asks for the assistant without a real IP salt (it then stays off). */
+export function assistantSaltWarning(environment: string, enabled: string | undefined, salt: string | undefined): string | null {
+  if (environment !== "production" || enabled !== "true" || salt?.trim()) return null;
+  return "ASSISTANT_ENABLED=true but ASSISTANT_IP_SALT is missing or blank: the store assistant stays off until a salt is set.";
+}
+
 export function assertProductionSecurityConfig(app: AppConfig): void {
   if (app.environment !== "production") return;
   const failures: string[] = [];
@@ -442,10 +448,10 @@ export default (): { app: AppConfig } => {
       enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
     },
     assistant: {
-      // Production never runs the assistant on the public development salt: an unset or empty salt keeps it off.
-      enabled: process.env.ASSISTANT_ENABLED === 'true' && (environment !== 'production' || Boolean(process.env.ASSISTANT_IP_SALT)),
+      // Production never runs the assistant on the public development salt: an unset, empty or blank salt keeps it off.
+      enabled: process.env.ASSISTANT_ENABLED === 'true' && (environment !== 'production' || Boolean(process.env.ASSISTANT_IP_SALT?.trim())),
       monthlySpendCeilingUsd: Number(process.env.ASSISTANT_MONTHLY_SPEND_CEILING_USD) || 50,
-      ipSalt: process.env.ASSISTANT_IP_SALT || 'development-only-assistant-ip-salt',
+      ipSalt: process.env.ASSISTANT_IP_SALT?.trim() || 'development-only-assistant-ip-salt',
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",

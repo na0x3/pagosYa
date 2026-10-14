@@ -25,7 +25,7 @@ describe("a contact message from the storefront form", () => {
 });
 
 describe("a contact message left from the store assistant", () => {
-  const build = (assistant: { enabled: boolean } | null) => {
+  const build = (assistant: { enabled: boolean } | null, platformEnabled = true) => {
     const prisma: any = {
       store: { findUnique: jest.fn().mockResolvedValue({ id: "store_1", merchantId: "m_1", slug: "deff", name: "deff", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true, contactFormEnabled: false, contactFormEmail: null, contactEmail: "hola@deff.bo", checkoutMode: "payment", locations: [] }) },
       merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m_1", email: "owner@deff.bo" }) },
@@ -35,7 +35,8 @@ describe("a contact message left from the store assistant", () => {
     };
     const email = { send: jest.fn().mockResolvedValue(undefined) };
     const inbox = { threadForLead: jest.fn().mockResolvedValue(undefined) };
-    return new StoreCheckoutService(prisma, { create: jest.fn() } as any, email as any, undefined, undefined, inbox as any);
+    const config = { get: (key: string) => (key === "app.assistant.enabled" ? platformEnabled : undefined) };
+    return new StoreCheckoutService(prisma, { create: jest.fn() } as any, email as any, undefined, config as any, inbox as any);
   };
   const dto = { items: [], email: "a@b.co", message: "hola", origin: "assistant" as const };
 
@@ -45,5 +46,9 @@ describe("a contact message left from the store assistant", () => {
 
   it("is still refused when the assistant is off for that store", async () => {
     await expect(build({ enabled: false }).submitLead("deff", dto)).rejects.toThrow("El formulario de contacto no está habilitado para esta tienda");
+  });
+
+  it("is refused when the assistant is switched off for the whole platform, even if the store turned it on", async () => {
+    await expect(build({ enabled: true }, false).submitLead("deff", dto)).rejects.toThrow("El formulario de contacto no está habilitado para esta tienda");
   });
 });
