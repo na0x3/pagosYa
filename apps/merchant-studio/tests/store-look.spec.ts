@@ -109,7 +109,8 @@ test('catalog: page title and cards follow the headline; card photos take shape,
 });
 
 test('cards return to true colour on hover and keyboard focus', async ({ page }) => {
-  await openKitPage(page, { path: 'productos.html', look: BOLD });
+  await openKitPage(page, { path: 'productos.html', look: { ...BOLD, photo: { treatment: 'mono' } } });
+  expect(await style(page, CARD_IMG, 'filter')).toBe('grayscale(1)');
   await page.locator('[data-pagosya-catalog] .menu-item').first().hover();
   await expect.poll(() => style(page, CARD_IMG, 'filter')).toBe('none');
   await page.mouse.move(0, 0);
@@ -118,7 +119,7 @@ test('cards return to true colour on hover and keyboard focus', async ({ page })
 });
 
 test('a YAPI-authored card keeps its own design', async ({ page }) => {
-  await openKitPage(page, { path: 'productos.html', look: BOLD });
+  await openKitPage(page, { path: 'productos.html', look: { ...BOLD, photo: { treatment: 'mono' } } });
   const custom = await page.evaluate(() => {
     document.querySelector('[data-pagosya-catalog]')!.insertAdjacentHTML('beforeend', '<article class="menu-item" data-custom-product><img class="menu-item__image" src="https://img.test/4.webp" alt=""></article>');
     const img = document.querySelector('.menu-item[data-custom-product] .menu-item__image')!;
@@ -133,4 +134,10 @@ test('cart drawer: heading follows the headline, line photos take polaroid frame
   expect(await style(page, '.cart-drawer__header h2', 'font-family')).toContain('Anton');
   expect(await style(page, '.cart-drawer .order-item__photo', 'padding-bottom')).toBe('20px');
   expect(await style(page, '.cart-drawer .order-item__photo', 'background-color')).toBe('rgb(255, 255, 255)');
+});
+
+test('the look filter leaves the DNA card zoom transition alone', async ({ page }) => {
+  await openKitPage(page, { path: 'productos.html', dna: { card: 'zoom' }, look: { ...BOLD, photo: { treatment: 'mono' } } });
+  expect(await style(page, CARD_IMG, 'filter')).toBe('grayscale(1)');
+  expect(await style(page, CARD_IMG, 'transition-property')).toContain('transform');
 });

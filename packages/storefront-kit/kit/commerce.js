@@ -3854,7 +3854,7 @@
     `:where(:root[data-look-rc]) ${LKC}{border-radius:var(--lk-rc)}`,
     `:where(:root[data-look-rb]) :is([data-pagosya-catalog] .catalog-tabs a,${LKC} .menu-item__badge){border-radius:var(--lk-rb)}`,
     `${LOOK_EDGED} :is(${LKC} .menu-item__image,${LOOK_CART_PHOTO}){box-shadow:var(--lk-edge)}`,
-    `${LOOK_FILTERED} :is(${LOOK_CARD_PHOTOS},${LOOK_CART_PHOTO}){filter:var(--lk-filter);transition:filter .25s}`,
+    `${LOOK_FILTERED} :is(${LOOK_CARD_PHOTOS},${LOOK_CART_PHOTO}){filter:var(--lk-filter)}`,
     `@media(hover:hover){${LOOK_FILTERED} ${LKC}:hover :is(.menu-item__image,.menu-item__image-alt){filter:none}}`,
     `${LOOK_FILTERED} ${LKC}:focus-within :is(.menu-item__image,.menu-item__image-alt){filter:none}`,
     `:where(:root[data-look-photo=polaroid]) :is(${LKC} .menu-item__image,${LOOK_CART_PHOTO}){box-sizing:border-box;padding:6px 6px 20px;background:#fff;box-shadow:0 6px 18px -8px #0006;border-radius:2px}`,
