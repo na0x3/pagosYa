@@ -81,3 +81,9 @@ test('Correos is no longer an Ajustes tab: the emails live in Correos y marketin
   tabs.select('emails');
   assert.deepEqual(selected(root), ['general']);
 });
+
+test('each settings tab carries one icon', () => {
+  const { root } = mount();
+  assert.equal(root.querySelectorAll('[data-settings-tab] svg.ui-icon').length, 4);
+  for (const tab of root.querySelectorAll('[data-settings-tab]')) assert.equal(tab.querySelectorAll('svg').length, 1);
+});

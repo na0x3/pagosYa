@@ -1,4 +1,5 @@
 import { escapeHtml } from "./html.mjs";
+import { uiChoice, uiHead, uiOption, uiSwitch } from "./ui-kit.mjs";
 // Store settings the live checkout reads: identity, how an order ends, support
 // contact, pickup/delivery locations with their stock, and link buttons.
 // Everything saves straight to the store (PATCH /stores/:id, PUT /links).
@@ -93,7 +94,7 @@ function locationsFromStore(store) {
 
 const TEMPLATE = `<form class="store-settings-form" novalidate>
   <section class="store-editor-section" aria-labelledby="storeSettingsIdentityTitle">
-    <div class="editor-section-head"><h3 id="storeSettingsIdentityTitle">Identidad</h3><p>Aparece en el cobro, los comprobantes y el seguimiento del pedido.</p></div>
+    ${uiHead({ icon: "store", id: "storeSettingsIdentityTitle", title: "Identidad", text: "Aparece en el cobro y los comprobantes." })}
     <div class="store-editor-section-body">
     <div><label for="storeNameInput">Nombre</label><input id="storeNameInput" name="name" maxlength="80" required></div>
     <div><label for="storeTaglineInput">Descripción corta (opcional)</label><input id="storeTaglineInput" name="tagline" maxlength="160" placeholder="Ropa urbana hecha en Bolivia"></div>
@@ -107,60 +108,60 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
     </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsCheckoutTitle">
-    <div class="editor-section-head"><h3 id="storeSettingsCheckoutTitle">Cómo termina el pedido</h3><p>Elige si cobras aquí o si solo conectas al cliente con tu canal comercial.</p></div>
+    ${uiHead({ icon: "shopping-bag", id: "storeSettingsCheckoutTitle", title: "Cómo termina el pedido", text: "Cobra aquí o recibe el pedido por tu canal." })}
     <div class="store-editor-section-body">
-    <fieldset class="visual-conversion store-conversion-settings">
+    <fieldset class="store-conversion-settings">
       <legend>Modo de conversión</legend>
-      <div class="visual-conversion-options">
-        <label class="visual-conversion-option"><input type="radio" name="storeCheckoutMode" value="payment" checked><span><strong>Cobrar con pagosYa</strong><small>Carrito, checkout y comprobante. Al activarlo pediremos KYC y NIT.</small></span></label>
-        <div class="visual-conversion-choice">
-          <label class="visual-conversion-option"><input type="radio" name="storeCheckoutMode" value="whatsapp"><span><strong>Recibir por WhatsApp</strong><small>El cliente revisa el carrito y te envía el detalle como mensaje.</small></span></label>
-          <div class="visual-whatsapp-phone" data-whatsapp hidden>
-            <label for="storeContactPhoneInput">Número que recibirá los pedidos</label>
-            <input id="storeContactPhoneInput" name="contactPhone" type="tel" maxlength="40" placeholder="+591 71234567" aria-describedby="storeWhatsappPhoneHelp">
-            <span class="faint" id="storeWhatsappPhoneHelp">Incluye el código de país.</span>
-          </div>
-        </div>
-        <label class="visual-conversion-option"><input type="radio" name="storeCheckoutMode" value="external"><span><strong>Captar interesados</strong><small>El cliente elige productos y deja únicamente su Gmail o correo al finalizar.</small></span></label>
+      <div class="ui-choices">
+        ${uiChoice({ icon: "credit-card", group: "storeCheckoutMode", value: "payment", checked: true, title: "Cobrar con pagosYa", text: "Carrito, pago y comprobante." })}
+        ${uiChoice({ icon: "message-circle", group: "storeCheckoutMode", value: "whatsapp", title: "Recibir por WhatsApp", text: "El pedido te llega como mensaje." })}
+        ${uiChoice({ icon: "mail", group: "storeCheckoutMode", value: "external", title: "Captar interesados", text: "El cliente deja su correo y su carrito." })}
       </div>
-      <p class="store-conversion-note" data-payment-requirement></p>
+      <div class="visual-whatsapp-phone" data-whatsapp hidden>
+        <label for="storeContactPhoneInput">Número que recibirá los pedidos</label>
+        <input id="storeContactPhoneInput" name="contactPhone" type="tel" maxlength="40" placeholder="+591 71234567" aria-describedby="storeWhatsappPhoneHelp">
+        <span class="faint" id="storeWhatsappPhoneHelp">Incluye el código de país.</span>
+      </div>
+      <p class="ui-note" data-payment-requirement></p>
       <p class="faint" data-lead-help hidden>El correo se enviará a tu correo de soporte; si no configuraste uno, usaremos el correo de tu cuenta pagosYa.</p>
-      <label class="checkbox-row store-cart-recommendations" for="storePublicVisibility">
-        <input type="checkbox" id="storePublicVisibility">
-        <span><strong>Tienda visible al público</strong><small>Cuando está apagado, tu tienda no aparece en buscadores ni en el directorio y su enlace muestra que no está disponible. Publicar un diseño desde YAPI también la hace visible.</small></span>
-      </label>
-      <label class="checkbox-row store-cart-recommendations" for="storeShowLowStock">
-        <input type="checkbox" id="storeShowLowStock">
-        <span><strong>Mostrar avisos de pocas unidades</strong><small>Permite que el cliente vea mensajes como “Solo quedan 3”. Si está apagado, el inventario permanece privado y solo se muestra “Agotado”.</small></span>
-      </label>
     </fieldset>
     </div>
   </section>
+  <section class="store-editor-section" aria-labelledby="storeSettingsVisibilityTitle">
+    ${uiHead({ icon: "eye", id: "storeSettingsVisibilityTitle", title: "Lo que ven tus clientes", text: "Visibilidad de la tienda y del stock." })}
+    <div class="store-editor-section-body">
+      <div class="ui-options">
+        ${uiOption({ icon: "globe", attrs: 'id="storePublicVisibility"', title: "Tienda visible al público", text: "Aparece en buscadores y en el directorio." })}
+        ${uiOption({ icon: "package", attrs: 'id="storeShowLowStock"', title: "Mostrar avisos de pocas unidades", text: "Muestra “Solo quedan 3” en tu tienda." })}
+      </div>
+      <p class="ui-note full" data-visibility-note hidden>Oculta, su enlace muestra que no está disponible. Publicar un diseño desde YAPI la vuelve visible.</p>
+    </div>
+  </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsContactTitle">
-    <div class="editor-section-head"><h3 id="storeSettingsContactTitle">Contacto</h3><p>Se muestra al cliente en el comprobante y el seguimiento.</p></div>
+    ${uiHead({ icon: "at-sign", id: "storeSettingsContactTitle", title: "Contacto", text: "Lo ve el cliente en su comprobante." })}
     <div class="store-editor-section-body">
     <div><label for="storeContactEmailInput">Correo de soporte (opcional)</label><input id="storeContactEmailInput" name="contactEmail" type="email" placeholder="soporte@mitienda.bo"></div>
     <div class="full">
       <label>Enlaces de la tienda (opcional)</label>
-      <p class="faint" style="margin:0 0 8px">Agrega Instagram, TikTok, WhatsApp, un catálogo u otro destino útil.</p>
+      <p class="faint" style="margin:0 0 8px">Instagram, TikTok, WhatsApp o tu catálogo.</p>
       <div data-links></div>
       <button type="button" class="ghost" data-link-add>+ Agregar enlace</button>
     </div>
     </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsPoliciesTitle">
-    <div class="editor-section-head"><h3 id="storeSettingsPoliciesTitle">Políticas para tus clientes</h3><p>Aparecen junto al botón de compra, en el carrito y al pie de tu tienda. Escríbelas con tus condiciones reales; YAPI no las inventa.</p></div>
+    ${uiHead({ icon: "file-text", id: "storeSettingsPoliciesTitle", title: "Políticas para tus clientes", text: "Junto al botón de compra. Usa tus condiciones reales." })}
     <div class="store-editor-section-body">
     ${POLICY_FIELDS.map(([key, label, hint]) => `<div class="full"><label for="storePolicy-${key}">${label} (opcional)</label><textarea id="storePolicy-${key}" data-policy="${key}" rows="4" maxlength="6000" placeholder="${hint}"></textarea></div>`).join("")}
     </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsLocationsTitle">
-    <div class="editor-section-head"><h3 id="storeSettingsLocationsTitle">Ubicaciones e inventario</h3><p>Agrega sucursales, define si permiten retiro o entrega y reparte el stock real de cada producto.</p></div>
+    ${uiHead({ icon: "map-pin", id: "storeSettingsLocationsTitle", title: "Ubicaciones e inventario", text: "Sucursales, retiro, entrega y stock por lugar." })}
     <div class="store-editor-section-body">
     <div class="full store-locations-editor">
       <div id="storeLocationsList"></div>
       <button class="ghost" id="storeLocationAdd" type="button">Agregar ubicación</button>
-      <p class="faint" style="margin:9px 0 0">El stock de todas las ubicaciones se convierte en el stock total del producto. “Sin límite” mantiene inventario ilimitado en esa sucursal.</p>
+      <p class="faint" style="margin:9px 0 0">El stock total suma todas tus ubicaciones.</p>
     </div>
     </div>
   </section>
@@ -217,6 +218,9 @@ export function mountStoreSettings(root, deps) {
         : "No se crea un cobro ni se solicita NIT. pagosYa enviará por correo los datos y el carrito del interesado.";
   }
 
+  /** The publishing caveat matters only while the store is hidden. */
+  const syncVisibility = () => { $("[data-visibility-note]").hidden = visibilityInput.checked; };
+
   function renderLogo() {
     logoPreview.hidden = !logoUrl;
     logoPreview.src = logoUrl ? deps.assetUrl(logoUrl) : EMPTY_IMAGE;
@@ -240,11 +244,11 @@ export function mountStoreSettings(root, deps) {
     const items = activeProducts();
     locationsList.innerHTML = locations.map((location, index) => {
       const id = escapeHtml(location.id);
-      const hours = (location.openingHours || defaultHours()).map((entry) => `<div class="store-location-hours-row"><span>${DAYS[entry.day]}</span><input type="time" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="open" value="${escapeHtml(entry.open)}" ${entry.closed ? "disabled" : ""} aria-label="Apertura ${DAYS[entry.day]}"><input type="time" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="close" value="${escapeHtml(entry.close)}" ${entry.closed ? "disabled" : ""} aria-label="Cierre ${DAYS[entry.day]}"><label><input type="checkbox" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="closed" ${entry.closed ? "checked" : ""}> Cerrado</label></div>`).join("");
+      const hours = (location.openingHours || defaultHours()).map((entry) => `<div class="store-location-hours-row"><span>${DAYS[entry.day]}</span><input type="time" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="open" value="${escapeHtml(entry.open)}" ${entry.closed ? "disabled" : ""} aria-label="Apertura ${DAYS[entry.day]}"><input type="time" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="close" value="${escapeHtml(entry.close)}" ${entry.closed ? "disabled" : ""} aria-label="Cierre ${DAYS[entry.day]}">${uiSwitch({ label: "Cerrado", attrs: `data-location-hours-day="${Number(entry.day)}" data-location-hours-field="closed" aria-label="Cerrado el ${DAYS[entry.day].toLowerCase()}"`, checked: entry.closed })}</div>`).join("");
       const stock = items.length ? items.map((product) => {
         const value = location.inventory?.[product.id];
         const unlimited = value === null;
-        return `<div class="store-location-stock-row"><strong>${escapeHtml(product.name)}</strong><input type="number" min="0" max="999999" step="1" data-location-stock="${escapeHtml(product.id)}" value="${unlimited ? "" : Number(value) || 0}" ${unlimited ? "disabled" : ""} aria-label="Stock de ${escapeHtml(product.name)} en ${escapeHtml(location.name || `ubicación ${index + 1}`)}"><label><input type="checkbox" data-location-unlimited="${escapeHtml(product.id)}" ${unlimited ? "checked" : ""}> Sin límite</label></div>`;
+        return `<div class="store-location-stock-row"><strong>${escapeHtml(product.name)}</strong><input type="number" min="0" max="999999" step="1" data-location-stock="${escapeHtml(product.id)}" value="${unlimited ? "" : Number(value) || 0}" ${unlimited ? "disabled" : ""} aria-label="Stock de ${escapeHtml(product.name)} en ${escapeHtml(location.name || `ubicación ${index + 1}`)}">${uiSwitch({ label: "Sin límite", attrs: `data-location-unlimited="${escapeHtml(product.id)}" aria-label="Sin límite de ${escapeHtml(product.name)}"`, checked: unlimited })}</div>`;
       }).join("") : '<p class="faint" style="margin:0">Agrega productos para repartir su stock.</p>';
       return `<article class="store-location-editor-card" data-location-id="${id}">
       <div class="store-location-editor-head"><strong>Ubicación ${index + 1}</strong><button class="ghost store-location-remove" type="button">Quitar</button></div>
@@ -254,9 +258,9 @@ export function mountStoreSettings(root, deps) {
         <div class="full"><label for="store-location-${id}-map">Mapa para insertar (opcional)</label><textarea id="store-location-${id}-map" data-location-field="mapEmbedUrl" rows="3" maxlength="2400" spellcheck="false" aria-describedby="locationMapHelp-${id} locationMapError-${id}" aria-errormessage="locationMapError-${id}" placeholder="Pega el código &lt;iframe&gt; de Google Maps o su URL de inserción">${escapeHtml(location.mapEmbedUrl)}</textarea><p class="faint" id="locationMapHelp-${id}" style="margin:7px 0 0">Google Maps: Compartir → Insertar un mapa → Copiar HTML. También aceptamos OpenStreetMap.</p><p class="field-validation-error" id="locationMapError-${id}" role="alert" hidden></p></div>
         <div class="full"><label for="store-location-${id}-highlight">Texto destacado (opcional)</label><input id="store-location-${id}-highlight" data-location-field="highlight" maxlength="140" value="${escapeHtml(location.highlight)}" placeholder="A media cuadra de la plaza principal"></div>
         <div class="full"><label for="store-location-${id}-description">Descripción (opcional)</label><textarea id="store-location-${id}-description" data-location-field="description" rows="3" maxlength="600" placeholder="Horarios, estacionamiento y acceso.">${escapeHtml(location.description)}</textarea></div>
-        <div class="full store-location-capabilities">
-          <span class="checkbox-row"><input id="store-location-${id}-pickup" type="checkbox" data-location-field="pickupEnabled" ${location.pickupEnabled ? "checked" : ""}><label for="store-location-${id}-pickup" style="margin:0">Permite retiro</label></span>
-          <span class="checkbox-row"><input id="store-location-${id}-delivery" type="checkbox" data-location-field="deliveryEnabled" ${location.deliveryEnabled ? "checked" : ""}><label for="store-location-${id}-delivery" style="margin:0">Permite entrega desde aquí</label></span>
+        <div class="full ui-options">
+          ${uiOption({ icon: "store", attrs: `id="store-location-${id}-pickup" data-location-field="pickupEnabled"`, checked: location.pickupEnabled, title: "Permite retiro", text: "El cliente recoge aquí." })}
+          ${uiOption({ icon: "truck", attrs: `id="store-location-${id}-delivery" data-location-field="deliveryEnabled"`, checked: location.deliveryEnabled, title: "Permite entrega desde aquí", text: "Despachas pedidos desde aquí." })}
         </div>
         <div class="store-location-hours-editor"><h5>Horario de atención</h5>${hours}</div>
         <div class="store-location-inventory"><h5>Stock en esta ubicación</h5><p class="faint">El cliente solo podrá elegirla si alcanza para todo su carrito.</p><div class="store-location-stock-list">${stock}</div></div>
@@ -330,7 +334,10 @@ export function mountStoreSettings(root, deps) {
     return "";
   }
 
-  form.addEventListener("change", (/** @type {any} */ event) => { if (event.target.name === "storeCheckoutMode") syncMode(); });
+  form.addEventListener("change", (/** @type {any} */ event) => {
+    if (event.target.name === "storeCheckoutMode") syncMode();
+    if (event.target === visibilityInput) syncVisibility();
+  });
   // Any edit, including list buttons below, marks the form so a background refresh keeps it.
   for (const type of ["input", "change", "click"]) form.addEventListener(type, (/** @type {any} */ event) => {
     if (type !== "click" || event.target.closest("[data-link-add], .link-remove, #storeLocationAdd, .store-location-remove, [data-logo-remove]")) { dirty = true; syncActions(); }
@@ -486,7 +493,7 @@ export function mountStoreSettings(root, deps) {
       seedInventory();
       locationsEdited = false; dirty = false; syncActions();
       showError(""); statusEl.textContent = "";
-      syncMode(); renderLogo(); renderLinks(); renderLocations();
+      syncMode(); syncVisibility(); renderLogo(); renderLinks(); renderLocations();
     },
     refreshRequirement: syncMode,
   };

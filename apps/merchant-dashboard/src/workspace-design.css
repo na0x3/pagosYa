@@ -216,31 +216,24 @@ body.is-logged-in .marketing-tabs button[aria-pressed=true]{background:var(--pg-
 /* Ajustes: one page with tabs. Sections sit flat on the page, separated by a hairline, with the heading on
    the left and the fields on the right; no boxes inside boxes. */
 body.is-logged-in .settings-page { padding: 0 28px 4px; border: 1px solid var(--pg-border); border-radius: 14px; background: var(--pg-surface); }
-@media (max-width: 860px) { body.is-logged-in .settings-page { padding: 0 16px 4px; } body.is-logged-in .settings-page .settings-tabs { margin: 0 -16px; padding: 0 8px; } }
-body.is-logged-in .settings-page .settings-tabs { margin: 0 -28px; padding: 0 16px; }
-body.is-logged-in .settings-tabs { display: flex; gap: 2px; margin: 0; border-bottom: 1px solid var(--pg-border); overflow-x: auto; scrollbar-width: none; }
-body.is-logged-in .settings-tabs [role="tab"] { flex: none; width: auto; min-height: 44px; margin: 0 0 -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; box-shadow: none; color: var(--pg-text-muted); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-body.is-logged-in .settings-tabs [role="tab"]:hover { color: var(--pg-text); }
-body.is-logged-in .settings-tabs [role="tab"][aria-selected="true"] { border-bottom-color: var(--pg-text); color: var(--pg-text); }
-body.is-logged-in .settings-tabs [role="tab"]:focus-visible { outline: 2px solid var(--pg-text); outline-offset: -3px; }
+@media (max-width: 860px) { body.is-logged-in .settings-page { padding: 0 16px 4px; } }
 body.is-logged-in [data-settings-panel] { padding-top: 24px; }
 body.is-logged-in [data-settings-panel][hidden] { display: none; }
 body.is-logged-in .settings-embed { display: block; width: 100%; min-height: 360px; border: 0; background: transparent; }
 
 body.is-logged-in .store-settings-form { display: block; }
-body.is-logged-in .store-editor-section { display: grid; grid-template-columns: minmax(180px, 250px) minmax(0, 1fr); gap: 16px 40px; min-width: 0; padding: 28px 0; border-top: 1px solid var(--pg-border); }
+body.is-logged-in .store-editor-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; min-width: 0; padding: 24px 0; border-top: 1px solid var(--pg-border); }
 body.is-logged-in .store-editor-section:first-child { padding-top: 4px; border-top: 0; }
 body.is-logged-in .editor-section-head h3 { margin: 0 0 6px; color: var(--pg-text); font-size: 15px; letter-spacing: -.01em; }
 body.is-logged-in .editor-section-head p { margin: 0; color: var(--pg-text-muted); font-size: 13px; line-height: 1.55; }
-body.is-logged-in .store-editor-section-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start; min-width: 0; }
+body.is-logged-in .store-editor-section-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start; min-width: 0; padding-left: 50px; }
+@media (max-width: 699px) { body.is-logged-in .store-editor-section-body { grid-template-columns: minmax(0, 1fr); padding-left: 0; } }
 body.is-logged-in .store-editor-section-body > div { display: flex; flex-direction: column; min-width: 0; }
-body.is-logged-in .store-editor-section-body > :is(.full, fieldset) { grid-column: 1 / -1; }
+body.is-logged-in .store-editor-section-body > :is(.full, fieldset, .ui-options) { grid-column: 1 / -1; }
+body.is-logged-in .store-editor-section-body > div.ui-options { display: grid; }
 /* The section heading already says what this is; the legend stays for screen readers. */
+body.is-logged-in .store-conversion-settings { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
 body.is-logged-in .store-conversion-settings > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-body.is-logged-in .store-conversion-settings .visual-conversion-options { grid-template-columns: 1fr; gap: 10px; }
-body.is-logged-in .store-conversion-settings .visual-conversion-option { min-height: 0; padding: 14px 16px; border-width: 1px; border-radius: 10px; }
-body.is-logged-in .store-conversion-settings .visual-conversion-option:has(input:checked) { border-color: var(--pg-text); background: var(--pg-surface); box-shadow: inset 0 0 0 1px var(--pg-text); }
-body.is-logged-in .store-conversion-settings .checkbox-row { margin-top: 6px; }
 
 body.is-logged-in .store-editor-section-body > .store-settings-logo { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; text-align: left; }
 body.is-logged-in .store-logo-frame { display: grid; place-items: center; flex: none; width: 56px; height: 56px; overflow: hidden; border: 1px dashed var(--pg-border-strong, var(--pg-border)); border-radius: 10px; background: var(--pg-surface); color: var(--pg-text-muted); font-size: 11px; }

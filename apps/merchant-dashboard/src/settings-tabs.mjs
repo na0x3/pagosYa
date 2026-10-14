@@ -1,8 +1,12 @@
+import { icon } from "./icons.mjs";
+
 /** Ajustes is one page with tabs. General is the dashboard's own; Marca, Envíos y retiro and Dominio web are
  * the Studio's panels, drawn inline in a same-origin frame that grows with its content. The store's emails
  * moved to Correos y marketing › Correos on 2026-10-13. */
 export const SETTINGS_TABS = ["general", "brand", "shipping", "domain"];
 const STUDIO_SECTIONS = ["brand", "shipping", "domain"];
+/** @type {Record<string, string>} */
+const TAB_ICONS = { general: "settings", brand: "palette", shipping: "truck", domain: "globe" };
 
 /** @param {string} storeId @param {string} section */
 export function settingsEmbedUrl(storeId, section) {
@@ -16,6 +20,10 @@ export function settingsEmbedUrl(storeId, section) {
  */
 export function mountSettingsTabs(root, deps) {
   const tabs = /** @type {HTMLElement[]} */ ([...root.querySelectorAll("[data-settings-tab]")]);
+  for (const button of tabs) {
+    const name = TAB_ICONS[button.dataset.settingsTab || ""];
+    if (name && !button.querySelector("svg")) button.insertAdjacentHTML("afterbegin", icon(name, { size: 16 }));
+  }
   const frame = /** @type {HTMLIFrameElement | null} */ (root.querySelector("iframe.settings-embed"));
   let current = "general";
 

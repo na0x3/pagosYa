@@ -1058,6 +1058,46 @@ test("WhatsApp orders need a destination number before the store is saved", asyn
   expect(requests.find((entry) => entry.method === "PATCH").body).toMatchObject({ checkoutMode: "whatsapp", contactPhone: "+591 71234567" });
 });
 
+test("Ajustes options are icon switches and cards that still work by keyboard", async ({ page }) => {
+  const stores = [store("store_1", "Primera")];
+  const requests = await openDashboard(page, stores, settingsResponder(stores));
+  await navigateDashboard(page, "store-settings");
+  await expect(page.locator("#storeSettingsRoot .ui-head svg")).toHaveCount(6);
+  await expect(page.locator("#storeSettingsSection [data-settings-tab] svg")).toHaveCount(4);
+
+  const lowStock = page.getByRole("switch", { name: /Mostrar avisos de pocas unidades/ });
+  await lowStock.uncheck();
+  await lowStock.focus();
+  await page.keyboard.press("Space");
+  await expect(lowStock).toBeChecked();
+
+  // The publishing caveat shows only while the store is hidden.
+  const visibility = page.getByRole("switch", { name: /Tienda visible al público/ });
+  const note = page.locator("[data-visibility-note]");
+  await visibility.uncheck();
+  await expect(note).toBeVisible();
+  await visibility.check();
+  await expect(note).toBeHidden();
+
+  await page.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(page.locator("#info")).toHaveText("Datos de la tienda guardados.");
+  expect(requests.find((entry) => entry.method === "PATCH").body).toMatchObject({ showLowStockToCustomers: true, publicVisibility: true });
+});
+
+test("Ajustes fits a phone without sideways scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const stores = [store("store_1", "Primera")];
+  await openDashboard(page, stores, settingsResponder(stores));
+  await navigateDashboard(page, "store-settings");
+  await expect(page.getByRole("radio", { name: /Captar interesados/ })).toBeAttached();
+  await expect(page.getByRole("switch", { name: /Tienda visible al público/ })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  if (process.env.SETTINGS_SHOTS_DIR) {
+    await page.locator("#storeSettingsCheckoutTitle").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${process.env.SETTINGS_SHOTS_DIR}/ajustes-phone.png` });
+  }
+});
+
 test("a location map must be an embeddable Google Maps or OpenStreetMap URL", async ({ page }) => {
   const stores = [store("store_1", "Primera")];
   const products = [{ id: "product_1", storeId: "store_1", name: "Pan brioche", amount: 2800, currency: "BOB", status: "ACTIVE", stock: 7, imageUrls: [], tags: [], variants: [], extras: [] }];
@@ -1096,7 +1136,7 @@ test("a lead-only store hides NIT features until integrated payments are enabled
 
   await navigateDashboard(page, "store-settings");
   await page.getByRole("radio", { name: /Cobrar con pagosYa/ }).check();
-  await expect(page.locator(".store-conversion-note")).toHaveText("Al guardar, abriremos Facturación para pedir KYC y NIT antes de aceptar pagos.");
+  await expect(page.locator("[data-payment-requirement]")).toHaveText("Al guardar, abriremos Facturación para pedir KYC y NIT antes de aceptar pagos.");
   await page.getByRole("button", { name: "Guardar cambios" }).click();
 
   await expect(page).toHaveURL(/#dashboard-compliance$/);
