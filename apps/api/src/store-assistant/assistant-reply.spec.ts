@@ -35,8 +35,10 @@ describe('reply assembly', () => {
     expect(assembleReply({ text: 'Te paso con la tienda.', box: box({ handoff, searched: [] }), evidence: [], contactPhone: null }).reply.blocks).toContainEqual({ type: 'handoff', whatsappUrl: null, summary: 'Pregunta por factura.' });
   });
 
-  it('allows an amount the buyer wrote', () => {
-    expect(assembleReply({ text: 'Con tus Bs 100 alcanza.', box: box(), evidence: ['tengo Bs 100'], contactPhone: null }).guarded).toBe(false);
+  it('does not accept an amount only the buyer wrote (the buyer message is never evidence)', () => {
+    const { guarded, offending } = assembleReply({ text: 'Con tus Bs 100 alcanza.', box: box(), evidence: [], contactPhone: null });
+    expect(guarded).toBe(true);
+    expect(offending).toEqual(['Bs 100']);
   });
 
   it('matches product names on whole words only', () => {

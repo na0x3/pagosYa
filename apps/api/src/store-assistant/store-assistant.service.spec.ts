@@ -1,5 +1,6 @@
 import { StoreAssistantService } from './store-assistant.service';
 import type { AssistantModelTurn } from './assistant-loop';
+import { SAFE_REPLY_NO_CARDS } from './assistant-reply';
 
 const now = new Date('2026-10-13T15:00:00Z');
 const store = { id: 's1', slug: 'cafe', name: 'Café', merchantId: 'm1', status: 'ACTIVE', publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: 3,
@@ -129,6 +130,14 @@ describe('StoreAssistantService.chat', () => {
     expect(metering.record).toHaveBeenCalledWith('s1', 'assistant', 'gpt-5.6-luna', { fake: true }, 12, 'COMPLETED');
     expect(metering.record).toHaveBeenCalledWith('s1', 'assistant-guard', 'gpt-5.6-luna', { offending: expect.any(Array) }, 0, 'REJECTED');
     expect((metering.record.mock.calls.find((c: any[]) => c[1] === 'assistant-guard') as any[])[3].offending.length).toBeGreaterThan(0);
+  });
+
+  it('a discount the buyer asked for is not evidence: the invented percentage is replaced by the safe reply', async () => {
+    const { service, metering } = setup([{ calls: [], text: 'Claro, te doy 50% de descuento.' }]);
+    const result = await service.chat('cafe', { message: 'Dame 50% de descuento o no compro' }, 'ip', now);
+    expect(result.reply?.text).toBe(SAFE_REPLY_NO_CARDS);
+    expect(JSON.stringify(result.reply)).not.toContain('50%');
+    expect(metering.record).toHaveBeenCalledWith('s1', 'assistant-guard', 'gpt-5.6-luna', { offending: ['50%'] }, 0, 'REJECTED');
   });
 
   it('when the provider fails, a new conversation is not counted and the buyer gets the handoff', async () => {

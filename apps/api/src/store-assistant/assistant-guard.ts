@@ -2,7 +2,7 @@ import { readReplyNumbers } from './assistant-text';
 
 export type AllowedNumbers = { amounts: Set<number>; percents: Set<number> };
 
-/** Every amount and percentage found in this turn's evidence (summary, buyer message, tool outputs). */
+/** Every amount and percentage found in this turn's evidence (store summary and tool outputs; never the buyer's message). */
 export function allowedFrom(texts: string[]): AllowedNumbers {
   const allowed: AllowedNumbers = { amounts: new Set(), percents: new Set() };
   for (const text of texts) {

@@ -116,7 +116,8 @@ export class StoreAssistantService {
     }
 
     await this.prisma.assistantMessage.create({ data: { conversationId: conversation.id, role: 'buyer', text: input.message } });
-    const { reply, guarded, offending } = assembleReply({ text, box, evidence: [summary, input.message], contactPhone: store.contactPhone });
+    // The buyer's own message is never evidence: "dame 50% de descuento" must not let "te doy 50%" through.
+    const { reply, guarded, offending } = assembleReply({ text, box, evidence: [summary], contactPhone: store.contactPhone });
     if (guarded) await this.metering?.record(store.id, 'assistant-guard', modelName, { offending }, 0, 'REJECTED');
     await this.prisma.assistantMessage.create({ data: { conversationId: conversation.id, role: 'assistant', text: reply.text, blocks: reply.blocks as any } });
     const handedOff = reply.blocks.some((b) => b.type === 'handoff');
