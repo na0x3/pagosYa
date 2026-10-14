@@ -5,7 +5,7 @@ import { StructuredCompletionService } from '../ai/structured-completion';
 import { PrismaService } from '../prisma/prisma.service';
 import { money } from '../store-knowledge/store-knowledge';
 import { storePolicies } from '../stores/store-presentation';
-import { withAssistantPrivacy } from './assistant-privacy';
+import { ASSISTANT_PRIVACY_PARAGRAPH, withAssistantPrivacy } from './assistant-privacy';
 import { buildAssistantSummary } from './assistant-summary';
 import { maskContact } from './assistant-text';
 import { AssistantUsage, PREVIEW_ALLOWANCE } from './assistant-usage';
@@ -56,10 +56,12 @@ export class StoreAssistantAdminService {
       ...(dto.formality !== undefined && { formality: dto.formality }),
       ...(dto.notes !== undefined && { notes: dto.notes.trim() }),
     };
-    const row = await this.prisma.storeAssistant.upsert({ where: { storeId }, create: { storeId, ...data }, update: data });
-    if (dto.enabled !== undefined) {
-      await this.prisma.store.update({ where: { id: storeId }, data: { policies: withAssistantPrivacy(storePolicies(store.policies), row.enabled) as Prisma.InputJsonValue } });
+    const policies = dto.enabled === undefined ? null : withAssistantPrivacy(storePolicies(store.policies), dto.enabled);
+    if (dto.enabled === true && !policies?.privacy?.includes(ASSISTANT_PRIVACY_PARAGRAPH)) {
+      throw new BadRequestException('Tu política de privacidad es demasiado larga para agregar el aviso del asistente. Acórtala para activarlo.');
     }
+    await this.prisma.storeAssistant.upsert({ where: { storeId }, create: { storeId, ...data }, update: data });
+    if (policies) await this.prisma.store.update({ where: { id: storeId }, data: { policies: policies as Prisma.InputJsonValue } });
     return this.view(merchantId, storeId, now);
   }
 
@@ -113,6 +115,7 @@ export class StoreAssistantAdminService {
     await this.owned(merchantId, storeId);
     const row = await this.prisma.assistantUnanswered.findFirst({ where: { id, storeId } });
     if (!row) throw new NotFoundException('Pregunta no encontrada');
+    if (row.status !== 'open') throw new BadRequestException('Esta pregunta ya fue atendida.');
     if (dto.action === 'teach') {
       const answer = dto.answer?.trim();
       if (!answer) throw new BadRequestException('Escribe la respuesta.');

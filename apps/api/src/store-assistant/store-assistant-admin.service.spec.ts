@@ -1,3 +1,5 @@
+import { AssistantOpsController } from './assistant-ops.controller';
+import { ASSISTANT_PRIVACY_PARAGRAPH } from './assistant-privacy';
 import { StoreAssistantAdminService } from './store-assistant-admin.service';
 
 const now = new Date('2026-10-13T15:00:00Z');
@@ -42,7 +44,7 @@ describe('StoreAssistantAdminService', () => {
   it('teaching an answer appends it to the notes and marks the question taught', async () => {
     const { service, prisma } = setup({
       storeAssistant: { findUnique: jest.fn().mockResolvedValue(row({ notes: 'Tostamos los martes.' })), upsert: jest.fn(async ({ update }: any) => row(update)) },
-      assistantUnanswered: { findFirst: jest.fn().mockResolvedValue({ id: 'u1', storeId: 's1', question: 'dan factura' }), update: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      assistantUnanswered: { findFirst: jest.fn().mockResolvedValue({ id: 'u1', storeId: 's1', question: 'dan factura', status: 'open' }), update: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     });
     await service.unanswered('m1', 's1', 'u1', { action: 'teach', answer: 'Sí, con NIT.' }, now);
     expect(prisma.storeAssistant.upsert.mock.calls[0][0].update.notes).toBe('Tostamos los martes.\n\nPregunta: dan factura\nRespuesta: Sí, con NIT.');
@@ -61,5 +63,33 @@ describe('StoreAssistantAdminService', () => {
   it('masks contact details in the conversation list', async () => {
     const { service } = setup({ assistantConversation: { findMany: jest.fn().mockResolvedValue([{ id: 'c1', startedAt: now, buyerMessages: 2, addedToCart: true, handedOff: false, messages: [{ text: 'mi correo es ana@mail.com' }] }]) } });
     expect((await service.conversations('m1', 's1')).conversations[0].firstQuestion).toBe('mi correo es a***@mail.com');
+  });
+
+  const storeWith = (privacy: string) => ({ store: { findFirst: jest.fn().mockResolvedValue({ id: 's1', merchantId: 'm1', publishedSourceRevision: 2, policies: { privacy } }), update: jest.fn() } });
+
+  it('refuses to switch on when the privacy policy has no room for the notice', async () => {
+    const { service, prisma } = setup(storeWith('x'.repeat(5990)));
+    await expect(service.save('m1', 's1', { enabled: true }, now)).rejects.toThrow('Tu política de privacidad es demasiado larga');
+    expect(prisma.storeAssistant.upsert).not.toHaveBeenCalled();
+    expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+
+  it('switching off removes the privacy paragraph', async () => {
+    const { service, prisma } = setup(storeWith(`Cuidamos tus datos.\n\n${ASSISTANT_PRIVACY_PARAGRAPH}`));
+    await service.save('m1', 's1', { enabled: false }, now);
+    expect(prisma.store.update.mock.calls[0][0].data.policies.privacy).toBe('Cuidamos tus datos.');
+  });
+
+  it('only acts on an open question', async () => {
+    const { service, prisma } = setup({ assistantUnanswered: { findFirst: jest.fn().mockResolvedValue({ id: 'u1', storeId: 's1', question: 'q', status: 'taught' }), update: jest.fn(), findMany: jest.fn() } });
+    await expect(service.unanswered('m1', 's1', 'u1', { action: 'teach', answer: 'Sí' }, now)).rejects.toThrow('Esta pregunta ya fue atendida.');
+    expect(prisma.storeAssistant.upsert).not.toHaveBeenCalled();
+    expect(prisma.assistantUnanswered.update).not.toHaveBeenCalled();
+  });
+
+  it('ops cap answers 404 for an unknown store', async () => {
+    const prisma: any = { store: { findUnique: jest.fn().mockResolvedValue(null) }, storeAssistant: { upsert: jest.fn() } };
+    await expect(new AssistantOpsController(prisma).cap('nope', { monthlyCap: 10 })).rejects.toThrow('Tienda no encontrada');
+    expect(prisma.storeAssistant.upsert).not.toHaveBeenCalled();
   });
 });
