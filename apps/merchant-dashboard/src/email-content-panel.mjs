@@ -1,4 +1,5 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { uiSwitch } from "./ui-kit.mjs";
 
 /**
  * Correos y marketing › Correos › Contenido: what the merchant says in their emails. The announcement, the
@@ -39,7 +40,7 @@ export function mountEmailContent(container, deps) {
   const recommendations = () => edited("recommendations") ? state.edits.recommendations : content().recommendations?.on !== false;
 
   const restore = (item) => `Editado por ti · <button type="button" class="link" data-content-restore="${item}">restaurar</button>`;
-  const switchBox = (item) => `<label class="email-content-switch"><input type="checkbox" data-content-switch="${item}" ${on(item) ? "checked" : ""} ${state.busy ? "disabled" : ""}> en este correo</label>`;
+  const switchBox = (item) => uiSwitch({ label: "en este correo", attrs: `data-content-switch="${item}"`, checked: on(item), disabled: state.busy });
   const count = (key, value) => `<span data-content-count="${key}">${value.length}</span>/${CAPS[key]}`;
   const photos = (attr, current, autoLabel) => `<div class="email-content-photos" role="group">
     <button type="button" ${attr}="" aria-pressed="${current === ""}">${esc(autoLabel)}</button>
@@ -99,7 +100,7 @@ export function mountEmailContent(container, deps) {
         <small>${count("note", note())} · Se usa cuando no hay reseñas publicadas.${c.note ? ` · ${restore("note")}` : ""}</small></div></div>
 
       <div class="email-content-row" data-content-row="recommendations"><span class="email-content-label">Recomendaciones</span>
-        <label class="email-content-switch"><input type="checkbox" data-content-recommendations ${recommendations() ? "checked" : ""} ${off}> Mostrar productos recomendados</label>
+        ${uiSwitch({ label: "Mostrar productos recomendados", attrs: `data-content-recommendations ${off}`, checked: recommendations() })}
         ${switchBox("recommendations")}</div>
 
       <p class="email-studio-status" role="status"${state.message ? "" : " hidden"}>${esc(state.message)}</p>

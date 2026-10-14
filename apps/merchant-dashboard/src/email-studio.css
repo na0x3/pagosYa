@@ -53,8 +53,7 @@
 .email-content-row input:not([type="checkbox"]), .email-content-row textarea, .email-content-row select { width: 100%; }
 .email-content-story { display: grid; gap: 10px; }
 .email-content-story label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
-.email-content-switch { display: inline-flex; align-items: center; gap: 6px; padding-top: 9px; font-size: 13px; white-space: nowrap; cursor: pointer; }
-.email-content-switch input { width: 16px; height: 16px; margin: 0; }
+.email-content-row > .ui-inline-switch { padding-top: 9px; }
 .email-content-photos { display: flex; flex-wrap: wrap; gap: 8px; }
 .email-content-photos button { width: auto; min-height: 56px; padding: 0 12px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); color: var(--pg-text); font-size: 13px; }
 .email-content-photos button:has(img) { width: 60px; padding: 1px; overflow: hidden; }
@@ -64,7 +63,7 @@
 .email-content .link { width: auto; min-height: 0; padding: 0; border: 0; background: none; color: var(--pg-text); text-decoration: underline; font-size: inherit; }
 @media (max-width: 860px) {
   .email-content-row { grid-template-columns: minmax(0, 1fr); }
-  .email-content-label, .email-content-switch { padding-top: 0; }
+  .email-content-label, .email-content-row > .ui-inline-switch { padding-top: 0; }
 }
 
 /* The list of every store email: one bordered list per group, the switch at the end of each row. */

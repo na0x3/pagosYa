@@ -102,9 +102,9 @@ test("Correos y marketing opens on Correos and lists every store email once", as
 test("a switch saves its email, and Carrito abandonado saves its wait time", async ({ page }) => {
   const requests = await openDashboard(page, [store("store_1", "Café Illimani")], correos());
   await navigateDashboard(page, "marketing");
-  await page.getByRole("checkbox", { name: "Enviar Pedir reseña" }).click();
+  await page.getByRole("switch", { name: "Enviar Pedir reseña" }).click();
   await expect.poll(() => requests.find((r) => r.method === "PUT" && r.path === `${WORKSPACE}/templates/REVIEW_REQUEST`)?.body).toEqual({ revision: 4, enabled: true, subject: "Solicitud de reseña · {{store}}", body: "Hola, Solicitud de reseña." });
-  await expect(page.getByRole("checkbox", { name: "Enviar Pedir reseña" })).toBeChecked();
+  await expect(page.getByRole("switch", { name: "Enviar Pedir reseña" })).toBeChecked();
   await page.locator('[data-email-row="RECOVERY"]').click();
   const form = page.locator('[data-email-text-form="RECOVERY"]');
   await form.getByLabel("Horas de espera").fill("48");

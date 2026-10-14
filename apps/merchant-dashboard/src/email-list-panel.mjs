@@ -1,4 +1,5 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { uiSwitch } from "./ui-kit.mjs";
 import { mountEmailStudio } from "./email-studio-panel.mjs";
 import { EMAIL_HELP, STORE_ONLY_VARIABLES, emailListGroups, normalizeOverview, sampleText, templateDraftError, templateSaveBody } from "./email-list.mjs";
 
@@ -57,7 +58,7 @@ export function mountEmailList(container, deps) {
         <button type="button" class="email-list-open" data-email-row="${esc(row.id)}" aria-pressed="${row.id === current}"><strong>${esc(row.label)}</strong><small>${esc(row.trigger)}${row.id === "RECOVERY" && row.delayHours ? ` · ${row.delayHours} h` : ""}</small></button>
         ${row.designed
           ? '<span class="email-list-state">Siempre activo</span>'
-          : `<label class="email-list-switch"><input type="checkbox" data-email-switch="${esc(row.id)}" aria-label="Enviar ${esc(row.label)}" ${row.enabled ? "checked" : ""} ${!row.supported || state.busy ? "disabled" : ""}><span>${!row.supported ? "Por conectar" : row.enabled ? "Activo" : "Desactivado"}</span></label>`}
+          : uiSwitch({ label: !row.supported ? "Por conectar" : row.enabled ? "Activo" : "Desactivado", attrs: `data-email-switch="${esc(row.id)}" aria-label="Enviar ${esc(row.label)}"`, checked: row.enabled, disabled: !row.supported || state.busy })}
       </li>`).join("")}</ul></section>`).join("");
     list.querySelectorAll("[data-email-row]").forEach(button => button.addEventListener("click", () => select(button.dataset.emailRow)));
     list.querySelectorAll("[data-email-switch]").forEach(box => box.addEventListener("change", () => void toggle(box)));
@@ -80,7 +81,7 @@ export function mountEmailList(container, deps) {
     editor.innerHTML = `<form class="email-text-editor" data-email-text-form="${esc(row.id)}" novalidate>
       <header><h3>${esc(row.label)}</h3><p>${esc(row.trigger)}</p></header>
       ${EMAIL_HELP[row.id] ? `<p class="faint">${esc(EMAIL_HELP[row.id])}</p>` : ""}
-      <label class="email-list-switch"><input type="checkbox" name="enabled" ${draft.enabled ? "checked" : ""} ${row.supported ? off : "disabled"}> Activar este correo</label>
+      ${uiSwitch({ label: "Activar este correo", attrs: `name="enabled" ${row.supported ? off : "disabled"}`, checked: draft.enabled })}
       ${row.supported ? "" : `<p class="faint">${esc(row.trigger)}. Puedes preparar el mensaje; el envío aún no está disponible.</p>`}
       ${row.id === "RECOVERY" ? `<label>Horas de espera<input type="number" name="recoveryHours" min="1" max="168" step="1" required value="${esc(draft.recoveryHours)}" ${off}></label>` : ""}
       <label>Asunto<input name="subject" maxlength="160" required value="${esc(draft.subject)}" ${off}></label>
