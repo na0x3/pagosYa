@@ -3841,6 +3841,28 @@
     `:where(:root[data-look-surface=banded]) ${LPC} .product-detail__related{--pd-ink:var(--lk-paper);--pd-paper:var(--lk-ink);--pd-muted:color-mix(in srgb,var(--pd-ink) 70%,var(--pd-paper));--pd-line:color-mix(in srgb,var(--pd-ink) 22%,var(--pd-paper));--pd-tint:color-mix(in srgb,var(--pd-ink) 10%,var(--pd-paper));background:var(--pd-paper);color:var(--pd-ink);padding:clamp(28px,5vw,64px) clamp(16px,4vw,48px)}`,
     `:where(:root[data-look-surface=tinted]) ${LPC} .product-detail__related{background:var(--pd-tint);padding:clamp(28px,5vw,64px) clamp(16px,4vw,48px)}`,
   ];
+  /* Cards, catalog and cart. Only the kit's own cards: a YAPI-authored card ([data-custom-product]) is already the store's look. */
+  const LKC = '[data-pagosya-catalog] .menu-item:not([data-custom-product])';
+  const LOOK_CART_PHOTO = '.cart-drawer .order-item__photo';
+  const LOOK_CARD_PHOTOS = `${LKC} :is(.menu-item__image,.menu-item__image-alt)`;
+  const LOOK_EDGED = ':where(:root[data-look-edge]:not([data-look-edge=none]))';
+  const LOOK_SURFACE_CSS = [
+    ...lookHeadingRules(`:is(.commerce-page-title,[data-pagosya-catalog] .catalog-group__title,${LKC} .menu-item__copy h3,.cart-drawer__header h2)`),
+    `:where(:root[data-look-label]) :is([data-pagosya-catalog] .catalog-tabs a,${LKC} .menu-item__badge){text-transform:uppercase;letter-spacing:var(--lk-lt);font-weight:var(--lk-lw)}`,
+    `:root[data-look-rp]{--kit-photo-radius:var(--lk-rp)}`,
+    `:where(:root[data-look-rp]) :is(${LOOK_CARD_PHOTOS},${LOOK_CART_PHOTO}){border-radius:var(--lk-rp)}`,
+    `:where(:root[data-look-rc]) ${LKC}{border-radius:var(--lk-rc)}`,
+    `:where(:root[data-look-rb]) :is([data-pagosya-catalog] .catalog-tabs a,${LKC} .menu-item__badge){border-radius:var(--lk-rb)}`,
+    `${LOOK_EDGED} :is(${LKC} .menu-item__image,${LOOK_CART_PHOTO}){box-shadow:var(--lk-edge)}`,
+    `${LOOK_FILTERED} :is(${LOOK_CARD_PHOTOS},${LOOK_CART_PHOTO}){filter:var(--lk-filter);transition:filter .25s}`,
+    `@media(hover:hover){${LOOK_FILTERED} ${LKC}:hover :is(.menu-item__image,.menu-item__image-alt){filter:none}}`,
+    `${LOOK_FILTERED} ${LKC}:focus-within :is(.menu-item__image,.menu-item__image-alt){filter:none}`,
+    `:where(:root[data-look-photo=polaroid]) :is(${LKC} .menu-item__image,${LOOK_CART_PHOTO}){box-sizing:border-box;padding:6px 6px 20px;background:#fff;box-shadow:0 6px 18px -8px #0006;border-radius:2px}`,
+    `:where(:root[data-look-photo=tight]) ${LKC} .menu-item__image{object-view-box:inset(10%)}`,
+    `:where(:root[data-look-aspect]) ${LKC} .menu-item__image{aspect-ratio:var(--lk-aspect)}`,
+    `:where(:root[data-look-tilt]) ${LKC}:nth-child(odd) .menu-item__image{rotate:calc(var(--lk-tilt) * -1)}`,
+    `:where(:root[data-look-tilt]) ${LKC}:nth-child(even) .menu-item__image{rotate:var(--lk-tilt)}`,
+  ];
   if (hasDna) {
     const dnaStyle = document.createElement('style');
     dnaStyle.dataset.pagosyaKit = 'dna';
@@ -3859,7 +3881,7 @@
   if (LOOK) {
     const lookStyle = document.createElement('style');
     lookStyle.dataset.pagosyaKit = 'look';
-    lookStyle.textContent = [...LOOK_BASE_CSS, ...LOOK_PDP_CSS].join('\n');
+    lookStyle.textContent = [...LOOK_BASE_CSS, ...LOOK_PDP_CSS, ...LOOK_SURFACE_CSS].join('\n');
     document.head.append(lookStyle);
     lookFilters();
   }

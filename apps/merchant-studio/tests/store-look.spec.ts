@@ -91,3 +91,46 @@ test('duotone on a dark store maps luminance 0 to the darker colour', async ({ p
   const offsets = [values[4], values[9], values[14]];
   [0x16 / 255, 0x12 / 255, 0x0f / 255].forEach((expected, i) => expect(offsets[i]).toBeCloseTo(expected, 2));
 });
+
+const CARD_IMG = '[data-pagosya-catalog] .menu-item:not([data-custom-product]) .menu-item__image';
+
+test('catalog: page title and cards follow the headline; card photos take shape, aspect and treatment', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openKitPage(page, { path: 'productos.html', look: { ...BOLD, photo: { treatment: 'mono', aspect: 'square', tilt: 3 } } });
+  expect(await style(page, '.commerce-page-title', 'font-family')).toContain('Anton');
+  expect(await style(page, '.commerce-page-title', 'text-transform')).toBe('uppercase');
+  expect(await style(page, CARD_IMG, 'border-top-left-radius')).toBe('20px');
+  expect(await style(page, CARD_IMG, 'aspect-ratio')).toBe('1 / 1');
+  expect(await style(page, CARD_IMG, 'filter')).toBe('grayscale(1)');
+  expect(await style(page, CARD_IMG, 'box-shadow')).toMatch(/5px 5px 0px/);
+  const rotations = await page.locator(CARD_IMG).evaluateAll(els => els.slice(0, 2).map(el => getComputedStyle(el).rotate));
+  expect(rotations.map(r => Math.abs(parseFloat(r)))).toEqual([3, 3]);
+  expect(Math.sign(parseFloat(rotations[0]))).toBe(-Math.sign(parseFloat(rotations[1])));
+});
+
+test('cards return to true colour on hover and keyboard focus', async ({ page }) => {
+  await openKitPage(page, { path: 'productos.html', look: BOLD });
+  await page.locator('[data-pagosya-catalog] .menu-item').first().hover();
+  await expect.poll(() => style(page, CARD_IMG, 'filter')).toBe('none');
+  await page.mouse.move(0, 0);
+  await page.locator('[data-pagosya-catalog] .menu-item .menu-item__details').first().focus();
+  await expect.poll(() => style(page, CARD_IMG, 'filter')).toBe('none');
+});
+
+test('a YAPI-authored card keeps its own design', async ({ page }) => {
+  await openKitPage(page, { path: 'productos.html', look: BOLD });
+  const custom = await page.evaluate(() => {
+    document.querySelector('[data-pagosya-catalog]')!.insertAdjacentHTML('beforeend', '<article class="menu-item" data-custom-product><img class="menu-item__image" src="https://img.test/4.webp" alt=""></article>');
+    const img = document.querySelector('.menu-item[data-custom-product] .menu-item__image')!;
+    return { filter: getComputedStyle(img).filter, radius: getComputedStyle(img).borderTopLeftRadius };
+  });
+  expect(custom).toEqual({ filter: 'none', radius: '0px' });
+});
+
+test('cart drawer: heading follows the headline, line photos take polaroid frames', async ({ page }) => {
+  await openKitPage(page, { path: 'productos.html', cart: true, look: { ...BOLD, photo: { treatment: 'polaroid' } } });
+  await openCart(page);
+  expect(await style(page, '.cart-drawer__header h2', 'font-family')).toContain('Anton');
+  expect(await style(page, '.cart-drawer .order-item__photo', 'padding-bottom')).toBe('20px');
+  expect(await style(page, '.cart-drawer .order-item__photo', 'background-color')).toBe('rgb(255, 255, 255)');
+});
