@@ -195,3 +195,16 @@ Each step ships working on its own:
 - Kit changes reach published stores immediately, so steps 2–4 must keep the "no look, no change" test green before they merge.
 - Rebuild the pre-built Studio (`vite build --mode embedded`) to see Studio-side changes at :4323.
 - `SOURCE_PRODUCT_PRESENTATION_DIRECTION` (`source-design.ts:13`) lists four product-page styles; `conversion` is the fifth. Fix the text while touching it.
+
+## Amendments from planning (2026-10-14)
+
+1. Kit variables use the `--lk-*` prefix; attributes stay `data-look-*`. The kit already uses `--look-top`/`--look-left` for the quick-look chip.
+2. The drawn photo treatment is already saved in `frame-draw.json` as `photos`, so nothing new needs storing. Only the photo treatment is a "declared" value; the heading font is measured, because the h1 already renders the concept's font.
+3. Touch CSS is carried across chat edits by a `dna.touch: 1` marker. On a store with a design concept, `sourceRuntimeDna` re-seeds `productCss` from the concept on every save, so `KEPT_DNA` alone would lose it. New stores and redesigns never carry it.
+4. The catalog "footer band" is dropped: catalog pages already reuse the home's own footer (`withSourceCommerceDesign`).
+5. Guarded CSS parts:
+   - Catalog: `page-title`, `tabs`, `group-title`, `grid`, `empty`. The kit has no filter or sort controls.
+   - Card: `card`, `card-media`, `card-name`, `card-meta`, `card-badge`.
+   - Cart, scoped to `.cart-drawer`: `cart-head`, `cart-line`, `cart-line-media`. The drawer shell keeps its DNA shape.
+6. If the self-review call itself fails, the review stage fails as it does today and no touch is written. The store keeps layer A and the planner's `productCss`.
+7. `type.label.case` is always `upper`, because labels are detected as small uppercase runs.
