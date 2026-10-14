@@ -29,3 +29,11 @@ test("every module a served module imports is served too", () => {
   assert.ok(seen.has("/src/email-list-panel.mjs"), "the dashboard loads the Correos list");
   assert.deepEqual([...seen].filter((file) => !server.includes(`"${file}"`)), []);
 });
+
+test("every stylesheet index.html links from /src is one the dev server serves", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const server = readFileSync(new URL("../server.mjs", import.meta.url), "utf8");
+  const sheets = [...html.matchAll(/<link rel="stylesheet" href="(\/src\/[^"]+)"/g)].map((match) => match[1]);
+  assert.ok(sheets.includes("/src/ui-kit.css"), "the kit stylesheet is linked");
+  assert.deepEqual(sheets.filter((file) => !server.includes(`"${file}"`)), []);
+});

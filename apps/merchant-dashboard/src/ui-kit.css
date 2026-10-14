@@ -1,0 +1,91 @@
+/* The dashboard's shared controls: section heads, switches, option grids, choice cards, pills,
+   tabs and summary figures. Panels use these instead of their own; markup comes from ui-kit.mjs,
+   icons from icons.mjs, colours from the --pg-* tokens in calm.css. Linked last so it wins. */
+
+body.is-logged-in .ui-icon { display: block; flex: none; }
+
+/* Section head */
+body.is-logged-in .ui-head { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
+body.is-logged-in .ui-head-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); color: var(--pg-text); }
+body.is-logged-in .ui-head-text { flex: 1; min-width: 0; }
+body.is-logged-in .ui-head h3 { margin: 0 0 3px; color: var(--pg-text); font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+body.is-logged-in .ui-head p { margin: 0; color: var(--pg-text-muted); font-size: 13px; line-height: 1.5; }
+body.is-logged-in .ui-count { flex: none; align-self: center; min-width: 28px; padding: 4px 10px; border-radius: 999px; background: var(--pg-surface-raised); color: var(--pg-text); font-size: 12px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Switch: a real checkbox drawn as a pill. The knob is a gradient, so no pseudo-element is needed. */
+body.is-logged-in .ui-switch {
+  appearance: none; -webkit-appearance: none; flex: none; width: 36px; min-width: 36px; height: 20px; margin: 0; padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background-color: var(--pg-border-strong);
+  background-image: radial-gradient(circle, #fff 0 7px, transparent 7.5px);
+  background-size: 20px 20px; background-repeat: no-repeat; background-position: left center;
+  transition: background-color .16s ease, background-position .16s ease;
+}
+body.is-logged-in .ui-switch:checked { background-color: var(--pg-ink); background-position: right center; }
+body.is-logged-in .ui-switch:focus { border: 0; box-shadow: none; }
+body.is-logged-in .ui-switch:focus-visible { outline: 2px solid var(--pg-text); outline-offset: 2px; }
+body.is-logged-in .ui-switch:disabled { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { body.is-logged-in .ui-switch { transition: none; } }
+
+body.is-logged-in .ui-inline-switch { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--pg-text-muted); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+body.is-logged-in .ui-inline-switch:has(.ui-switch:disabled) { cursor: not-allowed; }
+
+/* Option grid: switch, icon, title, one line — as many across as fit, three on a desktop panel. */
+body.is-logged-in .ui-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 20px 28px; min-width: 0; }
+body.is-logged-in .ui-option { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: start; gap: 10px; margin: 0; color: var(--pg-text); font-size: 14px; font-weight: 400; cursor: pointer; }
+body.is-logged-in .ui-option:not(:has(.ui-option-icon)) { grid-template-columns: auto minmax(0, 1fr); }
+body.is-logged-in .ui-option .ui-switch { margin-top: 1px; }
+body.is-logged-in .ui-option-icon { display: flex; padding-top: 1px; color: var(--pg-text-muted); }
+body.is-logged-in .ui-option-text { display: grid; gap: 2px; min-width: 0; }
+body.is-logged-in .ui-option strong { color: var(--pg-text); font-size: 14px; font-weight: 600; }
+body.is-logged-in .ui-option small { color: var(--pg-text-muted); font-size: 12.5px; line-height: 1.45; }
+body.is-logged-in .ui-option:has(.ui-switch:disabled) { opacity: .7; cursor: not-allowed; }
+
+/* Choice cards: radios side by side; the whole card is the hit area. */
+body.is-logged-in .ui-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+body.is-logged-in .ui-choice { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; margin: 0; padding: 14px 16px; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-surface); color: var(--pg-text); font-size: 14px; font-weight: 400; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+body.is-logged-in .ui-choice:not(:has(.ui-choice-icon)) { grid-template-columns: minmax(0, 1fr); }
+body.is-logged-in .ui-choice:hover { border-color: var(--pg-border-strong); }
+body.is-logged-in .ui-choice input { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+body.is-logged-in .ui-choice:has(input:checked) { border-color: var(--pg-text); box-shadow: inset 0 0 0 1px var(--pg-text); }
+body.is-logged-in .ui-choice:has(input:focus-visible) { outline: 2px solid var(--pg-text); outline-offset: 2px; }
+body.is-logged-in .ui-choice-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--pg-surface-raised); color: var(--pg-text); }
+body.is-logged-in .ui-choice-text { display: grid; gap: 2px; min-width: 0; }
+body.is-logged-in .ui-choice strong { font-size: 14px; font-weight: 600; }
+body.is-logged-in .ui-choice small { color: var(--pg-text-muted); font-size: 12.5px; line-height: 1.45; }
+
+/* Pills: small radios for presets. */
+body.is-logged-in .ui-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+body.is-logged-in .ui-pill { position: relative; margin: 0; }
+body.is-logged-in .ui-pill input { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+body.is-logged-in .ui-pill span { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--pg-border); border-radius: 999px; background: var(--pg-surface); color: var(--pg-text); font-size: 14px; font-weight: 500; }
+body.is-logged-in .ui-pill:hover span { border-color: var(--pg-border-strong); }
+body.is-logged-in .ui-pill input:checked + span { border-color: var(--pg-ink); background: var(--pg-ink); color: #fff; }
+body.is-logged-in .ui-pill input:focus-visible + span { outline: 2px solid var(--pg-text); outline-offset: 2px; }
+
+/* Tabs: a grey track with the selected tab raised in white; an optional icon and count. */
+body.is-logged-in .ui-tabs { display: inline-flex; gap: 2px; max-width: 100%; margin: 0; padding: 4px; border: 0; border-radius: 12px; background: var(--pg-surface-raised); overflow-x: auto; scrollbar-width: none; }
+body.is-logged-in .ui-tabs::-webkit-scrollbar { display: none; }
+body.is-logged-in .ui-tab { display: inline-flex; align-items: center; gap: 8px; flex: none; width: auto; min-height: 36px; margin: 0; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; box-shadow: none; color: var(--pg-text-muted); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+body.is-logged-in .ui-tab:hover { color: var(--pg-text); }
+body.is-logged-in .ui-tab[aria-selected="true"] { background: var(--pg-surface); color: var(--pg-text); box-shadow: 0 1px 2px rgb(24 24 27 / .08), 0 0 0 1px var(--pg-border); }
+body.is-logged-in .ui-tab:focus-visible { outline: 2px solid var(--pg-text); outline-offset: 2px; }
+body.is-logged-in .ui-tab .ui-icon { width: 16px; height: 16px; }
+body.is-logged-in .ui-tab > span { min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--pg-accent-soft); color: var(--pg-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+body.is-logged-in .ui-tab[aria-selected="true"] > span { background: var(--pg-surface-raised); color: var(--pg-text); }
+
+/* Summary figures */
+body.is-logged-in .ui-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; flex: 1; min-width: 0; margin: 0; }
+body.is-logged-in .ui-stat { min-width: 0; padding: 14px 16px; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-surface); }
+body.is-logged-in .ui-stat dt { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--pg-text-muted); font-size: 13px; font-weight: 500; }
+body.is-logged-in .ui-stat dt .ui-icon { color: var(--pg-text-muted); }
+body.is-logged-in .ui-stat dd { display: grid; gap: 2px; margin: 8px 0 0; color: var(--pg-text); font-size: 22px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+body.is-logged-in .ui-stat dd > span { display: block; }
+body.is-logged-in .ui-stat dd small, body.is-logged-in .ui-stat dd .is-extra { color: var(--pg-text-muted); font-size: 12px; font-weight: 500; letter-spacing: 0; line-height: 1.35; }
+body.is-logged-in .ui-stat.is-warning dd { color: var(--pg-warning); }
+body.is-logged-in .ui-stat.is-good dt .ui-icon { color: var(--pg-success); }
+body.is-logged-in .ui-stat.is-attention { border-color: var(--pg-text); box-shadow: inset 0 0 0 1px var(--pg-text); }
+
+/* A grey note for a caveat that only applies right now. */
+body.is-logged-in .ui-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--pg-surface-raised); color: var(--pg-text-muted); font-size: 13px; line-height: 1.5; }
+body.is-logged-in .ui-note[hidden] { display: none; }
