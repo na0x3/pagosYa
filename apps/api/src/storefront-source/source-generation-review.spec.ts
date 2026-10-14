@@ -13,6 +13,10 @@ import { captureHeaderCovers } from './design-engine/header-clickable';
 jest.mock('./store-look-measure', () => ({ ...jest.requireActual('./store-look-measure'), measureStoreLook: jest.fn().mockResolvedValue(null) }));
 import { measureStoreLook } from './store-look-measure';
 
+jest.mock('./product-theme-check', () => ({ ...jest.requireActual('./product-theme-check'), checkProductThemeOnSnapshot: jest.fn().mockResolvedValue([]) }));
+jest.mock('./kit-surface-check', () => ({ checkKitSurfacesOnSnapshot: jest.fn().mockResolvedValue({ catalog: [], card: [], cart: [] }) }));
+import { checkKitSurfacesOnSnapshot } from './kit-surface-check';
+
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
 // The review renders the draft in Chromium; unit tests exercise what the service does with the shots.
@@ -279,5 +283,57 @@ describe('one look per store: measured at every save', () => {
     config.set('app.yapiLookMeasure', false);
     await service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
     expect(measureStoreLook).not.toHaveBeenCalled();
+  });
+});
+
+describe('one look per store: YAPI touches the kit pages in the review stage', () => {
+  let service: SourceGenerationService, projects: any, config: any;
+  const configOf = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  const TOUCH = { product: '', catalog: '', card: '[data-part="card-media"]{transform:rotate(-2deg)}', cart: '', notes: ['Tarjetas inclinadas como en la portada.'] };
+  const NO_EDITS = { label: 'Café', notes: [], edits: [] };
+  const respondWith = (review: unknown, touch: unknown) => async (_url: unknown, init: any) => {
+    const name = JSON.parse(init.body).text.format.name;
+    return name === 'storefront_self_review' ? answer(review) : name === 'storefront_kit_touch' ? answer(touch) : answer({ label: 'Café', files: files(), products: [] });
+  };
+  const run = () => service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+  beforeEach(() => {
+    ({ service, projects, config } = setup());
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    config.set('app.yapiKitTouch', true);
+    (checkKitSurfacesOnSnapshot as jest.Mock).mockReset().mockResolvedValue({ catalog: [], card: [], cart: [] });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('saves N+1 with the touch even when the review changes nothing', async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
+    await run();
+    await eventually(() => projects.save.mock.calls.length === 2);
+    const dna = configOf(projects.save.mock.calls[1]).dna;
+    expect(dna.cardCss).toContain('rotate(-2deg)');
+    expect(dna.touch).toBe(1);
+  });
+
+  it('a surface that fails its check is dropped, and nothing left means no N+1', async () => {
+    (checkKitSurfacesOnSnapshot as jest.Mock).mockResolvedValue({ catalog: [], card: [{ control: 'add', viewport: 'mobile', reason: 'covered by another element' }], cart: [] });
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
+    await run();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    expect(projects.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('an unusable touch answer leaves revision N as the store', async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, 'not json') as any);
+    await run();
+    await new Promise(resolve => setTimeout(resolve, 3600));
+    expect(projects.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call the touch step when YAPI_KIT_TOUCH is off', async () => {
+    config.set('app.yapiKitTouch', false);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, TOUCH) as any);
+    await run();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    expect(fetchMock.mock.calls.some(c => JSON.parse((c[1] as any).body).text.format.name === 'storefront_kit_touch')).toBe(false);
   });
 });

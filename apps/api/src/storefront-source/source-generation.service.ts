@@ -12,6 +12,7 @@ import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from 
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
+import { carriedTouch, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, runKitTouch, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
@@ -128,7 +129,7 @@ import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-genera
 /** What a proposal-mode generate returns: the run now waits for the merchant to pick a card. */
 export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
 /** One provider call of a run (or of its background review), as the row's attempts record it. */
-export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
+export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review' | 'touch'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
 /** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. */
 type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
@@ -746,6 +747,8 @@ export class SourceGenerationService {
       let reviewing = false;
       /** The Sep-5 self-review, built below and started after revision N is saved. */
       let sep5Review: Sep5Review | undefined;
+      /** YAPI's guarded touches on the kit pages (spec 2026-10-14), written by the review stage or a chat request. */
+      let kitTouch: KitTouchCss | undefined;
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
       // Header controls a static edit covers (2026-10-12: Ramo Ramón's header trapped in an isolated poster, Rampa's own invisible
@@ -903,19 +906,19 @@ export class SourceGenerationService {
         const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: framePlatformHeader(frame.paragraph), hero: pickedHero, card: pickedCard };
         const prompt = sep5AuthorPrompt(authorInput);
         // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
-        const sep5Call = async (phase: 'author' | 'review', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[] } = {}) => {
+        const sep5Call = async (phase: 'author' | 'review' | 'touch', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[]; maxOutputTokens?: number; effort?: 'low' | 'medium' | 'high' } = {}) => {
           const callSignal = options.signal ?? signal;
           const attempt: SourceGenerationAttempt = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
           (options.attempts ?? attempts).push(attempt);
           let body: any = null;
           const callStarted = Date.now();
           try {
-            const allocation = budget.reserve(model, Math.ceil(text.length / 3) + 1000, SEP5_MAX_OUTPUT_TOKENS, 500);
+            const allocation = budget.reserve(model, Math.ceil(text.length / 3) + 1000, options.maxOutputTokens ?? SEP5_MAX_OUTPUT_TOKENS, 500);
             try {
               // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
               // and this one writes the entire store.
               const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([callSignal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
+                body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: options.effort ?? 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
               body = await response.json().catch(() => null);
             } finally { allocation.settle(body?.usage); }
           } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
@@ -929,6 +932,16 @@ export class SourceGenerationService {
           if (typeof body?.usage?.output_tokens === 'number') attempt.reasoningTokens = body.usage.output_tokens_details?.reasoning_tokens;
           await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
           return { attempt, body };
+        };
+        /** The touch call (spec 2026-10-14): the same metered client, a smaller answer, and one more try after 3 s when the
+         *  bridge gives no completed answer. The attempt is charged only when its CSS is kept (`used`). */
+        const touchCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: Array<{ type: 'input_image'; image_url: string; detail: 'auto' }>) => {
+          for (let tries = 0; ; tries++) {
+            const { attempt, body } = await sep5Call('touch', text, attached as typeof images, 'storefront_kit_touch', KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, { signal: run.signal, attempts: run.attempts, maxOutputTokens: KIT_TOUCH_MAX_OUTPUT_TOKENS, effort: 'medium' });
+            if ((body as { status?: string } | null)?.status === 'completed' || tries === 1) return { body, used: () => { attempt.status = 'COMPLETED'; } };
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            run.signal.throwIfAborted();
+          }
         };
         const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(sitePurpose === 'shop'), SEP5_CLIENT_TIMEOUT_MS);
         const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
@@ -976,37 +989,61 @@ export class SourceGenerationService {
         // render; the review is shown the draft once, at desktop and phone widths, with what the browser measured. The draft
         // that just passed is saved as revision N and shown first; startSep5Review runs this afterwards and saves the corrected
         // project as N+1 only if it passes the same acceptance and the store is still on N.
-        if (sep5SelfReview) {
+        // Kit touches (spec 2026-10-14 one look per store) ride the same background stage: after the review's edits, on the
+        // final home page, saved in the same N+1. A shop only: showcases have no kit pages.
+        const kitTouchOn = this.config.get<boolean>('app.yapiKitTouch') === true && sitePurpose === 'shop';
+        if (sep5SelfReview || kitTouchOn) {
           const draftFiles = authored.data.files, draftPreview = acceptedPreviewFiles;
           sep5Review = async review => {
-            // The same config a new store saves with, so the runtime renders the live catalog into the draft.
-            const config = { sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data };
-            const preview = await currentSourceRuntime({ brief: dto.brief, files: [
-              ...draftPreview.filter(file => !['config.js', 'commerce.js'].includes(file.path)),
-              { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
-              { path: 'commerce.js', content: '' },
-            ] } as unknown as SourceProjectSnapshot);
-            const { shots, facts } = await captureSep5Draft(preview, review.signal);
-            // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
-            const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
-            const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
-            const reviewed = await sep5Call('review', sep5ReviewPrompt({ ...authorInput, draft: draftFiles, measured }), shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_CLIENT_TIMEOUT_MS, review);
-            const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
-            if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${reviewed.attempt.responseStatus || 'sin estado'}${reviewed.attempt.incompleteReason ? `: ${reviewed.attempt.incompleteReason}` : ''})`);
-            this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
-            // Edits on the draft the review was shown; one that does not apply cleanly is skipped, never fatal.
-            const edited = applySep5Edits(draftFiles, result.data.edits);
-            // Nothing to change, or no edit applied: revision N stays the store and no empty «Revisión de YAPI» is saved.
-            if (edited.files.every((file, index) => file.content === draftFiles[index]?.content)) { reviewed.attempt.status = 'COMPLETED'; return null; }
-            if (!sep5ProjectIsUsable(edited.files, sitePurpose)) throw new Error(sitePurpose === 'shop' ? 'la revisión dejó el proyecto sin catálogo, carrito o estilos' : 'la revisión dejó el sitio sin su acción principal o sin estilos');
-            const kept = sep5AuthorableFiles(edited.files);
-            reviewing = true;
-            generated = { label: result.data.label.slice(0, 120) || generated.label, files: kept.files };
-            lenient = true;
-            try { await acceptCandidate(); } finally { lenient = false; }
-            await addSep5StandardPages();
-            reviewed.attempt.status = 'COMPLETED';
-            return { saveInput: await assembleSave(review.signal), notes: result.data.notes };
+            const notes: string[] = [];
+            let changed = false;
+            if (sep5SelfReview) {
+              // The same config a new store saves with, so the runtime renders the live catalog into the draft.
+              const config = { sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data };
+              const preview = await currentSourceRuntime({ brief: dto.brief, files: [
+                ...draftPreview.filter(file => !['config.js', 'commerce.js'].includes(file.path)),
+                { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
+                { path: 'commerce.js', content: '' },
+              ] } as unknown as SourceProjectSnapshot);
+              const { shots, facts } = await captureSep5Draft(preview, review.signal);
+              // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
+              const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
+              const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
+              const reviewed = await sep5Call('review', sep5ReviewPrompt({ ...authorInput, draft: draftFiles, measured }), shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_CLIENT_TIMEOUT_MS, review);
+              const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
+              if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${reviewed.attempt.responseStatus || 'sin estado'}${reviewed.attempt.incompleteReason ? `: ${reviewed.attempt.incompleteReason}` : ''})`);
+              this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
+              // Edits on the draft the review was shown; one that does not apply cleanly is skipped, never fatal.
+              const edited = applySep5Edits(draftFiles, result.data.edits);
+              if (edited.files.every((file, index) => file.content === draftFiles[index]?.content)) reviewed.attempt.status = 'COMPLETED';
+              else {
+                if (!sep5ProjectIsUsable(edited.files, sitePurpose)) throw new Error(sitePurpose === 'shop' ? 'la revisión dejó el proyecto sin catálogo, carrito o estilos' : 'la revisión dejó el sitio sin su acción principal o sin estilos');
+                const kept = sep5AuthorableFiles(edited.files);
+                reviewing = true;
+                generated = { label: result.data.label.slice(0, 120) || generated.label, files: kept.files };
+                lenient = true;
+                try { await acceptCandidate(); } finally { lenient = false; }
+                await addSep5StandardPages();
+                reviewed.attempt.status = 'COMPLETED';
+                notes.push(...result.data.notes);
+                changed = true;
+              }
+            }
+            if (kitTouchOn) {
+              try {
+                const base = await assembleSave(review.signal);
+                const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, signature: committedDesign?.concepts[committedDesign.selected]?.signature, signal: review.signal, call: touchCall(review) });
+                const surfaces = Object.keys(touch?.css ?? {});
+                if (touch && surfaces.length) { kitTouch = touch.css; notes.push(...touch.notes); changed = true; }
+                this.logger.log(JSON.stringify({ event: surfaces.length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces, dropped: (touch?.dropped ?? []).slice(0, 12), ...(touch ? {} : { reason: 'unusable answer' }) }));
+              } catch (error) {
+                review.signal.throwIfAborted();
+                this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
+              }
+            }
+            // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
+            if (!changed) return null;
+            return { saveInput: await assembleSave(review.signal), notes };
           };
         }
         await addSep5StandardPages();
@@ -1502,13 +1539,13 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
       // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
       const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
-      const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
+      const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'catalogCss', 'cardCss', 'cartCss', 'touch', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
       const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
         ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
       // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
       const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
       const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
-      const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna };
+      const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...carriedTouch(previousConfig.dna, creative), ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna, ...(kitTouch && Object.keys(kitTouch).length ? { ...kitTouch, touch: 1 } : {}) };
       // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
       const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
       const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));

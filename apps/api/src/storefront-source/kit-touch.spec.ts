@@ -1,0 +1,77 @@
+// apps/api/src/storefront-source/kit-touch.spec.ts
+import { carriedTouch, distinctiveCss, kitTouchPrompt, runKitTouch, TOUCH_KEYS } from './kit-touch';
+import { readConfigFile } from './store-look';
+
+const files = [
+  { path: 'index.html', content: '<main></main>' },
+  { path: 'styles.css', content: '.stamp{transform:rotate(-8deg);border:3px double #111}.plain{color:red}.photo::after{content:"";background:linear-gradient(#0000,#0003)}@keyframes wobble{from{rotate:-1deg}to{rotate:1deg}}' },
+  { path: 'commerce-pages.css', content: '.kit{transform:scale(2)}' },
+  { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"slug":"cafe","dna":{"version":1},"look":{"version":1,"edge":"offset"}};\n' },
+];
+const reply = (value: Record<string, unknown>) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ product: '', catalog: '', card: '', cart: '', notes: [], ...value }) }] }] });
+const deps = (body: unknown, over: Record<string, unknown> = {}) => {
+  const used = jest.fn();
+  return { used, deps: { files, brief: {}, storeName: 'Café', signal: new AbortController().signal, call: jest.fn(async () => ({ body, used })), capture: jest.fn(async () => []),
+    checkProduct: jest.fn(async () => []), checkSurfaces: jest.fn(async () => ({ catalog: [], card: [], cart: [] })), ...over } };
+};
+
+describe('distinctiveCss', () => {
+  it('keeps the authored rules that carry a device, never platform CSS', () => {
+    const css = distinctiveCss(files);
+    expect(css).toContain('.stamp');
+    expect(css).toContain('::after');
+    expect(css).toContain('@keyframes wobble');
+    expect(css).not.toContain('.plain');
+    expect(css).not.toContain('.kit');
+  });
+});
+
+describe('kitTouchPrompt', () => {
+  it("names every surface's parts, the protected controls and the merchant request", () => {
+    const text = kitTouchPrompt({ storeName: 'Café', look: { version: 1, edge: 'offset' }, distinctive: '.stamp{}', instruction: 'fotos inclinadas' });
+    for (const word of ['card-media', 'cart-line', 'page-title', 'gallery', 'protected', 'transform', 'fotos inclinadas', '"edge":"offset"']) expect(text).toContain(word);
+    expect(text.split('\n').find(line => line.startsWith('- card parts'))).toContain('transform');
+  });
+});
+
+describe('runKitTouch', () => {
+  it("sanitizes, checks and returns each surface's CSS, and marks the call as used", async () => {
+    const { deps: d, used } = deps(reply({ card: '[data-part="card-media"]{transform:rotate(-2deg)}', cart: '[data-part="cart-head"]{border-bottom:3px solid #111}', notes: ['Tarjetas inclinadas como en la portada.'] }));
+    const result = (await runKitTouch(d))!;
+    expect(result.css.cardCss).toContain('[data-pagosya-catalog] [data-part="card-media"]');
+    expect(result.css.cartCss).toContain('.cart-drawer [data-part="cart-head"]');
+    expect(result.notes).toEqual(['Tarjetas inclinadas como en la portada.']);
+    expect(used).toHaveBeenCalled();
+    const checked = (d.checkSurfaces as jest.Mock).mock.calls[0][0];
+    expect(readConfigFile(checked.files).dna.cardCss).toBe(result.css.cardCss);
+  });
+
+  it('drops only the surface that fails its browser check', async () => {
+    const { deps: d } = deps(reply({ card: '[data-part="card-media"]{transform:rotate(-2deg)}', cart: '[data-part="cart-head"]{border-bottom:3px solid #111}' }),
+      { checkSurfaces: jest.fn(async () => ({ catalog: [], card: [{ control: 'add', viewport: 'mobile', reason: 'covered by another element' }], cart: [] })) });
+    const result = (await runKitTouch(d))!;
+    expect(result.css.cardCss).toBeUndefined();
+    expect(result.css.cartCss).toBeDefined();
+    expect(result.dropped).toEqual([{ surface: 'card', reason: 'add (mobile): covered by another element' }]);
+  });
+
+  it('returns null for an answer that is not the schema, and never marks it used', async () => {
+    const { deps: d, used } = deps({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'no' }] }] });
+    expect(await runKitTouch(d)).toBeNull();
+    expect(used).not.toHaveBeenCalled();
+  });
+
+  it('returns empty CSS when the sanitizer leaves nothing', async () => {
+    const { deps: d, used } = deps(reply({ card: '.menu-add{opacity:0}' }));
+    const result = (await runKitTouch(d))!;
+    expect(result.css).toEqual({});
+    expect(used).not.toHaveBeenCalled();
+  });
+});
+
+describe('carriedTouch', () => {
+  const dna = { version: 1, touch: 1, productCss: 'a', cardCss: 'b', cartCss: '', swatch: 'pill' };
+  it('carries the touch across an ordinary edit', () => expect(carriedTouch(dna, false)).toEqual({ touch: 1, [TOUCH_KEYS.product]: 'a', [TOUCH_KEYS.card]: 'b' }));
+  it('never carries it into a new store or a redesign', () => expect(carriedTouch(dna, true)).toEqual({}));
+  it('carries nothing that the touch step did not write', () => expect(carriedTouch({ productCss: 'planner' }, false)).toEqual({}));
+});
