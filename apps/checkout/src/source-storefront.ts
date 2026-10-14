@@ -1,7 +1,7 @@
 import { createPasswordGuard, mountSourceAccountBridge } from '@pagosya/storefront-preview';
 import { blockedStoreMessage, createAccountBridgeHandler, takeAccountEmailToken } from './account/account-bridge-handler';
 import { isAccountDestination } from './account-destinations';
-import { assistantRequestBody, leadOrigin, postAssistantChat } from './assistant-bridge';
+import { assistantRequestBody, leadOrigin, postAssistantChat, rememberAssistantConversation, withStoredAssistantConversation } from './assistant-bridge';
 import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
@@ -228,7 +228,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       if (data.action === 'assistant') {
         const chat = assistantRequestBody(data.body);
         if (!chat) { reply(false, { message: 'Escribe tu pregunta.' }); return; }
-        const turn = await postAssistantChat(API_BASE_URL, slug, chat);
+        // The sandboxed frame cannot keep the conversation across pages; this page does (I3).
+        const turn = await postAssistantChat(API_BASE_URL, slug, withStoredAssistantConversation(chat, slug));
+        rememberAssistantConversation(slug, turn);
         reply(turn.ok, turn.body);
         return;
       }

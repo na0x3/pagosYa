@@ -123,14 +123,19 @@
   }
 
   async function request(body) {
-    if (hosted) { const result = await window.PAGOSYA_HOSTED_REQUEST('assistant', body); return { ok: result.ok, json: result.body || {} }; }
+    // The parent page relays the API's body; Nest puts the HTTP status in it as statusCode.
+    if (hosted) { const result = await window.PAGOSYA_HOSTED_REQUEST('assistant', body); const json = result.body || {}; return { ok: result.ok, status: typeof json.statusCode === 'number' ? json.statusCode : 0, json: json }; }
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = setTimeout(() => { if (controller) controller.abort(); }, 30000);
     try {
       const response = await fetch(apiBase() + '/stores/public/' + encodeURIComponent(config.slug) + '/assistant/chat', { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller ? controller.signal : undefined });
-      return { ok: response.ok, json: await response.json().catch(() => ({})) };
+      return { ok: response.ok, status: response.status, json: await response.json().catch(() => ({})) };
     } finally { clearTimeout(timer); }
   }
+
+  // The server's own message may be English or a list, so the buyer only ever sees this Spanish copy.
+  const refusal = status => status === 429 ? 'Vas muy rápido. Espera un momento y vuelve a escribir.'
+    : status === 400 ? 'No pude leer tu mensaje. Escríbelo de nuevo.' : 'No se pudo enviar. Inténtalo otra vez.';
 
   async function send(message, retried) {
     const submit = root.querySelector('.pya-form button[type=submit]');
@@ -161,7 +166,7 @@
           if (json.conversationId) { conversationId = json.conversationId; write(conversationId); }
           if (result.ok && json.reply) { added = false; render(json.reply); }
           else if (result.ok && json.fallback) { say('Ahora no puedo responder. Escríbele a la tienda 👉', 'bot'); handoff(null); }
-          else say(json.message || 'No se pudo enviar. Inténtalo otra vez.', 'bot');
+          else say(refusal(result.status), 'bot');
         } catch (error) { say('No pude mostrar la respuesta.', 'bot'); }
       }
     } finally { busy = false; submit.disabled = false; }
@@ -277,8 +282,10 @@
     document.addEventListener('pagosya:cart-updated', () => { if (!panel.hidden) showCheckout(); });
     document.addEventListener('click', event => { if (event.target.closest && event.target.closest('[data-pagosya-contact-open]')) { event.preventDefault(); setOpen(true); } });
     liftAboveStickyBar();
+    // Hosted (sandboxed) frames have no storage and are rebuilt per page, so there the hint can return on the next
+    // page; within a page it never shows once a reply carried a conversation.
     if (currentProduct() && !read() && !studio) {
-      hintTimer = setTimeout(() => { if (panel.hidden) { hint.hidden = false; setTimeout(() => { hint.hidden = true; }, 6000); } }, 8000);
+      hintTimer = setTimeout(() => { if (panel.hidden && !conversationId) { hint.hidden = false; setTimeout(() => { hint.hidden = true; }, 6000); } }, 8000);
     }
   }
 

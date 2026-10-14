@@ -25,3 +25,29 @@ export async function postAssistantChat(apiBase: string, slug: string, body: unk
     return { ok: false, body: { message: 'No pudimos conectar con el asistente. Inténtalo otra vez.' } };
   }
 }
+
+type ChatBody = NonNullable<ReturnType<typeof assistantRequestBody>>;
+type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
+const CONVERSATION_ID = /^[a-z0-9]{20,40}$/;
+const conversationKey = (slug: string) => `pagosya:assistant:${slug}`;
+
+/**
+ * A published design runs in a sandboxed frame with no storage, and the frame is replaced on every page, so the
+ * parent keeps the store's last conversation. The frame's own id always wins; the stored one only fills a gap.
+ */
+export function withStoredAssistantConversation(chat: ChatBody, slug: string, storage: () => StorageLike = () => sessionStorage): ChatBody {
+  if (chat.conversationId) return chat;
+  try {
+    const saved = storage().getItem(conversationKey(slug));
+    return saved && CONVERSATION_ID.test(saved) ? { ...chat, conversationId: saved } : chat;
+  } catch {
+    return chat;
+  }
+}
+
+/** Keeps the id of a successful turn; a refusal, a fallback without an id or a malformed id leaves the stored one alone. */
+export function rememberAssistantConversation(slug: string, turn: { ok: boolean; body: unknown }, storage: () => StorageLike = () => sessionStorage) {
+  const id = turn.ok && turn.body && typeof turn.body === 'object' ? (turn.body as Record<string, unknown>).conversationId : null;
+  if (typeof id !== 'string' || !CONVERSATION_ID.test(id)) return;
+  try { storage().setItem(conversationKey(slug), id); } catch { /* storage may be blocked; the next page starts a new chat */ }
+}

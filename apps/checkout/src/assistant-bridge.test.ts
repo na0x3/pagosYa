@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { assistantRequestBody, leadOrigin, postAssistantChat } from './assistant-bridge';
+import { assistantRequestBody, leadOrigin, postAssistantChat, rememberAssistantConversation, withStoredAssistantConversation } from './assistant-bridge';
 
 describe('assistant bridge', () => {
   it('passes only the chat fields, trimmed to their limits', () => {
@@ -27,5 +27,35 @@ describe('assistant bridge', () => {
     expect(timeout).toHaveBeenCalledWith(30000);
     const failing = vi.fn().mockRejectedValue(new Error('network down'));
     expect(await postAssistantChat('/v1', 'cafe', { message: 'hola' }, failing as any)).toEqual({ ok: false, body: { message: 'No pudimos conectar con el asistente. Inténtalo otra vez.' } });
+  });
+
+  const memory = () => { const map = new Map<string, string>(); return { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => { map.set(k, v); }, map }; };
+  const ID = 'cabcdefghijklmnopqrstuvw', OTHER = 'czzzzzzzzzzzzzzzzzzzzzzz';
+
+  it('keeps the conversation for a sandboxed frame: stored from a reply and re-injected when the frame omits it', () => {
+    const storage = memory();
+    expect(withStoredAssistantConversation({ message: 'hola' }, 'cafe', () => storage)).toEqual({ message: 'hola' });
+    rememberAssistantConversation('cafe', { ok: true, body: { conversationId: ID, reply: { text: 'x', blocks: [] } } }, () => storage);
+    expect(storage.map.get('pagosya:assistant:cafe')).toBe(ID);
+    expect(withStoredAssistantConversation({ message: 'otra' }, 'cafe', () => storage)).toEqual({ message: 'otra', conversationId: ID });
+    expect(withStoredAssistantConversation({ message: 'otra' }, 'otra-tienda', () => storage)).toEqual({ message: 'otra' });
+  });
+
+  it('never overrides an id the frame did send', () => {
+    const storage = memory(); storage.setItem('pagosya:assistant:cafe', ID);
+    expect(withStoredAssistantConversation({ message: 'hola', conversationId: OTHER }, 'cafe', () => storage)).toEqual({ message: 'hola', conversationId: OTHER });
+  });
+
+  it('remembers only a well-formed id from a successful reply, and survives storage that throws', () => {
+    const storage = memory(); storage.setItem('pagosya:assistant:cafe', ID);
+    rememberAssistantConversation('cafe', { ok: false, body: { conversationId: OTHER } }, () => storage);
+    rememberAssistantConversation('cafe', { ok: true, body: { conversationId: null, fallback: 'contact' } }, () => storage);
+    rememberAssistantConversation('cafe', { ok: true, body: { conversationId: '<script>' } }, () => storage);
+    expect(storage.map.get('pagosya:assistant:cafe')).toBe(ID);
+    storage.setItem('pagosya:assistant:cafe', 'not an id');
+    expect(withStoredAssistantConversation({ message: 'hola' }, 'cafe', () => storage)).toEqual({ message: 'hola' });
+    const broken = () => { throw new Error('SecurityError'); };
+    expect(withStoredAssistantConversation({ message: 'hola' }, 'cafe', broken)).toEqual({ message: 'hola' });
+    expect(() => rememberAssistantConversation('cafe', { ok: true, body: { conversationId: ID } }, broken)).not.toThrow();
   });
 });

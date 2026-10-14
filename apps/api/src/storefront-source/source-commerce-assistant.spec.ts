@@ -10,10 +10,14 @@ const ITEMS = [{ id: 'p1', name: 'Café', amount: 1000, currency: 'BOB', stock: 
 const ASSISTANT = { name: 'Carla', greeting: '¡Hola! Soy Carla.', avatarUrl: null, handoff: 'whatsapp', suggestions: ['¿Qué me recomiendas?'] };
 const flush = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0)); };
 
-function open(settings: Record<string, unknown>, hostedReply?: (action: string, body: any) => any) {
+const windows: any[] = [];
+afterEach(() => { while (windows.length) windows.pop().close(); });
+
+function open(settings: Record<string, unknown>, hostedReply?: (action: string, body: any) => any, prepare?: (w: any) => void) {
   const virtualConsole = new VirtualConsole();
   const dom = new JSDOM('<html><head></head><body><main></main><footer></footer></body></html>', { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole });
   const w = dom.window;
+  windows.push(w);
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -25,6 +29,7 @@ function open(settings: Record<string, unknown>, hostedReply?: (action: string, 
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
   w.PAGOSYA_HOSTED_REQUEST = jest.fn(async (action: string, body: any) => hostedReply ? hostedReply(action, body) : { ok: true, body: {} });
   const posted: any[] = []; w.parent.postMessage = (m: any) => { posted.push(m); };
+  prepare?.(w);
   w.eval(commerce); w.eval(chat);
   return { w, doc: w.document, posted };
 }
@@ -124,6 +129,56 @@ describe('kit chat.js', () => {
     await flush();
     expect(doc.querySelector('.pya-log')!.textContent).toContain('No se pudo enviar. Inténtalo otra vez.');
     expect(b.disabled).toBe(false);
+  });
+
+  it('a refused message shows Spanish copy by status, never the raw server message', async () => {
+    const cases: Array<[any, string]> = [
+      [{ statusCode: 429, message: 'ThrottlerException: Too Many Requests' }, 'Vas muy rápido. Espera un momento y vuelve a escribir.'],
+      [{ statusCode: 400, message: ['message must match /\\S/ regular expression'] }, 'No pude leer tu mensaje. Escríbelo de nuevo.'],
+      [{ statusCode: 500, message: 'Internal server error' }, 'No se pudo enviar. Inténtalo otra vez.'],
+      [{ message: 'Ya hay una solicitud en curso.' }, 'No se pudo enviar. Inténtalo otra vez.'],
+    ];
+    for (const [body, copy] of cases) {
+      const { w, doc } = open({ assistant: ASSISTANT }, () => ({ ok: false, body }));
+      typeAndSend(w, doc, 'hola'); await flush();
+      const text = doc.querySelector('.pya-log')!.textContent!;
+      expect(text).toContain(copy);
+      expect(text).not.toContain('Exception');
+      expect(text).not.toContain('Internal server error');
+      expect(text).not.toContain('regular expression');
+    }
+  });
+
+  it('a refused non-hosted message reads the HTTP status', async () => {
+    const { w, doc } = open({ assistant: ASSISTANT });
+    w.PAGOSYA_HOSTED = false; w.PAGOSYA_PREVIEW = false;
+    doc.querySelector('[data-pagosya-assistant]')!.remove();
+    delete w.PAGOSYA_ASSISTANT;
+    w.fetch = jest.fn(async () => ({ ok: false, status: 429, json: async () => ({ message: 'Too Many Requests' }) }));
+    w.eval(chat);
+    typeAndSend(w, doc, 'hola'); await flush();
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('Vas muy rápido. Espera un momento y vuelve a escribir.');
+    expect(doc.querySelector('.pya-log')!.textContent).not.toContain('Too Many Requests');
+  });
+
+  it('in a hosted store the product hint stays away once this page has a conversation', async () => {
+    const hints: Array<() => void> = [];
+    const onProductPage = (w: any) => {
+      w.document.addEventListener('pagosya:current-product', (e: any) => { e.detail.id = 'p1'; e.detail.name = 'Café'; });
+      const real = w.setTimeout.bind(w);
+      w.setTimeout = (fn: any, ms: number) => { if (ms === 8000) { hints.push(fn); return 1; } return real(fn, ms); };
+    };
+    const fresh = open({ assistant: ASSISTANT }, undefined, onProductPage);
+    expect(hints.length).toBe(1);
+    hints.pop()!();
+    expect(fresh.doc.querySelector('.pya-hint')!.hasAttribute('hidden')).toBe(false);
+
+    const { w, doc } = open({ assistant: ASSISTANT }, () => ({ ok: true, body: { conversationId: 'cabcdefghijklmnopqrstuvw', reply: { text: 'Hola', blocks: [] } } }), onProductPage);
+    typeAndSend(w, doc, 'hola'); await flush();
+    (doc.querySelector('[data-assistant-close]') as HTMLButtonElement).click();
+    expect(hints.length).toBe(1);
+    hints.pop()!();
+    expect(doc.querySelector('.pya-hint')!.hasAttribute('hidden')).toBe(true);
   });
 
   it('Escape on the launcher closes the open panel', () => {
