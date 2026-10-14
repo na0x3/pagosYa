@@ -57,8 +57,14 @@ describe('store assistant search (Postgres, Spanish)', () => {
   it('returns the part of a long passage around the match', async () => {
     const body = `${'Relleno de tienda. '.repeat(160)}Los envíos a Pando salen los jueves.`;
     const [hit] = await searchInfo(db, store.id, 'pando', [{ title: 'Envíos', body }]);
-    expect(hit.body).toContain('Pando');
+    expect(hit.body).toContain('pando');
     expect(hit.body.length).toBeLessThan(900);
+  });
+
+  it('matches accented words in the snippet', async () => {
+    const body = `${'Relleno de tienda. '.repeat(160)}Los envíos a Pando salen los jueves.`;
+    const [hit] = await searchInfo(db, store.id, 'envio', [{ title: 'Envíos', body }]);
+    expect(hit.body).toContain('envios a pando');
   });
 
   it('searches published articles and the store passages, never drafts', async () => {

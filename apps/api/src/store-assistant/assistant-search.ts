@@ -43,9 +43,10 @@ export async function searchInfo(prisma: PrismaService, storeId: string, query: 
       UNION ALL
       SELECT t.title, t.body FROM unnest(${titles}::text[], ${bodies}::text[]) AS t(title, body)
     ), scored AS (
-      SELECT title, body, to_tsvector('spanish', ${fold(Prisma.sql`title || ' ' || body`)}) AS doc FROM docs
+      SELECT title, ${fold(Prisma.sql`body`)} AS folded, to_tsvector('spanish', ${fold(Prisma.sql`title || ' ' || body`)}) AS doc FROM docs
     )
-    SELECT title, ts_headline('spanish', body, to_tsquery('spanish', ${words}), 'MaxWords=90, MinWords=40, StartSel="", StopSel="", HighlightAll=false') AS body, ts_rank(doc, to_tsquery('spanish', ${words})) AS rank
+    -- the snippet is cut from the accent-folded text so accented words match; only the model reads it
+    SELECT title, ts_headline('spanish', folded, to_tsquery('spanish', ${words}), 'MaxWords=90, MinWords=40, StartSel="", StopSel="", HighlightAll=false') AS body, ts_rank(doc, to_tsquery('spanish', ${words})) AS rank
     FROM scored WHERE doc @@ to_tsquery('spanish', ${words})
     ORDER BY rank DESC LIMIT ${limit}`;
   return rows.map(({ title, body }) => ({ title, body }));
