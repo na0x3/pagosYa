@@ -1,4 +1,4 @@
-import { COSMETIC_PARTS, sanitizeProductThemeCss } from './product-theme-css';
+import { COSMETIC_PARTS, sanitizeKitSurfaceCss, sanitizeProductThemeCss } from './product-theme-css';
 
 const norm = (css: string) => css.replace(/\s+/g, '');
 const PREFIX = '[data-pagosya-product][data-style]';
@@ -183,5 +183,39 @@ describe('guarded product theme CSS', () => {
     it('drops top-level declarations that have no rule', () => {
       refused('color:#111;');
     });
+  });
+});
+
+describe('kit surface profiles (spec 2026-10-14)', () => {
+  it('scopes each surface and keeps allowed declarations, including kit variables', () => {
+    const card = sanitizeKitSurfaceCss('card', '[data-part="card-media"]{transform:rotate(-3deg);box-shadow:6px 6px 0 var(--kit-ink)}');
+    expect(card.css).toContain('[data-pagosya-catalog] [data-part="card-media"]');
+    expect(card.css).toContain('var(--kit-ink)');
+    expect(sanitizeKitSurfaceCss('cart', '[data-part="cart-line"]{border-bottom:2px dashed var(--store-foreground)}').css).toContain('.cart-drawer [data-part="cart-line"]');
+    expect(sanitizeKitSurfaceCss('catalog', '[data-part="page-title"]{letter-spacing:.2em}').css).toContain('body:has([data-catalog-full]) [data-part="page-title"]');
+  });
+
+  it('out-weighs the look: every scope starts with :root:root:root so a touch beats the look on the same property', () => {
+    expect(sanitizeKitSurfaceCss('card', '[data-part="card"]{border:1px solid #111}').css.trim().startsWith(':root:root:root [data-pagosya-catalog] ')).toBe(true);
+    expect(sanitizeKitSurfaceCss('cart', '[data-part="cart-head"]{border-bottom:1px solid #111}').css.trim().startsWith(':root:root:root .cart-drawer ')).toBe(true);
+    expect(sanitizeKitSurfaceCss('catalog', '[data-part="tabs"]{gap:4px}').css.trim().startsWith(':root:root:root body:has([data-catalog-full]) ')).toBe(true);
+  });
+
+  it('is idempotent', () => {
+    const once = sanitizeKitSurfaceCss('card', '[data-part="card"]{border:2px solid #111}[data-part="card-name"]{text-transform:uppercase}').css;
+    expect(sanitizeKitSurfaceCss('card', once).css).toBe(once);
+  });
+
+  it("refuses protected controls, other surfaces' parts, url() and hiding a card or a cart line", () => {
+    expect(sanitizeKitSurfaceCss('card', '.menu-add{opacity:0}').css).toBe('');
+    expect(sanitizeKitSurfaceCss('card', '[data-part="gallery"]{border:1px solid red}').css).toBe('');
+    expect(sanitizeKitSurfaceCss('card', '[data-part="card-media"]{background:url(x.png)}').css).toBe('');
+    expect(sanitizeKitSurfaceCss('card', '[data-part="card"]{display:none}').css).toBe('');
+    expect(sanitizeKitSurfaceCss('cart', '[data-part="cart-line"]{opacity:.1}').css).toBe('');
+  });
+
+  it('leaves the product profile as it was', () => {
+    expect(sanitizeProductThemeCss('[data-part="gallery"]{border:1px solid var(--kit-ink)}').css).toBe('');
+    expect(sanitizeProductThemeCss('[data-part="gallery"]{border:1px solid var(--pd-line)}').css).toContain('var(--pd-line)');
   });
 });

@@ -52,8 +52,9 @@ const inPx = (token: string, min: number, max: number) => { const n = px(token);
 const pct = (token: string, min: number, max: number) => { const l = parseLength(token); return !!l && l.unit === '%' && l.n >= min && l.n <= max; };
 const timeMs = (token: string): number | null => { const m = token.match(/^(\d*\.?\d+)(ms|s)$/i); return m ? parseFloat(m[1]) * (m[2].toLowerCase() === 's' ? 1000 : 1) : null; };
 const number = (token: string): number | null => (/^-?(?:\d+\.?\d*|\.\d+)$/.test(token) ? parseFloat(token) : null);
-const VAR = /^var\(\s*--(?:pd|store|brand|pt)-[a-z0-9-]+\s*(?:,\s*[#\w.%\s-]+)?\)$/i;
-const isColour = (t: string) => /^#[0-9a-f]{3,8}$/i.test(t) || /^(?:transparent|currentcolor)$/i.test(t) || /^[a-z]{3,20}$/i.test(t) || /^(?:rgb|rgba|hsl|hsla)\([\d.\s,%/-]+\)$/i.test(t) || VAR.test(t);
+/** A var() the active profile allows (product: --pd-/--store-/--brand-/--pt-; each profile lists its own). */
+const isVar = (value: string) => { const m = value.trim().match(/^var\(\s*(--[a-z0-9-]+)\s*(?:,\s*[#\w.%\s-]+)?\)$/i); return Boolean(m && active.variables.test(m[1])); };
+const isColour = (t: string) => /^#[0-9a-f]{3,8}$/i.test(t) || /^(?:transparent|currentcolor)$/i.test(t) || /^[a-z]{3,20}$/i.test(t) || /^(?:rgb|rgba|hsl|hsla)\([\d.\s,%/-]+\)$/i.test(t) || isVar(t);
 
 // ---- validators -------------------------------------------------------------------------------------------------------
 const fail = (reason: string): never => { throw new Reject(reason); };
@@ -143,7 +144,7 @@ const clipPath: Validator = value => {
   if (m[1].toLowerCase() === 'polygon' && m[2].split(',').length > 12) fail('polygon() may have at most 12 points');
   return value.trim();
 };
-const varFont: Validator = value => VAR.test(value.trim()) && !value.includes(',') ? value.trim() : fail('font-family may only use a store font variable (var(--store-… / --brand-… / --pd-…))');
+const varFont: Validator = value => isVar(value) && !value.includes(',') ? value.trim() : fail('font-family may only use a store font variable (var(--store-… / --brand-… / --pd-…))');
 const fontSize: Validator = value => inPx(value.trim(), 12, 72) ? value.trim() : fail('font-size must be between 12px and 72px');
 const fontWeight: Validator = value => { const n = number(value.trim()); return ['normal', 'bold'].includes(value.trim().toLowerCase()) || (n !== null && n >= 300 && n <= 800) ? value.trim() : fail('font-weight must be normal, bold or 300-800'); };
 const lineHeight: Validator = value => { const n = number(value.trim()); return value.trim() === 'normal' || (n !== null && n >= 1 && n <= 2) ? value.trim() : fail('line-height must be 1-2'); };
@@ -259,6 +260,24 @@ function parseSelector(raw: string): ParsedSelector | string {
 const PRODUCT_PROFILE: ThemeCssProfile = { parts: COSMETIC_PARTS, sizedParts: [...SIZED_PARTS], scope: SCOPE, keyframePrefix: 'pt-', variables: /^--(?:pd|store|brand|pt)-[a-z0-9-]+$/i, variableHint: '--pd-, --store-, --brand- and --pt-' };
 let active: ActiveProfile;
 export function sanitizeProductThemeCss(input: unknown): ThemeCssReport { return sanitizeThemeCss(input, PRODUCT_PROFILE); }
+
+/** YAPI's touches on the kit's own surfaces (spec 2026-10-14 one look per store). Protected controls carry no data-part,
+ * so no selector can reach them; a card or a cart line may be restyled but never hidden, shrunk or made transparent.
+ * Every scope starts with :root:root:root: the look's surface rules reach specificity (0,5,0), and the precedence is
+ * kit, DNA, look, YAPI's touch, so a touch must win a tie-break on the same property (the touch CSS is injected last). */
+export const CATALOG_PARTS = ['page-title', 'tabs', 'group-title', 'grid', 'empty'] as const;
+export const CARD_PARTS = ['card', 'card-media', 'card-name', 'card-meta', 'card-badge'] as const;
+export const CART_PARTS = ['cart-head', 'cart-line', 'cart-line-media'] as const;
+export type KitSurface = 'catalog' | 'card' | 'cart';
+const KIT_VARIABLES = /^--(?:kit|store|brand|lk)-[a-z0-9-]+$/i;
+const KIT_VARIABLE_HINT = '--kit-, --store-, --brand- and --lk-';
+const HIDES = /^(display|visibility|opacity|clip|clip-path|width|height|max-width|max-height|position|z-index|inset|top|left|right|bottom)$/;
+const KIT_SURFACE_PROFILES: Record<KitSurface, ThemeCssProfile> = {
+  catalog: { parts: CATALOG_PARTS, sizedParts: ['grid'], scope: ':root:root:root body:has([data-catalog-full]) ', keyframePrefix: 'kc-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'grid' && HIDES.test(property) },
+  card: { parts: CARD_PARTS, sizedParts: ['card-media'], scope: ':root:root:root [data-pagosya-catalog] ', keyframePrefix: 'kd-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'card' && HIDES.test(property) },
+  cart: { parts: CART_PARTS, sizedParts: ['cart-line-media'], scope: ':root:root:root .cart-drawer ', keyframePrefix: 'kt-', variables: KIT_VARIABLES, variableHint: KIT_VARIABLE_HINT, refuse: (part, property) => part === 'cart-line' && HIDES.test(property) },
+};
+export function sanitizeKitSurfaceCss(surface: KitSurface, input: unknown): ThemeCssReport { return sanitizeThemeCss(input, KIT_SURFACE_PROFILES[surface]); }
 /** The same guarded sanitizer for another kind of page (the account pages, spec 2026-10-08). Synchronous, so the active
  * profile is set for exactly this call. */
 export function sanitizeThemeCss(input: unknown, profile: ThemeCssProfile): ThemeCssReport {

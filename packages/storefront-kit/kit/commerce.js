@@ -2059,7 +2059,7 @@
   const cartDrawer = document.createElement('dialog');
   cartDrawer.className = 'cart-drawer';
   cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title');
-  cartDrawer.innerHTML = `<header class="cart-drawer__header"><h2 id="cart-drawer-title">${escape(CART_WORD || 'Tu pedido')}</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>`;
+  cartDrawer.innerHTML = `<header class="cart-drawer__header" data-part="cart-head"><h2 id="cart-drawer-title">${escape(CART_WORD || 'Tu pedido')}</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>`;
   document.body.append(cartDrawer);
   // A bottom-sheet cart shows a grab handle; the element only exists for stores with a DNA.
   if (hasDna) cartDrawer.querySelector('.cart-drawer__header').insertAdjacentHTML('afterbegin', '<span class="cart-drawer__grip" aria-hidden="true"></span>');
@@ -3179,6 +3179,21 @@
   };
   // Shared by the home `tabs` layout (no current tab) and the collection page (marks its own tab).
   const catalogTabs = (currentSlug) => `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}"${c.slug === currentSlug ? ' aria-current="page"' : ''}>${escape(c.name)}</a>`).join("")}</nav>`;
+  /* Named parts for YAPI's guarded CSS on the kit's own surfaces (spec 2026-10-14; profiles in the API's product-theme-css.ts).
+   * Protected controls (prices, add-to-cart, totals) never get a part. An element that already names a part keeps it. */
+  function markKitParts() {
+    const mark = (selector, part) => document.querySelectorAll(selector).forEach(el => { if (!el.hasAttribute('data-part')) el.setAttribute('data-part', part); });
+    mark('[data-pagosya-catalog] .menu-item', 'card');
+    mark('[data-pagosya-catalog] .menu-item .menu-item__image', 'card-media');
+    mark('[data-pagosya-catalog] .menu-item :is(.menu-item__name,.menu-item__copy h3)', 'card-name');
+    mark('[data-pagosya-catalog] .menu-item :is(.menu-item__description,.menu-item__options)', 'card-meta');
+    mark('[data-pagosya-catalog] .menu-item .menu-item__badge', 'card-badge');
+    mark('.commerce-page-title', 'page-title');
+    mark('[data-pagosya-catalog] .catalog-tabs', 'tabs');
+    mark('[data-pagosya-catalog] .catalog-group__title', 'group-title');
+    mark('[data-pagosya-catalog][data-catalog-full]', 'grid');
+    mark('[data-pagosya-catalog] .catalog-empty', 'empty');
+  }
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
     // The catalog can change the fallback style, so this follows every render.
@@ -3230,6 +3245,7 @@
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     observeCards();
+    markKitParts();
     fitCards();
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fitCards);
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
@@ -3420,7 +3436,7 @@
       const later = laterUnit !== amount ? `hoy, luego ${money(laterUnit, p.currency)} / ${CADENCE_TEXT[line.cadence]}` : '';
       const unitCopy = quantity > 1 || saved || later ? `<p class="order-item__unit">${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
       const few = Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? `<p class="order-item__stock">${p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`}</p>` : '';
-      rows.push(`<li class="order-item"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
+      rows.push(`<li class="order-item" data-part="cart-line"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" data-part="cart-line-media" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
       lineViews.push({ id, p, name, amount, quantity, image, option,
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
@@ -3888,7 +3904,7 @@
   /* YAPI's guarded CSS: the API sanitized it (product-theme-css.ts) before it reached config.dna. This check is defence in
    * depth only, a coarse refusal of what the sanitizer never emits; it does not re-implement the sanitizer. It goes after
    * the kit's own styles and the look, so an equally specific theme rule wins. */
-  const THEME_CSS_KEYS = [['productCss', 'product-theme']];
+  const THEME_CSS_KEYS = [['productCss', 'product-theme'], ['catalogCss', 'catalog-theme'], ['cardCss', 'card-theme'], ['cartCss', 'cart-theme']];
   if (hasDna) for (const [key, name] of THEME_CSS_KEYS) {
     const themeCss = config.dna[key];
     if (typeof themeCss === 'string' && themeCss && themeCss.length <= 8000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|pointer-events|!\s*important/i.test(themeCss)) {

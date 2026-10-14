@@ -141,3 +141,24 @@ test('the look filter leaves the DNA card zoom transition alone', async ({ page 
   expect(await style(page, CARD_IMG, 'filter')).toBe('grayscale(1)');
   expect(await style(page, CARD_IMG, 'transition-property')).toContain('transform');
 });
+
+test("the kit names its card, catalog and cart parts and injects YAPI's guarded CSS for them", async ({ page }) => {
+  const dna = { cardCss: ':root:root:root [data-pagosya-catalog] [data-part="card-media"]{rotate:-2deg}', cartCss: ':root:root:root .cart-drawer [data-part="cart-head"]{border-bottom:3px solid #111}', catalogCss: ':root:root:root body:has([data-catalog-full]) [data-part="page-title"]{letter-spacing:.3em}' };
+  await openKitPage(page, { path: 'productos.html', cart: true, dna });
+  await expect(page.locator('[data-pagosya-catalog] .menu-item[data-part=card] [data-part=card-media]').first()).toBeVisible();
+  await expect(page.locator('.commerce-page-title[data-part=page-title]')).toHaveCount(1);
+  expect(await style(page, '[data-part=card-media]', 'rotate')).toBe('-2deg');
+  expect(parseFloat(await style(page, '.commerce-page-title', 'letter-spacing'))).toBeGreaterThan(5);
+  await openCart(page);
+  await expect(page.locator('.cart-drawer [data-part=cart-head]')).toHaveCount(1);
+  await expect(page.locator('.cart-drawer [data-part=cart-line] [data-part=cart-line-media]').first()).toBeAttached();
+  expect(await style(page, '.cart-drawer [data-part=cart-head]', 'border-bottom-width')).toBe('3px');
+});
+
+test('a sanitized-shape touch beats the look on the same property (kit, DNA, look, touch)', async ({ page }) => {
+  const dna = { cardCss: ':root:root:root [data-pagosya-catalog] [data-part="card-media"]{rotate:0deg}', cartCss: ':root:root:root .cart-drawer [data-part="cart-line-media"]{padding:0px}' };
+  await openKitPage(page, { path: 'productos.html', cart: true, dna, look: { ...BOLD, photo: { treatment: 'polaroid', tilt: 3 } } });
+  expect(await style(page, CARD_IMG, 'rotate')).toBe('0deg');
+  await openCart(page);
+  expect(await style(page, '.cart-drawer .order-item__photo', 'padding-bottom')).toBe('0px');
+});
