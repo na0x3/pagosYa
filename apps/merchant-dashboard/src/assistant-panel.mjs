@@ -4,7 +4,8 @@ import { conversationTags, NOTES_MAX, notesLeft, shortDate, usageLabel } from ".
 // Crecer › Asistente: settings, test chat, conversations and questions the assistant could not answer.
 export function mountAssistantPanel(deps) {
   const root = document.getElementById("assistantRoot");
-  let data = null, list = [], questions = [], open = null, failure = null, loading = false, loadedFor = null, request = 0, testId = null, status = "";
+  let data = null, list = [], questions = [], open = null, failure = null, loading = false, loadedFor = null, request = 0, testId = null, status = "", epoch = 0, testing = false;
+  let drafts = {}, testLog = [];
   const base = () => `/stores/${encodeURIComponent(deps.storeId())}/assistant`;
 
   async function load() {
@@ -21,10 +22,17 @@ export function mountAssistantPanel(deps) {
     } finally { if (mine === request) { loading = false; render(); } }
   }
 
-  async function save(patch, message) {
-    try { data = await deps.api(base(), { method: "PUT", body: JSON.stringify(patch) }); status = message; }
-    catch (error) { status = error.message; }
+  async function save(patch, message, clear = []) {
+    const e = epoch;
+    let ok = false;
+    try { const next = await deps.api(base(), { method: "PUT", body: JSON.stringify(patch) }); if (e !== epoch) return false; data = next; status = message; ok = true; clear.forEach((key) => delete drafts[key]); }
+    catch (error) { if (e !== epoch) return false; status = error.message; }
     render();
+    return ok;
+  }
+  async function reloadQuestions() {
+    const e = epoch;
+    try { const next = await deps.api(`${base()}/unanswered`); if (e === epoch) questions = next.questions || []; } catch { /* the list stays as it was */ }
   }
 
   function render() {
@@ -32,7 +40,7 @@ export function mountAssistantPanel(deps) {
     if (loading && !data) { root.innerHTML = `<div class="growth-skeleton"><span></span><span></span><span></span></div>`; return; }
     if (failure) { root.innerHTML = `<div class="growth-error" role="alert"><p>${esc(failure)}</p><button class="primary" type="button" data-assistant-retry>Reintentar</button></div>`; return; }
     if (!data) { root.innerHTML = ""; return; }
-    const s = data.settings, avatar = s.avatarUrl ? deps.assetUrl(s.avatarUrl) : null;
+    const s = data.settings, nameValue = drafts.name ?? s.name ?? "", greetingValue = drafts.greeting ?? s.greeting ?? "", formalityValue = drafts.formality ?? s.formality, notesValue = drafts.notes ?? s.notes, avatar = s.avatarUrl ? deps.assetUrl(s.avatarUrl) : null;
     root.innerHTML = `
       ${!data.publishedDesign ? `<p class="assistant-note">El asistente aparece en tiendas con diseño publicado. Publica tu diseño en Studio para activarlo.</p>` : ""}
       ${!data.platformEnabled ? `<p class="assistant-note">El asistente todavía no está disponible en pagosYa.</p>` : ""}
@@ -47,18 +55,18 @@ export function mountAssistantPanel(deps) {
         <div class="store-settings-logo"><div class="store-logo-frame">${avatar ? `<img src="${esc(avatar)}" alt="">` : "<span>Logo de la tienda</span>"}</div>
           <div class="store-logo-copy"><input id="assistantAvatarInput" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp">
           <label class="button-like ghost" for="assistantAvatarInput">${avatar ? "Cambiar foto" : "Subir foto"}</label>${avatar ? `<button class="ghost" type="button" data-assistant-avatar-remove>Quitar</button>` : ""}</div></div>
-        <label>Nombre<input data-assistant-field="name" maxlength="60" value="${esc(s.name ?? "")}" placeholder="Asistente de ${esc(deps.store()?.name ?? "tu tienda")}"></label>
-        <label>Saludo<input data-assistant-field="greeting" maxlength="200" value="${esc(s.greeting ?? "")}" placeholder="¡Hola! ¿En qué te ayudo?"></label>
+        <label>Nombre<input data-assistant-field="name" maxlength="60" value="${esc(nameValue)}" placeholder="Asistente de ${esc(deps.store()?.name ?? "tu tienda")}"></label>
+        <label>Saludo<input data-assistant-field="greeting" maxlength="200" value="${esc(greetingValue)}" placeholder="¡Hola! ¿En qué te ayudo?"></label>
         <fieldset><legend>Trato</legend>
-          <label><input type="radio" name="assistantFormality" value="tu" ${s.formality === "tu" ? "checked" : ""}> Tú</label>
-          <label><input type="radio" name="assistantFormality" value="usted" ${s.formality === "usted" ? "checked" : ""}> Usted</label></fieldset>
+          <label><input type="radio" name="assistantFormality" value="tu" ${formalityValue === "tu" ? "checked" : ""}> Tú</label>
+          <label><input type="radio" name="assistantFormality" value="usted" ${formalityValue === "usted" ? "checked" : ""}> Usted</label></fieldset>
         <button class="primary" type="button" data-assistant-save-look>Guardar apariencia</button>
       </section>
       <section class="assistant-card">
         <h3>Lo que el asistente debe saber</h3>
         <p>Lo que no está en tus productos ni en tus páginas: días de envío, feriados, tu historia.</p>
-        <textarea data-assistant-notes maxlength="${NOTES_MAX}" rows="8" aria-label="Lo que el asistente debe saber">${esc(s.notes)}</textarea>
-        <p class="assistant-count" data-assistant-count>${notesLeft(s.notes)} caracteres disponibles</p>
+        <textarea data-assistant-notes maxlength="${NOTES_MAX}" rows="8" aria-label="Lo que el asistente debe saber">${esc(notesValue)}</textarea>
+        <p class="assistant-count" data-assistant-count>${notesLeft(notesValue)} caracteres disponibles</p>
         <div class="assistant-row"><button class="ghost" type="button" data-assistant-draft>Redactar con YAPI</button><button class="primary" type="button" data-assistant-save-notes>Guardar notas</button></div>
       </section>
       <section class="assistant-card">
@@ -68,8 +76,8 @@ export function mountAssistantPanel(deps) {
       </section>
       <section class="assistant-card">
         <h3>Probar</h3><p>${esc(`${data.usage.previewUsed} de ${data.usage.previewCap} pruebas este mes`)}</p>
-        <div class="assistant-test-log" data-assistant-test-log aria-live="polite"></div>
-        <form class="assistant-row" data-assistant-test><input name="message" maxlength="500" placeholder="Pregunta como un cliente" aria-label="Pregunta de prueba" required><button class="primary" type="submit">Enviar</button></form>
+        <div class="assistant-test-log" data-assistant-test-log aria-live="polite">${testLog.map((m) => `<p class="assistant-msg is-${m.role}"${m.error ? ' role="alert"' : ""}>${esc(m.text)}</p>${(m.products || []).map((p) => `<p class="assistant-product">${esc(p.name)} · ${esc(p.price)}${p.inStock ? "" : " · Agotado"}</p>`).join("")}`).join("")}</div>
+        <form class="assistant-row" data-assistant-test><input name="message" maxlength="500" placeholder="Pregunta como un cliente" aria-label="Pregunta de prueba" value="${esc(drafts.test ?? "")}" required><button class="primary" type="submit" ${testing ? "disabled" : ""}>Enviar</button></form>
       </section>
       <section class="assistant-card">
         <h3>Preguntas que no supo</h3>
@@ -84,68 +92,80 @@ export function mountAssistantPanel(deps) {
   }
 
   root.addEventListener("change", async (event) => {
-    const target = event.target;
-    if (target.matches("[data-assistant-enabled]")) await save({ enabled: target.checked }, target.checked ? "Asistente activado." : "Asistente desactivado.");
+    const target = event.target, e = epoch;
+    if (target.name === "assistantFormality") drafts.formality = target.value;
+    else if (target.matches("[data-assistant-enabled]")) await save({ enabled: target.checked }, target.checked ? "Asistente activado." : "Asistente desactivado.");
     else if (target.matches("[data-assistant-coupon]")) {
       const id = target.dataset.assistantCoupon;
       try {
         await deps.api(`/stores/${encodeURIComponent(deps.storeId())}/promo-codes/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ showInAssistant: target.checked }) });
+        if (e !== epoch) return;
         data.coupons = data.coupons.map((c) => c.id === id ? { ...c, showInAssistant: target.checked } : c); status = "Cupones actualizados.";
-      } catch (error) { status = error.message; }
+      } catch (error) { if (e !== epoch) return; status = error.message; }
       render();
     } else if (target.id === "assistantAvatarInput" && target.files?.[0]) {
       const file = target.files[0];
       if (file.size > 8_000_000) { status = "La foto no puede pesar más de 8MB."; render(); return; }
-      try { const url = await deps.uploadFile(file); await save({ avatarUrl: url }, "Foto guardada."); } catch (error) { status = error.message; render(); }
+      try { const url = await deps.uploadFile(file); if (e !== epoch) return; await save({ avatarUrl: url }, "Foto guardada."); } catch (error) { if (e !== epoch) return; status = error.message; render(); }
     }
   });
   root.addEventListener("input", (event) => {
-    if (event.target.matches("[data-assistant-notes]")) root.querySelector("[data-assistant-count]").textContent = `${notesLeft(event.target.value)} caracteres disponibles`;
+    const target = event.target;
+    if (target.matches("[data-assistant-notes]")) { drafts.notes = target.value; root.querySelector("[data-assistant-count]").textContent = `${notesLeft(target.value)} caracteres disponibles`; }
+    else if (target.matches("[data-assistant-field]")) drafts[target.dataset.assistantField] = target.value;
+    else if (target.name === "message") drafts.test = target.value;
   });
   root.addEventListener("click", async (event) => {
     const button = event.target.closest("button"); if (!button) return;
+    const e = epoch;
     if (button.matches("[data-assistant-retry]")) load();
     else if (button.matches("[data-assistant-avatar-remove]")) await save({ avatarUrl: null }, "Se usará el logo de la tienda.");
-    else if (button.matches("[data-assistant-save-look]")) await save({ name: root.querySelector('[data-assistant-field="name"]').value, greeting: root.querySelector('[data-assistant-field="greeting"]').value, formality: root.querySelector('[name="assistantFormality"]:checked')?.value || "tu" }, "Apariencia guardada.");
-    else if (button.matches("[data-assistant-save-notes]")) await save({ notes: root.querySelector("[data-assistant-notes]").value }, "Notas guardadas.");
+    else if (button.matches("[data-assistant-save-look]")) await save({ name: root.querySelector('[data-assistant-field="name"]').value, greeting: root.querySelector('[data-assistant-field="greeting"]').value, formality: root.querySelector('[name="assistantFormality"]:checked')?.value || "tu" }, "Apariencia guardada.", ["name", "greeting", "formality"]);
+    else if (button.matches("[data-assistant-save-notes]")) await save({ notes: root.querySelector("[data-assistant-notes]").value }, "Notas guardadas.", ["notes"]);
     else if (button.matches("[data-assistant-draft]")) {
       button.disabled = true;
-      try { const { notes } = await deps.api(`${base()}/notes-draft`, { method: "POST" }); root.querySelector("[data-assistant-notes]").value = notes; root.querySelector("[data-assistant-count]").textContent = `${notesLeft(notes)} caracteres disponibles`; }
-      catch (error) { status = error.message; render(); }
+      try { const { notes } = await deps.api(`${base()}/notes-draft`, { method: "POST" }); if (e !== epoch) return; drafts.notes = notes; root.querySelector("[data-assistant-notes]").value = notes; root.querySelector("[data-assistant-count]").textContent = `${notesLeft(notes)} caracteres disponibles`; }
+      catch (error) { if (e !== epoch) return; status = error.message; render(); }
       finally { button.disabled = false; }
     } else if (button.matches("[data-assistant-teach]")) {
       const id = button.dataset.assistantTeach, answer = root.querySelector(`[data-assistant-answer="${CSS.escape(id)}"]`).value.trim();
       if (!answer) { status = "Escribe la respuesta."; render(); return; }
-      try { data = await deps.api(`${base()}/unanswered/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ action: "teach", answer }) }); questions = questions.filter((q) => q.id !== id); status = "Respuesta agregada a las notas."; }
-      catch (error) { status = error.message; }
+      try { data = await deps.api(`${base()}/unanswered/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ action: "teach", answer }) }); if (e !== epoch) return; questions = questions.filter((q) => q.id !== id); status = "Respuesta agregada a las notas."; }
+      catch (error) { if (e !== epoch) return; status = error.message; if (/ya fue atendida/.test(error.message)) await reloadQuestions(); }
       render();
     } else if (button.matches("[data-assistant-ignore]")) {
       const id = button.dataset.assistantIgnore;
-      try { data = await deps.api(`${base()}/unanswered/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ action: "ignore" }) }); questions = questions.filter((q) => q.id !== id); } catch (error) { status = error.message; }
+      try { data = await deps.api(`${base()}/unanswered/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ action: "ignore" }) }); if (e !== epoch) return; questions = questions.filter((q) => q.id !== id); } catch (error) { if (e !== epoch) return; status = error.message; if (/ya fue atendida/.test(error.message)) await reloadQuestions(); }
       render();
     } else if (button.matches("[data-assistant-open]")) {
       const id = button.dataset.assistantOpen;
       if (open?.id === id) { open = null; render(); return; }
-      try { open = await deps.api(`${base()}/conversations/${encodeURIComponent(id)}`); } catch (error) { status = error.message; }
+      try { const next = await deps.api(`${base()}/conversations/${encodeURIComponent(id)}`); if (e !== epoch) return; open = next; } catch (error) { if (e !== epoch) return; status = error.message; }
       render();
     }
   });
   root.addEventListener("submit", async (event) => {
     if (!event.target.matches("[data-assistant-test]")) return;
     event.preventDefault();
-    const form = event.target, input = form.elements.message, logEl = root.querySelector("[data-assistant-test-log]");
-    const message = input.value.trim(); if (!message) return;
-    input.value = ""; logEl.insertAdjacentHTML("beforeend", `<p class="assistant-msg is-buyer">${esc(message)}</p>`);
+    const e = epoch;
+    const message = event.target.elements.message.value.trim();
+    if (!message || testing) return;
+    drafts.test = ""; testing = true; testLog.push({ role: "buyer", text: message }); render();
     try {
       const result = await deps.api(`${base()}/test`, { method: "POST", body: JSON.stringify(testId ? { conversationId: testId, message } : { message }) });
+      if (e !== epoch) return;
       testId = result.conversationId || testId;
       const reply = result.reply;
-      logEl.insertAdjacentHTML("beforeend", `<p class="assistant-msg is-bot">${esc(reply?.text ?? "Sin respuesta.")}</p>${(reply?.blocks || []).filter((b) => b.type === "products").flatMap((b) => b.items).map((p) => `<p class="assistant-product">${esc(p.name)} · ${esc(p.price)}${p.inStock ? "" : " · Agotado"}</p>`).join("")}`);
-    } catch (error) { logEl.insertAdjacentHTML("beforeend", `<p class="assistant-msg is-bot" role="alert">${esc(error.message)}</p>`); }
+      testLog.push({ role: "bot", text: reply?.text ?? "Sin respuesta.", products: (reply?.blocks || []).filter((b) => b.type === "products").flatMap((b) => b.items) });
+      try { const next = await deps.api(base()); if (e === epoch) data = next; } catch { /* the usage count refreshes on the next load */ }
+    } catch (error) { if (e !== epoch) return; testLog.push({ role: "bot", text: error.message, error: true }); }
+    if (e !== epoch) return;
+    testing = false; render();
+    root.querySelector("[data-assistant-test] input")?.focus();
   });
 
   return {
     show() { if (loadedFor !== deps.storeId() || !data) load(); else render(); },
-    reset() { request++; data = null; list = []; questions = []; open = null; failure = null; loadedFor = null; testId = null; status = ""; if (document.body.dataset.dashboardView === "assistant") load(); },
+    reset() { request++; epoch++; drafts = {}; testLog = []; testing = false; data = null; list = []; questions = []; open = null; failure = null; loadedFor = null; testId = null; status = ""; if (document.body.dataset.dashboardView === "assistant") load(); },
   };
 }
