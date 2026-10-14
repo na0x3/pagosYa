@@ -267,6 +267,12 @@ for (const width of [390, 1280]) {
       await expect(card).toContainText("Bs 1.525,50");
       await expect(page.getByRole("tab", { name: /Por cobrar/ })).toContainText("1");
       await expect(page.locator(".cobros-summary")).toContainText("Bs 1.525,50");
+      if (width >= 1000) {
+        // The filter tabs are a compact track, not a grey bar across the page.
+        const track = await page.getByRole("tablist", { name: "Filtrar cobros" }).boundingBox();
+        const list = await page.locator(".cobros-summary").boundingBox();
+        expect(track.width).toBeLessThan(list.width);
+      }
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/dashboard-list-${width}.png` });
       expect(errors).toEqual([]);
     });

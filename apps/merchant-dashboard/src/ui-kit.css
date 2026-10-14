@@ -12,17 +12,23 @@ body.is-logged-in .ui-head h3 { margin: 0 0 3px; color: var(--pg-text); font-siz
 body.is-logged-in .ui-head p { margin: 0; color: var(--pg-text-muted); font-size: 13px; line-height: 1.5; }
 body.is-logged-in .ui-count { flex: none; align-self: center; min-width: 28px; padding: 4px 10px; border-radius: 999px; background: var(--pg-surface-raised); color: var(--pg-text); font-size: 12px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
 
-/* Switch: a real checkbox drawn as a pill. The knob is a gradient, so no pseudo-element is needed. */
+/* Switch: a real checkbox drawn as a pill. The knob is a gradient, so no pseudo-element is needed.
+   The 1px border keeps an off switch readable on white (WCAG 1.4.11) and in high-contrast mode. */
 body.is-logged-in .ui-switch {
-  appearance: none; -webkit-appearance: none; flex: none; width: 36px; min-width: 36px; height: 20px; margin: 0; padding: 0;
-  border: 0; border-radius: 999px; cursor: pointer;
+  appearance: none; -webkit-appearance: none; box-sizing: border-box; flex: none; width: 36px; min-width: 36px; height: 20px; margin: 0; padding: 0;
+  border: 1px solid var(--pg-text-faint); border-radius: 999px; cursor: pointer;
   background-color: var(--pg-border-strong);
   background-image: radial-gradient(circle, #fff 0 7px, transparent 7.5px);
-  background-size: 20px 20px; background-repeat: no-repeat; background-position: left center;
-  transition: background-color .16s ease, background-position .16s ease;
+  background-size: 18px 18px; background-repeat: no-repeat; background-position: left center;
+  transition: background-color .16s ease, background-position .16s ease, border-color .16s ease;
 }
-body.is-logged-in .ui-switch:checked { background-color: var(--pg-ink); background-position: right center; }
-body.is-logged-in .ui-switch:focus { border: 0; box-shadow: none; }
+body.is-logged-in .ui-switch:checked { border-color: var(--pg-ink); background-color: var(--pg-ink); background-position: right center; }
+body.is-logged-in .ui-switch:focus { border-color: var(--pg-text-faint); box-shadow: none; }
+body.is-logged-in .ui-switch:checked:focus { border-color: var(--pg-ink); }
+@media (forced-colors: active) {
+  body.is-logged-in .ui-switch { border-color: CanvasText; background-image: radial-gradient(circle, CanvasText 0 6px, transparent 6.5px); }
+  body.is-logged-in .ui-switch:checked { border-color: Highlight; background-color: Highlight; forced-color-adjust: none; }
+}
 body.is-logged-in .ui-switch:focus-visible { outline: 2px solid var(--pg-text); outline-offset: 2px; }
 body.is-logged-in .ui-switch:disabled { opacity: .45; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { body.is-logged-in .ui-switch { transition: none; } }
@@ -64,7 +70,7 @@ body.is-logged-in .ui-pill input:checked + span { border-color: var(--pg-ink); b
 body.is-logged-in .ui-pill input:focus-visible + span { outline: 2px solid var(--pg-text); outline-offset: 2px; }
 
 /* Tabs: a grey track with the selected tab raised in white; an optional icon and count. */
-body.is-logged-in .ui-tabs { display: inline-flex; gap: 2px; max-width: 100%; margin: 0; padding: 4px; border: 0; border-radius: 12px; background: var(--pg-surface-raised); overflow-x: auto; scrollbar-width: none; }
+body.is-logged-in .ui-tabs { display: inline-flex; justify-self: start; align-self: start; gap: 2px; max-width: 100%; margin: 0; padding: 4px; border: 0; border-radius: 12px; background: var(--pg-surface-raised); overflow-x: auto; scrollbar-width: none; }
 body.is-logged-in .ui-tabs::-webkit-scrollbar { display: none; }
 body.is-logged-in .ui-tab { display: inline-flex; align-items: center; gap: 8px; flex: none; width: auto; min-height: 36px; margin: 0; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; box-shadow: none; color: var(--pg-text-muted); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
 body.is-logged-in .ui-tab:hover { color: var(--pg-text); }

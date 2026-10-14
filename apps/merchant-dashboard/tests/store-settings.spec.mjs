@@ -1098,6 +1098,32 @@ test("Ajustes fits a phone without sideways scrolling", async ({ page }) => {
   }
 });
 
+test("an off switch keeps a visible outline, also in high-contrast mode", async ({ page }) => {
+  const stores = [store("store_1", "Primera")];
+  await openDashboard(page, stores, settingsResponder(stores));
+  await navigateDashboard(page, "store-settings");
+  const lowStock = page.getByRole("switch", { name: /Mostrar avisos de pocas unidades/ });
+  await lowStock.uncheck();
+  const borderWidth = () => lowStock.evaluate((el) => getComputedStyle(el).borderTopWidth);
+  expect(await borderWidth()).toBe("1px");
+  await page.emulateMedia({ forcedColors: "active" });
+  expect(await borderWidth()).toBe("1px");
+});
+
+test("a location's stock row keeps its Sin límite switch inside the row", async ({ page }) => {
+  const stores = [store("store_1", "Primera")];
+  const products = [{ id: "product_1", storeId: "store_1", name: "Pan brioche", amount: 2800, currency: "BOB", status: "ACTIVE", stock: 7, imageUrls: [], tags: [], variants: [], extras: [] }];
+  await openDashboard(page, stores, settingsResponder(stores, products));
+  await navigateDashboard(page, "store-settings");
+  await page.getByRole("button", { name: "Agregar ubicación" }).click();
+  const row = page.locator(".store-location-stock-row").first();
+  const toggle = row.locator(".ui-inline-switch");
+  await expect(toggle).toBeVisible();
+  const [rowBox, toggleBox] = [await row.boundingBox(), await toggle.boundingBox()];
+  expect(toggleBox.x + toggleBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 0.5);
+  expect(await toggle.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+});
+
 test("a location map must be an embeddable Google Maps or OpenStreetMap URL", async ({ page }) => {
   const stores = [store("store_1", "Primera")];
   const products = [{ id: "product_1", storeId: "store_1", name: "Pan brioche", amount: 2800, currency: "BOB", status: "ACTIVE", stock: 7, imageUrls: [], tags: [], variants: [], extras: [] }];
