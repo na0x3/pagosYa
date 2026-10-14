@@ -172,6 +172,37 @@ describe('build ("Generar sitio")', () => {
   });
 });
 
+describe('the home is rebuilt, so the measured look and YAPI touch go (one look per store)', () => {
+  const touched = (touch: number | undefined) => `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'salv', look: { version: 1, edge: 'offset' }, dna: { version: 1, swatch: 'pill', ...(touch ? { touch } : {}), productCss: 'old-product', catalogCss: 'old-catalog', cardCss: 'old-card', cartCss: 'old-cart' } })};`;
+  const withConfig = (projects: any, content: string) => projects.version.mockImplementation(async () => {
+    const { snapshot } = await setup().projects.version();
+    return { revision: 3, snapshot: { ...snapshot, files: snapshot.files.map((f: any) => f.path === 'config.js' ? { ...f, content } : f) } };
+  });
+  const savedConfig = (projects: any) => JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  for (const [name, act] of [
+    ['Boceto editado', (service: any, sketch: any) => service.update('m', 's', { revision: 3, sketch })],
+    ['regenerar', (service: any) => service.regenerate('m', 's', { revision: 3, designSeed: 'seed' })],
+    ['Generar sitio', (service: any) => service.build('m', 's', { revision: 3 })],
+  ] as const) it(`${name}: drops config.look and a touched store's touch CSS`, async () => {
+    const { service, projects, sketch } = setup();
+    withConfig(projects, touched(1));
+    await act(service, sketch);
+    const config = savedConfig(projects);
+    expect(config).not.toHaveProperty('look');
+    for (const key of ['touch', 'catalogCss', 'cardCss', 'cartCss']) expect(config.dna).not.toHaveProperty(key);
+    expect(config.dna.productCss ?? '').not.toBe('old-product');
+    expect(config.dna.swatch).toBe('pill');
+  });
+  it('an untouched store keeps its other dna and loses only the look', async () => {
+    const { service, projects, sketch } = setup();
+    withConfig(projects, touched(undefined));
+    await service.update('m', 's', { revision: 3, sketch });
+    const config = savedConfig(projects);
+    expect(config).not.toHaveProperty('look');
+    expect(config.dna).toMatchObject({ swatch: 'pill', cardCss: 'old-card' });
+  });
+});
+
 it('a hand edit maps the Botones choice onto the kit button form in config.js dna', async () => {
   const { service, projects, sketch } = setup();
   const edited = { ...sketch, style: { ...(sketch as any).style, buttons: 'outline' } };

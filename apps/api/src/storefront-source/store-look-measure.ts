@@ -118,7 +118,8 @@ export async function withMeasuredLook<T extends { files: SourceProjectFileDto[]
   if (options.enabled) {
     try {
       const reading = await (options.measure ?? measureStoreLook)({ brief: options.brief, files: input.files } as unknown as SourceProjectSnapshot, { signal: options.signal });
-      const measured = reading ? lookFromReading(reading, { treatment: options.declaredTreatment }) : undefined;
+      // Sanitized like any stored look: a reading's NaN or float noise never reaches config.js.
+      const measured = reading ? sanitizeLook(lookFromReading(reading, { treatment: options.declaredTreatment })) : undefined;
       if (measured) { look = measured; outcome = 'measured'; }
     } catch (error) {
       options.signal?.throwIfAborted();

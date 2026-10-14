@@ -94,7 +94,6 @@ describe('the theme tool only answers requests that concern the product page', (
 });
 
 describe('verify checks the kit surface CSS (catalog, cards, cart) in a real browser', () => {
-  const kitFail = { buy: failure };
   const ok = { catalog: [], card: [], cart: [] };
   const kitBox = (checkKitSurfaces: (snapshot: any) => Promise<any>) => box(async () => [], { checkKitSurfaces });
   const cardArgs = { cardCss: '[data-part="card-media"]{transform:rotate(-2deg)}', cartCss: '[data-part="cart-line"]{border-bottom:1px dashed #333}' };
@@ -110,7 +109,6 @@ describe('verify checks the kit surface CSS (catalog, cards, cart) in a real bro
   });
 
   it('drops only the failing surface and reports it', async () => {
-    void kitFail;
     const b = kitBox(async () => ({ ...ok, card: [failure] }));
     await theme(b, { preset: 'plain', ...cardArgs });
     const out = (await b.run('verify', '{}')).output;

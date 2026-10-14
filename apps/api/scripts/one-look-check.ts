@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { withVisualSandbox } from '../src/storefront-source/source-visual-capture';
 import { currentSourceRuntime } from '../src/storefront-source/source-runtime';
 import { readLookInPage } from '../src/storefront-source/store-look-measure';
-import { lookFromReading, patchConfigFile, readConfigFile, sanitizeLook, type StoreLook } from '../src/storefront-source/store-look';
+import { lookFromReading, lookUniqueness, patchConfigFile, readConfigFile, sameLook, sanitizeLook, type StoreLook } from '../src/storefront-source/store-look';
 import { parseFrameDraw, FRAME_DRAW_FILE } from '../src/storefront-source/design-engine/frame-draw';
 import type { SourceProjectSnapshot } from '../src/storefront-source/source-project';
 
@@ -54,7 +54,7 @@ async function main() {
       const heading = saved?.type?.heading;
       const checks = {
         lookSaved: Boolean(saved),
-        lookMatchesHome: JSON.stringify(fresh) === JSON.stringify(saved),
+        lookMatchesHome: sameLook(fresh, saved),
         titleFamily: !heading?.family || Boolean(facts.pdp?.family.includes(heading.family)),
         titleWeight: !heading?.weight || facts.pdp?.weight === String(heading.weight),
         titleCase: !heading?.case || facts.pdp?.transform === (heading.case === 'upper' ? 'uppercase' : 'none'),
@@ -66,10 +66,11 @@ async function main() {
     }
   } finally { await prisma.$disconnect(); }
   console.table(rows);
-  const key = (look?: StoreLook) => JSON.stringify([look?.type?.heading?.family, look?.type?.heading?.weight, look?.type?.heading?.case, look?.shape?.photo, look?.edge, look?.photo?.treatment]);
-  const seen = new Map<string, string>();
-  for (const { slug, look } of looks) { const k = key(look); if (seen.has(k)) console.log(`NOT UNIQUE: ${slug} has the same type/shape/edge/photo combination as ${seen.get(k)}`); else seen.set(k, slug); }
-  console.log(seen.size === looks.length ? 'Uniqueness: every store has its own combination.' : 'Uniqueness: FAILED (see above).');
+  // Stores without a saved look have nothing to compare: they are listed apart, never counted as duplicates.
+  const { unique, duplicates, lookless } = lookUniqueness(looks);
+  for (const [slug, first] of duplicates) console.log(`NOT UNIQUE: ${slug} has the same type/shape/edge/photo combination as ${first}`);
+  if (lookless.length) console.log(`No saved look (left out of the uniqueness verdict): ${lookless.join(', ')}`);
+  console.log(unique ? `Uniqueness: every store with a look has its own combination (${looks.length - lookless.length} compared).` : 'Uniqueness: FAILED (see above).');
 }
 
 main().catch(error => { console.error(error); process.exit(1); });

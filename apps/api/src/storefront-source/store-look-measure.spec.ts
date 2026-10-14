@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { readFile } from 'node:fs/promises';
 import { kitPath } from '@pagosya/storefront-kit';
 import { measureStoreLook, withMeasuredLook } from './store-look-measure';
-import { lookFromReading, readConfigFile } from './store-look';
+import { lookFromReading, readConfigFile, sanitizeLook } from './store-look';
 import type { SourceProjectSnapshot } from './source-project';
 
 /** A one-page store: a stylesheet, an Anton font and three photos. Nothing leaves the sandbox. */
@@ -79,6 +79,15 @@ describe('withMeasuredLook', () => {
     const result = await withMeasuredLook(input, { enabled: false, previousLook: { version: 1, edge: 'none' }, measure });
     expect(measure).not.toHaveBeenCalled();
     expect(readConfigFile(result.input.files).look).toEqual({ version: 1, edge: 'none' });
+  });
+
+  it('stores the sanitized look: a reading with NaN values never writes them (or null) into config.js', async () => {
+    const noisy = { ...reading, heading: { ...reading.heading, weight: NaN, letterSpacing: NaN }, labels: [{ letterSpacing: 1, fontSize: 12, weight: NaN }, { letterSpacing: 1, fontSize: 12, weight: NaN }, { letterSpacing: 1, fontSize: 12, weight: NaN }] };
+    const result = await withMeasuredLook(input, { enabled: true, measure: async () => noisy });
+    expect(result.look).toEqual(sanitizeLook(lookFromReading(noisy)));
+    const saved = readConfigFile(result.input.files).look;
+    expect(JSON.stringify(saved)).not.toContain('null');
+    expect(saved).toEqual({ version: 1, type: { heading: { family: 'Anton', case: 'none', italic: false }, label: { case: 'upper', tracking: 0.08 } } });
   });
 
   it('returns the input unchanged when there is no look at all', async () => {

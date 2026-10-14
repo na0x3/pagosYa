@@ -11,6 +11,8 @@ import { sourceAssetInventory, withSourceIcons } from './source-asset-library';
 import { assembleSketch, repairSketch, sketchProductTheme, sketchKitDna, type SketchContext, type StoreSketch } from './sketch';
 import { resolveProductTheme, snapshotWithProductTheme } from './product-theme';
 import type { SourceProjectSnapshot } from './source-project';
+import { patchConfigFile } from './store-look';
+import { TOUCH_KEYS } from './kit-touch';
 
 const SKETCH_FILE = 'sketch.json';
 const PHOTO = /\.(png|jpe?g|webp|avif)$/i;
@@ -130,9 +132,17 @@ export class SketchStudioService {
   }
 
   /** The sketch's product skin reaches the runtime through config.js dna, like the agent's
-   * set_product_card_theme; its composition travels as config.productPageStyle. */
-  private async withProductTheme(files: Array<{ path: string; content: string }>, sketch: StoreSketch) {
+   * set_product_card_theme; its composition travels as config.productPageStyle. Every caller rebuilds the home, so the
+   * look measured from the old home goes, and so does YAPI's touch (dna.touch = 1) drawn from it: the kit pages show the
+   * kit defaults until the next YAPI save measures and touches again (one look per store, spec 2026-10-14). */
+  private async withProductTheme(source: Array<{ path: string; content: string }>, sketch: StoreSketch) {
     const theme = await resolveProductTheme(sketchProductTheme(sketch.product));
+    const files = patchConfigFile(source, ({ look: _look, ...config }) => {
+      if (!config.dna || typeof config.dna !== 'object' || config.dna.touch !== 1) return config;
+      const dna = { ...config.dna };
+      for (const key of ['touch', ...Object.values(TOUCH_KEYS)]) delete dna[key];
+      return { ...config, dna };
+    });
     return snapshotWithProductTheme({ files }, theme.dna).files.map(file => {
       if (file.path !== 'config.js') return file;
       try {

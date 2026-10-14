@@ -125,6 +125,12 @@ export function lookFromReading(reading: LookReading, declared: { treatment?: st
 
 const inRange = (value: unknown, low: number, high: number): value is number => typeof value === 'number' && Number.isFinite(value) && value >= low && value <= high;
 const oneOf = <T extends string>(list: readonly T[], value: unknown): T | undefined => (list as readonly unknown[]).includes(value) ? value as T : undefined;
+/** A fractional reading rounded to 3 decimals (float noise like 0.30000000000000004 gone), kept only when in range. */
+const fine = (value: unknown, low: number, high: number): number | undefined => {
+  if (typeof value !== 'number') return undefined;
+  const rounded = Math.round(value * 1000) / 1000;
+  return inRange(rounded, low, high) ? rounded : undefined;
+};
 const radius = (value: unknown, arch: boolean): PhotoRadius | undefined => value === 'pill' || (arch && value === 'arch') ? value as PhotoRadius : inRange(value, 0, 48) ? Math.round(value) : undefined;
 /** A stored look, validated again (idempotent). Unknown keys and out-of-range values are dropped, never coerced. */
 export function sanitizeLook(raw: unknown): StoreLook | undefined {
@@ -135,12 +141,12 @@ export function sanitizeLook(raw: unknown): StoreLook | undefined {
     family: typeof h.family === 'string' && FAMILY.test(h.family) ? h.family : undefined,
     weight: inRange(h.weight, 300, 900) ? h.weight : undefined,
     case: oneOf(['none', 'upper'] as const, h.case),
-    tracking: inRange(h.tracking, -0.05, 0.3) ? h.tracking : undefined,
+    tracking: fine(h.tracking, -0.05, 0.3),
     italic: typeof h.italic === 'boolean' ? h.italic : undefined,
   }) : undefined;
-  const label = l && typeof l === 'object' && l.case === 'upper' ? { case: 'upper' as const, ...(inRange(l.tracking, 0, 0.3) ? { tracking: l.tracking } : {}), ...(inRange(l.weight, 300, 900) ? { weight: l.weight } : {}) } : undefined;
+  const label = l && typeof l === 'object' && l.case === 'upper' ? { case: 'upper' as const, ...(fine(l.tracking, 0, 0.3) !== undefined ? { tracking: fine(l.tracking, 0, 0.3) } : {}), ...(inRange(l.weight, 300, 900) ? { weight: l.weight } : {}) } : undefined;
   const shape = input.shape && typeof input.shape === 'object' ? compact({ photo: radius(input.shape.photo, true), card: radius(input.shape.card, false) as LookRadius | undefined, button: radius(input.shape.button, false) as LookRadius | undefined }) : undefined;
-  const photo = input.photo && typeof input.photo === 'object' ? compact({ treatment: oneOf(LOOK_TREATMENTS, input.photo.treatment), aspect: oneOf(LOOK_ASPECTS, input.photo.aspect), tilt: inRange(input.photo.tilt, 0, 4) ? input.photo.tilt : undefined }) : undefined;
+  const photo = input.photo && typeof input.photo === 'object' ? compact({ treatment: oneOf(LOOK_TREATMENTS, input.photo.treatment), aspect: oneOf(LOOK_ASPECTS, input.photo.aspect), tilt: fine(input.photo.tilt, 0, 4) }) : undefined;
   const look: StoreLook = { version: 1 };
   const type = compact({ heading, label });
   if (type) look.type = type;
@@ -167,4 +173,25 @@ export function patchConfigFile<T extends { path: string; content: string }>(fil
     if (!match) return file;
     try { return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(patch(JSON.parse(match[1])))};\n` }; } catch { return file; }
   });
+}
+
+/** JSON with object keys sorted at every level, so two equal looks compare equal whatever order their keys were written in. */
+const canonical = (value: unknown): string => Array.isArray(value) ? `[${value.map(canonical).join(',')}]`
+  : value && typeof value === 'object' ? `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(',')}}`
+  : JSON.stringify(value) ?? 'null';
+/** Do two stored looks say the same thing? Both are sanitized first (unknown keys, noise and bad values gone). */
+export function sameLook(a: unknown, b: unknown): boolean { return canonical(sanitizeLook(a) ?? null) === canonical(sanitizeLook(b) ?? null); }
+/** Spec 2026-10-14 success criterion 2 over a set of stores: two stores with the same headline type, photo shape, edge and
+ * treatment are duplicates (later store first). A store without a look has nothing to compare and is reported apart. */
+export function lookUniqueness(looks: ReadonlyArray<{ slug: string; look?: unknown }>): { unique: boolean; duplicates: Array<[string, string]>; lookless: string[] } {
+  const seen = new Map<string, string>();
+  const duplicates: Array<[string, string]> = [], lookless: string[] = [];
+  for (const { slug, look: raw } of looks) {
+    const look = sanitizeLook(raw);
+    if (!look) { lookless.push(slug); continue; }
+    const key = canonical([look.type?.heading?.family, look.type?.heading?.weight, look.type?.heading?.case, look.shape?.photo, look.edge, look.photo?.treatment]);
+    const first = seen.get(key);
+    if (first) duplicates.push([slug, first]); else seen.set(key, slug);
+  }
+  return { unique: duplicates.length === 0, duplicates, lookless };
 }

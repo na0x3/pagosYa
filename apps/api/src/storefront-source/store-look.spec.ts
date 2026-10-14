@@ -1,4 +1,4 @@
-import { lookFromReading, patchConfigFile, readConfigFile, sanitizeLook, type LookBox, type LookPhoto, type LookReading } from './store-look';
+import { lookFromReading, lookUniqueness, patchConfigFile, readConfigFile, sameLook, sanitizeLook, type LookBox, type LookPhoto, type LookReading } from './store-look';
 
 const box = (radius: number, extra: Partial<LookBox> = {}): LookBox => ({ width: 300, height: 375, radii: [radius, radius, radius, radius], borderWidth: 0, shadows: [], ...extra });
 const photo = (radius: number, extra: Partial<LookPhoto> = {}): LookPhoto => ({ ...box(radius), grayscale: 0, sepia: 0, blend: 'normal', overlay: false, padding: 0, lightBacking: false, rotate: 0, ...extra });
@@ -82,6 +82,11 @@ describe('sanitizeLook', () => {
     expect(sanitizeLook(JSON.parse(JSON.stringify(look)))).toEqual(look);
   });
 
+  it('normalises float noise in tracking and tilt', () => {
+    expect(sanitizeLook({ version: 1, type: { heading: { tracking: 0.1 + 0.2 - 0.2 }, label: { case: 'upper', tracking: 0.1 * 3 } }, photo: { tilt: 0.1 * 3 * 10 } }))
+      .toEqual({ version: 1, type: { heading: { tracking: 0.1 }, label: { case: 'upper', tracking: 0.3 } }, photo: { tilt: 3 } });
+  });
+
   it('drops unknown keys, wrong versions and unsafe values', () => {
     expect(sanitizeLook(undefined)).toBeUndefined();
     expect(sanitizeLook({ version: 2, edge: 'soft' })).toBeUndefined();
@@ -98,5 +103,20 @@ describe('config helpers', () => {
     const patched = patchConfigFile(files, config => ({ ...config, look: { version: 1 } }));
     expect(readConfigFile(patched).look).toEqual({ version: 1 });
     expect(patched[1]).toBe(files[1]);
+  });
+});
+
+describe('one-look-check comparisons', () => {
+  it('compares looks sanitized on both sides and regardless of key order', () => {
+    const a = { version: 1, edge: 'offset', type: { heading: { family: 'Anton', case: 'upper', tracking: 0.1 } } };
+    const b = { type: { heading: { tracking: 0.1 + 0.2 - 0.2, case: 'upper', family: 'Anton' } }, edge: 'offset', version: 1, junk: true };
+    expect(sameLook(a, b)).toBe(true);
+    expect(sameLook(a, { ...a, edge: 'soft' })).toBe(false);
+    expect(sameLook(undefined, { version: 2 })).toBe(true);
+  });
+  it('leaves look-less stores out of the uniqueness verdict and reports them apart', () => {
+    const look = { version: 1, edge: 'offset' };
+    expect(lookUniqueness([{ slug: 'a', look }, { slug: 'b' }, { slug: 'c' }])).toEqual({ unique: true, duplicates: [], lookless: ['b', 'c'] });
+    expect(lookUniqueness([{ slug: 'a', look }, { slug: 'b', look: { edge: 'offset', version: 1 } }])).toEqual({ unique: false, duplicates: [['b', 'a']], lookless: [] });
   });
 });
