@@ -1,4 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { icon } from "./icons.mjs";
+import { uiHead, uiOption, uiSwitch } from "./ui-kit.mjs";
 import { CADENCES, CADENCE_LABEL, STATUS_LABEL, STATUS_TONE, MEMBER_STATUS_FILTERS, MEMBER_STATE_TONE, formatMoney, memberFigures, offersPayload, subscriberWhatsAppUrl, summaryFigures, validateGraceDays, validateOffers } from "./subscriptions.mjs";
 
 /**
@@ -71,9 +73,9 @@ export function mountSubscriptionsPanel(deps) {
   }
 
   function headHtml() {
-    const tab = (id, label) => `<button type="button" role="tab" aria-selected="${state.tab === id}" data-tab="${id}">${label}</button>`;
+    const tab = (id, label, name) => `<button type="button" role="tab" class="ui-tab" aria-selected="${state.tab === id}" data-tab="${id}">${icon(name, { size: 16 })}${label}</button>`;
     return `<header class="subs-head"><p>Clientes que reciben tus productos cada semana, quincena o mes, y tus miembros.</p>
-      <div class="subs-tabs" role="tablist" aria-label="Suscripciones">${tab("subscribers", "Suscriptores")}${tab("members", "Miembros")}${tab("settings", "Configuración")}</div></header>`;
+      <div class="ui-tabs" role="tablist" aria-label="Suscripciones">${tab("subscribers", "Suscriptores", "users")}${tab("members", "Miembros", "badge-check")}${tab("settings", "Configuración", "settings")}</div></header>`;
   }
 
   function confirmRow(text, yesAttrs, yesLabel) {
@@ -198,18 +200,16 @@ export function mountSubscriptionsPanel(deps) {
       return `<tr><td>${esc(product.name)}</td><td>${chips}</td><td><button type="button" class="subs-quiet" data-edit="${esc(product.id)}" ${editing ? "disabled" : ""}>Editar</button></td></tr>${form}`;
     }).join("");
     return `<section class="subs-card subs-switch">
-        <label><input type="checkbox" data-switch ${enabled ? "checked" : ""}> <span>Ofrecer suscripciones en mi tienda</span></label>
-        <p>Tus clientes reciben un enlace de pago antes de cada entrega. No se cobra automáticamente.</p>
+        ${uiOption({ icon: "repeat", attrs: "data-switch", checked: enabled, title: "Ofrecer suscripciones en mi tienda", text: "Pagan con un enlace antes de cada entrega." })}
         ${switchConfirm}
       </section>
       <section class="subs-card">
-        <h3>Frecuencias por producto</h3>
+        ${uiHead({ icon: "calendar-clock", title: "Frecuencias por producto" })}
         ${rows ? `<div class="subs-table-wrap"><table class="subs-table"><thead><tr><th>Producto</th><th>Frecuencias</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p>Aún no tienes productos.</p>`}
       </section>
       <section class="subs-card">
-        <h3>Membresías</h3>
+        ${uiHead({ icon: "id-card", title: "Membresías", text: "Días de gracia antes de que venza." })}
         <label>Días de gracia para renovar <input type="number" name="graceDays" min="0" max="30" step="1" value="${esc(summary?.membershipGraceDays ?? 7)}"></label>
-        <p>Si un miembro no paga su renovación, sigue activo estos días. Después, su membresía vence.</p>
         <button type="button" class="primary" data-save-grace>Guardar</button>
       </section>`;
   }
@@ -217,7 +217,7 @@ export function mountSubscriptionsPanel(deps) {
   function offerFormHtml(offers) {
     const line = CADENCES.map((cadence) => {
       const saved = offers.find((offer) => offer.cadence === cadence);
-      return `<div class="subs-offer-row"><label><input type="checkbox" name="offer-${cadence}" ${saved ? "checked" : ""}> ${CADENCE_LABEL[cadence]}</label>
+      return `<div class="subs-offer-row">${uiSwitch({ label: CADENCE_LABEL[cadence], attrs: `name="offer-${cadence}"`, checked: Boolean(saved) })}
         <label>Descuento <input type="number" name="discount-${cadence}" min="0" max="99" step="1" value="${saved ? esc(saved.discountPercent) : 0}"> %</label></div>`;
     }).join("");
     return `<div class="subs-offer-form">${line}<div class="subs-offer-actions"><button type="button" class="primary" data-save-offers>Guardar</button><button type="button" class="subs-quiet" data-cancel-edit>Cancelar</button></div></div>`;

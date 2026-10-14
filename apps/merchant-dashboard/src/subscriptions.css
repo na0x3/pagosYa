@@ -2,9 +2,6 @@
 #subscriptionsRoot { display: grid; gap: 16px; }
 .subs-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .subs-head p { margin: 0; color: var(--pg-text-muted); font-size: 14px; }
-.subs-tabs { display: inline-flex; gap: 4px; padding: 3px; background: var(--pg-accent-soft); border-radius: var(--calm-radius-sm, 8px); }
-.subs-tabs button { min-height: 34px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--pg-text-muted); font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
-.subs-tabs button[aria-selected="true"] { background: var(--pg-surface, #fff); color: var(--pg-text); box-shadow: var(--calm-shadow); }
 .subs-card { padding: 20px; background: var(--pg-surface, #fff); border: 1px solid var(--pg-border); border-radius: var(--calm-radius, 12px); box-shadow: var(--calm-shadow); }
 .subs-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 650; }
 .subs-card p { margin: 0; color: var(--pg-text-muted); font-size: 14px; line-height: 1.5; }
@@ -40,13 +37,11 @@
 .subs-confirm div { display: flex; gap: 6px; }
 .subs-confirm .primary { min-height: 32px; padding: 0 12px; font-size: 13px; }
 .subs-confirm-row td { padding: 0 14px 12px; }
-.subs-switch label { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
-.subs-switch label input { width: 18px; height: 18px; accent-color: var(--pg-ink); }
 .subs-switch .subs-confirm { margin-top: 12px; }
 .subs-chip { display: inline-block; margin: 0 4px 4px 0; padding: 2px 9px; border-radius: 999px; background: var(--pg-accent-soft); font-size: 12px; font-weight: 600; }
 .subs-offer-form { display: grid; gap: 8px; padding: 4px 0; }
 .subs-offer-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); align-items: center; gap: 12px; }
-.subs-offer-row label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.subs-offer-row label:not(.ui-inline-switch) { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .subs-offer-row input[type="number"] { width: 72px; min-height: 34px; }
 .subs-offer-actions { display: flex; gap: 8px; }
 .subs-offer-actions .primary { min-height: 34px; padding: 0 14px; }
