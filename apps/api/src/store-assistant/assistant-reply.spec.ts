@@ -58,6 +58,20 @@ describe('reply assembly', () => {
     expect(reply.blocks.filter((b) => b.type === 'add_to_cart')).toEqual([add]);
   });
 
+  it('a passing reply drops a handoff summary that states an invented figure (block and WhatsApp text)', () => {
+    const handoff = { reason: 'otro', question: '', summary: 'Quiere la chompa a Bs 150 con 30% de descuento.' };
+    const { reply, guarded } = assembleReply({ text: 'Te paso con la tienda.', box: box({ handoff, searched: [] }), evidence: [], contactPhone: '70000000' });
+    expect(guarded).toBe(false);
+    expect(reply.text).toBe('Te paso con la tienda.');
+    expect(reply.blocks).toContainEqual({ type: 'handoff', whatsappUrl: 'https://wa.me/70000000?text=' + encodeURIComponent('Hola, vengo del chat de la tienda.'), summary: '' });
+  });
+
+  it('a passing reply keeps a handoff summary whose figures are in the evidence', () => {
+    const handoff = { reason: 'otro', question: '', summary: 'Quiere la Chompa de Bs 255,00.' };
+    const { reply } = assembleReply({ text: 'Te paso con la tienda.', box: box({ handoff, searched: [] }), evidence: [], contactPhone: null });
+    expect(reply.blocks).toContainEqual({ type: 'handoff', whatsappUrl: null, summary: 'Quiere la Chompa de Bs 255,00.' });
+  });
+
   it('a guarded reply never carries the model-written handoff summary into the handoff', () => {
     const handoff = { reason: 'no_se', question: '¿NIT?', summary: 'Te lo dejo en Bs 10' };
     const { reply, guarded } = assembleReply({ text: 'Te la dejo en Bs 200.', box: box({ handoff }), evidence: [], contactPhone: '70000000' });

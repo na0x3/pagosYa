@@ -22,7 +22,8 @@ const wordsOf = (value: string) => ` ${foldText(value).replace(/[^\p{L}\p{N}]+/g
 export function assembleReply(input: { text: string; box: BoxState; evidence: string[]; contactPhone: string | null }): { reply: AssistantReply; guarded: boolean; offending: string[] } {
   const { box } = input;
   const cards = [...box.cards.values()];
-  const check = checkReply(input.text, allowedFrom([...input.evidence, ...box.evidence]));
+  const allowed = allowedFrom([...input.evidence, ...box.evidence]);
+  const check = checkReply(input.text, allowed);
   const guarded = !check.ok;
   const replyWords = wordsOf(input.text);
   let shown: ProductCard[];
@@ -44,8 +45,9 @@ export function assembleReply(input: { text: string; box: BoxState; evidence: st
     }
   }
   if (box.handoff || (guarded && !shown.length) || !input.text) {
-    // A guarded reply may carry an invented figure, so the handoff text never reuses the model-written summary.
-    const summary = guarded ? '' : (box.handoff?.summary ?? '');
+    // The summary is model-written too: a guarded reply never reuses it, and a passing reply keeps it only if its own figures pass the guard.
+    const written = box.handoff?.summary ?? '';
+    const summary = guarded || !checkReply(written, allowed).ok ? '' : written;
     blocks.push({ type: 'handoff', whatsappUrl: whatsappUrl(input.contactPhone, summary), summary });
   }
   const text = !input.text ? EMPTY_REPLY : guarded ? (shown.length ? SAFE_REPLY_WITH_CARDS : SAFE_REPLY_NO_CARDS) : input.text;
