@@ -66,6 +66,47 @@
     fields: ['boxed', 'underline', 'filled', 'pill'],
   };
   if (hasDna) for (const name of Object.keys(COMMERCE_DNA)) if (COMMERCE_DNA[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+  // One look per store (spec 2026-10-14): what the store's own home page does, measured at each save (store-look.ts in the
+  // API). Validated again here; every look rule keys on a data-look-* attribute, so a store without config.look renders as before.
+  const LOOK = (() => {
+    const look = config.look && typeof config.look === 'object' && config.look.version === 1 ? config.look : null;
+    if (!look) return null;
+    const root = document.documentElement;
+    const set = (name, value = '') => root.setAttribute(`data-look-${name}`, value);
+    const prop = (name, value) => root.style.setProperty(`--lk-${name}`, value);
+    const num = (value, low, high) => typeof value === 'number' && Number.isFinite(value) && value >= low && value <= high;
+    const radius = (value, arch) => value === 'pill' ? '999px' : arch && value === 'arch' ? '999px 999px 8px 8px / 42% 42% 8px 8px' : num(value, 0, 48) ? `${Math.round(value)}px` : '';
+    root.setAttribute('data-look', '');
+    const heading = look.type?.heading;
+    if (heading && typeof heading === 'object') {
+      if (typeof heading.family === 'string' && /^[\p{L}\p{N} '-]{1,60}$/u.test(heading.family)) { set('hf'); prop('hf', `"${heading.family.replace(/'/g, '')}"`); }
+      if (num(heading.weight, 300, 900)) { set('hw'); prop('hw', String(heading.weight)); }
+      if (heading.case === 'upper' || heading.case === 'none') set('hc', heading.case);
+      if (num(heading.tracking, -0.05, 0.3)) { set('ht'); prop('ht', `${heading.tracking}em`); }
+      if (heading.italic === true) set('hi');
+    }
+    const label = look.type?.label;
+    if (label && label.case === 'upper') { set('label'); prop('lt', num(label.tracking, 0, 0.3) ? `${label.tracking}em` : '.08em'); prop('lw', num(label.weight, 300, 900) ? String(label.weight) : '600'); }
+    for (const [key, attribute, arch] of [['photo', 'rp', true], ['card', 'rc', false], ['button', 'rb', false]]) {
+      const value = radius(look.shape?.[key], arch);
+      if (value) { set(attribute, look.shape[key] === 'arch' ? 'arch' : ''); prop(attribute, value); }
+    }
+    if (['none', 'hairline', 'outline', 'offset', 'soft'].includes(look.edge)) set('edge', look.edge);
+    if (['natural', 'mono', 'duotone', 'sepia', 'grain', 'polaroid', 'tight'].includes(look.photo?.treatment)) set('photo', look.photo.treatment);
+    const aspect = { square: '1 / 1', portrait: '4 / 5', landscape: '4 / 3' }[look.photo?.aspect];
+    if (aspect) { set('aspect', look.photo.aspect); prop('aspect', aspect); }
+    if (num(look.photo?.tilt, 0.5, 4)) { set('tilt'); prop('tilt', `${look.photo.tilt}deg`); }
+    if (['tinted', 'banded'].includes(look.surface)) set('surface', look.surface);
+    return look;
+  })();
+  /* Duotone and grain are SVG filters in the page (no store url()): duotone maps luminance onto the store's ink→paper. */
+  function lookFilters() {
+    if (!LOOK || !['duotone', 'grain'].includes(LOOK.photo?.treatment) || document.getElementById('pagosya-look-filters')) return;
+    const rgb = name => { const probe = document.createElement('span'); probe.style.color = `var(${name})`; document.body.append(probe); const channels = (getComputedStyle(probe).color.match(/[\d.]+/g) || ['0', '0', '0']).slice(0, 3).map(v => Number(v) / 255); probe.remove(); return channels; };
+    const ink = rgb('--lk-ink'), paper = rgb('--lk-paper');
+    const rows = [0, 1, 2].map(i => { const d = paper[i] - ink[i]; return `${(d * 0.2126).toFixed(4)} ${(d * 0.7152).toFixed(4)} ${(d * 0.0722).toFixed(4)} 0 ${ink[i].toFixed(4)}`; }).join(' ');
+    document.body.insertAdjacentHTML('beforeend', `<svg id="pagosya-look-filters" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="pagosya-look-duotone" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${rows} 0 0 0 1 0"/></filter><filter id="pagosya-look-grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" result="noise"/><feColorMatrix in="noise" type="saturate" values="0" result="mono"/><feComponentTransfer in="mono" result="soft"><feFuncA type="table" tableValues="0 .18"/></feComponentTransfer><feComposite in="soft" in2="SourceGraphic" operator="in" result="grain"/><feBlend in="grain" in2="SourceGraphic" mode="multiply"/></filter></svg>`);
+  }
   // The brand checkout's panel photo: only a bundled asset path, so nothing can leave the url().
   const CHECKOUT_PHOTO = typeof config.checkoutPhoto === 'string' && /^assets\/[a-z0-9][a-z0-9._/-]*\.(?:png|jpe?g|webp|avif|gif)$/i.test(config.checkoutPhoto) && !config.checkoutPhoto.includes('..') ? config.checkoutPhoto : '';
   if (CHECKOUT_PHOTO && document.documentElement.getAttribute('data-dna-checkout') === 'brand') document.documentElement.style.setProperty('--checkout-panel', `center / cover no-repeat url("${CHECKOUT_PHOTO}")`);
@@ -3758,6 +3799,43 @@
     ':root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy{display:flex;justify-content:space-between;gap:0}',
     '@media(min-width:481px){:root[data-dna-button=split] [data-pagosya-product][data-style] .product-detail__buy-total:not(:empty){display:inline-block;margin-left:1em;padding-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}:root[data-dna-button=split] [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:none}}',
   ];
+  /* One look per store (spec 2026-10-14). Unlayered, after the DNA styles, before YAPI's guarded CSS: the measured look wins
+   * over drawn DNA and YAPI's touches win over both. Colours stay the store's own; protected controls are never selected. */
+  const LOOK_FILTERED = ':root:is([data-look-photo=mono],[data-look-photo=sepia],[data-look-photo=duotone],[data-look-photo=grain])';
+  const lookHeadingRules = target => [
+    `:root[data-look-hf] ${target}{font-family:var(--lk-hf)}`,
+    `:root[data-look-hw] ${target}{font-weight:var(--lk-hw)}`,
+    `:root[data-look-hc=upper] ${target}{text-transform:uppercase}`,
+    `:root[data-look-hc=none] ${target}{text-transform:none}`,
+    `:root[data-look-ht] ${target}{letter-spacing:var(--lk-ht)}`,
+    `:root[data-look-hi] ${target}{font-style:italic}`,
+  ];
+  const LOOK_BASE_CSS = [
+    ':root[data-look]{--lk-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));--lk-paper:var(--store-background,var(--brand-background,var(--paper,#fff)));--lk-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--lk-ink) 16%,var(--lk-paper))))}',
+    ':root[data-look-edge=hairline]{--lk-edge:0 0 0 1px var(--lk-line)}:root[data-look-edge=outline]{--lk-edge:0 0 0 2px var(--lk-ink)}:root[data-look-edge=offset]{--lk-edge:5px 5px 0 var(--lk-ink)}:root[data-look-edge=soft]{--lk-edge:0 14px 34px -16px color-mix(in srgb,var(--lk-ink) 55%,transparent)}',
+    ':root[data-look-photo=mono]{--lk-filter:grayscale(1)}:root[data-look-photo=sepia]{--lk-filter:sepia(.65) saturate(.85)}:root[data-look-photo=duotone]{--lk-filter:url(#pagosya-look-duotone)}:root[data-look-photo=grain]{--lk-filter:url(#pagosya-look-grain);--lk-grain:url(#pagosya-look-grain)}',
+  ];
+  const LPC = '[data-pagosya-product][data-style]';
+  const LOOK_CHIPS = `${LPC} .product-detail__values:not([data-kind=swatch]) [data-product-option]`;
+  const LOOK_PDP_CSS = [
+    ...lookHeadingRules(`${LPC} #pagosya-product-title`),
+    `:root[data-look-label] :is(${LPC} [data-part=eyebrow],${LPC} .product-detail__options legend,${LPC} .product-tabs [role=tab],${LPC} .product-detail__badge){text-transform:uppercase;letter-spacing:var(--lk-lt);font-weight:var(--lk-lw)}`,
+    `:root[data-look-rc] [data-pagosya-product]{--pd-radius:var(--lk-rc)}`,
+    `:root[data-look-rp] ${LPC} :is(.product-detail__photo,.product-detail__stack img,.product-detail__related img){border-radius:var(--lk-rp)}`,
+    `:root[data-look-rb] :is(${LOOK_CHIPS},${LPC} .product-detail__badge,${LPC} .product-detail__navigation button,${LPC} .product-detail__navigation span){border-radius:var(--lk-rb)}`,
+    `:root[data-look] ${LPC} :is(.product-detail__navigation button,.product-detail__navigation span){background:var(--pd-paper);color:var(--pd-ink)}`,
+    `:root[data-look-edge]:not([data-look-edge=none]) ${LPC} :is(.product-detail__stage,.product-detail__related img){box-shadow:var(--lk-edge)}`,
+    `:root[data-look-edge]:not([data-look-edge=none]) ${LPC}[data-style=dense] .product-detail__buybox{border-color:transparent;box-shadow:var(--lk-edge)}`,
+    `:root:is([data-look-edge=outline],[data-look-edge=offset]) ${LOOK_CHIPS}{box-shadow:var(--lk-edge)}`,
+    `${LOOK_FILTERED} ${LPC} :is(.product-detail__thumbnails img,.product-detail__related img){filter:var(--lk-filter);transition:filter .25s}`,
+    `${LOOK_FILTERED} ${LPC} :is(.product-detail__thumbnails button:is(:hover,:focus-visible) img,.product-detail__related li:is(:hover,:focus-within) img){filter:none}`,
+    `:root[data-look-photo=grain] ${LPC} :is(.product-detail__photo,.product-detail__stack img){filter:var(--lk-grain)}`,
+    `:root[data-look-photo=polaroid] ${LPC} .product-detail__stage{padding:12px 12px 40px;background:#fff;box-shadow:0 10px 26px -14px #0007}`,
+    `:root[data-look-aspect] ${LPC} .product-detail__related img{aspect-ratio:var(--lk-aspect)}`,
+    `:root[data-look-aspect] ${LPC}[data-style=dense][data-pagosya-product-page] .product-detail__photo{aspect-ratio:var(--lk-aspect);background:var(--pd-paper)}`,
+    `:root[data-look-surface=banded] ${LPC} .product-detail__related{--pd-ink:var(--lk-paper);--pd-paper:var(--lk-ink);--pd-muted:color-mix(in srgb,var(--pd-ink) 70%,var(--pd-paper));--pd-line:color-mix(in srgb,var(--pd-ink) 22%,var(--pd-paper));--pd-tint:color-mix(in srgb,var(--pd-ink) 10%,var(--pd-paper));background:var(--pd-paper);color:var(--pd-ink);padding:clamp(28px,5vw,64px) clamp(16px,4vw,48px)}`,
+    `:root[data-look-surface=tinted] ${LPC} .product-detail__related{background:var(--pd-tint);padding:clamp(28px,5vw,64px) clamp(16px,4vw,48px)}`,
+  ];
   if (hasDna) {
     const dnaStyle = document.createElement('style');
     dnaStyle.dataset.pagosyaKit = 'dna';
@@ -3772,13 +3850,23 @@
       drawStyle.textContent = COMMERCE_DRAW_CSS;
       document.head.append(drawStyle);
     }
-    /* Product theme: guarded CSS the API sanitized (product-theme-css.ts) before it reached config.dna.productCss. This check is
-     * defence in depth only, a coarse refusal of what the sanitizer never emits; it does not re-implement the sanitizer.
-     * It goes after the kit's own styles so an equally specific theme rule wins. */
-    const themeCss = config.dna.productCss;
+  }
+  if (LOOK) {
+    const lookStyle = document.createElement('style');
+    lookStyle.dataset.pagosyaKit = 'look';
+    lookStyle.textContent = [...LOOK_BASE_CSS, ...LOOK_PDP_CSS].join('\n');
+    document.head.append(lookStyle);
+    lookFilters();
+  }
+  /* YAPI's guarded CSS: the API sanitized it (product-theme-css.ts) before it reached config.dna. This check is defence in
+   * depth only, a coarse refusal of what the sanitizer never emits; it does not re-implement the sanitizer. It goes after
+   * the kit's own styles and the look, so an equally specific theme rule wins. */
+  const THEME_CSS_KEYS = [['productCss', 'product-theme']];
+  if (hasDna) for (const [key, name] of THEME_CSS_KEYS) {
+    const themeCss = config.dna[key];
     if (typeof themeCss === 'string' && themeCss && themeCss.length <= 8000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|pointer-events|!\s*important/i.test(themeCss)) {
       const themeStyle = document.createElement('style');
-      themeStyle.dataset.pagosyaKit = 'product-theme';
+      themeStyle.dataset.pagosyaKit = name;
       themeStyle.textContent = themeCss;
       document.head.append(themeStyle);
     }
