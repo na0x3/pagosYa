@@ -1,4 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { icon } from "./icons.mjs";
+import { uiChoice, uiPill, uiStat } from "./ui-kit.mjs";
 import { dueDateFromPreset, dueDateInputValue, dueDateFromInput, formatMoney, longDate, whatsAppShareUrl } from "./cobros.mjs";
 import {
   BOLIVIA_CITIES,
@@ -157,31 +159,14 @@ export function mountContractsPanel(deps) {
   const dateTime = (iso) => new Intl.DateTimeFormat("es-BO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz" }).format(new Date(iso));
   const typeInfo = (id) => CONTRACT_TYPES.find((type) => type.id === id) || CONTRACT_TYPES[CONTRACT_TYPES.length - 1];
   const ICON = {
-    pen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg>',
-    spark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>',
-    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>',
-    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
-    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-    whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1.1-4A8 8 0 1 1 20 12z"/><path d="M9 9.5c.3 2 2 3.8 4.2 4.5l1.1-1.1 1.7.8-.4 1.4c-3.3.3-6.8-3.1-6.6-6.4l1.4-.4.8 1.7z"/></svg>',
-    mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
-    link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>',
-    eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>',
-    doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>',
-    scale: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0L5 7zM19 7l-3 7a3 3 0 0 0 6 0l-3-7z"/></svg>',
-    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    pen: icon("pen-line"), spark: icon("sparkles"), close: icon("x"), plus: icon("plus"), up: icon("chevron-up"),
+    down: icon("chevron-down"), trash: icon("trash-2"), whatsapp: icon("message-circle"), mail: icon("mail"),
+    link: icon("link"), eye: icon("eye"), check: icon("check"), doc: icon("file-text"), alert: icon("triangle-alert"),
+    scale: icon("scale"), lock: icon("lock"), clock: icon("clock"),
   };
-  const TYPE_ICON = {
-    servicios: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-.6-.6-2.1z"/></svg>',
-    compraventa: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18l-2 10H5L3 7zM8 7V5a4 4 0 0 1 8 0v2"/></svg>',
-    alquiler: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></svg>',
-    confidencialidad: ICON.lock,
-    personalizado: ICON.pen,
-  };
+  /** @type {Record<string, string>} Lucide name per contract type. */
+  const TYPE_ICON_NAME = { servicios: "wrench", compraventa: "shopping-cart", alquiler: "key-round", confidencialidad: "lock", personalizado: "pen-line" };
+  const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_ICON_NAME).map(([type, name]) => [type, icon(name)]));
   const noticeHtml = (extra = "") => `<p class="contract-legal-notice" data-contract-notary-notice role="note">${ICON.scale}<span><strong>Firma electrónica simple.</strong> ${esc(NOTARY_NOTICE)}${extra ? ` ${esc(extra)}` : ""}</span></p>`;
 
   // ── list ─────────────────────────────────────────────────────────────
@@ -268,15 +253,15 @@ export function mountContractsPanel(deps) {
         : `<p class="proposals-filter-empty">${esc(emptyTab)}</p>`;
     const counts = { all: summary.all, open: summary.open, signed: summary.signed, draft: summary.draft, closed: summary.closed };
     root.innerHTML = `<div class="proposals-head">
-        <dl class="proposals-summary contracts-summary">
-          <div class="${summary.awaitingYou ? "is-attention" : ""}"><dt>Te toca firmar</dt><dd>${Number(summary.awaitingYou || 0)}<small>${summary.awaitingYou ? "Ábrelos y firma en un toque" : "Nada pendiente de tu lado"}</small></dd></div>
-          <div><dt>Esperando a tus clientes</dt><dd>${Math.max(0, Number(summary.open || 0) - Number(summary.awaitingYou || 0))}<small>${Number(summary.open || 0)} por firmar en total</small></dd></div>
-          <div class="is-good"><dt>Firmados</dt><dd>${Number(summary.signed || 0)}<small>Con PDF y registro de firma</small></dd></div>
+        <dl class="ui-stats contracts-summary">
+          ${uiStat({ label: "Te toca firmar", icon: "pen-line", value: `${Number(summary.awaitingYou || 0)}<small>${summary.awaitingYou ? "Ábrelos y firma en un toque" : "Nada pendiente de tu lado"}</small>`, tone: summary.awaitingYou ? "attention" : "" })}
+          ${uiStat({ label: "Esperando a tus clientes", icon: "hourglass", value: `${Math.max(0, Number(summary.open || 0) - Number(summary.awaitingYou || 0))}<small>${Number(summary.open || 0)} por firmar en total</small>` })}
+          ${uiStat({ label: "Firmados", icon: "circle-check", value: `${Number(summary.signed || 0)}<small>Con PDF y registro de firma</small>`, tone: "good" })}
         </dl>
         <button type="button" class="primary proposals-new" data-contract-new>${ICON.spark}<span>Nuevo contrato</span></button>
       </div>
-      <div class="proposals-filters" role="tablist" aria-label="Filtrar contratos">
-        ${FILTERS.map((option) => `<button type="button" role="tab" aria-selected="${filter === option.id}" data-contract-filter="${option.id}">${esc(option.label)}<span>${Number(counts[option.id] || 0)}</span></button>`).join("")}
+      <div class="ui-tabs" role="tablist" aria-label="Filtrar contratos">
+        ${FILTERS.map((option) => `<button type="button" role="tab" class="ui-tab" aria-selected="${filter === option.id}" data-contract-filter="${option.id}">${esc(option.label)}<span>${Number(counts[option.id] || 0)}</span></button>`).join("")}
       </div>
       ${list}`;
   }
@@ -345,12 +330,8 @@ export function mountContractsPanel(deps) {
         ${c.fromProposalLabel ? `<p class="contract-from-proposal" data-contract-from-proposal>${ICON.check}<span>Desde la propuesta <strong>${esc(c.fromProposalLabel)}</strong> aceptada: el objeto, el precio y el cliente ya están cargados. Revisa y completa lo que falte.</span></p>` : ""}
         <section class="contract-step-card" aria-labelledby="contractStepType">
           <h3 id="contractStepType"><span class="contract-step-number">1</span>¿Qué tipo de contrato?</h3>
-          <div class="contract-types" role="radiogroup" aria-label="Tipo de contrato">
-            ${CONTRACT_TYPES.map((option) => `<label class="contract-type${option.id === c.contractType ? " is-selected" : ""}">
-              <input type="radio" name="contractType" value="${esc(option.id)}" ${option.id === c.contractType ? "checked" : ""}>
-              <span class="contract-type-icon" aria-hidden="true">${TYPE_ICON[option.id]}</span>
-              <span class="contract-type-copy"><strong>${esc(option.label)}</strong><small>${esc(option.hint)}</small></span>
-            </label>`).join("")}
+          <div class="ui-choices" role="radiogroup" aria-label="Tipo de contrato">
+            ${CONTRACT_TYPES.map((option) => uiChoice({ icon: TYPE_ICON_NAME[option.id] || "file-text", group: "contractType", value: option.id, title: option.label, text: option.hint, checked: option.id === c.contractType })).join("")}
           </div>
           <p class="contract-type-notice" data-contract-type-notice ${type.notice ? "" : "hidden"}>${ICON.alert}<span>${esc(type.notice)}</span></p>
         </section>
@@ -389,9 +370,9 @@ export function mountContractsPanel(deps) {
         </section>
         <section class="contract-step-card" aria-labelledby="contractStepOrder">
           <h3 id="contractStepOrder"><span class="contract-step-number">4</span>¿Quién firma primero?</h3>
-          <div class="proposal-pills" role="radiogroup" aria-label="Orden de firma">
-            <label class="proposal-pill"><input type="radio" name="contractOrder" value="merchant_first" ${c.signingOrder === "merchant_first" ? "checked" : ""}><span>Yo primero (recomendado)</span></label>
-            <label class="proposal-pill"><input type="radio" name="contractOrder" value="customer_first" ${c.signingOrder === "customer_first" ? "checked" : ""}><span>Mi cliente primero</span></label>
+          <div class="ui-pills" role="radiogroup" aria-label="Orden de firma">
+            ${uiPill({ group: "contractOrder", value: "merchant_first", label: "Yo primero (recomendado)", checked: c.signingOrder === "merchant_first" })}
+            ${uiPill({ group: "contractOrder", value: "customer_first", label: "Mi cliente primero", checked: c.signingOrder === "customer_first" })}
           </div>
           <p class="proposal-hint">Firmar primero le muestra a tu cliente que el contrato ya está aprobado por ti.</p>
         </section>
@@ -576,15 +557,15 @@ export function mountContractsPanel(deps) {
           <div class="proposal-two">
             <div><label for="contractEditCity">Ciudad del contrato</label><select id="contractEditCity" data-contract-city><option value="">Elige la ciudad</option>${cityOptions.map((city) => `<option ${city === e.meta.city ? "selected" : ""}>${esc(city)}</option>`).join("")}</select></div>
             <div><span class="contract-label">Quién firma primero</span>
-              <div class="proposal-pills" role="radiogroup" aria-label="Orden de firma">
-                <label class="proposal-pill"><input type="radio" name="contractEditOrder" value="merchant_first" ${e.meta.signingOrder === "merchant_first" ? "checked" : ""}><span>Yo primero</span></label>
-                <label class="proposal-pill"><input type="radio" name="contractEditOrder" value="customer_first" ${e.meta.signingOrder === "customer_first" ? "checked" : ""}><span>Mi cliente</span></label>
+              <div class="ui-pills" role="radiogroup" aria-label="Orden de firma">
+                ${uiPill({ group: "contractEditOrder", value: "merchant_first", label: "Yo primero", checked: e.meta.signingOrder === "merchant_first" })}
+                ${uiPill({ group: "contractEditOrder", value: "customer_first", label: "Mi cliente", checked: e.meta.signingOrder === "customer_first" })}
               </div></div>
           </div>
           <span class="contract-label">Tu cliente puede firmar hasta</span>
-          <div class="proposal-pills" role="radiogroup" aria-label="Plazo para firmar">
-            ${DEADLINES.map((option) => `<label class="proposal-pill"><input type="radio" name="contractDeadline" value="${option.id}" ${deadlinePreset === option.id ? "checked" : ""}><span>${esc(option.label)}</span></label>`).join("")}
-            <label class="proposal-pill"><input type="radio" name="contractDeadline" value="custom" ${deadlinePreset === "custom" ? "checked" : ""}><span>Otra fecha</span></label>
+          <div class="ui-pills" role="radiogroup" aria-label="Plazo para firmar">
+            ${DEADLINES.map((option) => uiPill({ group: "contractDeadline", value: option.id, label: option.label, checked: deadlinePreset === option.id })).join("")}
+            ${uiPill({ group: "contractDeadline", value: "custom", label: "Otra fecha", checked: deadlinePreset === "custom" })}
           </div>
           <div class="proposal-custom-date" data-contract-custom-date ${deadlinePreset === "custom" ? "" : "hidden"}><label for="contractDeadlineDate">Firmar antes de</label><input id="contractDeadlineDate" type="date" min="${esc(dueDateInputValue(new Date().toISOString()))}" value="${esc(dueDateInputValue(e.validUntil))}"></div>
           <p class="proposal-hint" data-contract-deadline-hint>${esc(e.validUntil ? `Tu cliente puede firmar hasta el ${longDate(e.validUntil)}.` : "Elige una fecha")}</p>
@@ -824,9 +805,9 @@ export function mountContractsPanel(deps) {
         <p class="proposal-hint">${sendFirst ? "Firmas tú primero y luego le enviamos el contrato a tu cliente para que firme." : "Tu firma queda registrada con la versión que tu cliente ve."}</p>
         <label for="contractSignerName">Tu nombre completo</label>
         <input id="contractSignerName" maxlength="120" autocomplete="name" value="${esc(signer.name)}" data-autofocus>
-        <div class="contract-sign-tabs" role="tablist" aria-label="Cómo firmar">
-          <button type="button" role="tab" aria-selected="true" data-contract-sign-method="TYPED">Escribir</button>
-          <button type="button" role="tab" aria-selected="false" data-contract-sign-method="DRAWN">Dibujar</button>
+        <div class="ui-tabs" role="tablist" aria-label="Cómo firmar">
+          <button type="button" role="tab" class="ui-tab" aria-selected="true" data-contract-sign-method="TYPED">${icon("keyboard", { size: 16 })}Escribir</button>
+          <button type="button" role="tab" class="ui-tab" aria-selected="false" data-contract-sign-method="DRAWN">${icon("pen-line", { size: 16 })}Dibujar</button>
         </div>
         <div class="contract-sign-typed" data-contract-sign-typed><span data-contract-sign-preview>${esc(signer.name || "Tu firma")}</span></div>
         <div class="contract-sign-draw" data-contract-sign-draw hidden>

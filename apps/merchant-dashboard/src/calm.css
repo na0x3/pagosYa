@@ -203,11 +203,10 @@ body.is-logged-in .growth-period button[aria-pressed="true"], body.is-logged-in 
 @media (prefers-reduced-motion: reduce) { .overview-setup-track span { transition: none; } }
 
 /* Cards in the page modules: hairline borders and a soft lift, no hard offset shadows. */
-body.is-logged-in :is(.growth-weekly, .growth-insight, .growth-empty, .growth-onboarding li, .assistant-card, .cobro-card, .cobro-share-option, .cobro-discard-card, .proposal-card, .proposal-example, .proposal-share-option, .contract-example, .contract-type, .product-yapi-guide) {
+body.is-logged-in :is(.growth-weekly, .growth-insight, .growth-empty, .growth-onboarding li, .assistant-card, .cobro-card, .cobro-share-option, .cobro-discard-card, .proposal-card, .proposal-example, .proposal-share-option, .contract-example, .product-yapi-guide) {
   border-width: 1px; border-color: var(--pg-border); border-radius: var(--calm-radius); box-shadow: var(--calm-shadow);
 }
 body.is-logged-in :is(.cobro-card, .cobro-share-option, .proposal-card, .proposal-example, .proposal-share-option, .contract-example):hover { transform: none; border-color: var(--pg-border-strong); box-shadow: var(--calm-shadow); }
-body.is-logged-in :is(.contract-type.is-selected, .contract-type:has(input:checked)) { border-color: var(--pg-ink); background: var(--pg-bg); box-shadow: 0 0 0 1px var(--pg-ink); }
 body.is-logged-in .growth-onboarding li { background: var(--pg-surface); }
 body.is-logged-in .growth-onboarding li.is-done { border-color: var(--pg-border); background: var(--pg-bg); }
 body.is-logged-in .growth-empty-icon { background: var(--pg-accent-soft); color: var(--pg-text); border: 0; box-shadow: none; }

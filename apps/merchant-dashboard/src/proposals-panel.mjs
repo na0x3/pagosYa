@@ -1,4 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { icon } from "./icons.mjs";
+import { uiPill, uiStat } from "./ui-kit.mjs";
 import { dueDateFromInput, dueDateFromPreset, dueDateInputValue, formatMoney, longDate, parseMoney, whatsAppShareUrl } from "./cobros.mjs";
 import {
   EXAMPLE_PROMPTS,
@@ -148,19 +150,9 @@ export function mountProposalsPanel(deps) {
   const pdfUrl = (publicUrl) => `${deps.apiBase().replace(/\/$/, "")}/documents/public/${encodeURIComponent(tokenFrom(publicUrl))}/pdf`;
   const dateTime = (iso) => new Intl.DateTimeFormat("es-BO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz" }).format(new Date(iso));
   const ICON = {
-    spark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>',
-    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>',
-    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
-    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-    whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1.1-4A8 8 0 1 1 20 12z"/><path d="M9 9.5c.3 2 2 3.8 4.2 4.5l1.1-1.1 1.7.8-.4 1.4c-3.3.3-6.8-3.1-6.6-6.4l1.4-.4.8 1.7z"/></svg>',
-    mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
-    link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>',
-    eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>',
-    doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>',
+    spark: icon("sparkles"), close: icon("x"), plus: icon("plus"), up: icon("chevron-up"), down: icon("chevron-down"),
+    trash: icon("trash-2"), whatsapp: icon("message-circle"), mail: icon("mail"), link: icon("link"), eye: icon("eye"),
+    check: icon("check"), doc: icon("file-text"), alert: icon("triangle-alert"),
   };
 
   // ── list ─────────────────────────────────────────────────────────────
@@ -245,14 +237,14 @@ export function mountProposalsPanel(deps) {
         ? `<ul class="proposals-list">${documents.map((doc) => cardHtml(doc, now)).join("")}</ul>`
         : `<p class="proposals-filter-empty">${esc(emptyTab)}</p>`;
     root.innerHTML = `<div class="proposals-head">
-        <dl class="proposals-summary">
-          <div><dt>Esperando respuesta</dt><dd>${esc(formatMoney(bob.open))}<small>${Number(counts.open || 0)} ${counts.open === 1 ? "propuesta" : "propuestas"}${counts.changes ? ` · ${Number(counts.changes)} con cambios pedidos` : ""}</small></dd></div>
-          <div class="is-good"><dt>Aceptadas · 30 días</dt><dd>${esc(formatMoney(bob.accepted30))}<small>${Number(counts.accepted || 0)} en total</small></dd></div>
+        <dl class="ui-stats">
+          ${uiStat({ label: "Esperando respuesta", icon: "hourglass", value: `${esc(formatMoney(bob.open))}<small>${Number(counts.open || 0)} ${counts.open === 1 ? "propuesta" : "propuestas"}${counts.changes ? ` · ${Number(counts.changes)} con cambios pedidos` : ""}</small>` })}
+          ${uiStat({ label: "Aceptadas · 30 días", icon: "circle-check", value: `${esc(formatMoney(bob.accepted30))}<small>${Number(counts.accepted || 0)} en total</small>`, tone: "good" })}
         </dl>
         <button type="button" class="primary proposals-new" data-proposal-new>${ICON.spark}<span>Nueva propuesta con IA</span></button>
       </div>
-      <div class="proposals-filters" role="tablist" aria-label="Filtrar propuestas">
-        ${FILTERS.map((option) => `<button type="button" role="tab" aria-selected="${filter === option.id}" data-proposal-filter="${option.id}">${esc(option.label)}<span>${Number(counts[option.id] || 0)}</span></button>`).join("")}
+      <div class="ui-tabs" role="tablist" aria-label="Filtrar propuestas">
+        ${FILTERS.map((option) => `<button type="button" role="tab" class="ui-tab" aria-selected="${filter === option.id}" data-proposal-filter="${option.id}">${esc(option.label)}<span>${Number(counts[option.id] || 0)}</span></button>`).join("")}
       </div>
       ${list}`;
   }
@@ -316,9 +308,9 @@ export function mountProposalsPanel(deps) {
             <div><label for="proposalDeadline">Fecha límite</label><input id="proposalDeadline" maxlength="120" value="${esc(c.deadline)}" placeholder="Ej.: antes del 15 de noviembre"></div>
           </div>
         </details>
-        <fieldset class="proposal-tone"><legend>Tono</legend>
-          <label class="proposal-pill"><input type="radio" name="proposalTone" value="formal" ${c.tone === "formal" ? "checked" : ""}><span>Formal</span></label>
-          <label class="proposal-pill"><input type="radio" name="proposalTone" value="cercano" ${c.tone === "cercano" ? "checked" : ""}><span>Cercano</span></label>
+        <fieldset class="proposal-tone ui-pills"><legend>Tono</legend>
+          ${uiPill({ group: "proposalTone", value: "formal", label: "Formal", checked: c.tone === "formal" })}
+          ${uiPill({ group: "proposalTone", value: "cercano", label: "Cercano", checked: c.tone === "cercano" })}
         </fieldset>
         <div class="proposal-problems" role="alert" data-proposal-composer-error ${c.error ? "" : "hidden"}>${c.error ? `<p>${esc(c.error)}</p>${c.noAi ? "<p>Puedes empezar con la plantilla de siempre y completarla tú.</p>" : ""}` : ""}</div>
         <div class="proposal-generating" data-proposal-generating ${c.generating ? "" : "hidden"} aria-live="polite">
@@ -493,9 +485,9 @@ export function mountProposalsPanel(deps) {
         </div>
         <section class="proposal-step" aria-labelledby="proposalValidityTitle">
           <h3 id="proposalValidityTitle">Válida por</h3>
-          <div class="proposal-pills" role="radiogroup" aria-label="Validez">
-            ${VALIDITY.map((option) => `<label class="proposal-pill"><input type="radio" name="proposalValidity" value="${option.id}" ${e.validPreset === option.id ? "checked" : ""}><span>${esc(option.label)}</span></label>`).join("")}
-            <label class="proposal-pill"><input type="radio" name="proposalValidity" value="custom" ${e.validPreset === "custom" ? "checked" : ""}><span>Otra fecha</span></label>
+          <div class="ui-pills" role="radiogroup" aria-label="Validez">
+            ${VALIDITY.map((option) => uiPill({ group: "proposalValidity", value: option.id, label: option.label, checked: e.validPreset === option.id })).join("")}
+            ${uiPill({ group: "proposalValidity", value: "custom", label: "Otra fecha", checked: e.validPreset === "custom" })}
           </div>
           <div class="proposal-custom-date" ${e.validPreset === "custom" ? "" : "hidden"}><label for="proposalValidDate">Válida hasta</label><input id="proposalValidDate" type="date" min="${esc(dueDateInputValue(new Date().toISOString()))}" value="${esc(dueDateInputValue(e.validUntil))}"></div>
           <p class="proposal-hint" data-proposal-valid-hint>${esc(validHint())}</p>
