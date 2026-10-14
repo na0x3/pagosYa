@@ -77,15 +77,12 @@
 .email-list-open { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; width: auto; min-height: 48px; padding: 8px 10px; border: 0; border-radius: 8px; background: none; box-shadow: none; color: var(--pg-text); font-size: 14px; text-align: left; }
 .email-list-open small { color: var(--pg-text-muted); font-size: 12px; font-weight: 400; }
 .email-list-open[aria-pressed="true"] { background: var(--pg-accent-soft); }
-.email-list-state, .email-list-switch span { color: var(--pg-text-muted); font-size: 12px; white-space: nowrap; }
-.email-list-switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
-.email-list-switch input { width: auto; margin: 0; }
+.email-list-state { color: var(--pg-text-muted); font-size: 12px; white-space: nowrap; }
 /* The plain-text editor, under the list. */
 .email-text-editor { display: grid; gap: 14px; max-width: 640px; padding-top: 20px; border-top: 1px solid var(--pg-border); }
 .email-text-editor header h3 { margin: 0 0 4px; font-size: 15px; }
 .email-text-editor header p, .email-text-editor .faint { margin: 0; color: var(--pg-text-muted); font-size: 13px; }
 .email-text-editor > label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
-.email-text-editor > label.email-list-switch { display: inline-flex; font-weight: 500; }
 .email-text-sample { padding: 14px 16px; border: 1px solid var(--pg-border); border-radius: var(--calm-radius, 12px); background: var(--pg-surface, #fff); }
 .email-text-sample small { color: var(--pg-text-muted); }
 .email-text-sample h4 { margin: 6px 0; font-size: 15px; }

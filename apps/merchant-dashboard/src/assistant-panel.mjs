@@ -1,4 +1,5 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { uiHead, uiPill, uiSwitch } from "./ui-kit.mjs";
 import { conversationTags, NOTES_MAX, notesLeft, shortDate, usageLabel } from "./assistant.mjs";
 
 // Crecer › Asistente: settings, test chat, conversations and questions the assistant could not answer.
@@ -45,34 +46,33 @@ export function mountAssistantPanel(deps) {
       ${!data.publishedDesign ? `<p class="assistant-note">El asistente aparece en tiendas con diseño publicado. Publica tu diseño en Studio para activarlo.</p>` : ""}
       ${!data.platformEnabled ? `<p class="assistant-note">El asistente todavía no está disponible en pagosYa.</p>` : ""}
       <section class="assistant-card">
-        <label class="email-list-switch"><input type="checkbox" data-assistant-enabled ${s.enabled ? "checked" : ""} ${data.publishedDesign ? "" : "disabled"} aria-label="Activar asistente"><span>${s.enabled ? "Activo" : "Desactivado"}</span></label>
-        <h3>Asistente de tu tienda</h3>
+        ${uiHead({ icon: "bot", title: "Asistente de tu tienda" })}
+        ${uiSwitch({ label: s.enabled ? "Activo" : "Desactivado", attrs: 'data-assistant-enabled aria-label="Activar asistente"', checked: s.enabled, disabled: !data.publishedDesign })}
         <p>${esc(usageLabel(data.usage.used, data.usage.cap))}</p>
         <p class="assistant-status" role="status">${esc(status)}</p>
       </section>
       <section class="assistant-card">
-        <h3>Apariencia</h3>
+        ${uiHead({ icon: "palette", title: "Apariencia" })}
         <div class="store-settings-logo"><div class="store-logo-frame">${avatar ? `<img src="${esc(avatar)}" alt="">` : "<span>Logo de la tienda</span>"}</div>
           <div class="store-logo-copy"><input id="assistantAvatarInput" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp">
           <label class="button-like ghost" for="assistantAvatarInput">${avatar ? "Cambiar foto" : "Subir foto"}</label>${avatar ? `<button class="ghost" type="button" data-assistant-avatar-remove>Quitar</button>` : ""}</div></div>
         <label>Nombre<input data-assistant-field="name" maxlength="60" value="${esc(nameValue)}" placeholder="Asistente de ${esc(deps.store()?.name ?? "tu tienda")}"></label>
         <label>Saludo<input data-assistant-field="greeting" maxlength="200" value="${esc(greetingValue)}" placeholder="¡Hola! ¿En qué te ayudo?"></label>
-        <fieldset><legend>Trato</legend>
-          <label><input type="radio" name="assistantFormality" value="tu" ${formalityValue === "tu" ? "checked" : ""}> Tú</label>
-          <label><input type="radio" name="assistantFormality" value="usted" ${formalityValue === "usted" ? "checked" : ""}> Usted</label></fieldset>
+        <fieldset class="ui-pills"><legend>Trato</legend>
+          ${uiPill({ group: "assistantFormality", value: "tu", label: "Tú", checked: formalityValue === "tu" })}
+          ${uiPill({ group: "assistantFormality", value: "usted", label: "Usted", checked: formalityValue === "usted" })}</fieldset>
         <button class="primary" type="button" data-assistant-save-look>Guardar apariencia</button>
       </section>
       <section class="assistant-card">
-        <h3>Lo que el asistente debe saber</h3>
-        <p>Lo que no está en tus productos ni en tus páginas: días de envío, feriados, tu historia.</p>
+        ${uiHead({ icon: "book-open", title: "Lo que el asistente debe saber", text: "Envíos, feriados, tu historia." })}
         <textarea data-assistant-notes maxlength="${NOTES_MAX}" rows="8" aria-label="Lo que el asistente debe saber">${esc(notesValue)}</textarea>
         <p class="assistant-count" data-assistant-count>${notesLeft(notesValue)} caracteres disponibles</p>
         <div class="assistant-row"><button class="ghost" type="button" data-assistant-draft>Redactar con YAPI</button><button class="primary" type="button" data-assistant-save-notes>Guardar notas</button></div>
       </section>
       <section class="assistant-card">
-        <h3>Cupones que puede ofrecer</h3>
+        ${uiHead({ icon: "ticket", title: "Cupones que puede ofrecer", count: data.coupons.length })}
         ${data.coupons.length ? `<ul class="email-list-group">${data.coupons.map((c) => `<li class="email-list-row"><span><strong>${esc(c.code)}</strong> <small>${esc(c.label)}</small></span>
-          <label class="email-list-switch"><input type="checkbox" data-assistant-coupon="${esc(c.id)}" ${c.showInAssistant ? "checked" : ""} aria-label="El asistente puede ofrecer ${esc(c.code)}"><span>${c.showInAssistant ? "Puede ofrecerlo" : "No lo ofrece"}</span></label></li>`).join("")}</ul>` : `<p class="carts-empty">No tienes cupones activos.</p>`}
+          ${uiSwitch({ label: c.showInAssistant ? "Puede ofrecerlo" : "No lo ofrece", attrs: `data-assistant-coupon="${esc(c.id)}" aria-label="El asistente puede ofrecer ${esc(c.code)}"`, checked: c.showInAssistant })}</li>`).join("")}</ul>` : `<p class="carts-empty">No tienes cupones activos.</p>`}
       </section>
       <section class="assistant-card">
         <h3>Probar</h3><p>${esc(`${data.usage.previewUsed} de ${data.usage.previewCap} pruebas este mes`)}</p>
