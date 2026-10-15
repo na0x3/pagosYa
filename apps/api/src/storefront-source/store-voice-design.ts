@@ -4,11 +4,11 @@
  * Ids, sources and the never-assumed classes are enforced in code (here and in store-voice.ts); a failed or unusable answer only
  * leaves the store without a sheet. The tone call (a chat request about tone) lives here too.
  */
-import { avoidPhrases } from './copy-check';
+import { avoidPhrases, factTokens, moneyIn } from './copy-check';
 import { MERCHANT_MARKER } from './kit-touch';
 import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { sourceResponseJson } from './source-response';
-import { ASSUMED_KINDS, foldText, sanitizeVoice, SPECIFIC_SOURCES, VOICE_WORDS, type OnboardingMaterial, type StoreVoice } from './store-voice';
+import { ASSUMED_KINDS, foldText, neverAssumedReason, sanitizeVoice, SPECIFIC_SOURCES, VOICE_WORDS, type OnboardingMaterial, type StoreVoice } from './store-voice';
 
 export const VOICE_TIMEOUT_MS = 60_000;
 export const VOICE_MAX_OUTPUT_TOKENS = 3_000;
@@ -73,9 +73,27 @@ const contentWords = (text: string) => foldText(text).split(/[^\p{L}\p{N}]+/u).f
 export function voiceFromAnswer(raw: unknown, material: VoiceMaterial): StoreVoice | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const value = raw as Record<string, any>;
-  const merchant = new Set(contentWords([material.merchantMessages, material.onboarding.what ?? '', material.onboarding.story ?? '', ...material.onboarding.answers.map(entry => entry.answer)].join(' ')));
+  const merchantText = [material.merchantMessages, material.onboarding.what ?? '', material.onboarding.story ?? '', ...material.onboarding.answers.map(entry => entry.answer)].join(' ');
+  const merchant = new Set(contentWords(merchantText));
+  // Final review 2026-10-15: a specific is a fact copied from MATERIAL, so every number, unit or origin place in it must appear in
+  // the material it cites, it never states money, and a YAPI-sourced one never makes a health claim or quotes a review. A
+  // «merchant» one shares at least two content words with the merchant's own text. Anything else could be an invented fact
+  // that skips «Datos que YAPI supuso» and the publish gate.
+  const cited: Record<string, string> = {
+    merchant: foldText(`${merchantText} ${JSON.stringify(material.brief ?? '')}`),
+    product: foldText(JSON.stringify(material.products)),
+    photo: foldText(material.photos.map(photo => photo.description).join(' ')),
+    brain: foldText(JSON.stringify(material.brain ?? '')),
+  };
+  const sourced = (entry: any) => {
+    if (typeof entry?.text !== 'string' || !(entry.source in cited)) return false;
+    if (moneyIn(entry.text).length) return false;
+    if (entry.source !== 'merchant' && neverAssumedReason(entry.text)) return false;
+    if (!factTokens(entry.text).every(token => cited[entry.source].includes(foldText(token)))) return false;
+    return entry.source !== 'merchant' || contentWords(entry.text).filter(word => merchant.has(word)).length >= 2;
+  };
   const specifics = (Array.isArray(value.specifics) ? value.specifics : [])
-    .filter((entry: any) => entry?.source !== 'merchant' || (typeof entry.text === 'string' && contentWords(entry.text).some(word => merchant.has(word))))
+    .filter(sourced)
     .map((entry: any, index: number) => ({ id: `s${index + 1}`, text: entry?.text, source: entry?.source }));
   const assumed = (Array.isArray(value.assumed) ? value.assumed : []).map((entry: any, index: number) => ({ id: `a${index + 1}`, text: entry?.text, kind: entry?.kind, status: 'assumed' }));
   const words = Object.fromEntries(VOICE_WORDS.flatMap(word => (typeof value.words?.[word] === 'string' && value.words[word].trim() ? [[word, value.words[word]]] : [])));
@@ -94,7 +112,9 @@ export async function runVoiceSheet(deps: { material: VoiceMaterial; call: (text
 export const TONE_TIMEOUT_MS = 30_000;
 export const TONE_SCHEMA = { type: 'object', additionalProperties: false, required: ['voice'], properties: { voice: { type: 'string' } } };
 const TONE_WORDS = /\b(?:formal\w*|informal\w*|divertid\w*|seri[oa]s?|cercan[oa]s?|calid[oa]s?|fresc[oa]s?|juvenil\w*|elegantes?|sobri[oa]s?|amigables?|tecnic[oa]s?|poetic[oa]s?|direct[oa]s?|cort[oa]s?|simples?|sencill[oa]s?|profesional\w*|relajad[oa]s?)\b/;
-const TONE_SUBJECT = /\b(?:habla\w*|hable\w*|escrib\w*|redact\w*|redaccion|suen\w*|sonar|tono|voz|textos?|palabras|lenguaje|tute\w*|de usted|de tu|de vos)\b/;
+// How the store speaks (final review 2026-10-15): «escribe un párrafo sencillo» or «un texto corto» asks for a piece of text,
+// not a tone, so «escribe/redacta» count only as «escribe más …», «de forma …» or «en un tono …», and «textos» only with «suenen».
+const TONE_SUBJECT = /\b(?:habla\w*|hable\w*|(?:escrib|redact)\w*\s+(?:mas|menos|de (?:forma|manera)|con (?:un )?tono|en (?:un )?tono)|suen\w*|sonar|tono|voz|lenguaje|tute\w*|de usted|de tu|de vos)\b/;
 const VISUAL = /\b(?:colou?r\w*|diseno|fotos?|imagen\w*|botones|boton|letras?|tipografi\w*|fondos?|animacion\w*|portada|logo)\b/;
 /** Does the merchant ask for another tone (spec 2026-10-14: «habla más formal», «más divertido»)? Only their own words count
  *  (after MERCHANT_MARKER), accents ignored. A request that names a visual part («el diseño más divertido») is a design request. */

@@ -193,10 +193,11 @@ describe('voice.json in every save (spec 2026-10-14, part 2)', () => {
   });
 });
 
-/** The sheet call's answer. Code drops the merchant specific with no source in the merchant's words and the percent. */
+/** The sheet call's answer. Code drops the merchant specific with no source in the merchant's words, a specific that states
+ *  money (final review 2026-10-15) and the percent. */
 const SHEET_ANSWER = {
   voice: SHEET.voice,
-  specifics: [{ text: 'El flat white con alfajor de maicena es lo que todos piden', source: 'merchant' }, { text: 'Espresso doble a Bs 18', source: 'product' }, { text: 'Un sabio que nadie nombró', source: 'merchant' }],
+  specifics: [{ text: 'El flat white con alfajor de maicena es lo que todos piden', source: 'merchant' }, { text: 'Espresso doble', source: 'product' }, { text: 'Espresso doble a Bs 18', source: 'product' }, { text: 'Un sabio que nadie nombró', source: 'merchant' }],
   texture: SHEET.texture,
   assumed: [{ text: 'tostado en Caranavi', kind: 'origin' }, { text: 'abiertos desde 2019', kind: 'history' }, { text: '20% menos azúcar', kind: 'number' }],
   words: { products: 'la carta', customers: 'vecinos', order: 'Tu pedido', team: '' },

@@ -47,8 +47,8 @@ const oneOf = <T extends string>(list: readonly T[], value: unknown): value is T
 /** Never invented, even as a tracked assumption (spec, owner decisions): money, reviews and quotes, health or results claims.
  *  Matched on folded text, so accents and case never let one through. */
 export const NEVER_ASSUMED: ReadonlyArray<{ reason: string; pattern: RegExp }> = [
-  { reason: 'precio, monto o descuento', pattern: /(?:\bbs\.?|\$|\busd\b|€)\s?\d|\d+(?:[.,]\d+)?\s?(?:%|por ?ciento\b|bs\b|bolivianos\b|dolares\b)|\b(?:descuentos?|ofertas?|promocion|rebaja|gratis|precios?|cuesta|2x1|liquidacion)\b/ },
-  { reason: 'reseña o cita', pattern: /[«»"“”]|\b(?:testimonios?|resenas?|opinion|opiniones|opina|dijo|dicen|comento|recomiendan|estrellas|calificacion)\b/ },
+  { reason: 'precio, monto o descuento', pattern: /(?:\bbs\.?|\$|\busd\b|€)\s?\d|\d+(?:[.,]\d+)?\s?(?:%|por ?ciento\b|bs\b|bolivianos\b|dolares\b|usd\b|€)|\bpor ?ciento\b|\b(?:descuentos?|ofertas?|promocion|rebaja|gratis|precios?|cuesta|2x1|liquidacion)\b/ },
+  { reason: 'reseña o cita', pattern: /[«»"“”‘’]|\b(?:testimonios?|resenas?|opinion|opiniones|opina|dijo|dicen|comento|recomiendan|estrellas|calificacion)\b/ },
   { reason: 'salud o resultados', pattern: /\b(?:cura|curan|curar|sana|sanar|alivia|aliviar|adelgaza\w*|baja(?:r)? de peso|perder peso|quema grasa|desintoxica\w*|detox|previene|prevenir|inmun\w*|antiinflamatori\w*|antioxidante\w*|clinicamente|comprobad\w*|garantiza\w*|resultados|saludables?)\b/ },
 ];
 export function neverAssumedReason(text: string): string | undefined {
@@ -176,11 +176,15 @@ function capSpecifics(list: VoiceSpecific[]): VoiceSpecific[] {
  *  removed them, or the author never used them), and facts the merchant confirmed move to the specifics as the merchant's own. */
 export function voiceForSave(voice: StoreVoice, files: ReadonlyArray<{ path: string; content: string; encoding?: string }>): StoreVoice {
   const onPages = new Set([...assumedIdsByPage(files).values()].flat());
+  // Final review 2026-10-15: a fact the author wrote without its mark (or that an edit unwrapped) is still on the page; it stays
+  // pending, so it is listed and the publish gate holds, until no authored page states it.
+  const pageText = authoredPages(files).map(file => foldText(file.content.replace(/<(script|style)\b[\s\S]*?<\/\1\s*>|<!--[\s\S]*?-->/gi, ' ').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ')).join(' \n ');
+  const stated = (fact: AssumedFact) => pageText.includes(foldText(fact.text).replace(/\s+/g, ' ').trim());
   const confirmed = voice.assumed.filter(fact => fact.status === 'confirmed');
   return {
     ...voice,
     specifics: capSpecifics([...voice.specifics, ...confirmed.map(fact => ({ id: fact.id, text: fact.text, source: 'merchant' as const }))]),
-    assumed: voice.assumed.filter(fact => fact.status === 'assumed' && onPages.has(fact.id)),
+    assumed: voice.assumed.filter(fact => fact.status === 'assumed' && (onPages.has(fact.id) || stated(fact))),
   };
 }
 

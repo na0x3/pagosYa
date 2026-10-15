@@ -93,3 +93,23 @@ describe('tone requests (spec 2026-10-14, part 2)', () => {
     expect(await runToneUpdate({ voice: sheet, instruction: 'x', call: async () => ({ body: reply({ voice: sheet.voice }), used }) })).toBeNull();
   });
 });
+
+describe('final review fixes 2026-10-15: specifics are sourced, tone is about speaking', () => {
+  it('drops specifics whose numbers are not in the material they cite, health or money claims, and merchant facts sharing one word', async () => {
+    const material: VoiceMaterial = { ...MATERIAL, merchantMessages: 'Somos una cafetería de barrio en Sopocachi', onboarding: { answers: [] } };
+    const raw = { ...ANSWER, specifics: [
+      { text: 'Cafetería de barrio fundada en 1998 en Sopocachi', source: 'merchant' },
+      { text: 'El espresso doble cura la resaca', source: 'product' },
+      { text: 'Espresso doble a Bs 15', source: 'product' },
+      { text: 'Una cafetería tranquila', source: 'merchant' },
+      { text: 'Cafetería de barrio en Sopocachi', source: 'merchant' },
+      { text: 'latte con arte de hoja en taza azul', source: 'photo' },
+    ] };
+    const result = await runVoiceSheet({ material, call: async () => ({ body: reply(raw), used: jest.fn() }) });
+    expect(result!.voice.specifics.map(entry => entry.text)).toEqual(['Cafetería de barrio en Sopocachi', 'latte con arte de hoja en taza azul']);
+  });
+
+  it.each(['Escribe un párrafo sencillo sobre nuestra historia', 'Agrega un texto corto sobre los envíos', 'Pon un texto simple con el horario', 'Redacta una descripción corta de cada servicio'])(
+    'a request for a piece of text is not a tone change: %s', text => expect(instructionConcernsTone(text)).toBe(false));
+  it('«escribe más formal» still is', () => expect(instructionConcernsTone('escribe más formal')).toBe(true));
+});

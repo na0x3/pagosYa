@@ -123,3 +123,12 @@ describe('the cart word comes from the store voice (spec 2026-10-14 store voice)
     expect(tooLong!.controls.words.cart).toBe('Tu taza');
   });
 });
+
+describe('final review fix 2026-10-15: a chat request keeps the cart word it asked for', () => {
+  it('on a request the sheet word neither overrides the answer nor reaches the prompt', async () => {
+    const { deps: input, call } = deps(reply(ANSWER), { cartWord: 'Tu canasta', instruction: 'En el botón del carrito pon "Mi bolsa"' });
+    const designed = await runControlsDesign(input);
+    expect(designed!.controls.words.cart).toBe('Tu taza');
+    expect(call.mock.calls[0][0]).not.toContain('«Tu canasta»');
+  });
+});

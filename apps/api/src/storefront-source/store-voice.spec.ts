@@ -161,3 +161,14 @@ describe('merchant material (spec part 1)', () => {
     expect(foldText('Experiencia ÚNICA, Pasión')).toBe('experiencia unica, pasion');
   });
 });
+
+describe('final review fixes 2026-10-15', () => {
+  it('never assumes money or quotes written other ways', () => {
+    for (const text of ['20€ menos', 'cuesta 20 USD', 'veinte por ciento menos', '‘lo mejor del barrio’']) expect(neverAssumedReason(text)).toBeDefined();
+  });
+  it('keeps a pending fact a page states without its mark, and drops it once no page says it', () => {
+    const sheet = sanitizeVoice({ ...SHEET, assumed: [{ id: 'a1', text: 'tostado en Caranavi', kind: 'origin', status: 'assumed' }] })!;
+    expect(voiceForSave(sheet, [{ path: 'index.html', content: '<main><p>Café tostado en Caranavi.</p></main>' }]).assumed.map(fact => fact.id)).toEqual(['a1']);
+    expect(voiceForSave(sheet, [{ path: 'index.html', content: '<main><p>Café de la casa.</p></main>' }]).assumed).toEqual([]);
+  });
+});

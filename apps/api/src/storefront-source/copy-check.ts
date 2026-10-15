@@ -65,7 +65,8 @@ export function phrasePattern(phrase: string): RegExp {
 }
 
 type HtmlNode = { nodeName: string; tagName?: string; value?: string; attrs?: Array<{ name: string; value: string }>; childNodes?: HtmlNode[] };
-const SKIP = new Set(['head', 'script', 'style', 'template', 'noscript', 'svg', 'header']);
+// Only the platform header is chrome; a section's own <header> holds authored copy (final review 2026-10-15).
+const SKIP = new Set(['head', 'script', 'style', 'template', 'noscript', 'svg']);
 const CHROME = new Set(['footer', 'nav']);
 const BLOCK = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'dt', 'dd', 'td', 'th', 'figcaption', 'blockquote', 'div', 'section', 'article', 'main', 'aside', 'footer', 'nav', 'ul', 'ol', 'dl', 'table', 'tr', 'form', 'label', 'button', 'br', 'figure']);
 export type PageText = { page: string; blocks: string[]; bare: string[]; assumedIds: string[] };
@@ -82,7 +83,7 @@ export function pageText(page: string, html: string, chrome = true): PageText {
   const walk = (node: HtmlNode, assumed: boolean) => {
     if (node.nodeName === '#text') { text += node.value ?? ''; plain += assumed ? ' ' : node.value ?? ''; return; }
     const tag = node.tagName;
-    if (tag && (SKIP.has(tag) || (!chrome && CHROME.has(tag)) || node.attrs?.some(attr => attr.name === 'hidden'))) return;
+    if (tag && (SKIP.has(tag) || (!chrome && CHROME.has(tag)) || node.attrs?.some(attr => attr.name === 'hidden' || (tag === 'header' && attr.name === 'data-pagosya-header')))) return;
     const id = tag === 'span' ? node.attrs?.find(attr => attr.name === 'data-assumed')?.value : undefined;
     if (id) ids.add(id);
     const block = Boolean(tag && BLOCK.has(tag));

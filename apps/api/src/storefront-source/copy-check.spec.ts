@@ -134,3 +134,9 @@ describe('money amounts', () => {
     expect(run('El lote cuesta Bs 1.200.', [1200])).toEqual([]);
   });
 });
+
+describe('final review fix 2026-10-15: authored headers are read', () => {
+  it('reads a section header and skips only the platform header', () => {
+    expect(visibleSentences('<body><header data-pagosya-header><a>Carrito vacío ahora</a></header><main><section><header><h2>Tostamos cada lunes temprano.</h2></header></section></main></body>')).toEqual(['Tostamos cada lunes temprano.']);
+  });
+});
