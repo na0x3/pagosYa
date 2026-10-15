@@ -256,6 +256,7 @@ model Merchant {
   users                       MerchantUser[]
   stores                      Store[]
   mediaAssets                 MediaAsset[]
+  mediaAssetDescriptions      MediaAssetDescription[]
   productStats                StoreProductStat[]
   storeLeads                  StoreLead[]
   supportCases                SupportCase[]
@@ -1205,6 +1206,18 @@ model MediaAsset {
 
   @@index([merchantId, createdAt])
   @@index([storeId, createdAt])
+}
+
+/// What an uploaded photo shows, in one Spanish line (spec 2026-10-14 store voice, part 1): written the first time the photo is
+/// used in a design and kept per merchant and content digest (sha256 of the bytes), so the same photo is never described twice.
+model MediaAssetDescription {
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  digest      String
+  description String
+  createdAt   DateTime @default(now())
+
+  @@id([merchantId, digest])
 }
 
 enum VisualProposalStatus {
