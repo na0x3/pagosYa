@@ -7,7 +7,7 @@ import type { StoreSketch } from './sketch-schema';
 
 /** Phrases that would be true of any store on the platform. Named rather than described, because the model
  * reproduces them verbatim: every one of these came out of a real generation. */
-const FILLER = ['calidad que se nota', 'hecho con amor', 'una selección pensada', 'objetos que conversan', 'pensada como una revista', 'para mirar de cerca', 'lo mejor para vos'];
+export const FILLER = ['calidad que se nota', 'hecho con amor', 'una selección pensada', 'objetos que conversan', 'pensada como una revista', 'para mirar de cerca', 'lo mejor para vos'];
 
 /** Keys whose strings are copy a visitor reads. An allowlist, because the blocks also carry ids, colours, hrefs,
  * photo paths and icon names that would otherwise count as prose, and button labels ("Ver productos") and
