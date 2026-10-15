@@ -30,6 +30,9 @@ export const PARTS = [
   'product/dialog-style.js',
   'product/setup.js',
   'product/bundles-related.js',
+  'pages/policy-links.js',
+  'account/pages.js',
+  'pages/standard.js',
   'rest.js',
 ];
 
