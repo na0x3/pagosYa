@@ -98,7 +98,7 @@ async function main() {
     results.push(...prior.results);
     if (prior.haltReason) throw new Error('Prior run halted for provider quota/auth; resume will not repeat paid calls. Recheck saved outputs only.');
   }
-  const generatorDigest = createHash('sha256').update((await Promise.all(['source-generation.service.ts','source-design.ts','source-design-planner.ts','source-fonts.ts','source-composition-registry.ts','source-site-purpose.ts','source-next.ts'].map(path => readFile(resolve('src/storefront-source', path))).concat(readFile(kitPath('commerce.js'))))).map(buffer => buffer.toString('utf8')).join('\n')).digest('hex');
+  const generatorDigest = createHash('sha256').update((await Promise.all(['source-generation.service.ts','source-generation-types.ts','source-style-proposals.ts','source-review-runner.ts','source-sep5-call.ts','source-save-assembly.ts','source-sep5-stage.ts','source-sep5-review.ts','source-agent-stage.ts','source-design.ts','source-design-planner.ts','source-fonts.ts','source-composition-registry.ts','source-site-purpose.ts','source-next.ts'].map(path => readFile(resolve('src/storefront-source', path))).concat(readFile(kitPath('commerce.js'))))).map(buffer => buffer.toString('utf8')).join('\n')).digest('hex');
   await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
   const browser = await chromium.launch();
