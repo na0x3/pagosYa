@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node kit/check-runtimes.mjs && tsc -p tsconfig.json"
+    "test": "node --test tools/build-commerce.test.mjs && node kit/check-runtimes.mjs && tsc -p tsconfig.json"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

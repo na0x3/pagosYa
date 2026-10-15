@@ -29,7 +29,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(node_modules|dist|build|test-results|graphify-out|\\.next|\\.wrangler)/|^apps/merchant-dashboard/public/studio/' },
+    exclude: { path: '(^|/)(node_modules|dist|build|test-results|graphify-out|\\.next|\\.wrangler)/|^apps/merchant-dashboard/public/studio/|^packages/storefront-kit/commerce-src/' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'node', 'default'], extensions: ['.ts', '.tsx', '.js', '.mjs', '.cjs', '.jsx', '.d.ts'] },
   },

@@ -30,6 +30,7 @@ export default tseslint.config(
       "apps/matcho-showcase/**",
       "apps/merchant-dashboard/public/**",
       "packages/storefront-kit/kit/**",
+      "packages/storefront-kit/commerce-src/**",
       "packages/widget-js/tsup.config.ts",
       "**/*.d.ts",
     ],
