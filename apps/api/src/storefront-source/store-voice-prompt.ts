@@ -73,3 +73,8 @@ export function emailVoiceLine(json: string): string {
   const voice = json ? readVoice([{ path: VOICE_FILE, content: json }]) : undefined;
   return voice ? JSON.stringify({ voice: voice.voice, words: voice.words, specifics: voice.specifics.map(entry => entry.text).slice(0, 5), avoid: avoidPhrases(undefined, voice) }) : '';
 }
+
+/** The edit that follows a tone request: rewrite the visible text in the new voice, facts and marked spans untouched. */
+export function toneEditDirection(voice: StoreVoice): string {
+  return `STORE VOICE UPDATE: the merchant asked for a new tone. The store now speaks like this: ${JSON.stringify(voice.voice)}. Rewrite the visible text of every page in this voice with short exact edits. Keep every fact, product name, price, link and <span data-assumed="…"> element (rewrite only the words around it), and keep the layout and styles as they are.`;
+}

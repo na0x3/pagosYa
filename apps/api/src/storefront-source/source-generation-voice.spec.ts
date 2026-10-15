@@ -388,3 +388,34 @@ describe('the controls and the review read the sheet (spec 2026-10-14)', () => {
     expect(prisma.storeAgentMessage.create.mock.calls.at(-1)[0].data.content).toBe('Pulí tu tienda: Oscurecí el texto. Supuse 1 dato de tu negocio: confírmalo, corrígelo o quítalo en «Datos que YAPI supuso» antes de publicar.');
   });
 });
+
+describe('a chat request about tone (spec 2026-10-14, part 2)', () => {
+  const editOf = (instruction: string) => build({ revision: 1, instruction: `Resumen de YAPI.\nPedido actual del comercio: ${instruction}` });
+  beforeEach(async () => {
+    fetchMock.mockImplementation(respond({ independent_storefront: authorWith(SPAN) }) as any);
+    await build();
+    asPrevious(0, [voiceFile(SHEET)]);
+  });
+
+  it('rewrites the voice line, saves it with the edit, and asks the edit to rewrite the text in it', async () => {
+    fetchMock.mockImplementation(respond({ store_voice_tone: () => ({ voice: 'Hablamos de usted, con calma y precisión.' }), independent_storefront: () => EDIT }) as any);
+    const result: any = await editOf('habla más formal');
+    expect(promptOf(calls('store_voice_tone')[0])).toContain('"habla más formal"');
+    expect(savedVoice(1).voice).toBe('Hablamos de usted, con calma y precisión.');
+    expect(textOf(calls('independent_storefront').at(-1))).toContain('STORE VOICE UPDATE');
+    expect(result.generation.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'tone', status: 'COMPLETED' })]));
+  });
+
+  it('a failed tone call keeps the sheet and the edit still saves', async () => {
+    fetchMock.mockImplementation(respond({ store_voice_tone: () => 'esto no es JSON', independent_storefront: () => EDIT }) as any);
+    await editOf('más divertido');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(savedVoice(1).voice).toBe(SHEET.voice);
+  });
+
+  it('a request that is not about tone makes no tone call', async () => {
+    fetchMock.mockImplementation(respond({ independent_storefront: () => EDIT }) as any);
+    await editOf('Oscurece un poco el texto');
+    expect(calls('store_voice_tone')).toHaveLength(0);
+  });
+});

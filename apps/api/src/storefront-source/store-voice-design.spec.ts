@@ -1,5 +1,5 @@
 import { PLAYBOOK } from './design-engine/playbook';
-import { runVoiceSheet, VOICE_SCHEMA, voicePrompt, type VoiceMaterial } from './store-voice-design';
+import { instructionConcernsTone, runToneUpdate, runVoiceSheet, VOICE_SCHEMA, voicePrompt, type VoiceMaterial } from './store-voice-design';
 import { sanitizeVoice } from './store-voice';
 
 const reply = (value: unknown) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text: typeof value === 'string' ? value : JSON.stringify(value) }] }] });
@@ -68,5 +68,28 @@ describe('the voice sheet call (spec 2026-10-14, part 2)', () => {
   it('asks for strict JSON with every part', () => {
     expect(VOICE_SCHEMA.required).toEqual(['voice', 'specifics', 'texture', 'assumed', 'words', 'avoid']);
     expect(VOICE_SCHEMA.properties.words.required).toEqual(['products', 'customers', 'order', 'team']);
+  });
+});
+
+describe('tone requests (spec 2026-10-14, part 2)', () => {
+  it.each([
+    ['habla más formal', true], ['más divertido', true], ['Que los textos suenen más cercanos', true], ['háblales de usted', true], ['hazla más seria', true],
+    ['el diseño más divertido', false], ['pon las fotos más grandes', false], ['cambia el título del inicio', false], ['botones más redondos', false],
+  ])('%s → %s', (text, expected) => expect(instructionConcernsTone(text)).toBe(expected));
+
+  it("reads only the merchant's own words after the marker", () => {
+    expect(instructionConcernsTone('Resumen: habla más formal.\nPedido actual del comercio: cambia el color del botón')).toBe(false);
+  });
+
+  it('rewrites the voice line only, kept and billed by the caller; an unusable or unchanged answer is null', async () => {
+    const sheet = sanitizeVoice({ version: 1, voice: 'Hablamos de tú, despacio.', specifics: [], texture: [], assumed: [], words: { order: 'Tu pedido' }, avoid: [] })!;
+    const used = jest.fn();
+    const call = jest.fn(async (_text: string) => ({ body: reply({ voice: 'Hablamos de usted, con calma y precisión.' }), used }));
+    const updated = await runToneUpdate({ voice: sheet, instruction: 'habla más formal', call });
+    expect(updated!.voice).toEqual({ ...sheet, voice: 'Hablamos de usted, con calma y precisión.' });
+    expect(call.mock.calls[0][0]).toContain('"habla más formal"');
+    expect(used).not.toHaveBeenCalled();
+    expect(await runToneUpdate({ voice: sheet, instruction: 'x', call: async () => ({ body: reply('no'), used }) })).toBeNull();
+    expect(await runToneUpdate({ voice: sheet, instruction: 'x', call: async () => ({ body: reply({ voice: sheet.voice }), used }) })).toBeNull();
   });
 });

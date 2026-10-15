@@ -1,7 +1,8 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { sourceSignatureTaskLine } from './source-signature';
 import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, writeVoiceSheet } from './store-voice-run';
-import { voiceCartWord, voiceEditDirection, withVoiceCartWord } from './store-voice-prompt';
+import { toneEditDirection, voiceCartWord, voiceEditDirection, withVoiceCartWord } from './store-voice-prompt';
+import { instructionConcernsTone, runToneUpdate, TONE_SCHEMA, TONE_TIMEOUT_MS } from './store-voice-design';
 import type { LegendEntry } from './photo-descriptions';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
@@ -1007,6 +1008,24 @@ export class SourceGenerationService {
       const reviewControls: ReviewControls | undefined = controlsDesignOn
         ? { design: designReviewControls, keep: (input, designed, keepSignal) => keepGuardedControls(storeControlsInto(input, designed.controls), revisionControls, 'yapi', keepSignal) }
         : undefined;
+      // Store voice (spec 2026-10-14, part 2): a chat request about tone («habla más formal», «más divertido») rewrites the voice
+      // line first; this same edit then rewrites the visible text in it, and the sheet is saved with the edit. A failed call keeps
+      // the sheet, and the edit still runs with the merchant's words.
+      if (voice.on && !creative && voice.sheet && instructionConcernsTone(dto.instruction)) {
+        const toneSignal = AbortSignal.any([signal, AbortSignal.timeout(TONE_TIMEOUT_MS)]);
+        try {
+          const updated = await runToneUpdate({ voice: voice.sheet, instruction: merchantWords.trim().slice(0, 400), call: async text => {
+            const { attempt, body } = await sep5Call('tone', text, [], 'store_voice_tone', TONE_SCHEMA, TONE_TIMEOUT_MS, { signal: toneSignal, maxOutputTokens: 800, effort: 'low' });
+            return { body, used: () => { attempt.status = 'COMPLETED'; } };
+          } });
+          if (updated) { voice.sheet = updated.voice; updated.used(); }
+          this.logger.log(JSON.stringify({ event: updated ? 'voice_tone_saved' : 'voice_tone_dropped', generationId: run.id }));
+        } catch (error) {
+          signal.throwIfAborted();
+          this.logger.warn(JSON.stringify({ event: 'voice_tone_dropped', generationId: run.id, reason: toneSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+        }
+        if (voice.sheet) taskPrompt += `\n${toneEditDirection(voice.sheet)}`;
+      }
       // Store voice (spec 2026-10-14, part 3): an edit of a store with a sheet writes any new text in its voice and keeps its
       // marked facts. The single-call edit reads taskPrompt when it runs.
       if (voice.on && !sep5Author && voice.sheet) taskPrompt += `\n${voiceEditDirection(voice.sheet)}`;
