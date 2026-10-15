@@ -1,8 +1,9 @@
 /**
  * YAPI's self-review after the store is shown (spec 2026-10-12 faster generation, part 2). The review is a
  * StoreSourceGeneration row of its own: status REVIEWING while it runs (no activeStoreId, so it never blocks a new request),
- * a heartbeat Studio's reviewPending reads, and COMPLETED, DISCARDED, FAILED or CANCELLED once it ends. The status column is
- * a plain string, so none of this needs a migration.
+ * a heartbeat Studio's reviewPending reads, and COMPLETED, DISCARDED, FAILED or CANCELLED once it ends. The status column has a
+ * CHECK constraint: these statuses are allowed by migration 20261014220000_source_review_statuses (spec 2026-10-14 store
+ * controls, part 1; before it every review row insert failed).
  */
 export const SOURCE_REVIEW_STATUS = 'REVIEWING';
 export const SOURCE_REVIEW_LABEL = 'Revisión de YAPI';
