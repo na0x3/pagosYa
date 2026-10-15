@@ -8,6 +8,8 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import type { SourceProgressReporter } from './source-progress';
 import type { sourceGenerationPlan } from './source-generation-policy';
 import type { sourceProvider } from './source-provider';
+import type { LegendEntry } from './photo-descriptions';
+import type { VoiceRun } from './store-voice-run';
 import type { SourceRequestBudget } from './source-request-budget';
 import type { sourceStoreConfigData } from './source-store-config';
 import type { SourceImageUse } from './source-setup';
@@ -36,7 +38,7 @@ import type { SaveSourceProjectDto } from './dto/save-source-project.dto';
 /** What a proposal-mode generate returns: the run now waits for the merchant to pick a card. */
 export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
 /** One provider call of a run (or of its background review), as the row's attempts record it. */
-export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review' | 'touch' | 'controls'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
+export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review' | 'touch' | 'controls' | 'photo' | 'voice' | 'tone'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
 /** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. `deadline` is when
  * the stage's own signal times out (epoch ms), so a step inside it can keep time for the N+1 save. */
 export type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[]; deadline: number }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
@@ -63,12 +65,14 @@ export type GenerationRunFacts = {
   started: number; runTimeout: number; stablePrompt: string; signatureOn: boolean;
   brand: Awaited<ReturnType<BrandProfileService['get']>> | undefined; apiUrl: URL; data: ReturnType<typeof sourceStoreConfigData>;
   images: SourceInputImage[]; assets: SourceProjectFileDto[]; retainedAssets: SourceProjectFileDto[];
-  assetLegend: Array<{ original: string; path: string }>; assetUrls: string[]; ownedUrls: Set<string>;
+  assetLegend: LegendEntry[]; assetUrls: string[]; ownedUrls: Set<string>;
   imageUses: SourceImageUse[]; photoFacts: Record<string, SourcePhotoFacts>; fontPaths: Record<string, string>;
   previous: { snapshot: unknown } | null; previousFiles: SourceProjectFileDto[]; oldFiles: SourceProjectFileDto[];
   previousDesign: SourceDesign | null; previousScene: SourceVisualSystem['scene'] | null; sectionScope: ReturnType<typeof sourceSectionScope>;
   sitePurpose: SourceSitePurpose; scrollFeel: SourceScrollFeel; motion: SourceMotionMode; primaryAction: ReturnType<typeof resolveStoreAction> | undefined;
   creative: boolean; redesign: boolean; useNext: boolean; editExisting: boolean;
+  /** Store voice (spec 2026-10-14, store-voice-run.ts): read `voice.sheet` and the jobs through the object, never from a copy. */
+  voice: VoiceRun;
 };
 
 /** generate()'s mutable run state, seen live: each property is a getter (and, where a stage writes it, a setter) onto

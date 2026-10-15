@@ -430,3 +430,23 @@ describe('recent controls (spec 2026-10-14 store controls)', () => {
     expect(query.values).toEqual(expect.arrayContaining(['s1', 40, 'config.js', 'frame-draw.json']));
   });
 });
+
+describe('recent voices (spec 2026-10-14 store voice)', () => {
+  it("reads the latest other stores' voice sheet, home sentences and kind, read-only", async () => {
+    const { service, prisma } = setup();
+    const voice = { version: 1, voice: 'Hablamos de tú.', specifics: [], texture: [], assumed: [], words: {}, avoid: [] };
+    prisma.$queryRaw = jest.fn().mockResolvedValue([
+      { voice: JSON.stringify(voice), draw: JSON.stringify({ kind: 'cafe-food', header: 'side-rail' }), home: '<main><p>Tostamos los lunes. Abrimos temprano.</p></main>' },
+      { voice: '{broken', draw: null, home: null },
+      { voice: null, draw: null, home: '<p>Solo texto.</p>' },
+    ]);
+    expect(await service.recentVoices('s1', new Date('2026-10-15T12:00:00Z'))).toEqual([
+      { kind: 'cafe-food', voice, sentences: ['Tostamos los lunes.', 'Abrimos temprano.'] },
+      { sentences: ['Solo texto.'] },
+    ]);
+    const query = prisma.$queryRaw.mock.calls[0][0];
+    expect(query.text).toContain('DISTINCT ON');
+    expect(query.text).not.toMatch(/\b(?:INSERT|UPDATE|DELETE)\b/i);
+    expect(query.values).toEqual(expect.arrayContaining(['s1', 12, 'voice.json', 'frame-draw.json', 'index.html']));
+  });
+});

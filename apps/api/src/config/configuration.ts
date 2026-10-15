@@ -86,6 +86,9 @@ export interface AppConfig {
   yapiLookMeasure: boolean;
   /** One look per store: YAPI's guarded touches on the kit pages in Sep-5 builds. YAPI_KIT_TOUCH=off disables. */
   yapiKitTouch: boolean;
+  /** Store voice (spec 2026-10-14): photo descriptions, the voice sheet, writing rules, the copy check, tone requests and the
+   *  assumed-facts gate. Default on; YAPI_VOICE=off keeps today's prompts and carries a store's voice.json unchanged. */
+  yapiVoice: boolean;
   /** Store controls (spec 2026-10-14): a library control language on new Sep-5 stores and redesigns, drawn into the header and the
    *  kit, carried across edits. Default on; YAPI_CONTROLS=off stops new ones and drops a store's record at its next save. */
   yapiControls: boolean;
@@ -438,6 +441,7 @@ export default (): { app: AppConfig } => {
     yapiFrameDraw: process.env.YAPI_FRAME_DRAW !== 'off',
     yapiLookMeasure: process.env.YAPI_LOOK_MEASURE !== 'off',
     yapiKitTouch: process.env.YAPI_KIT_TOUCH !== 'off',
+    yapiVoice: process.env.YAPI_VOICE !== 'off',
     yapiControls: process.env.YAPI_CONTROLS !== 'off',
     yapiControlsDesign: process.env.YAPI_CONTROLS_DESIGN !== 'off',
     yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',

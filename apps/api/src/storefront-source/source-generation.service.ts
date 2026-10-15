@@ -1,5 +1,7 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { sourceSignatureTaskLine } from './source-signature';
+import { describeNewPhotos, startVoiceRun } from './store-voice-run';
+import type { LegendEntry } from './photo-descriptions';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
@@ -319,7 +321,7 @@ export class SourceGenerationService {
     const apiUrl = sourcePublicApiUrl(this.config);
     const data = sourceStoreConfigData(publicStore, apiUrl, dto.revision === 0);
     const assets: SourceProjectFileDto[] = [];
-    const assetLegend: Array<{ original: string; path: string }> = [];
+    const assetLegend: LegendEntry[] = [];
     const images: Array<{ type: "input_image"; image_url: string; detail: "auto" }> = [];
     const visionAssetPaths: string[] = [];
     for (const capture of (execution?.referenceCaptures || []).slice(0, 4)) {
@@ -493,6 +495,15 @@ export class SourceGenerationService {
     /** A chat edit of a store with the platform header whose merchant asked about its controls (spec 2026-10-14, part 4). */
     const controlsRequest = controlsDesignOn && !creative && !claude && hasPlatformHeader(previousFiles) && instructionConcernsControls(dto.instruction);
     const storeData = data as { locations?: unknown[]; shippingEnabled?: boolean; shippingPickupEnabled?: boolean };
+    // Store voice (spec 2026-10-14): the run's voice state (store-voice-run.ts), handed to every stage as facts.voice. It writes
+    // cached photo descriptions onto the legend now, before any prompt reads it. YAPI_VOICE=off keeps today's prompts.
+    const voice = await startVoiceRun({
+      on: this.config.get<boolean>('app.yapiVoice') === true && !useNext, sep5Author, storeId, merchantId, previousFiles,
+      proposalVoice: execution?.style?.proposal.voice,
+      kind: kind ?? detectKind(`${merchantWords}\n${typeof briefFacts?.businessType === 'string' ? briefFacts.businessType : ''}\n${businessInfo}\n${data.items.map(item => item.name).join(', ')}`),
+      assetLegend, buffers: assetBuffers, contentType: name => this.uploads.contentTypeFor(name), prisma: this.prisma,
+      recentVoices: (id, now, limit) => this.projects.recentVoices(id, now, limit),
+    });
     // A contract section is asked for only when the store has the fact: YAPI must never invent hours or an address.
     const playbookEvidence = {
       hours: /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2})/i.test(businessInfo) || JSON.stringify(storeData.locations ?? []).includes('open'),
@@ -680,8 +691,14 @@ export class SourceGenerationService {
       const matchingAssets = JSON.stringify([...(checkpoint?.assetUrls || [])].sort()) === JSON.stringify([...assetUrls].sort());
       const resumable = Boolean((checkpoint?.key === checkpointKey || (matchingRequest || execution?.resumeDraft === true) && matchingAssets) && Array.isArray(checkpoint?.files) && Array.isArray(checkpoint?.requirements));
       const retainedDesign = resumable && checkpoint?.design ? savedSourceDesign([{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(checkpoint.design) }]) || undefined : undefined;
+      // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
+      // the single-call repair may switch it before the chat touch runs.
+      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
       if (exploration) {
         await progress?.('design');
+        // Store voice (spec 2026-10-14, part 1): new photos are described beside the planner or the style cards (store-voice-run.ts).
+        const voiceStage = { voice, assetLegend, sep5Call, prisma: this.prisma, merchantId, signal, logger: this.logger, runId: run.id };
+        if (voice.on && sep5Author) voice.photosJob = describeNewPhotos(voiceStage);
         const implementationFloor = budget.reserve(model, estimate.estimatedInputTokens, 2000, 2000);
         // Cross-store memory is best-effort: a failed lookup plans without it rather than failing the run.
         const avoidRecent = retainedDesign || pickedDesign ? [] : await Promise.resolve().then(() => this.projects.recentDesignFingerprints(storeId)).catch(() => [] as string[]);
@@ -766,7 +783,7 @@ export class SourceGenerationService {
         budget, signal, attempts, autoRepairs, started, runTimeout, stablePrompt, signatureOn,
         brand, apiUrl, data, images, assets, retainedAssets, assetLegend, assetUrls, ownedUrls, imageUses, photoFacts, fontPaths,
         previous, previousFiles, oldFiles, previousDesign, previousScene, sectionScope,
-        sitePurpose, scrollFeel, motion, primaryAction, creative, redesign, useNext, editExisting,
+        sitePurpose, scrollFeel, motion, primaryAction, creative, redesign, useNext, editExisting, voice,
       };
       const live: GenerationLive = {
         get generated() { return generated; }, set generated(value) { generated = value; },
@@ -966,9 +983,6 @@ export class SourceGenerationService {
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
       // Yapi orchestrates bounded Design, Boceto and Critic stages; assembly and commerce stay deterministic.
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
-      // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
-      // the single-call repair may switch it before the chat touch runs.
-      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
       /** The review stage's controls call (spec 2026-10-14, part 4), on its own deadline; null when it fails, times out or answers
        *  nothing usable. It never rejects: the review closure starts it before the review call and awaits it after, so a rejection
        *  would go unhandled meanwhile. */

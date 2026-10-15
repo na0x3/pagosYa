@@ -7,6 +7,7 @@ import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { commerceSummary } from './design-engine/commerce-draw';
 import { decodeEntities, FALLBACK_HEADER_SHAPE, HEADER_SHAPES, headerFact, renderSourceHeader, swapPreviewHeader, type HeaderShape } from './source-header';
 import { sourceSitePurpose } from './source-site-purpose';
+import type { StoreVoice } from './store-voice';
 
 /** Spec 2026-10-13: the menu a card shows before any section exists; the built store links its own marked sections. */
 const PREVIEW_LINKS = { shop: ['Productos', 'Nosotros', 'Contacto'], showcase: ['Servicios', 'Nosotros', 'Contacto'] };
@@ -18,7 +19,9 @@ export type StyleProposal = { version: 1; status: StyleProposalStatus; slots: Ar
   /** By concept index, like heroes: true while that card shows its template hero and the model hero is still being written. */
   heroPending?: boolean[];
   /** Spec 2026-10-12 faster generation: both cards are planned, so the merchant may pick while heroes are still drawn. */
-  pickable?: boolean };
+  pickable?: boolean;
+  /** Spec 2026-10-14 store voice: the sheet the proposal run wrote beside its cards; the picked card's build uses it. */
+  voice?: StoreVoice };
 /** What the merchant decided on a running proposal: the chat wrote PICKED with the card, or a new request SUPERSEDED it. */
 export type StyleDecision = { status: 'PICKED'; picked: number } | { status: 'SUPERSEDED' };
 type HeroPalette = { paper: string; ink: string; accent: string; accent2: string };

@@ -1,5 +1,7 @@
 import { sourceRequestContext } from './source-request-context';
 import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
+import { visibleSentences } from './copy-check';
+import { readVoice, VOICE_FILE, type RecentVoice } from './store-voice';
 import { readControls } from './store-controls';
 import type { RecentControls } from './store-controls-library';
 import { isSignatureDevice, type ShownStyleCard } from './design-engine/style-draws';
@@ -133,6 +135,32 @@ export class SourceProjectsService {
       const controls = row.config ? readControls([{ path: 'config.js', content: row.config }]) : undefined;
       const kind = parseFrameDraw(row.draw).kind;
       return controls ? [{ ...(kind ? { kind } : {}), controls }] : [];
+    });
+  }
+
+  /** The voice sheets and home sentences of recent other stores (spec 2026-10-14 store voice): each store's latest revision in
+   *  30 days, newest first, with the business kind its frame draw recorded. Read-only; only three small text files travel. */
+  async recentVoices(storeId: string, now = new Date(), limit = 12): Promise<RecentVoice[]> {
+    const since = new Date(now.getTime() - 30 * 86_400_000);
+    const rows = await this.prisma.$queryRaw<Array<{ voice: string | null; draw: string | null; home: string | null }>>(Prisma.sql`
+      WITH latest AS (
+        SELECT DISTINCT ON (v."storeId") v."storeId", v.revision, v."createdAt"
+        FROM "StoreSourceVersion" v
+        WHERE v."storeId" <> ${storeId} AND v."createdAt" >= ${since}
+        ORDER BY v."storeId", v."createdAt" DESC
+      ), top AS (SELECT * FROM latest ORDER BY "createdAt" DESC LIMIT ${limit})
+      SELECT
+        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${VOICE_FILE} LIMIT 1) AS voice,
+        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${FRAME_DRAW_FILE} LIMIT 1) AS draw,
+        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${'index.html'} LIMIT 1) AS home
+      FROM top JOIN "StoreSourceVersion" v ON v."storeId" = top."storeId" AND v.revision = top.revision
+      ORDER BY top."createdAt" DESC
+    `);
+    return rows.flatMap(row => {
+      const voice = row.voice ? readVoice([{ path: VOICE_FILE, content: row.voice }]) : undefined;
+      const sentences = row.home ? visibleSentences(row.home).slice(0, 80) : [];
+      const kind = parseFrameDraw(row.draw).kind;
+      return voice || sentences.length ? [{ ...(kind ? { kind } : {}), ...(voice ? { voice } : {}), sentences }] : [];
     });
   }
 

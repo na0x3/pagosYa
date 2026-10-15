@@ -24,6 +24,7 @@ import { withSourceFonts } from './source-fonts';
 import { SOURCE_DESIGN_FILE, type SourceDesign } from './source-design';
 import { measureStoreLook, withMeasuredLook } from './store-look-measure';
 import type { GenerationLive, GenerationRunFacts } from './source-generation-types';
+import { voiceFile, voiceForSave, VOICE_FILE } from './store-voice';
 
 /** The DNA motifs a design's selected concept declares. */
 export const designMotifs = (value?: SourceDesign | null) => value?.concepts[value.selected]?.dna?.motifs ?? [];
@@ -34,7 +35,7 @@ export const designMotifs = (value?: SourceDesign | null) => value?.concepts[val
 export type LookChoice = { reuse?: { look: StoreLook | undefined }; fallback?: StoreLook };
 
 export type SaveAssemblyContext = {
-  facts: Pick<GenerationRunFacts, 'prisma' | 'config' | 'logger' | 'storeId' | 'runId' | 'slug' | 'dto' | 'brand' | 'apiUrl' | 'data' | 'assets' | 'retainedAssets' | 'assetLegend' | 'imageUses' | 'photoFacts' | 'fontPaths' | 'previous' | 'previousFiles' | 'previousDesign' | 'previousScene' | 'sectionScope' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'creative' | 'useNext' | 'signal'>;
+  facts: Pick<GenerationRunFacts, 'prisma' | 'config' | 'logger' | 'storeId' | 'runId' | 'slug' | 'dto' | 'brand' | 'apiUrl' | 'data' | 'assets' | 'retainedAssets' | 'assetLegend' | 'imageUses' | 'photoFacts' | 'fontPaths' | 'previous' | 'previousFiles' | 'previousDesign' | 'previousScene' | 'sectionScope' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'creative' | 'useNext' | 'signal' | 'voice'>;
   live: Pick<GenerationLive, 'generated' | 'agentTheme' | 'visualSystem' | 'frame' | 'compiledNext' | 'sketchFile' | 'websiteDesignFile' | 'kitTouch' | 'motifFiles' | 'agentAccountTheme' | 'agentMotifPack' | 'agentPolicies'>;
   /** generate()'s platformHeader: draws the platform header on every static page and logs its notes once per run. */
   platformHeader: (files: SourceProjectFileDto[], platformPages: string[]) => SourceProjectFileDto[];
@@ -110,6 +111,11 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
   // The store-wide motif pack: YAPI's choice this run (null removes it), otherwise the one the store had.
   const motifPack = chosenMotifPack(live.agentMotifPack, previousConfig.motifPack);
   if (agentPolicyChange) data.policies = mergeAgentPolicies((await prisma.store.findUnique({ where: { id: storeId }, select: { policies: true } }))?.policies, live.agentPolicies);
+  // Store voice (spec 2026-10-14): voice.json beside frame-draw.json. A YAPI save drops pending facts no page carries any more and
+  // moves confirmed ones to the specifics; a run without a sheet (always, with the flag off) carries the store's own file as is.
+  const sheet = facts.voice.sheet;
+  const voiceToSave = sheet ? voiceForSave(sheet, files) : undefined;
+  const carriedVoice = voiceToSave ? undefined : previousFiles.find(file => file.path === VOICE_FILE);
   const config = { ...sourceCommerceRoutes([...files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
     // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
     : live.agentTheme?.assurances !== undefined ? (live.agentTheme.assurances.length ? { productAssurances: live.agentTheme.assurances } : {})
@@ -120,6 +126,7 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
     ...(live.sketchFile ? [live.sketchFile] : []),
     ...(live.websiteDesignFile ? [live.websiteDesignFile] : []),
     ...(live.frame.file ? [live.frame.file] : []),
+    ...(voiceToSave ? [voiceFile(voiceToSave)] : carriedVoice ? [carriedVoice] : []),
     { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(live.visualSystem, files, previousScene), null, 2) + '\n' },
     { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
     ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },

@@ -13,7 +13,7 @@ import { createSep5Review, type AssembleSave, type ReviewControls } from './sour
 import type { GenerationLive, GenerationRunFacts } from './source-generation-types';
 
 export type Sep5StageContext = {
-  facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'progress' | 'apiUrl' | 'data' | 'assetLegend' | 'images' | 'ownedUrls' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'oldFiles' | 'creative' | 'autoRepairs' | 'signatureOn'>;
+  facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'progress' | 'apiUrl' | 'data' | 'assetLegend' | 'images' | 'ownedUrls' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'oldFiles' | 'creative' | 'autoRepairs' | 'signatureOn' | 'voice'>;
   live: GenerationLive;
   sep5SelfReview: boolean; playbookOn: boolean;
   playbookEntry: PlaybookEntry | undefined; playbookEvidence: Record<Evidence, boolean>;
@@ -39,6 +39,8 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   // and site.js. The engine's own motion plan is reused rather than reinvented, in its non-React form.
   // Not passed on the translation branch below, where only palette, copy and section order survive and
   // authored motion would be output tokens spent on CSS nothing renders.
+  // Store voice (spec 2026-10-14): the Bundled images legend carries what each photo shows before the author reads it.
+  await facts.voice.photosJob;
   const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
   // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
   // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.

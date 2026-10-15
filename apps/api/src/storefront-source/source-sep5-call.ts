@@ -25,14 +25,16 @@ export type Sep5Caller = ReturnType<typeof sep5Caller>;
 /** One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike. */
 export function sep5Caller(context: Sep5CallContext) {
   const { provider, apiKey, budget, signal, attempts, storeId, metering } = context;
-  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
+  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls' | 'photo' | 'voice' | 'tone', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
     const callSignal = options.signal ?? signal;
     const attempt: SourceGenerationAttempt = { model: context.model(), phase, durationMs: 0, status: 'FAILED', usage: null };
     (options.attempts ?? attempts).push(attempt);
     let body: any = null;
     const callStarted = Date.now();
     try {
-      const allocation = budget.reserve(context.model(), Math.ceil(text.length / 3) + 1000, options.maxOutputTokens ?? SEP5_MAX_OUTPUT_TOKENS, 500);
+      // A small call (the 400-token photo line) asks for less than the usual 500-token floor; the floor never exceeds the request.
+      const requested = options.maxOutputTokens ?? SEP5_MAX_OUTPUT_TOKENS;
+      const allocation = budget.reserve(context.model(), Math.ceil(text.length / 3) + 1000, requested, Math.min(500, requested));
       try {
         // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
         // and this one writes the entire store.
