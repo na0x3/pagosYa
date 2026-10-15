@@ -141,15 +141,27 @@ describe('Ajustes › Correos routes', () => {
     expect((await get('').expect(200)).body).toMatchObject({ kit: 'active', siteChanged: false });
   });
 
+  // Previews load in the merchant's browser: without the public https base (local dev, no tunnel) their images
+  // come from the address the browser reached this API on, so icons and photos show instead of broken boxes.
+  it('previews images from the address the dashboard reached the API on when no public base is set', async () => {
+    await get('/preview').expect(200);
+    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.anything(), { assetBase: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+$/) });
+  });
+  it('previews images from the public https base when one is set', async () => {
+    config.get.mockImplementation((key: string) => (key === 'app.publicAssetBaseUrl' ? 'https://api.pagosya.bo' : undefined));
+    await get('/preview').expect(200);
+    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.anything(), { assetBase: 'https://api.pagosya.bo' });
+  });
+
   it('previews the active look by default, the candidate when asked, and 404s a missing candidate', async () => {
     await get('/preview?type=appointment_confirmed').expect(200);
     expect(emails.sampleReceipt).toHaveBeenCalledWith('store_1', 'Café Illimani', 'appointment_confirmed');
-    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.objectContaining({ type: 'appointment_confirmed' }));
+    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.objectContaining({ type: 'appointment_confirmed' }), { assetBase: expect.any(String) });
 
     const candidate = { layout: 'L', blocks: 'B', copy: {} };
     kits.candidate.mockResolvedValue(candidate);
     await get('/preview?which=candidate').expect(200);
-    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.anything(), { kit: candidate });
+    expect(emails.renderReceipt).toHaveBeenLastCalledWith('store_1', expect.anything(), { kit: candidate, assetBase: expect.any(String) });
 
     kits.candidate.mockResolvedValue(null);
     await get('/preview?which=candidate').expect(404);

@@ -61,14 +61,27 @@ export class StoreEmailController {
 
   @Get('preview')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  async preview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('type') type = 'order_confirmation', @Query('which') which = 'active') {
+  async preview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Req() req: { protocol: string; get(name: string): string | undefined }, @Query('type') type = 'order_confirmation', @Query('which') which = 'active') {
     const store = await this.owned(merchant.id, storeId);
     const emailType = asType(type);
     const sample = await this.emails.sampleReceipt(storeId, store.name, emailType);
-    if (which !== 'candidate') return this.emails.renderReceipt(storeId, sample);
+    const assetBase = this.previewAssetBase(req);
+    if (which !== 'candidate') return this.emails.renderReceipt(storeId, sample, { assetBase });
     const candidate = await this.kits.candidate(storeId);
     if (!candidate) throw new NotFoundException('No hay un diseño nuevo.');
-    return this.emails.renderReceipt(storeId, sample, { kit: candidate });
+    return this.emails.renderReceipt(storeId, sample, { kit: candidate, assetBase });
+  }
+
+  /**
+   * A preview loads in the merchant's browser, not in Gmail: its images resolve against the public https base when
+   * there is one, else against the address the browser reached this API on (local dev without a tunnel), so icons
+   * and photos show instead of broken boxes. Sent emails never use the latter (StoreEmailService.base is https only).
+   */
+  private previewAssetBase(req: { protocol: string; get(name: string): string | undefined }) {
+    const base = this.config.get<string | null>('app.publicAssetBaseUrl');
+    if (base?.startsWith('https://')) return base;
+    const host = req.get('host');
+    return host ? `${req.protocol}://${host}` : null;
   }
 
   @Post('design')

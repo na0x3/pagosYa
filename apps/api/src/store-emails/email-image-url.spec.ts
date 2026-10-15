@@ -10,9 +10,14 @@ describe('emailImageUrl', () => {
   it('passes an absolute https URL through', () => {
     expect(emailImageUrl('https://cdn.example.com/a.png', base)).toBe('https://cdn.example.com/a.png');
   });
-  it('drops anything that is not https after resolution', () => {
-    expect(emailImageUrl('/v1/uploads/abc.webp', 'http://localhost:3001')).toBeNull();
+  // The base is the caller's decision: a sent email only ever gets the https PUBLIC_ASSET_BASE_URL
+  // (StoreEmailService.base), the dashboard preview gets the API's own address so dev previews show images.
+  it('resolves an upload path against the base its caller chose, and drops one without a base', () => {
+    expect(emailImageUrl('/v1/uploads/abc.webp', 'http://localhost:3001')).toBe('http://localhost:3001/v1/uploads/abc.webp');
+    expect(emailImageUrl('/v1/uploads/abc.webp', 'ftp://example.com')).toBeNull();
     expect(emailImageUrl('/v1/uploads/abc.webp', null)).toBeNull();
+  });
+  it('drops an absolute image that is not https', () => {
     expect(emailImageUrl('http://cdn.example.com/a.png', base)).toBeNull();
     expect(emailImageUrl('data:image/png;base64,AAAA', base)).toBeNull();
     expect(emailImageUrl('javascript:alert(1)', base)).toBeNull();
@@ -26,9 +31,9 @@ describe('emailImageUrl', () => {
 });
 
 describe('emailIconUrl', () => {
-  it('points at the public icon route in the requested tone, only over https', () => {
+  it('points at the public icon route in the requested tone, on the base its caller chose', () => {
     expect(emailIconUrl('truck', 'light', 'https://api.pagosya.bo')).toBe('https://api.pagosya.bo/v1/email-assets/icons/truck-light.png');
-    expect(emailIconUrl('truck', 'dark', 'http://localhost:3001')).toBeNull();
+    expect(emailIconUrl('truck', 'dark', 'http://localhost:3001')).toBe('http://localhost:3001/v1/email-assets/icons/truck-dark.png');
     expect(emailIconUrl('truck', 'dark', null)).toBeNull();
   });
   it('ships every icon in both tones', () => {

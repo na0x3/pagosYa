@@ -40,7 +40,8 @@ export class StoreEmailService {
   private readonly checkedKits = new Map<string, ReturnType<typeof validate.validateEmailKit>>();
   constructor(private readonly prisma: PrismaService, private readonly kits: EmailKitStore, private readonly content: EmailContentStore, private readonly config: ConfigService) {}
 
-  private base() { return this.config.get<string | null>('app.publicAssetBaseUrl') ?? null; }
+  /** The base every sent email's images resolve against: only ever https, which is all Gmail fetches. */
+  private base() { const base = this.config.get<string | null>('app.publicAssetBaseUrl') ?? null; return base?.startsWith('https://') ? base : null; }
 
   private async brand(storeId: string | null): Promise<BrandProfile> {
     if (!storeId) return EMPTY_BRAND;
@@ -79,7 +80,7 @@ export class StoreEmailService {
     return origin ? `${origin.replace(/\/$/, '')}/s/${encodeURIComponent(store.slug)}` : null;
   }
 
-  private async items(lines: ReceiptLine[]): Promise<EmailItem[]> {
+  private async items(lines: ReceiptLine[], base: string | null): Promise<EmailItem[]> {
     const ids = [...new Set(lines.map(line => line.paymentLinkId).filter((id): id is string => !!id))];
     const links = ids.length ? await this.prisma.paymentLink.findMany({ where: { id: { in: ids } }, select: { id: true, imageUrls: true, variants: true } }) : [];
     const photos = new Map<string, string>();
@@ -93,7 +94,7 @@ export class StoreEmailService {
     return lines.map(line => {
       const path = (line.paymentLinkId && line.variantId ? photos.get(`${line.paymentLinkId}|${line.variantId}`) : undefined)
         ?? (line.paymentLinkId ? photos.get(`${line.paymentLinkId}|`) : undefined) ?? null;
-      const src = emailImageUrl(path, this.base());
+      const src = emailImageUrl(path, base);
       return { name: line.name, variant: line.variant, extras: line.extras, quantity: line.quantity, amount: line.amount, image: src ? { src, alt: line.name } : null, productId: line.paymentLinkId };
     });
   }
@@ -106,11 +107,13 @@ export class StoreEmailService {
     return checked.usable ? checked.html : null;
   }
 
-  async renderReceipt(storeId: string | null, input: ReceiptInput, opts: { kit?: KitInput | null } = {}): Promise<{ html: string; subject: string; repairs: string[] }> {
+  async renderReceipt(storeId: string | null, input: ReceiptInput, opts: { kit?: KitInput | null; assetBase?: string | null } = {}): Promise<{ html: string; subject: string; repairs: string[] }> {
+    // The dashboard preview passes the address the merchant's browser reaches the API on; a sent email uses base().
+    const base = opts.assetBase ?? this.base();
     const floor = await loadFloorKit();
     const type = receiptType(input);
     const store = storeId ? await this.prisma.store.findUnique({ where: { id: storeId }, select: { logoUrl: true, slug: true, customDomains: { where: { status: 'ACTIVE' }, select: { hostname: true }, take: 1 } } }) : null;
-    const logoUrl = emailImageUrl(input.logoUrl ?? store?.logoUrl ?? null, this.base());
+    const logoUrl = emailImageUrl(input.logoUrl ?? store?.logoUrl ?? null, base);
     const repairs: string[] = [];
     // A failed lookup (for instance before the kit or content tables are migrated) costs the store's look, never the email.
     const guarded = async <T>(what: string, lookup: () => Promise<T>, fallback: T): Promise<T> => {
@@ -124,10 +127,10 @@ export class StoreEmailService {
     };
     const checkoutOrigin = this.config.get<string>('app.checkoutOrigin') ?? null;
     const [brand, items, row, overrides, ctx, stored] = await Promise.all([
-      this.brand(storeId), this.items(input.lines),
+      this.brand(storeId), this.items(input.lines, base),
       opts.kit !== undefined ? Promise.resolve(opts.kit) : storeId ? guarded('kit', () => this.kits.active(storeId), null) : Promise.resolve(null),
       storeId ? guarded('kit', () => this.kits.overrides(storeId, type), {}) : Promise.resolve({}),
-      storeId ? guarded('context', () => loadEmailContext(this.prisma, storeId, { assetBase: this.base(), checkoutOrigin }), NO_CONTEXT) : Promise.resolve(NO_CONTEXT),
+      storeId ? guarded('context', () => loadEmailContext(this.prisma, storeId, { assetBase: base, checkoutOrigin }), NO_CONTEXT) : Promise.resolve(NO_CONTEXT),
       storeId ? guarded<StoredContent>('content', () => this.content.get(storeId), {}) : Promise.resolve({}),
     ]);
     const checked = row ? this.check(row) : null;
@@ -150,10 +153,10 @@ export class StoreEmailService {
     const kit = checked?.kit ?? floor;
     const values = new Map([...layoutColorTokens(kit), ...brandColorTokens(brand)]);
     const data: ReceiptData & { delivery: Delivery } = { ...input, items, delivery: input.delivery ?? null };
-    const content = resolveContent(type, stored, ctx, copy, { cliente: input.customerName, tienda: input.storeName }, this.base());
+    const content = resolveContent(type, stored, ctx, copy, { cliente: input.customerName, tienda: input.storeName }, base);
     const assembled = assembleWithinBudget(this.resolveKit(kit, values), this.resolveKit(floor, values), richReceiptCalls(type, data, copy, ctx, content), {
       storeName: input.storeName, logoUrl, storeUrl: ctx.storeUrl ?? this.storeUrl(store), preheader: copy.preheader, unsubscribeUrl: null, marketing: false,
-      nav: ctx.nav, socials: ctx.socials, address: ctx.address, policies: ctx.policies, iconBase: this.base(),
+      nav: ctx.nav, socials: ctx.socials, address: ctx.address, policies: ctx.policies, iconBase: base,
     });
     return { html: assembled.html, subject: copy.subject, repairs: [...repairs, ...assembled.repairs] };
   }

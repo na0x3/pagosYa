@@ -193,3 +193,14 @@ describe('StoreEmailService.renderReceipt', () => {
     });
   });
 });
+
+describe('StoreEmailService image addresses', () => {
+  it('never sends an email with images on a base that is not https', async () => {
+    const { html } = await harness({ base: 'http://localhost:3001' }).renderReceipt('s1', input());
+    expect(html).not.toContain('http://localhost:3001');
+  });
+  it('the dashboard preview can show images from the address the browser reaches the API on', async () => {
+    const { html } = await harness({ base: null }).renderReceipt('s1', input(), { assetBase: 'http://localhost:3001' });
+    expect(html).toContain('http://localhost:3001/v1/uploads/logo.png');
+  });
+});
