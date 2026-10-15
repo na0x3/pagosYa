@@ -12,16 +12,14 @@ import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from 
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
-import { carriedTouch, chatTouchKept, instructionConcernsKitSurfaces, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
+import { chatTouchKept, instructionConcernsKitSurfaces, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { asksForBold, designBrandCss, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, storePhotoPaths, FRAME_DRAW_FILE } from './design-engine/frame-draw';
-import { measureStoreLook, withMeasuredLook } from './store-look-measure';
-import { patchConfigFile, readConfigFile, sanitizeLook, type StoreLook } from './store-look';
-import { commerceConfig } from './source-commerce-config';
+import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
+import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
@@ -44,7 +42,7 @@ import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent, unusedPhotoDiagnostic } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
-import { avoidTakenFingerprint, sourceRuntimeDna, SOURCE_PRODUCT_PAGE_STYLES } from './source-dna';
+import { avoidTakenFingerprint, sourceRuntimeDna } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, isClaude } from './source-provider';
 import { withSavedLogo } from './source-saved-logo';
@@ -54,15 +52,14 @@ import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { sourceUiCompositions, sourceUiCompositionPrompt, type SourceCompositionInput } from './source-ui';
 import { sourceUiCompositionRecipe } from './source-composition-registry';
-import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
-import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
+import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
+import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { catalogueDigest } from './sketch/sketch-catalogue-digest';
-import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, sketchProductTheme, sketchKitDna, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
+import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
 import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type ShownStyleCard, type StyleSlot } from './design-engine/style-draws';
 import { numbersIn } from './design-engine/style-hero';
-import type { StyleProposal } from './source-style-proposal';
 import { SourceReviewRegistry, SOURCE_REVIEW_HEARTBEAT_MS, SOURCE_REVIEW_STATUS, reviewPendingWhere } from './source-background-review';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
@@ -71,14 +68,12 @@ import { SourceRequestBudget } from './source-request-budget';
 import { Optional } from '@nestjs/common';
 import { BrandProfileService } from '../brand/brand-profile.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
-import { brandContext, brandHasColours, brandStyles, BRAND_FONT_FIELDS, linkBrandStylesheet } from '../brand/brand-profile';
+import { brandContext, brandHasColours, brandStyles, BRAND_FONT_FIELDS } from '../brand/brand-profile';
 import { requestedSourceProductOperations, requestedSourceProducts, sourceProductOperationsSchema, sourceProductsSchema, type SourceProductOperation } from './source-products';
-import { sourceCommerceRoutes } from './source-commerce-pages';
-import { withSourceCommerceDesign } from './source-commerce-design';
-import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion, withSourceMotion } from './source-motion';
+import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion } from './source-motion';
 import { sourceMotionPlan } from './source-motion-plan';
 import { sourceMotionPersonalityLine } from './source-motion-tokens';
-import { buildSourceVisualSystem, savedSourceVisualSystem, sourceProductPageStyle, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
+import { buildSourceVisualSystem, savedSourceVisualSystem, sourceProductPageStyle, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
 import { validateSourcePreflight } from './source-preflight';
 import { platformSuppliedPages, repairSourceContracts } from './source-autorepair';
@@ -87,10 +82,9 @@ import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { applySourceKitCss, SOURCE_KIT_CSS_PATH } from './source-kit-css';
 import { applyOrderEmailTemplate } from './source-email-html';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
-import { extractSourceMotifs, isSourceMotifFile, sourceMotifConfig, sourceMotifPaths, sourceMotifPrompt } from './source-motifs';
-import { chosenMotifPack } from './source-motif-packs';
+import { extractSourceMotifs, isSourceMotifFile, sourceMotifPaths, sourceMotifPrompt } from './source-motifs';
 import { ProductPageWriterService } from '../product-content/product-page-writer.service';
-import { AGENT_POLICY_KINDS, mergeAgentPolicies, type PendingPolicies } from './source-agent-policies';
+import { AGENT_POLICY_KINDS, type PendingPolicies } from './source-agent-policies';
 import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
@@ -111,8 +105,8 @@ import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
 import { kitPath } from '@pagosya/storefront-kit';
 import { AgentWorkspace } from './agent/agent-workspace';
-import { AgentToolbox, recordTellsKept, type AgentStep } from './agent/agent-tools';
-import { applyProductThemeToDesign, instructionConcernsProductCard, productThemeRuntime, resolveProductTheme, sanitizeProductAssurances } from './product-theme';
+import { AgentToolbox, recordTellsKept } from './agent/agent-tools';
+import { instructionConcernsProductCard } from './product-theme';
 import { runAgent, AGENT_LIMITS, agentLimits, agentRunHeadroom, agentWallWithin, abortedByTimeout } from './agent/agent-loop';
 import { sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
 import { normalizeAccountTheme } from './account-theme';
@@ -124,10 +118,11 @@ import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { CLAUDE_COMPANION_MODEL, SEP5_CLIENT_TIMEOUT_MS, SEP5_MAX_OUTPUT_TOKENS, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
 import { outputSchema, sourceStablePrompt } from './source-generation-prompt';
 import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
-import type { Sep5Review, SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
+import type { AgentOutcome, GenerateExecution, GeneratedSource, GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
 import { runStyleProposal, type ProposeStylesInput } from './source-style-proposals';
 import { startBackgroundReview, type BackgroundReviewInput } from './source-review-runner';
 import { sep5Caller } from './source-sep5-call';
+import { assembleSourceSave, designMotifs, type LookChoice, type SaveAssemblyContext } from './source-save-assembly';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
 /** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
@@ -301,7 +296,7 @@ export class SourceGenerationService {
   /** Resolves when the store's background review in this process has ended (tests and tools). */
   reviewSettled(storeId: string): Promise<void> { return this.reviews.settled(storeId); }
 
-  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: called once both cards are planned and choosable, before their heroes finish (spec 2026-10-12). */ onPickable?: (result: StyleProposalResult) => void; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } }) {
+  async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto, budget = this.newBudget(dto.maxCredits), imageUses: SourceImageUse[] = [], progress?: SourceProgressReporter, execution?: GenerateExecution) {
     execution?.signal?.throwIfAborted();
     // On the merchant's own ChatGPT plan nothing is billed: no credit allowance, no credits charged, more time per run.
     const chatgptPlan = Boolean(this.config.get('app.chatgptPlan')), freeRun = Boolean(execution?.free) || chatgptPlan;
@@ -636,8 +631,8 @@ export class SourceGenerationService {
     let sketchFile: SourceProjectFileDto | null = null;
     let creativeSummary: string | undefined;
     let websiteDesignFile: SourceProjectFileDto | null = null;
-    let generated!: { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
-    let agentOutcome: { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>>; requirements: AgentToolbox['requirements']; evidence: AgentToolbox['evidence'] } | undefined;
+    let generated!: GeneratedSource;
+    let agentOutcome: AgentOutcome | undefined;
     /** The product page theme the agent chose (already sanitized and browser-checked); merged into the accepted design below. */
     let agentTheme: AgentToolbox['pendingTheme'] = null;
     let agentAccountTheme: AgentToolbox['pendingAccountTheme'] = null;
@@ -666,7 +661,6 @@ export class SourceGenerationService {
     // DNA motif drawings (sub-project 3) live outside the authored files the validators and the compiler see: taken out
     // and sanitised on arrival, carried forward from the previous revision, saved beside the design and in config.js.
     let motifFiles: SourceProjectFileDto[] = previousFiles.filter(file => isSourceMotifFile(file.path));
-    const designMotifs = (value?: SourceDesign | null) => value?.concepts[value.selected]?.dna?.motifs ?? [];
     try {
       // Check again after acquiring the generation slot, before spending tokens.
       if ((await this.projects.current(merchantId, storeId)).revision !== dto.revision) throw new ConflictException('El proyecto cambió. Recarga antes de generar.');
@@ -753,6 +747,46 @@ export class SourceGenerationService {
       let revisionLook: StoreLook | undefined;
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
+      // The run as the stages split out of generate() see it (source-generation-types.ts): fixed values by value, and every
+      // `let` above through a getter/setter, so a stage always reads and writes the real local.
+      const facts: GenerationRunFacts = {
+        prisma: this.prisma, config: this.config, logger: this.logger, metering: this.metering,
+        storeId, runId: run.id, slug: owner.slug,
+        dto, execution, progress, plan, claude, chatgptPlan, provider, apiKey, agentProvider,
+        budget, signal, attempts, autoRepairs, started, runTimeout, stablePrompt, signatureOn,
+        brand, apiUrl, data, images, assets, retainedAssets, assetLegend, assetUrls, ownedUrls, imageUses, photoFacts, fontPaths,
+        previous, previousFiles, oldFiles, previousDesign, previousScene, sectionScope,
+        sitePurpose, scrollFeel, motion, primaryAction, creative, redesign, useNext, editExisting,
+      };
+      const live: GenerationLive = {
+        get generated() { return generated; }, set generated(value) { generated = value; },
+        get products() { return products; }, set products(value) { products = value; },
+        get unusedImagePaths() { return unusedImagePaths; }, set unusedImagePaths(value) { unusedImagePaths = value; },
+        get motifFiles() { return motifFiles; }, set motifFiles(value) { motifFiles = value; },
+        get lenient() { return lenient; }, set lenient(value) { lenient = value; },
+        get reviewing() { return reviewing; }, set reviewing(value) { reviewing = value; },
+        get sep5Review() { return sep5Review; }, set sep5Review(value) { sep5Review = value; },
+        get kitTouch() { return kitTouch; }, set kitTouch(value) { kitTouch = value; },
+        get revisionLook() { return revisionLook; },
+        get acceptedPreviewFiles() { return acceptedPreviewFiles; }, set acceptedPreviewFiles(value) { acceptedPreviewFiles = value; },
+        get committedDesign() { return committedDesign; },
+        get boldAsked() { return boldAsked; },
+        get frame() { return frame; },
+        get playbookText() { return playbookText; },
+        get styleBold() { return styleBold; },
+        get visualSystem() { return visualSystem; }, set visualSystem(value) { visualSystem = value; },
+        get sketchFile() { return sketchFile; },
+        get websiteDesignFile() { return websiteDesignFile; },
+        get compiledNext() { return compiledNext; },
+        get agentTheme() { return agentTheme; }, set agentTheme(value) { agentTheme = value; },
+        get agentAccountTheme() { return agentAccountTheme; }, set agentAccountTheme(value) { agentAccountTheme = value; },
+        get agentMotifPack() { return agentMotifPack; }, set agentMotifPack(value) { agentMotifPack = value; },
+        get agentPolicies() { return agentPolicies; }, set agentPolicies(value) { agentPolicies = value; },
+        get agentOutcome() { return agentOutcome; }, set agentOutcome(value) { agentOutcome = value; },
+        get unfinishedStatus() { return unfinishedStatus; }, set unfinishedStatus(value) { unfinishedStatus = value; },
+        get taskPrompt() { return taskPrompt; }, set taskPrompt(value) { taskPrompt = value; },
+        get model() { return model; },
+      };
       // Header controls a static edit covers (2026-10-12: Ramo Ramón's header trapped in an isolated poster, Rampa's own invisible
       // cart drawer), judged in a browser against the saved revision, rendered once per run: only covers the edit brings in block (524dfd73).
       const headerGate = this.config.get<boolean>('app.headerClickGate') === true;
@@ -1471,98 +1505,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       }
     // Policies YAPI rewrote, merged with Ajustes as it is now (the merchant may have edited another one meanwhile).
     const agentPolicyChange = Object.keys(agentPolicies).length > 0;
-    /** Everything a save carries besides the model's authored files: kit files, assets, design and visual-system files,
-     *  config.js. Built from `generated` as it is when called: once for revision N, and again by the background review. */
-    /** `lookChoice.reuse`: a look already measured on this same home (the touch base), written as is without measuring again;
-     *  `lookChoice.fallback`: the look to keep when measuring fails (the review stage's revision N), instead of the previous
-     *  revision's. A new store or a redesign never falls back to the previous revision's look: its design is new. */
-    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: { reuse?: { look: StoreLook | undefined }; fallback?: StoreLook } = {}) => {
-      const acceptedDesign = applyProductThemeToDesign(sourceDesignAfterSectionEdit(generated.design || previousDesign || undefined, generated.files, sectionScope), agentTheme);
-      // A local copy: the review stage assembles twice (the touch reads a base, then the final save), and brand.css, the Next scaffold and the brand link must not pile up on `generated`.
-      let files = [...generated.files];
-      if (sectionScope) visualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), acceptedDesign);
-      // Carry forward previously bundled assets on an edit, without carrying old private configuration.
-      const previousAssets = retainedAssets;
-      const assetPaths = new Set(assets.map((f) => f.path));
-      assets.push(...previousAssets.filter((f) => !assetPaths.has(f.path)));
-      const previousBrand = (previous?.snapshot as any)?.files?.find((file: SourceProjectFileDto) => file.path === 'brand.css');
-      // Confirmed brand colours win; otherwise a fresh design's drawn colour world becomes the brand tokens.
-      // The rule lives in designBrandCss (tested): confirmed colours, else the drawn world, never a stale drawn block.
-      const tokenCss = designBrandCss({ palette: frame.palette, brandColours: brandHasColours(brand?.data), confirmedCss: brand && brand.revision > 0 ? brandStyles(brand.data, fontPaths) : '', brandRevision: brand?.revision ?? 0, previousBrand: previousBrand?.content });
-      if (useNext) files.push(...compiledNext, ...nextProjectScaffold(owner.slug, nextContentPages(files, sitePurpose)));
-      if (tokenCss) {
-        files = files.map(file => file.path.endsWith('.html') ? { ...file, content: linkBrandStylesheet(file.content, file.path) } : file);
-        files.push({ path: 'brand.css', content: tokenCss });
-      }
-      if (useNext && !tokenCss) files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
-      const useCommercePages = sitePurpose === 'shop' && (useNext || !previous || files.some(file => file.path === "product.html") && files.some(file => file.path === "checkout.html"));
-      // commerce-pages.css is platform CSS (never authored), so like commerce.js every save takes the kit's current copy:
-      // kept from the first build, kit fixes never reached existing stores (2026-10-12, the checkout row fix).
-      const refreshPagesCss = useCommercePages || useNext || files.some(file => file.path === "commerce-pages.css");
-      if (refreshPagesCss) files = files.filter(file => file.path !== "commerce-pages.css");
-      const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(refreshPagesCss ? ["commerce-pages.css"] : []), ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html"] : []).filter(path => !files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(kitPath(path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
-      const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
-      const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
-      const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
-      let productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
-      // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
-      // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
-      // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
-      let sketchTheme: Record<string, string | number> | null = null;
-      let sketchAssurances: ReturnType<typeof sanitizeProductAssurances>['items'] = [];
-      if (!agentTheme && sketchFile) {
-        try {
-          const parsedSketch = JSON.parse(sketchFile.content);
-          sketchTheme = { ...productThemeRuntime((await resolveProductTheme(sketchProductTheme(parsedSketch.product))).dna), ...sketchKitDna(parsedSketch) };
-          if (SOURCE_PRODUCT_PAGE_STYLES.includes(parsedSketch.product?.layout)) productPageStyle = parsedSketch.product.layout;
-          sketchAssurances = sanitizeProductAssurances(parsedSketch.product?.assurances).items;
-        } catch { /* a malformed sketch keeps the seeded DNA */ }
-      }
-      // A sketch-born store has no design concept: without this, any later chat edit would re-seed the
-      // DNA and silently strip the skin, button form, card behaviour and motion its boceto chose.
-      const conceptDna = acceptedDesign?.concepts[acceptedDesign.selected]?.dna;
-      const KEPT_DNA = ['swatch', 'gallery', 'blocks', 'divider', 'enter', 'media', 'productCss', 'button', 'card', 'cart', 'review', 'motion', 'hover', 'press', 'added', 'checkout', 'fields'];
-      const carriedDna = !agentTheme && !sketchTheme && !conceptDna && previousConfig.dna && typeof previousConfig.dna === 'object'
-        ? Object.fromEntries(KEPT_DNA.filter(key => previousConfig.dna[key] !== undefined).map(key => [key, previousConfig.dna[key]])) : {};
-      // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
-      const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
-      const drawnCommerce = commerceConfig({ commerce: frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
-      const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...carriedTouch(previousConfig.dna, creative), ...(agentTheme ? productThemeRuntime(agentTheme) : sketchTheme ?? {}), ...(frame.dna ?? {}), ...drawnCommerce.dna, ...(kitTouch && Object.keys(kitTouch).length ? { ...kitTouch, touch: 1 } : {}) };
-      // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
-      const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
-      const acceptedMotifFiles = motifFiles.filter(file => acceptedMotifPaths.includes(file.path));
-      const runtimeMotifs = sourceMotifConfig(designMotifs(acceptedDesign), acceptedMotifFiles);
-      // The account pages' theme (spec 2026-10-08): what YAPI set this run, otherwise what the store already had.
-      // A freshly drawn account layout wins over the saved one; a kept draw leaves the saved theme (and its CSS) as it is.
-      const accountTheme = agentAccountTheme ?? drawnCommerce.accountTheme ?? normalizeAccountTheme(previousConfig.accountTheme);
-      // The store-wide motif pack: YAPI's choice this run (null removes it), otherwise the one the store had.
-      const motifPack = chosenMotifPack(agentMotifPack, previousConfig.motifPack);
-      if (agentPolicyChange) data.policies = mergeAgentPolicies((await this.prisma.store.findUnique({ where: { id: storeId }, select: { policies: true } }))?.policies, agentPolicies);
-      const config = { ...sourceCommerceRoutes([...files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
-        // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
-        : agentTheme?.assurances !== undefined ? (agentTheme.assurances.length ? { productAssurances: agentTheme.assurances } : {})
-        : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), ...(primaryAction ? { primaryAction } : {}), sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
-      const assembled = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(platformHeader(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
-        ...files, ...kitFiles, ...assets, ...acceptedMotifFiles,
-        ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
-        ...(sketchFile ? [sketchFile] : []),
-        ...(websiteDesignFile ? [websiteDesignFile] : []),
-        ...(frame.file ? [frame.file] : []),
-        { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, files, previousScene), null, 2) + '\n' },
-        { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
-        ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
-        { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
-      ], previousFiles, assetLegend, imageUses, photoFacts))), []), motion) };
-      // One look per store (spec 2026-10-14): read the final home page and keep it as config.look for the kit pages.
-      if (lookChoice.reuse) {
-        const { look } = lookChoice.reuse;
-        return look ? { ...assembled, files: patchConfigFile(assembled.files, current => ({ ...current, look })) } : assembled;
-      }
-      const fallbackLook = 'fallback' in lookChoice ? lookChoice.fallback : creative ? undefined : previousConfig.look;
-      const measured = await withMeasuredLook(assembled, { enabled: this.config.get<boolean>('app.yapiLookMeasure') === true, declaredTreatment: parseFrameDraw(frame.file?.content).photos, previousLook: fallbackLook, brief: dto.brief, signal: assembleSignal, measure: measureStoreLook });
-      this.logger.log(JSON.stringify({ event: measured.outcome === 'measured' ? 'look_measured' : 'look_kept', generationId: run.id, outcome: measured.outcome, ...(measured.reason ? { reason: measured.reason } : {}) }));
-      return measured.input;
-    };
+    // Everything a save carries besides the model's authored files (source-save-assembly.ts). It reads `generated` as it is
+    // when called: once for revision N, and again by the background review.
+    const saveContext: SaveAssemblyContext = { facts, live, platformHeader, agentPolicyChange };
+    const assembleSave = (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => assembleSourceSave(saveContext, assembleSignal, lookChoice);
     // A chat request about the kit pages (spec 2026-10-14) re-runs only the touch step, with the merchant's words. The new
     // CSS replaces the surfaces it covers; surfaces it leaves empty keep the store's earlier touch. It runs before the
     // receipt so a used attempt is billed, on its own deadline (the touch never fails an edit), and an agent theme chosen
