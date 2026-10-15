@@ -4,11 +4,15 @@
 
 **Goal:** Every new Sep-5 store gets its own language for its small controls (header cart, account, menu and search; card "+"; quantity steppers; drawer close; count badge), tied to its look and its business, designed by YAPI in the background review stage, checked in a browser, with a hand-designed library as the floor.
 
-**Architecture:** A clamped `config.controls` record (`store-controls.ts`) is picked from a pure library for revision N (`store-controls-library.ts`). The platform draws it into the header at save time (`source-header.ts` and `packages/storefront-kit/kit/controls.css`), and `commerce.js` draws it onto the kit's own controls at runtime. YAPI designs a record of its own in a dedicated `controls` call. That call runs beside the background review call, and again on chat requests (`store-controls-design.ts`). A browser guard (`store-controls-guard.ts`) keeps the record, patches one icon slot, or drops it. Part 1 first fixes the database CHECK constraint that has stopped every background review row from being created.
+**Architecture:** A clamped `config.controls` record (`store-controls.ts`) is picked from a pure library for revision N (`store-controls-library.ts`). The platform draws it into the header at save time (`source-header.ts` and `packages/storefront-kit/kit/controls.css`), and `commerce.js` (built from `packages/storefront-kit/commerce-src`) draws it onto the kit's own controls at runtime. YAPI designs a record of its own in a dedicated `controls` call. That call runs beside the background review call, and again on chat requests (`store-controls-design.ts`). A browser guard (`store-controls-guard.ts`) keeps the record, patches one icon slot, or drops it. Part 1 first fixes the database CHECK constraint that has stopped every background review row from being created.
 
 **Tech Stack:** NestJS and TypeScript (apps/api); Prisma and PostgreSQL (one migration); Playwright Chromium (`withVisualSandbox` and jest browser specs); jsdom (kit runtime specs); plain browser JS and CSS (packages/storefront-kit/kit); Jest.
 
 **Spec:** docs/superpowers/specs/2026-10-14-store-controls-design.md
+
+**Re-anchored 2026-10-15 after the big-file split** (docs/superpowers/plans/2026-10-15-split-big-files.md, appendix "where the code now lives"; HEAD 94f7beda). Every path, line number and quoted "before" snippet below is the code at that HEAD, before any task of this plan edits it. Line numbers drift as earlier steps insert lines, so always anchor on the quoted text. What moved:
+- `kit/commerce.js` is generated from `packages/storefront-kit/commerce-src/<area>/<topic>.js` by `packages/storefront-kit/tools/build-commerce.mjs`. Task 6 edits parts, adds one part, runs the build and commits the parts with `kit/commerce.js`.
+- `generate()` was split. The Sep-5 author stage is in `source-sep5-stage.ts`, the review closure in `source-sep5-review.ts`, the metered calls in `source-sep5-call.ts`, save assembly in `source-save-assembly.ts`, and the shared types in `source-generation-types.ts`. Tasks 7–10 keep their glue in `generate()` (flags, library pick, guard, chat requests, the N save). The review-stage half of Task 9 now goes through `source-sep5-stage.ts` and `source-sep5-review.ts`.
 
 ## Global Constraints
 
@@ -66,8 +70,10 @@
   - `YAPI_CONTROLS_DESIGN` (`app.yapiControlsDesign`, on unless `off`) covers YAPI's call in the review stage and in chat.
 - **No backfill.** Existing stores get a record only from a new build or a redesign.
 - **Database.**
-  - Task 1 adds exactly one migration. Applying it to the dev DB is the owner's step: `cd apps/api && npx prisma migrate deploy`.
-  - Never run `prisma migrate dev`, `db push`, `migrate reset` or `migrate diff`.
+  - Task 1 adds exactly one migration file. Applying it to the dev DB is the owner's step and no task applies it: `cd apps/api && npx prisma migrate deploy`.
+  - No test needs the dev DB to have it. Task 1's test reads the migration files. Every other test mocks Prisma.
+  - No task creates or drops a database on the dev Postgres server. No task runs the integration harness (`jest.integration.config.js`).
+  - Never run `prisma migrate dev`, `migrate deploy`, `db push`, `migrate reset` or `migrate diff`.
 - **Live-stack check (run before any edit under `apps/api`).** The owner's `pnpm dev:chatgpt` runs `nest start --watch` from this working tree. Editing any file under `apps/api/src` restarts the API and kills running YAPI builds and background reviews. Before such an edit, run this read-only command and continue only when it prints `[0,0]`:
   ```bash
   cd apps/api && node -e "const{PrismaClient}=require('@prisma/client');const p=new PrismaClient();Promise.all([p.storeSourceChatJob.count({where:{status:'RUNNING'}}),p.storeSourceGeneration.count({where:{status:{in:['RUNNING','REVIEWING']},heartbeatAt:{gt:new Date(Date.now()-5*60e3)}}})]).then(r=>console.log(JSON.stringify(r))).finally(()=>p.\$disconnect())"
@@ -84,6 +90,11 @@
   - Never stage or edit `apps/api/src/store-emails/*`: the owner's uncommitted work.
   - Every commit message ends with the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Kit edits are live at once.** `currentSourceRuntime` injects the current `packages/storefront-kit/kit/*` into every preview, so every kit change must do nothing for a store without `config.controls`.
+- **`kit/commerce.js` is generated.**
+  - Never edit it by hand. `packages/storefront-kit/tools/build-commerce.test.mjs` fails when it differs from its parts.
+  - Edit the part in `packages/storefront-kit/commerce-src/<area>/<topic>.js`, or add a new part to `PARTS` in `tools/build-commerce.mjs`. `PARTS` order is execution order.
+  - Run `node packages/storefront-kit/tools/build-commerce.mjs`, then the same command with `--check`.
+  - Commit the part(s) together with `kit/commerce.js`.
 - **Language.** Merchant-facing text is Spanish.
 
 ## Review Focus
@@ -117,18 +128,26 @@
 | File | Responsibility |
 |---|---|
 | `apps/api/prisma/migrations/20261014220000_source_review_statuses/migration.sql` (new) | Allows `REVIEWING`, `CANCELLED` and `DISCARDED` in `StoreSourceGeneration_status_check` (Part 1) |
-| `apps/api/src/storefront-source/source-generation-status.spec.ts` (new) | Pins the newest status CHECK to every status the code writes |
-| `apps/api/src/storefront-source/source-generation-state.integration.spec.ts` | Real-Postgres regression for the review row statuses |
+| `apps/api/src/storefront-source/source-generation-status.spec.ts` (new) | Pins the newest status CHECK to every status the code writes (reads the migration files; no database) |
 | `apps/api/src/storefront-source/source-background-review.ts` | Corrects the "no migration needed" comment |
 | `apps/api/src/storefront-source/store-controls.ts` (new) | `StoreControls` type and enums, `parseIconPath`, `cleanControlWord`, `sanitizeControls(Report)`, `readControls`, `withControlsConfig` |
 | `apps/api/src/storefront-source/store-controls-library.ts` (new) | Icons (line and solid), 11 languages, `pickLibraryControls`, `libraryRecord`, `controlsKey`, `cartIconName`, `storePalette`, `libraryIconFallback`, `controlsToAvoid`, `controlsUniqueness` |
 | `apps/api/src/storefront-source/source-header.ts` | Draws a record into the header (icons, words, layout, `data-controls-*`); the controls stylesheet; `hasPlatformHeader` |
 | `packages/storefront-kit/kit/controls.css` (new) | Outline recipes, `--ctl-*` variables, badge styles, locked layer |
-| `packages/storefront-kit/kit/commerce.js` | `CONTROLS` reader, cart word, count badge state, `decorateControls` for the card "+", steppers and drawer close |
+| `packages/storefront-kit/commerce-src/shared/config-dna.js` | `CONTROL_ENUMS`, the `CONTROLS` reader and `controlIcon` (after the `LOOK` IIFE); `CART_WORD` takes the record's word |
+| `packages/storefront-kit/commerce-src/cart/render.js` | Count badge state (`data-empty`) and the plain «producto/productos» label |
+| `packages/storefront-kit/commerce-src/controls/decorate.js` (new part) | `decorateControls` for the card "+", steppers and drawer close, and its MutationObserver |
+| `packages/storefront-kit/tools/build-commerce.mjs` | `PARTS` gains `controls/decorate.js`, just before `shared/start.js` |
+| `packages/storefront-kit/kit/commerce.js` (generated) | Rebuilt from the parts and committed with them |
 | `apps/api/src/storefront-source/store-controls-guard.ts` (new) | `readControlsInPage`, `inspectControlsPage`, `judgeControls`, `guardControlsOnSnapshot`, `captureControlsShots` |
 | `apps/api/src/storefront-source/store-controls-design.ts` (new) | `CONTROLS_SCHEMA`, `controlsPrompt`, `storeTokens`, `runControlsDesign`, `controlsDeadlineMs`, `instructionConcernsControls` |
 | `apps/api/src/storefront-source/source-projects.service.ts` | `recentControls` (read-only sibling query) |
-| `apps/api/src/storefront-source/source-generation.service.ts` | Glue: library pick for N, guard, review-stage controls call, chat requests, carry rules |
+| `apps/api/src/storefront-source/source-generation.service.ts` | Glue in `generate()`: flags, sibling lookup, `storeControlsInto`, `keepGuardedControls`, the library pick in the `assembleSave` wrapper, `designReviewControls` and `reviewControls` handed to the Sep-5 stage, chat requests, the N save, carry rules |
+| `apps/api/src/storefront-source/source-generation-types.ts` | Attempt phase `'controls'`; `GenerationLive.revisionControls` |
+| `apps/api/src/storefront-source/source-sep5-call.ts` | `controlsCall` beside `touchCall` (phase `'controls'`) |
+| `apps/api/src/storefront-source/source-sep5-stage.ts` | Arms the review stage when YAPI's controls call is on; passes `controls` to the review |
+| `apps/api/src/storefront-source/source-sep5-review.ts` | `ReviewControls`; `AssembleSave` takes a `controlsChoice`; the controls job beside the review call and the guarded N+1 |
+| `apps/api/src/storefront-source/source-design-planner.ts` | `DesignPlanningAttempt` phase `'controls'` |
 | `apps/api/src/config/configuration.ts` | `yapiControls` and `yapiControlsDesign` flags |
 | `apps/api/src/storefront-source/kit-touch.ts` | «haz el carrito como una taza» is a controls request, not a kit-touch request |
 | `apps/api/src/storefront-source/sketch-studio.service.ts` | Boceto saves drop `config.controls` |
@@ -150,7 +169,7 @@ What is known (read-only reading of the code and the dev DB, 2026-10-14):
   ```
   The constraint was last set by `prisma/migrations/20261011200000_style_pick_awaiting_status/migration.sql`.
 - **What fails.**
-  - `startSep5Review` (`source-generation.service.ts:1716`) inserts `status: 'REVIEWING'`. The insert violates the constraint, the `.catch` logs `sep5_review_not_started`, and the method returns. So there is no row, no review, no kit touch and no N+1.
+  - `startBackgroundReview` (`source-review-runner.ts:47`, reached through the service's `startSep5Review` wrapper at `source-generation.service.ts:1325`) inserts `status: SOURCE_REVIEW_STATUS` (`'REVIEWING'`). The insert violates the constraint, the `.catch` logs `sep5_review_not_started`, and the function returns. So there is no row, no review, no kit touch and no N+1.
   - `cancelReview`'s `CANCELLED` and the `DISCARDED`/`CANCELLED` endings would fail the same way.
   - `source-background-review.ts:4-5` says "The status column is a plain string, so none of this needs a migration". That is wrong.
   - Unit tests mock Prisma and cannot see a CHECK.
@@ -171,8 +190,12 @@ What is not known:
 **Files:**
 - Create: `apps/api/prisma/migrations/20261014220000_source_review_statuses/migration.sql`
 - Create (test): `apps/api/src/storefront-source/source-generation-status.spec.ts`
-- Modify (test): `apps/api/src/storefront-source/source-generation-state.integration.spec.ts:1-3` (import), and after line 23 (new test)
 - Modify: `apps/api/src/storefront-source/source-background-review.ts:1-6` (doc comment)
+
+**Database rule for this task:**
+- No step applies the migration. Applying it is the owner's step (Step 8).
+- No test needs the dev DB to have it. The test reads the migration files from disk.
+- There is no real-Postgres test. An earlier draft added one to `source-generation-state.integration.spec.ts`. That harness creates and drops its own database on the dev Postgres server, so it is dropped from this plan. Do not add it, and do not run `jest.integration.config.js`.
 
 **Interfaces:**
 - Consumes: `SOURCE_REVIEW_STATUS: 'REVIEWING'` from `source-background-review.ts`.
@@ -213,32 +236,7 @@ describe('StoreSourceGeneration status check', () => {
   - Run: `cd apps/api && npx jest src/storefront-source/source-generation-status.spec.ts`
   - Expected: FAIL. The received value is `{ status: 'REVIEWING', allowed: false }`.
 
-- [ ] **Step 4: Add the real-database regression.** Run it only if the owner agrees that the integration harness may create and drop its own throwaway database on the dev Postgres server. It never touches the `pagosya` database (`common/testing/integration-database.ts`). Step 2's test is the required one.
-  - In `source-generation-state.integration.spec.ts`, add after line 2 (`import { integrationDatabase } …`):
-
-```ts
-import { SOURCE_REVIEW_STATUS } from './source-background-review';
-```
-
-  - Then add this test after the closing `});` of the `it.each(['PARTIAL', 'BLOCKED'])` test (current line 23), inside `harness.describeDb`:
-
-```ts
-  // Spec 2026-10-14 store controls, part 1: the CHECK never allowed the background review's statuses, so every review row
-  // insert failed (sep5_review_not_started) and no «Revisión de YAPI» was ever saved.
-  it('keeps a background review row through every status the review writes', async () => {
-    const review = await db.storeSourceGeneration.create({ data: { storeId, baseRevision: 1, requestedModel: 'auto', model: 'test', maxCredits: 50, status: SOURCE_REVIEW_STATUS } });
-    expect(review.status).toBe('REVIEWING');
-    for (const status of ['CANCELLED', 'DISCARDED', 'FAILED', 'COMPLETED']) {
-      expect((await db.storeSourceGeneration.update({ where: { id: review.id }, data: { status } })).status).toBe(status);
-    }
-    await db.storeSourceGeneration.delete({ where: { id: review.id } });
-  });
-```
-
-  - Run: `cd apps/api && npx jest --config jest.integration.config.js src/storefront-source/source-generation-state.integration.spec.ts`
-  - Expected: FAIL with `new row for relation "StoreSourceGeneration" violates check constraint "StoreSourceGeneration_status_check"`.
-
-- [ ] **Step 5: Write the migration.** Create `apps/api/prisma/migrations/20261014220000_source_review_statuses/migration.sql`:
+- [ ] **Step 4: Write the migration.** Create `apps/api/prisma/migrations/20261014220000_source_review_statuses/migration.sql`. This only writes the file; nothing applies it here.
 
 ```sql
 -- Spec 2026-10-14 store controls, part 1: YAPI's background review (spec 2026-10-12 faster generation) keeps a row of its own:
@@ -248,7 +246,7 @@ ALTER TABLE "StoreSourceGeneration" DROP CONSTRAINT "StoreSourceGeneration_statu
 ALTER TABLE "StoreSourceGeneration" ADD CONSTRAINT "StoreSourceGeneration_status_check" CHECK ("status" IN ('RUNNING', 'COMPLETED', 'FAILED', 'INTERRUPTED', 'CANDIDATE', 'PARTIAL', 'BLOCKED', 'AWAITING_STYLE', 'REVIEWING', 'CANCELLED', 'DISCARDED'));
 ```
 
-- [ ] **Step 6: Correct the comment.** In `source-background-review.ts`, replace the doc comment (lines 1-6, ending «…so none of this needs a migration. */») with:
+- [ ] **Step 5: Correct the comment.** In `source-background-review.ts`, replace the doc comment (lines 1-6, ending «…so none of this needs a migration. */») with:
 
 ```ts
 /**
@@ -260,21 +258,21 @@ ALTER TABLE "StoreSourceGeneration" ADD CONSTRAINT "StoreSourceGeneration_status
  */
 ```
 
-- [ ] **Step 7: Run both tests and see them pass.**
+- [ ] **Step 6: Run both tests and see them pass.**
   - Run: `cd apps/api && npx jest src/storefront-source/source-generation-status.spec.ts src/storefront-source/source-background-review.spec.ts --maxWorkers=2`. Expected: PASS.
-  - If Step 4 was run, run: `cd apps/api && npx jest --config jest.integration.config.js src/storefront-source/source-generation-state.integration.spec.ts`. Expected: PASS. The harness applies every migration file to its throwaway database.
+  - Neither test touches a database. The dev DB keeps its old CHECK until the owner's Step 8.
 
-- [ ] **Step 8: Commit.**
+- [ ] **Step 7: Commit.**
 
 ```bash
-git add apps/api/prisma/migrations/20261014220000_source_review_statuses/migration.sql apps/api/src/storefront-source/source-generation-status.spec.ts apps/api/src/storefront-source/source-generation-state.integration.spec.ts apps/api/src/storefront-source/source-background-review.ts
+git add apps/api/prisma/migrations/20261014220000_source_review_statuses/migration.sql apps/api/src/storefront-source/source-generation-status.spec.ts apps/api/src/storefront-source/source-background-review.ts
 git commit -m "fix(yapi): allow the background review's statuses in the generation status check — every review row insert failed
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 9 (owner, never an agent): apply the migration.**
-  - The owner runs `cd apps/api && npx prisma migrate deploy`. It applies only this migration: every other migration in the folder is already applied on the dev DB, as checked read-only on 2026-10-14.
+- [ ] **Step 8 (owner, never an agent): apply the migration.**
+  - No task of this plan applies the migration, and no agent runs this command. The owner runs `cd apps/api && npx prisma migrate deploy`. It applies only this migration: every other migration in the folder is already applied on the dev DB, as checked read-only on 2026-10-14.
   - From then on, every Sep-5 build runs the self-review and the kit touch in the background, for the first time since 2026-10-12. Each build makes more ChatGPT-plan calls.
   - Task 12 checks that a `REVIEWING` row appears and a «Revisión de YAPI» is saved.
 
@@ -1027,10 +1025,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Modify: `apps/api/src/storefront-source/source-header.ts`:
   - imports (lines 7-11);
-  - `RenderHeaderInput` (lines 17-24);
+  - `RenderHeaderInput` (lines 18-25);
   - `renderSourceHeader` (lines 36-63, replaced whole);
-  - `SourceHeaderInput` (lines 133-143);
-  - the `renderSourceHeader` call inside `withSourceHeader` (line 186).
+  - `SourceHeaderInput` (lines 128-138);
+  - the `renderSourceHeader` call inside `withSourceHeader` (line 181).
+  - Line numbers are at HEAD 94f7beda; (c) lengthens the file, so anchor (d) and (e) on the quoted text.
 - Test: `apps/api/src/storefront-source/source-header.spec.ts` (new imports and a new `describe` at the end).
 
 **Interfaces:**
@@ -1141,7 +1140,7 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
 import type { IconSlot, StoreControls } from './store-controls';
 ```
 
-(b) In `RenderHeaderInput`, after `prefix?: string;` (line 23), add:
+(b) In `RenderHeaderInput`, after `prefix?: string;` (line 24), add:
 
 ```ts
   /** The store's control language (spec 2026-10-14 store controls); without one the header is drawn exactly as before. */
@@ -1210,14 +1209,14 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
 }
 ```
 
-(d) In `SourceHeaderInput`, after `claim?: boolean;` (line 142), add:
+(d) In `SourceHeaderInput`, after `claim?: boolean;` (line 137 at HEAD), add:
 
 ```ts
   /** The store's control language (spec 2026-10-14); drawn into every page's header. */
   controls?: StoreControls;
 ```
 
-(e) In `withSourceHeader`, replace the `const header = renderSourceHeader({ … })` line (line 186) with:
+(e) In `withSourceHeader`, replace the `const header = renderSourceHeader({ … })` line (line 181 at HEAD) with:
 
 ```ts
     const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}) });
@@ -1403,7 +1402,7 @@ describe('store controls in the platform header (spec 2026-10-14, part 3)', () =
 
 - [ ] **Step 5: Wire it into the header.** In `source-header.ts`:
 
-(a) After the `kitText` helper (line 30), add:
+(a) After the `kitText` helper (lines 28-31), add:
 
 ```ts
 let controlsCss: string | undefined;
@@ -1435,18 +1434,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 6: The kit runtime draws the record (`commerce.js`)
 
-**Existing code this touches (packages/storefront-kit/kit/commerce.js):**
-- The `LOOK` reader (lines 69-100) is the pattern this follows.
-- `CART_WORD` (line 124).
-- The cart drawer's close button: `cartDrawer.innerHTML = '<header class="cart-drawer__header" …><button type="button" data-cart-close aria-label="Cerrar pedido">×</button>…'` (line 2070).
-- The card "+": `class="menu-add" type="button" data-add="…" aria-label="Añadir …"><svg viewBox="0 0 24 24" …><path d="M12 5v14M5 12h14"/></svg>` (line 2963).
-- The cart-line steppers: `<div class="quantity"><button type="button" data-remove=…>−</button><output>…</output><button type="button" data-add=…>+</button></div>` (lines 3446-3449).
-- The product page's steppers: `data-product-quantity="-1"` and `"1"` (line 1105).
-- The count update (line 3453).
-- The end of the IIFE (lines 4489-4491).
+**Existing code this touches.** `kit/commerce.js` is generated (see Global Constraints), so every edit goes into a part under `packages/storefront-kit/commerce-src/`:
+- The `LOOK` reader (`shared/config-dna.js:71-101`) is the pattern this follows.
+- `CART_WORD` (`shared/config-dna.js:124`).
+- The cart drawer's close button: ``cartDrawer.innerHTML = `<header class="cart-drawer__header" …><button type="button" data-cart-close aria-label="Cerrar pedido">×</button>…` `` (`cart/drawer.js:24`).
+- The card "+": `class="menu-add" type="button" data-add="…" aria-label="Añadir …"><svg viewBox="0 0 24 24" …><path d="M12 5v14M5 12h14"/></svg>` (`catalog/cards.js:174`).
+- The cart-line steppers: `<div class="quantity"><button type="button" data-remove=…>−</button><output>…</output><button type="button" data-add=…>+</button></div>` (`cart/render.js:32`).
+- The product page's steppers: `data-product-quantity="-1"` and `"1"` (`product/setup.js:121`).
+- The count update (`cart/render.js:37`).
+- The end of the IIFE (`shared/start.js:11-13`), the last part in `PARTS`.
+
+**Where the runtime code goes:**
+- The `CONTROLS` reader stays inside `shared/config-dna.js`, right after the `LOOK` IIFE. It cannot be its own part: `CART_WORD`, at line 124 of the same part, reads `CONTROLS` at load, and a later part would leave `CONTROLS` in its temporal dead zone.
+- `decorateControls` and its MutationObserver are a new runtime area, so they become a new part, `commerce-src/controls/decorate.js`.
+  - It goes into `PARTS` just before `shared/start.js`, as the last part before the start.
+  - At load it reads only `CONTROLS` and `controlIcon` (`shared/config-dna.js`), and no part calls it.
+  - The decorated buttons are drawn later, so the observer finds them. The kit's own drawer exists by then (`cart/drawer.js` builds it at load).
 
 **Files:**
-- Modify: `packages/storefront-kit/kit/commerce.js` (four places, quoted below)
+- Modify: `packages/storefront-kit/commerce-src/shared/config-dna.js` (the `CONTROLS` reader after the `LOOK` IIFE; `CART_WORD`)
+- Modify: `packages/storefront-kit/commerce-src/cart/render.js` (the count update)
+- Create: `packages/storefront-kit/commerce-src/controls/decorate.js` (new part)
+- Modify: `packages/storefront-kit/tools/build-commerce.mjs` (`PARTS`)
+- Regenerate: `packages/storefront-kit/kit/commerce.js` (`node packages/storefront-kit/tools/build-commerce.mjs`; never by hand)
 - Create (test): `apps/api/src/storefront-source/store-controls-runtime.spec.ts` (jsdom)
 - Create (test): `apps/api/src/storefront-source/store-controls-browser.spec.ts` (Chromium)
 
@@ -1565,9 +1575,9 @@ describe('store controls in the kit runtime (spec 2026-10-14)', () => {
   - Run: `cd apps/api && npx jest src/storefront-source/store-controls-runtime.spec.ts`
   - Expected: FAIL. `commerce.match(...)` is null (`Cannot read properties of null (reading '1')`), `data-controls-outline` is null, and the card "+" has no `data-ctl`.
 
-- [ ] **Step 3: Read the record in the runtime.**
+- [ ] **Step 3: Read the record in the runtime.** Edit the parts named below, never `kit/commerce.js`.
 
-(a) After the `LOOK` IIFE ends, insert the `CONTROLS` reader. The insertion point is right after these lines:
+(a) In `packages/storefront-kit/commerce-src/shared/config-dna.js`, insert the `CONTROLS` reader after the `LOOK` IIFE ends. The insertion point is right after these lines (`shared/config-dna.js:99-101`):
 ```js
     if (['tinted', 'banded'].includes(look.surface)) set('surface', look.surface);
     return look;
@@ -1606,7 +1616,7 @@ Insert:
   const controlIcon = slot => CONTROLS && CONTROLS.icons[slot] ? `<svg class="ctl-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="${CONTROLS.icons[slot]}"/></svg>` : '';
 ```
 
-(b) Replace line 124:
+(b) In the same part, replace line 124:
 ```js
   const CART_WORD = typeof config.cartWord === 'string' && /^[\p{L} ]{2,24}$/u.test(config.cartWord.trim()) ? config.cartWord.trim() : '';
 ```
@@ -1616,7 +1626,7 @@ with:
   const CART_WORD = [CONTROLS ? CONTROLS.cartWord : '', config.cartWord].map(value => typeof value === 'string' ? value.trim() : '').find(value => /^[\p{L} ]{2,24}$/u.test(value)) || '';
 ```
 
-(c) Replace the count update (line 3453):
+(c) In `packages/storefront-kit/commerce-src/cart/render.js`, replace the count update (line 37):
 ```js
     document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
 ```
@@ -1632,13 +1642,7 @@ with:
     });
 ```
 
-(d) Replace the end of the file:
-```js
-  void loadCommerceContent();
-  void load();
-})();
-```
-with:
+(d) Create the new part `packages/storefront-kit/commerce-src/controls/decorate.js`. It holds whole lines of the runtime's IIFE, like every part: no wrapper, two-space indent, ending with a newline. `shared/start.js` stays as it is.
 ```js
   // The kit's own small controls take the store's language: the card "+", the quantity steppers and the cart drawer's close
   // button. Their aria-label and data-* hooks never change; only the inside of the button becomes the face. A store-authored
@@ -1663,13 +1667,27 @@ with:
     // A page that is going away (its document torn down under the observer) must not throw from the microtask.
     new MutationObserver(() => { if (queued) return; queued = true; queueMicrotask(() => { queued = false; try { decorateControls(); } catch { /* the page is going away */ } }); }).observe(document.body, { childList: true, subtree: true });
   }
-
-  void loadCommerceContent();
-  void load();
-})();
 ```
 
-- [ ] **Step 4: Run the jsdom test and the kit parse check, and see them pass.**
+(e) In `packages/storefront-kit/tools/build-commerce.mjs`, add the part to `PARTS` just before the start part:
+```js
+  'header/platform-header.js',
+  'shared/start.js',
+];
+```
+becomes:
+```js
+  'header/platform-header.js',
+  'controls/decorate.js',
+  'shared/start.js',
+];
+```
+
+(f) Regenerate the runtime: `node packages/storefront-kit/tools/build-commerce.mjs`. Expected: `Wrote kit/commerce.js from 32 commerce-src parts.` Never edit `kit/commerce.js` by hand. The specs read it through `kitPath('commerce.js')`.
+
+- [ ] **Step 4: Run the build checks, the jsdom test and the kit parse check, and see them pass.**
+  - Run: `node packages/storefront-kit/tools/build-commerce.mjs --check`. Expected: `kit/commerce.js matches 32 commerce-src parts.`
+  - Run: `node --test packages/storefront-kit/tools/build-commerce.test.mjs`. Expected: 3 tests pass: the built file equals its parts, every part is listed once, and the runtime parses as one script.
   - Run: `cd apps/api && npx jest src/storefront-source/store-controls-runtime.spec.ts`. Expected: PASS.
   - Run: `node packages/storefront-kit/kit/check-runtimes.mjs`. Expected: every runtime parses.
 
@@ -1775,7 +1793,7 @@ it("a store without a record keeps today's kit controls", async () => {
 - [ ] **Step 6: Run the browser test and see it pass.**
   - Run: `cd apps/api && npx jest src/storefront-source/store-controls-browser.spec.ts`
   - Expected: PASS. It takes well under a minute: 6 pages × 44 combinations. The drawer's close button sits in `<header class="cart-drawer__header">`, so a control counts as the platform header's only inside `[data-pagosya-header]`.
-  - If a combination fails, the label names it (`outline/fill@width` and `where:slot`). Fix `controls.css`, never the test.
+  - If a combination fails, the label names it (`outline/fill@width` and `where:slot`). Fix `controls.css`, never the test. A runtime fix goes into its `commerce-src` part, followed by the build.
 
 - [ ] **Step 7: Run the existing kit specs that read `commerce.js`, and see them still pass.**
   - Run: `cd apps/api && npx jest src/storefront-source/source-commerce-surfaces-draw.spec.ts src/storefront-source/source-commerce-cascade.spec.ts src/storefront-source/source-header-browser.spec.ts --maxWorkers=2`
@@ -1784,7 +1802,7 @@ it("a store without a record keeps today's kit controls", async () => {
 - [ ] **Step 8: Commit.**
 
 ```bash
-git add packages/storefront-kit/kit/commerce.js apps/api/src/storefront-source/store-controls-runtime.spec.ts apps/api/src/storefront-source/store-controls-browser.spec.ts
+git add packages/storefront-kit/commerce-src/shared/config-dna.js packages/storefront-kit/commerce-src/cart/render.js packages/storefront-kit/commerce-src/controls/decorate.js packages/storefront-kit/tools/build-commerce.mjs packages/storefront-kit/kit/commerce.js apps/api/src/storefront-source/store-controls-runtime.spec.ts apps/api/src/storefront-source/store-controls-browser.spec.ts
 git commit -m "feat(controls): the kit draws the store's controls — card +, steppers, drawer close, badge and cart word from config.controls
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1794,23 +1812,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 7: Revision N gets the library pick, away from sibling stores
 
-**Where things are today (source-generation.service.ts):**
-- `kind` (the playbook kind, `detectKind`) and `boldAsked` (calm or bold, `useSlot` sets it for a picked style card) are computed at lines 499-502.
-- `assembleSave` (line 1518) builds every save and ends by measuring the home into `config.look` (lines 1591-1599).
-- `platformHeader` (lines 769-775) draws the header into every page.
+**Where things are today (HEAD 94f7beda):**
+- `kind` (the playbook kind, `detectKind`) and `boldAsked` (calm or bold, `useSlot` sets it for a picked style card at line 524) are computed in `generate()` at `source-generation.service.ts:478-479`.
+- Every save is built by `assembleSourceSave` (`source-save-assembly.ts:47-137`). It ends by writing or measuring `config.look` (lines 128-136).
+  - `generate()` calls it through a one-line `assembleSave` wrapper (`source-generation.service.ts:1252`).
+  - The Sep-5 stage, the review closure and the chat kit touch all receive that wrapper.
+- `platformHeader` (`source-generation.service.ts:785-791`) draws the header into every page. `assembleSourceSave` gets it through `SaveAssemblyContext.platformHeader`.
+- The pick therefore stays in `generate()`. The `assembleSave` wrapper applies it to what `assembleSourceSave` returns, so the look is already final. `source-save-assembly.ts` is not touched.
+  - The old plan applied it inside both look returns of `assembleSave`. This is the same thing, because both returns write the look into `config.look`.
+  - The `reuse` return writes the look it was given. The measured return writes the measured look. Neither adds any other key.
 - Sibling avoidance follows the playbook's same-kind view (ba4848d4): `projects.recentFrameDraws(storeId, now, 40)` is a read-only raw query over each other store's latest revision (`source-projects.service.ts:96-111`), and `recentForKind` (`design-engine/playbook.ts:133`) keeps the newest plus the same-kind ones.
 
 **Files:**
 - Modify: `apps/api/src/config/configuration.ts` (`AppConfig` after line 88; values after line 434)
 - Modify: `apps/api/src/storefront-source/store-controls-library.ts` (append `RecentControls`, `controlsToAvoid`)
 - Modify: `apps/api/src/storefront-source/source-projects.service.ts` (imports; `recentControls` after `recentFrameDraws`, line 111)
-- Modify: `apps/api/src/storefront-source/source-generation.service.ts`:
-  - imports (lines 23, 25);
-  - after line 502;
-  - after line 757;
-  - `platformHeader` (lines 769-771);
-  - after line 776;
-  - `assembleSave`'s two returns (lines 1592-1599).
+- Modify: `apps/api/src/storefront-source/source-generation.service.ts` (all inside `generate()` except the imports):
+  - imports (lines 19, 20);
+  - after line 479 (`let boldAsked = …`);
+  - after line 733 (`let revisionLook …`);
+  - `platformHeader` (lines 785-787);
+  - after line 792 (`const headerPreview = …`);
+  - the `assembleSave` wrapper (line 1252).
+- Not modified: `source-save-assembly.ts` (`assembleSourceSave` and `SaveAssemblyContext`). A `platformHeader` with an optional third parameter still fits `SaveAssemblyContext.platformHeader`.
 - Test: `apps/api/src/storefront-source/store-controls-library.spec.ts`; `apps/api/src/storefront-source/source-projects.service.spec.ts`; `apps/api/src/storefront-source/source-generation-review.spec.ts`
 
 **Interfaces:**
@@ -1827,7 +1851,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - In `generate()`:
     - `controlsOn`, `controlsKind`, `controlsFresh`, `previousControls`, `controlsAvoid`;
     - `platformHeader(files, platformPages, controls?)`;
-    - `storeControlsInto<T extends { files: SourceProjectFileDto[] }>(input: T, controls: StoreControls | undefined): T`.
+    - `storeControlsInto<T extends { files: SourceProjectFileDto[] }>(input: T, controls: StoreControls | undefined): T`;
+    - `withControls<T extends { files: SourceProjectFileDto[] }>(input: T): T`, applied by the `assembleSave` wrapper to every save.
 
 - [ ] **Step 1: Live-stack check.** Run the command from Global Constraints and continue only on `[0,0]`.
 
@@ -2022,20 +2047,20 @@ import type { RecentControls } from './store-controls-library';
 - [ ] **Step 6: The pick in `generate()`.** In `source-generation.service.ts`:
 
 (a) Imports:
-  - After line 23 (`import { patchConfigFile, readConfigFile, sanitizeLook, type StoreLook } from './store-look';`), add:
+  - After line 19 (`import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';`), add:
 
 ```ts
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
 import { controlsToAvoid, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
 ```
 
-  - Change line 25 to:
+  - Change line 20 (`import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';`) to:
 
 ```ts
-import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
+import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 ```
 
-(b) After `let boldAsked = asksForBold(merchantWords);` (line 502), add:
+(b) After `let boldAsked = asksForBold(merchantWords);` (line 479), add:
 
 ```ts
     // Store controls (spec 2026-10-14): one button language per store, on static stores whose header the platform draws.
@@ -2047,7 +2072,7 @@ import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, 
     const previousControls = readControls(previousFiles);
 ```
 
-(c) After `let revisionLook: StoreLook | undefined;` (line 757), add:
+(c) After `let revisionLook: StoreLook | undefined;` (line 733, inside the `try`, before `const facts`), add:
 
 ```ts
       /** Languages revision N must not repeat (spec 2026-10-14): the latest sibling and same-kind stores', and on a redesign the
@@ -2055,7 +2080,7 @@ import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, 
       const controlsAvoid: StoreControls[] = controlsFresh ? [...controlsToAvoid(await withinOr(() => this.projects.recentControls(storeId, new Date(), 40), SHOWN_CARDS_TIMEOUT_MS, [] as RecentControls[]), controlsKind), ...(previousControls ? [previousControls] : [])] : [];
 ```
 
-(d) Replace the first three lines of `platformHeader` (lines 769-771):
+(d) Replace the first three lines of `platformHeader` (lines 785-787):
 
 ```ts
       const platformHeader = (files: SourceProjectFileDto[], platformPages: string[]) => {
@@ -2071,7 +2096,7 @@ with:
         const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(controls ? { controls } : {}) });
 ```
 
-(e) After the `const headerPreview = …` line (line 776), add:
+(e) After the `const headerPreview = …` line (line 792), add:
 
 ```ts
       /** config.controls written (or removed) and every page's platform header drawn again with it. A save that neither has nor
@@ -2080,38 +2105,25 @@ with:
         !controls && readConfigFile(input.files).controls === undefined ? input : { ...input, files: platformHeader(withControlsConfig(input.files, controls), [], controls) };
 ```
 
-(f) In `assembleSave`, replace the end of the function (lines 1591-1599):
+(f) Replace the `assembleSave` wrapper (line 1252, after `const saveContext: SaveAssemblyContext = { facts, live, platformHeader, agentPolicyChange };`):
 
 ```ts
-      // One look per store (spec 2026-10-14): read the final home page and keep it as config.look for the kit pages.
-      if (lookChoice.reuse) {
-        const { look } = lookChoice.reuse;
-        return look ? { ...assembled, files: patchConfigFile(assembled.files, current => ({ ...current, look })) } : assembled;
-      }
-      const fallbackLook = 'fallback' in lookChoice ? lookChoice.fallback : creative ? undefined : previousConfig.look;
-      const measured = await withMeasuredLook(assembled, { enabled: this.config.get<boolean>('app.yapiLookMeasure') === true, declaredTreatment: parseFrameDraw(frame.file?.content).photos, previousLook: fallbackLook, brief: dto.brief, signal: assembleSignal, measure: measureStoreLook });
-      this.logger.log(JSON.stringify({ event: measured.outcome === 'measured' ? 'look_measured' : 'look_kept', generationId: run.id, outcome: measured.outcome, ...(measured.reason ? { reason: measured.reason } : {}) }));
-      return measured.input;
+    const assembleSave = (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => assembleSourceSave(saveContext, assembleSignal, lookChoice);
 ```
 
 with:
 
 ```ts
-      // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known. A new store or a
-      // redesign takes the seeded library pick (calm or bold, the measured look, away from its siblings); an edit carries its own.
-      const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T, look: StoreLook | undefined): T => storeControlsInto(input, !controlsOn ? undefined
-        : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look, seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
-        : previousControls);
-      // One look per store (spec 2026-10-14): read the final home page and keep it as config.look for the kit pages.
-      if (lookChoice.reuse) {
-        const { look } = lookChoice.reuse;
-        return withControls(look ? { ...assembled, files: patchConfigFile(assembled.files, current => ({ ...current, look })) } : assembled, look);
-      }
-      const fallbackLook = 'fallback' in lookChoice ? lookChoice.fallback : creative ? undefined : previousConfig.look;
-      const measured = await withMeasuredLook(assembled, { enabled: this.config.get<boolean>('app.yapiLookMeasure') === true, declaredTreatment: parseFrameDraw(frame.file?.content).photos, previousLook: fallbackLook, brief: dto.brief, signal: assembleSignal, measure: measureStoreLook });
-      this.logger.log(JSON.stringify({ event: measured.outcome === 'measured' ? 'look_measured' : 'look_kept', generationId: run.id, outcome: measured.outcome, ...(measured.reason ? { reason: measured.reason } : {}) }));
-      return withControls(measured.input, sanitizeLook(readConfigFile(measured.input.files).look));
+    // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known (assembleSourceSave writes
+    // config.look last, measured or reused). A new store or a redesign takes the seeded library pick (calm or bold, the measured
+    // look, away from its siblings); an edit carries its own.
+    const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T): T => storeControlsInto(input, !controlsOn ? undefined
+      : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : previousControls);
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice));
 ```
+
+Every caller keeps calling `assembleSave` as before: the N save, `runChatKitTouch`, and the Sep-5 stage's wrapper, which the review closure calls.
 
 - [ ] **Step 7: Run the tests and see them pass.**
   - Run: `cd apps/api && npx jest src/storefront-source/store-controls-library.spec.ts src/storefront-source/source-projects.service.spec.ts src/storefront-source/source-generation-review.spec.ts --maxWorkers=2`. Expected: PASS.
@@ -2131,15 +2143,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 8: The browser guard (`store-controls-guard.ts`), and revision N passes it
 
 **Reused:**
-- `measureHeaderCovers(page, { maxPositions })` and `HEADER_CHECK_WIDTHS = [1440, 390]` (`design-engine/header-clickable.ts:20-27`).
-- The `captureHeaderCovers` sandbox pattern (`header-clickable.ts:144-161`).
+- `measureHeaderCovers(page, { maxPositions })` and `HEADER_CHECK_WIDTHS = [1440, 390]` (`design-engine/header-clickable.ts:17-27`).
+- The `captureHeaderCovers` sandbox pattern (`header-clickable.ts:133-150`).
 - The menu Escape and focus check from `source-header-browser.spec.ts:27-30, 40-47`.
-- The contrast measurement of `kit-surface-check.ts:39-55`, with colours read through a 1×1 canvas so `oklch()` and `color()` tokens compare too (as `commerce.js` `lookFilters` does).
+- The contrast measurement of `kit-surface-check.ts:39-55`, with colours read through a 1×1 canvas so `oklch()` and `color()` tokens compare too (as the kit runtime's `lookFilters` does, `commerce-src/shared/config-dna.js:103`).
 
 **Files:**
 - Create: `apps/api/src/storefront-source/store-controls-guard.ts`
 - Create (test): `apps/api/src/storefront-source/store-controls-guard.spec.ts`
-- Modify: `apps/api/src/storefront-source/source-generation.service.ts` (imports; a closure after `storeControlsInto`; the N save at line 1631)
+- Modify: `apps/api/src/storefront-source/source-generation.service.ts` (imports; a closure in `generate()` after `storeControlsInto`; the N save at lines 1260-1261). The N save is still in `generate()`; no split module changes in this task.
 - Modify (test): `apps/api/src/storefront-source/source-generation-review.spec.ts` (a module mock at the top; a new `describe`)
 
 **Interfaces:**
@@ -2486,7 +2498,7 @@ import { CONTROLS_GUARD_TIMEOUT_MS, guardControlsOnSnapshot, judgeControls } fro
       };
 ```
 
-(c) Replace (line 1631-1632):
+(c) Replace the N save (lines 1260-1261 at HEAD, after `await progress?.('saving');`):
 
 ```ts
     const saveInput = await assembleSave();
@@ -2521,11 +2533,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 9: YAPI designs the controls in the review stage (N+1)
 
 **Pattern followed:** the kit touch in the review stage.
-- `touchCall` (`source-generation.service.ts:928-936`) gives a metered `sep5Call` phase, billed only through `used()`.
-- `KIT_TOUCH_SCHEMA` (`kit-touch.ts:24-25`) is the strict JSON schema.
-- `touchBudgetMs` (`kit-touch.ts:149-152`) is spied in tests to shorten the deadline.
+- `touchCall` (`source-sep5-call.ts:56-63`, built by `sep5Caller`) gives a metered `sep5Call` phase, billed only through `used()`.
+- `KIT_TOUCH_SCHEMA` (`kit-touch.ts:26`) is the strict JSON schema.
+- `touchBudgetMs` (`kit-touch.ts:147`) is spied in tests to shorten the deadline. The spy works because `source-sep5-review.ts` calls it through the module.
 - The touch's notes go into `reviewMessage`.
 - The controls call differs in one way: it starts at the top of the review closure, beside the review call, because the ChatGPT bridge serves about two calls at once (spec part 4).
+
+**Where the review stage lives now (HEAD 94f7beda):**
+- `generate()` builds `{ sep5Call, touchCall } = sep5Caller(…)` (`source-generation.service.ts:918`). It hands them, `facts`, `live` and an `assembleSave` wrapper to `runSep5AuthorStage` (`source-sep5-stage.ts`, called at lines 922-923).
+- The stage arms the review at `source-sep5-stage.ts:93-97` (`kitTouchOn`, then `if (sep5SelfReview || kitTouchOn)`). `live.sep5Review = createSep5Review({ … })`.
+- The review closure is `createSep5Review` in `source-sep5-review.ts:38-103`. It reads `live.revisionLook` and calls the `AssembleSave` it was given (type at line 20).
+- The controls job needs values that only `generate()` has: `controlsKind`, `controlsAvoid`, `previousControls`, `merchantWords`, `redesign`, `revisionFiles`, `storeControlsInto` and `keepGuardedControls`.
+  - So `generate()` builds `designReviewControls` and a small `ReviewControls` object (`{ design, keep }`).
+  - It passes them to the stage as `controls`. The stage passes them to the review.
+  - Revision N's language reaches the review as `live.revisionControls`, beside `live.revisionLook`.
+  - `assembleSave` takes a third `controlsChoice` argument, so the review can save N's language instead of a fresh pick.
 
 **Files:**
 - Modify: `apps/api/src/config/configuration.ts` (`yapiControlsDesign`)
@@ -2533,16 +2555,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Create (test): `apps/api/src/storefront-source/store-controls-design.spec.ts`
 - Modify: `apps/api/src/storefront-source/store-controls-guard.ts` (append `captureControlsShots`)
 - Modify: `apps/api/src/storefront-source/source-design-planner.ts:16` (the `DesignPlanningAttempt` phase union)
-- Modify: `apps/api/src/storefront-source/source-generation.service.ts`:
+- Modify: `apps/api/src/storefront-source/source-generation-types.ts` (the `SourceGenerationAttempt` phase union, line 38; `GenerationLive.revisionControls` after `revisionLook`, line 85)
+- Modify: `apps/api/src/storefront-source/source-sep5-call.ts` (imports; the `sep5Call` phase union, line 27; `controlsCall` after `touchCall`, lines 56-64)
+- Modify: `apps/api/src/storefront-source/source-sep5-stage.ts` (imports; `Sep5StageContext`; the destructuring, line 30; the review arming, lines 93-97)
+- Modify: `apps/api/src/storefront-source/source-sep5-review.ts` (imports; `AssembleSave`, line 20; `ReviewControls`; `Sep5ReviewContext`; the closure's start, lines 42-45, and end, lines 99-102)
+- Modify: `apps/api/src/storefront-source/source-generation.service.ts` (in `generate()`):
   - imports;
-  - the attempt type (line 133);
   - the flags block from Task 7;
-  - near `revisionLook`;
-  - `sep5Call` (line 901);
-  - after `touchCall` (line 936);
-  - the review closure (lines 1000-1062);
-  - `assembleSave`;
+  - after the `controlsAvoid` line from Task 7;
+  - the `live` getters (after `get revisionLook()`, line 756);
+  - the `sep5Caller` line (918), then `designReviewControls` and `reviewControls` after it;
+  - the `runSep5AuthorStage` call (lines 922-923);
+  - the `withControls`/`assembleSave` wrapper from Task 7;
   - after the N save.
+- Not modified: `source-save-assembly.ts`, `source-review-runner.ts`.
 - Modify (test): `apps/api/src/storefront-source/source-generation-review.spec.ts`
 
 **Interfaces:**
@@ -2558,7 +2584,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - Prompt helpers: `storeTokens(files): string` and `controlsPrompt(input): string`.
   - The call: `type ControlsDesign = { controls: StoreControls; note: string; used: () => void; replacedIcons: IconSlot[] }` and `runControlsDesign(deps: ControlsDesignDeps): Promise<ControlsDesign | null>`.
   - Screenshots: `captureControlsShots(snapshot, signal): Promise<ModelImage[]>` (guard module).
-  - The attempt phase `'controls'`.
+  - The attempt phase `'controls'` (`SourceGenerationAttempt`, `DesignPlanningAttempt` and `sep5Call`).
+  - `sep5Caller(…).controlsCall(run: { signal; attempts }) => (text, attached) => Promise<{ body: unknown; used: () => void }>` (`source-sep5-call.ts`).
+  - In `source-sep5-review.ts`:
+    - `type ReviewControls = { design(review): Promise<ControlsDesign | null>; keep(input, designed, signal): Promise<{ input; kept: boolean }> }`;
+    - `AssembleSave` gains a third `controlsChoice?: { use?: StoreControls }` argument;
+    - `Sep5ReviewContext.controls?: ReviewControls`.
+  - `Sep5StageContext.controls?: ReviewControls` (`source-sep5-stage.ts`).
+  - `GenerationLive.revisionControls: StoreControls | undefined` (read-only).
+  - In `generate()`: `controlsDesignOn`, `revisionControls`, `revisionFiles`, `designReviewControls` and `reviewControls`.
 
 - [ ] **Step 1: Live-stack check.** Run the command from Global Constraints and continue only on `[0,0]`.
 
@@ -2895,24 +2929,215 @@ describe('store controls: YAPI designs N+1 in the review stage (spec 2026-10-14,
     yapiControlsDesign: process.env.YAPI_CONTROLS_DESIGN !== 'off',
 ```
 
-In `source-generation.service.ts`:
-
-(a) Import, after the `store-controls-guard` import:
+(a) Shared types, in `source-generation-types.ts`:
+  - In `SourceGenerationAttempt` (line 38), change `… | 'author' | 'review' | 'touch'; durationMs: number;` to `… | 'author' | 'review' | 'touch' | 'controls'; durationMs: number;`.
+  - Make the same change to the `phase` union of `DesignPlanningAttempt` (`source-design-planner.ts:16`). `generate()` passes its attempts list to the design planner and `proposeStyles`, so the two unions must match or TypeScript rejects the call (TS2322).
+  - After `import type { StoreLook } from './store-look';` (line 24), add:
 
 ```ts
-import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA, runControlsDesign, type ControlsDesign } from './store-controls-design';
+import type { StoreControls } from './store-controls';
 ```
 
-(b) In `SourceGenerationAttempt` (line 133), change `… | 'author' | 'review' | 'touch'` to `… | 'author' | 'review' | 'touch' | 'controls'`. Make the same change to the `phase` union of `DesignPlanningAttempt` (`source-design-planner.ts:16`): `generate()` passes its attempts list to the design planner and `proposeStyles`, so the two unions must match or TypeScript rejects the call (TS2322).
+  - In `GenerationLive`, after `readonly revisionLook: StoreLook | undefined;` (line 85), add:
 
-(c) In the flags block from Task 7 (after `const previousControls = readControls(previousFiles);`), add:
+```ts
+  /** Store controls (spec 2026-10-14): the language revision N was saved with, the review stage's fallback. */
+  readonly revisionControls: StoreControls | undefined;
+```
+
+(b) The controls call, in `source-sep5-call.ts`:
+  - After `import { SEP5_MAX_OUTPUT_TOKENS } from './source-generation-run';` (line 3), add:
+
+```ts
+import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA } from './store-controls-design';
+```
+
+  - In the `sep5Call` signature (line 27), change `phase: 'author' | 'review' | 'touch'` to `phase: 'author' | 'review' | 'touch' | 'controls'`.
+  - Replace the end of `sep5Caller` (lines 60-64):
+
+```ts
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      run.signal.throwIfAborted();
+    }
+  };
+  return { sep5Call, touchCall };
+```
+
+with:
+
+```ts
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      run.signal.throwIfAborted();
+    }
+  };
+  /** The controls call (spec 2026-10-14 store controls, part 4): the same metered client, a small answer and medium effort, on
+   *  its own signal. The attempt is charged only when the guard keeps the record (`used`). */
+  const controlsCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: SourceInputImage[]) => {
+    const { attempt, body } = await sep5Call('controls', text, attached, 'storefront_controls', CONTROLS_SCHEMA, controlsDeadlineMs(), { signal: run.signal, attempts: run.attempts, maxOutputTokens: CONTROLS_MAX_OUTPUT_TOKENS, effort: 'medium' });
+    return { body, used: () => { attempt.status = 'COMPLETED'; } };
+  };
+  return { sep5Call, touchCall, controlsCall };
+```
+
+`Sep5Caller` is `ReturnType<typeof sep5Caller>`, so it gains `controlsCall` without another change.
+
+(c) The review closure, in `source-sep5-review.ts`:
+  - Replace the types import (line 14):
+
+```ts
+import type { GenerationLive, GenerationRunFacts, Sep5Review } from './source-generation-types';
+```
+
+with:
+
+```ts
+import type { GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
+import type { StoreControls } from './store-controls';
+import type { ControlsDesign } from './store-controls-design';
+```
+
+  - Replace `AssembleSave` (lines 19-20):
+
+```ts
+/** generate()'s assembleSave. Stages receive it wrapped, `(…a) => assembleSave(…a)`, because it is declared after them. */
+export type AssembleSave = (assembleSignal?: AbortSignal, lookChoice?: LookChoice) => ReturnType<typeof assembleSourceSave>;
+```
+
+with:
+
+```ts
+/** generate()'s assembleSave. Stages receive it wrapped, `(…a) => assembleSave(…a)`, because it is declared after them.
+ *  `controlsChoice.use` saves that control language instead of generate()'s own pick (spec 2026-10-14 store controls). */
+export type AssembleSave = (assembleSignal?: AbortSignal, lookChoice?: LookChoice, controlsChoice?: { use?: StoreControls }) => ReturnType<typeof assembleSourceSave>;
+type SaveInput = Awaited<ReturnType<AssembleSave>>;
+
+/** Store controls (spec 2026-10-14, part 4), built by generate(): YAPI's controls call, started beside the review call, and the
+ *  browser guard on the N+1 candidate. */
+export type ReviewControls = {
+  /** Never rejects: null when the call fails, times out or answers nothing usable. */
+  design: (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => Promise<ControlsDesign | null>;
+  /** The record drawn into the candidate and guarded; a failing guard puts revision N's language back (kept: false). */
+  keep: (input: SaveInput, designed: ControlsDesign, signal: AbortSignal) => Promise<{ input: SaveInput; kept: boolean }>;
+};
+```
+
+  - In `Sep5ReviewContext`, after `sep5Call: Sep5Caller['sep5Call']; touchCall: Sep5Caller['touchCall'];` (line 31), add:
+
+```ts
+  controls?: ReviewControls;
+```
+
+  - In `createSep5Review`, add `controls` to the destructuring (line 39), between `touchCall` and `assembleSave`:
+
+```ts
+  const { facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, controls, assembleSave } = context;
+```
+
+  - Replace the start of the closure (lines 43-45):
+
+```ts
+    const notes: string[] = [];
+    let changed = false;
+    if (sep5SelfReview) {
+```
+
+with:
+
+```ts
+    const notes: string[] = [];
+    let changed = false;
+    // YAPI's controls (spec 2026-10-14) are designed beside the review call: the ChatGPT bridge serves about two calls at once.
+    const controlsJob = controls ? controls.design(review) : null;
+    if (sep5SelfReview) {
+```
+
+  - Replace the end of the closure (lines 99-102):
+
+```ts
+    // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
+    if (!changed) return null;
+    return { saveInput: await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: live.revisionLook }), notes };
+  };
+```
+
+with:
+
+```ts
+    // YAPI's controls, guarded on the N+1 candidate: a failing guard keeps revision N's language, never the review's edits.
+    const designed = controlsJob ? await controlsJob : null;
+    review.signal.throwIfAborted();
+    // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
+    if (!changed && !designed) return null;
+    let saveInput = await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: live.revisionLook }, { use: live.revisionControls });
+    if (designed && controls) {
+      const guarded = await controls.keep(saveInput, designed, review.signal);
+      if (guarded.kept) { designed.used(); notes.push(designed.note); saveInput = guarded.input; }
+      else if (!changed) return null;
+    }
+    return { saveInput, notes };
+  };
+```
+
+  - The kit touch's base save (`assembleSave(touchSignal, { fallback: live.revisionLook })`, line 88) is left as it is, as in the original plan.
+
+(d) The stage, in `source-sep5-stage.ts`:
+  - Change the review import (line 12) to:
+
+```ts
+import { createSep5Review, type AssembleSave, type ReviewControls } from './source-sep5-review';
+```
+
+  - In `Sep5StageContext`, after `sep5Call: Sep5Caller['sep5Call']; touchCall: Sep5Caller['touchCall'];` (line 22), add:
+
+```ts
+  /** Store controls (spec 2026-10-14, part 4): YAPI's controls call beside the review, and its guard; absent when off. */
+  controls?: ReviewControls;
+```
+
+  - Add `controls` to the destructuring (line 30):
+
+```ts
+  const { facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall, controls, assembleSave } = context;
+```
+
+  - Replace the review arming (lines 94-96):
+
+```ts
+  if (sep5SelfReview || kitTouchOn) {
+    const draftFiles = authored.data.files, draftPreview = live.acceptedPreviewFiles;
+    live.sep5Review = createSep5Review({ facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, assembleSave });
+```
+
+with:
+
+```ts
+  // Store controls (spec 2026-10-14, part 4): YAPI's controls call arms the review stage on its own too.
+  if (sep5SelfReview || kitTouchOn || controls) {
+    const draftFiles = authored.data.files, draftPreview = live.acceptedPreviewFiles;
+    live.sep5Review = createSep5Review({ facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, controls, assembleSave });
+```
+
+(e) In `source-generation.service.ts`:
+  - Imports. After the `store-controls-guard` import from Task 8, add:
+
+```ts
+import { controlsDeadlineMs, runControlsDesign, type ControlsDesign } from './store-controls-design';
+```
+
+  - Change `import { runChatKitTouch } from './source-sep5-review';` (line 112) to:
+
+```ts
+import { runChatKitTouch, type ReviewControls } from './source-sep5-review';
+```
+
+(f) In the flags block from Task 7 (after `const previousControls = readControls(previousFiles);`), add:
 
 ```ts
     /** YAPI designs the language (spec 2026-10-14, part 4): in the review stage of a new store or a redesign, and on chat requests. */
     const controlsDesignOn = controlsOn && this.config.get<boolean>('app.yapiControlsDesign') === true;
 ```
 
-(d) After the `controlsAvoid` line (Task 7 (c)), add:
+(g) After the `controlsAvoid` line (Task 7 (c)), add:
 
 ```ts
       /** The language and files revision N saved: the review stage's fallback and what its controls call photographs. */
@@ -2920,103 +3145,83 @@ import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA, runCon
       let revisionFiles: SourceProjectFileDto[] = [];
 ```
 
-(e) In the `sep5Call` signature (line 901), change `phase: 'author' | 'review' | 'touch'` to `phase: 'author' | 'review' | 'touch' | 'controls'`.
-
-(f) After `touchCall` (after line 936), add:
+  and in the `live` object, after `get revisionLook() { return revisionLook; },` (line 756), add:
 
 ```ts
-      /** The controls call (spec 2026-10-14, part 4): the same metered client, a small answer and medium effort, on its own signal.
-       *  The attempt is charged only when the guard keeps the record (`used`). */
-      const controlsCall = (call: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: Array<{ type: 'input_image'; image_url: string; detail: 'auto' }>) => {
-        const { attempt, body } = await sep5Call('controls', text, attached as typeof images, 'storefront_controls', CONTROLS_SCHEMA, controlsDeadlineMs(), { signal: call.signal, attempts: call.attempts, maxOutputTokens: CONTROLS_MAX_OUTPUT_TOKENS, effort: 'medium' });
-        return { body, used: () => { attempt.status = 'COMPLETED'; } };
+        get revisionControls() { return revisionControls; },
+```
+
+(h) Replace the `sep5Caller` line (line 918):
+
+```ts
+      const { sep5Call, touchCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
+```
+
+with:
+
+```ts
+      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
+      /** The review stage's controls call (spec 2026-10-14, part 4), on its own deadline; null when it fails, times out or answers
+       *  nothing usable. It never rejects: the review closure starts it before the review call and awaits it after, so a rejection
+       *  would go unhandled meanwhile. */
+      const designReviewControls = async (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }): Promise<ControlsDesign | null> => {
+        const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(controlsDeadlineMs())]);
+        try {
+          const designed = await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords) });
+          if (!designed) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: 'unusable answer' }));
+          return designed;
+        } catch (error) {
+          if (!review.signal.aborted) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: controlsSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+          return null;
+        }
       };
+      /** YAPI's controls for the Sep-5 review stage (source-sep5-review.ts ReviewControls): the call above, and the guard on the N+1
+       *  candidate with revision N's language as the fallback. None when YAPI_CONTROLS_DESIGN is off. */
+      const reviewControls: ReviewControls | undefined = controlsDesignOn
+        ? { design: designReviewControls, keep: (input, designed, keepSignal) => keepGuardedControls(storeControlsInto(input, designed.controls), revisionControls, 'yapi', keepSignal) }
+        : undefined;
 ```
 
-(g) In `assembleSave`:
-  - Change its signature (line 1518) to:
+(i) Replace the `runSep5AuthorStage` call (lines 922-923):
 
 ```ts
-    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: { reuse?: { look: StoreLook | undefined }; fallback?: StoreLook } = {}, controlsChoice: { use?: StoreControls } = {}) => {
-```
-
-  - Replace the `withControls` const from Task 7 with:
-
-```ts
-      // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known. `controlsChoice.use` is the
-      // review stage's (YAPI's guarded record, or revision N's); otherwise a new store or a redesign takes the seeded library pick
-      // and an edit carries its own.
-      const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T, look: StoreLook | undefined): T => storeControlsInto(input, !controlsOn ? undefined
-        : 'use' in controlsChoice ? controlsChoice.use
-        : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look, seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
-        : previousControls);
-```
-
-(h) Replace lines 1000-1005:
-
-```ts
-        const kitTouchOn = this.config.get<boolean>('app.yapiKitTouch') === true && sitePurpose === 'shop';
-        if (sep5SelfReview || kitTouchOn) {
-          const draftFiles = authored.data.files, draftPreview = acceptedPreviewFiles;
-          sep5Review = async review => {
-            const notes: string[] = [];
-            let changed = false;
+        await runSep5AuthorStage({ facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall,
+          assembleSave: (assembleSignal, lookChoice) => assembleSave(assembleSignal, lookChoice) });
 ```
 
 with:
 
 ```ts
-        const kitTouchOn = this.config.get<boolean>('app.yapiKitTouch') === true && sitePurpose === 'shop';
-        /** The review stage's controls call, on its own deadline; null when it fails, times out or answers nothing usable. It never
-         *  rejects: it starts before the review call and is awaited after it, so a rejection would go unhandled meanwhile. */
-        const designReviewControls = async (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }): Promise<ControlsDesign | null> => {
-          const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(controlsDeadlineMs())]);
-          try {
-            const designed = await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords) });
-            if (!designed) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: 'unusable answer' }));
-            return designed;
-          } catch (error) {
-            if (!review.signal.aborted) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: controlsSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
-            return null;
-          }
-        };
-        if (sep5SelfReview || kitTouchOn || controlsDesignOn) {
-          const draftFiles = authored.data.files, draftPreview = acceptedPreviewFiles;
-          sep5Review = async review => {
-            const notes: string[] = [];
-            let changed = false;
-            // YAPI's controls (spec 2026-10-14) are designed beside the review call: the ChatGPT bridge serves about two calls at once.
-            const controlsJob = controlsDesignOn ? designReviewControls(review) : null;
+        await runSep5AuthorStage({ facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall, controls: reviewControls,
+          assembleSave: (assembleSignal, lookChoice, controlsChoice) => assembleSave(assembleSignal, lookChoice, controlsChoice) });
 ```
 
-(i) Replace the end of the review closure (lines 1059-1062):
+(j) Replace the Task 7 `withControls` and `assembleSave` lines:
 
 ```ts
-            // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
-            if (!changed) return null;
-            return { saveInput: await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: revisionLook }), notes };
-          };
+    // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known (assembleSourceSave writes
+    // config.look last, measured or reused). A new store or a redesign takes the seeded library pick (calm or bold, the measured
+    // look, away from its siblings); an edit carries its own.
+    const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T): T => storeControlsInto(input, !controlsOn ? undefined
+      : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : previousControls);
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice));
 ```
 
 with:
 
 ```ts
-            // YAPI's controls, guarded on the N+1 candidate: a failing guard keeps revision N's language, never the review's edits.
-            const designed = controlsJob ? await controlsJob : null;
-            review.signal.throwIfAborted();
-            // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
-            if (!changed && !designed) return null;
-            let saveInput = await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: revisionLook }, { use: revisionControls });
-            if (designed) {
-              const guarded = await keepGuardedControls(storeControlsInto(saveInput, designed.controls), revisionControls, 'yapi', review.signal);
-              if (guarded.kept) { designed.used(); notes.push(designed.note); saveInput = guarded.input; }
-              else if (!changed) return null;
-            }
-            return { saveInput, notes };
-          };
+    // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known (assembleSourceSave writes
+    // config.look last, measured or reused). `controlsChoice.use` is the review stage's (YAPI's guarded record, or revision N's);
+    // otherwise a new store or a redesign takes the seeded library pick and an edit carries its own.
+    const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T, controlsChoice: { use?: StoreControls }): T => storeControlsInto(input, !controlsOn ? undefined
+      : 'use' in controlsChoice ? controlsChoice.use
+      : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : previousControls);
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice);
 ```
 
-(j) After `revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);` (the N save), add:
+(k) After `revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);` (the N save), add:
 
 ```ts
     revisionControls = readControls(saveInput.files);
@@ -3024,13 +3229,13 @@ with:
 ```
 
 - [ ] **Step 9: Run the tests and see them pass.**
-  - Run: `cd apps/api && npx jest src/storefront-source/source-generation-review.spec.ts src/storefront-source/store-controls-design.spec.ts src/storefront-source/source-background-review.spec.ts --maxWorkers=2`
+  - Run: `cd apps/api && npx jest src/storefront-source/source-generation-review.spec.ts src/storefront-source/store-controls-design.spec.ts src/storefront-source/source-background-review.spec.ts src/storefront-source/source-sep5-call.spec.ts --maxWorkers=2`
   - Expected: PASS, including every earlier review and kit-touch test. They leave `app.yapiControlsDesign` unset.
 
 - [ ] **Step 10: Commit.**
 
 ```bash
-git add apps/api/src/config/configuration.ts apps/api/src/storefront-source/store-controls-design.ts apps/api/src/storefront-source/store-controls-design.spec.ts apps/api/src/storefront-source/store-controls-guard.ts apps/api/src/storefront-source/source-design-planner.ts apps/api/src/storefront-source/source-generation.service.ts apps/api/src/storefront-source/source-generation-review.spec.ts
+git add apps/api/src/config/configuration.ts apps/api/src/storefront-source/store-controls-design.ts apps/api/src/storefront-source/store-controls-design.spec.ts apps/api/src/storefront-source/store-controls-guard.ts apps/api/src/storefront-source/source-design-planner.ts apps/api/src/storefront-source/source-generation-types.ts apps/api/src/storefront-source/source-sep5-call.ts apps/api/src/storefront-source/source-sep5-stage.ts apps/api/src/storefront-source/source-sep5-review.ts apps/api/src/storefront-source/source-generation.service.ts apps/api/src/storefront-source/source-generation-review.spec.ts
 git commit -m "feat(controls): YAPI designs each store's controls beside the background review — guarded, billed only when kept, saved in N+1
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -3040,8 +3245,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 10: Chat requests about the controls
 
-**Pattern followed:** the chat request touch (`source-generation.service.ts:1602-1625`).
-- `instructionConcernsKitSurfaces` reads only the merchant's own words, the part after `MERCHANT_MARKER` (`kit-touch.ts:124-131`).
+**Pattern followed:** the chat request touch, `runChatKitTouch` (`source-sep5-review.ts:116-136`). `generate()` calls it at `source-generation.service.ts:1254`, after `assembleSave` is declared and before the receipt.
+- `instructionConcernsKitSurfaces` reads only the merchant's own words, the part after `MERCHANT_MARKER` (`kit-touch.ts:130-136`).
 - The touch runs on its own deadline before the receipt.
 - A used attempt is billed. A failure never fails the edit.
 - What is kept is saved with that same edit.
@@ -3054,21 +3259,22 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `apps/api/src/storefront-source/store-controls-design.ts` (classifier)
-- Modify: `apps/api/src/storefront-source/kit-touch.ts:126` (the cart strip)
+- Modify: `apps/api/src/storefront-source/kit-touch.ts:135` (the cart strip)
 - Modify: `apps/api/src/storefront-source/source-header.ts` (`hasPlatformHeader`)
-- Modify: `apps/api/src/storefront-source/source-generation.service.ts`:
-  - imports;
+- Modify: `apps/api/src/storefront-source/source-generation.service.ts` (all in `generate()`; the chat request stays there, beside the `runChatKitTouch` call, because it needs `keepGuardedControls`, `storeControlsInto` and `controlsCall`):
+  - imports (lines 9, 13, and the Task 9 `store-controls-design` import);
   - the flags block;
-  - after line 612 (edit prompt);
-  - after the Task 9 (d) lines;
+  - after line 589 (edit prompt);
+  - after the Task 9 (g) lines;
   - `withControls`;
-  - line 1472 (`allowUnchanged`);
-  - before `const successfulAttempts` (line 1626).
+  - line 1208 (`allowUnchanged`);
+  - after `await runChatKitTouch({ facts, live, touchCall, assembleSave });` (line 1254), before `const successfulAttempts` (line 1255).
 - Test: `store-controls-design.spec.ts`, `kit-touch.spec.ts`, `source-header.spec.ts`, `source-generation-review.spec.ts`
 
 **Interfaces:**
 - Consumes:
-  - `MERCHANT_MARKER = 'Pedido actual del comercio:'` (`kit-touch.ts:122`).
+  - `MERCHANT_MARKER = 'Pedido actual del comercio:'` (`kit-touch.ts:130`). The service no longer imports it since the split (the chat kit touch moved to `source-sep5-review.ts`), so Step 5 (a) adds the import.
+  - `controlsCall` from `sep5Caller` (Task 9).
   - `runControlsDesign` and `controlsDeadlineMs` (Task 9).
   - `keepGuardedControls` (Task 8).
   - `storeControlsInto` (Task 7).
@@ -3214,7 +3420,7 @@ export function instructionConcernsControls(text: string): boolean {
 ```
 
 
-(b) In `kit-touch.ts`, replace line 126:
+(b) In `kit-touch.ts`, replace line 135:
 
 ```ts
   const cart = own.replace(/\b(?:icono|boton|simbolo|logo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
@@ -3227,7 +3433,7 @@ with:
   const cart = own.replace(/\b(?:icono|boton|simbolo|logo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b|\bcarrito\s+(?:como|en\s+forma\s+de|con\s+forma\s+de)\b[^.,;!?]*/g, ' ');
 ```
 
-(c) In `source-header.ts`, after `emptySourceHeaders` (line 131), add:
+(c) In `source-header.ts`, after `emptySourceHeaders` (lines 120-126 at HEAD; Tasks 4-5 move it down), add:
 
 ```ts
 /** Does a saved store carry the platform header (spec 2026-10-13)? Its controls are then the platform's to draw (spec 2026-10-14). */
@@ -3239,7 +3445,7 @@ export function hasPlatformHeader(files: ReadonlyArray<{ path: string; content: 
 - [ ] **Step 5: The request in `generate()`.** In `source-generation.service.ts`:
 
 (a) Imports:
-  - Change the `./source-header` import (line 10) to add `hasPlatformHeader`:
+  - Change the `./source-header` import (line 9) to add `hasPlatformHeader`:
 
 ```ts
 import { emptySourceHeaders, hasPlatformHeader, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSourceHeader } from './source-header';
@@ -3248,7 +3454,13 @@ import { emptySourceHeaders, hasPlatformHeader, headerFact, SOURCE_PLATFORM_HEAD
   - Change the Task 9 `store-controls-design` import to:
 
 ```ts
-import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA, instructionConcernsControls, runControlsDesign, type ControlsDesign } from './store-controls-design';
+import { controlsDeadlineMs, instructionConcernsControls, runControlsDesign, type ControlsDesign } from './store-controls-design';
+```
+
+  - Change `import { type KitTouchCss } from './kit-touch';` (line 13) to:
+
+```ts
+import { MERCHANT_MARKER, type KitTouchCss } from './kit-touch';
 ```
 
 (b) In the flags block, after `const controlsDesignOn = …`, add:
@@ -3258,40 +3470,42 @@ import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA, instru
     const controlsRequest = controlsDesignOn && !creative && !claude && hasPlatformHeader(previousFiles) && instructionConcernsControls(dto.instruction);
 ```
 
-(c) After line 612 (`if (execution?.candidate) taskPrompt += "\nUntrusted visual findings …`), add:
+(c) After line 589 (`if (execution?.candidate) taskPrompt += "\nUntrusted visual findings …`), add:
 
 ```ts
     if (controlsRequest) taskPrompt += '\nSTORE CONTROLS: the cart, account, menu and search buttons, the product cards\' "+" button, the quantity steppers and the cart\'s close button are drawn by the platform from a separate design step that runs after this edit with the merchant\'s words. Do not restyle or redraw them here. If the request is only about them, return no edits.';
 ```
 
-(d) After the Task 9 (d) lines (`let revisionFiles …`), add:
+(d) After the Task 9 (g) lines (`let revisionFiles …`), add:
 
 ```ts
       /** The language a chat request about the controls asked for, once the guard kept it; saved with that edit. */
       let requestedControls: StoreControls | undefined;
 ```
 
-(e) In `withControls` (Task 9 (g)), replace the last two lines:
+(e) In `withControls` (Task 9 (j)), replace the last two lines:
 
 ```ts
-        : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look, seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
-        : previousControls);
+      : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : previousControls);
 ```
 
 with:
 
 ```ts
-        : requestedControls ?? (controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look, seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
-        : previousControls));
+      : requestedControls ?? (controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : previousControls));
 ```
 
-(f) At line 1472, change `allowUnchanged: products.length > 0 || productOperations.length > 0,` to:
+The `'use' in controlsChoice` branch above them stays first, so the review stage's choice still wins.
+
+(f) At line 1208 (the `editExisting` branch of the single-call loop, still in `generate()`), change `allowUnchanged: products.length > 0 || productOperations.length > 0,` to:
 
 ```ts
 allowUnchanged: products.length > 0 || productOperations.length > 0 || controlsRequest,
 ```
 
-(g) Before `const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');` (line 1626), add:
+(g) After `await runChatKitTouch({ facts, live, touchCall, assembleSave });` (line 1254), before `const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');` (line 1255), add the block below. `assembleSave`, `controlsCall` (Task 9 (h)), `keepGuardedControls` and `storeControlsInto` are all in scope there, in the same `try`.
 
 ```ts
     // A chat request about the controls (spec 2026-10-14: «haz el carrito como una taza», «botones más redondos») runs the controls
