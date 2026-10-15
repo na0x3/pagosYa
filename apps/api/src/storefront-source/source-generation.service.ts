@@ -17,7 +17,9 @@ import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
-import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
+import { readControls, withControlsConfig, type StoreControls } from './store-controls';
+import { controlsToAvoid, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
+import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -477,6 +479,13 @@ export class SourceGenerationService {
     const businessInfo = typeof briefFacts?.businessInformation === 'string' ? briefFacts.businessInformation : '';
     const kind = playbookOn ? detectKind(`${merchantWords}\n${typeof briefFacts?.businessType === 'string' ? briefFacts.businessType : ''}\n${businessInfo}\n${data.items.map(item => item.name).join(', ')}`) : undefined;
     let boldAsked = asksForBold(merchantWords);
+    // Store controls (spec 2026-10-14): one button language per store, on static stores whose header the platform draws.
+    // YAPI_CONTROLS=off stops new records and drops a store's record at its next save, so its header is today's again.
+    const controlsOn = this.config.get<boolean>('app.yapiControls') === true && !useNext;
+    const controlsKind: PlaybookKind = kind ?? 'general';
+    /** A new store or a redesign picks a library language for revision N; an edit carries the store's own. */
+    const controlsFresh = controlsOn && creative && sep5Author;
+    const previousControls = readControls(previousFiles);
     const storeData = data as { locations?: unknown[]; shippingEnabled?: boolean; shippingPickupEnabled?: boolean };
     // A contract section is asked for only when the store has the fact: YAPI must never invent hours or an address.
     const playbookEvidence = {
@@ -731,6 +740,9 @@ export class SourceGenerationService {
       let kitTouch: KitTouchCss | undefined;
       /** The look revision N was saved with: the review stage's fallback when its own measurement fails. */
       let revisionLook: StoreLook | undefined;
+      /** Languages revision N must not repeat (spec 2026-10-14): the latest sibling and same-kind stores', and on a redesign the
+       *  store's own. A slow or failed lookup only loses that history. */
+      const controlsAvoid: StoreControls[] = controlsFresh ? [...controlsToAvoid(await withinOr(() => this.projects.recentControls(storeId, new Date(), 40), SHOWN_CARDS_TIMEOUT_MS, [] as RecentControls[]), controlsKind), ...(previousControls ? [previousControls] : [])] : [];
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
       // The run as the stages split out of generate() see it (source-generation-types.ts): fixed values by value, and every
@@ -782,14 +794,18 @@ export class SourceGenerationService {
       // one fact. A Sep-5 author run owns the header outright; any other store without the slot is left alone. Each note is
       // logged once per run.
       const headerNotes = new Set<string>();
-      const platformHeader = (files: SourceProjectFileDto[], platformPages: string[]) => {
+      const platformHeader = (files: SourceProjectFileDto[], platformPages: string[], controls?: StoreControls) => {
         const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
-        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author });
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(controls ? { controls } : {}) });
         if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
         if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
         return result.files;
       };
       const headerPreview = (files: SourceProjectFileDto[]) => currentSourceRuntime({ brief: dto.brief, files: [...previousFiles.filter(file => !files.some(next => next.path === file.path)), ...files] } as unknown as SourceProjectSnapshot);
+      /** config.controls written (or removed) and every page's platform header drawn again with it. A save that neither has nor
+       *  had a record is returned as it is, so stores without controls keep today's bytes. */
+      const storeControlsInto = <T extends { files: SourceProjectFileDto[] }>(input: T, controls: StoreControls | undefined): T =>
+        !controls && readConfigFile(input.files).controls === undefined ? input : { ...input, files: platformHeader(withControlsConfig(input.files, controls), [], controls) };
       const acceptCandidate = async () => {
         websiteDesignFile = generated.files.find(file => file.path === 'website-design.json') ?? websiteDesignFile;
         generated.files = generated.files.filter(file => file.path !== 'website-design.json');
@@ -1249,7 +1265,13 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // Everything a save carries besides the model's authored files (source-save-assembly.ts). It reads `generated` as it is
     // when called: once for revision N, and again by the background review.
     const saveContext: SaveAssemblyContext = { facts, live, platformHeader, agentPolicyChange };
-    const assembleSave = (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => assembleSourceSave(saveContext, assembleSignal, lookChoice);
+    // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known (assembleSourceSave writes
+    // config.look last, measured or reused). A new store or a redesign takes the seeded library pick (calm or bold, the measured
+    // look, away from its siblings); an edit carries its own.
+    const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T): T => storeControlsInto(input, !controlsOn ? undefined
+      : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : previousControls);
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice));
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
     await runChatKitTouch({ facts, live, touchCall, assembleSave });
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');

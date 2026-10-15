@@ -10,6 +10,7 @@ import { sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
 import { validateLegacySources } from "./source-legacy";
 import { dnaFingerprint } from "./source-dna";
 import { validDna } from "./fixtures/dna";
+import { CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 
 const input = () => ({ revision: 0, label: "First", brief: { businessType: "Café", audience: "Neighbors", primaryAction: "Pickup", visualDirection: "Menu" }, files: [
   { path: "package.json", content: '{"name":"cafe","scripts":{"build":"node build.mjs"}}' },
@@ -410,5 +411,22 @@ describe('recent style cards', () => {
     expect(query.text).toContain('proposal IS NOT NULL');
     expect(query.text).toContain('UNION');
     expect(query.values).toEqual(expect.arrayContaining(['m1', 'cafe-food', 20]));
+  });
+});
+
+describe('recent controls (spec 2026-10-14 store controls)', () => {
+  it("reads the latest other stores' control language and kind, read-only, and drops records that do not sanitize", async () => {
+    const { service, prisma } = setup();
+    const controls = libraryRecord(CONTROL_LANGUAGES[0], 'cafe-food', 'cup');
+    prisma.$queryRaw = jest.fn().mockResolvedValue([
+      { config: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'a', controls })};\n`, draw: JSON.stringify({ kind: 'cafe-food', header: 'side-rail' }) },
+      { config: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'b', controls: { ...controls, shape: { ...controls.shape, outline: 'hexagon' } } })};\n`, draw: null },
+      { config: null, draw: null },
+    ]);
+    expect(await service.recentControls('s1', new Date('2026-10-14T12:00:00Z'))).toEqual([{ kind: 'cafe-food', controls }]);
+    const query = prisma.$queryRaw.mock.calls[0][0];
+    expect(query.text).toContain('DISTINCT ON');
+    expect(query.text).not.toMatch(/\b(?:INSERT|UPDATE|DELETE)\b/i);
+    expect(query.values).toEqual(expect.arrayContaining(['s1', 40, 'config.js', 'frame-draw.json']));
   });
 });

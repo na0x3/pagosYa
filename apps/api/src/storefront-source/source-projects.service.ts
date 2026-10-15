@@ -1,5 +1,7 @@
 import { sourceRequestContext } from './source-request-context';
 import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
+import { readControls } from './store-controls';
+import type { RecentControls } from './store-controls-library';
 import { isSignatureDevice, type ShownStyleCard } from './design-engine/style-draws';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 /** Another merchant's display font enters a prompt only when it is a catalogue id. */
@@ -108,6 +110,30 @@ export class SourceProjectsService {
       WHERE f->>'path' = ${FRAME_DRAW_FILE}
     `);
     return rows.map(row => parseFrameDraw(row.content)).filter(draw => Object.keys(draw).length > 0);
+  }
+
+  /** The control languages of recent other stores (spec 2026-10-14 store controls): each store's latest revision in 30 days,
+   *  newest first, with the business kind its frame draw recorded. Read-only; a revision without a usable record is left out. */
+  async recentControls(storeId: string, now = new Date(), limit = 40): Promise<RecentControls[]> {
+    const since = new Date(now.getTime() - 30 * 86_400_000);
+    const rows = await this.prisma.$queryRaw<Array<{ config: string | null; draw: string | null }>>(Prisma.sql`
+      WITH latest AS (
+        SELECT DISTINCT ON (v."storeId") v."storeId", v.revision, v."createdAt"
+        FROM "StoreSourceVersion" v
+        WHERE v."storeId" <> ${storeId} AND v."createdAt" >= ${since}
+        ORDER BY v."storeId", v."createdAt" DESC
+      ), top AS (SELECT * FROM latest ORDER BY "createdAt" DESC LIMIT ${limit})
+      SELECT
+        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${'config.js'} LIMIT 1) AS config,
+        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${FRAME_DRAW_FILE} LIMIT 1) AS draw
+      FROM top JOIN "StoreSourceVersion" v ON v."storeId" = top."storeId" AND v.revision = top.revision
+      ORDER BY top."createdAt" DESC
+    `);
+    return rows.flatMap(row => {
+      const controls = row.config ? readControls([{ path: 'config.js', content: row.config }]) : undefined;
+      const kind = parseFrameDraw(row.draw).kind;
+      return controls ? [{ ...(kind ? { kind } : {}), controls }] : [];
+    });
   }
 
   /** The style cards recent proposals SHOWED, built or not (2026-10-11 variety), never a slot whose card was not shown: the merchant's last `limit` proposals and the

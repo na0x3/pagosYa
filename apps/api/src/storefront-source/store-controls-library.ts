@@ -194,3 +194,20 @@ export function pickLibraryControls(input: LibraryPickInput): StoreControls {
   }
   return libraryRecord(CONTROL_LANGUAGES[0], input.kind, cartIcon, input.look);
 }
+
+/** One other store's language, with the business kind its frame draw recorded (SourceProjectsService.recentControls). */
+export type RecentControls = { kind?: string; controls: StoreControls };
+/** The languages a new store must not repeat (spec part 4): the same-kind stores first, then the newest others, each once. */
+export function controlsToAvoid(rows: RecentControls[], kind: string, limit = 6): StoreControls[] {
+  const ordered = [...rows.filter(row => row.kind === kind), ...rows.filter(row => row.kind !== kind)];
+  const seen = new Set<string>();
+  const out: StoreControls[] = [];
+  for (const { controls } of ordered) {
+    const key = controlsKey(controls);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(controls);
+    if (out.length === limit) break;
+  }
+  return out;
+}

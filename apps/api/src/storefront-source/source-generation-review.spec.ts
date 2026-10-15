@@ -9,6 +9,7 @@ import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { captureHeaderCovers } from './design-engine/header-clickable';
+import { controlsKey, pickLibraryControls, storePalette } from './store-controls-library';
 // Measuring launches Chromium; these tests exercise what the service does with a reading.
 jest.mock('./store-look-measure', () => ({ ...jest.requireActual('./store-look-measure'), measureStoreLook: jest.fn().mockResolvedValue(null) }));
 import { measureStoreLook } from './store-look-measure';
@@ -467,5 +468,68 @@ describe('one look per store: YAPI touches the kit pages in the review stage', (
       expect([brandCount(projects.save.mock.calls[0]), brandCount(projects.save.mock.calls[1])]).toEqual([1, 1]);
       expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
     });
+  });
+});
+
+// Spec 2026-10-14 store controls. The fixture home has no <body>, so the platform header has nowhere to claim its slot
+// (withSourceHeader's claimSlot); these tests give the author's home a body so the header, and its controls, are drawn.
+const homeWithBody = () => files().map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('<!doctype html>', '<!doctype html><html lang="es"><body>') + '</body></html>' } : file);
+const authorWithBody = (review: unknown) => async (_url: unknown, init: any) => JSON.parse(init.body).text.format.name === 'storefront_self_review' ? answer(review) : answer({ label: 'Café', files: homeWithBody(), products: [] });
+
+describe('store controls: revision N gets a library language (spec 2026-10-14, part 4)', () => {
+  let service: SourceGenerationService, projects: any, config: any;
+  const configOf = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  const homeOf = (call: any[]): string => call[2].files.find((f: any) => f.path === 'index.html').content;
+  const EDIT = (from: string, to: string) => ({ label: 'Texto', edits: [{ path: 'styles.css', search: from, replacement: to }], files: [] });
+  const build = () => service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+  beforeEach(() => {
+    ({ service, projects, config } = setup());
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    config.set('app.sep5SelfReview', false);
+    config.set('app.yapiControls', true);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(authorWithBody(REVIEW) as any);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('saves the seeded library pick in config.js and draws it into the header of revision N', async () => {
+    await build();
+    const controls = configOf(projects.save.mock.calls[0]).controls;
+    expect(controls).toEqual(pickLibraryControls({ kind: 'general', mode: 'calm', seed: 's1:0', palette: storePalette(projects.save.mock.calls[0][2].files) }));
+    expect(homeOf(projects.save.mock.calls[0])).toContain(`data-controls-outline="${controls.shape.outline}"`);
+    expect(homeOf(projects.save.mock.calls[0])).toContain('<style data-pagosya-controls-style>');
+  });
+
+  it('never repeats the outline and cart icon of the latest sibling stores', async () => {
+    const alone = pickLibraryControls({ kind: 'general', mode: 'calm', seed: 's1:0', palette: storePalette(files()) });
+    projects.recentControls = jest.fn().mockResolvedValue([{ kind: 'general', controls: alone }]);
+    await build();
+    expect(projects.recentControls).toHaveBeenCalledWith('s1', expect.any(Date), 40);
+    expect(controlsKey(configOf(projects.save.mock.calls[0]).controls)).not.toBe(controlsKey(alone));
+  });
+
+  it("an edit carries the language; with YAPI_CONTROLS off the next save drops it and draws today's header", async () => {
+    await build();
+    const first = configOf(projects.save.mock.calls[0]).controls;
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...projects.save.mock.calls[0][2], revision: 1 }) });
+    (globalThis.fetch as unknown as jest.Mock).mockImplementation((async () => answer(EDIT('#222', '#333'))) as any);
+    await service.generate('m1', 's1', { ...dto, revision: 1, instruction: 'Oscurece un poco el texto' }, new SourceRequestBudget(500), []);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(first);
+    expect(homeOf(projects.save.mock.calls[1])).toContain(`data-controls-outline="${first.shape.outline}"`);
+    config.set('app.yapiControls', false);
+    projects.version.mockResolvedValue({ revision: 2, snapshot: sourceProjectSnapshot({ ...projects.save.mock.calls[1][2], revision: 2 }) });
+    (globalThis.fetch as unknown as jest.Mock).mockImplementation((async () => answer(EDIT('#333', '#444'))) as any);
+    await service.generate('m1', 's1', { ...dto, revision: 2, instruction: 'Oscurece un poco más el texto' }, new SourceRequestBudget(500), []);
+    expect(configOf(projects.save.mock.calls[2]).controls).toBeUndefined();
+    expect(homeOf(projects.save.mock.calls[2])).not.toContain('data-controls-');
+    expect(homeOf(projects.save.mock.calls[2])).toContain('<button type="button" class="pyh-cart" data-cart-open><span class="pyh-cart-word">Carrito</span>');
+  });
+
+  it("a redesign picks a new language away from the store's previous one", async () => {
+    await build();
+    const previous = configOf(projects.save.mock.calls[0]).controls;
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...projects.save.mock.calls[0][2], revision: 1 }) });
+    await service.generate('m1', 's1', { ...dto, revision: 1, instruction: 'Rediseña toda la tienda desde cero' }, new SourceRequestBudget(25), []);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(pickLibraryControls({ kind: 'general', mode: 'calm', seed: 's1:1', avoid: [previous], palette: storePalette(projects.save.mock.calls[1][2].files) }));
   });
 });

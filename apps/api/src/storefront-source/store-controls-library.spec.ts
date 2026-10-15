@@ -1,7 +1,7 @@
 import { CART_WORDS } from './design-engine/commerce-draw';
 import type { PlaybookKind } from './design-engine/playbook';
 import { CONTROL_OUTLINES, parseIconPath, sanitizeControls } from './store-controls';
-import { CART_ICONS, CONTROL_LANGUAGES, KIND_CART_ICON, SHARED_ICONS, cartIconFor, cartIconName, controlsKey, hexContrast, languageReadable, libraryIconFallback, libraryRecord, pickLibraryControls, storePalette } from './store-controls-library';
+import { CART_ICONS, CONTROL_LANGUAGES, KIND_CART_ICON, SHARED_ICONS, cartIconFor, cartIconName, controlsKey, controlsToAvoid, hexContrast, languageReadable, libraryIconFallback, libraryRecord, pickLibraryControls, storePalette } from './store-controls-library';
 
 describe('the controls library (spec 2026-10-14, part 5)', () => {
   it('draws every icon as valid path data inside the 24×24 box, in both styles', () => {
@@ -86,5 +86,13 @@ describe('the controls library (spec 2026-10-14, part 5)', () => {
   it("falls back to the line drawing of the store's own icons for a failing slot", () => {
     expect(libraryIconFallback('cafe-food')('cart')).toBe(CART_ICONS.cup.line);
     expect(libraryIconFallback('cafe-food')('close')).toBe(SHARED_ICONS.close.line);
+  });
+});
+
+describe('controlsToAvoid', () => {
+  it('takes the same-kind stores first, then the newest others, six at most, each language once', () => {
+    const records = CONTROL_LANGUAGES.map(language => libraryRecord(language, 'cafe-food', 'cup'));
+    const rows = [{ kind: 'clothing', controls: records[0] }, { kind: 'cafe-food', controls: records[1] }, { controls: records[2] }, { kind: 'cafe-food', controls: records[1] }, ...records.slice(3, 9).map(controls => ({ kind: 'beauty', controls }))];
+    expect(controlsToAvoid(rows, 'cafe-food')).toEqual([records[1], records[0], records[2], records[3], records[4], records[5]]);
   });
 });
