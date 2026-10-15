@@ -36,6 +36,10 @@ export const PARTS = [
   'product/page.js',
   'checkout/page-setup.js',
   'cart/drawer.js',
+  'motifs/placement.js',
+  'checkout/overlay.js',
+  'catalog/cards.js',
+  'look/contrast-guard.js',
   'rest.js',
 ];
 
