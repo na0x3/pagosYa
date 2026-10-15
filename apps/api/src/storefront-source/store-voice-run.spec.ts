@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { describeNewPhotos, startVoiceRun, type VoiceRunInput } from './store-voice-run';
+import { describeNewPhotos, startVoiceRun, writeVoiceSheet, type VoiceRunInput } from './store-voice-run';
 import { voiceFile, type StoreVoice } from './store-voice';
 
 const bytes = Buffer.from('una foto');
@@ -71,5 +71,37 @@ describe('describeNewPhotos (spec 2026-10-14, part 1)', () => {
     expect((sep5Call.mock.calls[0] as unknown[])[0]).toBe('photo');
     expect(run.assetLegend.map(entry => entry.description)).toEqual(['pan de masa madre', 'latte con arte de hoja en taza azul']);
     expect(run.prisma.mediaAssetDescription.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ merchantId: 'm1', description: 'latte con arte de hoja en taza azul' }) }));
+  });
+});
+
+describe('writeVoiceSheet (spec 2026-10-14, part 2)', () => {
+  const ANSWER = { voice: 'Hablamos de tú.', specifics: [{ text: 'Una ventana a la plaza grande', source: 'merchant' }], texture: [], assumed: [], words: { products: '', customers: '', order: 'Tu pedido', team: '' }, avoid: [] };
+  const deps = async (sep5Call: unknown) => {
+    const run = input();
+    const voice = await startVoiceRun(run);
+    return { voice, assetLegend: run.assetLegend, sep5Call: sep5Call as any, prisma: run.prisma, merchantId: 'm1', signal: new AbortController().signal, logger: { log: jest.fn(), warn: jest.fn() }, runId: 'run-1', storeName: 'Café Remanso', brief: { businessType: 'Cafetería' }, products: [{ name: 'Espresso doble' }] };
+  };
+
+  it('waits for the photos, writes the sheet from the run material and bills it once kept', async () => {
+    let photosDone = false;
+    const attempt = { status: 'FAILED' };
+    const sep5Call = jest.fn(async () => ({ attempt, body: photosDone ? reply(ANSWER) : reply('las fotos no estaban') }));
+    const ready = await deps(sep5Call);
+    ready.voice.brain = { identity: { name: 'Café Remanso' } };
+    ready.voice.photosJob = new Promise<void>(resolve => setTimeout(() => { photosDone = true; resolve(); }, 10));
+    const sheet = await writeVoiceSheet(ready);
+    expect(sheet).toMatchObject({ voice: 'Hablamos de tú.', specifics: [{ id: 's1', source: 'merchant' }], words: { order: 'Tu pedido' } });
+    expect(attempt.status).toBe('COMPLETED');
+    const [phase, prompt] = sep5Call.mock.calls[0] as unknown as [string, string];
+    expect(phase).toBe('voice');
+    expect(prompt).toContain('"storeBrain":{"identity":{"name":"Café Remanso"}}');
+    expect(prompt).toContain('pan de masa madre');
+  });
+
+  it('returns null, unbilled, when the call fails or answers nothing usable', async () => {
+    const attempt = { status: 'FAILED' };
+    expect(await writeVoiceSheet(await deps(jest.fn(async () => ({ attempt, body: reply('no') }))))).toBeNull();
+    expect(await writeVoiceSheet(await deps(jest.fn(async () => { throw new Error('bridge'); })))).toBeNull();
+    expect(attempt.status).toBe('FAILED');
   });
 });

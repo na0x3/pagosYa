@@ -15,11 +15,12 @@ import { distinctBoldDisplay, distinctBoldDisplays, styleOpeningKey, styleRecomm
 import { retryProviderRejection } from './source-provider-error';
 import { completedCredits } from './source-generation-run';
 import type { StyleProposalResult } from './source-generation-types';
+import type { StoreVoice } from './store-voice';
 
 /** What a style proposal needs from SourceGenerationService. The service builds it when the proposal starts, so the two
  *  timings are the instance's at that moment (the specs shorten them on the instance). */
 export type StyleProposalDeps = { prisma: PrismaService; metering?: AiUsageService; logger: Logger; stylePickPollMs: number; pickHeroWaitMs: number };
-export type ProposeStylesInput = { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; plan: (slot: StyleSlot & { playbook: string }) => Promise<SourceDesign>; boldAsked: boolean; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number; onPickable?: (result: StyleProposalResult) => void };
+export type ProposeStylesInput = { runId: string; storeId: string; dto: GenerateSourceProjectDto; imageUses: SourceImageUse[]; redesign: boolean; styleSlots: Array<StyleSlot & { playbook: string }>; plan: (slot: StyleSlot & { playbook: string }) => Promise<SourceDesign>; boldAsked: boolean; assetLegend: Array<{ original: string; path: string }>; storeName: string; logoUrl: string | null; brandPalette?: HeroFacts['palette']; model: SourceModel; provider: { endpoint: string; name: string }; apiKey: string; budget: SourceRequestBudget; signal: AbortSignal; attempts: DesignPlanningAttempt[]; started: number; freeRun: boolean; maxCredits: number; onPickable?: (result: StyleProposalResult) => void; /** Spec 2026-10-14 store voice: the sheet call started beside the cards. */ voice?: Promise<StoreVoice | null> };
 
 /**
  * Elige tu estilo in two lanes (spec 2026-10-11, amendments "four parallel lanes" and "two cards"): one calm card and one
@@ -41,6 +42,9 @@ export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeSt
   // model when the provider refuses the fast one.
   const heroModel: SourceModel = input.model.startsWith('gpt-') ? 'gpt-5.6-luna' : input.model;
   const createdAt = new Date().toISOString();
+  // Spec 2026-10-14 store voice: the sheet written beside the cards travels on the proposal; the final writes wait for it.
+  let voiceSheet: StoreVoice | undefined;
+  void input.voice?.then(sheet => { if (sheet) voiceSheet = sheet; });
   const photo = input.imageUses.find(use => use.role === 'business') ?? input.imageUses.find(use => use.role === 'product');
   const photoPath = photo ? input.assetLegend.find(entry => entry.original === photo.url)?.path : undefined;
   const logoPath = input.logoUrl ? input.assetLegend.find(entry => entry.original === input.logoUrl)?.path : undefined;
@@ -54,7 +58,7 @@ export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeSt
     const order = live(), concepts = order.map(slot => slotConcepts[slot.slot]!);
     return { version: 1, status, slots: input.styleSlots, design: concepts.length ? { concepts, ...styleRecommendation(concepts, input.boldAsked) } : null,
       heroes: order.map(slot => slotHeroes[slot.slot] ?? null), heroPalettes: order.map(slot => slotPalettes[slot.slot] ?? null), heroPending: order.map(slot => status === 'RUNNING' && slotPending[slot.slot] === true),
-      assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt, ...(pickable ? { pickable: true } : {}) };
+      assetMap: input.assetLegend, request: { dto: input.dto, imageUses: input.imageUses, redesign: input.redesign }, createdAt, ...(pickable ? { pickable: true } : {}), ...(voiceSheet ? { voice: voiceSheet } : {}) };
   };
   // Saves run one after another and each writes the state at its own turn, so a slow write never lands an older proposal.
   // Once the outcome is decided (closed), lane saves stop. Only a row this run still holds is written: after a sweep or
@@ -143,6 +147,7 @@ export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeSt
   input.signal.throwIfAborted();
   const finished = () => ({ status: 'AWAITING_STYLE', activeStoreId: null, credits: completedCredits(input.attempts, input.maxCredits, input.freeRun), attempts: input.attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - input.started, completedAt: new Date() });
   if (!decision) {
+    await input.voice;
     closed = true;
     const completed = await save('AWAITING_STYLE', finished()) as { count: number };
     if (completed.count === 1) return { styleProposal: { generationId: input.runId, cards: live().length } };
@@ -164,6 +169,7 @@ export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeSt
       deps.logger.warn(JSON.stringify({ event: 'style_hero_skipped', generationId: input.runId, slot: pickedSlot, waitedMs: Date.now() - waitStarted }));
     }
   }
+  await input.voice;
   closed = true;
   // The pick's build waits for this release, then reads the heroes written here.
   const released = await deps.prisma.storeSourceGeneration.updateMany({ where: { id: input.runId, status: 'RUNNING', activeStoreId: input.storeId }, data: {

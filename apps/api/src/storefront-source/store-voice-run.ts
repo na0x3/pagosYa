@@ -9,7 +9,8 @@ import type { PlaybookKind } from './design-engine/playbook';
 import { SHOWN_CARDS_TIMEOUT_MS, withinOr } from './design-engine/style-draws';
 import { applyPhotoDescriptions, describePhotos, legendPhotos, PHOTO_DESCRIPTION_MAX_OUTPUT_TOKENS, PHOTO_DESCRIPTION_SCHEMA, PHOTO_DESCRIPTION_TIMEOUT_MS, type LegendEntry, type LegendPhoto } from './photo-descriptions';
 import type { Sep5Caller } from './source-sep5-call';
-import { merchantMessagesText, readOnboardingMaterial, readVoice, sanitizeVoice, voicesToDiffer, withOnboardingAnswers, type OnboardingMaterial, type RecentVoice, type StoreVoice } from './store-voice';
+import { merchantMessagesText, merchantSpecificCount, readOnboardingMaterial, readVoice, sanitizeVoice, voicesToDiffer, withOnboardingAnswers, type OnboardingMaterial, type RecentVoice, type StoreVoice } from './store-voice';
+import { runVoiceSheet, voiceDeadlineMs, VOICE_MAX_OUTPUT_TOKENS, VOICE_SCHEMA } from './store-voice-design';
 
 export type VoiceRun = {
   /** YAPI_VOICE on, on a static store. */
@@ -109,5 +110,38 @@ export async function describeNewPhotos(deps: VoiceStageDeps): Promise<void> {
     deps.logger.log(JSON.stringify({ event: 'photo_descriptions', generationId: deps.runId, asked: fresh.length, described: found.size }));
   } catch (error) {
     if (!deps.signal.aborted) deps.logger.warn(JSON.stringify({ event: 'photo_descriptions_failed', generationId: deps.runId, reason: ((error as Error)?.message || '').slice(0, 300) }));
+  }
+}
+
+export type VoiceSheetDeps = VoiceStageDeps & { storeName: string; brief: unknown; products: Array<{ name: string; description?: string }> };
+/** Part 2: the sheet call, after the photos are described, on its own deadline. Null when it fails or answers nothing usable;
+ *  the attempt is billed only for a kept sheet. Never rejects: the style proposal and the author await it. */
+export async function writeVoiceSheet(deps: VoiceSheetDeps): Promise<StoreVoice | null> {
+  const { voice } = deps;
+  await voice.photosJob;
+  const voiceSignal = AbortSignal.any([deps.signal, AbortSignal.timeout(voiceDeadlineMs())]);
+  try {
+    const written = await runVoiceSheet({
+      material: {
+        storeName: deps.storeName, kind: voice.kind, merchantMessages: voice.merchantMessages, onboarding: voice.onboarding, brief: deps.brief, products: deps.products,
+        photos: deps.assetLegend.flatMap(entry => (entry.description ? [{ path: entry.path, description: entry.description }] : [])),
+        ...(voice.brain ? { brain: voice.brain } : {}),
+        differFrom: voice.siblings.flatMap(row => (row.voice ? [row.voice] : [])),
+      },
+      call: async text => {
+        const { attempt, body } = await deps.sep5Call('voice', text, [], 'store_voice', VOICE_SCHEMA, voiceDeadlineMs(), { signal: voiceSignal, maxOutputTokens: VOICE_MAX_OUTPUT_TOKENS, effort: 'low' });
+        return { body, used: () => { attempt.status = 'COMPLETED'; } };
+      },
+    });
+    if (!written) {
+      deps.logger.warn(JSON.stringify({ event: 'voice_sheet_dropped', generationId: deps.runId, reason: 'unusable answer' }));
+      return null;
+    }
+    written.used();
+    deps.logger.log(JSON.stringify({ event: 'voice_sheet_written', generationId: deps.runId, specifics: written.voice.specifics.length, merchant: merchantSpecificCount(written.voice), assumed: written.voice.assumed.length }));
+    return written.voice;
+  } catch (error) {
+    if (!deps.signal.aborted) deps.logger.warn(JSON.stringify({ event: 'voice_sheet_dropped', generationId: deps.runId, reason: voiceSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+    return null;
   }
 }

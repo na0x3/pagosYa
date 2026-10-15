@@ -41,6 +41,7 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   // authored motion would be output tokens spent on CSS nothing renders.
   // Store voice (spec 2026-10-14): the Bundled images legend carries what each photo shows before the author reads it.
   await facts.voice.photosJob;
+  if (facts.voice.on && !facts.voice.sheet) facts.voice.sheet = (await facts.voice.sheetJob) ?? undefined;
   const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
   // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
   // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.

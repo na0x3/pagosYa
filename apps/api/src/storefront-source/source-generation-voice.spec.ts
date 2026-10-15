@@ -11,6 +11,8 @@ import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { voiceFile, type StoreVoice } from './store-voice';
+import * as styleHero from './design-engine/style-hero';
+import { validateStyleDesign } from './source-style-design';
 
 // Measuring, sampling, the review's shots, the header check and the controls guard launch Chromium; these tests exercise what
 // the service does with their results.
@@ -187,5 +189,97 @@ describe('voice.json in every save (spec 2026-10-14, part 2)', () => {
     expect(prisma.storeAgentMessage.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { thread: { storeId: 's1' }, channel: 'source', role: 'USER' } }));
     expect(projects.recentVoices).toHaveBeenCalledWith('s1', expect.any(Date), 12);
     expect(savedVoice(0)).toBeUndefined();
+  });
+});
+
+/** The sheet call's answer. Code drops the merchant specific with no source in the merchant's words and the percent. */
+const SHEET_ANSWER = {
+  voice: SHEET.voice,
+  specifics: [{ text: 'El flat white con alfajor de maicena es lo que todos piden', source: 'merchant' }, { text: 'Espresso doble a Bs 18', source: 'product' }, { text: 'Un sabio que nadie nombró', source: 'merchant' }],
+  texture: SHEET.texture,
+  assumed: [{ text: 'tostado en Caranavi', kind: 'origin' }, { text: 'abiertos desde 2019', kind: 'history' }, { text: '20% menos azúcar', kind: 'number' }],
+  words: { products: 'la carta', customers: 'vecinos', order: 'Tu pedido', team: '' },
+  avoid: ['pausa perfecta'],
+};
+
+describe('the voice sheet (spec 2026-10-14, part 2)', () => {
+  it('a first build writes the sheet in the design stage and saves it in revision N, with only the assumptions a page uses', async () => {
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(SPAN) }) as any);
+    const result: any = await build();
+    expect(calls('store_voice')).toHaveLength(1);
+    const prompt = promptOf(calls('store_voice')[0]);
+    expect(prompt).toContain('"answers":[{"question":"¿Qué pide todo el mundo?","answer":"El flat white con alfajor de maicena."}]');
+    expect(prompt).toContain('Crea la tienda de mi cafetería');
+    const voice = savedVoice(0);
+    expect(voice.specifics.map((entry: any) => entry.id)).toEqual(['s1', 's2']);
+    expect(voice.assumed).toEqual([{ id: 'a1', text: 'tostado en Caranavi', kind: 'origin', status: 'assumed' }]);
+    expect(voice.words.order).toBe('Tu pedido');
+    expect(result.generation.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'voice', status: 'COMPLETED' })]));
+  });
+
+  it('a redesign keeps the store’s sheet and writes no new one', async () => {
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(SPAN) }) as any);
+    await build();
+    asPrevious(0);
+    await build({ revision: 1, instruction: 'Rediseña toda la tienda desde cero' });
+    expect(calls('store_voice')).toHaveLength(1);
+    expect(savedVoice(1).voice).toBe(SHEET_ANSWER.voice);
+    expect(savedVoice(1).assumed.map((entry: any) => entry.id)).toEqual(['a1']);
+  });
+
+  it('with YAPI_VOICE off a first build makes no sheet call', async () => {
+    config.set('app.yapiVoice', false);
+    await build();
+    expect(calls('store_voice')).toHaveLength(0);
+    expect(savedVoice(0)).toBeUndefined();
+  });
+
+  it('a failed or unusable sheet call never fails the build', async () => {
+    fetchMock.mockImplementation(respond({ store_voice: () => 'esto no es JSON' }) as any);
+    const result: any = await build();
+    expect(result.revision).toBe(1);
+    expect(savedVoice(0)).toBeUndefined();
+    expect(warnLines().some(line => line.includes('"event":"voice_sheet_dropped"'))).toBe(true);
+  });
+});
+
+describe('the voice sheet beside the style cards (spec 2026-10-14, part 2)', () => {
+  const cardConcept = (name: string) => ({ ...concept(name), cardName: `${name} de barrio`, vibe: `${name} vibe paragraph.`, inspiration: ['El tostado de cada mañana', 'La esquina de la plaza', 'Tazas de cerámica local'] });
+  const laneDesign = (slot: number) => {
+    const { design } = validateStyleDesign({ concepts: ['Menu', 'Window'].map(cardConcept), selection: { index: 0, rationale: 'r' } }, ['calm', 'bold'], { narrative: true });
+    return { ...design, selected: 0, concepts: design.concepts.filter(item => item.card!.slot === slot) };
+  };
+  let explore: jest.SpyInstance;
+  const finalProposal = () => prisma.storeSourceGeneration.updateMany.mock.calls.map((call: any[]) => call[0]).find((call: any) => call.data.status === 'AWAITING_STYLE')?.data.proposal;
+  beforeEach(() => {
+    for (const key of ['app.yapiStylePick', 'app.yapiPlaybook', 'app.yapiFrameDraw', 'app.yapiDesignDraw']) config.set(key, true);
+    jest.spyOn(styleHero, 'writeStyleHero').mockResolvedValue({ html: '<header data-store-name>Café</header><section><h1>Tarjeta</h1></section>', source: 'model' });
+    explore = jest.spyOn(SourceDesignPlanner.prototype, 'explore');
+  });
+
+  it('writes the sheet beside the cards, not after them, and keeps it on the proposal', async () => {
+    let voiceStarted!: () => void;
+    const started = new Promise<void>(resolve => { voiceStarted = resolve; });
+    explore.mockImplementation(async (args: any) => {
+      if (!args.styleSlots) return threeConceptDesign;
+      await Promise.race([started, new Promise((_ok, fail) => setTimeout(() => fail(new Error('the voice call did not start beside the cards')), 5000))]);
+      return laneDesign(args.styleSlots[0].slot);
+    });
+    fetchMock.mockImplementation(respond({ store_voice: () => { voiceStarted(); return SHEET_ANSWER; } }) as any);
+    const result = await build({}, { styleProposal: true });
+    expect(result).toEqual({ styleProposal: { generationId: expect.any(String), cards: 2 } });
+    expect(finalProposal().voice).toMatchObject({ version: 1, voice: SHEET_ANSWER.voice, words: { order: 'Tu pedido' } });
+  });
+
+  it('a picked card builds with the proposal’s sheet and writes no new one', async () => {
+    explore.mockImplementation(async (args: any) => (args.styleSlots ? laneDesign(args.styleSlots[0].slot) : threeConceptDesign));
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER }) as any);
+    await build({}, { styleProposal: true });
+    const asked = calls('store_voice').length;
+    const proposal = { ...finalProposal(), status: 'PICKED', picked: 0 };
+    fetchMock.mockImplementation(respond({ independent_storefront: authorWith('<h1>Menú</h1><p><span data-assumed="a2">abiertos desde 2019</span></p>') }) as any);
+    await build({}, { style: { proposal, index: 0 } });
+    expect(calls('store_voice')).toHaveLength(asked);
+    expect(savedVoice(0)).toMatchObject({ voice: SHEET_ANSWER.voice, assumed: [{ id: 'a2', text: 'abiertos desde 2019', status: 'assumed' }] });
   });
 });
