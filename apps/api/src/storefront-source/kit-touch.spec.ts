@@ -90,6 +90,9 @@ describe('instructionConcernsKitSurfaces', () => {
     ['Los botones del carrito más grandes', false], ['El carrito en el encabezado más pequeño', false], ['Pon el carrito en el menú', false], ['El carrito en el header', false], ['El carrito en la barra', false],
     ['Los botones del carrito y el catálogo', true],
     ['Haz el carrito como una taza', false], ['El carrito en forma de canasta', false],
+    // Review CD fix 1: the same header-cart phrases as the controls classifier, never past a second «carrito».
+    ['El carrito con un ícono de canasta', false], ['El contador del carrito en rojo', false],
+    ['Haz el carrito como una taza y que el carrito muestre el envío', true], ['El carrito como una taza, y la página del carrito más clara', true],
   ])('%s → %s', (text, expected) => expect(instructionConcernsKitSurfaces(text)).toBe(expected));
 
   it("reads only the merchant's own words after the marker", () => {

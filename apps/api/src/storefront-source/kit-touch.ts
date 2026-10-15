@@ -128,12 +128,24 @@ export function carriedTouch(previousDna: unknown, creative: boolean): Record<st
 }
 
 export const MERCHANT_MARKER = 'Pedido actual del comercio:';
+/** The merchant's own words (after MERCHANT_MARKER), accents removed and lower-cased: what the request classifiers read. */
+export function merchantOwnWords(text: string): string {
+  return (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+/** Phrases about the header cart itself (spec 2026-10-14 store controls): its icon, button, symbol or count badge, and its look,
+ *  «carrito como / en forma de / con un ícono de …» plus up to four words, never past a conjunction or a second «carrito». One
+ *  source for both classifiers: the kit touch strips them (the cart page is not meant) and the controls request reads them. */
+const HEADER_CART = String.raw`\b(?:icono|boton|simbolo|logo|dibujo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\b(?:contador|numerito|burbuja|insignia)\s+del?\s+carrito\b|\bcarrito\s+(?:como|en\s+forma\s+de|con\s+forma\s+de|con\s+(?:un|una|el|la|otro|otra)\s+(?:icono|simbolo|dibujo))\b(?:\s+(?!(?:carrito|y|e|o|u|ni|pero|que)\b)[a-z]+){0,4}`;
+/** Does the merchant's own wording (merchantOwnWords) name the header cart's look, drawing or badge? */
+export function namesHeaderCart(own: string): boolean {
+  return new RegExp(HEADER_CART).test(own);
+}
 /** Does the merchant's own request concern the kit pages (product page, catalog, cards, cart)? Only their words count. */
 export function instructionConcernsKitSurfaces(text: string): boolean {
-  const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  // The cart's icon, button or header placement is the header's business, not the cart page's.
-  // «carrito como una taza» / «carrito en forma de canasta» is about the header cart's look: a controls request (store-controls-design.ts).
-  const cart = own.replace(/\b(?:icono|boton|simbolo|logo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b|\bcarrito\s+(?:como|en\s+forma\s+de|con\s+forma\s+de)\b[^.,;!?]*/g, ' ');
+  const own = merchantOwnWords(text);
+  // The cart's icon, button, badge, look («carrito como una taza») or header placement is the header's business, not the cart
+  // page's: the first are a controls request (store-controls-design.ts), the placement the header's.
+  const cart = own.replace(new RegExp(HEADER_CART, 'g'), ' ').replace(/\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
   return /\bcarrito\b/.test(cart) || /\bcatalogo\b|\bfotos?\s+de\s+(?:los\s+)?productos?\b|\btarjetas?\s+de(?:l)?\s+productos?\b|\bpagina\s+de(?:l)?\s+productos?\b|\bficha\b|\bproduct\s+(?:page|card)s?\b/.test(own);
 }
 

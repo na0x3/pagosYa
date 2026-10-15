@@ -65,6 +65,15 @@ describe('instructionConcernsControls', () => {
     ['El carrito en forma de bolsa', true],
     ['Pon las fotos de los productos inclinadas', false], ['Cambia el título del inicio', false], ['Agrega un botón de WhatsApp', false],
     ['El carrito con un sello como en la portada', false],
+    // Review CD fix 1: the request must name a header control; a bare shape word or another target is not one.
+    ['Agrega un botón de WhatsApp en el menú', false], ['Pon un botón para ver mi cuenta de Instagram', false],
+    ['Ten en cuenta que el botón de reservar debe verse bien', false], ['El botón Comprar ahora del inicio más redondo', false],
+    ['Haz el botón de la portada más grande y redondo', false], ['Los íconos de la sección de beneficios en forma de círculo', false],
+    ['Agrega iconos de Instagram y TikTok en el pie de página con bordes', false], ['Agrega un botón para buscar en el catálogo', false],
+    ['Los botones de la portada más redondos', false], ['Botones redondos en el catálogo', false], ['Cambia el carrito', false],
+    ['Haz los botones de la tienda más redondos', true], ['Los botones del encabezado con forma de etiqueta', true],
+    ['Los íconos de arriba más redondos', true], ['El ícono de mi cuenta como una taza', true], ['El botón del menú con bordes', true],
+    ['La lupa del buscador en forma de lupa antigua', true], ['El carrito con un ícono de canasta', true], ['El numerito del carrito en verde', true],
   ])('%s → %s', (text, expected) => expect(instructionConcernsControls(text)).toBe(expected));
 
   it("reads only the merchant's own words after the marker", () => {

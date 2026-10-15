@@ -6,7 +6,7 @@
  */
 import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { sourceResponseJson } from './source-response';
-import { MERCHANT_MARKER } from './kit-touch';
+import { merchantOwnWords, namesHeaderCart } from './kit-touch';
 import { captureControlsShots, type ModelImage } from './store-controls-guard';
 import { ACCOUNT_LAYOUTS, CART_LAYOUTS, CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, ICON_SLOTS, sanitizeControlsReport, type IconSlot, type StoreControls } from './store-controls';
 import { pickLibraryControls } from './store-controls-library';
@@ -93,14 +93,26 @@ export async function runControlsDesign(deps: ControlsDesignDeps): Promise<Contr
   return { controls: report.controls, note, used, replacedIcons: report.replacedIcons };
 }
 
-/** Does the merchant's own request concern the store's small controls (spec 2026-10-14: «haz el carrito como una taza», «botones
- *  más redondos», «el ícono del carrito»)? Only their words count (after MERCHANT_MARKER), accents ignored. */
+/** The header's other controls by name: the icon or button of the menu, the search or the account («el ícono de mi cuenta»,
+ *  never «mi cuenta de Instagram»), and the search's magnifier. */
+const HEADER_CONTROL = /\b(?:icono|boton|simbolo|dibujo)(?:es|s)?\s+(?:del?|de\s+la|de\s+mi|para\s+(?:el|la|mi))\s+(?:menu|buscador|busqueda|buscar|cuenta\b(?!\s+de\b))|\blupa\b/;
+/** The store's controls as a group: «los botones de la tienda / del encabezado / de arriba». */
+const HEADER_GROUP = /\b(?:botones|iconos)\s+(?:de\s+(?:la\s+)?(?:tienda|cabecera|barra|arriba)|del\s+(?:encabezado|header|menu\s+superior))\b/;
+/** Bare «botones» / «íconos» (not «botones de …») with a shape word: the store's buttons, only when nothing else is named. */
+const BARE_BUTTONS = /\b(?:botones|iconos)\b(?!\s+(?:de|del|para)\b)/;
+const SHAPE_WORD = /\b(?:redond\w*|cuadrad\w*|esquinas?|bordes?|forma|pildoras?|boletos?|tickets?|etiquetas?|sellos?|stickers?|pegatinas?)\b/;
+/** Another target named in the request: a page, section, social network or a named button of the authored pages. */
+const OTHER_TARGET = /\b(?:portada|inicio|home|hero|banner|whatsapp|instagram|tiktok|facebook|redes|pie\s+de\s+pagina|footer|secci\w*|catalogo|productos?|ficha|comprar|reserv\w*|formulario|contacto|beneficios|testimonios|galeria|blog|paginas?|tarjetas?|pago|checkout|newsletter)\b/;
+/** Does the merchant's own request concern the store's header controls (spec 2026-10-14; review CD fix 1)? Only their words count
+ *  (after MERCHANT_MARKER), accents ignored. The request must name a header control as its target:
+ *  - the cart's look, icon, button or count badge (namesHeaderCart, shared with the kit-touch classifier);
+ *  - the icon or button of the menu, the search or the account, or the magnifier;
+ *  - the controls as a group («los botones de la tienda / del encabezado / de arriba»);
+ *  - bare «botones» / «íconos» with a shape word («botones más redondos»), only when the request names no other target
+ *    (portada, inicio, WhatsApp, redes, pie de página, sección, catálogo, producto, «Comprar ahora», «reservar»…).
+ *  A shape word alone, «Cambia el carrito» (the cart page's) or a button of the authored pages is never a controls request. */
 export function instructionConcernsControls(text: string): boolean {
-  const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const control = /\b(?:botones|boton|iconos|icono)\b/.test(own)
-    && /\b(?:carrito|cuenta|menu|buscar|busqueda|lupa|redond\w*|cuadrad\w*|esquinas?|bordes?|forma|pildoras?|boletos?|tickets?|etiquetas?|sellos?|stickers?|pegatinas?|contador)\b/.test(own);
-  const cartAs = /\bcarrito\s+(?:como|en\s+forma\s+de|con\s+forma\s+de|con\s+(?:un|una)\s+icono)\b/.test(own);
-  const iconOf = /\b(?:icono|simbolo|dibujo)\s+(?:del?|de\s+la|para\s+el)\s+(?:carrito|cuenta|menu|buscador|busqueda)\b/.test(own);
-  const badge = /\b(?:contador|numerito|burbuja|insignia)\s+del?\s+carrito\b/.test(own);
-  return control || cartAs || iconOf || badge;
+  const own = merchantOwnWords(text);
+  if (namesHeaderCart(own) || HEADER_CONTROL.test(own) || HEADER_GROUP.test(own)) return true;
+  return BARE_BUTTONS.test(own) && SHAPE_WORD.test(own) && !OTHER_TARGET.test(own);
 }
