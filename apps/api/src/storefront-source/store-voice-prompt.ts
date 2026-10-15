@@ -2,7 +2,7 @@
 import { cleanControlWord, type StoreControls } from './store-controls';
 import { avoidPhrases } from './copy-check';
 import type { PlaybookKind } from './design-engine/playbook';
-import { merchantTextOf, type StoreVoice } from './store-voice';
+import { merchantTextOf, readVoice, VOICE_FILE, type StoreVoice } from './store-voice';
 import type { VoiceRun } from './store-voice-run';
 
 export const WRITING_RULES: readonly string[] = [
@@ -65,4 +65,11 @@ export function voiceCartWord(voice: StoreVoice | undefined): string | undefined
 export function withVoiceCartWord(controls: StoreControls, voice: StoreVoice | undefined): StoreControls {
   const cart = voiceCartWord(voice);
   return cart ? { ...controls, words: { ...controls.words, cart } } : controls;
+}
+
+/** The email designer's line (spec 2026-10-14): the voice, the store's words, a few specifics and every avoid phrase, as JSON
+ *  data; '' when the store has no readable sheet. */
+export function emailVoiceLine(json: string): string {
+  const voice = json ? readVoice([{ path: VOICE_FILE, content: json }]) : undefined;
+  return voice ? JSON.stringify({ voice: voice.voice, words: voice.words, specifics: voice.specifics.map(entry => entry.text).slice(0, 5), avoid: avoidPhrases(undefined, voice) }) : '';
 }

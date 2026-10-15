@@ -33,6 +33,13 @@ describe('emailKitPrompt', () => {
     expect(prompt.length).toBeLessThan(45_000);
     expect(prompt).toMatch(/untrusted/i);
   });
+
+  it('writes the copy in the store voice when the store has a sheet, as untrusted data (spec 2026-10-14 store voice)', () => {
+    const prompt = emailKitPrompt({ ...input, voice: '{"voice":"Hablamos de tú."}' });
+    expect(prompt).toContain('Store voice sheet');
+    expect(prompt.indexOf('Store voice sheet')).toBeGreaterThan(prompt.indexOf('untrusted reference content'));
+    expect(emailKitPrompt(input)).not.toContain('Store voice sheet');
+  });
 });
 
 describe('designEmailKit', () => {

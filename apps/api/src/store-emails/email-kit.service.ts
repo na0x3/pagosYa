@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { emailVoiceLine } from '../storefront-source/store-voice-prompt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
@@ -33,6 +34,7 @@ export class EmailKitService {
       brand: brandContext((brand?.data as BrandProfile | null) ?? EMPTY_BRAND),
       stylesheet: read(/(?:^|\/)styles(?:\/globals)?\.css$/i), homepage: read(/(?:^|\/)index\.html$/i),
       products: products.map(p => p.name),
+      voice: emailVoiceLine(read(/^voice\.json$/)),
     }, {
       provider: sourceProvider(this.config, designer.EMAIL_KIT_MODEL), budget: new SourceRequestBudget(designer.EMAIL_KIT_MAX_CREDITS, unmetered),
       record: (body, durationMs, status) => this.usage.record(storeId, 'email-kit', designer.EMAIL_KIT_MODEL, body, durationMs, status),

@@ -46,3 +46,20 @@ describe('EmailKitService', () => {
     await expect(failing.service.designAfterSite('s')).resolves.toBeUndefined();
   });
 });
+
+describe('the store voice reaches the email design (spec 2026-10-14 store voice)', () => {
+  it("reads voice.json from the files it designs from", async () => {
+    const sheet = { version: 1, voice: 'Hablamos de tú.', specifics: [], texture: [], assumed: [], words: { order: 'Tu pedido' }, avoid: [] };
+    const prisma: any = {
+      store: { findUnique: jest.fn(async () => ({ name: 'Café', publishedSourceRevision: 3 })) },
+      storeSourceVersion: { findFirst: jest.fn(async () => ({ revision: 5, snapshot: { files: [{ path: 'index.html', content: '<h1>Café</h1>' }, { path: 'voice.json', content: JSON.stringify(sheet) }] } })) },
+      storeBrandProfile: { findUnique: jest.fn(async () => null) },
+      paymentLink: { findMany: jest.fn(async () => []) },
+    };
+    const spy = jest.spyOn(designer, 'designEmailKit').mockImplementation(async () => ({ raw: { layout: '<p>no slot</p>', blocks: '', copy: '{}' }, usage: null }));
+    const config: any = { get: (key: string) => ({ 'app.openAi.apiKey': 'k' } as Record<string, unknown>)[key] };
+    const service = new EmailKitService(prisma, { active: jest.fn(), saveActive: jest.fn(), saveCandidate: jest.fn() } as any, { record: jest.fn() } as any, config);
+    await service.design('s', 'twin', 'candidate');
+    expect(spy.mock.calls[0][0].voice).toContain('"voice":"Hablamos de tú."');
+  });
+});

@@ -1,5 +1,5 @@
 import { PLAYBOOK } from './design-engine/playbook';
-import { storeBrainDirection, storeVoiceDirection, voiceAuthorInput, voiceCartWord, voiceEditDirection, withVoiceCartWord, WRITING_RULES } from './store-voice-prompt';
+import { emailVoiceLine, storeBrainDirection, storeVoiceDirection, voiceAuthorInput, voiceCartWord, voiceEditDirection, withVoiceCartWord, WRITING_RULES } from './store-voice-prompt';
 import { CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 import type { StoreVoice } from './store-voice';
 import type { VoiceRun } from './store-voice-run';
@@ -67,5 +67,15 @@ describe('the controls read the order word (spec 2026-10-14; store controls read
     expect(withVoiceCartWord(record, SHEET).words.cart).toBe('Tu pedido');
     expect(withVoiceCartWord(record, { ...SHEET, words: { order: 'Tu canasta grande y linda' } })).toBe(record);
     expect(withVoiceCartWord(record, undefined)).toBe(record);
+  });
+});
+
+describe('the email designer’s line (spec 2026-10-14)', () => {
+  it('carries the voice, the words, a few specifics and the avoid phrases; nothing without a sheet', () => {
+    const line = JSON.parse(emailVoiceLine(JSON.stringify(SHEET)));
+    expect(line).toMatchObject({ voice: SHEET.voice, words: SHEET.words, specifics: ['El flat white con alfajor'] });
+    expect(line.avoid).toEqual(expect.arrayContaining(['calidad que se nota', 'pausa perfecta']));
+    expect(emailVoiceLine('')).toBe('');
+    expect(emailVoiceLine('{nope')).toBe('');
   });
 });
