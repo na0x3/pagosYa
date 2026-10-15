@@ -360,3 +360,41 @@ describe('a published design with a drawn signup turns subscriptions on', () => 
     expect(retention.createMany).not.toHaveBeenCalled();
   });
 });
+
+describe('assumed facts block publishing, never the checks or previews (spec 2026-10-14 store voice)', () => {
+  const sheet = (status: 'assumed' | 'confirmed') => ({ version: 1, voice: 'Hablamos de tú.', specifics: [], texture: [], assumed: [{ id: 'a1', text: 'desde 1998', kind: 'history', status }], words: {}, avoid: [] });
+  const withVoice = (harness: ReturnType<typeof checkedPublishing>, status: 'assumed' | 'confirmed') => {
+    harness.snapshots[1] = sourceProjectSnapshot({ ...harness.snapshots[1], revision: 0, label: 'Diseño', files: [...harness.snapshots[1].files, { path: 'voice.json', encoding: 'utf8', content: JSON.stringify(sheet(status)) }] });
+  };
+  const message = 'Antes de publicar, confirma, corrige o quita el dato que YAPI supuso: «desde 1998». Está en «Datos que YAPI supuso».';
+
+  for (const action of ['publish', 'start'] as const) {
+    it(`${action}: refuses while a fact waits, naming it`, async () => {
+      const harness = checkedPublishing();
+      withVoice(harness, 'assumed');
+      await harness.record();
+      await expect(harness.service[action]('m', 's', 2, 0)).rejects.toMatchObject({ status: 409, message });
+      expect(harness.prisma.$transaction).not.toHaveBeenCalled();
+    });
+  }
+
+  it('records the browser check as failed, with the facts, instead of refusing it', async () => {
+    const harness = checkedPublishing();
+    withVoice(harness, 'assumed');
+    await harness.record(2, true, 'm', [{ label: 'Escritorio', status: 'passed' }]);
+    expect(harness.results[0]).toMatchObject({ passed: false, findings: [{ label: 'Escritorio', status: 'passed' }, { label: 'Datos que YAPI supuso', status: 'failed', blocking: true, detail: message }] });
+  });
+
+  it('publishes once every fact is confirmed', async () => {
+    const harness = checkedPublishing();
+    withVoice(harness, 'confirmed');
+    await harness.record();
+    await expect(harness.service.publish('m', 's', 2, 0)).resolves.toBeDefined();
+  });
+
+  it('never blocks reading a revision: previews and «Ver en navegador» read the snapshot as it is', async () => {
+    const harness = checkedPublishing();
+    withVoice(harness, 'assumed');
+    await expect(harness.service.snapshot('s', 2)).resolves.toMatchObject({ files: expect.arrayContaining([expect.objectContaining({ path: 'voice.json' })]) });
+  });
+});

@@ -1,4 +1,6 @@
 import { boundedSourceFindings, requireSourceChecks, sourceRuntimeDigest, SourceCheckResultDto } from './source-check-results';
+import { assumedFactsBlockMessage, assumedFactsCheckRow } from './assumed-facts';
+import { pendingAssumptions, readVoice } from './store-voice';
 import { isPublicStore, PUBLIC_STORE_WHERE } from '../stores/active-store';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { currentSourceRuntime, currentSourceRuntimeBundle, withSourceRuntime, type SourceRuntimeFiles, type TrustedSourceRuntimeBundle } from './source-runtime';
@@ -97,14 +99,25 @@ export class SourcePublishingService {
     await withSourceMotion(snapshot.files, sourceMotionMode(snapshot.files));
     return snapshot;
   }
+
+  /** Spec 2026-10-14 store voice: a revision whose sheet lists a fact YAPI assumed and the merchant has not confirmed, corrected
+   *  or removed cannot go live. The message lists the facts; the Studio shows the three actions beside them. */
+  private assertNoPendingAssumptions(snapshot: SourceProjectSnapshot) {
+    const pending = pendingAssumptions(readVoice(snapshot.files));
+    if (pending.length) throw new ConflictException(assumedFactsBlockMessage(pending));
+  }
   async recordChecks(merchantId: string, storeId: string, revision: number, body: SourceCheckResultDto) {
     await this.owner(merchantId, storeId);
     if (!Number.isInteger(revision) || revision < 1 || revision > 2147483647) throw new BadRequestException('La revisión debe ser un entero positivo.');
     if (typeof body.passed !== 'boolean') throw new BadRequestException('El resultado debe indicar si la comprobación pasó.');
     const findings = boundedSourceFindings(body.findings) as Prisma.InputJsonArray;
     const snapshot = await this.snapshot(storeId, revision);
+    // Spec 2026-10-14 store voice: while a fact YAPI assumed waits for the merchant, the check is recorded as failed with the facts
+    // listed. It is still recorded: only publishing waits, never the checks, drafts or previews.
+    const pending = pendingAssumptions(readVoice(snapshot.files));
     return this.prisma.sourceCheckResult.create({ data: {
-      storeId, revision, snapshotDigest: sourceProjectDigest(snapshot), runtimeDigest: await sourceRuntimeDigest(), passed: body.passed, findings,
+      storeId, revision, snapshotDigest: sourceProjectDigest(snapshot), runtimeDigest: await sourceRuntimeDigest(), passed: body.passed && !pending.length,
+      findings: (pending.length ? [...findings, assumedFactsCheckRow(pending)] : findings) as Prisma.InputJsonArray,
     } });
   }
   async change(merchantId: string, storeId: string, expected: number, operation: (tx: Prisma.TransactionClient) => Promise<void>) {
@@ -141,6 +154,7 @@ export class SourcePublishingService {
     if (store.status !== 'ACTIVE') throw new BadRequestException('Activa la tienda antes de publicar este diseño.');
     const snapshot = await this.snapshot(storeId, revision);
     assertSourceCommerceContract(snapshot);
+    this.assertNoPendingAssumptions(snapshot);
     const runtime = await currentSourceRuntimeBundle();
     await requireSourceChecks(this.prisma, storeId, revision, snapshot, runtime.digest);
     return this.change(merchantId, storeId, expected, async tx => {
@@ -167,6 +181,7 @@ export class SourcePublishingService {
     if (store.checkoutMode !== 'payment') throw new BadRequestException('Activa los pagos integrados para comparar compras confirmadas.');
     const [a, b] = await Promise.all([this.snapshot(storeId, store.publishedSourceRevision), this.snapshot(storeId, revision)]);
     assertSourceCommerceContract(a); assertSourceCommerceContract(b);
+    this.assertNoPendingAssumptions(b);
     const authored = (s: SourceProjectSnapshot) => JSON.stringify(s.files.filter(f => /\.(html|css|js)$/.test(f.path) && !['config.js', 'commerce.js'].includes(f.path)).sort((x,y)=>x.path.localeCompare(y.path)));
     if (store.publishedSourceRevision === revision || authored(a) === authored(b)) throw new BadRequestException('Elige una alternativa con un cambio de diseño para comparar.');
     const runtime = await currentSourceRuntimeBundle();
