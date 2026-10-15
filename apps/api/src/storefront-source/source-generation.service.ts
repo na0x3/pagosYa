@@ -1,26 +1,24 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
-import { sourceSignatureAuthorDirection, sourceSignatureTaskLine } from './source-signature';
+import { sourceSignatureTaskLine } from './source-signature';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
 import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure, sketchDirection, attachDesign, validateDesign, designSeedFor, type DesignInput } from './design-engine/design-engine';
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
-import { sep5AuthorPrompt, sep5CardLook, sep5BoldDefault, sep5FontDirection, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_AUTHOR_VERSION, SEP5_RESPONSE_SCHEMA, sep5ResponseSchema, sep5Products, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
-import { captureSep5Draft, sep5MeasuredFacts } from './design-engine/sep5-review-capture';
+import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, SEP5_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { emptySourceHeaders, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSourceHeader } from './source-header';
 import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
-import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
-import { chatTouchKept, instructionConcernsKitSurfaces, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
+import { instructionConcernsKitSurfaces, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, framePlatformHeader, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
+import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
-import { contractMisses, craftFacts, detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
+import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
@@ -46,7 +44,6 @@ import { avoidTakenFingerprint, sourceRuntimeDna } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, isClaude } from './source-provider';
 import { withSavedLogo } from './source-saved-logo';
-import { sep5AuthorableFiles, sep5PreviousSource } from './source-authorable';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
@@ -115,7 +112,7 @@ import { snapshotWithProductTheme } from './product-theme';
 import { openAiAgentModel } from './agent/agent-model';
 import { agentInstructions, agentOpening } from './agent/agent-prompt';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
-import { CLAUDE_COMPANION_MODEL, SEP5_CLIENT_TIMEOUT_MS, SEP5_MAX_OUTPUT_TOKENS, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
+import { CLAUDE_COMPANION_MODEL, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
 import { outputSchema, sourceStablePrompt } from './source-generation-prompt';
 import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
 import type { AgentOutcome, GenerateExecution, GeneratedSource, GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
@@ -123,10 +120,10 @@ import { runStyleProposal, type ProposeStylesInput } from './source-style-propos
 import { startBackgroundReview, type BackgroundReviewInput } from './source-review-runner';
 import { sep5Caller } from './source-sep5-call';
 import { assembleSourceSave, designMotifs, type LookChoice, type SaveAssemblyContext } from './source-save-assembly';
+import { runSep5AuthorStage } from './source-sep5-stage';
+import { runChatKitTouch } from './source-sep5-review';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
-/** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
-const REVIEW_SAVE_MARGIN_MS = 90_000;
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
 export { completedCredits, fillsProductPagesAfterSave } from './source-generation-run';
 export { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
@@ -931,133 +928,10 @@ export class SourceGenerationService {
       // the single-call repair may switch it before the chat touch runs.
       const { sep5Call, touchCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
       if (sep5Author) {
-        // The Sep-5 commit (26f889c8) wrote the store instead of filling a schema, and that is where its voice
-        // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one
-        // attempt, high effort, 18k output tokens. What it writes is the store; nothing re-renders it.
-        await progress?.('building');
-        // The authored files ARE the store here, so the choreography is actionable: Sep-5 writes its own CSS
-        // and site.js. The engine's own motion plan is reused rather than reinvented, in its non-React form.
-        // Not passed on the translation branch below, where only palette, copy and section order survive and
-        // authored motion would be output tokens spent on CSS nothing renders.
-        const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
-        // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
-        // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-        const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: playbookText, fonts: sep5FontDirection(committedDesign), signature: sourceSignatureAuthorDirection(committedDesign?.concepts[committedDesign.selected], signatureOn), frame: framePlatformHeader(frame.paragraph), hero: pickedHero, card: pickedCard };
-        const prompt = sep5AuthorPrompt(authorInput);
-        const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(sitePurpose === 'shop'), SEP5_CLIENT_TIMEOUT_MS);
-        const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
-        // Sep-5's own guard. There is deliberately no fallback to the engine here: a store rendered from a
-        // plan is the output this path exists to avoid, so a failed author stage fails the generation and the
-        // merchant's previous revision stays untouched.
-        if (!authored.success || !sep5ProjectIsUsable(authored.data.files, sitePurpose)) {
-          attempt.failureReason ??= `la respuesta no incluyó un proyecto utilizable (${attempt.responseStatus || 'sin estado'}${attempt.incompleteReason ? `: ${attempt.incompleteReason}` : ''})`;
-          this.logger.warn(JSON.stringify({ event: 'sep5_author_unusable', generationId: run.id, status: attempt.responseStatus, reason: attempt.incompleteReason, outputTokens: body?.usage?.output_tokens, reasoningTokens: attempt.reasoningTokens, maxOutputTokens: SEP5_MAX_OUTPUT_TOKENS }));
-          throw new BadGatewayException('La generación no devolvió una tienda completa. Vuelve a intentarlo.');
-        }
-        attempt.status = 'COMPLETED';
-        // The products the merchant listed with their prices go to the real catalog; a rejected list never fails the store.
-        // A showcase sells nothing online: it never creates products, whatever the author returned.
-        const listed: { products: typeof products; note?: string } = sitePurpose === 'shop' ? sep5Products(authored.data.products, dto.instruction, ownedUrls) : { products: [] };
-        products = listed.products;
-        if (listed.note) autoRepairs.push(listed.note);
-        // `motion` says whether the choreography was actually sent, so a store that came out static can be
-        // told apart from a run that was never asked for movement.
-        this.logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: run.id, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none', bold: authorInput.boldDefault }));
-        const authorable = sep5AuthorableFiles(authored.data.files);
-        if (authorable.dropped.length) autoRepairs.push(`dropped platform files the author returned: ${authorable.dropped.join(', ')}`);
-        generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${owner.slug}`, files: authorable.files };
-        // The Sep-5 run validated only the project contract (apps/api/sep5-run.mjs). The presentation and
-        // visual-system contracts were written later, against engine output; holding authored source to them
-        // would reject the designs this path exists to reproduce. The project contract still applies.
-        lenient = true;
-        try { await acceptCandidate(); } finally { lenient = false; }
-        // The standard pages (Buscar, Nosotros, Contacto, the policies) and the footer slot that links them, on
-        // every authored store instead of only when the merchant later asks. Built from the final index.html, so
-        // they share its header, footer and stylesheet; a store whose markup declines the surgery keeps without.
-        const addSep5StandardPages = async () => {
-          const pages = withStaticStandardPages(generated.files, sitePurpose);
-          if (!pages.added.length && !pages.refreshed.length && !pages.slotAdded) return;
-          const before = { generated, repairs: autoRepairs.length, motifs: motifFiles, preview: acceptedPreviewFiles, unused: unusedImagePaths };
-          generated = { ...generated, files: pages.files };
-          lenient = true;
-          try { await acceptCandidate(); }
-          catch (error) {
-            generated = before.generated; autoRepairs.length = before.repairs; motifFiles = before.motifs; acceptedPreviewFiles = before.preview; unusedImagePaths = before.unused;
-            this.logger.warn(JSON.stringify({ event: 'sep5_standard_pages_declined', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
-          } finally { lenient = false; }
-        };
-        // Self-review after the save (spec 2026-10-12 faster generation). The author writes blind, never seeing its own CSS
-        // render; the review is shown the draft once, at desktop and phone widths, with what the browser measured. The draft
-        // that just passed is saved as revision N and shown first; startSep5Review runs this afterwards and saves the corrected
-        // project as N+1 only if it passes the same acceptance and the store is still on N.
-        // Kit touches (spec 2026-10-14 one look per store) ride the same background stage: after the review's edits, on the
-        // final home page, saved in the same N+1. A shop only: showcases have no kit pages.
-        const kitTouchOn = this.config.get<boolean>('app.yapiKitTouch') === true && sitePurpose === 'shop';
-        if (sep5SelfReview || kitTouchOn) {
-          const draftFiles = authored.data.files, draftPreview = acceptedPreviewFiles;
-          sep5Review = async review => {
-            const notes: string[] = [];
-            let changed = false;
-            if (sep5SelfReview) {
-              // The same config a new store saves with, so the runtime renders the live catalog into the draft.
-              const config = { sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data };
-              const preview = await currentSourceRuntime({ brief: dto.brief, files: [
-                ...draftPreview.filter(file => !['config.js', 'commerce.js'].includes(file.path)),
-                { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
-                { path: 'commerce.js', content: '' },
-              ] } as unknown as SourceProjectSnapshot);
-              const { shots, facts } = await captureSep5Draft(preview, review.signal);
-              // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
-              const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
-              const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
-              const reviewed = await sep5Call('review', sep5ReviewPrompt({ ...authorInput, draft: draftFiles, measured }), shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_CLIENT_TIMEOUT_MS, review);
-              const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
-              if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${reviewed.attempt.responseStatus || 'sin estado'}${reviewed.attempt.incompleteReason ? `: ${reviewed.attempt.incompleteReason}` : ''})`);
-              this.logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: run.id, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
-              // Edits on the draft the review was shown; one that does not apply cleanly is skipped, never fatal.
-              const edited = applySep5Edits(draftFiles, result.data.edits);
-              if (edited.files.every((file, index) => file.content === draftFiles[index]?.content)) reviewed.attempt.status = 'COMPLETED';
-              else {
-                if (!sep5ProjectIsUsable(edited.files, sitePurpose)) throw new Error(sitePurpose === 'shop' ? 'la revisión dejó el proyecto sin catálogo, carrito o estilos' : 'la revisión dejó el sitio sin su acción principal o sin estilos');
-                const kept = sep5AuthorableFiles(edited.files);
-                reviewing = true;
-                generated = { label: result.data.label.slice(0, 120) || generated.label, files: kept.files };
-                lenient = true;
-                try { await acceptCandidate(); } finally { lenient = false; }
-                await addSep5StandardPages();
-                reviewed.attempt.status = 'COMPLETED';
-                notes.push(...result.data.notes);
-                changed = true;
-              }
-            }
-            // The touch reads the home as the review left it; a kept touch does not change the home, so the final save reuses
-            // the look that base measured instead of measuring a third time.
-            let touchedLook: { look: StoreLook | undefined } | undefined;
-            if (kitTouchOn) {
-              // Its own deadline, like the chat re-run (T8-I2): the review's cancellation still aborts it, but a slow touch is
-              // dropped in time for N+1 to save the review's own edits; with too little time left it is skipped.
-              const budget = touchBudgetMs(review.deadline - Date.now(), REVIEW_SAVE_MARGIN_MS);
-              if (!budget) this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: 'deadline', skipped: true }));
-              else {
-                const touchSignal = AbortSignal.any([review.signal, AbortSignal.timeout(budget)]);
-                try {
-                  const base = await assembleSave(touchSignal, { fallback: revisionLook });
-                  const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, signature: committedDesign?.concepts[committedDesign.selected]?.signature, signal: touchSignal, call: touchCall({ signal: touchSignal, attempts: review.attempts }) });
-                  const surfaces = Object.keys(touch?.css ?? {});
-                  if (touch && surfaces.length) { kitTouch = touch.css; touch.used(); notes.push(...touch.notes); changed = true; touchedLook = { look: sanitizeLook(readConfigFile(base.files).look) }; }
-                  this.logger.log(JSON.stringify({ event: surfaces.length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces, dropped: (touch?.dropped ?? []).slice(0, 12), ...(touch ? {} : { reason: 'unusable answer' }) }));
-                } catch (error) {
-                  review.signal.throwIfAborted();
-                  this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: touchSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
-                }
-              }
-            }
-            // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
-            if (!changed) return null;
-            return { saveInput: await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: revisionLook }), notes };
-          };
-        }
-        await addSep5StandardPages();
+        // Sep-5 authors the store, adds the standard pages and arms the background review (source-sep5-stage.ts).
+        // assembleSave is declared after this branch: the stage gets a wrapper, called only by the review after the save.
+        await runSep5AuthorStage({ facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall,
+          assembleSave: (assembleSignal, lookChoice) => assembleSave(assembleSignal, lookChoice) });
       } else if (sketchFirst) {
         await progress?.('building');
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
@@ -1509,27 +1383,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // when called: once for revision N, and again by the background review.
     const saveContext: SaveAssemblyContext = { facts, live, platformHeader, agentPolicyChange };
     const assembleSave = (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => assembleSourceSave(saveContext, assembleSignal, lookChoice);
-    // A chat request about the kit pages (spec 2026-10-14) re-runs only the touch step, with the merchant's words. The new
-    // CSS replaces the surfaces it covers; surfaces it leaves empty keep the store's earlier touch. It runs before the
-    // receipt so a used attempt is billed, on its own deadline (the touch never fails an edit), and an agent theme chosen
-    // in this same request wins over it on the surfaces the theme set.
-    const touchBudget = touchBudgetMs(started + runTimeout - Date.now());
-    if (!creative && !claude && sitePurpose === 'shop' && this.config.get<boolean>('app.yapiKitTouch') === true && instructionConcernsKitSurfaces(dto.instruction) && touchBudget > 0) {
-      const touchSignal = AbortSignal.any([signal, AbortSignal.timeout(touchBudget)]);
-      try {
-        const base = await assembleSave(touchSignal);
-        const touch = await runKitTouch({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, instruction: (dto.instruction.split(MERCHANT_MARKER).at(-1) ?? dto.instruction).trim().slice(0, 400), signal: touchSignal, call: touchCall({ signal: touchSignal, attempts }) });
-        // The agent's theme of this same request wins on the surfaces it set; only CSS that is kept is billed.
-        const { css: chosen, bill } = chatTouchKept(touch?.css ?? {}, agentTheme);
-        if (touch && bill) touch.used();
-        const before = readConfigFile(base.files).dna;
-        if (Object.keys(chosen).length) kitTouch = { ...(before?.touch === 1 ? pickTouch(before) : {}), ...chosen };
-        this.logger.log(JSON.stringify({ event: Object.keys(chosen).length ? 'kit_touch_saved' : 'kit_touch_dropped', generationId: run.id, surfaces: Object.keys(chosen), request: true }));
-      } catch (error) {
-        signal.throwIfAborted();
-        this.logger.warn(JSON.stringify({ event: 'kit_touch_dropped', generationId: run.id, reason: touchSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300), request: true }));
-      }
-    }
+    // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
+    await runChatKitTouch({ facts, live, touchCall, assembleSave });
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
