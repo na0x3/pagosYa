@@ -22,6 +22,7 @@ import type { SourceProjectSnapshot } from './source-project';
 import type { StyleProposal } from './source-style-proposal';
 import type { KitTouchCss } from './kit-touch';
 import type { StoreLook } from './store-look';
+import type { StoreControls } from './store-controls';
 import type { frameForRun } from './design-engine/frame-draw';
 import type { AgentStep, AgentToolbox } from './agent/agent-tools';
 import type { PendingPolicies } from './source-agent-policies';
@@ -35,7 +36,7 @@ import type { SaveSourceProjectDto } from './dto/save-source-project.dto';
 /** What a proposal-mode generate returns: the run now waits for the merchant to pick a card. */
 export type StyleProposalResult = { styleProposal: { generationId: string; cards: number } };
 /** One provider call of a run (or of its background review), as the row's attempts record it. */
-export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review' | 'touch'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
+export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | 'source' | 'agent' | 'visual' | 'sketch' | 'composition' | 'brand' | 'creative' | 'critic' | 'author' | 'review' | 'touch' | 'controls'; durationMs: number; status: string; usage: ReturnType<typeof sourceUsage>; responseStatus?: string; incompleteReason?: string; reasoningTokens?: number; reasoningEffort?: string; failureReason?: string; tools?: string[]; diagnostics?: Array<{ tool: string; digest: string; durationMs: number; output: string }> };
 /** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. `deadline` is when
  * the stage's own signal times out (epoch ms), so a step inside it can keep time for the N+1 save. */
 export type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[]; deadline: number }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
@@ -83,6 +84,8 @@ export type GenerationLive = {
   sep5Review: Sep5Review | undefined;
   kitTouch: KitTouchCss | undefined;
   readonly revisionLook: StoreLook | undefined;
+  /** Store controls (spec 2026-10-14): the language revision N was saved with, the review stage's fallback. */
+  readonly revisionControls: StoreControls | undefined;
   acceptedPreviewFiles: SourceProjectFileDto[];
   readonly committedDesign: SourceDesign | undefined;
   readonly boldAsked: boolean;

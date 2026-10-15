@@ -147,3 +147,26 @@ export async function guardControlsOnSnapshot(snapshot: SourceProjectSnapshot, o
   }, 'no-preference');
   return failures;
 }
+
+export type ModelImage = { type: 'input_image'; image_url: string; detail: 'auto' };
+/** The home page with its header in view, at 1440 and 390, for the controls call (spec part 4). */
+export async function captureControlsShots(snapshot: SourceProjectSnapshot, signal: AbortSignal): Promise<ModelImage[]> {
+  const runtime = await currentSourceRuntime(snapshot);
+  const shots: ModelImage[] = [];
+  await withVisualSandbox(runtime, sourceVisualState(runtime, 'index.html', undefined, true).query, signal, false, async context => {
+    for (const width of HEADER_CHECK_WIDTHS) {
+      signal.throwIfAborted();
+      const page = await context.newPage();
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      page.setDefaultTimeout(7000);
+      try {
+        await page.goto('https://preview.invalid/index.html', { waitUntil: 'load', timeout: 12_000 });
+        await page.evaluate(async () => { await document.fonts.ready; });
+        await page.waitForTimeout(300);
+        const image = await page.screenshot({ type: 'jpeg', quality: 70, animations: 'disabled', timeout: 7000 });
+        shots.push({ type: 'input_image', image_url: `data:image/jpeg;base64,${image.toString('base64')}`, detail: 'auto' });
+      } finally { await page.close(); }
+    }
+  }, 'no-preference');
+  return shots;
+}

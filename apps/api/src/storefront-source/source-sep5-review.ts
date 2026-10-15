@@ -11,13 +11,26 @@ import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { chatTouchKept, instructionConcernsKitSurfaces, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs } from './kit-touch';
 import type { assembleSourceSave, LookChoice } from './source-save-assembly';
 import type { Sep5Caller } from './source-sep5-call';
-import type { GenerationLive, GenerationRunFacts, Sep5Review } from './source-generation-types';
+import type { GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
+import type { StoreControls } from './store-controls';
+import type { ControlsDesign } from './store-controls-design';
 
 /** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
 export const REVIEW_SAVE_MARGIN_MS = 90_000;
 
-/** generate()'s assembleSave. Stages receive it wrapped, `(…a) => assembleSave(…a)`, because it is declared after them. */
-export type AssembleSave = (assembleSignal?: AbortSignal, lookChoice?: LookChoice) => ReturnType<typeof assembleSourceSave>;
+/** generate()'s assembleSave. Stages receive it wrapped, `(…a) => assembleSave(…a)`, because it is declared after them.
+ *  `controlsChoice.use` saves that control language instead of generate()'s own pick (spec 2026-10-14 store controls). */
+export type AssembleSave = (assembleSignal?: AbortSignal, lookChoice?: LookChoice, controlsChoice?: { use?: StoreControls }) => ReturnType<typeof assembleSourceSave>;
+type SaveInput = Awaited<ReturnType<AssembleSave>>;
+
+/** Store controls (spec 2026-10-14, part 4), built by generate(): YAPI's controls call, started beside the review call, and the
+ *  browser guard on the N+1 candidate. */
+export type ReviewControls = {
+  /** Never rejects: null when the call fails, times out or answers nothing usable. */
+  design: (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => Promise<ControlsDesign | null>;
+  /** The record drawn into the candidate and guarded; a failing guard puts revision N's language back (kept: false). */
+  keep: (input: SaveInput, designed: ControlsDesign, signal: AbortSignal) => Promise<{ input: SaveInput; kept: boolean }>;
+};
 
 export type Sep5ReviewContext = {
   facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'apiUrl' | 'data' | 'sitePurpose' | 'scrollFeel'>;
@@ -29,6 +42,7 @@ export type Sep5ReviewContext = {
   addSep5StandardPages: () => Promise<void>;
   acceptCandidate: () => Promise<void>;
   sep5Call: Sep5Caller['sep5Call']; touchCall: Sep5Caller['touchCall'];
+  controls?: ReviewControls;
   assembleSave: AssembleSave;
 };
 
@@ -36,12 +50,14 @@ export type Sep5ReviewContext = {
  *  blind; the review is shown the draft once, at desktop and phone widths, with what the browser measured, and the
  *  corrected project lands as N+1 only if it passes the same acceptance and the store is still on N. */
 export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
-  const { facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, assembleSave } = context;
+  const { facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, controls, assembleSave } = context;
   // The ConfigService is `appConfig` here: the review builds its own `config` (the draft's config.js object).
   const { config: appConfig, logger, runId, slug, dto, apiUrl, data, sitePurpose, scrollFeel } = facts;
   return async review => {
     const notes: string[] = [];
     let changed = false;
+    // YAPI's controls (spec 2026-10-14) are designed beside the review call: the ChatGPT bridge serves about two calls at once.
+    const controlsJob = controls ? controls.design(review) : null;
     if (sep5SelfReview) {
       // The same config a new store saves with, so the runtime renders the live catalog into the draft.
       const config = { sitePurpose, scrollFeel, demo: false, slug: slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: appConfig.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data };
@@ -96,9 +112,18 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
         }
       }
     }
+    // YAPI's controls, guarded on the N+1 candidate: a failing guard keeps revision N's language, never the review's edits.
+    const designed = controlsJob ? await controlsJob : null;
+    review.signal.throwIfAborted();
     // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
-    if (!changed) return null;
-    return { saveInput: await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: live.revisionLook }), notes };
+    if (!changed && !designed) return null;
+    let saveInput = await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: live.revisionLook }, { use: live.revisionControls });
+    if (designed && controls) {
+      const guarded = await controls.keep(saveInput, designed, review.signal);
+      if (guarded.kept) { designed.used(); notes.push(designed.note); saveInput = guarded.input; }
+      else if (!changed) return null;
+    }
+    return { saveInput, notes };
   };
 }
 

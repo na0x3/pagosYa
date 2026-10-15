@@ -9,7 +9,7 @@ import { sourceResponseJson } from './source-response';
 import { withStaticStandardPages } from './source-static-pages';
 import type { Evidence, PlaybookEntry } from './design-engine/playbook';
 import type { Sep5Caller } from './source-sep5-call';
-import { createSep5Review, type AssembleSave } from './source-sep5-review';
+import { createSep5Review, type AssembleSave, type ReviewControls } from './source-sep5-review';
 import type { GenerationLive, GenerationRunFacts } from './source-generation-types';
 
 export type Sep5StageContext = {
@@ -20,6 +20,8 @@ export type Sep5StageContext = {
   pickedHero: string; pickedCard: string;
   acceptCandidate: () => Promise<void>;
   sep5Call: Sep5Caller['sep5Call']; touchCall: Sep5Caller['touchCall'];
+  /** Store controls (spec 2026-10-14, part 4): YAPI's controls call beside the review, and its guard; absent when off. */
+  controls?: ReviewControls;
   /** Lazy: generate() declares assembleSave after the engine branch; the review calls it only after revision N is saved. */
   assembleSave: AssembleSave;
 };
@@ -27,7 +29,7 @@ export type Sep5StageContext = {
 /** Sep-5 authors the whole static store in one call (the pinned 26f889c8 prompt), adds the standard pages, and arms the
  *  background review (live.sep5Review) that saves N+1 after revision N is shown. */
 export async function runSep5AuthorStage(context: Sep5StageContext): Promise<void> {
-  const { facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall, assembleSave } = context;
+  const { facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall, controls, assembleSave } = context;
   const { config, logger, runId, slug, dto, progress, data, assetLegend, images, ownedUrls, sitePurpose, motion, primaryAction, oldFiles, creative, autoRepairs, signatureOn } = facts;
   // The Sep-5 commit (26f889c8) wrote the store instead of filling a schema, and that is where its voice
   // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one
@@ -91,9 +93,10 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   // Kit touches (spec 2026-10-14 one look per store) ride the same background stage: after the review's edits, on the
   // final home page, saved in the same N+1. A shop only: showcases have no kit pages.
   const kitTouchOn = config.get<boolean>('app.yapiKitTouch') === true && sitePurpose === 'shop';
-  if (sep5SelfReview || kitTouchOn) {
+  // Store controls (spec 2026-10-14, part 4): YAPI's controls call arms the review stage on its own too.
+  if (sep5SelfReview || kitTouchOn || controls) {
     const draftFiles = authored.data.files, draftPreview = live.acceptedPreviewFiles;
-    live.sep5Review = createSep5Review({ facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, assembleSave });
+    live.sep5Review = createSep5Review({ facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, controls, assembleSave });
   }
   await addSep5StandardPages();
 }

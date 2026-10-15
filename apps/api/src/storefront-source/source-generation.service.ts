@@ -20,6 +20,7 @@ import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
 import { controlsToAvoid, libraryIconFallback, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
 import { CONTROLS_GUARD_TIMEOUT_MS, guardControlsOnSnapshot, judgeControls } from './store-controls-guard';
+import { controlsDeadlineMs, runControlsDesign, type ControlsDesign } from './store-controls-design';
 import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
@@ -112,7 +113,7 @@ import { startBackgroundReview, type BackgroundReviewInput } from './source-revi
 import { sep5Caller } from './source-sep5-call';
 import { assembleSourceSave, designMotifs, type LookChoice, type SaveAssemblyContext } from './source-save-assembly';
 import { runSep5AuthorStage } from './source-sep5-stage';
-import { runChatKitTouch } from './source-sep5-review';
+import { runChatKitTouch, type ReviewControls } from './source-sep5-review';
 import { runAgentStage } from './source-agent-stage';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
@@ -487,6 +488,8 @@ export class SourceGenerationService {
     /** A new store or a redesign picks a library language for revision N; an edit carries the store's own. */
     const controlsFresh = controlsOn && creative && sep5Author;
     const previousControls = readControls(previousFiles);
+    /** YAPI designs the language (spec 2026-10-14, part 4): in the review stage of a new store or a redesign, and on chat requests. */
+    const controlsDesignOn = controlsOn && this.config.get<boolean>('app.yapiControlsDesign') === true;
     const storeData = data as { locations?: unknown[]; shippingEnabled?: boolean; shippingPickupEnabled?: boolean };
     // A contract section is asked for only when the store has the fact: YAPI must never invent hours or an address.
     const playbookEvidence = {
@@ -744,6 +747,9 @@ export class SourceGenerationService {
       /** Languages revision N must not repeat (spec 2026-10-14): the latest sibling and same-kind stores', and on a redesign the
        *  store's own. A slow or failed lookup only loses that history. */
       const controlsAvoid: StoreControls[] = controlsFresh ? [...controlsToAvoid(await withinOr(() => this.projects.recentControls(storeId, new Date(), 40), SHOWN_CARDS_TIMEOUT_MS, [] as RecentControls[]), controlsKind), ...(previousControls ? [previousControls] : [])] : [];
+      /** The language and files revision N saved: the review stage's fallback and what its controls call photographs. */
+      let revisionControls: StoreControls | undefined;
+      let revisionFiles: SourceProjectFileDto[] = [];
       /** The last accepted candidate as the preflight saw it, assets and fonts resolved: what the self-review renders. */
       let acceptedPreviewFiles: SourceProjectFileDto[] = [];
       // The run as the stages split out of generate() see it (source-generation-types.ts): fixed values by value, and every
@@ -767,6 +773,7 @@ export class SourceGenerationService {
         get sep5Review() { return sep5Review; }, set sep5Review(value) { sep5Review = value; },
         get kitTouch() { return kitTouch; }, set kitTouch(value) { kitTouch = value; },
         get revisionLook() { return revisionLook; },
+        get revisionControls() { return revisionControls; },
         get acceptedPreviewFiles() { return acceptedPreviewFiles; }, set acceptedPreviewFiles(value) { acceptedPreviewFiles = value; },
         get committedDesign() { return committedDesign; },
         get boldAsked() { return boldAsked; },
@@ -956,12 +963,31 @@ export class SourceGenerationService {
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
       // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
       // the single-call repair may switch it before the chat touch runs.
-      const { sep5Call, touchCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
+      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
+      /** The review stage's controls call (spec 2026-10-14, part 4), on its own deadline; null when it fails, times out or answers
+       *  nothing usable. It never rejects: the review closure starts it before the review call and awaits it after, so a rejection
+       *  would go unhandled meanwhile. */
+      const designReviewControls = async (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }): Promise<ControlsDesign | null> => {
+        const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(controlsDeadlineMs())]);
+        try {
+          const designed = await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords) });
+          if (!designed) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: 'unusable answer' }));
+          return designed;
+        } catch (error) {
+          if (!review.signal.aborted) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: controlsSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+          return null;
+        }
+      };
+      /** YAPI's controls for the Sep-5 review stage (source-sep5-review.ts ReviewControls): the call above, and the guard on the N+1
+       *  candidate with revision N's language as the fallback. None when YAPI_CONTROLS_DESIGN is off. */
+      const reviewControls: ReviewControls | undefined = controlsDesignOn
+        ? { design: designReviewControls, keep: (input, designed, keepSignal) => keepGuardedControls(storeControlsInto(input, designed.controls), revisionControls, 'yapi', keepSignal) }
+        : undefined;
       if (sep5Author) {
         // Sep-5 authors the store, adds the standard pages and arms the background review (source-sep5-stage.ts).
         // assembleSave is declared after this branch: the stage gets a wrapper, called only by the review after the save.
-        await runSep5AuthorStage({ facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall,
-          assembleSave: (assembleSignal, lookChoice) => assembleSave(assembleSignal, lookChoice) });
+        await runSep5AuthorStage({ facts, live, sep5SelfReview, playbookOn, playbookEntry, playbookEvidence, pickedHero, pickedCard, acceptCandidate, sep5Call, touchCall, controls: reviewControls,
+          assembleSave: (assembleSignal, lookChoice, controlsChoice) => assembleSave(assembleSignal, lookChoice, controlsChoice) });
       } else if (sketchFirst) {
         await progress?.('building');
         const sketchPhotos = sketchPhotoAllowlist(assets, assetLegend, imageUses);
@@ -1291,12 +1317,13 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // when called: once for revision N, and again by the background review.
     const saveContext: SaveAssemblyContext = { facts, live, platformHeader, agentPolicyChange };
     // Store controls (spec 2026-10-14): the language this save carries, chosen once the look is known (assembleSourceSave writes
-    // config.look last, measured or reused). A new store or a redesign takes the seeded library pick (calm or bold, the measured
-    // look, away from its siblings); an edit carries its own.
-    const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T): T => storeControlsInto(input, !controlsOn ? undefined
+    // config.look last, measured or reused). `controlsChoice.use` is the review stage's (YAPI's guarded record, or revision N's);
+    // otherwise a new store or a redesign takes the seeded library pick and an edit carries its own.
+    const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T, controlsChoice: { use?: StoreControls }): T => storeControlsInto(input, !controlsOn ? undefined
+      : 'use' in controlsChoice ? controlsChoice.use
       : controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
       : previousControls);
-    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice));
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice);
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
     await runChatKitTouch({ facts, live, touchCall, assembleSave });
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
@@ -1309,6 +1336,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // (today's header), a failing icon takes the library line icon, and a guard that cannot run keeps the language.
     if (controlsFresh && readControls(saveInput.files)) saveInput = (await keepGuardedControls(saveInput, undefined, 'library', signal)).input;
     revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);
+    revisionControls = readControls(saveInput.files);
+    revisionFiles = saveInput.files;
     signal.throwIfAborted();
     // Validate the assembled result, including final asset rewrites and runtime configuration.
     // Draft evidence alone cannot certify a different saved snapshot.

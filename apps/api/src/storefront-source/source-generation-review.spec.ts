@@ -18,6 +18,7 @@ jest.mock('./product-theme-check', () => ({ ...jest.requireActual('./product-the
 jest.mock('./kit-surface-check', () => ({ checkKitSurfacesOnSnapshot: jest.fn().mockResolvedValue({ catalog: [], card: [], cart: [] }) }));
 import { checkKitSurfacesOnSnapshot } from './kit-surface-check';
 import * as kitTouchModule from './kit-touch';
+import * as controlsDesignModule from './store-controls-design';
 const realTouchBudget = kitTouchModule.touchBudgetMs;
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
@@ -26,7 +27,7 @@ jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockR
 jest.mock('./design-engine/sep5-review-capture', () => ({ ...jest.requireActual('./design-engine/sep5-review-capture'), captureSep5Draft: jest.fn().mockResolvedValue({ shots: [{ width: 1280, y: 0, image: 'data:image/png;base64,AAAA' }], facts: [] }) }));
 jest.mock('./design-engine/header-clickable', () => ({ ...jest.requireActual('./design-engine/header-clickable'), captureHeaderCovers: jest.fn().mockResolvedValue([]) }));
 // The controls guard launches Chromium; these tests exercise what the service does with its verdict.
-jest.mock('./store-controls-guard', () => ({ ...jest.requireActual('./store-controls-guard'), guardControlsOnSnapshot: jest.fn().mockResolvedValue([]) }));
+jest.mock('./store-controls-guard', () => ({ ...jest.requireActual('./store-controls-guard'), guardControlsOnSnapshot: jest.fn().mockResolvedValue([]), captureControlsShots: jest.fn().mockResolvedValue([]) }));
 import { guardControlsOnSnapshot } from './store-controls-guard';
 import { CART_ICONS } from './store-controls-library';
 
@@ -580,5 +581,106 @@ describe('store controls: the guard on revision N (spec 2026-10-14, part 5)', ()
     expect(configOf(projects.save.mock.calls[0]).controls).toEqual(picked());
     expect(guardControlsOnSnapshot).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_guard_failed"') && line.includes('chromium crashed'))).toBe(true);
+  });
+});
+
+describe('store controls: YAPI designs N+1 in the review stage (spec 2026-10-14, part 4)', () => {
+  let service: SourceGenerationService, prisma: any, projects: any, config: any;
+  const configOf = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  const DESIGNED = {
+    shape: { outline: 'stamp', corner: 0, notch: 8, tilt: 2, border: 'dashed', weight: 2, fill: 'solid', colour: 'ink' },
+    layout: { cart: 'icon+word', account: 'icon' },
+    icons: { cart: CART_ICONS.cup.solid, account: '', menu: '', search: '', plus: '', minus: '', close: '' },
+    words: { cart: 'Tu taza', account: '' }, badge: 'stamp',
+    note: 'Diseñé los botones como sellos, con una taza para el carrito.',
+  };
+  const SAVED = { version: 1, shape: DESIGNED.shape, layout: DESIGNED.layout, icons: { cart: CART_ICONS.cup.solid }, words: { cart: 'Tu taza' }, badge: 'stamp', source: 'yapi' };
+  const NO_EDITS = { label: 'Café', notes: [], edits: [] };
+  const schemaOf = (init: any) => JSON.parse(init.body).text.format.name;
+  const respondWith = (review: unknown, controls: (init: any) => Promise<Response>) => async (_url: unknown, init: any) =>
+    schemaOf(init) === 'storefront_self_review' ? answer(review) : schemaOf(init) === 'storefront_controls' ? controls(init) : answer({ label: 'Café', files: files(), products: [] });
+  const ended = (status: string) => prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.where.id === 'review-1' && c.data.status === status);
+  const run = () => service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+  beforeEach(() => {
+    ({ service, prisma, projects, config } = setup());
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    config.set('app.yapiControls', true);
+    config.set('app.yapiControlsDesign', true);
+    (guardControlsOnSnapshot as jest.Mock).mockReset().mockResolvedValue([]);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("saves YAPI's controls in N+1 with the review's edits, bills the call and puts its note in the chat", async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, async () => answer(DESIGNED)) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[0]).controls.source).toBe('library');
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(SAVED);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
+    expect(prisma.storeAgentMessage.create.mock.calls[0][0].data.content).toContain(DESIGNED.note);
+    expect(ended('COMPLETED').data.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'controls', status: 'COMPLETED' })]));
+  });
+
+  it('starts the controls call beside the review call, not after it', async () => {
+    let controlsStarted!: () => void;
+    const started = new Promise<void>(resolve => { controlsStarted = resolve; });
+    jest.spyOn(globalThis, 'fetch').mockImplementation((async (_url: unknown, init: any) => {
+      if (schemaOf(init) === 'storefront_self_review') {
+        await Promise.race([started, new Promise((_ok, fail) => setTimeout(() => fail(new Error('the controls call did not start beside the review')), 5000))]);
+        return answer(REVIEW);
+      }
+      if (schemaOf(init) === 'storefront_controls') { controlsStarted(); return answer(DESIGNED); }
+      return answer({ label: 'Café', files: files(), products: [] });
+    }) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(SAVED);
+  });
+
+  it('an unusable answer keeps the library language; with nothing else changed there is no N+1 and the call is not billed', async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, async () => answer('esto no es JSON')) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(1);
+    expect(ended('COMPLETED').data.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'controls', status: 'FAILED' })]));
+  });
+
+  it("a failing guard keeps revision N's language while the review's edits still save", async () => {
+    (guardControlsOnSnapshot as jest.Mock).mockResolvedValueOnce([]).mockResolvedValueOnce([{ width: 390, slot: 'cart', check: 'contrast', detail: 'word 1.10:1, needs 4.5:1' }]);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, async () => answer(DESIGNED)) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(configOf(projects.save.mock.calls[0]).controls);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
+    expect(ended('COMPLETED').data.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'controls', status: 'FAILED' })]));
+  });
+
+  it('a controls call past its own deadline is dropped (reason deadline) and N+1 still saves the review edits', async () => {
+    jest.spyOn(controlsDesignModule, 'controlsDeadlineMs').mockReturnValue(50);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, init => new Promise((_ok, fail) => init.signal.addEventListener('abort', () => fail(init.signal.reason)))) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[1]).controls.source).toBe('library');
+    expect(warn.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_dropped"') && line.includes('"reason":"deadline"'))).toBe(true);
+  });
+
+  it("a redesign tells YAPI to move away from the store's previous controls", async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, async () => answer(DESIGNED)) as any);
+    await run();
+    await service.reviewSettled('s1');
+    projects.version.mockResolvedValue({ revision: 2, snapshot: sourceProjectSnapshot({ ...projects.save.mock.calls[1][2], revision: 2 }) });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(NO_EDITS, async () => answer(DESIGNED)) as any);
+    await service.generate('m1', 's1', { ...dto, revision: 2, instruction: 'Rediseña toda la tienda desde cero' }, new SourceRequestBudget(25), []);
+    await service.reviewSettled('s1');
+    const last = fetchMock.mock.calls.map(call => call[1] as any).filter(init => schemaOf(init) === 'storefront_controls').at(-1);
+    const prompt = JSON.parse(last.body).input[0].content[0].text;
+    expect(prompt).toContain("move away from the store's previous controls");
+    expect(prompt).toContain('"outline":"stamp"');
   });
 });

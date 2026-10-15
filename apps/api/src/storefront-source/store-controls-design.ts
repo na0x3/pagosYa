@@ -1,0 +1,93 @@
+/**
+ * YAPI designs the store's controls (spec 2026-10-14, part 4): one dedicated call that returns the controls record as strict JSON
+ * plus one short Spanish note. It runs beside the background review call (revision N+1) and again on a chat request about the
+ * controls. The answer is sanitized here; the caller checks it in a browser (store-controls-guard.ts). A timeout, an unusable
+ * answer or a failing guard keeps the store's library language: this never fails a build.
+ */
+import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
+import { sourceResponseJson } from './source-response';
+import { captureControlsShots, type ModelImage } from './store-controls-guard';
+import { ACCOUNT_LAYOUTS, CART_LAYOUTS, CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, ICON_SLOTS, sanitizeControlsReport, type IconSlot, type StoreControls } from './store-controls';
+import { pickLibraryControls } from './store-controls-library';
+import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
+import type { SourceProjectSnapshot } from './source-project';
+import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+
+export const CONTROLS_TIMEOUT_MS = 60_000;
+export const CONTROLS_MAX_OUTPUT_TOKENS = 4_000;
+/** The controls call's own deadline (spec: about 60 s, like the kit touch); a function so a test can shorten it. */
+export function controlsDeadlineMs(): number { return CONTROLS_TIMEOUT_MS; }
+
+export const CONTROLS_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['shape', 'layout', 'icons', 'words', 'badge', 'note'],
+  properties: {
+    shape: { type: 'object', additionalProperties: false, required: ['outline', 'corner', 'notch', 'tilt', 'border', 'weight', 'fill', 'colour'], properties: {
+      outline: { type: 'string', enum: [...CONTROL_OUTLINES] }, corner: { type: 'number' }, notch: { type: 'number' }, tilt: { type: 'number' },
+      border: { type: 'string', enum: [...CONTROL_BORDERS] }, weight: { type: 'number' }, fill: { type: 'string', enum: [...CONTROL_FILLS] }, colour: { type: 'string', enum: [...CONTROL_COLOURS] },
+    } },
+    layout: { type: 'object', additionalProperties: false, required: ['cart', 'account'], properties: { cart: { type: 'string', enum: [...CART_LAYOUTS] }, account: { type: 'string', enum: [...ACCOUNT_LAYOUTS] } } },
+    icons: { type: 'object', additionalProperties: false, required: [...ICON_SLOTS], properties: Object.fromEntries(ICON_SLOTS.map(slot => [slot, { type: 'string' }])) },
+    words: { type: 'object', additionalProperties: false, required: ['cart', 'account'], properties: { cart: { type: 'string' }, account: { type: 'string' } } },
+    badge: { type: 'string', enum: [...CONTROL_BADGES] },
+    note: { type: 'string' },
+  },
+};
+
+/** The store's colour tokens as the model should read them (brand.css first, then styles.css), at most 16. */
+export function storeTokens(files: ReadonlyArray<{ path: string; content: string }>): string {
+  const found = new Map<string, string>();
+  for (const path of ['brand.css', 'styles.css']) {
+    const css = files.find(file => file.path === path)?.content ?? '';
+    for (const match of css.matchAll(/--(?:store|brand)-([\w-]+)\s*:\s*([^;{}]+)/g)) if (!found.has(match[1])) found.set(match[1], match[2].trim().slice(0, 60));
+  }
+  return [...found].slice(0, 16).map(([name, value]) => `${name}: ${value}`).join('; ');
+}
+
+const languageOf = (controls: StoreControls) => ({ outline: controls.shape.outline, fill: controls.shape.fill, colour: controls.shape.colour, badge: controls.badge, cart: controls.icons.cart ?? '' });
+export type ControlsPromptInput = { storeName: string; kind: PlaybookKind; brief: unknown; products: string[]; tokens: string; look?: StoreLook; avoid: StoreControls[]; previous?: StoreControls; current?: StoreControls; instruction?: string };
+export function controlsPrompt(input: ControlsPromptInput): string {
+  const { version: _version, source: _source, ...example } = pickLibraryControls({ kind: input.kind, mode: 'calm', seed: 'example' });
+  return [
+    `Design the small controls of «${input.storeName}», a ${PLAYBOOK[input.kind].name} business: the header's cart, account, menu and search buttons, the product cards' "+" button, the quantity steppers, the cart's close button and the count badge. Screenshots attached: the home page with its header at 1440px and 390px. The shape must belong to this store's look and the icons and words to what it sells, so no two stores look alike.`,
+    `Business: ${JSON.stringify({ brief: input.brief, products: input.products })}`,
+    `Colour tokens (the controls use only these, through colour: accent, ink or paper): ${input.tokens || '(not found)'}`,
+    `Measured look of the home page: ${JSON.stringify(input.look ?? {})}`,
+    input.avoid.length ? `Other stores already use these control languages; do not repeat an outline together with a similar cart icon: ${JSON.stringify(input.avoid.map(languageOf))}` : '',
+    input.previous ? `This is a redesign: move away from the store's previous controls: ${JSON.stringify(languageOf(input.previous))}` : '',
+    input.current ? `The store's current controls (change them as the merchant asks; keep what they did not mention): ${JSON.stringify(languageOf(input.current))}` : '',
+    input.instruction ? `The merchant asked now: «${input.instruction}». Follow it for the controls.` : '',
+    'Rules:',
+    '- shape: outline is one of the listed outlines; corner 0-24 px; notch 0-10 px (ticket notches, tag cut, stamp scallop depth); tilt -6 to 6 degrees (drawn on the face, never the tap target); weight 1-3 px. fill: solid, outline, ghost (no fill, the header text colour) or inverted. colour: accent, ink or paper.',
+    '- icons: SVG path data only (the d attribute) for a 24x24 box, every point between 0 and 24, at most 1,500 characters each. They are FILLED with the text colour using fill-rule evenodd, so a line icon must be drawn as its outline (an outer shape and an inner shape). No other SVG elements, attributes, URLs or text. The cart icon shows what this store sells (a cup, a bag, a basket, a frame, a scoop, a briefcase, a leaf, a paw, or anything that fits it better); the others are account, menu, search, plus, minus and close. An empty string keeps the platform icon.',
+    '- words: cart and account in Spanish, 1-14 letters, no emoji. An empty string keeps the platform word. Screen readers keep their own plain labels.',
+    '- layout: cart icon+word, icon or word; account icon, word or icon+word. badge: dot, circle, inline, corner or stamp.',
+    '- A real browser checks every control at 1440px and 390px: 44px tap targets, nothing covered, no sideways scroll, words at 4.5:1 and icons and borders at 3:1 contrast against the header. A failing icon is replaced by the platform icon; any other failure discards the whole design.',
+    `A valid answer looks like this (do not copy it): ${JSON.stringify({ ...example, note: 'Diseñé los botones como boletos, con una taza para el carrito.' })}`,
+    'Answer with JSON: shape, layout, icons, words, badge, and note (one short sentence in Spanish for the merchant saying what you designed).',
+  ].filter(Boolean).join('\n\n');
+}
+
+export type ControlsDesignDeps = {
+  files: SourceProjectFileDto[]; brief: unknown; storeName: string; kind: PlaybookKind; products: string[]; avoid: StoreControls[];
+  previous?: StoreControls; current?: StoreControls; instruction?: string; signal: AbortSignal;
+  call: (text: string, images: ModelImage[]) => Promise<{ body: unknown; used: () => void }>;
+  fallbackIcon: (slot: IconSlot) => string | undefined;
+  capture?: (snapshot: SourceProjectSnapshot, signal: AbortSignal) => Promise<ModelImage[]>;
+};
+export type ControlsDesign = { controls: StoreControls; note: string; used: () => void; replacedIcons: IconSlot[] };
+/** One controls call. Null for an unusable answer (not JSON, an unknown enum, a missing number); `used` bills the attempt and is
+ *  called by the caller only when the guard keeps the record. */
+export async function runControlsDesign(deps: ControlsDesignDeps): Promise<ControlsDesign | null> {
+  const snapshot = { brief: deps.brief, files: deps.files } as unknown as SourceProjectSnapshot;
+  const images = await (deps.capture ?? captureControlsShots)(snapshot, deps.signal);
+  const text = controlsPrompt({ storeName: deps.storeName, kind: deps.kind, brief: deps.brief, products: deps.products, tokens: storeTokens(deps.files), look: sanitizeLook(readConfigFile(deps.files).look), avoid: deps.avoid, previous: deps.previous, current: deps.current, instruction: deps.instruction });
+  const { body, used } = await deps.call(text, images);
+  let raw: unknown;
+  try { raw = sourceResponseJson(body); } catch { return null; }
+  if (!raw || typeof raw !== 'object') return null;
+  const answer = raw as Record<string, unknown>;
+  const report = sanitizeControlsReport({ ...answer, version: 1, source: 'yapi' }, { fallbackIcon: deps.fallbackIcon });
+  if (!report.controls) return null;
+  const note = typeof answer.note === 'string' && answer.note.trim() ? answer.note.trim().slice(0, 200) : 'Diseñé los botones de tu tienda.';
+  return { controls: report.controls, note, used, replacedIcons: report.replacedIcons };
+}

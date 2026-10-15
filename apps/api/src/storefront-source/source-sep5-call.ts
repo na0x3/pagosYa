@@ -1,6 +1,7 @@
 import type { AiUsageService } from '../ai-usage/ai-usage.service';
 import { KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS } from './kit-touch';
 import { SEP5_MAX_OUTPUT_TOKENS } from './source-generation-run';
+import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA } from './store-controls-design';
 import { sourceUsage, type SourceModel } from './source-generation-policy';
 import type { sourceProvider } from './source-provider';
 import type { SourceRequestBudget } from './source-request-budget';
@@ -24,7 +25,7 @@ export type Sep5Caller = ReturnType<typeof sep5Caller>;
 /** One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike. */
 export function sep5Caller(context: Sep5CallContext) {
   const { provider, apiKey, budget, signal, attempts, storeId, metering } = context;
-  const sep5Call = async (phase: 'author' | 'review' | 'touch', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
+  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
     const callSignal = options.signal ?? signal;
     const attempt: SourceGenerationAttempt = { model: context.model(), phase, durationMs: 0, status: 'FAILED', usage: null };
     (options.attempts ?? attempts).push(attempt);
@@ -61,5 +62,11 @@ export function sep5Caller(context: Sep5CallContext) {
       run.signal.throwIfAborted();
     }
   };
-  return { sep5Call, touchCall };
+  /** The controls call (spec 2026-10-14 store controls, part 4): the same metered client, a small answer and medium effort, on
+   *  its own signal. The attempt is charged only when the guard keeps the record (`used`). */
+  const controlsCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: SourceInputImage[]) => {
+    const { attempt, body } = await sep5Call('controls', text, attached, 'storefront_controls', CONTROLS_SCHEMA, controlsDeadlineMs(), { signal: run.signal, attempts: run.attempts, maxOutputTokens: CONTROLS_MAX_OUTPUT_TOKENS, effort: 'medium' });
+    return { body, used: () => { attempt.status = 'COMPLETED'; } };
+  };
+  return { sep5Call, touchCall, controlsCall };
 }
