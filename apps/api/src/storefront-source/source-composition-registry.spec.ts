@@ -226,6 +226,9 @@ it('never treats a large upload count as permission for a gallery, collage or co
     const choices = sourceUiCompositions({ seed: String(seed), brief: 'Furniture shop', assets: photos(12) });
     expect(choices.some(c => ['gallery', 'floating-media', 'parallax-stack', 'before-after', 'video'].includes(c.scene!))).toBe(false);
   }
-  const lookbook = Array.from({ length: 20 }, (_, seed) => sourceUiCompositions({ seed: String(seed), brief: 'Furniture lookbook', assets: photos(12) })).flat();
+  const lookbook = Array.from({ length: 20 }, (_, seed) => sourceUiCompositions({ seed: String(seed), brief: 'Furniture', instruction: 'Quiero un lookbook de muebles', assets: photos(12) })).flat();
   expect(lookbook.some(c => c.scene === 'gallery')).toBe(true);
+  // The business brief alone (a vintage archive, an art gallery) never asks for a photo group.
+  const brief = Array.from({ length: 20 }, (_, seed) => sourceUiCompositions({ seed: String(seed), brief: 'Galería de arte y ropa vintage, lookbook', assets: photos(12) })).flat();
+  expect(brief.some(c => c.scene === 'gallery')).toBe(false);
 });

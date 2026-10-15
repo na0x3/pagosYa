@@ -2,6 +2,7 @@ import { isSceneImage, isProductImage, sketchImageRole } from './sketch/sketch-a
 import { SKETCH_COMPONENT_REGISTRY as SOURCE_SKETCH_COMPOSITIONS, type SketchCompositionMetadata, type ArtDirection } from '@pagosya/shared-types';
 import { createHash } from 'node:crypto';
 import { SOURCE_DNA_ENUMS } from './source-dna';
+import { merchantAsksForPhotoGroup } from './source-media-design';
 
 export type SourceLayoutGrammar = typeof SOURCE_DNA_ENUMS.layout.grammar[number];
 
@@ -168,7 +169,8 @@ export function sourceUiCompositions(input: SourceCompositionInput = {}): Source
     // Counts establish feasibility only. A scene with multiple decorative photos
     // needs a thematic job; additional uploads never create that job.
     .filter(direction => {
-      if (direction.scene === 'gallery') return /lookbook|editorial collection|collection story|gallery|galeria|archivo|archive|vintage/.test(text);
+      // A photo-group scene only on the merchant's own request, never from the business brief (owner decision 2026-10-15).
+      if (direction.scene === 'gallery') return merchantAsksForPhotoGroup(input.instruction ?? '');
       if (['floating-media', 'parallax-stack'].includes(direction.scene ?? '')) return input.grammar === 'collage' || /collage|cutout|recortes|parallax|floating/.test(text);
       if (direction.scene === 'before-after') return /before.after|antes.y.despues|comparison pair/.test(text);
       if (direction.scene === 'video') return (input.assets ?? []).some(asset => asset.kind === 'video' && !['reference', 'unused'].includes(asset.role ?? ''));
@@ -187,7 +189,7 @@ export function sourceUiCompositions(input: SourceCompositionInput = {}): Source
   });
 }
 
-export const SOURCE_COMPOSITION_PLANNING = 'Composition candidates are independent starting directions with asset requirements and mobile plans, not a mandatory template. Develop each concept from a different candidate or an explicitly explained custom composition. Merchant instructions, confirmed typography/colors and actual image roles override every candidate. Never force the suggested fonts, sections or effect when they conflict. Borrow visual structure from an owned reference, never its fictional copy, prices or product facts. Keep catalog and purchase controls complete for large catalogs; omit unsupported story sections. Product grids, category discovery, useful comparisons and thematic editorial collections are valid. Image quantity establishes feasibility, never a reason for a collage or extra gallery. References such as craft denim, outdoor apparel, travel goods and fashion campaigns teach different buying journeys: choose from product facts and theme, never clone brand claims. A concept may depart from all families when the brief warrants it. Keep all unrelated composition and tokens on later local edits.';
+export const SOURCE_COMPOSITION_PLANNING = 'Composition candidates are independent starting directions with asset requirements and mobile plans, not a mandatory template. Develop each concept from a different candidate or an explicitly explained custom composition. Merchant instructions, confirmed typography/colors and actual image roles override every candidate. Never force the suggested fonts, sections or effect when they conflict. Borrow visual structure from an owned reference, never its fictional copy, prices or product facts. Keep catalog and purchase controls complete for large catalogs; omit unsupported story sections. Product grids, category discovery and useful comparisons are valid. Never three or more photos together in one section unless the merchant asks for a gallery; image quantity is never a reason for a collage or extra gallery. References such as craft denim, outdoor apparel, travel goods and fashion campaigns teach different buying journeys: choose from product facts and theme, never clone brand claims. A concept may depart from all families when the brief warrants it. Keep all unrelated composition and tokens on later local edits.';
 
 /**
  * What each scene is, as code the model can copy.

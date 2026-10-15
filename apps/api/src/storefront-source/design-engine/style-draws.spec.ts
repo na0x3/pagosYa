@@ -145,7 +145,7 @@ describe('variety across proposals (2026-10-11: "always the same two templates")
     }
     expect(fresh.size).toBeGreaterThanOrEqual(4);
     const recent = ['stamp', 'marquee', 'stickers', 'numbers', 'ticket'].map(device => ({ kind: 'cafe-food', mode: 'bold' as const, draw: {}, device }));
-    for (let seed = 1; seed <= 30; seed++) expect(['torn-edge', 'polaroids', 'outline-wordmark']).toContain(styleDraws({ ...base, shown: recent, random: seeded(seed) })[1].device);
+    for (let seed = 1; seed <= 30; seed++) expect(['torn-edge', 'outline-wordmark']).toContain(styleDraws({ ...base, shown: recent, random: seeded(seed) })[1].device);
     // Without photos or facts: never a photo device, never invented numbers.
     for (let seed = 1; seed <= 30; seed++) expect(['stamp', 'marquee', 'stickers', 'ticket', 'outline-wordmark']).toContain(styleDraws({ ...base, available: bare, random: seeded(seed) })[1].device);
     // The device rides on the slot (saved with the proposal) and in the bold lane's direction.
@@ -157,12 +157,14 @@ describe('variety across proposals (2026-10-11: "always the same two templates")
   it('chains: each proposal\'s shown bold device is avoided by the next', () => {
     const shown: Array<{ kind: string; mode: 'bold'; draw: Record<string, string>; device: string; mine: boolean }> = [];
     const devices: string[] = [];
-    for (let round = 0; round < 8; round++) {
+    // Polaroids is a photo group: in rotation only when the merchant asked for a gallery (2026-10-15), so seven otherwise.
+    for (let round = 0; round < 7; round++) {
       const [, bold] = styleDraws({ ...base, shown, briefNumbers: 2, random: seeded(round + 11) });
       devices.push(bold.device!);
       shown.unshift({ kind: 'cafe-food', mode: 'bold', draw: {}, device: bold.device!, mine: true });
     }
-    expect(new Set(devices).size).toBe(8);
+    expect(new Set(devices).size).toBe(7);
+    expect(devices).not.toContain('polaroids');
   });
 });
 

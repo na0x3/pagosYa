@@ -21,7 +21,8 @@ export const SIGNATURE_DEVICES = {
   stickers: { label: 'a cluster of two or three tilted stickers with short real words from the brief' },
   numbers: { label: 'a row of oversized real numbers from the brief (hours, years, sizes, prices), never invented', needs: (available: FrameAvailable, numbers: number) => available.facts && numbers >= 2 },
   'torn-edge': { label: 'a torn-paper edge on the main photo', needs: (available: FrameAvailable) => available.photos >= 1 },
-  polaroids: { label: 'a small stack of polaroid-framed photos, each slightly turned', needs: (available: FrameAvailable) => available.photos >= 1 },
+  // A stack of photos is a photo group: only on the merchant's request (owner decision 2026-10-15).
+  polaroids: { label: 'a small stack of polaroid-framed photos, each slightly turned', needs: (available: FrameAvailable) => available.photos >= 3 && Boolean(available.photoGroups) },
   ticket: { label: 'a label or ticket tag (notched or punched) carrying a real detail' },
   'outline-wordmark': { label: 'a giant outline wordmark of the store name set behind the headline' },
 } as const satisfies Record<string, { label: string; needs?: (available: FrameAvailable, numbers: number) => boolean }>;

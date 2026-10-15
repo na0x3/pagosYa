@@ -2,7 +2,15 @@
 
 import type { SourceCompositionPlan } from './source-composition-plan';
 
-export type SourceMediaPolicy = { allowLayered: boolean; compositionPlan?: SourceCompositionPlan; page?: string };
+export type SourceMediaPolicy = { allowLayered: boolean; allowPhotoGroups?: boolean; compositionPlan?: SourceCompositionPlan; page?: string };
+
+/** A gallery, collage, mosaic or lookbook only when the merchant's own words ask for one ("sin collage" is not asking).
+ *  Owner decision 2026-10-15: every softer rule ("purposeful galleries are valid") ended in a photo wall. */
+export function merchantAsksForPhotoGroup(instruction: string): boolean {
+  const text = (instruction.split('Pedido actual del comercio:').at(-1) || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return Array.from(text.matchAll(/galeria|gallery|collage|mosaico|mosaic|lookbook|polaroid/g))
+    .some(match => !/(?:\bno|\bsin|without|avoid|nada de|ningun[ao]?)\b[^.!?]{0,24}$/.test(text.slice(0, match.index)));
+}
 
 /** Server-owned scope: local copy edits do not silently redesign an existing gallery. */
 export function sourceMediaPolicy(purpose: string, wholeDesign: boolean, instruction: string, compositionPlan?: SourceCompositionPlan): SourceMediaPolicy | undefined {
@@ -12,11 +20,11 @@ export function sourceMediaPolicy(purpose: string, wholeDesign: boolean, instruc
   // overlap anything can only stack full-width bands, which is how every generated store came to look alike.
   // The merchant withdraws it explicitly; the measured failure to keep out is text over text, checked elsewhere.
   const layered = !/(?:no|sin|without|avoid).{0,24}(?:collage|parallax|superpuest|overlap|capas)/.test(text);
-  return { allowLayered: layered, ...(compositionPlan ? { compositionPlan } : {}) };
+  return { allowLayered: layered, allowPhotoGroups: merchantAsksForPhotoGroup(instruction), ...(compositionPlan ? { compositionPlan } : {}) };
 }
 
 export const SOURCE_MEDIA_DESIGN_CONTRACT = `SHOP IMAGE AND SECTION PLAN. Before choosing a layout, use each asset's measured pixels.width and pixels.height. Aim for two source pixels per displayed CSS pixel; never enlarge a raster photograph beyond its source resolution. A small portrait belongs in a bounded portrait panel or product card, not stretched across a wide desktop banner. If no asset supports a large hero, choose a compact image or typography-led opening. CSS cover is not a quality fix: retain at least half the original photo's area and keep the product recognizable. Use contain or change the panel ratio when the crop would discard most of the photo. Do not blur an inadequate photo or invent/upscale a replacement.
-Choose image quantity and arrangement from the products, theme and customer task, not a universal photo quota. Product and category grids, useful comparisons and intentional editorial/lookbook galleries are valid. Commit their page purpose, section intent and individual media roles in the composition plan before code. A heading alone does not justify a repeated photo wall. Keep unused uploads available: never create an extra gallery or repeated photo-only sections merely to display every upload. If all images are requested, plan a useful and coherent destination without changing product-photo ownership or inventing products.
+NO PHOTO GROUPS: never place three or more photos together in one section: no gallery, collage, mosaic, photo strip, lookbook grid or wall of store photos, whatever the plan calls it. A section shows at most two photos of its own; the catalog's product cards and cards that each link to their own product or collection page are not photo groups. This holds however many photos were uploaded and however bold the design is; only the merchant's own message asking for a gallery, collage or lookbook lifts it. Never add a caption that excuses a photo (for example, that the brands or products shown are not sold here): a photo that shows another brand's signs or products that are not in the catalog stays unused. Commit each section's purpose and media roles in the composition plan before code. Keep unused uploads available: never create an extra gallery or repeated photo-only sections merely to display every upload. If all images are requested, plan a useful and coherent destination without changing product-photo ownership or inventing products.
 Every authored page and section must help the customer choose, understand a real product, find confirmed purchase information, or carry the brand's voice deliberately. A marquee, a statement line, a badge or a typographic moment is legitimate brand work, not filler, when it is designed rather than repeated: judge a section by whether it was composed on purpose, not by whether it transacts. Omit a section that only repeats an earlier photo or shop-all action. Do not invent facts, products or claims to justify a section. Keep an obvious product/catalog action fully visible in the first screen on desktop and mobile, one primary action in each group, truthful destination labels and a simple header; a logo does not need a subtitle or extra navigation row. Preserve explicit current merchant instructions. Composition is checked across authored pages on whole-store designs; local copy changes preserve existing layout.`;
 
 /** Runs inside the isolated browser. Pure observations; never changes generated content. */
@@ -93,10 +101,17 @@ export function evaluateSourceMediaDesign(policy: SourceMediaPolicy): string[] {
     while (container && container.tagName !== 'MAIN') {
       const members = unplanned.filter(other => container!.contains(other.element));
       if (members.length >= 3) { groups.set(container, members); break; }
+      // Without a gallery request the rule is per section: single photos in different sections are never a group.
+      if (!policy.allowPhotoGroups && (container.tagName === 'SECTION' || container.parentElement?.tagName === 'MAIN')) break;
       container = container.parentElement;
     }
   }
   for (const [container, members] of groups) {
+    // No plan label, caption or size hierarchy excuses a group: those exemptions are how photo walls kept shipping.
+    if (!policy.allowPhotoGroups) {
+      errors.push(`[composition:photo-group] ${members.length} fotos juntas en una sección (${members.slice(0, 4).map(photo => photo.name).join(' / ')}). Sin una petición de galería del comercio, una sección muestra como máximo dos fotos propias: conserva la mejor junto a texto útil y deja las demás sin usar; no añadas un texto que disculpe las fotos.`);
+      break;
+    }
     const explainedIndividually = members.every(photo => {
       const card = photo.element.closest('figure,article,li') || photo.element.parentElement;
       return !!card && card !== container && members.filter(other => card.contains(other.element)).length === 1 && meaningfulText(card);

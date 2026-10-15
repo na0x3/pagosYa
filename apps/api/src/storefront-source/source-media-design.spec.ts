@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { captureAgentDraft } from './agent/agent-capture';
-import { sourceMediaPolicy } from './source-media-design';
+import { merchantAsksForPhotoGroup, sourceMediaPolicy } from './source-media-design';
 import { sourceAssetInventory } from './source-asset-library';
 import type { SourceCompositionPlan } from './source-composition-plan';
 import { agentProjectIndex } from './agent/agent-task';
@@ -54,17 +54,17 @@ it('rejects an unplanned 3+2 image wall on a separate gallery page', async () =>
   snapshot.files[0].path = 'galeria.html';
   for (const width of [1280, 390] as const) {
     const result = await captureAgentDraft(snapshot, width, undefined, 'galeria.html', [], 'normal', policy);
-    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('[composition:unjustified-image-wall]')]));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-group]')]));
   }
 });
 it.each(['coleccion.html', 'colecciones.html'])('allows useful category links to %s without a photograph quota', async route => {
   expect(await check(`<section style="display:grid;grid-template-columns:repeat(3,200px)">${Array.from({length:6},(_,i)=>`<a href="${route}?category=${i}">${photo('width:200px;height:300px')}<span>Categoría ${i}</span></a>`).join('')}</section>`)).toEqual([]);
 });
 it('does not treat a headline or arbitrary external image links as grid purpose', async () => {
-  expect(await check(gallery.replace(/(<img[^>]*>)/g, '<a href="https://example.com">$1<span>Read more</span></a>'))).toEqual(expect.arrayContaining([expect.stringContaining('[composition:unjustified-image-wall]')]));
+  expect(await check(gallery.replace(/(<img[^>]*>)/g, '<a href="https://example.com">$1<span>Read more</span></a>'))).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-group]')]));
 });
 it('includes bounded raster background panels in composition checks', async () => {
-  expect(await check(`<section style="display:grid;grid-template-columns:repeat(3,200px)">${Array.from({length:5},()=>'<div style="width:200px;height:300px;background-image:url(assets/portrait.png)"></div>').join('')}</section>`)).toEqual(expect.arrayContaining([expect.stringContaining('[composition:unjustified-image-wall]')]));
+  expect(await check(`<section style="display:grid;grid-template-columns:repeat(3,200px)">${Array.from({length:5},()=>'<div style="width:200px;height:300px;background-image:url(assets/portrait.png)"></div>').join('')}</section>`)).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-group]')]));
 });
 
 it('accepts the same 3+2 layout when its lookbook purpose and media are planned', async () => {
@@ -76,9 +76,32 @@ it('accepts the same 3+2 layout when its lookbook purpose and media are planned'
   expect((await captureAgentDraft(snapshot,1280,undefined,'galeria.html',[],'normal',sourceMediaPolicy('shop',true,'Create a seasonal lookbook',stale))).errors).toEqual(expect.arrayContaining([expect.stringContaining('[composition:unjustified-image-wall]')]));
 });
 it('does not let one introductory sentence justify unrelated image walls', async () => {
-  expect(await check(gallery.replace('<section id="looks"', '<p>Explore our wonderful collection and find something for you.</p><section id="looks"'))).toEqual(expect.arrayContaining([expect.stringContaining('[composition:unjustified-image-wall]')]));
+  expect(await check(gallery.replace('<section id="looks"', '<p>Explore our wonderful collection and find something for you.</p><section id="looks"'))).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-group]')]));
 });
-it('permits individually explained comparison cards and dominant-image compositions', async () => {
-  expect(await check(`<section style="display:flex">${Array.from({length:4},(_,i)=>`<figure>${photo('width:150px;height:225px')}<figcaption>Option ${i}: the confirmed dimensions are 10 by 20 centimetres.</figcaption></figure>`).join('')}</section>`)).toEqual([]);
-  expect(await check(`<section style="display:flex">${photo('width:340px;height:510px')}${photo('width:100px;height:150px')}${photo('width:100px;height:150px')}</section>`)).toEqual([]);
+it('allows explained cards and dominant-image compositions only when the merchant asks for a gallery', async () => {
+  const cards = `<section style="display:flex">${Array.from({length:4},(_,i)=>`<figure>${photo('width:150px;height:225px')}<figcaption>Option ${i}: the confirmed dimensions are 10 by 20 centimetres.</figcaption></figure>`).join('')}</section>`;
+  const dominant = `<section style="display:flex">${photo('width:340px;height:510px')}${photo('width:100px;height:150px')}${photo('width:100px;height:150px')}</section>`;
+  const asked = sourceMediaPolicy('shop', true, 'Quiero una galería de fotos del local')!;
+  for (const html of [cards, dominant]) {
+    expect(await check(html)).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-group]')]));
+    expect(await check(html, asked)).toEqual([]);
+  }
+});
+it('rejects the Raíz Viva store-ambience collage even when the plan calls it an editorial gallery', async () => {
+  // 2026-10-15 owner report: one large, one tall and two small store photos, planned as editorial-gallery, plus an excuse caption.
+  const html = `<section id="ambiente"><h2>Estantes, madera y verdes</h2><p>El espacio acompaña una forma directa de elegir.</p><div style="display:grid;grid-template-columns:600px 400px 280px;gap:20px">${photo('width:600px;height:760px;object-fit:contain','Estanterías')}${photo('width:400px;height:600px;object-fit:contain','Exhibidor')}<div>${photo('width:250px;height:375px;object-fit:contain','Detalle')}${photo('width:250px;height:375px;object-fit:contain','Mostrador')}</div></div><p>Las fotografías muestran ambiente de tienda.</p></section>`;
+  const plan = { family: 'craft-story', rationale: 'r', pages: [{ page: 'index.html', purpose: 'story', rationale: 'r', sections: [{ id: 'ambiente', intent: 'Mostrar las fotografías confirmadas como contexto de tienda', layout: 'editorial-gallery', geometry: 'rail', mobile: 'rail', primaryAction: 'WhatsApp', media: [{ asset: 'assets/portrait.png', role: 'lead' }] }] }] } as SourceCompositionPlan;
+  expect(await check(html, sourceMediaPolicy('shop', true, 'Crea mi tienda de suplementos', plan)!)).toEqual(expect.arrayContaining([expect.stringContaining('[composition:photo-group]')]));
+});
+it('counts photos per section, so one photo in each of several text sections is not a group', async () => {
+  expect(await check(`<div>${Array.from({ length: 3 }, (_, i) => `<section>${photo('width:200px;height:300px', `Foto ${i}`)}<p>Un párrafo real sobre esta parte de la tienda número ${i}.</p></section>`).join('')}</div>`)).toEqual([]);
+  expect(await check(`<section style="display:flex">${photo('width:200px;height:300px')}${photo('width:200px;height:300px')}</section>`)).toEqual([]);
+});
+it('reads a gallery request only from the merchant, never from a refusal', () => {
+  expect(merchantAsksForPhotoGroup('Pon una galería en el inicio')).toBe(true);
+  expect(merchantAsksForPhotoGroup('quiero un COLLAGE de fotos')).toBe(true);
+  expect(merchantAsksForPhotoGroup('Resumen: galería de arte.\nPedido actual del comercio: haz mejor la página de contacto')).toBe(false);
+  expect(merchantAsksForPhotoGroup('Sin galería en inicio, sin collage')).toBe(false);
+  expect(merchantAsksForPhotoGroup('no quiero ningún mosaico de fotos')).toBe(false);
+  expect(merchantAsksForPhotoGroup('Crea una tienda limpia')).toBe(false);
 });

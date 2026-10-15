@@ -5,12 +5,14 @@
  */
 import { cartWordFor, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
 import { CONVENTIONAL_HEADERS, PLAYBOOK, type StyleFamily } from './playbook';
+import { merchantAsksForPhotoGroup } from '../source-media-design';
 
-export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'product' | 'facts';
+export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'photoGroup' | 'product' | 'facts';
 export type FrameEntry = { id: string; bold: boolean; desktop: string; phone: string; needs?: FrameNeed };
 export type FramePart = 'header' | 'cart' | 'footer' | 'hero';
 export type FrameDraw = Record<FramePart, string>;
-export type FrameAvailable = { photos: number; products: number; facts: boolean };
+/** photoGroups: the merchant's own words asked for a gallery, collage or lookbook (merchantAsksForPhotoGroup). */
+export type FrameAvailable = { photos: number; products: number; facts: boolean; photoGroups?: boolean };
 
 export const FRAME_DRAW_FILE = 'frame-draw.json';
 const PARTS: FramePart[] = ['header', 'cart', 'footer', 'hero'];
@@ -48,9 +50,9 @@ export const FRAME_CATALOGUE: Record<FramePart, readonly FrameEntry[]> = {
     { id: 'full-bleed', bold: false, needs: 'photos1', desktop: 'Hero: one photo filling the first screen edge to edge with the headline set over it, with a scrim for contrast.', phone: 'On phones: the photo fills the first screen in a portrait crop and the headline stays readable.' },
     { id: 'split', bold: false, needs: 'photos1', desktop: 'Hero: the first screen divided into a photo half and a text half with the headline and the main action.', phone: 'On phones: the photo on top, the text below.' },
     { id: 'type-only', bold: true, desktop: 'Hero: no photo at all; the first screen is typography and colour, a very large headline, one short line and the main action.', phone: 'On phones: the headline still dominates the first screen.' },
-    { id: 'collage', bold: true, needs: 'photos3', desktop: 'Hero: three or more photos arranged as an overlapping collage with the headline set among them.', phone: 'On phones: two photos overlap above the headline and the rest are left out.' },
+    { id: 'collage', bold: true, needs: 'photoGroup', desktop: 'Hero: three or more photos arranged as an overlapping collage with the headline set among them.', phone: 'On phones: two photos overlap above the headline and the rest are left out.' },
     { id: 'single-product', bold: false, needs: 'product', desktop: 'Hero: one real product from the catalog as the hero, its photo large with its name and a button to its product page; never type its price, which the runtime owns and may change.', phone: 'On phones: the product photo, name and button stacked.' },
-    { id: 'statement-strip', bold: true, needs: 'photos3', desktop: 'Hero: one statement in very large type, then a horizontal strip of photos below it.', phone: 'On phones: the photo strip scrolls sideways.' },
+    { id: 'statement-strip', bold: true, needs: 'photoGroup', desktop: 'Hero: one statement in very large type, then a horizontal strip of photos below it.', phone: 'On phones: the photo strip scrolls sideways.' },
     { id: 'offset-frame', bold: true, needs: 'photos1', desktop: "Hero: a single photo inside a visible frame or border, with the headline placed offset so it overlaps the frame's edge.", phone: 'On phones: the frame narrows and the headline overlaps its bottom edge.' },
     { id: 'slow-slideshow', bold: false, needs: 'photos2', desktop: 'Hero: two or more photos cross-fading slowly (about 6 seconds each) behind a fixed headline, paused on hover and under prefers-reduced-motion.', phone: 'On phones: the same, showing a single photo under reduced motion.' },
     // Calm openings that need no photo (night run 2026-10-11: every store without photos got the type-only hero).
@@ -65,6 +67,8 @@ const fits = (entry: FrameEntry, available: FrameAvailable) => {
     case 'photos1': return available.photos >= 1;
     case 'photos2': return available.photos >= 2;
     case 'photos3': return available.photos >= 3;
+    // Owner decision 2026-10-15: no photo groups unless the merchant asks for one.
+    case 'photoGroup': return available.photos >= 3 && Boolean(available.photoGroups);
     case 'product': return available.products >= 1;
     case 'facts': return available.facts;
     default: return true;
@@ -228,6 +232,7 @@ export function frameInputs(input: {
       photos: storePhotoPaths(input).length,
       products: input.items.filter(item => item.imageUrls?.length).length,
       facts: Boolean(input.locations?.length) || FACT.test(info),
+      photoGroups: merchantAsksForPhotoGroup(request),
     },
   };
 }
@@ -286,7 +291,7 @@ export const DESIGN_CATALOGUE: Record<Exclude<DesignPart, 'palette'>, readonly F
   structure: [
     { id: 'catalog-first', bold: false, desktop: 'Page structure: the catalog right after the hero, then one short story section, then pickup and delivery, then contact.', phone: 'On phones: the catalog first, two products per row.' },
     { id: 'story-scroll', bold: true, desktop: 'Page structure: one long story scroll of four or five chapters, each a full-width band with one idea and one photo or number, the catalog as the fourth chapter.', phone: 'On phones: one chapter per screen.' },
-    { id: 'lookbook', bold: true, needs: 'photos3', desktop: 'Page structure: a lookbook; large photos lead in an uneven grid with short captions, the catalog follows the photos.', phone: 'On phones: photos full width, captions under each.' },
+    { id: 'lookbook', bold: true, needs: 'photoGroup', desktop: 'Page structure: a lookbook; large photos lead in an uneven grid with short captions, the catalog follows the photos.', phone: 'On phones: photos full width, captions under each.' },
     { id: 'menu-board', bold: true, desktop: 'Page structure: a menu board; the catalog styled as a big printed menu with prices from the runtime, then a short note about the business.', phone: 'On phones: the menu as one long list.' },
     { id: 'guide-compare', bold: false, desktop: 'Page structure: a guide; a short "how to choose" section comparing the products side by side, then the catalog, then answers to real questions.', phone: 'On phones: the comparison becomes stacked cards.' },
     { id: 'magazine-issue', bold: true, desktop: 'Page structure: a magazine issue; a contents list, numbered features of different widths, a pull quote from the brief, then the catalog as the "shop" pages.', phone: 'On phones: one feature per screen with its number.' },
