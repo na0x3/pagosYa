@@ -997,3 +997,40 @@ it('finishes a preserved draft with the decision it was built from, even after t
   expect(fresh.dialogue.decide).toHaveBeenCalled();
   expect(fresh.generation.generate.mock.calls[0]?.[6]?.resumeDraft).toBeUndefined();
 });
+
+describe('store voice in the chat (spec 2026-10-14)', () => {
+  const Q1 = '¿Qué pide todo el mundo?', Q2 = '¿Qué tiene tu local que no tenga otro?';
+  const withAsked = (prisma: any, messages: any[]) => { prisma.storeAgentMessage.findMany = jest.fn(async () => messages.filter(message => message.role === 'ASSISTANT').slice().reverse().map(message => ({ metadata: message.metadata }))); };
+
+  it('names the facts YAPI assumed and asks one kind question after a build, never twice', async () => {
+    const { service, generation, prisma, messages } = setup();
+    withAsked(prisma, messages);
+    generation.generate.mockResolvedValue({ revision: 2, label: 'Café', generation: { voice: { pending: 2, questions: [Q1, Q2] } } });
+    const first = await service.send('m', 's', request);
+    expect(first.assistantMessage.content).toContain('Supuse 2 datos de tu negocio: confírmalos, corrígelos o quítalos en «Datos que YAPI supuso» antes de publicar.');
+    expect(first.assistantMessage.content).toContain(`Una pregunta para que tu tienda suene más tuya: ${Q1}`);
+    expect((first.assistantMessage.metadata as any).kindQuestion).toBe(Q1);
+    const second = await service.send('m', 's', { ...request, instruction: 'El flat white con alfajor' });
+    expect((second.assistantMessage.metadata as any).kindQuestion).toBe(Q2);
+    const third = await service.send('m', 's', { ...request, instruction: 'Cambia el fondo' });
+    expect(third.assistantMessage.metadata).not.toHaveProperty('kindQuestion');
+    expect(third.assistantMessage.content).not.toContain('Una pregunta para que tu tienda');
+  });
+
+  it('keeps the answer to a kind question on the onboarding record, finished for a store that never had one', async () => {
+    const { service, prisma } = setup([{ role: 'ASSISTANT', content: 'Guardé los cambios.', metadata: { sourceRevision: 1, kindQuestion: Q1 } }]);
+    prisma.store.findFirst.mockImplementation(async (args: any) => (args?.select?.onboarding ? { onboarding: null } : { name: 'Café Aroma', logoUrl: null, _count: { paymentLinks: 0 }, paymentLinks: [] }));
+    prisma.store.update = jest.fn(async () => ({}));
+    await service.send('m', 's', { ...request, instruction: 'El flat white con alfajor' });
+    const saved = prisma.store.update.mock.calls[0][0];
+    expect(saved.where).toEqual({ id: 's' });
+    expect(saved.data.onboarding.answers).toEqual([{ question: Q1, answer: 'El flat white con alfajor' }]);
+    expect(saved.data.onboarding.finishedAt).toEqual(expect.any(String));
+  });
+
+  it('a failed answer save never fails the message', async () => {
+    const { service, prisma } = setup([{ role: 'ASSISTANT', content: 'Guardé los cambios.', metadata: { sourceRevision: 1, kindQuestion: Q1 } }]);
+    prisma.store.update = jest.fn(async () => { throw new Error('down'); });
+    await expect(service.send('m', 's', { ...request, instruction: 'El cortado' })).resolves.toHaveProperty('revision');
+  });
+});

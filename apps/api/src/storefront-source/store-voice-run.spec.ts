@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, writeVoiceSheet, type VoiceRunInput } from './store-voice-run';
+import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, voiceReceipt, writeVoiceSheet, type VoiceRunInput } from './store-voice-run';
 import { voiceFile, type StoreVoice } from './store-voice';
 
 const bytes = Buffer.from('una foto');
@@ -117,5 +117,18 @@ describe('the copy check in a run (spec 2026-10-14, part 4)', () => {
     const line = JSON.parse(copyFindingsLog('run-1', copy, ['Reescribí la bienvenida.']));
     expect(line).toMatchObject({ event: 'copy_findings', generationId: 'run-1', counts: { echo: 1, avoid: 1, unsourced: 1 }, notes: ['Reescribí la bienvenida.'] });
     expect(line.findings[0]).toContain('línea: «Un lugar calmo para leer, trabajar y conversar sin apuro.»');
+  });
+});
+
+describe('voiceReceipt (spec 2026-10-14, part 1)', () => {
+  it('counts pending facts, and offers the kind questions not yet answered while fewer than 3 specifics are the merchant’s', async () => {
+    const voice = await startVoiceRun(input());
+    const sheet: StoreVoice = { ...SHEET, assumed: [{ id: 'a1', text: 'tostado en Caranavi', kind: 'origin', status: 'assumed' }] };
+    const receipt = voiceReceipt({ ...voice, onboarding: { answers: [{ question: '¿Qué pide todo el mundo?', answer: 'El cortado' }] } }, [voiceFile(sheet)]);
+    expect(receipt).toEqual({ pending: 1, questions: ['¿Qué tiene tu local que no tenga otro?', '¿De dónde viene tu café o tus ingredientes?'] });
+    const rich: StoreVoice = { ...sheet, specifics: ['a', 'b', 'c'].map((text, i) => ({ id: `m${i}`, text, source: 'merchant' as const })) };
+    expect(voiceReceipt(voice, [voiceFile(rich)])!.questions).toEqual([]);
+    expect(voiceReceipt({ ...voice, on: false }, [voiceFile(sheet)])).toBeUndefined();
+    expect(voiceReceipt(voice, [])).toBeUndefined();
   });
 });

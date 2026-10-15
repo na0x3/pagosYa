@@ -28,6 +28,8 @@ import { inspectSourceWebsite, sourceWebsiteReferenceUrls, sourceWebsiteReferenc
 import { honorImageContent } from './source-image-intent';
 import { requestsImageChange } from './source-edit-scope';
 import { createSourceProgress } from './source-progress';
+import { mergeOnboarding } from '../stores/store-onboarding';
+import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, templateManifest, type TemplateManifest } from '@pagosya/store-templates';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
@@ -96,6 +98,11 @@ function offeredDirections(messages: Array<{ role: string; metadata?: unknown }>
  *  no longer hold the chat and are not choosable. A row read without its heartbeat counts as beating. */
 const styleRunBeating = (row: { heartbeatAt?: Date | string | null }) => !row.heartbeatAt || Date.now() - new Date(row.heartbeatAt).getTime() < 90_000;
 const retryablePick = (proposal: StyleProposal, rowStatus: string, revision: number) => proposal.status === 'PICKED' && Boolean(proposal.design) && rowStatus === 'AWAITING_STYLE' && proposal.request.dto.revision === revision;
+/** Spec 2026-10-14 store voice: the kind question a YAPI reply asked, if it asked one. */
+const kindQuestionOf = (message: { role: string; metadata?: unknown } | undefined): string | undefined => {
+  const question = message?.role === 'ASSISTANT' ? (message.metadata as { kindQuestion?: unknown } | null)?.kindQuestion : undefined;
+  return typeof question === 'string' ? question : undefined;
+};
 
 @Injectable()
 export class SourceChatService {
@@ -300,6 +307,10 @@ export class SourceChatService {
       threadId: thread.id, channel: 'source', role: 'USER', content: input.instruction.trim(),
       metadata: { assetUrls: input.assetUrls || [], revision: input.revision, ...(input.requestId ? { requestId: input.requestId } : {}) },
     } });
+    // Store voice (spec 2026-10-14): the message right after YAPI's kind question is its answer. It is kept word for word on the
+    // onboarding record, where the next YAPI save adds it to the sheet as the merchant's own. It never fails or delays the message.
+    const askedQuestion = kindQuestionOf(history.messages.at(-1));
+    if (askedQuestion && input.instruction.trim()) await this.recordKindAnswer(merchantId, storeId, askedQuestion, input.instruction.trim());
     const workflow = createSourceProgress(async progress => {
       await sourceRequestContext.getStore()?.progress?.(progress);
       if (input.requestId) await this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: {
@@ -505,16 +516,38 @@ export class SourceChatService {
   /** The reply after a saved revision; the same text for a chat build and a build from a picked style. */
   private async revisionReply(thread: { id: string }, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, revision: Exclude<Awaited<ReturnType<SourceGenerationService['generate']>>, StyleProposalResult>, setupDraft: SourceSetupDraft, imageUses: SourceImageUse[], assetUrls: string[], prefix = '') {
     await workflow.finish('completed');
+    // Store voice (spec 2026-10-14): the facts YAPI assumed are named, and one kind question is asked while the sheet has fewer
+    // than 3 of the merchant's own specifics. YAPI never waits for the answer.
+    const voice = (revision.generation as { voice?: VoiceReceipt } | undefined)?.voice;
+    const kindQuestion = voice?.questions.length ? nextKindQuestion(voice.questions, await this.askedKindQuestions(thread.id)) : undefined;
+    const voiceNote = `${voice?.pending ? ` ${pendingFactsNote(voice.pending)}` : ''}${kindQuestion ? ` ${kindQuestionNote(kindQuestion)}` : ''}`;
     // The agent engine ends with its own account of the work: a short summary and the sections it built, in page order.
     const designReport = revision.generation?.creativeSummary ? `${revision.generation.creativeSummary}\n\n` : '';
     // A request about the store's controls says what YAPI drew, or that it kept them (review CD fix 4).
     const controlsReport = revision.generation?.controlsNote ? `${revision.generation.controlsNote}\n\n` : '';
     const agentReport = revision.agent ? `${revision.agent.summary}\n\n${revision.agent.sections.map(section => `• ${section}`).join('\n')}\n\n` : '';
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
-      threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${prefix}${designReport}${controlsReport}${agentReport}${revision.agent ? 'Guardé una revisión verificada en escritorio y celular' : 'Guardé los cambios de tu tienda'} «${revision.label}». ${revision.agent ? 'La revisión está lista para que la revises.' : 'El editor comprobará su resultado en el navegador y mostrará aquí los errores y pasos pendientes.'} Revisa también el aspecto del sitio a la derecha.${referenceOnlyNotice(imageUses, assetUrls)}${revision.createdProducts?.length ? ` Creé ${revision.createdProducts.length} productos en tu catálogo; también aparecen en la tienda publicada.` : ''}${revision.updatedProducts?.length ? ` Actualicé ${revision.updatedProducts.length} productos de tu catálogo.` : ''}${revision.deletedProducts?.length ? ` Eliminé ${revision.deletedProducts.length} productos de tu catálogo.` : ''}${revision.createdProducts?.length || revision.updatedProducts?.length || revision.deletedProducts?.length ? ' Puedes seguir administrándolos en Productos.' : ''}${revision.optionChanges?.length ? ` Opciones guardadas: ${revision.optionChanges.map(change=>`${change.productName}: ${change.count} combinaciones`).join('; ')}.` : ''}`,
-      metadata: { progress: workflow.value, sourceSetup: { ...setupDraft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: revision.revision, label: revision.label, ...(revision.agent ? { agentSummary: revision.agent.summary, agentSections: revision.agent.sections } : {}), createdProductIds: revision.createdProducts?.map(p => p.id) || [], ...(revision.generation ? { generation: revision.generation } : {}) },
+      threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${prefix}${designReport}${controlsReport}${agentReport}${revision.agent ? 'Guardé una revisión verificada en escritorio y celular' : 'Guardé los cambios de tu tienda'} «${revision.label}». ${revision.agent ? 'La revisión está lista para que la revises.' : 'El editor comprobará su resultado en el navegador y mostrará aquí los errores y pasos pendientes.'} Revisa también el aspecto del sitio a la derecha.${referenceOnlyNotice(imageUses, assetUrls)}${revision.createdProducts?.length ? ` Creé ${revision.createdProducts.length} productos en tu catálogo; también aparecen en la tienda publicada.` : ''}${revision.updatedProducts?.length ? ` Actualicé ${revision.updatedProducts.length} productos de tu catálogo.` : ''}${revision.deletedProducts?.length ? ` Eliminé ${revision.deletedProducts.length} productos de tu catálogo.` : ''}${revision.createdProducts?.length || revision.updatedProducts?.length || revision.deletedProducts?.length ? ' Puedes seguir administrándolos en Productos.' : ''}${revision.optionChanges?.length ? ` Opciones guardadas: ${revision.optionChanges.map(change=>`${change.productName}: ${change.count} combinaciones`).join('; ')}.` : ''}${voiceNote}`,
+      metadata: { progress: workflow.value, sourceSetup: { ...setupDraft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: revision.revision, label: revision.label, ...(revision.agent ? { agentSummary: revision.agent.summary, agentSections: revision.agent.sections } : {}), createdProductIds: revision.createdProducts?.map(p => p.id) || [], ...(revision.generation ? { generation: revision.generation } : {}), ...(kindQuestion ? { kindQuestion } : {}) },
     } });
     return { userMessage, assistantMessage, revision };
+  }
+
+  /** The kind questions YAPI already asked in this thread (spec 2026-10-14): never asked twice. A failed read asks again. */
+  private async askedKindQuestions(threadId: string): Promise<string[]> {
+    const rows = await Promise.resolve().then(() => this.prisma.storeAgentMessage.findMany({ where: { threadId, channel: 'source', role: 'ASSISTANT' }, orderBy: { createdAt: 'desc' }, take: 100, select: { metadata: true } })).catch(() => [] as Array<{ metadata: unknown }>);
+    return rows.flatMap(row => { const question = (row.metadata as { kindQuestion?: unknown } | null)?.kindQuestion; return typeof question === 'string' ? [question] : []; });
+  }
+
+  /** The answer to a kind question, kept on Store.onboarding.answers (spec 2026-10-14). A store with no walkthrough record gets a
+   *  finished one, so it never shows as an unfinished walkthrough. Never throws. */
+  private async recordKindAnswer(merchantId: string, storeId: string, question: string, answer: string): Promise<void> {
+    await Promise.resolve().then(async () => {
+      const row = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { onboarding: true } });
+      const current = row?.onboarding && typeof row.onboarding === 'object' && (row.onboarding as { version?: unknown }).version === 1 ? row.onboarding : null;
+      const onboarding = mergeOnboarding(current, { answers: [{ question, answer }], ...(current ? {} : { finished: true }) });
+      await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: onboarding as unknown as Prisma.InputJsonValue } });
+    }).catch(() => undefined);
   }
 
   /** "Elige tu estilo": build the store from the merchant's card with the request the proposal saved, not this message. */

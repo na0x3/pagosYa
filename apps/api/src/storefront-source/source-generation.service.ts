@@ -1,6 +1,7 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { sourceSignatureTaskLine } from './source-signature';
-import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, writeVoiceSheet } from './store-voice-run';
+import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, voiceReceipt, writeVoiceSheet } from './store-voice-run';
+import type { VoiceReceipt } from './store-voice';
 import { toneEditDirection, voiceCartWord, voiceEditDirection, withVoiceCartWord } from './store-voice-prompt';
 import { instructionConcernsTone, runToneUpdate, TONE_SCHEMA, TONE_TIMEOUT_MS } from './store-voice-design';
 import type { LegendEntry } from './photo-descriptions';
@@ -1397,7 +1398,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number; voice?: VoiceReceipt }) };
     await progress?.('saving');
     let saveInput = await assembleSave();
     // Revision N's library language passes the same browser guard as YAPI's (spec 2026-10-14, part 5): a failing one is not saved
@@ -1408,6 +1409,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     revisionFiles = saveInput.files;
     // Store voice (spec 2026-10-14, part 4): with no background review to rewrite them, revision N's copy findings are logged now.
     if (voice.on && sep5Author && !sep5Review) this.logger.log(copyFindingsLog(run.id, voiceCopyInput(voice, { data, assetLegend, brief: dto.brief }, saveInput.files), []));
+    // Store voice (spec 2026-10-14): what the chat reply says about this save's sheet (source-chat.service.ts revisionReply).
+    const voiceNote = voiceReceipt(voice, saveInput.files);
+    if (voiceNote) receipt.voice = voiceNote;
     signal.throwIfAborted();
     // Validate the assembled result, including final asset rewrites and runtime configuration.
     // Draft evidence alone cannot certify a different saved snapshot.

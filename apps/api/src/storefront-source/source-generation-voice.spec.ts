@@ -419,3 +419,11 @@ describe('a chat request about tone (spec 2026-10-14, part 2)', () => {
     expect(calls('store_voice_tone')).toHaveLength(0);
   });
 });
+
+describe('the receipt tells the chat about the sheet (spec 2026-10-14)', () => {
+  it('names the pending facts and the kind questions still worth asking', async () => {
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(SPAN) }) as any);
+    const result: any = await build();
+    expect(result.generation.voice).toEqual({ pending: 1, questions: ['¿Qué tiene tu local que no tenga otro?', '¿De dónde viene tu café o tus ingredientes?'] });
+  });
+});

@@ -5,12 +5,12 @@
  */
 import type { Logger } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
-import type { PlaybookKind } from './design-engine/playbook';
+import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { SHOWN_CARDS_TIMEOUT_MS, withinOr } from './design-engine/style-draws';
 import { applyPhotoDescriptions, describePhotos, legendPhotos, PHOTO_DESCRIPTION_MAX_OUTPUT_TOKENS, PHOTO_DESCRIPTION_SCHEMA, PHOTO_DESCRIPTION_TIMEOUT_MS, type LegendEntry, type LegendPhoto } from './photo-descriptions';
 import type { Sep5Caller } from './source-sep5-call';
 import { checkCopy, copyFindingCounts, copyFindingLines, storePrices, type CopyCheckInput } from './copy-check';
-import { merchantMessagesText, merchantSpecificCount, merchantTextOf, readOnboardingMaterial, readVoice, sanitizeVoice, voicesToDiffer, withOnboardingAnswers, type OnboardingMaterial, type RecentVoice, type StoreVoice } from './store-voice';
+import { foldText, merchantMessagesText, merchantSpecificCount, merchantTextOf, pendingAssumptions, type VoiceReceipt, readOnboardingMaterial, readVoice, sanitizeVoice, voicesToDiffer, withOnboardingAnswers, type OnboardingMaterial, type RecentVoice, type StoreVoice } from './store-voice';
 import { runVoiceSheet, voiceDeadlineMs, VOICE_MAX_OUTPUT_TOKENS, VOICE_SCHEMA } from './store-voice-design';
 
 export type VoiceRun = {
@@ -164,4 +164,16 @@ export function voiceCopyInput(voice: VoiceRun, run: { data: { items: ReadonlyAr
 export function copyFindingsLog(runId: string, input: CopyCheckInput, notes: readonly string[]): string {
   const found = checkCopy(input);
   return JSON.stringify({ event: 'copy_findings', generationId: runId, counts: copyFindingCounts(found), findings: copyFindingLines(found, 12), notes });
+}
+
+/** What the chat reply says about a save's sheet (spec 2026-10-14): facts waiting for the merchant, and the kind questions still
+ *  worth asking (only while fewer than 3 specifics are the merchant's own; never one answered in onboarding). */
+export function voiceReceipt(voice: VoiceRun, files: ReadonlyArray<{ path: string; content: string; encoding?: string }>): VoiceReceipt | undefined {
+  const saved = voice.on ? readVoice(files) : undefined;
+  if (!saved) return undefined;
+  const answered = voice.onboarding.answers.map(entry => foldText(entry.question));
+  return {
+    pending: pendingAssumptions(saved).length,
+    questions: merchantSpecificCount(saved) < 3 ? PLAYBOOK[voice.kind].questions.filter(question => !answered.includes(foldText(question))) : [],
+  };
 }
