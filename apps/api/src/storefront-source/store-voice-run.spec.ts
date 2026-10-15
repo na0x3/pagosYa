@@ -132,3 +132,19 @@ describe('voiceReceipt (spec 2026-10-14, part 1)', () => {
     expect(voiceReceipt(voice, [])).toBeUndefined();
   });
 });
+
+describe('deadlines on the ChatGPT plan (live demo 2026-10-15: the bridge serves two calls, design calls take 52–122 s)', () => {
+  it('the photo and sheet calls get the plan deadlines', async () => {
+    const run = input();
+    const voice = await startVoiceRun({ ...run, chatgptPlan: true });
+    const sep5Call = jest.fn(async () => ({ attempt: { status: 'FAILED' } as any, body: reply({ voice: 'Hablamos de tú.', specifics: [], texture: [], assumed: [], words: { products: '', customers: '', order: '', team: '' }, avoid: [] }) }));
+    const deps = { voice, assetLegend: run.assetLegend, sep5Call: sep5Call as any, prisma: run.prisma, merchantId: 'm1', signal: new AbortController().signal, logger: { log: jest.fn(), warn: jest.fn() }, runId: 'run-1' };
+    await describeNewPhotos(deps);
+    expect((sep5Call.mock.calls[0] as unknown[])[5]).toBe(180_000);
+    await writeVoiceSheet({ ...deps, storeName: 'Café', brief: {}, products: [] });
+    expect((sep5Call.mock.calls.at(-1) as unknown[])[5]).toBe(180_000);
+    const metered = await startVoiceRun(input());
+    await describeNewPhotos({ ...deps, voice: metered });
+    expect((sep5Call.mock.calls.at(-1) as unknown[])[5]).toBe(30_000);
+  });
+});

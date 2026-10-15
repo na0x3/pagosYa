@@ -1,4 +1,5 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
+import { sideCallDeadlineMs } from './source-side-deadlines';
 import { sourceSignatureTaskLine } from './source-signature';
 import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, voiceReceipt, writeVoiceSheet } from './store-voice-run';
 import type { VoiceReceipt } from './store-voice';
@@ -501,7 +502,7 @@ export class SourceGenerationService {
     // Store voice (spec 2026-10-14): the run's voice state (store-voice-run.ts), handed to every stage as facts.voice. It writes
     // cached photo descriptions onto the legend now, before any prompt reads it. YAPI_VOICE=off keeps today's prompts.
     const voice = await startVoiceRun({
-      on: this.config.get<boolean>('app.yapiVoice') === true && !useNext, sep5Author, storeId, merchantId, previousFiles,
+      on: this.config.get<boolean>('app.yapiVoice') === true && !useNext, sep5Author, storeId, merchantId, previousFiles, chatgptPlan,
       proposalVoice: execution?.style?.proposal.voice,
       kind: kind ?? detectKind(`${merchantWords}\n${typeof briefFacts?.businessType === 'string' ? briefFacts.businessType : ''}\n${businessInfo}\n${data.items.map(item => item.name).join(', ')}`),
       assetLegend, buffers: assetBuffers, contentType: name => this.uploads.contentTypeFor(name), prisma: this.prisma,
@@ -698,7 +699,7 @@ export class SourceGenerationService {
       const retainedDesign = resumable && checkpoint?.design ? savedSourceDesign([{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(checkpoint.design) }]) || undefined : undefined;
       // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
       // the single-call repair may switch it before the chat touch runs.
-      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
+      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering, chatgptPlan });
       if (exploration) {
         await progress?.('design');
         // Store voice (spec 2026-10-14, part 1): new photos are described beside the planner or the style cards (store-voice-run.ts).
@@ -995,7 +996,7 @@ export class SourceGenerationService {
        *  nothing usable. It never rejects: the review closure starts it before the review call and awaits it after, so a rejection
        *  would go unhandled meanwhile. */
       const designReviewControls = async (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }): Promise<ControlsDesign | null> => {
-        const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(controlsDeadlineMs())]);
+        const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(sideCallDeadlineMs(controlsDeadlineMs(), chatgptPlan))]);
         try {
           return await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords),
             onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason })), cartWord: voiceCartWord(voice.sheet) });
@@ -1013,10 +1014,10 @@ export class SourceGenerationService {
       // line first; this same edit then rewrites the visible text in it, and the sheet is saved with the edit. A failed call keeps
       // the sheet, and the edit still runs with the merchant's words.
       if (voice.on && !creative && voice.sheet && instructionConcernsTone(dto.instruction)) {
-        const toneSignal = AbortSignal.any([signal, AbortSignal.timeout(TONE_TIMEOUT_MS)]);
+        const toneSignal = AbortSignal.any([signal, AbortSignal.timeout(sideCallDeadlineMs(TONE_TIMEOUT_MS, chatgptPlan))]);
         try {
           const updated = await runToneUpdate({ voice: voice.sheet, instruction: merchantWords.trim().slice(0, 400), call: async text => {
-            const { attempt, body } = await sep5Call('tone', text, [], 'store_voice_tone', TONE_SCHEMA, TONE_TIMEOUT_MS, { signal: toneSignal, maxOutputTokens: 800, effort: 'low' });
+            const { attempt, body } = await sep5Call('tone', text, [], 'store_voice_tone', TONE_SCHEMA, sideCallDeadlineMs(TONE_TIMEOUT_MS, chatgptPlan), { signal: toneSignal, maxOutputTokens: 800, effort: 'low' });
             return { body, used: () => { attempt.status = 'COMPLETED'; } };
           } });
           if (updated) { voice.sheet = updated.voice; updated.used(); }

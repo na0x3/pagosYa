@@ -1,4 +1,5 @@
 import type { AiUsageService } from '../ai-usage/ai-usage.service';
+import { sideCallDeadlineMs } from './source-side-deadlines';
 import { KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS } from './kit-touch';
 import { SEP5_MAX_OUTPUT_TOKENS } from './source-generation-run';
 import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA } from './store-controls-design';
@@ -8,6 +9,8 @@ import type { SourceRequestBudget } from './source-request-budget';
 import type { SourceGenerationAttempt, SourceInputImage } from './source-generation-types';
 
 export type Sep5CallContext = {
+  /** The owner's ChatGPT plan: the touch and controls calls get longer deadlines (source-side-deadlines.ts). */
+  chatgptPlan?: boolean;
   provider: Pick<ReturnType<typeof sourceProvider>, 'endpoint'>;
   apiKey: ReturnType<typeof sourceProvider>['apiKey'];
   budget: SourceRequestBudget;
@@ -58,7 +61,7 @@ export function sep5Caller(context: Sep5CallContext) {
    *  bridge gives no completed answer. The attempt is charged only when its CSS is kept (`used`). */
   const touchCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: SourceInputImage[]) => {
     for (let tries = 0; ; tries++) {
-      const { attempt, body } = await sep5Call('touch', text, attached, 'storefront_kit_touch', KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, { signal: run.signal, attempts: run.attempts, maxOutputTokens: KIT_TOUCH_MAX_OUTPUT_TOKENS, effort: 'medium' });
+      const { attempt, body } = await sep5Call('touch', text, attached, 'storefront_kit_touch', KIT_TOUCH_SCHEMA, sideCallDeadlineMs(KIT_TOUCH_TIMEOUT_MS, context.chatgptPlan), { signal: run.signal, attempts: run.attempts, maxOutputTokens: KIT_TOUCH_MAX_OUTPUT_TOKENS, effort: 'medium' });
       if ((body as { status?: string } | null)?.status === 'completed' || tries === 1) return { body, used: () => { attempt.status = 'COMPLETED'; } };
       await new Promise(resolve => setTimeout(resolve, 3000));
       run.signal.throwIfAborted();
@@ -67,7 +70,7 @@ export function sep5Caller(context: Sep5CallContext) {
   /** The controls call (spec 2026-10-14 store controls, part 4): the same metered client, a small answer and medium effort, on
    *  its own signal. The attempt is charged only when the guard keeps the record (`used`). */
   const controlsCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: SourceInputImage[]) => {
-    const { attempt, body } = await sep5Call('controls', text, attached, 'storefront_controls', CONTROLS_SCHEMA, controlsDeadlineMs(), { signal: run.signal, attempts: run.attempts, maxOutputTokens: CONTROLS_MAX_OUTPUT_TOKENS, effort: 'medium' });
+    const { attempt, body } = await sep5Call('controls', text, attached, 'storefront_controls', CONTROLS_SCHEMA, sideCallDeadlineMs(controlsDeadlineMs(), context.chatgptPlan), { signal: run.signal, attempts: run.attempts, maxOutputTokens: CONTROLS_MAX_OUTPUT_TOKENS, effort: 'medium' });
     return { body, used: () => { attempt.status = 'COMPLETED'; } };
   };
   return { sep5Call, touchCall, controlsCall };

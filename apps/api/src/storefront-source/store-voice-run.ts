@@ -7,6 +7,7 @@ import type { Logger } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { SHOWN_CARDS_TIMEOUT_MS, withinOr } from './design-engine/style-draws';
+import { PLAN_PHOTO_DESCRIPTION_TIMEOUT_MS, sideCallDeadlineMs } from './source-side-deadlines';
 import { applyPhotoDescriptions, describePhotos, legendPhotos, PHOTO_DESCRIPTION_MAX_OUTPUT_TOKENS, PHOTO_DESCRIPTION_SCHEMA, PHOTO_DESCRIPTION_TIMEOUT_MS, type LegendEntry, type LegendPhoto } from './photo-descriptions';
 import type { Sep5Caller } from './source-sep5-call';
 import { checkCopy, copyFindingCounts, copyFindingLines, storePrices, type CopyCheckInput } from './copy-check';
@@ -14,6 +15,8 @@ import { foldText, merchantMessagesText, merchantSpecificCount, merchantTextOf, 
 import { runVoiceSheet, voiceDeadlineMs, VOICE_MAX_OUTPUT_TOKENS, VOICE_SCHEMA } from './store-voice-design';
 
 export type VoiceRun = {
+  /** The owner's ChatGPT plan: side calls get longer deadlines (source-side-deadlines.ts). */
+  chatgptPlan?: boolean;
   /** YAPI_VOICE on, on a static store. */
   on: boolean;
   /** A Sep-5 first build, or a redesign of a store without a sheet, writes a new one (the sheet call, design stage). */
@@ -37,6 +40,7 @@ export type VoiceRun = {
 };
 
 export type VoiceRunInput = {
+  chatgptPlan?: boolean;
   on: boolean;
   sep5Author: boolean;
   storeId: string;
@@ -54,7 +58,7 @@ export type VoiceRunInput = {
 
 /** The run's voice state before its row exists. Never throws: every read that fails is an empty one. */
 export async function startVoiceRun(input: VoiceRunInput): Promise<VoiceRun> {
-  const empty: VoiceRun = { on: false, fresh: false, kind: input.kind, onboarding: { answers: [] }, merchantMessages: '', siblings: [], photos: [], described: new Map(), sheet: undefined, photosJob: Promise.resolve(), sheetJob: Promise.resolve(null) };
+  const empty: VoiceRun = { chatgptPlan: Boolean(input.chatgptPlan), on: false, fresh: false, kind: input.kind, onboarding: { answers: [] }, merchantMessages: '', siblings: [], photos: [], described: new Map(), sheet: undefined, photosJob: Promise.resolve(), sheetJob: Promise.resolve(null) };
   if (!input.on) return empty;
   const previous = readVoice(input.previousFiles);
   // The merchant's material is read only when something will write from it: a Sep-5 design, or a store that has a sheet.
@@ -96,12 +100,13 @@ export async function describeNewPhotos(deps: VoiceStageDeps): Promise<void> {
   const { voice } = deps;
   const fresh = voice.photos.filter(photo => !voice.described.has(photo.digest));
   if (!fresh.length) return;
-  const photoSignal = AbortSignal.any([deps.signal, AbortSignal.timeout(PHOTO_DESCRIPTION_TIMEOUT_MS)]);
+  const photoDeadline = voice.chatgptPlan ? PLAN_PHOTO_DESCRIPTION_TIMEOUT_MS : PHOTO_DESCRIPTION_TIMEOUT_MS;
+  const photoSignal = AbortSignal.any([deps.signal, AbortSignal.timeout(photoDeadline)]);
   try {
     const found = await describePhotos({
       photos: fresh,
       call: async (text, image) => {
-        const { attempt, body } = await deps.sep5Call('photo', text, [{ type: 'input_image', image_url: image, detail: 'auto' }], 'photo_description', PHOTO_DESCRIPTION_SCHEMA, PHOTO_DESCRIPTION_TIMEOUT_MS, { signal: photoSignal, maxOutputTokens: PHOTO_DESCRIPTION_MAX_OUTPUT_TOKENS, effort: 'low' });
+        const { attempt, body } = await deps.sep5Call('photo', text, [{ type: 'input_image', image_url: image, detail: 'auto' }], 'photo_description', PHOTO_DESCRIPTION_SCHEMA, photoDeadline, { signal: photoSignal, maxOutputTokens: PHOTO_DESCRIPTION_MAX_OUTPUT_TOKENS, effort: 'low' });
         return { body, used: () => { attempt.status = 'COMPLETED'; } };
       },
       save: (digest, description) => deps.prisma.mediaAssetDescription.upsert({ where: { merchantId_digest: { merchantId: deps.merchantId, digest } }, create: { merchantId: deps.merchantId, digest, description }, update: {} }),
@@ -120,7 +125,8 @@ export type VoiceSheetDeps = VoiceStageDeps & { storeName: string; brief: unknow
 export async function writeVoiceSheet(deps: VoiceSheetDeps): Promise<StoreVoice | null> {
   const { voice } = deps;
   await voice.photosJob;
-  const voiceSignal = AbortSignal.any([deps.signal, AbortSignal.timeout(voiceDeadlineMs())]);
+  const voiceDeadline = sideCallDeadlineMs(voiceDeadlineMs(), voice.chatgptPlan);
+  const voiceSignal = AbortSignal.any([deps.signal, AbortSignal.timeout(voiceDeadline)]);
   try {
     const written = await runVoiceSheet({
       material: {
@@ -130,7 +136,7 @@ export async function writeVoiceSheet(deps: VoiceSheetDeps): Promise<StoreVoice 
         differFrom: voice.siblings.flatMap(row => (row.voice ? [row.voice] : [])),
       },
       call: async text => {
-        const { attempt, body } = await deps.sep5Call('voice', text, [], 'store_voice', VOICE_SCHEMA, voiceDeadlineMs(), { signal: voiceSignal, maxOutputTokens: VOICE_MAX_OUTPUT_TOKENS, effort: 'low' });
+        const { attempt, body } = await deps.sep5Call('voice', text, [], 'store_voice', VOICE_SCHEMA, voiceDeadline, { signal: voiceSignal, maxOutputTokens: VOICE_MAX_OUTPUT_TOKENS, effort: 'low' });
         return { body, used: () => { attempt.status = 'COMPLETED'; } };
       },
     });
