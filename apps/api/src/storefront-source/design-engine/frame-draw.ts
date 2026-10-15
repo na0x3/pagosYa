@@ -3,7 +3,7 @@
  * random: given the same kind of brief it lands on the same header every time. The platform rolls these four parts
  * per new store or redesign, avoiding what recent stores got, and YAPI builds them in the store's own language.
  */
-import { cartWordFor, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
+import { COMMERCE_LEAN, cartWordFor, drawCommerce, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
 import { CONVENTIONAL_HEADERS, PLAYBOOK, type StyleFamily } from './playbook';
 import { merchantAsksForPhotoGroup } from '../source-media-design';
 
@@ -159,7 +159,7 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string } } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself (style cards). */ commerce?: false }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string } } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -190,12 +190,19 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed, input.spread ?? 0);
   const frameOmit = frameOverrides(input.request);
   const playbookFields: Record<string, string> = input.playbook ? { kind: input.playbook.kind, family: input.playbook.family.id } : {};
-  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) };
+  // Checkout, cart and account drawn on every fresh build, not only on a picked style card (2026-10-15: 23 of 26 stores had
+  // the default). Calm or bold like the header; without a playbook every option, as the frame itself.
+  const commerceMode = input.boldStyle || input.playbook?.bold ? 'bold' : conventional ? 'calm' : undefined;
+  const commerceDrawn = input.commerce === false ? undefined : drawCommerce(input.random ?? Math.random, recent.map(parseCommerceDraw), commerceMode ?? 'calm', input.spread ?? 0, commerceMode ? COMMERCE_LEAN[commerceMode] : {});
+  const cartWord = cartWordFor(input.playbook?.kind);
+  const commerce = commerceDrawn ? { commerce: { draw: commerceDrawn, fresh: true, ...(cartWord ? { cartWord } : {}) } } : {};
+  const cartLine = commerceDrawn && cartWord ? `\n- Cart label: the header's cart reads «${cartWord}» followed by the count in [data-cart-count]; never another word for the cart.` : '';
+  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields, ...commerceDrawn }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) + cartLine, ...commerce };
   const category = input.playbook?.kind ?? input.category ?? '';
   const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) }, input.spread ?? 0);
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
-  const draw = { ...frame, ...design, category, ...playbookFields };
+  const draw = { ...frame, ...design, category, ...playbookFields, ...commerceDrawn };
   // Parts the merchant decided are not saved: they were never built, so they must not count in other stores' history.
   const savedDraw: Record<string, string> = { ...draw };
   if (designOmit.palette) delete savedDraw.palette;
@@ -204,10 +211,11 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const palette = designOmit.palette ? undefined : allPalettes().find(entry => entry.id === design.palette);
   return {
     file: { path: FRAME_DRAW_FILE, content: JSON.stringify(savedDraw, null, 2) + '\n' },
-    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }, Boolean(input.playbook)),
+    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }, Boolean(input.playbook)) + cartLine,
     planner: plannerDirection(draw, { palette: designOmit.palette }, Boolean(input.playbook)),
     ...(designOmit.button ? {} : { dna: { button: design.button, hover: design.hover } }),
     ...(palette ? { palette } : {}),
+    ...commerce,
   };
 }
 

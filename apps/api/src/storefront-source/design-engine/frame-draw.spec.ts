@@ -1,5 +1,6 @@
 import { SOURCE_RHYTHM_DIRECTION } from '../source-design';
 import { PLAYBOOK } from './playbook';
+import { COMMERCE_LEAN, COMMERCE_OPTIONS } from './commerce-draw';
 import { asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, framePlatformHeader, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -386,4 +387,53 @@ it('drops the header and cart lines for an author whose header the platform draw
   expect(stripped.startsWith('FRAME AND HERO:')).toBe(true);
   expect(framePlatformHeader('FRAME AND HERO: x\n- Cart label: the header\'s cart reads «Tu bolsa».\n- Hero: y')).toBe('FRAME AND HERO: x\n- Hero: y');
   expect(framePlatformHeader('')).toBe('');
+});
+
+// Sub-project 1 (2026-10-15): 23 of 26 dev stores had the default checkout, because only style-card picks drew commerce.
+describe('commerce draw on every fresh build', () => {
+  const parts = Object.keys(COMMERCE_OPTIONS) as Array<keyof typeof COMMERCE_OPTIONS>;
+  const run = (extra: Partial<Parameters<typeof frameForRun>[0]> = {}, seed = 4) => frameForRun({ enabled: true, designEnabled: true, category: 'café', fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(seed), ...extra });
+  const playbook = (bold: boolean) => ({ kind: 'cafe-food', family: PLAYBOOK['cafe-food'].families[0], bold });
+
+  it('draws and saves all five parts, with the cart word of the kind of business', () => {
+    const fresh = run({ playbook: playbook(false) });
+    expect(Object.keys(fresh.commerce!.draw).sort()).toEqual([...parts].sort());
+    expect(fresh.commerce).toMatchObject({ fresh: true, cartWord: 'Tu pedido' });
+    expect(parseFrameDraw(fresh.file!.content)).toMatchObject(fresh.commerce!.draw);
+    expect(fresh.paragraph).toContain('«Tu pedido»');
+    // Without the design draw the commerce still comes: it is the frame's, not the palette's.
+    expect(run({ designEnabled: false }).commerce!.draw).toEqual(expect.objectContaining({ checkout: expect.any(String) }));
+  });
+
+  it('a calm build stays calm and a bold one bold', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const calm = run({ playbook: playbook(false) }, seed).commerce!.draw;
+      const bold = run({ playbook: playbook(true), boldStyle: true }, seed).commerce!.draw;
+      for (const part of parts) {
+        expect(COMMERCE_LEAN.calm[part]).toContain(calm[part]);
+        expect(COMMERCE_LEAN.bold[part]).toContain(bold[part]);
+      }
+    }
+  });
+
+  it('spreads across recent stores and never gives a redesign its own last checkout back', () => {
+    const checkouts = new Set(Array.from({ length: 20 }, (_, seed) => run({}, seed + 1).commerce!.draw.checkout));
+    expect(checkouts.size).toBeGreaterThan(2);
+    const recent = [{ checkout: 'columns' as const }, { checkout: 'steps' as const }];
+    for (let seed = 1; seed <= 20; seed++) expect(['ticket', 'brand']).toContain(run({ recent }, seed).commerce!.draw.checkout);
+    for (let seed = 1; seed <= 20; seed++) {
+      const own = { path: FRAME_DRAW_FILE, content: JSON.stringify({ checkout: 'steps', cartSurface: 'page' }) };
+      const redesign = run({ previous: [own], playbook: playbook(false) }, seed).commerce!.draw;
+      expect(redesign.checkout).toBe('columns');
+      expect(redesign.cartSurface).toBe('drawer');
+    }
+  });
+
+  it('an edit keeps the saved draw, and a style card can draw its own', () => {
+    const saved = { path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'classic', checkout: 'ticket', cartSurface: 'sheet', kind: 'cafe-food' }) };
+    expect(frameForRun({ enabled: true, designEnabled: true, fresh: false, previous: [saved], recent: [], available: rich, request: 'cambia el título' }).commerce).toEqual({ draw: { checkout: 'ticket', cartSurface: 'sheet' }, fresh: false, cartWord: 'Tu pedido' });
+    const card = run({ commerce: false });
+    expect(card.commerce).toBeUndefined();
+    expect(parseFrameDraw(card.file!.content).checkout).toBeUndefined();
+  });
 });

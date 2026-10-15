@@ -98,7 +98,7 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
   const taken: ReturnType<typeof parseFrameDraw>[] = [];
   const slots: StyleSlot[] = plan.map(({ mode, family }, slot) => {
     const recent = [...Array.from({ length: TAKEN_WEIGHT }, () => taken).flat(), ...history];
-    const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD });
+    const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false });
     const draw = parseFrameDraw(run.file?.content);
     taken.push(draw);
     const used = displaysShown(mode);

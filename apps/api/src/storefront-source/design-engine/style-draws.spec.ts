@@ -223,9 +223,9 @@ describe('frameForRun keeps a saved commerce draw on an edit', () => {
     expect(frameForRun({ ...run, fresh: false, previous }).commerce).toEqual({ draw: { account: 'split', checkout: 'ticket', fields: 'pill', cartSurface: 'sheet', added: 'stamp' }, fresh: false, cartWord: 'Tu bolsa' });
     expect(frameForRun({ ...run, designEnabled: false, fresh: false, previous }).commerce?.draw.checkout).toBe('ticket');
   });
-  it('returns no commerce for a saved draw without it, nor for a fresh ordinary run', () => {
+  it('returns no commerce for a saved draw without it; a fresh ordinary run draws its own (2026-10-15)', () => {
     const previous = [{ path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'stacked' }) }];
     expect(frameForRun({ ...run, fresh: false, previous }).commerce).toBeUndefined();
-    expect(frameForRun({ ...run, fresh: true, previous: [] }).commerce).toBeUndefined();
+    expect(frameForRun({ ...run, fresh: true, previous: [] }).commerce).toMatchObject({ fresh: true, draw: { checkout: expect.any(String) } });
   });
 });
