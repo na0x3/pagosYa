@@ -18,7 +18,8 @@ import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
-import { controlsToAvoid, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
+import { controlsToAvoid, libraryIconFallback, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
+import { CONTROLS_GUARD_TIMEOUT_MS, guardControlsOnSnapshot, judgeControls } from './store-controls-guard';
 import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
@@ -806,6 +807,30 @@ export class SourceGenerationService {
        *  had a record is returned as it is, so stores without controls keep today's bytes. */
       const storeControlsInto = <T extends { files: SourceProjectFileDto[] }>(input: T, controls: StoreControls | undefined): T =>
         !controls && readConfigFile(input.files).controls === undefined ? input : { ...input, files: platformHeader(withControlsConfig(input.files, controls), [], controls) };
+      /** The browser guard (spec 2026-10-14, part 5) on a candidate save. A failing icon takes the library icon for its slot; any
+       *  other failure puts `fallback` back (revision N's language, or none). A guard that cannot run keeps a library language
+       *  and drops YAPI's. Never fails the save; logs controls_saved or controls_dropped with the reasons. */
+      const keepGuardedControls = async <T extends { files: SourceProjectFileDto[] }>(input: T, fallback: StoreControls | undefined, source: 'library' | 'yapi' | 'request', base: AbortSignal): Promise<{ input: T; kept: boolean }> => {
+        const controls = readControls(input.files);
+        if (!controls) return { input, kept: false };
+        const guardSignal = AbortSignal.any([base, AbortSignal.timeout(CONTROLS_GUARD_TIMEOUT_MS)]);
+        let verdict: ReturnType<typeof judgeControls>;
+        try {
+          verdict = judgeControls(await guardControlsOnSnapshot({ brief: dto.brief, files: input.files } as unknown as SourceProjectSnapshot, { signal: guardSignal }));
+        } catch (error) {
+          base.throwIfAborted();
+          this.logger.warn(JSON.stringify({ event: 'controls_guard_failed', generationId: run.id, source, reason: guardSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+          return source === 'library' ? { input, kept: true } : { input: storeControlsInto(input, fallback), kept: false };
+        }
+        if (verdict.drop) {
+          this.logger.log(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source, reasons: verdict.reasons.slice(0, 12) }));
+          return { input: storeControlsInto(input, fallback), kept: false };
+        }
+        const fallbackIcon = libraryIconFallback(controlsKind, merchantWords);
+        const kept: StoreControls = verdict.iconSlots.length ? { ...controls, icons: { ...controls.icons, ...Object.fromEntries(verdict.iconSlots.map(slot => [slot, fallbackIcon(slot)])) } } : controls;
+        this.logger.log(JSON.stringify({ event: 'controls_saved', generationId: run.id, source, outline: kept.shape.outline, iconFallbacks: verdict.iconSlots }));
+        return { input: verdict.iconSlots.length ? storeControlsInto(input, kept) : input, kept: true };
+      };
       const acceptCandidate = async () => {
         websiteDesignFile = generated.files.find(file => file.path === 'website-design.json') ?? websiteDesignFile;
         generated.files = generated.files.filter(file => file.path !== 'website-design.json');
@@ -1279,7 +1304,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
     const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
-    const saveInput = await assembleSave();
+    let saveInput = await assembleSave();
+    // Revision N's library language passes the same browser guard as YAPI's (spec 2026-10-14, part 5): a failing one is not saved
+    // (today's header), a failing icon takes the library line icon, and a guard that cannot run keeps the language.
+    if (controlsFresh && readControls(saveInput.files)) saveInput = (await keepGuardedControls(saveInput, undefined, 'library', signal)).input;
     revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);
     signal.throwIfAborted();
     // Validate the assembled result, including final asset rewrites and runtime configuration.

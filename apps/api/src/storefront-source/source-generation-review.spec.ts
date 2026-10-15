@@ -25,6 +25,10 @@ jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockR
 // The review renders the draft in Chromium; unit tests exercise what the service does with the shots.
 jest.mock('./design-engine/sep5-review-capture', () => ({ ...jest.requireActual('./design-engine/sep5-review-capture'), captureSep5Draft: jest.fn().mockResolvedValue({ shots: [{ width: 1280, y: 0, image: 'data:image/png;base64,AAAA' }], facts: [] }) }));
 jest.mock('./design-engine/header-clickable', () => ({ ...jest.requireActual('./design-engine/header-clickable'), captureHeaderCovers: jest.fn().mockResolvedValue([]) }));
+// The controls guard launches Chromium; these tests exercise what the service does with its verdict.
+jest.mock('./store-controls-guard', () => ({ ...jest.requireActual('./store-controls-guard'), guardControlsOnSnapshot: jest.fn().mockResolvedValue([]) }));
+import { guardControlsOnSnapshot } from './store-controls-guard';
+import { CART_ICONS } from './store-controls-library';
 
 const concept = (name: string) => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
   composition: { family: 'menu-led', rationale: 'The cafe needs a clear menu for quick ordering.', pages: [{ page: 'index.html', purpose: 'shopping', rationale: 'Choose from the real menu.', sections: [{ id: 'menu', intent: 'Choose products and order.', layout: 'product-grid', geometry: 'grid', media: [], mobile: 'grid', primaryAction: 'Order' }] }] },
@@ -531,5 +535,50 @@ describe('store controls: revision N gets a library language (spec 2026-10-14, p
     projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...projects.save.mock.calls[0][2], revision: 1 }) });
     await service.generate('m1', 's1', { ...dto, revision: 1, instruction: 'Rediseña toda la tienda desde cero' }, new SourceRequestBudget(25), []);
     expect(configOf(projects.save.mock.calls[1]).controls).toEqual(pickLibraryControls({ kind: 'general', mode: 'calm', seed: 's1:1', avoid: [previous], palette: storePalette(projects.save.mock.calls[1][2].files) }));
+  });
+});
+
+describe('store controls: the guard on revision N (spec 2026-10-14, part 5)', () => {
+  let service: SourceGenerationService, projects: any, config: any;
+  const configOf = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  const homeOf = (call: any[]): string => call[2].files.find((f: any) => f.path === 'index.html').content;
+  const build = () => service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+  const picked = () => pickLibraryControls({ kind: 'general', mode: 'calm', seed: 's1:0', palette: storePalette(projects.save.mock.calls[0][2].files) });
+  beforeEach(() => {
+    ({ service, projects, config } = setup());
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    config.set('app.sep5SelfReview', false);
+    config.set('app.yapiControls', true);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(authorWithBody(REVIEW) as any);
+    (guardControlsOnSnapshot as jest.Mock).mockReset().mockResolvedValue([]);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("saves no record and today's header when the library language fails the guard", async () => {
+    (guardControlsOnSnapshot as jest.Mock).mockResolvedValueOnce([{ width: 390, slot: 'cart', check: 'contrast', detail: 'word 1.20:1, needs 4.5:1' }]);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    await build();
+    expect(configOf(projects.save.mock.calls[0]).controls).toBeUndefined();
+    expect(homeOf(projects.save.mock.calls[0])).not.toContain('data-controls-');
+    expect(log.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_dropped"') && line.includes('"source":"library"'))).toBe(true);
+  });
+
+  it('an icon that fails the guard takes the line drawing of the library icon for that slot only', async () => {
+    (guardControlsOnSnapshot as jest.Mock).mockResolvedValueOnce([{ width: 1440, slot: 'cart', check: 'icon', detail: 'the icon paints 0 pixels' }]);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    await build();
+    expect(configOf(projects.save.mock.calls[0]).controls).toEqual({ ...picked(), icons: { ...picked().icons, cart: CART_ICONS.bag.line } });
+    // The seeded pick is a line language whose cart already is the bag: the log proves the verdict reached the save.
+    expect(log.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_saved"') && line.includes('"iconFallbacks":["cart"]'))).toBe(true);
+  });
+
+  it('keeps the library language when the guard itself cannot run', async () => {
+    (guardControlsOnSnapshot as jest.Mock).mockRejectedValueOnce(new Error('chromium crashed'));
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    await build();
+    expect(configOf(projects.save.mock.calls[0]).controls).toEqual(picked());
+    expect(guardControlsOnSnapshot).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_guard_failed"') && line.includes('chromium crashed'))).toBe(true);
   });
 });
