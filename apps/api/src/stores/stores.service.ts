@@ -18,7 +18,7 @@ import { assertWebsiteRevision, saveWebsiteDraftPatch, websiteDraft, websiteEdit
 import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { assertValidStoreLocations, storeLocationSnapshot } from "./store-locations";
 import { DEFAULT_STORE_ANIMATION, normalizeAnimationMedia, animationContentSection, DEFAULT_STORE_CONTENT_ORDER, type StoreAnimation, storeUpdateData, readStoreHeroSlides, readStoreEditorialGallery } from "./store-presentation";
-import { mergeOnboarding, onboardingBrief, type StoreOnboardingPatch } from "./store-onboarding";
+import { mergeOnboarding, onboardingBrief, onboardingQuestions, type StoreOnboardingPatch } from "./store-onboarding";
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 
 /** Store management for the merchant: creating, configuring, publishing the website draft, links, archiving, and quick QR payments. */
@@ -37,12 +37,12 @@ export class StoresService {
       // A specific store (the list's Continuar): the merchant's own, active and unfinished, with its full answers.
       const one = await this.prisma.store.findFirst({ where: { id: storeId, merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true } });
       const unfinished = Boolean(one?.onboarding) && !(one!.onboarding as { finishedAt?: string }).finishedAt;
-      return { enabled: true, store: one && unfinished ? { id: one.id, name: one.name, onboarding: one.onboarding } : null };
+      return { enabled: true, store: one && unfinished ? { id: one.id, name: one.name, onboarding: one.onboarding, questions: onboardingQuestions(one.onboarding as { what?: string } | null) } : null };
     }
     const stores = await this.prisma.store.findMany({ where: { merchantId, status: StoreStatus.ACTIVE }, select: { id: true, name: true, onboarding: true }, orderBy: { createdAt: 'desc' }, take: 50 });
     // The newest store that started the walkthrough and never finished it resumes; stores from before the walkthrough (null) never do.
     const open = stores.find((store) => store.onboarding && !(store.onboarding as { finishedAt?: string }).finishedAt) ?? null;
-    return { enabled: true, store: open ? { id: open.id, name: open.name, onboarding: open.onboarding } : null };
+    return { enabled: true, store: open ? { id: open.id, name: open.name, onboarding: open.onboarding, questions: onboardingQuestions(open.onboarding as { what?: string } | null) } : null };
   }
 
   async saveOnboarding(merchantId: string, storeId: string, patch: StoreOnboardingPatch) {
@@ -50,9 +50,11 @@ export class StoresService {
     if (!store) throw new NotFoundException('Tienda no encontrada.');
     const onboarding = mergeOnboarding(store.onboarding, patch);
     await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: onboarding as unknown as Prisma.InputJsonValue, ...(patch.contact?.whatsapp && onboarding.contact?.whatsapp ? { contactPhone: onboarding.contact.whatsapp } : {}), ...(patch.primaryAction && onboarding.primaryAction?.kind === 'form' ? { contactFormEnabled: true } : {}) } });
-    if (!patch.finished && !patch.brief) return { onboarding };
+    // Spec 2026-10-14 store voice: every save answers with the kind questions, so the walkthrough asks them once «¿Qué vendes?» is known.
+    const questions = onboardingQuestions(onboarding);
+    if (!patch.finished && !patch.brief) return { onboarding, questions };
     const products = await this.prisma.paymentLink.findMany({ where: { storeId }, select: { name: true, amount: true }, orderBy: { createdAt: 'asc' }, take: 5 });
-    return { onboarding, brief: onboardingBrief(store.name, onboarding, products) };
+    return { onboarding, questions, brief: onboardingBrief(store.name, onboarding, products) };
   }
 
   async createQuickQrPayment(merchantId: string, storeId: string, dto: CreateQuickQrPaymentDto) {

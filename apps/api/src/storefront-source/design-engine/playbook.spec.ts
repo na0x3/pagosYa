@@ -131,3 +131,15 @@ it('keeps the last stores of the same kind in view, beyond the newest six of any
   expect(view.families).toEqual(['services-clear']);
   expect(view.dice.map(draw => draw.header)).toEqual(['h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h10']);
 });
+
+it('asks two or three short Spanish questions per kind and keeps its own avoid list (spec 2026-10-14 store voice)', () => {
+  for (const entry of Object.values(PLAYBOOK)) {
+    expect({ kind: entry.kind, count: entry.questions.length >= 2 && entry.questions.length <= 3 }).toEqual({ kind: entry.kind, count: true });
+    for (const question of entry.questions) expect(question).toMatch(/^¿[^?]{4,60}\?$/);
+    expect(entry.avoid.length).toBeGreaterThan(2);
+  }
+  expect(PLAYBOOK['cafe-food'].questions.slice(0, 2)).toEqual(['¿Qué pide todo el mundo?', '¿Qué tiene tu local que no tenga otro?']);
+  expect(PLAYBOOK.services.questions.slice(0, 2)).toEqual(['¿Qué problema resuelves primero?', '¿Cómo es una primera reunión contigo?']);
+  expect(PLAYBOOK['crafts-home'].questions).toContain('¿Qué te inspira?');
+  expect(PLAYBOOK.general.questions).toContain('¿Cada cuánto entregan?');
+});

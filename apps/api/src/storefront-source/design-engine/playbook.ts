@@ -11,7 +11,11 @@ export type StyleFamily = { id: string; name: string; palettes: Palette[]; fonts
 export type Evidence = 'hours' | 'location' | 'delivery';
 /** `evidence`: shown only when the store has that fact (never invented); `kitPage`: the platform's own information pages carry it. */
 export type PlaybookSection = { id: string; label: string; must: string; detect: RegExp; evidence?: Evidence; kitPage?: boolean };
-export type PlaybookEntry = { kind: PlaybookKind; name: string; profile: CraftProfile; sections: PlaybookSection[]; families: StyleFamily[]; tone: string; footer: string; references: string[];
+export type PlaybookEntry = { kind: PlaybookKind; name: string; profile: CraftProfile; sections: PlaybookSection[]; families: StyleFamily[]; tone: string;
+  /** Spec 2026-10-14 store voice: 2–3 short Spanish questions asked in onboarding's story step and, once each, in chat. */
+  questions: string[];
+  /** Phrases this kind's stores never write; added to the shared avoid list by code (copy-check.ts avoidPhrases). */
+  avoid: string[]; footer: string; references: string[];
   /** Story angles (DESIGN_CATALOGUE.angle) that suit this kind; a calm build draws only these. */
   angles: string[] };
 
@@ -29,6 +33,7 @@ const LEGAL = 'a multi-column footer (shop, information pages, contact and hours
 export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   'cafe-food': { kind: 'cafe-food', angles: ['origin-place', 'ritual-time', 'the-maker', 'senses', 'neighbourhood', 'field-guide'], name: 'café and food', profile: 'shop', references: ['buna.mx', 'pukupuku.pe'], sections: [ABOUT, HOURS, LOCATION, DELIVERY], footer: LEGAL,
     tone: 'warm and concrete: origin, process and taste in real words from the brief; no poetry about pauses or moments',
+    questions: ['¿Qué pide todo el mundo?', '¿Qué tiene tu local que no tenga otro?', '¿De dónde viene tu café o tus ingredientes?'], avoid: ['momento perfecto', 'tu pausa', 'cada taza cuenta', 'aroma que enamora', 'el mejor café', 'sabor inigualable'],
     families: [
       { id: 'cafe-shop', name: 'clean roaster shop', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline', 'underline'], fonts: [{ display: 'outfit', text: 'outfit' }, { display: 'manrope', text: 'manrope' }, { display: 'familjen-grotesk', text: 'figtree' }],
         palettes: [p('cafe-white-red', 'white and deep red', '#ffffff', '#161616', '#8f1d14', '#f4efe9'), p('cafe-white-green', 'white and forest green', '#ffffff', '#141a17', '#1f5c4a', '#eef2ee')] },
@@ -37,6 +42,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     ] },
   'bakery-sweets': { kind: 'bakery-sweets', angles: ['ritual-time', 'the-maker', 'senses', 'neighbourhood'], name: 'bakery and sweets', profile: 'shop', references: ['panio.mx', 'rapanui.com.ar', 'pumpstreetchocolate.com'], sections: [ABOUT, HOURS, LOCATION, DELIVERY, FAQ], footer: LEGAL,
     tone: 'generous and specific: ingredients, baking times and real flavours; gifts and occasions when the brief has them',
+    questions: ['¿Qué sale primero del horno cada día?', '¿Qué receta es la de la casa?', '¿Para qué ocasiones te piden más?'], avoid: ['hecho con cariño', 'como en casa', 'dulce tentación', 'sabor inigualable', 'irresistible'],
     families: [
       { id: 'bakery-editorial', name: 'calm editorial bakery', radius: 'soft', photoShape: 'plain', buttons: ['pill', 'outline'], fonts: [{ display: 'libre-caslon-text', text: 'figtree' }, { display: 'dm-serif-display', text: 'manrope' }],
         palettes: [p('bakery-cream-rose', 'cream and rose', '#fbf7f2', '#221a17', '#b0475a', '#f1e6e1'), p('bakery-cream-plum', 'cream and plum', '#faf6f1', '#20161f', '#5b2a52', '#ece3e8')] },
@@ -46,6 +52,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   clothing: { kind: 'clothing', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'clothing and accessories', profile: 'shop', references: ['carlafernandez.com', 'juanadearco.net', 'solalpaca.com', 'thinkingmu.com'], footer: LEGAL,
     sections: [ABOUT, DELIVERY, { id: 'sizes', label: 'tallas', must: 'sizes and how to choose them', detect: /(talla|tallas|medidas|size)/i }, { kitPage: true, id: 'returns', label: 'cambios y devoluciones', must: 'exchanges and returns in one line', detect: /(cambio|devoluci[oó]n|devoluciones)/i }],
     tone: 'short and confident: collections, materials and fit; never hype',
+    questions: ['¿Con qué telas trabajas?', '¿Quién diseña o cose cada prenda?', '¿Cómo eligen su talla tus clientes?'], avoid: ['tendencia', 'look perfecto', 'estilo único', 'para cada ocasión', 'imprescindible'],
     families: [
       { id: 'clothing-minimal', name: 'minimal boutique', radius: 'square', photoShape: 'plain', buttons: ['block', 'underline', 'outline'], fonts: [{ display: 'instrument', text: 'instrument' }, { display: 'manrope', text: 'manrope' }],
         palettes: [p('clothing-white-black', 'white and black', '#ffffff', '#111111', '#111111', '#efefef'), p('clothing-white-orange', 'white and burnt orange', '#ffffff', '#151515', '#c2410c', '#ecf0f1')] },
@@ -55,6 +62,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   beauty: { kind: 'beauty', angles: ['ritual-time', 'the-maker', 'origin-place', 'field-guide'], name: 'beauty and personal care', profile: 'shop', references: ['xinu.mx', 'matarrania.com'], footer: LEGAL,
     sections: [ABOUT, { id: 'ingredients', label: 'ingredientes o servicios', must: 'what is inside or what the service does, from the brief', detect: /(ingrediente|f[oó]rmula|natural|servicio|tratamiento|piel|cabello)/i }, DELIVERY, CONTACT],
     tone: 'calm and exact: ingredients, routines and results the brief supports; never medical claims',
+    questions: ['¿Qué ingrediente o servicio es el de la casa?', '¿Cómo es una primera visita contigo?', '¿Qué te preguntan siempre tus clientes?'], avoid: ['resultados visibles', 'piel perfecta', 'mímate', 'belleza natural', 'te mereces'],
     families: [
       { id: 'beauty-quiet', name: 'quiet luxury', radius: 'square', photoShape: 'plain', buttons: ['outline', 'block'], fonts: [{ display: 'newsreader', text: 'figtree' }, { display: 'libre-caslon-text', text: 'manrope' }],
         palettes: [p('beauty-ivory-taupe', 'ivory and taupe', '#f6f4ec', '#1b1a17', '#7d6a55', '#ebe7dc'), p('beauty-white-sage', 'white and sage', '#ffffff', '#16201b', '#4f6b5a', '#eef1ec')] },
@@ -64,6 +72,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   services: { kind: 'services', angles: ['field-guide', 'the-maker', 'neighbourhood'], name: 'professional services and finance', profile: 'story', references: ['kambista.com', 'p-narayan-and-associates-15999.boosterpack.xyz', 'pagosya.boosterpack.xyz'], footer: LEGAL,
     sections: [{ id: 'offer', label: 'qué ofrecemos', must: 'what is offered, in plain words', detect: /(servicio|ofrecemos|asesor|contab|legal|financ|cr[eé]dito|tr[aá]mite)/i }, { id: 'steps', label: 'cómo funciona', must: 'how it works in 3-4 numbered steps', detect: /(c[oó]mo funciona|paso|primero|1\.|01)/i }, { id: 'proof', label: 'confianza', must: 'proof from the brief only: years, clients, registrations or reviews it states', detect: /(a[nñ]os|clientes|registr|rese[nñ]a|confian|certific)/i }, FAQ, CONTACT],
     tone: 'clear and trustworthy: what you get, what it costs and what happens next; no jargon',
+    questions: ['¿Qué problema resuelves primero?', '¿Cómo es una primera reunión contigo?', '¿A qué tipo de cliente ayudas más?'], avoid: ['soluciones integrales', 'llevamos tu negocio', 'siguiente nivel', 'de la mano', 'aliado estratégico', 'potencia tu'],
     families: [
       { id: 'services-editorial', name: 'editorial trust', radius: 'square', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'block'], fonts: [{ display: 'young-serif', text: 'instrument' }, { display: 'playfair-display', text: 'lora' }, { display: 'newsreader', text: 'manrope' }],
         palettes: [p('services-cream-terracotta', 'cream and terracotta', '#f8f5ef', '#262b24', '#9e4a3a', '#ede5d8'), p('services-stone-navy', 'stone and navy', '#f5f5f0', '#1c2133', '#4d5471', '#eaeae4')] },
@@ -73,6 +82,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   'fitness-wellness': { kind: 'fitness-wellness', angles: ['ritual-time', 'the-maker', 'neighbourhood', 'field-guide'], name: 'fitness and wellness', profile: 'story', references: ['yoko-studio-gent-19475.boosterpack.xyz', 'moonpilates.mx'], footer: LEGAL,
     sections: [{ id: 'classes', label: 'clases', must: 'the classes or services with level and length', detect: /(clase|clases|sesi[oó]n|nivel|minutos)/i }, { id: 'prices', label: 'precios', must: 'prices or memberships from the catalogue', detect: /(precio|plan|membres|paquete|Bs\.?|\$)/i }, HOURS, LOCATION, CONTACT],
     tone: 'encouraging and practical: who it is for, what a class feels like, how to start',
+    questions: ['¿Cómo es una primera clase?', '¿Para quién es tu estudio?', '¿Qué hace distinta tu forma de entrenar?'], avoid: ['mejor versión', 'sin excusas', 'transforma tu cuerpo', 'cuerpo y mente', 'supera tus límites'],
     families: [
       { id: 'fitness-studio', name: 'studio warm', radius: 'pill', photoShape: 'arch', buttons: ['pill', 'outline'], fonts: [{ display: 'outfit', text: 'figtree' }, { display: 'bricolage', text: 'manrope' }],
         palettes: [p('fitness-cream-forest', 'cream and forest', '#fdf8e8', '#13221a', '#024526', '#f3e5ab'), p('fitness-cream-clay', 'cream and clay', '#fbf6ee', '#211813', '#a4502f', '#efe1cf')] },
@@ -82,6 +92,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   'crafts-home': { kind: 'crafts-home', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'crafts and home', profile: 'shop', references: ['onoracasa.com', 'utilitariomexicano.com'], footer: LEGAL,
     sections: [ABOUT, { id: 'craft', label: 'cómo se hace', must: 'materials and how each piece is made', detect: /(hecho a mano|artesan|material|barro|cer[aá]mica|madera|tejid|proceso)/i }, LOCATION, DELIVERY],
     tone: 'honest and tactile: materials, makers and care; each piece is real',
+    questions: ['¿Qué te inspira?', '¿En qué papel o material trabajas?', '¿Cómo se hace cada pieza?'], avoid: ['piezas únicas', 'con alma', 'hecho a mano con amor', 'llena de vida', 'cada pieza cuenta una historia'],
     families: [
       { id: 'crafts-gallery', name: 'gallery shop', radius: 'square', photoShape: 'plain', buttons: ['outline', 'block', 'underline'], fonts: [{ display: 'dm-serif-display', text: 'manrope' }, { display: 'instrument-serif', text: 'instrument' }],
         palettes: [p('crafts-white-charcoal', 'white and charcoal', '#ffffff', '#1b1a19', '#393634', '#efede9'), p('crafts-white-clay', 'white and clay', '#ffffff', '#1d1714', '#a2512e', '#f2e8e1')] },
@@ -91,6 +102,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   'flowers-gifts': { kind: 'flowers-gifts', angles: ['ritual-time', 'the-maker', 'senses', 'neighbourhood'], name: 'flowers and gifts', profile: 'shop', references: ['margaritasellamamiamor.com'], footer: LEGAL,
     sections: [{ id: 'occasions', label: 'ocasiones', must: 'shop by occasion or category', detect: /(ocasi[oó]n|cumplea|aniversario|boda|regalo|ramo|arreglo)/i }, DELIVERY, ABOUT, CONTACT],
     tone: 'kind and helpful: occasions, delivery times and care, without clichés',
+    questions: ['¿Qué flor o regalo te piden más?', '¿Cada cuánto entregan y dónde?', '¿Qué ocasión te gusta más preparar?'], avoid: ['momentos especiales', 'sorprende a quien más quieres', 'detalles que enamoran', 'el regalo perfecto'],
     families: [
       { id: 'flowers-classic', name: 'classic florist', radius: 'soft', photoShape: 'plain', buttons: ['outline', 'block'], fonts: [{ display: 'libre-caslon-text', text: 'figtree' }, { display: 'newsreader', text: 'manrope' }],
         palettes: [p('flowers-white-black', 'white and black', '#ffffff', '#111111', '#111111', '#f3f3f3'), p('flowers-white-rose', 'white and rose', '#ffffff', '#1f1416', '#b23a5b', '#f8e8ec')] },
@@ -99,6 +111,7 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     ] },
   general: { kind: 'general', angles: ['the-maker', 'field-guide', 'neighbourhood', 'origin-place'], name: 'professional store', profile: 'shop', references: ['pagosya.boosterpack.xyz'], sections: [ABOUT, DELIVERY, CONTACT], footer: LEGAL,
     tone: 'plain and specific: what is sold, for whom and how to buy it',
+    questions: ['¿Qué es lo que más te piden?', '¿De dónde viene lo que vendes?', '¿Cada cuánto entregan?'], avoid: ['la mejor calidad', 'al mejor precio', 'todo lo que necesitas', 'para toda la familia'],
     families: [
       { id: 'general-clean', name: 'clean shop', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'manrope', text: 'manrope' }, { display: 'figtree', text: 'figtree' }],
         palettes: [p('general-white-blue', 'white and blue', '#ffffff', '#111827', '#1d4ed8', '#eef2fb'), p('general-white-green', 'white and green', '#ffffff', '#132017', '#2f6b3a', '#e8f2ec')] },

@@ -11,6 +11,10 @@ class StoreOnboardingActionDto {
   @IsIn(PRIMARY_ACTION_KINDS) kind!: PrimaryActionKind;
   @IsOptional() @IsString() @MaxLength(300) value?: string;
 }
+class StoreOnboardingAnswerDto {
+  @IsString() @MaxLength(200) question!: string;
+  @IsString() @MaxLength(400) answer!: string;
+}
 
 export class StoreOnboardingDto {
   @IsOptional() @IsInt() @Min(0) @Max(8) step?: number;
@@ -18,6 +22,7 @@ export class StoreOnboardingDto {
   @IsOptional() @IsArray() @IsIn(ONBOARDING_STEPS, { each: true }) skipped?: OnboardingStep[];
   @IsOptional() @IsString() @MaxLength(300) what?: string;
   @IsOptional() @IsString() @MaxLength(1200) story?: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => StoreOnboardingAnswerDto) answers?: StoreOnboardingAnswerDto[];
   @IsOptional() @IsArray() @ArrayMaxSize(20) @Matches(/^\/v1\/uploads\/[A-Za-z0-9._-]+$/, { each: true }) photos?: string[];
   @IsOptional() @ValidateNested() @Type(() => StoreOnboardingContactDto) contact?: StoreOnboardingContactDto;
   @IsOptional() @IsIn(['shop', 'showcase']) purpose?: 'shop' | 'showcase';

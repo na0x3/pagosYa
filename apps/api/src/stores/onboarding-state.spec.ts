@@ -1,5 +1,6 @@
 import { StoreStatus } from "@prisma/client";
 import { StoresService } from "./stores.service";
+import { PLAYBOOK } from "../storefront-source/design-engine/playbook";
 
 type Row = { id: string; name: string; status: StoreStatus; createdAt: number; onboarding: unknown };
 const row = (id: string, createdAt: number, onboarding: unknown, status: StoreStatus = StoreStatus.ACTIVE): Row => ({ id, name: id, status, createdAt, onboarding });
@@ -23,7 +24,7 @@ describe("onboardingState", () => {
   it("returns the newest unfinished store among several", async () => {
     const { service } = serviceWith([row("old", 1, open), row("newest", 3, open), row("mid", 2, open)]);
     const state = await service.onboardingState("m_1", true);
-    expect(state).toEqual({ enabled: true, store: { id: "newest", name: "newest", onboarding: open } });
+    expect(state).toEqual({ enabled: true, store: { id: "newest", name: "newest", onboarding: open, questions: PLAYBOOK.general.questions } });
   });
 
   it("ignores finished and null-onboarding stores", async () => {
@@ -72,7 +73,7 @@ describe("onboardingState with storeId", () => {
 
   it("returns that store's full onboarding when unfinished", async () => {
     const state = await make([mine("s1", full)]).onboardingState("m_1", true, "s1");
-    expect(state).toEqual({ enabled: true, store: { id: "s1", name: "s1", onboarding: full } });
+    expect(state).toEqual({ enabled: true, store: { id: "s1", name: "s1", onboarding: full, questions: PLAYBOOK["cafe-food"].questions } });
   });
   it("returns null for another merchant's store, archived, finished or never-started stores", async () => {
     const service = make([mine("s1", full), { ...mine("s2", full), merchantId: "m_2" }, mine("s3", full, StoreStatus.ARCHIVED), mine("s4", finished), mine("s5", null)]);
@@ -90,5 +91,14 @@ describe("saveOnboarding (spec 2026-10-13)", () => {
     expect(result.brief).toContain("Crea mi sitio.");
     await service.saveOnboarding("m_1", "s_1", { primaryAction: { kind: "booking", value: "https://cal.com/deff" } });
     expect((update.mock.calls[1] as any[])[0].data).not.toHaveProperty("contactFormEnabled");
+  });
+  it("returns the kind questions with every save, and keeps the answers (spec 2026-10-14 store voice)", async () => {
+    const update = jest.fn(async () => ({}));
+    const prisma = { store: { findFirst: jest.fn(async () => ({ name: "Café Remanso", onboarding: { version: 1, step: 1, done: [], skipped: [] } })), update }, paymentLink: { findMany: jest.fn(async () => []) } };
+    const service = new StoresService(prisma as any, undefined as any, undefined as any);
+    const saved: any = await service.saveOnboarding("m_1", "s_1", { step: 2, done: ["what"], what: "Cafetería de barrio" });
+    expect(saved.questions).toEqual(PLAYBOOK["cafe-food"].questions);
+    await service.saveOnboarding("m_1", "s_1", { step: 7, done: ["story"], answers: [{ question: "¿Qué pide todo el mundo?", answer: "El cortado" }] });
+    expect((update.mock.calls[1] as any[])[0].data.onboarding.answers).toEqual([{ question: "¿Qué pide todo el mundo?", answer: "El cortado" }]);
   });
 });
