@@ -21,6 +21,12 @@ export const TARGET = join(root, 'kit', 'commerce.js');
 /** Concatenation order, which is execution order: top-level statements run in this order, and a `const`/`let` is in
  *  its temporal dead zone until its part has run. A new part goes where its code must run, not where it reads best. */
 export const PARTS = [
+  'shared/config-dna.js',
+  'motifs/drawings.js',
+  'shared/analytics.js',
+  'shared/state.js',
+  'catalog/offers.js',
+  'cart/lines.js',
   'rest.js',
 ];
 
