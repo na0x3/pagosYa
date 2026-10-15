@@ -10,9 +10,8 @@ import { emptySourceHeaders, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSource
 import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { currentSourceRuntime } from './source-runtime';
-import { instructionConcernsKitSurfaces, type KitTouchCss } from './kit-touch';
+import { type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
-import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
 import { sourceMediaPolicy } from './source-media-design';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
@@ -23,7 +22,7 @@ import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-mercha
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
 import { captureAgentDraft } from './agent/agent-capture';
-import { agentProjectIndex, workspaceDigest, assertMerchantTaskCoverage, assertTaskFeasibility, validateTaskRequirements } from './agent/agent-task';
+import { agentProjectIndex, workspaceDigest } from './agent/agent-task';
 import { loadStoreKnowledge, storeKnowledgeForGeneration } from '../store-knowledge/store-knowledge';
 import { DesignRetryableConflict } from './source-design-errors';
 import { sourceSitePurpose, sourceSitePurposePrompt } from './source-site-purpose';
@@ -40,18 +39,15 @@ import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent, unusedPhotoDiagnostic } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
-import { avoidTakenFingerprint, sourceRuntimeDna } from './source-dna';
+import { avoidTakenFingerprint } from './source-dna';
 import { adoptTrailingDesignSections, sourceEyebrowNote, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_LAYOUT_CONTRACT, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, isClaude } from './source-provider';
 import { withSavedLogo } from './source-saved-logo';
-import { anthropicAgentModel } from './agent/agent-model-anthropic';
-import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
-import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { sourceUiCompositions, sourceUiCompositionPrompt, type SourceCompositionInput } from './source-ui';
 import { sourceUiCompositionRecipe } from './source-composition-registry';
 import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, repairNextCommerceMounts, repairNextAuthoredMarkup, repairNextSharedComponentReferences, repairNextMisdirectedImports, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, SourceScopeConflict } from './source-edit-scope';
-import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
+import { withSourceFonts } from './source-fonts';
 import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
@@ -70,7 +66,7 @@ import { requestedSourceProductOperations, requestedSourceProducts, sourceProduc
 import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion } from './source-motion';
 import { sourceMotionPlan } from './source-motion-plan';
 import { sourceMotionPersonalityLine } from './source-motion-tokens';
-import { buildSourceVisualSystem, savedSourceVisualSystem, sourceProductPageStyle, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
+import { buildSourceVisualSystem, savedSourceVisualSystem, SOURCE_VISUAL_SYSTEM_CONTRACT, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
 import { validateSourcePreflight } from './source-preflight';
 import { platformSuppliedPages, repairSourceContracts } from './source-autorepair';
@@ -81,11 +77,10 @@ import { applyOrderEmailTemplate } from './source-email-html';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import { extractSourceMotifs, isSourceMotifFile, sourceMotifPaths, sourceMotifPrompt } from './source-motifs';
 import { ProductPageWriterService } from '../product-content/product-page-writer.service';
-import { AGENT_POLICY_KINDS, type PendingPolicies } from './source-agent-policies';
+import { type PendingPolicies } from './source-agent-policies';
 import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
-import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
@@ -100,18 +95,11 @@ import { Prisma } from '@prisma/client';
 import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-generation-policy';
 import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
-import { kitPath } from '@pagosya/storefront-kit';
-import { AgentWorkspace } from './agent/agent-workspace';
-import { AgentToolbox, recordTellsKept } from './agent/agent-tools';
-import { instructionConcernsProductCard } from './product-theme';
-import { runAgent, AGENT_LIMITS, agentLimits, agentRunHeadroom, agentWallWithin, abortedByTimeout } from './agent/agent-loop';
+import { AgentToolbox } from './agent/agent-tools';
+import { agentLimits, agentRunHeadroom } from './agent/agent-loop';
 import { sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
-import { normalizeAccountTheme } from './account-theme';
 import { agentPreviewSnapshot } from './agent/agent-capture';
 import { snapshotWithProductTheme } from './product-theme';
-import { openAiAgentModel } from './agent/agent-model';
-import { agentInstructions, agentOpening } from './agent/agent-prompt';
-import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { CLAUDE_COMPANION_MODEL, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
 import { outputSchema, sourceStablePrompt } from './source-generation-prompt';
 import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
@@ -122,6 +110,7 @@ import { sep5Caller } from './source-sep5-call';
 import { assembleSourceSave, designMotifs, type LookChoice, type SaveAssemblyContext } from './source-save-assembly';
 import { runSep5AuthorStage } from './source-sep5-stage';
 import { runChatKitTouch } from './source-sep5-review';
+import { runAgentStage } from './source-agent-stage';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
@@ -1133,131 +1122,9 @@ export class SourceGenerationService {
         lenient = true;
         try { await acceptCandidate(); } finally { lenient = false; }
       } else if (agentEngine) {
-        await progress?.('building');
-        const isNew = !previous;
-        const workspace = new AgentWorkspace(oldFiles, { redesign: isNew || redesign, rewriteComponents: execution?.keepTemplate === true });
-
-
-        // What the sandbox needs besides the draft: the saved store, or for a new store its catalog config and the commerce runtime.
-        const previewBase = previous
-          ? { brief: dto.brief, files: [...previousFiles.filter(file => !assets.some(asset => asset.path === file.path)), ...assets] }
-          : { brief: dto.brief, files: [
-            { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ sitePurpose, scrollFeel, demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ''), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), productPage: 'product.html', checkoutPage: 'checkout.html', data })};\n` },
-            { path: 'commerce.js', content: await readFile(kitPath('commerce.js'), 'utf8') },
-            ...assets,
-          ] };
-        if (previous) previewBase.files = previewBase.files.map(file => {
-          if (file.path !== 'config.js') return file;
-          const stored = JSON.parse(file.content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, ''));
-          return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...stored, sitePurpose, scrollFeel, slug: owner.slug, data })};\n` };
-        });
-        // Review the committed commerce structure, not the previous store's runtime DNA.
-        // pendingTheme is subsequently applied by the toolbox, as it is at final save.
-        if (isNew || redesign) {
-          previewBase.files = previewBase.files.map(file => {
-            if (file.path !== 'config.js') return file;
-            const stored = JSON.parse(file.content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, ''));
-            const productPageStyle = sourceProductPageStyle(visualSystem, stored);
-            const dna = sourceRuntimeDna(committedDesign?.concepts[committedDesign.selected]?.dna, storeId, productPageStyle);
-            return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...stored, ...(productPageStyle ? { productPageStyle } : {}), dna })};\n` };
-          });
-          previewBase.files = previewBase.files.filter(file => ![SOURCE_DESIGN_FILE, SOURCE_VISUAL_SYSTEM_FILE].includes(file.path));
-          previewBase.files.push({ path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(visualSystem) });
-          if (committedDesign) previewBase.files.push({ path: SOURCE_DESIGN_FILE, content: JSON.stringify(committedDesign) });
-        }
-        // finish is accepted only when the draft passes the same acceptance chain a single-call response must pass.
-        const gate = async (files: SourceProjectFileDto[]) => {
-          const saved = { repairs: autoRepairs.length, motifs: motifFiles };
-          generated = { label: 'Cambios de YAPI', files: files.map(file => ({ ...file })) };
-          try { await acceptCandidate(); workspace.restore(generated.files.filter(file => nextSourceFile(file.path))); return null; }
-          catch (error) { autoRepairs.length = saved.repairs; motifFiles = saved.motifs; return repairDiagnostic(error); }
-        };
-        const lenientGate = async (files: SourceProjectFileDto[]) => { lenient = true; try { return await gate(files); } finally { lenient = false; } };
-        let renderablePreview = resumable ? checkpoint.preview : undefined;
-        const toolbox = new AgentToolbox({ workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, merchantInstruction: sourceRequestContext.getStore()?.request.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, gate, lenientGate, taskRequired: true,
-          mediaPolicy: sourceMediaPolicy(sitePurpose, isNew || redesign, merchantRequest?.instruction || dto.instruction, committedDesign?.concepts[committedDesign.selected]?.composition),
-          ...((isNew || redesign) ? { reviewComposition: async (input: Parameters<typeof reviewSourceComposition>[0]) => {
-            // The existing vision-capable planning provider reviews independently of the writing transcript.
-            const reviewModel = model;
-            const review = await reviewSourceComposition(input, { model: reviewModel, provider: sourceProvider(this.config, reviewModel), budget,
-              direction: committedDesign?.concepts[committedDesign.selected],
-              record: async (body, durationMs, status) => {
-                attempts.push({ model: reviewModel, phase: 'visual', durationMs, status, usage: sourceUsage(reviewModel, body?.usage), tools: ['composition_review'] });
-                await this.metering?.record(storeId, 'source-composition-review', reviewModel, body, durationMs, status);
-              },
-            });
-            const visualAttempt = attempts.slice().reverse().find(attempt => attempt.phase === 'visual');
-            if (visualAttempt) (visualAttempt.diagnostics ??= []).push({ tool: 'composition_review', digest: workspaceDigest(input.snapshot.files), durationMs: visualAttempt.durationMs,
-              output: JSON.stringify({ ...review, coverage: input.captures.map(({ page, width }) => ({ page, width, state: 'normal' })) }) });
-            return review;
-          } } : {}),
-          onDiagnostic: diagnostic => { const attempt = attempts.at(-1); if (attempt) (attempt.diagnostics ??= []).push(diagnostic); },
-          // A whole-store design may always set the product page theme; a local edit only when it concerns the product page.
-          themeAllowed: isNew || redesign || instructionConcernsProductCard(dto.instruction) || instructionConcernsKitSurfaces(dto.instruction),
-          accountThemeAllowed: isNew || redesign || /cuenta|login|ingres|registro|contraseña|perfil|pedidos|acceso/i.test(dto.instruction),
-          motifPackAllowed: isNew || redesign || /motivo|decora|paquete|dibuj|ilustra|sticker|pegatina|tem[aá]tic|divertid|l[uú]dic/i.test(dto.instruction),
-          // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
-          onPreview: files => {
-            renderablePreview = { files: workspace.files(), theme: toolbox.pendingTheme };
-            agentDraftPreviews.set(storeId, files.filter(file => !(file.encoding === 'base64' && previousFiles.some(saved => saved.path === file.path))));
-          } });
-        if (resumable) {
-          try { toolbox.requirements = validateTaskRequirements(checkpoint.requirements, oldFiles); assertTaskFeasibility(toolbox.requirements, previewBase.files); assertMerchantTaskCoverage(toolbox.requirements, merchantRequest?.instruction || dto.instruction); }
-          catch (error) {
-            toolbox.requirements = [];
-            taskPrompt += '\nThe retained source is reusable, but its old checker plan was invalid: ' + (error as Error).message + ' Plan again against the unchanged original merchant request before continuing.';
-          }
-          workspace.restore(checkpoint.files);
-          toolbox.pendingTheme = checkpoint.theme || null;
-          toolbox.pendingAccountTheme = normalizeAccountTheme(checkpoint.accountTheme) ?? null;
-          toolbox.pendingMotifPack = typeof checkpoint.motifPack === 'string' || checkpoint.motifPack === null ? checkpoint.motifPack : undefined;
-          toolbox.pendingPolicies = Object.fromEntries(AGENT_POLICY_KINDS.filter(kind => typeof checkpoint.policies?.[kind] === 'string' || checkpoint.policies?.[kind] === null).map(kind => [kind, checkpoint.policies[kind]]));
-          taskPrompt += '\nRestored unfinished private draft for this exact request. Original requirements (must not be reduced): ' + JSON.stringify(toolbox.requirements) + '. Inspect current files, repair the remaining problems and verify again.';
-        }
-        const saveCheckpoint = async () => {
-          if (execution?.candidate || !toolbox.requirements.length) return;
-          await this.prisma.storeSourceGeneration.updateMany({ where: { id: run.id, status: 'RUNNING' }, data: { checkpoint: { key: checkpointKey, ...(committedDesign ? { design: committedDesign } : {}), ...(requestKey ? { requestKey } : {}), assetUrls, ...(renderablePreview ? { preview: renderablePreview } : {}), ...(!previous ? { base: { brief: previewBase.brief, files: previewBase.files.filter(file => !file.path.startsWith('assets/')) } } : {}), requirements: toolbox.requirements, files: workspace.files(), theme: toolbox.pendingTheme, accountTheme: toolbox.pendingAccountTheme, ...(toolbox.pendingMotifPack !== undefined ? { motifPack: toolbox.pendingMotifPack } : {}), ...(Object.keys(toolbox.pendingPolicies).length ? { policies: toolbox.pendingPolicies } : {}), evidence: toolbox.evidence } as unknown as Prisma.InputJsonValue } });
-        };
-        const onTurn = async ({ body, durationMs, status }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => {
-          // The tools this turn asked for, so a slow or failed run can be explained afterwards (OpenAI `output`, Anthropic `content`).
-          const tools = [...(Array.isArray(body?.output) ? body.output : []), ...(Array.isArray(body?.content) ? body.content : [])].filter((item: any) => item?.type === 'function_call' || item?.type === 'tool_use').map((item: any) => String(item.name));
-          attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, tools, ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}),
-            // The provider's own words, for us: the merchant sees only the status and code.
-            ...(body?.error ? { failureReason: [body.error.code || body.error.type, body.error.message].filter(part => typeof part === 'string' && part).join(': ').slice(0, 300) } : {}) });
-          await this.prisma.storeSourceGeneration.updateMany({ where:{id:run.id,status:'RUNNING'}, data:{attempts:attempts as unknown as Prisma.InputJsonValue} });
-          await this.metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
-        };
-        const agentModel = agentProvider
-          ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
-          : openAiAgentModel({
-            endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: plan.reasoningEffort, signal,
-            // Every turn resends the growing transcript; a stable key lets the provider bill that prefix at the cached rate.
-            promptCacheKey: sourcePromptCacheKey('agent', stablePrompt, storeId),
-            onTurn,
-          });
-        execution?.onDispatch?.();
-        let outcome: Awaited<ReturnType<typeof runAgent>>;
-        let accepted: boolean;
-        try {
-          // Measured against the run's hard stop, so the agent stops itself (warned, and its draft rescued) before the run is aborted.
-          const runLimits = agentWallWithin(agentLimits(chatgptPlan), started + runTimeout);
-          outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [frame.paragraph, playbookText].filter(Boolean).join('\n')), opening: agentOpening(taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
-          accepted = outcome.status === 'finished' && !!toolbox.finished;
-          // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
-          if (!accepted && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length)) accepted = await toolbox.acceptIfBuildable();
-          unfinishedStatus = toolbox.stopped?.status === 'partial' ? 'PARTIAL' : toolbox.stopped?.status === 'blocked' ? 'BLOCKED' : null;
-        } finally { agentDraftPreviews.clear(storeId); }
-        if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? (abortedByTimeout(signal) ? ' porque se acabó el tiempo de esta solicitud' : ' porque se canceló') : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : outcome.reason === 'loop' ? ' porque se quedó repitiendo la misma acción' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
-        if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme && toolbox.pendingMotifPack === undefined && !Object.keys(toolbox.pendingPolicies).length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
-        autoRepairs.push(...toolbox.repairs);
-        if (signatureOn) recordTellsKept(attempts, toolbox.tellsKept);
-        agentTheme = toolbox.pendingTheme;
-        agentAccountTheme = toolbox.pendingAccountTheme;
-        agentMotifPack = toolbox.pendingMotifPack;
-        agentPolicies = toolbox.pendingPolicies;
-        const summary = toolbox.finished?.summary.trim() || 'Cambios de YAPI';
-        generated.label = summary.split('\n')[0].slice(0, 120);
-        agentOutcome = { summary, requirements: toolbox.requirements, evidence: toolbox.evidence, sections: toolbox.finished?.sections ?? [], steps: toolbox.steps.map(({ thumbnail: _thumbnail, ...step }) => step) };
+        // The tool-using agent (source-agent-stage.ts). It writes the agent's theme, policies, outcome and unfinished status
+        // through `live`, the last one before it throws, so the catch below records PARTIAL/BLOCKED as before.
+        await runAgentStage({ facts, live, acceptCandidate, resume: { resumable, checkpoint, checkpointKey, requestKey, merchantRequest } });
       } else {
       for (let index = 0; index < sourceAttemptLimit; index++) {
         await progress?.(index ? 'repairing' : 'building');
