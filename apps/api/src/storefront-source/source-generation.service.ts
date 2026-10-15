@@ -12,7 +12,7 @@ import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from 
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
-import { carriedTouch, chatTouchKept, instructionConcernsKitSurfaces, KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
+import { carriedTouch, chatTouchKept, instructionConcernsKitSurfaces, MERCHANT_MARKER, pickTouch, runKitTouch, touchBudgetMs, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { reviewSourceComposition } from './source-composition-review';
 import { preferFreshComposition } from './source-composition-selection';
@@ -127,6 +127,7 @@ import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-genera
 import type { Sep5Review, SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 import { runStyleProposal, type ProposeStylesInput } from './source-style-proposals';
 import { startBackgroundReview, type BackgroundReviewInput } from './source-review-runner';
+import { sep5Caller } from './source-sep5-call';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
 /** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
@@ -892,44 +893,9 @@ export class SourceGenerationService {
       const sourceAttemptLimit = attempts.filter(attempt => attempt.phase === 'design').length > 1 ? 1 : 2;
       // Yapi orchestrates bounded Design, Boceto and Critic stages; assembly and commerce stay deterministic.
       // Total by construction: any provider failure falls back to the repaired default sketch and still saves.
-      // One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike.
-      const sep5Call = async (phase: 'author' | 'review' | 'touch', text: string, attached: typeof images, schemaName: string, schema: object, timeoutMs: number, options: { signal?: AbortSignal; attempts?: SourceGenerationAttempt[]; maxOutputTokens?: number; effort?: 'low' | 'medium' | 'high' } = {}) => {
-        const callSignal = options.signal ?? signal;
-        const attempt: SourceGenerationAttempt = { model, phase, durationMs: 0, status: 'FAILED', usage: null };
-        (options.attempts ?? attempts).push(attempt);
-        let body: any = null;
-        const callStarted = Date.now();
-        try {
-          const allocation = budget.reserve(model, Math.ceil(text.length / 3) + 1000, options.maxOutputTokens ?? SEP5_MAX_OUTPUT_TOKENS, 500);
-          try {
-            // SEP5_CLIENT_TIMEOUT_MS, not the staged-call arms: those are sized for a 3,500-token design stage,
-            // and this one writes the entire store.
-            const response = await fetch(provider.endpoint, { method: 'POST', signal: AbortSignal.any([callSignal, AbortSignal.timeout(timeoutMs)]), headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ model, store: false, instructions: '', input: [{ role: 'user', content: [{ type: 'input_text', text }, ...attached] }], max_output_tokens: allocation.outputTokens, reasoning: { effort: options.effort ?? 'high' }, text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } } }) });
-            body = await response.json().catch(() => null);
-          } finally { allocation.settle(body?.usage); }
-        } catch (error) { attempt.failureReason = ((error as Error)?.message || 'sin respuesta').slice(0, 300); }
-        callSignal.throwIfAborted();
-        attempt.durationMs = Date.now() - callStarted;
-        attempt.usage = sourceUsage(model, body?.usage);
-        // A truncated project and a refused one fail identically without these, which is how an "incomplete
-        // response" reached the merchant with nothing for anyone to act on.
-        if (typeof body?.status === 'string') attempt.responseStatus = body.status;
-        if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
-        if (typeof body?.usage?.output_tokens === 'number') attempt.reasoningTokens = body.usage.output_tokens_details?.reasoning_tokens;
-        await this.metering?.record(storeId, 'source-generation', model, body, attempt.durationMs, attempt.status);
-        return { attempt, body };
-      };
-      /** The touch call (spec 2026-10-14): the same metered client, a smaller answer, and one more try after 3 s when the
-       *  bridge gives no completed answer. The attempt is charged only when its CSS is kept (`used`). */
-      const touchCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: Array<{ type: 'input_image'; image_url: string; detail: 'auto' }>) => {
-        for (let tries = 0; ; tries++) {
-          const { attempt, body } = await sep5Call('touch', text, attached as typeof images, 'storefront_kit_touch', KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS, { signal: run.signal, attempts: run.attempts, maxOutputTokens: KIT_TOUCH_MAX_OUTPUT_TOKENS, effort: 'medium' });
-          if ((body as { status?: string } | null)?.status === 'completed' || tries === 1) return { body, used: () => { attempt.status = 'COMPLETED'; } };
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          run.signal.throwIfAborted();
-        }
-      };
+      // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
+      // the single-call repair may switch it before the chat touch runs.
+      const { sep5Call, touchCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering });
       if (sep5Author) {
         // The Sep-5 commit (26f889c8) wrote the store instead of filling a schema, and that is where its voice
         // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one

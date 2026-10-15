@@ -11,3 +11,5 @@ export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | '
 /** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. `deadline` is when
  * the stage's own signal times out (epoch ms), so a step inside it can keep time for the N+1 save. */
 export type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[]; deadline: number }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
+/** One image input of a Responses API request, as generate() builds them. */
+export type SourceInputImage = { type: 'input_image'; image_url: string; detail: 'auto' };
