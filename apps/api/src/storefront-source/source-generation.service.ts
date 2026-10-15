@@ -63,7 +63,7 @@ import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design
 import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type ShownStyleCard, type StyleSlot } from './design-engine/style-draws';
 import { numbersIn } from './design-engine/style-hero';
 import type { StyleProposal } from './source-style-proposal';
-import { SourceReviewCancelled, SourceReviewDiscarded, SourceReviewRegistry, SOURCE_REVIEW_HEARTBEAT_MS, SOURCE_REVIEW_LABEL, SOURCE_REVIEW_STATUS, reviewMessage, reviewPendingWhere } from './source-background-review';
+import { SourceReviewRegistry, SOURCE_REVIEW_HEARTBEAT_MS, SOURCE_REVIEW_STATUS, reviewPendingWhere } from './source-background-review';
 import { sourceResponseJson } from './source-response';
 import { checkSourceProviderQuota } from './source-provider-error';
 import { sourceTaskContext, sourceRedesignRequested } from './source-context';
@@ -102,7 +102,7 @@ import { PublicStoresService } from "../stores/public-stores.service";
 import { sourcePublicApiUrl, sourceStoreConfigData } from "./source-store-config";
 import { SourceProjectsService } from "./source-projects.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
-import type { SaveSourceProjectDto, SourceProjectFileDto } from "./dto/save-source-project.dto";
+import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
 import { repairCommercePageWiring } from "./commerce-page-wiring";
 
 import { Prisma } from '@prisma/client';
@@ -121,16 +121,14 @@ import { snapshotWithProductTheme } from './product-theme';
 import { openAiAgentModel } from './agent/agent-model';
 import { agentInstructions, agentOpening } from './agent/agent-prompt';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
-import { CLAUDE_COMPANION_MODEL, SEP5_CLIENT_TIMEOUT_MS, SEP5_MAX_OUTPUT_TOKENS, completedCredits, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
+import { CLAUDE_COMPANION_MODEL, SEP5_CLIENT_TIMEOUT_MS, SEP5_MAX_OUTPUT_TOKENS, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
 import { outputSchema, sourceStablePrompt } from './source-generation-prompt';
 import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
-import type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
+import type { Sep5Review, SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 import { runStyleProposal, type ProposeStylesInput } from './source-style-proposals';
+import { startBackgroundReview, type BackgroundReviewInput } from './source-review-runner';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
-/** The Sep-5 self-review as generate() hands it to startSep5Review: null when it has nothing to change. `deadline` is when
- * the stage's own signal times out (epoch ms), so a step inside it can keep time for the N+1 save. */
-type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[]; deadline: number }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
 /** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
 const REVIEW_SAVE_MARGIN_MS = 90_000;
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
@@ -1688,80 +1686,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     } finally { clearInterval(heartbeat); }
   }
 
-  /** The catalog items revision N saved in config.js, written into `files`' config.js; files unchanged when N has none. */
-  private async withSavedCatalog(merchantId: string, storeId: string, revision: number, files: SourceProjectFileDto[]): Promise<SourceProjectFileDto[]> {
-    const configOf = (content: string | undefined) => { try { return content ? JSON.parse(content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;?\s*$/, '')) : null; } catch { return null; } };
-    const version = await Promise.resolve().then(() => this.projects.version(merchantId, storeId, revision)).catch(() => null);
-    const items = configOf((version?.snapshot as { files?: SourceProjectFileDto[] } | undefined)?.files?.find(file => file.path === 'config.js')?.content)?.data?.items;
-    if (!Array.isArray(items)) return files;
-    return files.map(file => {
-      const config = file.path === 'config.js' ? configOf(file.content) : null;
-      return config ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data: { ...config.data, items } })};\n` } : file;
-    });
-  }
-
-  /**
-   * YAPI's self-review of a Sep-5 store, after revision N is saved and shown (spec 2026-10-12 faster generation, part 2).
-   * It runs in this API process, outside the chat request that saved N, on its own REVIEWING row:
-   * - no lease, so a new request cancels it instead of waiting;
-   * - a heartbeat, which Studio's reviewPending reads;
-   * - the row flips to COMPLETED in the same transaction that saves N+1 «Revisión de YAPI».
-   * The save keeps the optimistic revision check, so a merchant change, template or restore since N discards the result
-   * silently. Credits are charged on the row only when the review's answer is used. Resolves once the row exists.
-   */
-  private async startSep5Review(input: { merchantId: string; storeId: string; revision: number; brief: SaveSourceProjectDto['brief']; savedFiles: SourceProjectFileDto[]; model: SourceModel; requestedModel: string; maxCredits: number; freeRun: boolean; review: Sep5Review }): Promise<void> {
-    const row = await this.prisma.storeSourceGeneration.create({ data: { storeId: input.storeId, baseRevision: input.revision, requestedModel: input.requestedModel, model: input.model, maxCredits: input.maxCredits, status: SOURCE_REVIEW_STATUS } })
-      .catch(error => { this.logger.warn(JSON.stringify({ event: 'sep5_review_not_started', storeId: input.storeId, reason: ((error as Error)?.message || '').slice(0, 300) })); return null; });
-    if (!row) return;
-    // Outside the request's context: its lease fence and progress reporter belong to a chat job that has finished.
-    void this.reviews.start(input.storeId, cancel => sourceRequestContext.exit(async () => {
-      const started = Date.now(), attempts: SourceGenerationAttempt[] = [], lost = new AbortController();
-      const heartbeat = setInterval(() => {
-        void this.prisma.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { heartbeatAt: new Date() } }).then(result => { if (!result.count) lost.abort(); }).catch(() => undefined);
-      }, this.reviewHeartbeatMs);
-      const record = () => ({ attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - started, completedAt: new Date() });
-      try {
-        const deadline = Date.now() + SEP5_CLIENT_TIMEOUT_MS;
-        const signal = AbortSignal.any([cancel, lost.signal, AbortSignal.timeout(SEP5_CLIENT_TIMEOUT_MS)]);
-        const outcome = await input.review({ signal, attempts, deadline });
-        signal.throwIfAborted();
-        const credits = completedCredits(attempts, input.maxCredits, input.freeRun);
-        if (!outcome) {
-          await this.prisma.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { status: 'COMPLETED', credits, ...record() } });
-          this.logger.log(JSON.stringify({ event: 'sep5_review_unchanged', generationId: row.id }));
-          return;
-        }
-        // Header controls the review covers, judged against revision N, like an edit: only covers it brings in block.
-        if (this.config.get<boolean>('app.headerClickGate') === true) {
-          let introduced: HeaderCover[] = [];
-          try {
-            const covers = async (files: SourceProjectFileDto[]) => captureHeaderCovers(await currentSourceRuntime({ brief: input.brief, files } as unknown as SourceProjectSnapshot), signal);
-            const saved = await covers(input.savedFiles);
-            introduced = introducedHeaderCovers(await covers(outcome.saveInput.files), saved);
-          } catch (error) {
-            signal.throwIfAborted();
-            this.logger.warn(JSON.stringify({ event: 'header_click_check_failed', generationId: row.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
-          }
-          if (introduced.length) throw new SourceReviewDiscarded(headerCoverProblems(introduced).join(' '));
-        }
-        // N's save rewrote config.js with the catalog this run created (append); the review assembled its config from the
-        // run's start, before those products existed, so N+1 carries N's catalog instead of an empty one.
-        const files = await this.withSavedCatalog(input.merchantId, input.storeId, input.revision, outcome.saveInput.files);
-        const saved = await this.projects.save(input.merchantId, input.storeId, { ...outcome.saveInput, files, revision: input.revision, label: SOURCE_REVIEW_LABEL }, undefined, async tx => {
-          const held = await tx.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { status: 'COMPLETED', revision: input.revision + 1, credits, ...record() } });
-          if (held.count !== 1) throw new SourceReviewCancelled('la revisión se canceló antes de guardarse');
-        });
-        const thread = await this.prisma.storeAgentThread.findUnique({ where: { storeId: input.storeId }, select: { id: true } }).catch(() => null);
-        if (thread) await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: reviewMessage(outcome.notes, outcome.saveInput.label), metadata: { sourceRevision: saved.revision, label: SOURCE_REVIEW_LABEL, review: true } } }).catch(() => undefined);
-        if (credits) await this.coverWithRewardCredits(input.merchantId, row.id, credits);
-        this.logger.log(JSON.stringify({ event: 'sep5_review_saved', generationId: row.id, revision: saved.revision, notes: outcome.notes.length }));
-      } catch (error) {
-        const status = cancel.aborted || lost.signal.aborted || error instanceof SourceReviewCancelled ? 'CANCELLED'
-          : error instanceof ConflictException || error instanceof SourceReviewDiscarded ? 'DISCARDED' : 'FAILED';
-        await this.prisma.storeSourceGeneration.updateMany({ where: { id: row.id, status: { in: [SOURCE_REVIEW_STATUS, 'CANCELLED'] } }, data: { status, credits: 0, ...record() } }).catch(() => undefined);
-        this.logger.warn(JSON.stringify({ event: 'sep5_review_kept_draft', generationId: row.id, status, reason: ((error as Error)?.message || 'sin respuesta').slice(0, 300) }));
-      } finally { clearInterval(heartbeat); }
-    }));
+  /** YAPI's self-review of a Sep-5 store after revision N is saved (source-review-runner.ts). The reward helper is passed
+   *  bound: unbound it would lose `this` and its own catch would turn that into "no credits", silently. */
+  private startSep5Review(input: BackgroundReviewInput): Promise<void> {
+    return startBackgroundReview({ prisma: this.prisma, projects: this.projects, config: this.config, logger: this.logger, reviews: this.reviews, reviewHeartbeatMs: this.reviewHeartbeatMs,
+      coverWithRewardCredits: (merchantId, generationId, credits) => this.coverWithRewardCredits(merchantId, generationId, credits) }, input);
   }
 
   /** Elige tu estilo in two lanes (source-style-proposals.ts). The timings are read from this instance when it starts. */

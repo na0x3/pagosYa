@@ -235,6 +235,16 @@ describe('Sep-5 self-review after the save', () => {
     expect(JSON.parse(config.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, '')).data.items).toEqual([{ id: 'p1', name: 'Latte' }]);
   });
 
+  it('redeems reward credits for the review row it saves (the service helper keeps its `this`)', async () => {
+    // coverWithRewardCredits swallows its own errors: called without `this` it would return 0 and redeem nothing, silently.
+    const rewards = { redeemForGeneration: jest.fn().mockResolvedValue(0) };
+    (service as any).rewards = rewards;
+    await generateN();
+    await service.reviewSettled('s1');
+    expect(fenceWrite().data.credits).toBeGreaterThan(0);
+    expect(rewards.redeemForGeneration).toHaveBeenCalledWith('m1', 'review-1', fenceWrite().data.credits);
+  });
+
   // Final review: the ChatGPT bridge serves about two calls at once, so the polish goes first and the store's email look
   // and long product pages follow it.
   it('starts the email look and the product pages only after the background review ends', async () => {
