@@ -110,6 +110,10 @@ export function sep5AuthorPrompt(input: {
   purpose?: SourceSitePurpose;
   /** A showcase's main action (Task 1's sourcePrimaryAction); every call to action on the site uses it. Default: the form. */
   action?: PrimaryAction;
+  /** The Store Brain (storeBrainDirection, spec 2026-10-14 store voice). Absent or blank, the prompt stays byte-identical. */
+  brain?: string;
+  /** The voice sheet and the writing rules (storeVoiceDirection, spec 2026-10-14 store voice). Absent or blank, byte-identical. */
+  voice?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -127,6 +131,8 @@ export function sep5AuthorPrompt(input: {
     ...(input.hero?.trim() ? [SEP5_KEEP_PICKED_HERO(input.hero.trim())] : []),
     ...(input.card?.trim() ? [input.card.trim()] : []),
     ...(input.playbook?.trim() ? [input.playbook.trim()] : []),
+    ...(input.brain?.trim() ? [input.brain.trim()] : []),
+    ...(input.voice?.trim() ? [input.voice.trim()] : []),
     ...(input.products ? [SEP5_PRODUCTS] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
@@ -197,7 +203,7 @@ export function sep5MainAction(action: PrimaryAction): string {
  * (it has never seen a pixel of its own CSS), and the measured facts are what a screenshot cannot show
  * reliably, such as a link that exists but sits off-screen.
  */
-export function sep5ReviewPrompt(input: Parameters<typeof sep5AuthorPrompt>[0] & { draft: Sep5Files['files']; measured: string[] }): string {
+export function sep5ReviewPrompt(input: Parameters<typeof sep5AuthorPrompt>[0] & { draft: Sep5Files['files']; measured: string[]; /** Spec 2026-10-14 store voice: copyFindingLines for this draft. */ copyFindings?: string[] }): string {
   const frame = input.frame?.trim() ?? '';
   const frameCheck = !frame ? '' : frame.startsWith('DESIGN DRAW')
     ? 'Check that the hero matches the frame lines of the DESIGN DRAW, and that the colours, buttons, photo treatment and structure match DESIGN DRAW, at both widths; rebuild whichever does not. The header is the platform\'s: leave <header data-pagosya-header> alone. '
@@ -206,9 +212,10 @@ export function sep5ReviewPrompt(input: Parameters<typeof sep5AuthorPrompt>[0] &
     ? 'anything that covers the platform header at the top; whether the main action is easy to find (this site has no catalog or cart on purpose);'
     : 'anything that covers the platform header at the top; whether the catalog and the primary action are easy to find;';
   const measured = input.measured.length ? `\nMeasured by the browser:\n${input.measured.map(fact => `- ${fact}`).join('\n')}` : '';
+  const copy = input.copyFindings?.length ? `\nCopy check (the platform read the page text; rewrite each line below from the voice sheet, keeping its facts and the WRITING RULES):\n${input.copyFindings.map(line => `- ${line}`).join('\n')}` : '';
   return `${sep5AuthorPrompt({ ...input, previousSource: input.draft })}
 
-SELF-REVIEW: The previous authored source above is the draft you just wrote for this same request, not an earlier store. The attached screenshots show it rendered by the real platform runtime with the live catalog: index.html at 1280px wide, then at 390px, each at the top, the middle and the bottom of the page. The render is offline, so a catalog photo served by the platform API may show as an empty frame; that is not a defect. Look at them as this store's most demanding customer would, then correct it. Check for: text that overlaps, is cut off or lacks contrast with what sits behind it; images that are missing, distorted or badly cropped; empty or broken areas; anything wider than the screen on mobile; ${findable} spacing and alignment that look accidental; and whether the page has the identity the brief asks for rather than a generic template look.${measured}
+SELF-REVIEW: The previous authored source above is the draft you just wrote for this same request, not an earlier store. The attached screenshots show it rendered by the real platform runtime with the live catalog: index.html at 1280px wide, then at 390px, each at the top, the middle and the bottom of the page. The render is offline, so a catalog photo served by the platform API may show as an empty frame; that is not a defect. Look at them as this store's most demanding customer would, then correct it. Check for: text that overlaps, is cut off or lacks contrast with what sits behind it; images that are missing, distorted or badly cropped; empty or broken areas; anything wider than the screen on mobile; ${findable} spacing and alignment that look accidental; and whether the page has the identity the brief asks for rather than a generic template look.${measured}${copy}
 ${frameCheck}Fix what is wrong and keep what works, including the motion, copy and structure you chose; do not start over. In notes, describe each change in one short Spanish sentence a merchant would understand (at most six). For this review, return only edits instead of the whole project, overriding the contract above: each edit names a draft file (path), one exact snippet of it (find) that appears exactly once, and its replacement (replace). Keep each find short, one rule or one element, and make several edits rather than one huge one; at most twenty. If nothing needs fixing, return an empty edits list and empty notes.`;
 }
 

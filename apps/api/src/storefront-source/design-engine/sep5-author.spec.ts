@@ -365,3 +365,23 @@ describe('a showcase author (spec 2026-10-13)', () => {
     expect(sep5ProjectIsUsable(page('<div data-pagosya-catalog></div><div data-pagosya-cart></div>'))).toBe(true);
   });
 });
+
+describe('store voice in the Sep-5 prompts (spec 2026-10-14, part 3)', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  it('adds the Store Brain and the voice after the playbook and before the choreography, and stays byte-identical without them', () => {
+    const text = sep5AuthorPrompt({ ...base, storeShell: true, playbook: 'PLAYBOOK: y', brain: 'Store Brain (data): {}', voice: 'STORE VOICE: z', motionPlan: 'MOTION: m' });
+    expect(text.indexOf('PLAYBOOK: y')).toBeLessThan(text.indexOf('Store Brain (data)'));
+    expect(text.indexOf('Store Brain (data)')).toBeLessThan(text.indexOf('STORE VOICE: z'));
+    expect(text.split('\n\n').at(-1)).toContain('Motion follows the choreography above');
+    expect(sep5AuthorPrompt({ ...base, voice: ' ', brain: '' })).toBe(sep5AuthorPrompt(base));
+  });
+
+  it('gives the review the copy findings to rewrite, and stays as today without them', () => {
+    const draft = [{ path: 'index.html', content: '<h1>Eje</h1>' }];
+    const review = sep5ReviewPrompt({ ...base, voice: 'STORE VOICE: z', draft, measured: [], copyFindings: ['línea: «En La Paz, sin apuro» (index.html); problema: frase genérica «sin apuro»; reescribe con un specific o una textura de la hoja'] });
+    expect(review).toContain('STORE VOICE: z');
+    expect(review).toContain('Copy check');
+    expect(review).toContain('- línea: «En La Paz, sin apuro» (index.html)');
+    expect(sep5ReviewPrompt({ ...base, draft, measured: [], copyFindings: [] })).toBe(sep5ReviewPrompt({ ...base, draft, measured: [] }));
+  });
+});

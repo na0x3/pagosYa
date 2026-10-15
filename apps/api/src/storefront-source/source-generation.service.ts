@@ -1,6 +1,7 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { sourceSignatureTaskLine } from './source-signature';
 import { describeNewPhotos, startVoiceRun, writeVoiceSheet } from './store-voice-run';
+import { voiceEditDirection } from './store-voice-prompt';
 import type { LegendEntry } from './photo-descriptions';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
@@ -1006,6 +1007,9 @@ export class SourceGenerationService {
       const reviewControls: ReviewControls | undefined = controlsDesignOn
         ? { design: designReviewControls, keep: (input, designed, keepSignal) => keepGuardedControls(storeControlsInto(input, designed.controls), revisionControls, 'yapi', keepSignal) }
         : undefined;
+      // Store voice (spec 2026-10-14, part 3): an edit of a store with a sheet writes any new text in its voice and keeps its
+      // marked facts. The single-call edit reads taskPrompt when it runs.
+      if (voice.on && !sep5Author && voice.sheet) taskPrompt += `\n${voiceEditDirection(voice.sheet)}`;
       if (sep5Author) {
         // Sep-5 authors the store, adds the standard pages and arms the background review (source-sep5-stage.ts).
         // assembleSave is declared after this branch: the stage gets a wrapper, called only by the review after the save.
