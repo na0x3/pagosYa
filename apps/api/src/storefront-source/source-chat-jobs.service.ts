@@ -24,8 +24,10 @@ export function merchantJobError(error: unknown): string | null {
 }
 // By name: an aborted fetch rejects with a DOMException, which is not always an Error in this realm.
 const isAbort = (error: unknown) => ['AbortError', 'TimeoutError'].includes((error as { name?: unknown } | null)?.name as string);
-export function chatJobView(job: StoreSourceChatJob) {
-  return { id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
+/** Where a waiting request stands: requests running or queued before it, and the running store when it is the merchant's own. */
+export type ChatJobQueue = { ahead: number; runningStore?: string };
+export function chatJobView(job: StoreSourceChatJob, queue?: ChatJobQueue) {
+  return { ...(queue ? { queue } : {}), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
 }
 @Injectable()
 export class SourceChatJobsService implements OnModuleDestroy {
@@ -63,13 +65,22 @@ export class SourceChatJobsService implements OnModuleDestroy {
   async latest(merchantId: string, storeId: string) {
     await this.owner(merchantId, storeId); await this.expire();
     const job = await this.prisma.storeSourceChatJob.findFirst({ where: { storeId }, orderBy: { createdAt: 'desc' } });
-    return { job: job ? chatJobView(job) : null };
+    return { job: job ? chatJobView(job, await this.queue(job)) : null };
   }
   async get(merchantId: string, storeId: string, id: string) {
     await this.owner(merchantId, storeId);
     const job = await this.prisma.storeSourceChatJob.findFirst({ where: { id, storeId, merchantId } });
     if (!job) throw new NotFoundException('Pedido no encontrado.');
-    return chatJobView(job);
+    return chatJobView(job, await this.queue(job));
+  }
+  /** One worker runs one request at a time (tick), so a request can wait behind another store's run (2026-10-15). */
+  private async queue(job: StoreSourceChatJob): Promise<ChatJobQueue | undefined> {
+    if (job.status !== 'QUEUED') return undefined;
+    const ahead = await this.prisma.storeSourceChatJob.count({ where: { OR: [{ status: 'RUNNING' }, { status: 'QUEUED', createdAt: { lt: job.createdAt } }] } });
+    const running = await this.prisma.storeSourceChatJob.findFirst({ where: { status: 'RUNNING' }, orderBy: { createdAt: 'asc' }, select: { storeId: true, merchantId: true } });
+    // Another merchant's store name is never shown.
+    const store = running && running.merchantId === job.merchantId && running.storeId !== job.storeId ? await this.prisma.store.findUnique({ where: { id: running.storeId }, select: { name: true } }) : null;
+    return { ahead, ...(store?.name ? { runningStore: store.name } : {}) };
   }
   async cancel(merchantId: string, storeId: string, id: string) {
     await this.get(merchantId, storeId, id);

@@ -112,3 +112,31 @@ describe('failure message stored on the job', () => {
     jest.restoreAllMocks();
   });
 });
+
+// 2026-10-15 owner report: a queued request looked frozen ("YAPI sigue trabajando…") behind another store's run.
+describe('queue position on a waiting request', () => {
+  const queued: any = { id: 'q', storeId: 's', merchantId: 'm', status: 'QUEUED', requestId: 'r', sequence: 0, createdAt: new Date('2026-10-15T23:13:37Z') };
+  it('counts what runs or waits before it and names the running store only when it is the same merchant', async () => {
+    const { prisma, service } = setup();
+    prisma.storeSourceChatJob.findFirst = jest.fn()
+      .mockResolvedValueOnce(queued)
+      .mockResolvedValueOnce({ id: 'run', storeId: 'other', merchantId: 'm', status: 'RUNNING' });
+    prisma.storeSourceChatJob.count = jest.fn().mockResolvedValue(2);
+    prisma.store.findUnique = jest.fn().mockResolvedValue({ name: 'Raíz Viva' });
+    const view = await service.get('m', 's', 'q');
+    expect(view.queue).toEqual({ ahead: 2, runningStore: 'Raíz Viva' });
+    expect(prisma.storeSourceChatJob.count).toHaveBeenCalledWith({ where: { OR: [{ status: 'RUNNING' }, { status: 'QUEUED', createdAt: { lt: queued.createdAt } }] } });
+  });
+  it("never names another merchant's store, and a running job has no queue", async () => {
+    const { prisma, service } = setup();
+    prisma.storeSourceChatJob.findFirst = jest.fn()
+      .mockResolvedValueOnce(queued)
+      .mockResolvedValueOnce({ id: 'run', storeId: 'x', merchantId: 'someone-else', status: 'RUNNING' });
+    prisma.storeSourceChatJob.count = jest.fn().mockResolvedValue(1);
+    prisma.store.findUnique = jest.fn();
+    expect((await service.get('m', 's', 'q')).queue).toEqual({ ahead: 1 });
+    expect(prisma.store.findUnique).not.toHaveBeenCalled();
+    prisma.storeSourceChatJob.findFirst = jest.fn().mockResolvedValueOnce({ ...queued, status: 'RUNNING' });
+    expect((await service.get('m', 's', 'q')).queue).toBeUndefined();
+  });
+});

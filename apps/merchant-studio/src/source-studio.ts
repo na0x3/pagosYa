@@ -32,7 +32,8 @@ import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
 import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
-import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
+import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type SourceChatJob, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
+import { queueStatus } from './source-queue-status';
 import { QUICK_ACTIONS, createSelectionState, matchEditableText } from './source-selection';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, receivePreviewContact, openPreviewContact, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
@@ -426,12 +427,18 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {
           transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
           const stop = watchBuildProgress(selectedStore, job.requestId);
-          try { await api.waitSourceChatJob(selectedStore, job); transitionBuild({ type: 'complete' }); await load(); }
+          try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); }
           finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
         }); }, 0);
       }
     }
     if (storeId) void loadStyleProposal();
+  }
+  // A request waiting behind another store's run says so instead of looking frozen (owner report 2026-10-15).
+  function showQueue(job: SourceChatJob) {
+    const waiting = queueStatus(job);
+    if (waiting) { if (buildStatus !== waiting) { buildStatus = waiting; updateBuildProgress(); } }
+    else if (buildStatus.startsWith('En espera:')) { buildStatus = 'YAPI está trabajando en tu pedido…'; updateBuildProgress(); }
   }
   /**
    * Polls land every 1.5s. The stage updates in place rather than re-rendering,
@@ -596,7 +603,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, retry?.resumeDraft || retry?.stylePick ? { ...(retry.resumeDraft ? { resumeDraft: true } : {}), ...(retry.stylePick ? { stylePick: retry.stylePick } : {}) } : undefined);
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, { ...(retry?.resumeDraft ? { resumeDraft: true } : {}), ...(retry?.stylePick ? { stylePick: retry.stylePick } : {}), onUpdate: showQueue });
         stopProgress();
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';

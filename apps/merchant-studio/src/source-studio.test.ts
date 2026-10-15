@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { mountSourceStudio } from './source-studio';
 import { checkSourceWebsite } from './source-checks';
 import { ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceVersion } from './api';
+// Every send now passes onUpdate (the queue line, 2026-10-15); the assertions compare the rest of the options.
+const sendOptions = (call: unknown[]) => { const { onUpdate, ...rest } = (call.at(-1) ?? {}) as Record<string, unknown>; expect(typeof onUpdate).toBe('function'); return rest; };
 
 vi.mock('./source-checks', async importOriginal => ({ ...await importOriginal<typeof import('./source-checks')>(), checkSourceWebsite: vi.fn() }));
 vi.mock('./source-design-jobs', () => ({ createSourceDesignJobs: () => () => {} }));
@@ -467,7 +469,7 @@ it('saves a preserved draft by finishing the run it came from', async () => {
   await vi.waitFor(() => expect(sent).toHaveBeenCalled());
   expect(sent.mock.calls[0][1]).toBe('Crea mi gelatería');
   expect(sent.mock.calls[0][2]).toEqual(['/v1/uploads/a.jpg']);
-  expect(sent.mock.calls[0].at(-1)).toEqual({ resumeDraft: true });
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ resumeDraft: true });
 });
 
 it('builds a new message on the preserved draft: the draft is saved first, then the message goes out', async () => {
@@ -485,9 +487,9 @@ it('builds a new message on the preserved draft: the draft is saved first, then 
   app.querySelector<HTMLFormElement>('[data-composer]')!.requestSubmit();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
   expect(sent.mock.calls[0][1]).toBe('Crea mi gelatería');
-  expect(sent.mock.calls[0].at(-1)).toEqual({ resumeDraft: true });
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ resumeDraft: true });
   expect(sent.mock.calls[1][1]).toContain('Agrega una sección de sabores');
-  expect(sent.mock.calls[1].at(-1)).toBeUndefined();
+  expect(sendOptions(sent.mock.calls[1])).toEqual({});
 });
 
 it('keeps the new message in the box when the draft could not be saved', async () => {
@@ -517,7 +519,7 @@ it('shows the proposed styles in the preview area and sends the picked one as a 
   app.querySelector<HTMLButtonElement>('[data-style-use="1"]')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
   expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
-  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
 });
 it('sends Elige tú as an automatic pick and retries a failed build with the same pick', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
@@ -529,11 +531,11 @@ it('sends Elige tú as an automatic pick and retries a failed build with the sam
   app.querySelector<HTMLButtonElement>('[data-style-auto]')!.click();
   await vi.waitFor(() => expect(app.querySelector('#source-retry-message')).not.toBeNull());
   expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
-  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ stylePick: { generationId: 'g1', auto: true } });
   app.querySelector<HTMLButtonElement>('#source-retry-message')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
   expect(sent.mock.calls[1][1]).toBe('Usar el estilo «Estilo 1»');
-  expect(sent.mock.calls[1].at(-1)).toEqual({ stylePick: { generationId: 'g1', auto: true } });
+  expect(sendOptions(sent.mock.calls[1])).toEqual({ stylePick: { generationId: 'g1', auto: true } });
 });
 it('after a reload, shows a picked style whose build failed and retries it with the same pick', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'PICKED', picked: 1, recommended: 0, cards: [0, 1].map(styleCard) } } as any);
@@ -545,7 +547,7 @@ it('after a reload, shows a picked style whose build failed and retries it with 
   app.querySelector<HTMLButtonElement>('[data-style-retry]')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
   expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
-  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
 });
 it('does not drop a pick while code edits are unsaved: the buttons are disabled and the picker stays', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
@@ -632,7 +634,7 @@ it('shows choosable cards whose heroes are still drawing after the request ended
   app.querySelector<HTMLButtonElement>('[data-style-card="0"]')!.click();
   app.querySelector<HTMLButtonElement>('[data-style-use="0"]')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
-  expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 0 } });
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ stylePick: { generationId: 'g1', index: 0 } });
 });
 
 const FACT = { id: 'a1', text: 'tostado en Caranavi', kind: 'origin', status: 'assumed' as const, pages: ['index.html'], unwrapped: [] };

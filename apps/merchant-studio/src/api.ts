@@ -13,7 +13,7 @@ export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "librar
 export { CHECKOUT_ORIGIN };
 
 export type SourceChatResult = { setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision };
-export type SourceChatJob = { id: string; requestId: string; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'AWAITING_INPUT' | 'BLOCKED' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED' | 'CANCELLED'; sequence: number; result?: SourceChatResult; error?: string; lastCommittedRevision?: number };
+export type SourceChatJob = { id: string; requestId: string; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'AWAITING_INPUT' | 'BLOCKED' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED' | 'CANCELLED'; sequence: number; result?: SourceChatResult; error?: string; lastCommittedRevision?: number; /** Only while QUEUED. */ queue?: { ahead: number; runningStore?: string } };
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -322,10 +322,10 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean } }): Promise<SourceChatResult> {
+  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean }; onUpdate?: (job: SourceChatJob) => void }): Promise<SourceChatResult> {
     const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}), ...(options?.resumeDraft ? { resumeDraft: true } : {}), ...(options?.stylePick ? { stylePick: options.stylePick } : {}) }) });
     onAccepted?.(job);
-    return this.waitSourceChatJob(storeId, job);
+    return this.waitSourceChatJob(storeId, job, options?.onUpdate);
   }
 
   styleProposal(storeId: string): Promise<{ proposal: import('./source-style-pick').StyleProposalView | null }> {
@@ -342,14 +342,16 @@ export class MerchantStudioApi {
   cancelSourceChatJob(storeId: string, id: string): Promise<SourceChatJob> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
   }
-  async waitSourceChatJob(storeId: string, initial: SourceChatJob): Promise<SourceChatResult> {
+  async waitSourceChatJob(storeId: string, initial: SourceChatJob, onUpdate?: (job: SourceChatJob) => void): Promise<SourceChatResult> {
     let job = initial;
+    onUpdate?.(job);
     let consecutiveErrors = 0;
     while (job.status === 'QUEUED' || job.status === 'RUNNING') {
       await new Promise(resolve => setTimeout(resolve, 1000));
       try {
         job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs/${encodeURIComponent(job.id)}`);
         consecutiveErrors = 0;
+        onUpdate?.(job);
       } catch (error) {
         if (++consecutiveErrors >= 15 || error instanceof ApiError && [401, 403, 404].includes(error.status)) throw error;
       }
