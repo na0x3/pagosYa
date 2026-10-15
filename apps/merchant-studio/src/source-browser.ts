@@ -1,6 +1,6 @@
 import { mountSourceAccountDemo } from './source-account-demo';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
-import { sourcePreviewDocument, receivePreviewNavigation, createPreviewImageLoader, type SourceSnapshot } from '@pagosya/storefront-preview';
+import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewContact, openPreviewContact, createPreviewImageLoader, type SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml } from './studio-ui';
 import './source-browser.css';
 import { LOADER_STAR } from './source-loader-star';
@@ -38,6 +38,7 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     const controller = new AbortController();
     window.addEventListener('pagehide', () => controller.abort(), { once: true });
     window.addEventListener('message', event => {
+      const contact = receivePreviewContact(event, frame); if (contact) { openPreviewContact(contact); return; }
       const next = receivePreviewNavigation(event, frame, hydrated);
       if (!next) return;
       sessionStorage.setItem(cartKey, JSON.stringify(next.cart || []));

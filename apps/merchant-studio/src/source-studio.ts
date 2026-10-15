@@ -34,7 +34,7 @@ import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, typ
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
 import { QUICK_ACTIONS, createSelectionState, matchEditableText } from './source-selection';
-import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
+import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, receivePreviewContact, openPreviewContact, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
 import './source-studio.css';
 import './source-browser.css';
@@ -198,6 +198,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
+    // The store's WhatsApp, phone and email links open for the merchant, like on the published store.
+    const contact = receivePreviewContact(event, previewFrame); if (contact) { openPreviewContact(contact); return; }
     if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); if (bocetoOpen) bocetoPanel.resync(); return; }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-size' && Number.isFinite(event.data.height)) {
       const next = Math.min(20000, Math.max(360, Number(event.data.height)));

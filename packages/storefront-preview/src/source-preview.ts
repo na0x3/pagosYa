@@ -23,6 +23,21 @@ export function receivePreviewNavigation(event: MessageEvent, frame: HTMLIFrameE
   return { page: data.page, theme: data.theme === 'light' || data.theme === 'dark' ? data.theme : undefined, newTab: data.newTab === true, query: typeof data.query === 'string' && data.query.startsWith('?') ? data.query.slice(0, 2000) : '', fragment: typeof data.fragment === 'string' && data.fragment.startsWith('#') ? data.fragment.slice(0, 1000) : '',
     cart: Array.isArray(data.cart) ? data.cart.slice(0, 100).filter((item: any) => typeof item?.id === 'string' && item.id.length <= 200 && Number.isInteger(item.quantity) && item.quantity > 0 && item.quantity <= 99) : [] };
 }
+/** The store's own contact links (WhatsApp, phone, email): the editor preview keeps them, the editor opens them for the merchant. */
+const CONTACT_PREFIXES = ['https://wa.me/', 'https://api.whatsapp.com/', 'tel:', 'mailto:'];
+const isContactLink = (href: string) => CONTACT_PREFIXES.some(prefix => href.toLowerCase().startsWith(prefix));
+/** A WhatsApp, phone or email link the merchant clicked in the preview frame, or null. */
+export function receivePreviewContact(event: MessageEvent, frame: HTMLIFrameElement | null): string | null {
+  const url = event.data?.url;
+  if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || event.data?.type !== 'pagosya:source-contact' || typeof url !== 'string' || url.length > 2000 || !isContactLink(url)) return null;
+  return url;
+}
+/** Opens a contact link from the preview in a new tab, never with access back to the editor. */
+export function openPreviewContact(url: string): void {
+  const link = document.createElement('a');
+  link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+  link.click();
+}
 /** What the merchant clicked in the preview while editing: a section of the page, or a part the platform owns.
  * An empty section id with kind 'section' means "clear the selection". */
 export interface PreviewSelection { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }
@@ -119,7 +134,8 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     if (el.getAttribute('target') === '_blank') el.setAttribute('data-preview-new-tab', 'true');
     el.removeAttribute('target');
     // Published stores keep outside links clickable; the trusted parent decides whether they may open.
-    const outside = navigation.hosted === true && /^(?:https?:|tel:|mailto:)/i.test(href);
+    // The editor keeps the store's contact links too: clicking one asks the editor to open it (pagosya:source-contact).
+    const outside = (navigation.hosted === true && /^(?:https?:|tel:|mailto:)/i.test(href)) || isContactLink(href);
     if (!outside && !href.startsWith('#') && !resolve(href)?.path.endsWith('.html')) el.removeAttribute('href');
   });
   const assets = assetSources.length ? ' ' + assetSources.join(' ') : '';
@@ -179,6 +195,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
         }
         if (${navigation.hosted !== true}) { event.preventDefault(); event.stopImmediatePropagation(); return; }
       }
+      if (${navigation.hosted !== true} && ${encoded(CONTACT_PREFIXES)}.some(prefix => href.toLowerCase().startsWith(prefix))) { event.preventDefault(); event.stopImmediatePropagation(); parent.postMessage({ type: 'pagosya:source-contact', url: href }, '*'); return; }
       if (href.startsWith('#')) {
         // Scroll real section anchors without navigating the opaque srcdoc URL.
         // Hash-only application routes (such as checkout) still dispatch hashchange.
