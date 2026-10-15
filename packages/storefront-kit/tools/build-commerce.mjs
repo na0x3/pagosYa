@@ -40,6 +40,10 @@ export const PARTS = [
   'checkout/overlay.js',
   'catalog/cards.js',
   'look/contrast-guard.js',
+  'catalog/render.js',
+  'templates/kit-templates.js',
+  'cart/render.js',
+  'contact/form.js',
   'rest.js',
 ];
 
