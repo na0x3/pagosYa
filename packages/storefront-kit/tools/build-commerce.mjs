@@ -51,6 +51,7 @@ export const PARTS = [
   'shared/click-actions.js',
   'content/load.js',
   'header/platform-header.js',
+  'controls/decorate.js',
   'shared/start.js',
 ];
 

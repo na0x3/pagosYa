@@ -99,6 +99,34 @@
     if (['tinted', 'banded'].includes(look.surface)) set('surface', look.surface);
     return look;
   })();
+  // Store controls (spec 2026-10-14): one button language per store, chosen and checked by the API (store-controls.ts) and
+  // drawn into the platform header at save time. Validated again here; every controls rule keys on data-controls-*, so a
+  // store without config.controls renders as before.
+  const CONTROL_ENUMS = {
+    outline: ['rounded', 'pill', 'square', 'ticket', 'tag', 'sticker', 'tab', 'stamp', 'bracket', 'underline', 'blob'],
+    border: ['none', 'hairline', 'solid', 'double', 'dashed', 'offset'],
+    fill: ['solid', 'outline', 'ghost', 'inverted'],
+    colour: ['accent', 'ink', 'paper'],
+    badge: ['dot', 'circle', 'inline', 'corner', 'stamp'],
+  };
+  const CONTROLS = (() => {
+    const record = config.controls && typeof config.controls === 'object' && config.controls.version === 1 ? config.controls : null;
+    const shape = record && record.shape && typeof record.shape === 'object' ? record.shape : null;
+    if (!shape) return null;
+    const values = { outline: shape.outline, border: shape.border, fill: shape.fill, colour: shape.colour, badge: record.badge };
+    if (Object.keys(CONTROL_ENUMS).some(name => !CONTROL_ENUMS[name].includes(values[name]))) return null;
+    const ranges = { corner: [0, 24, 'px'], notch: [0, 10, 'px'], tilt: [-6, 6, 'deg'], weight: [1, 3, 'px'] };
+    if (Object.keys(ranges).some(name => typeof shape[name] !== 'number' || !Number.isFinite(shape[name]) || shape[name] < ranges[name][0] || shape[name] > ranges[name][1])) return null;
+    const root = document.documentElement;
+    for (const name of Object.keys(CONTROL_ENUMS)) root.setAttribute(`data-controls-${name}`, values[name]);
+    for (const name of Object.keys(ranges)) root.style.setProperty(`--ctl-${name}`, `${shape[name]}${ranges[name][2]}`);
+    const icons = {};
+    const given = record.icons && typeof record.icons === 'object' ? record.icons : {};
+    for (const slot of ['cart', 'account', 'menu', 'search', 'plus', 'minus', 'close']) if (typeof given[slot] === 'string' && /^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\-\s]{1,1500}$/.test(given[slot])) icons[slot] = given[slot];
+    const word = typeof record.words?.cart === 'string' ? record.words.cart.trim() : '';
+    return { icons, cartWord: /^[\p{L}\p{M}][\p{L}\p{M} '’.-]{0,13}$/u.test(word) ? word : '' };
+  })();
+  const controlIcon = slot => CONTROLS && CONTROLS.icons[slot] ? `<svg class="ctl-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" clip-rule="evenodd"><path fill="currentColor" fill-rule="evenodd" d="${CONTROLS.icons[slot]}"/></svg>` : '';
   /* Duotone and grain are SVG filters in the page (no store url()): duotone maps luminance onto the store's ink→paper. */
   function lookFilters() {
     if (!LOOK || !['duotone', 'grain'].includes(LOOK.photo?.treatment) || document.getElementById('pagosya-look-filters')) return;
@@ -121,7 +149,8 @@
   const CHECKOUT_PHOTO = typeof config.checkoutPhoto === 'string' && /^assets\/[a-z0-9][a-z0-9._/-]*\.(?:png|jpe?g|webp|avif|gif)$/i.test(config.checkoutPhoto) && !config.checkoutPhoto.includes('..') ? config.checkoutPhoto : '';
   if (CHECKOUT_PHOTO && document.documentElement.getAttribute('data-dna-checkout') === 'brand') document.documentElement.style.setProperty('--checkout-panel', `center / cover no-repeat url("${CHECKOUT_PHOTO}")`);
   // The cart's own word (Tu bolsa, Tu ramo…): short plain words only, else today's label.
-  const CART_WORD = typeof config.cartWord === 'string' && /^[\p{L} ]{2,24}$/u.test(config.cartWord.trim()) ? config.cartWord.trim() : '';
+  // The record's cart word wins (spec 2026-10-14: the store's cart word reaches the header, the drawer and the order panel alike).
+  const CART_WORD = [CONTROLS ? CONTROLS.cartWord : '', config.cartWord].map(value => typeof value === 'string' ? value.trim() : '').find(value => /^[\p{L} ]{2,24}$/u.test(value)) || '';
   // The kit pages' header says "Mi pedido (n)"; with a word of its own the store says "Tu bolsa (n)". The count element stays.
   if (CART_WORD) document.querySelectorAll('a[href="checkout.html"]').forEach(link => {
     const first = link.firstChild;
@@ -3450,7 +3479,14 @@
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
-    document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
+    document.querySelectorAll("[data-cart-count]").forEach((el) => {
+      el.textContent = String(count);
+      if (!CONTROLS) return;
+      // The badge hides at zero (controls.css); the plain label around it reads «Carrito, 1 producto» / «…, 2 productos».
+      el.toggleAttribute('data-empty', count === 0);
+      const unit = el.parentElement?.querySelector('[data-ctl-unit]');
+      if (unit) unit.textContent = count === 1 ? ' producto' : ' productos';
+    });
     document.querySelectorAll("[data-pagosya-cart]").forEach((el) => {
       const focused = el.contains(document.activeElement) ? document.activeElement : null;
       const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : focused?.hasAttribute('data-remove-line') ? 'data-remove-line' : null;
@@ -4476,6 +4512,29 @@
     }
   }
   initPlatformHeader();
+  // The kit's own small controls take the store's language: the card "+", the quantity steppers and the cart drawer's close
+  // button. Their aria-label and data-* hooks never change; only the inside of the button becomes the face. A store-authored
+  // card ([data-custom-product]) keeps its own button.
+  function decorateControls() {
+    if (!CONTROLS) return;
+    const face = (button, slot) => {
+      button.setAttribute('data-ctl', slot);
+      const inner = document.createElement('span');
+      inner.className = 'ctl-face';
+      inner.innerHTML = controlIcon(slot) || button.innerHTML;
+      button.replaceChildren(inner);
+    };
+    document.querySelectorAll('.menu-item:not([data-custom-product]) .menu-add[data-add]:not([data-ctl])').forEach(button => face(button, 'plus'));
+    document.querySelectorAll(':is(.quantity,.product-detail__quantity)>button:not([data-ctl])').forEach(button => face(button, button.matches('[data-remove],[data-product-quantity="-1"]') ? 'minus' : 'plus'));
+    document.querySelectorAll('.cart-drawer__header>[data-cart-close]:not([data-ctl])').forEach(button => face(button, 'close'));
+  }
+  // Cards and cart lines are re-rendered on every change; one microtask after each batch of DOM changes redraws what is new.
+  if (CONTROLS && typeof MutationObserver === 'function' && document.body) {
+    decorateControls();
+    let queued = false;
+    // A page that is going away (its document torn down under the observer) must not throw from the microtask.
+    new MutationObserver(() => { if (queued) return; queued = true; queueMicrotask(() => { queued = false; try { decorateControls(); } catch { /* the page is going away */ } }); }).observe(document.body, { childList: true, subtree: true });
+  }
   // «Pide una cotización» in the header, and any call to action marked data-pagosya-contact-open, opens the platform contact
   // form; a store without the form keeps the link, which goes to its Contacto page.
   document.addEventListener('click', event => {

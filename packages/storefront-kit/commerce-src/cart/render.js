@@ -34,7 +34,14 @@
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
-    document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
+    document.querySelectorAll("[data-cart-count]").forEach((el) => {
+      el.textContent = String(count);
+      if (!CONTROLS) return;
+      // The badge hides at zero (controls.css); the plain label around it reads «Carrito, 1 producto» / «…, 2 productos».
+      el.toggleAttribute('data-empty', count === 0);
+      const unit = el.parentElement?.querySelector('[data-ctl-unit]');
+      if (unit) unit.textContent = count === 1 ? ' producto' : ' productos';
+    });
     document.querySelectorAll("[data-pagosya-cart]").forEach((el) => {
       const focused = el.contains(document.activeElement) ? document.activeElement : null;
       const focusedAction = focused?.hasAttribute('data-add') ? 'data-add' : focused?.hasAttribute('data-remove') ? 'data-remove' : focused?.hasAttribute('data-remove-line') ? 'data-remove-line' : null;
