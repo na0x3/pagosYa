@@ -5,7 +5,8 @@ import { CONVENTIONAL_HEADERS } from './design-engine/playbook';
 import { emptySourceHeaders, FALLBACK_HEADER_SHAPE, headerFact, HEADER_SHAPES, renderSourceHeader, withSourceHeader, type HeaderShape } from './source-header';
 import { createHash } from 'node:crypto';
 import { CART_ICONS, CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
-import type { StoreControls } from './store-controls';
+import postcss from 'postcss';
+import { CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, type StoreControls } from './store-controls';
 
 const links = [{ href: '#servicios', label: 'Servicios' }, { href: 'nosotros.html', label: 'Nosotros' }];
 const render = (shape: HeaderShape, purpose: 'shop' | 'service', extra: Partial<Parameters<typeof renderSourceHeader>[0]> = {}) =>
@@ -236,6 +237,16 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
     expect(html).not.toContain('{{');
   });
 
+  it('draws every icon with the even-odd rule the sanitizer and the library assume', () => {
+    const html = render('menu-button', 'shop', { controls: TICKET });
+    const icons = html.match(/<svg class="ctl-icon"[\s\S]*?<\/svg>/g)!;
+    expect(icons.length).toBeGreaterThan(1);
+    for (const icon of icons) {
+      expect(icon).toContain('clip-rule="evenodd"');
+      expect(icon).toContain('<path fill="currentColor" fill-rule="evenodd" d="');
+    }
+  });
+
   it('follows the layout: icon only keeps the plain label, word only draws no icon, a missing icon falls back to the word', () => {
     const iconOnly = cartButton(render('menu-button', 'shop', { controls: withLayout('icon', 'icon') }));
     expect(iconOnly).toContain('<svg class="ctl-icon"');
@@ -269,5 +280,25 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
     const files = [{ path: 'index.html', content: '<body><header data-pagosya-header></header><main><section id="a" data-nav-label="Inicio"></section></main></body>' }, { path: 'nosotros.html', content: '<body><header data-pagosya-header></header><main></main></body>' }];
     const result = withSourceHeader(files, { shape: 'menu-button', purpose: 'shop', storeName: 'Café', controls: TICKET });
     for (const file of result.files) expect(file.content).toContain('data-controls-outline="ticket"');
+  });
+
+  it('controls.css has one recipe per outline and rules for every fill, colour, border and badge, from the store tokens only', () => {
+    const css = readFileSync(kitPath('controls.css'), 'utf8');
+    for (const outline of CONTROL_OUTLINES) expect(css).toContain(`[data-controls-outline=${outline}] .ctl-face{`);
+    for (const fill of CONTROL_FILLS) expect(css).toContain(`[data-controls-fill=${fill}]{`);
+    for (const colour of CONTROL_COLOURS) expect(css).toContain(`[data-controls-colour=${colour}]{`);
+    for (const border of CONTROL_BORDERS) expect(css).toContain(`[data-controls-border=${border}]{`);
+    for (const badge of CONTROL_BADGES) expect(css).toContain(`[data-controls-badge=${badge}]`);
+    // A colour literal may appear only as the last fallback of a token chain, or as a mask's black and clear.
+    const withoutFallbacks = css.replace(/var\(--[\w-]+,(?:var\(--[\w-]+,)*#[0-9a-f]{3,8}\)+/gi, '').replace(/#0{3,4}\b/g, '');
+    expect(withoutFallbacks).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    // No record, no change: every rule keys on a data-controls-* attribute.
+    postcss.parse(css).walkRules(rule => expect(rule.selector).toMatch(/data-controls-/));
+    expect(css).toMatch(/@layer pagosya-controls-locked\{[^@]*\[data-controls-outline\] \[data-ctl\]\{min-width:44px!important;min-height:44px!important;transform:none!important/);
+  });
+
+  it('carries the controls stylesheet only with a record', () => {
+    expect(render('menu-button', 'shop', { controls: TICKET }).match(/<style data-pagosya-controls-style>/g)).toHaveLength(1);
+    expect(render('menu-button', 'shop')).not.toContain('data-pagosya-controls-style');
   });
 });

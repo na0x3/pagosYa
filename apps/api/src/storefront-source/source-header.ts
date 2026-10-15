@@ -32,6 +32,10 @@ const kitText = (file: string) => {
   if (!kitFiles.has(file)) kitFiles.set(file, readFileSync(kitPath('headers', file), 'utf8').trim());
   return kitFiles.get(file)!;
 };
+let controlsCss: string | undefined;
+/** The controls stylesheet (spec 2026-10-14), read once per process like the header templates; it rides in the header beside
+ *  headers.css, so it reaches every page the platform header is drawn on, kit pages included. */
+const controlsStyle = () => (controlsCss ??= readFileSync(kitPath('controls.css'), 'utf8').trim());
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /** A page-relative link gets the folder prefix; an anchor, an absolute URL, tel: or mailto: stays as it is. */
 const local = (href: string, prefix: string) => /^(?:[a-z][a-z\d+.-]*:|#|\/)/i.test(href) ? href : prefix + href;
@@ -39,7 +43,7 @@ const local = (href: string, prefix: string) => /^(?:[a-z][a-z\d+.-]*:|#|\/)/i.t
 /** One record icon as inline SVG: path data only (sanitizeControls checked it), filled with the control's own colour. */
 const controlIcon = (controls: StoreControls, slot: IconSlot) => {
   const d = controls.icons[slot];
-  return d ? `<svg class="ctl-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="${escape(d)}"/></svg>` : '';
+  return d ? `<svg class="ctl-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" clip-rule="evenodd"><path fill="currentColor" fill-rule="evenodd" d="${escape(d)}"/></svg>` : '';
 };
 /** The inner layer that carries the shape: the icon and/or the word as the layout says; a word whenever the icon is missing. */
 const controlFace = (icon: string, word: string, layout: string, wordClass = 'ctl-word') => {
@@ -91,7 +95,7 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
   }
   // A callback, never a replacement string: a store name containing "$&" must stay literal.
   const body = kitText(`${input.shape}.html`).replace(/\{\{(\w+)\}\}/g, (_match, key: string) => parts[key] ?? '');
-  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}</style>${body}</header>`;
+  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}</style>${controls ? `<style data-pagosya-controls-style>${controlsStyle()}</style>` : ''}${body}</header>`;
 }
 
 const SLOT = /<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])[^>]*>/i;

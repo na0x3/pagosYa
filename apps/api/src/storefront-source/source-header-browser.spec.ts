@@ -6,6 +6,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { kitPath } from '@pagosya/storefront-kit';
 import { HEADER_SHAPES, renderSourceHeader, type HeaderShape } from './source-header';
 import { measureHeaderCovers } from './design-engine/header-clickable';
+import { CONTROL_OUTLINES, type StoreControls } from './store-controls';
+import { CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 
 /** Spec 2026-10-13, part B testing: every shape × shop/showcase in a real browser at the widths part 1 probes (1440, 390). */
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
@@ -16,13 +18,13 @@ let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch({ headless: true }); });
 afterAll(async () => { await browser?.close(); });
 
-async function open(shape: HeaderShape, purpose: 'shop' | 'service', width: number, storeName = 'Marca'): Promise<Page> {
+async function open(shape: HeaderShape, purpose: 'shop' | 'service', width: number, storeName = 'Marca', controls?: StoreControls): Promise<Page> {
   const page = await browser.newPage({ viewport: { width, height: width === 390 ? 844 : 900 } });
-  const header = renderSourceHeader({ shape, purpose, storeName, links, action: { kind: 'whatsapp', value: '59170000000' }, fact: 'Atendemos de lunes a viernes, de 9:00 a 18:00.', search: true });
+  const header = renderSourceHeader({ shape, purpose, storeName, links, action: { kind: 'whatsapp', value: '59170000000' }, fact: 'Atendemos de lunes a viernes, de 9:00 a 18:00.', search: true, ...(controls ? { controls } : {}) });
   const css = ':root{--store-background:#f4efe6;--store-foreground:#1d1b18;--store-accent:#b5462a;--store-accent-foreground:#ffffff}body{margin:0;font-family:Georgia,serif}section{min-height:620px;padding:40px}';
   const body = `${header}<main><section id="servicios" data-nav-label="Servicios"><h1>Hola</h1></section><section id="proyectos" data-nav-label="Proyectos"></section><section id="nosotros" data-nav-label="Nosotros"></section></main><p data-pagosya-status></p>`;
   await page.setContent(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body>${body}</body></html>`);
-  const config = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, sitePurpose: purpose, data: { storeName, items: [] } };
+  const config = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, sitePurpose: purpose, ...(controls ? { controls } : {}), data: { storeName, items: [] } };
   await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_CONFIG=${JSON.stringify(config)};` });
   await page.addScriptTag({ content: commerce });
   return page;
@@ -106,4 +108,35 @@ it('the shrinking header stays put while the page is held still near where it sh
       expect({ start, steady: toggles <= 1 }).toEqual({ start, steady: true });
     } finally { await page.close(); }
   }
+});
+
+describe('store controls in the platform header (spec 2026-10-14, part 3)', () => {
+  it.each([...CONTROL_OUTLINES])('«%s»: upright 44px targets, the tilt on the face, nothing covered or wider than the screen, the menu gives the page back', async outline => {
+    const base = libraryRecord(CONTROL_LANGUAGES[0], 'crafts-home', 'frame');
+    const controls: StoreControls = { ...base, shape: { ...base.shape, outline, tilt: -3, notch: 6 }, words: { cart: 'Tu portafolios', account: 'Mi cuenta' } };
+    for (const shape of ['menu-button', 'side-rail', 'bottom-pill', 'centered-split'] as const) for (const width of [1440, 390]) {
+      const page = await open(shape, 'shop', width, 'Marca', controls);
+      try {
+        const facts = await page.evaluate(() => Array.from(document.querySelectorAll('header [data-ctl]')).filter(el => (el as any).checkVisibility()).map(el => {
+          const box = el.getBoundingClientRect(), face = el.querySelector('.ctl-face')!;
+          return { slot: el.getAttribute('data-ctl'), width: box.width, height: box.height, box: getComputedStyle(el).transform, face: getComputedStyle(face).transform };
+        }));
+        const label = `${outline} ${shape} ${width}`;
+        expect({ label, cart: facts.some(fact => fact.slot === 'cart') }).toEqual({ label, cart: true });
+        for (const fact of facts) {
+          expect({ label, slot: fact.slot, target: fact.width >= 44 && fact.height >= 44, upright: fact.box === 'none', tilted: fact.face !== 'none' })
+            .toEqual({ label, slot: fact.slot, target: true, upright: true, tilted: true });
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+        expect(await measureHeaderCovers(page, { maxPositions: 2 })).toEqual([]);
+        const toggle = page.locator('[data-pagosya-header-toggle]');
+        if (await toggle.isVisible()) {
+          await toggle.click();
+          expect(await menuState(page)).toMatchObject({ open: true, focusInside: true });
+          await page.keyboard.press('Escape');
+          expect(await menuState(page)).toEqual({ open: false, focusInside: false, focusOnToggle: true, overflow: '' });
+        }
+      } finally { await page.close(); }
+    }
+  });
 });

@@ -1,0 +1,54 @@
+/* Store controls (spec docs/superpowers/specs/2026-10-14-store-controls-design.md): one button language per store, from config.controls.
+   Every rule is keyed on [data-controls-outline], which the platform header carries from save time and commerce.js sets on :root,
+   so a store without a record never matches. Colours come only from the store tokens. The hit box ([data-ctl]) stays upright and
+   at least 44x44; the shape, fill, border and tilt are drawn on its inner .ctl-face layer. */
+:is(:root,.pyh)[data-controls-outline]{--ctl-paper:var(--store-background,var(--brand-background,var(--paper,#ffffff)));--ctl-text:var(--store-foreground,var(--brand-foreground,var(--ink,#161616)));--ctl-accent:var(--store-accent,var(--brand-accent,var(--accent,#161616)));--ctl-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,#ffffff));--ctl-scallop:calc(var(--ctl-notch,4px) + 4px)}
+[data-controls-colour=accent]{--ctl-c:var(--ctl-accent);--ctl-on:var(--ctl-on-accent)}
+[data-controls-colour=ink]{--ctl-c:var(--ctl-text);--ctl-on:var(--ctl-paper)}
+[data-controls-colour=paper]{--ctl-c:var(--ctl-paper);--ctl-on:var(--ctl-text)}
+[data-controls-fill=solid]{--ctl-fill:var(--ctl-c);--ctl-ink:var(--ctl-on)}
+[data-controls-fill=outline]{--ctl-fill:transparent;--ctl-ink:var(--ctl-c)}
+[data-controls-fill=ghost]{--ctl-fill:transparent;--ctl-ink:currentColor}
+[data-controls-fill=inverted]{--ctl-fill:var(--ctl-on);--ctl-ink:var(--ctl-c)}
+[data-controls-border=none]{--ctl-border:0 solid transparent}
+[data-controls-border=hairline]{--ctl-border:1px solid var(--ctl-ink)}
+[data-controls-border=solid]{--ctl-border:var(--ctl-weight,2px) solid var(--ctl-ink)}
+[data-controls-border=double]{--ctl-border:max(3px,calc(var(--ctl-weight,2px) * 3)) double var(--ctl-ink)}
+[data-controls-border=dashed]{--ctl-border:var(--ctl-weight,2px) dashed var(--ctl-ink)}
+[data-controls-border=offset]{--ctl-border:var(--ctl-weight,2px) solid var(--ctl-ink);--ctl-shadow:3px 3px 0 var(--ctl-ink)}
+/* The hit box: what was a pill or a text link becomes a plain, upright target; the face inside carries the language. */
+:is(:root,.pyh)[data-controls-outline] [data-ctl],:root[data-controls-outline] [data-pagosya-product] .product-detail__quantity>[data-ctl]{position:relative;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:inherit;clip-path:none;-webkit-mask:none;mask:none;text-decoration:none;cursor:pointer}
+[data-controls-outline] .ctl-face{display:inline-flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;min-width:36px;min-height:36px;padding:0 12px;border:var(--ctl-border);border-radius:var(--ctl-corner,8px);background:var(--ctl-fill);color:var(--ctl-ink);box-shadow:var(--ctl-shadow,none);transform:rotate(var(--ctl-tilt,0deg));font:inherit;font-size:15px;font-weight:600;line-height:1;white-space:nowrap;pointer-events:none;transition:transform .16s ease}
+[data-controls-outline] .ctl-face:not(:has(.ctl-word)){width:36px;padding:0}
+[data-controls-outline] .ctl-icon{display:block;flex:none;width:20px;height:20px;fill:currentColor}
+[data-controls-outline] [data-ctl]:active:not(:disabled) .ctl-face{transform:rotate(var(--ctl-tilt,0deg)) translateY(1px)}
+[data-controls-outline] [data-ctl]:disabled .ctl-face{opacity:.45}
+/* One recipe per outline. */
+[data-controls-outline=rounded] .ctl-face{border-radius:var(--ctl-corner,8px)}
+[data-controls-outline=pill] .ctl-face{border-radius:999px}
+[data-controls-outline=square] .ctl-face{border-radius:0}
+[data-controls-outline=ticket] .ctl-face{border-radius:var(--ctl-corner,4px);padding-inline:calc(var(--ctl-notch,5px) + 10px);-webkit-mask:radial-gradient(circle at 0 50%,#0000 var(--ctl-notch,5px),#000 calc(var(--ctl-notch,5px) + .5px)) 0 0/51% 100% no-repeat,radial-gradient(circle at 100% 50%,#0000 var(--ctl-notch,5px),#000 calc(var(--ctl-notch,5px) + .5px)) 100% 0/51% 100% no-repeat;mask:radial-gradient(circle at 0 50%,#0000 var(--ctl-notch,5px),#000 calc(var(--ctl-notch,5px) + .5px)) 0 0/51% 100% no-repeat,radial-gradient(circle at 100% 50%,#0000 var(--ctl-notch,5px),#000 calc(var(--ctl-notch,5px) + .5px)) 100% 0/51% 100% no-repeat}
+[data-controls-outline=tag] .ctl-face{border-radius:0 var(--ctl-corner,4px) var(--ctl-corner,4px) 0;padding-left:calc(var(--ctl-notch,6px) + 16px);clip-path:polygon(calc(var(--ctl-notch,6px) + 6px) 0,100% 0,100% 100%,calc(var(--ctl-notch,6px) + 6px) 100%,0 50%);-webkit-mask:radial-gradient(circle at calc(var(--ctl-notch,6px) + 8px) 50%,#0000 2.5px,#000 3px);mask:radial-gradient(circle at calc(var(--ctl-notch,6px) + 8px) 50%,#0000 2.5px,#000 3px)}
+[data-controls-outline=sticker] .ctl-face{border-radius:var(--ctl-corner,14px);box-shadow:0 0 0 calc(var(--ctl-weight,2px) + 2px) var(--ctl-paper),2px 3px 0 calc(var(--ctl-weight,2px) + 2px) color-mix(in srgb,var(--ctl-text) 30%,transparent)}
+[data-controls-outline=tab] .ctl-face{border-radius:var(--ctl-corner,8px) var(--ctl-corner,8px) 0 0;box-shadow:inset 0 calc(-1 * var(--ctl-weight,2px)) 0 var(--ctl-ink)}
+[data-controls-outline=stamp] .ctl-face{border-radius:0;padding-inline:calc(var(--ctl-scallop) / 2 + 10px);-webkit-mask:radial-gradient(calc(var(--ctl-scallop) / 3),#0000 97%,#000) round calc(var(--ctl-scallop) / -2) calc(var(--ctl-scallop) / -2)/var(--ctl-scallop) var(--ctl-scallop),linear-gradient(#000 0 0) no-repeat 50%/calc(100% - var(--ctl-scallop)) calc(100% - var(--ctl-scallop));mask:radial-gradient(calc(var(--ctl-scallop) / 3),#0000 97%,#000) round calc(var(--ctl-scallop) / -2) calc(var(--ctl-scallop) / -2)/var(--ctl-scallop) var(--ctl-scallop),linear-gradient(#000 0 0) no-repeat 50%/calc(100% - var(--ctl-scallop)) calc(100% - var(--ctl-scallop))}
+[data-controls-outline=bracket] .ctl-face{border:0;border-radius:0;background:linear-gradient(var(--ctl-ink) 0 0) 0 0/8px var(--ctl-weight,2px),linear-gradient(var(--ctl-ink) 0 0) 0 0/var(--ctl-weight,2px) 8px,linear-gradient(var(--ctl-ink) 0 0) 100% 0/8px var(--ctl-weight,2px),linear-gradient(var(--ctl-ink) 0 0) 100% 0/var(--ctl-weight,2px) 8px,linear-gradient(var(--ctl-ink) 0 0) 0 100%/8px var(--ctl-weight,2px),linear-gradient(var(--ctl-ink) 0 0) 0 100%/var(--ctl-weight,2px) 8px,linear-gradient(var(--ctl-ink) 0 0) 100% 100%/8px var(--ctl-weight,2px),linear-gradient(var(--ctl-ink) 0 0) 100% 100%/var(--ctl-weight,2px) 8px,var(--ctl-fill);background-repeat:no-repeat}
+[data-controls-outline=underline] .ctl-face{border:0;border-radius:0;background:linear-gradient(var(--ctl-ink) 0 0) 50% 100%/calc(100% - 16px) var(--ctl-weight,2px) no-repeat,var(--ctl-fill)}
+[data-controls-outline=blob] .ctl-face{border-radius:42% 58% 55% 45%/55% 45% 58% 42%}
+/* The count badge on the header cart. Zero shows nothing (inline reads like today's "Carrito 0"); the number always stays in the
+   accessibility tree, so the cart reads «Carrito, 0 productos» and a dot badge still says how many. */
+[data-controls-outline] [data-ctl=cart] .ctl-badge{box-sizing:border-box;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--ctl-accent);color:var(--ctl-on-accent);font-size:11px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums;pointer-events:none}
+[data-controls-colour=accent][data-controls-fill=solid]:not([data-controls-badge=inline]) [data-ctl=cart] .ctl-badge{background:var(--ctl-text);color:var(--ctl-paper)}
+[data-controls-badge=inline] [data-ctl=cart] .ctl-badge{min-width:1.2em;height:auto;margin-left:-4px;padding:0;background:none;color:inherit;font-size:15px;line-height:1}
+[data-controls-badge=circle] [data-ctl=cart] .ctl-badge{position:absolute;top:0;right:-2px}
+[data-controls-badge=corner] [data-ctl=cart] .ctl-badge{position:absolute;top:-2px;right:-4px;border-radius:4px 4px 4px 0}
+[data-controls-badge=stamp] [data-ctl=cart] .ctl-badge{position:absolute;top:-2px;right:-4px;border-radius:2px;transform:rotate(-8deg);outline:1.5px dashed currentColor;outline-offset:1px}
+[data-controls-badge=dot] [data-ctl=cart] .ctl-badge{position:absolute;top:6px;right:4px;width:10px;min-width:0;height:10px;padding:0;overflow:hidden;text-indent:-999px;white-space:nowrap}
+[data-controls-badge]:not([data-controls-badge=inline]) [data-ctl=cart] .ctl-badge[data-empty]{width:1px;min-width:0;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+/* Locked: no record can change these. Important declarations in a layer outrank every unlayered rule, the store's included. */
+@layer pagosya-controls-locked{
+[data-controls-outline] [data-ctl]{min-width:44px!important;min-height:44px!important;transform:none!important;rotate:none!important;translate:none!important;scale:none!important;clip-path:none!important}
+[data-controls-outline] [data-ctl]:focus-visible{outline:3px solid var(--ctl-text)!important;outline-offset:2px!important;box-shadow:0 0 0 2px var(--ctl-paper)!important}
+[data-controls-outline] .ctl-sr{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+}
+@media (prefers-reduced-motion:reduce){[data-controls-outline] .ctl-face{transition:none}}
