@@ -8,7 +8,7 @@ export const WALKTHROUGH_STEPS = [
   { id: 'logo', title: '¿Tienes logo?', optional: true },
   { id: 'photos', title: 'Sube fotos de tu negocio', optional: true },
   { id: 'products', title: 'Agrega hasta 5 productos', optional: true },
-  { id: 'story', title: 'Tu historia', optional: true },
+  { id: 'story', title: 'Unas preguntas sobre tu negocio', optional: true },
   { id: 'contact', title: '¿Cómo te contactan?', optional: true },
 ];
 const REQUIRED = { name: 'Escribe el nombre de tu negocio.', what: 'Cuéntanos en una frase qué vendes.' };
@@ -76,10 +76,21 @@ export function productDrafts(rows) {
   }).filter(Boolean).slice(0, 5);
 }
 
+// Spec 2026-10-14 store voice: the story step asks two or three questions chosen by the kind of business (the API sends them
+// with the «¿Qué vendes?» save). Every answer is optional and travels word for word, up to 400 characters.
+export function answersFor(questions, values) {
+  return (questions || []).map((question, index) => ({ question, answer: String(values[`a${index}`] || '').trim().slice(0, 400) })).filter(entry => entry.answer);
+}
+export function answerValues(questions, answers) {
+  const values = {};
+  (questions || []).forEach((question, index) => { const saved = (answers || []).find(entry => entry?.question === question); if (saved?.answer) values[`a${index}`] = saved.answer; });
+  return values;
+}
+
 // Files chosen or dropped but not uploaded yet: shown at once, kept in state so an error repaint never loses them.
 const pendingView = files => (files || []).map(({ file, url }) => `<figure class="wt-pending">${url ? `<img src="${escapeHtml(url)}" alt="">` : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption></figure>`).join('');
 
-const field = (step, values, pending = {}) => {
+const field = (step, values, pending = {}, questions = []) => {
   const v = name => escapeHtml(String(values[name] || ''));
   switch (step.id) {
     case 'name': return `<input class="wt-input" name="name" maxlength="120" autocomplete="organization" placeholder="Café Buna" value="${v('name')}" autofocus><p class="wt-aside">¿Vienes de Shopify? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>`;
@@ -87,7 +98,11 @@ const field = (step, values, pending = {}) => {
     case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Arrastra tu logo o toca para elegir</span></label><div class="wt-thumbs">${pendingView(pending.logo)}</div><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
     case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${(values.photos || []).map(url => `<img src="${escapeHtml(url)}" alt="">`).join('')}${pendingView(pending.photos)}</div>`;
     case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product"><input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
-    case 'story': return `<textarea class="wt-input" name="story" maxlength="1200" rows="5" placeholder="Desde cuándo, dónde y qué hace único a tu negocio">${v('story')}</textarea>`;
+    case 'story': {
+      // An older API sends no questions: the free story box stays.
+      if (!questions.length) return `<textarea class="wt-input" name="story" maxlength="1200" rows="5" placeholder="Desde cuándo, dónde y qué hace único a tu negocio">${v('story')}</textarea>`;
+      return `<p class="wt-aside">Responde las que quieras: YAPI escribe tu tienda con tus palabras.</p>${questions.slice(0, 3).map((question, index) => `<label class="wt-question"><span>${escapeHtml(question)}</span><textarea class="wt-input" name="a${index}" maxlength="400" rows="2">${v(`a${index}`)}</textarea></label>`).join('')}`;
+    }
     case 'sell': {
       const chosen = values.sell || guessSitePurpose(values.what);
       const option = (value, label) => `<label class="wt-choice"><input type="radio" name="sell" value="${value}" ${chosen === value ? 'checked' : ''}> ${label}</label>`;
@@ -144,7 +159,7 @@ export function walkthroughView(state) {
   return `<form class="wt" data-wt-form novalidate>
     <div class="wt-progress" role="progressbar" aria-label="Progreso" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${state.step + 1}"><i style="width:${Math.round(((state.step + 1) / total) * 100)}%"></i></div>
     <button class="wt-ghost wt-exit" type="button" data-wt-exit>Salir</button>
-    <h1 class="wt-title">${escapeHtml(step.title)}</h1>${field(step, state.values, state.pending)}
+    <h1 class="wt-title">${escapeHtml(step.title)}</h1>${field(step, state.values, state.pending, state.questions || [])}
     ${state.error ? `<p class="wt-error" role="alert">${escapeHtml(state.error)}</p>` : ''}
     <footer class="wt-actions">${state.step ? '<button class="wt-ghost" type="button" data-wt-back>Atrás</button>' : '<span></span>'}<span>${step.optional ? '<button class="wt-ghost" type="button" data-wt-skip>Saltar</button>' : ''}<button class="primary" type="submit" ${state.busy ? 'disabled' : ''}>${state.step === total - 1 ? 'Crear mi tienda' : 'Siguiente'}</button></span></footer>
   </form>`;
@@ -160,8 +175,9 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
   // `resume` given (a store, or null for a fresh run) skips the lookup; omitted keeps the old fetch.
   const resume = resumeStore !== undefined ? { store: resumeStore } : await api('/stores/onboarding').catch(() => ({ store: null }));
   const saved = resume.store?.onboarding;
-  let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [] } },
-    ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), values: { name: resume.store.name, what: saved?.what, story: saved?.story, photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city, sell: saved?.purpose, action: saved?.primaryAction?.kind, booking: saved?.primaryAction?.kind === 'booking' ? saved.primaryAction.value : undefined, phone: saved?.primaryAction?.kind === 'phone' ? saved.primaryAction.value : undefined } } : {}) };
+  const resumedQuestions = Array.isArray(resume.store?.questions) ? resume.store.questions : [];
+  let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [] }, questions: [] },
+    ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), questions: resumedQuestions, values: { name: resume.store.name, what: saved?.what, story: saved?.story, ...answerValues(resumedQuestions, saved?.answers), photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city, sell: saved?.purpose, action: saved?.primaryAction?.kind, booking: saved?.primaryAction?.kind === 'booking' ? saved.primaryAction.value : undefined, phone: saved?.primaryAction?.kind === 'phone' ? saved.primaryAction.value : undefined } } : {}) };
   const paint = () => { root.innerHTML = walkthroughView(state); root.querySelector('[autofocus]')?.focus(); };
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
   // Per run: product rows already created (index -> { id, name, amount }), and the one chat-job id, so retries never duplicate.
@@ -200,7 +216,11 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
       return patch(mark);
     }
     if (skipped) return patch(mark);
-    if (id === 'what') return patch({ ...mark, what: state.values.what });
+    if (id === 'what') {
+      const answered = await patch({ ...mark, what: state.values.what });
+      if (Array.isArray(answered?.questions)) state = { ...state, questions: answered.questions };
+      return answered;
+    }
     if (id === 'sell') return patch({ ...mark, purpose: state.values.sell });
     if (id === 'logo' && picked.logo[0]) { await api(`/stores/${state.storeId}`, { method: 'PATCH', body: JSON.stringify({ logoUrl: await uploadFile(picked.logo[0]) }) }); clearPending('logo'); }
     if (id === 'photos') {
@@ -224,7 +244,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
         created[i] = { id: product?.id, name: draft.name, amount: draft.amount };
       }
     }
-    if (id === 'story') return patch({ ...mark, story: state.values.story });
+    if (id === 'story') return patch({ ...mark, ...(state.questions?.length ? { answers: answersFor(state.questions, state.values) } : { story: state.values.story }) });
     if (id === 'contact') {
       // Order matters: the job exists before the store is marked finished, so a reload never strands a finished store.
       if (!jobPosted) {
@@ -249,7 +269,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
       const last = state.step === LAST;
       await save(skipped, picked, moved.step);
       if (last) return onDone(state.storeId);
-      state = { ...moved, storeId: state.storeId, values: state.values, pending: state.pending, busy: false };
+      state = { ...moved, storeId: state.storeId, values: state.values, pending: state.pending, questions: state.questions, busy: false };
     } catch (error) {
       state = { ...state, busy: false, error: `No pudimos guardar este paso (${error?.message || 'error'}). Inténtalo de nuevo${WALKTHROUGH_STEPS[state.step].optional ? ' o sáltalo' : ''}.` };
     }

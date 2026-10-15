@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WALKTHROUGH_STEPS, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
+import { WALKTHROUGH_STEPS, answerValues, answersFor, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
@@ -39,7 +39,7 @@ test('product rows become centavos and incomplete rows are dropped', () => {
 });
 
 // A fake root and api: drives runWalkthrough without a DOM.
-async function drive(step, { fail = () => false, uploadFail = () => false } = {}) {
+async function drive(step, { fail = () => false, uploadFail = () => false, questions } = {}) {
   const handlers = {}; const calls = []; const uploads = []; let done = null;
   const root = { innerHTML: '', querySelector: () => null, addEventListener: (type, fn) => { handlers[type] = fn; } };
   const api = async (path, init = {}) => {
@@ -48,6 +48,7 @@ async function drive(step, { fail = () => false, uploadFail = () => false } = {}
     calls.push(call);
     if (path === '/stores/onboarding') return { store: { id: 's1', name: 'Buna', onboarding: { step } } };
     if (path.endsWith('/payment_links')) return { id: `p${calls.length}` };
+    if (questions && call.method === 'PATCH' && path.endsWith('/onboarding')) return { questions, ...(call.body?.brief ? { brief: 'BRIEF' } : {}) };
     if (call.body?.brief) return { brief: 'BRIEF' };
     return {};
   };
@@ -304,4 +305,47 @@ test('a showcase skips products, saves its main action and builds as a service s
   assert.deepEqual(patches.find(b => b.brief).primaryAction, { kind: 'booking', value: 'https://cal.com/deff' });
   assert.equal(posts(w.calls, '/chat-jobs')[0].body.sitePurpose, 'service');
   assert.equal(w.done(), 's1');
+});
+
+test('the story step asks the kind questions the API sent, each optional, escaped, up to 400 characters (spec 2026-10-14)', () => {
+  const html = walkthroughView({ ...start, step: 6, questions: ['¿Qué pide todo el mundo?', '<b>¿Qué tiene tu local?</b>'] });
+  assert.match(html, /name="a0"/);
+  assert.match(html, /name="a1"/);
+  assert.doesNotMatch(html, /name="a2"/);
+  assert.match(html, /maxlength="400"/);
+  assert.match(html, /¿Qué pide todo el mundo\?/);
+  assert.doesNotMatch(html, /<b>¿Qué tiene/);
+  assert.match(html, /Saltar/);
+  // An older API sends no questions: the free story box stays.
+  assert.match(walkthroughView({ ...start, step: 6 }), /name="story"/);
+});
+
+test('answers are sent word for word, only the ones typed, and saved ones fill the boxes again', () => {
+  assert.deepEqual(answersFor(['¿A?', '¿B?', '¿C?'], { a0: '  El cortado ', a2: 'x'.repeat(500) }), [{ question: '¿A?', answer: 'El cortado' }, { question: '¿C?', answer: 'x'.repeat(400) }]);
+  assert.deepEqual(answersFor([], { a0: 'x' }), []);
+  assert.deepEqual(answerValues(['¿A?', '¿B?'], [{ question: '¿B?', answer: 'sí' }]), { a1: 'sí' });
+  assert.deepEqual(answerValues(['¿A?'], undefined), {});
+});
+
+test('the questions come back with the «¿Qué vendes?» save, and the story step saves their answers', async () => {
+  const questions = ['¿Qué pide todo el mundo?', '¿Qué tiene tu local que no tenga otro?'];
+  const w = await drive(1, { questions });
+  await w.type('what', 'Cafetería de barrio');
+  await w.submit(); // what → sell
+  await w.submit(); // sell → logo
+  await w.submit(); // logo → photos
+  await w.submit(); // photos → products
+  await w.submit(); // products → story
+  assert.match(w.root.innerHTML, /¿Qué tiene tu local que no tenga otro\?/);
+  await w.type('a0', 'El flat white con alfajor');
+  await w.submit(); // story → contact
+  const story = w.calls.filter(c => c.method === 'PATCH' && c.path === '/stores/s1/onboarding').map(c => c.body).find(body => body.done?.includes('story'));
+  assert.deepEqual(story, { step: 7, done: ['story'], answers: [{ question: '¿Qué pide todo el mundo?', answer: 'El flat white con alfajor' }] });
+});
+
+test('a resumed store shows its questions with the answers it already gave', async () => {
+  const root = { innerHTML: '', querySelector: () => null, addEventListener: () => {} };
+  const store = { id: 's1', name: 'Café', onboarding: { step: 6, answers: [{ question: '¿Qué tiene tu local?', answer: 'Una ventana a la plaza' }] }, questions: ['¿Qué pide todo el mundo?', '¿Qué tiene tu local?'] };
+  await runWalkthrough(root, { api: async () => ({}), uploadFile: async () => '', onDone: () => {}, resume: store });
+  assert.match(root.innerHTML, /name="a1"[^>]*>Una ventana a la plaza</);
 });
