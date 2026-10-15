@@ -1034,3 +1034,24 @@ describe('store voice in the chat (spec 2026-10-14)', () => {
     await expect(service.send('m', 's', { ...request, instruction: 'El cortado' })).resolves.toHaveProperty('revision');
   });
 });
+
+describe('kind answers after the final review (2026-10-15)', () => {
+  const Q1 = '¿Qué pide todo el mundo?';
+  const asked = { role: 'ASSISTANT', content: 'Guardé los cambios.', metadata: { sourceRevision: 1, kindQuestion: Q1 } };
+  const review = { role: 'ASSISTANT', content: 'Pulí tu tienda: Agrandé el título.', metadata: { review: true } };
+  const saving = (prisma: any) => { prisma.store.findFirst.mockImplementation(async (args: any) => (args?.select?.onboarding ? { onboarding: null } : { name: 'Café Aroma', logoUrl: null, _count: { paymentLinks: 0 }, paymentLinks: [] })); prisma.store.update = jest.fn(async () => ({})); };
+
+  it('an answer typed after the review note still answers the question', async () => {
+    const { service, prisma } = setup([asked, review]);
+    saving(prisma);
+    await service.send('m', 's', { ...request, instruction: 'El flat white con alfajor' });
+    expect(prisma.store.update.mock.calls[0][0].data.onboarding.answers).toEqual([{ question: Q1, answer: 'El flat white con alfajor' }]);
+  });
+
+  it('a request to change the store is not saved as the answer', async () => {
+    const { service, prisma } = setup([asked]);
+    saving(prisma);
+    await service.send('m', 's', { ...request, instruction: 'Cambia el fondo a azul' });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+});

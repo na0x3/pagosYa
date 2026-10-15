@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WALKTHROUGH_STEPS, answerValues, answersFor, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
+import { WALKTHROUGH_STEPS, answerValues, answersFor, withKindQuestions, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
@@ -321,7 +321,8 @@ test('the story step asks the kind questions the API sent, each optional, escape
 });
 
 test('answers are sent word for word, only the ones typed, and saved ones fill the boxes again', () => {
-  assert.deepEqual(answersFor(['¿A?', '¿B?', '¿C?'], { a0: '  El cortado ', a2: 'x'.repeat(500) }), [{ question: '¿A?', answer: 'El cortado' }, { question: '¿C?', answer: 'x'.repeat(400) }]);
+  // Final review 2026-10-15: a blank answer is sent too, so erasing one clears it on the server.
+  assert.deepEqual(answersFor(['¿A?', '¿B?', '¿C?'], { a0: '  El cortado ', a2: 'x'.repeat(500) }), [{ question: '¿A?', answer: 'El cortado' }, { question: '¿B?', answer: '' }, { question: '¿C?', answer: 'x'.repeat(400) }]);
   assert.deepEqual(answersFor([], { a0: 'x' }), []);
   assert.deepEqual(answerValues(['¿A?', '¿B?'], [{ question: '¿B?', answer: 'sí' }]), { a1: 'sí' });
   assert.deepEqual(answerValues(['¿A?'], undefined), {});
@@ -340,7 +341,8 @@ test('the questions come back with the «¿Qué vendes?» save, and the story st
   await w.type('a0', 'El flat white con alfajor');
   await w.submit(); // story → contact
   const story = w.calls.filter(c => c.method === 'PATCH' && c.path === '/stores/s1/onboarding').map(c => c.body).find(body => body.done?.includes('story'));
-  assert.deepEqual(story, { step: 7, done: ['story'], answers: [{ question: '¿Qué pide todo el mundo?', answer: 'El flat white con alfajor' }] });
+  // The unanswered question is sent blank, so an answer erased later is cleared on the server (final review 2026-10-15).
+  assert.deepEqual(story, { step: 7, done: ['story'], answers: [{ question: '¿Qué pide todo el mundo?', answer: 'El flat white con alfajor' }, { question: '¿Qué tiene tu local que no tenga otro?', answer: '' }] });
 });
 
 test('a resumed store shows its questions with the answers it already gave', async () => {
@@ -348,4 +350,10 @@ test('a resumed store shows its questions with the answers it already gave', asy
   const store = { id: 's1', name: 'Café', onboarding: { step: 6, answers: [{ question: '¿Qué tiene tu local?', answer: 'Una ventana a la plaza' }] }, questions: ['¿Qué pide todo el mundo?', '¿Qué tiene tu local?'] };
   await runWalkthrough(root, { api: async () => ({}), uploadFile: async () => '', onDone: () => {}, resume: store });
   assert.match(root.innerHTML, /name="a1"[^>]*>Una ventana a la plaza</);
+});
+
+test('new kind questions start with empty answers (final review 2026-10-15)', () => {
+  const state = { questions: ['¿A?', '¿B?'], values: { what: 'Café', a0: 'El cortado', a1: 'La plaza' } };
+  assert.deepEqual(withKindQuestions(state, ['¿A?', '¿B?']), state);
+  assert.deepEqual(withKindQuestions(state, ['¿X?', '¿Y?']), { questions: ['¿X?', '¿Y?'], values: { what: 'Café', a0: '', a1: '', a2: '' } });
 });

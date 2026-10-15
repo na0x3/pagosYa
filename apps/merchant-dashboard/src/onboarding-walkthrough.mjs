@@ -79,7 +79,14 @@ export function productDrafts(rows) {
 // Spec 2026-10-14 store voice: the story step asks two or three questions chosen by the kind of business (the API sends them
 // with the «¿Qué vendes?» save). Every answer is optional and travels word for word, up to 400 characters.
 export function answersFor(questions, values) {
-  return (questions || []).map((question, index) => ({ question, answer: String(values[`a${index}`] || '').trim().slice(0, 400) })).filter(entry => entry.answer);
+  // A blank answer is sent too: the API clears that question's saved answer, so erasing one works (final review 2026-10-15).
+  return (questions || []).map((question, index) => ({ question, answer: String(values[`a${index}`] || '').trim().slice(0, 400) }));
+}
+/** New kind questions (the merchant changed «¿Qué vendes?») start with empty boxes, so an answer never moves under another
+ *  question (final review 2026-10-15). The same questions keep what was typed. */
+export function withKindQuestions(state, questions) {
+  const same = JSON.stringify(state.questions || []) === JSON.stringify(questions);
+  return same ? state : { ...state, questions, values: { ...state.values, a0: '', a1: '', a2: '' } };
 }
 export function answerValues(questions, answers) {
   const values = {};
@@ -218,7 +225,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     if (skipped) return patch(mark);
     if (id === 'what') {
       const answered = await patch({ ...mark, what: state.values.what });
-      if (Array.isArray(answered?.questions)) state = { ...state, questions: answered.questions };
+      if (Array.isArray(answered?.questions)) state = withKindQuestions(state, answered.questions);
       return answered;
     }
     if (id === 'sell') return patch({ ...mark, purpose: state.values.sell });

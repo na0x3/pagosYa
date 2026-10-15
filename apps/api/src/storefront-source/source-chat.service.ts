@@ -103,6 +103,19 @@ const kindQuestionOf = (message: { role: string; metadata?: unknown } | undefine
   const question = message?.role === 'ASSISTANT' ? (message.metadata as { kindQuestion?: unknown } | null)?.kindQuestion : undefined;
   return typeof question === 'string' ? question : undefined;
 };
+/** The kind question still waiting (final review 2026-10-15): the latest one YAPI asked since the merchant's last message, so a
+ *  review note posted in between does not hide it. */
+const pendingKindQuestion = (messages: ReadonlyArray<{ role: string; metadata?: unknown }>): string | undefined => {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    if (messages[index].role === 'USER') return undefined;
+    const question = kindQuestionOf(messages[index]);
+    if (question) return question;
+  }
+  return undefined;
+};
+/** A message that asks YAPI to change the store is an instruction, never the answer to a kind question. */
+const STORE_EDIT_REQUEST = /^\s*(?:por favor,?\s+)?(?:cambia\w*|pon|ponle|ponme|agrega\w*|anade|anadir|quita\w*|elimina\w*|borra\w*|haz|hazme|hazla|hazlo|crea\w*|sube|mueve|reemplaza|usa|redisena\w*|arregla|corrige|muestra|oculta|traduce|empieza|vuelve)\b/;
+const answersKindQuestion = (text: string) => !STORE_EDIT_REQUEST.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
 
 @Injectable()
 export class SourceChatService {
@@ -309,8 +322,8 @@ export class SourceChatService {
     } });
     // Store voice (spec 2026-10-14): the message right after YAPI's kind question is its answer. It is kept word for word on the
     // onboarding record, where the next YAPI save adds it to the sheet as the merchant's own. It never fails or delays the message.
-    const askedQuestion = kindQuestionOf(history.messages.at(-1));
-    if (askedQuestion && input.instruction.trim()) await this.recordKindAnswer(merchantId, storeId, askedQuestion, input.instruction.trim());
+    const askedQuestion = pendingKindQuestion(history.messages);
+    if (askedQuestion && input.instruction.trim() && answersKindQuestion(input.instruction)) await this.recordKindAnswer(merchantId, storeId, askedQuestion, input.instruction.trim());
     const workflow = createSourceProgress(async progress => {
       await sourceRequestContext.getStore()?.progress?.(progress);
       if (input.requestId) await this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: {
