@@ -44,7 +44,14 @@ export const PARTS = [
   'templates/kit-templates.js',
   'cart/render.js',
   'contact/form.js',
-  'rest.js',
+  'look/dna-css.js',
+  'catalog/card-extras.js',
+  'checkout/shipping.js',
+  'checkout/submit.js',
+  'shared/click-actions.js',
+  'content/load.js',
+  'header/platform-header.js',
+  'shared/start.js',
 ];
 
 /** Every .js file under commerce-src/, relative to it, with forward slashes, sorted. */
