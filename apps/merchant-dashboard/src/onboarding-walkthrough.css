@@ -5,8 +5,8 @@
 .wt-title { font-size: clamp(28px, 5vw, 40px); line-height: 1.1; margin: 12px 0 4px; }
 .wt-input { width: 100%; min-height: 56px; font-size: 18px; padding: 12px 14px; border: 1px solid var(--line, #ddd); border-radius: 10px; box-sizing: border-box; }
 .wt-drop { display: grid; place-items: center; min-height: 140px; border: 2px dashed var(--line, #ccc); border-radius: 12px; cursor: pointer; font-size: 16px; }
-.wt-thumbs { display: flex; flex-wrap: wrap; gap: 8px; } .wt-thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
-.wt-pending { margin: 0; width: 72px; display: grid; gap: 4px; } .wt-pending figcaption { font-size: 12px; color: var(--muted, #555); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-thumbs { display: flex; flex-wrap: wrap; gap: 14px; padding-top: 8px; } .wt-thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+.wt-pending { position: relative; margin: 0; width: 72px; display: grid; gap: 4px; } .wt-pending figcaption { font-size: 12px; color: var(--muted, #555); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wt-products { display: grid; gap: 8px; } .wt-product { display: grid; grid-template-columns: 1fr 120px; gap: 8px; } .wt-product input { min-height: 48px; font-size: 16px; padding: 8px 12px; border: 1px solid var(--line, #ddd); border-radius: 8px; }
 .wt-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; } .wt-actions > span { display: flex; gap: 8px; }
 .wt-ghost { background: none; border: 0; padding: 10px 12px; font: inherit; color: var(--muted, #555); cursor: pointer; }
@@ -22,3 +22,11 @@
 /* Spec 2026-10-14 store voice: the kind questions on the story step. */
 .wt-question { display: grid; gap: 6px; margin-bottom: 14px; }
 .wt-question > span { font-weight: 600; }
+
+/* 2026-10-15 owner report. Every photo can be taken out again. */
+.wt-remove { position: absolute; top: -10px; right: -10px; display: grid; place-items: center; width: 28px; height: 28px; min-height: 0; min-width: 0; padding: 0; border: 1px solid var(--line, #ddd); border-radius: 50%; background: var(--paper, #fff); color: var(--ink, #111); font: 600 16px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 1px 3px rgb(0 0 0 / .15); }
+.wt-remove:hover { background: var(--ink, #111); color: #fff; }
+.wt-remove:focus-visible { outline: 2px solid var(--ink, #111); outline-offset: 2px; }
+/* Logged in, the walkthrough fills the page area beside the sidebar and sits above the top bar and the YAPI bar, so its Salir
+   is never hidden; the sidebar stays usable and leaving through it closes the walkthrough (dashboard.js). */
+body.is-logged-in .wt-overlay { left: var(--sidebar-w, 0px); z-index: 115; }

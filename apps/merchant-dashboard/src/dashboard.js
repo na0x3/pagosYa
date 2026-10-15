@@ -730,6 +730,19 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     root.hidden = false;
     showWalkthroughChoice(root, { store: unfinished, onContinue: store => openWalkthrough(store), onFresh: () => openWalkthrough(null), onExit: () => { root.hidden = true; root.innerHTML = ""; } });
   }
+  // The sidebar stays usable beside the walkthrough (onboarding-walkthrough.css): opening another page or store through it
+  // closes the walkthrough. Every step is already saved, so "Crear otra tienda" offers to continue (owner report 2026-10-15).
+  function closeWalkthroughForNavigation(event) {
+    const root = document.getElementById("onboardingWalkthrough");
+    if (root.hidden || root.contains(event.target)) return;
+    if (event.type === "click" && !event.target.closest(".dashboard-sidebar :is(a, button)")) return;
+    if (event.type === "change" && event.target.id !== "sidebarStorePicker") return;
+    root._wtAbort?.abort();
+    root.hidden = true; root.innerHTML = "";
+    void refresh();
+  }
+  document.addEventListener("click", closeWalkthroughForNavigation, true);
+  document.addEventListener("change", closeWalkthroughForNavigation, true);
   // The walkthrough's Shopify links hide it first, then open the usual import dialog.
   document.getElementById("onboardingWalkthrough").addEventListener("click", event => {
     if (!event.target.closest("[data-open-shopify-import]")) return;

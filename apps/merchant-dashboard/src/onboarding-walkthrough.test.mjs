@@ -62,6 +62,8 @@ async function drive(step, { fail = () => false, uploadFail = () => false, quest
     type: async (name, value) => handlers.input({ target: { name, type: 'text', value } }),
     submit: async () => { handlers.submit({ preventDefault() {} }); await tick(); await tick(); },
     back: async () => { handlers.click({ target: { closest: sel => (sel === '[data-wt-back]' ? {} : null) } }); },
+    skip: async () => { handlers.click({ target: { closest: sel => (sel === '[data-wt-skip]' ? {} : null) } }); await tick(); await tick(); },
+    remove: key => handlers.click({ target: { closest: sel => (sel === '[data-wt-remove]' ? { dataset: { wtRemove: key } } : null) } }),
   };
 }
 const posts = (calls, suffix) => calls.filter(c => c.method === 'POST' && c.path.endsWith(suffix));
@@ -140,6 +142,40 @@ test('photos picked with the file input show at once; at most 20 are kept', asyn
   await w.submit();
   assert.equal(w.calls.find(c => c.body?.photos).body.photos.length, 20);
   assert.equal(w.uploads.length, 20);
+});
+
+test('a picked photo can be taken out before Siguiente and is never uploaded', async () => {
+  const w = await drive(4);
+  w.pick('photos', [image('tienda.jpg'), image('logo-ajeno.jpg'), image('equipo.jpg')]);
+  assert.match(w.root.innerHTML, /data-wt-remove="pending:photos:1"/);
+  w.remove('pending:photos:1');
+  assert.doesNotMatch(w.root.innerHTML, /logo-ajeno\.jpg/);
+  await w.submit();
+  assert.deepEqual(w.uploads, ['tienda.jpg', 'equipo.jpg']);
+  assert.deepEqual(w.calls.find(c => c.body?.photos).body.photos, ['/v1/uploads/tienda.jpg', '/v1/uploads/equipo.jpg']);
+});
+
+test('a saved photo can be taken out after Atrás, and the shorter list is saved even with nothing new picked', async () => {
+  const w = await drive(4);
+  w.pick('photos', [image('a.jpg'), image('b.jpg')]);
+  await w.submit();
+  await w.back();
+  assert.match(w.root.innerHTML, /data-wt-remove="saved:0"/);
+  w.remove('saved:0');
+  assert.doesNotMatch(w.root.innerHTML, /uploads\/a\.jpg/);
+  await w.submit();
+  const saves = w.calls.filter(c => c.method === 'PATCH' && c.body?.photos);
+  assert.deepEqual(saves.at(-1).body.photos, ['/v1/uploads/b.jpg']);
+});
+
+test('taking out every saved photo and pressing Saltar saves an empty list', async () => {
+  const w = await drive(4);
+  w.pick('photos', [image('a.jpg')]);
+  await w.submit(); await w.back();
+  w.remove('saved:0');
+  const handlersSkip = w.calls.length;
+  await w.skip();
+  assert.deepEqual(w.calls.slice(handlersSkip).find(c => c.method === 'PATCH').body.photos, []);
 });
 
 test('a dropped logo is used on the logo step; a drop on another step is only blocked', async () => {

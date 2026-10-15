@@ -95,15 +95,18 @@ export function answerValues(questions, answers) {
 }
 
 // Files chosen or dropped but not uploaded yet: shown at once, kept in state so an error repaint never loses them.
-const pendingView = files => (files || []).map(({ file, url }) => `<figure class="wt-pending">${url ? `<img src="${escapeHtml(url)}" alt="">` : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption></figure>`).join('');
+// Every chosen or saved photo can be taken out again (owner report 2026-10-15: "no way to delete pictures").
+const removeButton = (key, label) => `<button class="wt-remove" type="button" data-wt-remove="${key}" aria-label="${escapeHtml(label)}" title="Quitar">×</button>`;
+const pendingView = (files, name = 'photos') => (files || []).map(({ file, url }, index) => `<figure class="wt-pending">${url ? `<img src="${escapeHtml(url)}" alt="">` : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption>${removeButton(`pending:${name}:${index}`, `Quitar ${file.name || 'foto'}`)}</figure>`).join('');
+const savedPhotosView = urls => (urls || []).map((url, index) => `<figure class="wt-pending"><img src="${escapeHtml(url)}" alt=""><figcaption>Foto ${index + 1}</figcaption>${removeButton(`saved:${index}`, `Quitar foto ${index + 1}`)}</figure>`).join('');
 
 const field = (step, values, pending = {}, questions = []) => {
   const v = name => escapeHtml(String(values[name] || ''));
   switch (step.id) {
     case 'name': return `<input class="wt-input" name="name" maxlength="120" autocomplete="organization" placeholder="Café Buna" value="${v('name')}" autofocus><p class="wt-aside">¿Vienes de Shopify? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>`;
     case 'what': return `<textarea class="wt-input" name="what" maxlength="300" rows="3" placeholder="Café de especialidad tostado en Sopocachi" autofocus>${v('what')}</textarea>`;
-    case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Arrastra tu logo o toca para elegir</span></label><div class="wt-thumbs">${pendingView(pending.logo)}</div><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
-    case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${(values.photos || []).map(url => `<img src="${escapeHtml(url)}" alt="">`).join('')}${pendingView(pending.photos)}</div>`;
+    case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Arrastra tu logo o toca para elegir</span></label><div class="wt-thumbs">${pendingView(pending.logo, 'logo')}</div><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
+    case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${savedPhotosView(values.photos)}${pendingView(pending.photos)}</div>`;
     case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product"><input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
     case 'story': {
       // An older API sends no questions: the free story box stays.
@@ -195,6 +198,8 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
   let brief = null;
   let jobPosted = false;
   const MAX_PHOTOS = 20;
+  // A saved photo taken out: the next save of the photos step sends the shorter list, even when nothing new was picked.
+  let photosRemoved = false;
   const objectUrl = file => { try { return URL.createObjectURL(file); } catch { return ''; } };
   const isImage = file => /^image\//.test(file?.type || '');
   // Picked or dropped files wait in state until their step saves.
@@ -206,6 +211,18 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     const previous = new Map(state.pending[name].map(p => [p.file, p.url]));
     for (const [file, url] of previous) if (url && !kept.includes(file)) URL.revokeObjectURL(url);
     state = { ...state, pending: { ...state.pending, [name]: kept.map(file => ({ file, url: previous.get(file) ?? objectUrl(file) })) } };
+    paint();
+  }
+  function removePhoto(key) {
+    const [kind, a, b] = key.split(':');
+    if (kind === 'saved') {
+      state = { ...state, values: { ...state.values, photos: (state.values.photos || []).filter((_, index) => index !== Number(a)) } };
+      photosRemoved = true;
+    } else if (kind === 'pending' && (a === 'logo' || a === 'photos')) {
+      const gone = state.pending[a][Number(b)];
+      if (gone?.url) URL.revokeObjectURL(gone.url);
+      state = { ...state, pending: { ...state.pending, [a]: state.pending[a].filter((_, index) => index !== Number(b)) } };
+    }
     paint();
   }
   function clearPending(name) {
@@ -222,7 +239,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
       state = { ...state, storeId: store.id };
       return patch(mark);
     }
-    if (skipped) return patch(mark);
+    if (skipped) return patch({ ...mark, ...(id === 'photos' && photosRemoved ? { photos: state.values.photos || [] } : {}) }).then(saved => { if (id === 'photos') photosRemoved = false; return saved; });
     if (id === 'what') {
       const answered = await patch({ ...mark, what: state.values.what });
       if (Array.isArray(answered?.questions)) state = withKindQuestions(state, answered.questions);
@@ -234,7 +251,9 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
       const urls = [...(state.values.photos || []), ...await Promise.all(picked.photos.slice(0, MAX_PHOTOS).map(file => uploadFile(file)))].slice(0, MAX_PHOTOS);
       state = { ...state, values: { ...state.values, photos: urls } };
       clearPending('photos');
-      return patch({ ...mark, ...(picked.photos.length ? { photos: urls } : {}) });
+      const saved = await patch({ ...mark, ...(picked.photos.length || photosRemoved ? { photos: urls } : {}) });
+      photosRemoved = false;
+      return saved;
     }
     if (id === 'products') {
       for (let i = 0; i < 5; i++) {
@@ -298,6 +317,8 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     if (event.target.closest('[data-wt-exit]') && !state.busy) { onExit?.(); return; }
     if (event.target.closest('[data-wt-skip]') && !state.busy) void advance(true);
     if (event.target.closest('[data-wt-back]') && !state.busy) { state = nextState(state, { type: 'back' }); paint(); }
+    const remove = event.target.closest('[data-wt-remove]');
+    if (remove && !state.busy) removePhoto(remove.dataset.wtRemove || '');
   });
   paint();
 }
