@@ -12,7 +12,7 @@ const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checko
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 const RECORD: StoreControls = { ...libraryRecord(CONTROL_LANGUAGES.find(language => language.id === 'ticket-stub')!, 'cafe-food', 'cup'), words: { cart: 'Tu taza', account: 'Mi cuenta' } };
 const ITEMS = [{ id: 'taza', name: 'Taza', description: 'Cerámica.', amount: 6000, currency: 'BOB', stock: 12, imageUrls: [] }];
-const HEADER = '<header data-pagosya-header><button type="button" class="pyh-cart" data-cart-open data-ctl="cart"><span class="ctl-face"></span><span class="ctl-sr">Carrito, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button></header>';
+const HEADER = '<header data-pagosya-header><button type="button" class="pyh-cart" data-cart-open data-ctl="cart"><span class="ctl-face"></span><span class="ctl-sr">Tu taza, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button></header>';
 const CUSTOM = '<div class="menu-item" data-custom-product><button type="button" class="menu-add" data-add="taza">Agregar</button></div>';
 
 const opened: any[] = [];
@@ -86,6 +86,12 @@ describe('store controls in the kit runtime (spec 2026-10-14)', () => {
     await settle();
     const count = doc.querySelector('header [data-cart-count]');
     expect([count.textContent, count.hasAttribute('data-empty'), doc.querySelector('header [data-ctl-unit]').textContent]).toEqual(['1', false, ' producto']);
+    // Label in Name: the word-led name survives every count change («Tu taza, 1 producto»; the unit alone is rewritten).
+    const cartName = () => doc.querySelector('header [data-ctl=cart]').textContent.replace(/\s+/g, ' ').trim();
+    expect(cartName()).toBe('Tu taza, 1 producto');
+    doc.querySelector('.quantity > button[data-add]').click();
+    await settle();
+    expect(cartName()).toBe('Tu taza, 2 productos');
     expect([...doc.querySelectorAll('.quantity > button')].map((button: any) => [button.getAttribute('data-ctl'), button.querySelector('.ctl-face path')?.getAttribute('d')]))
       .toEqual([['minus', RECORD.icons.minus], ['plus', RECORD.icons.plus]]);
     expect(RECORD.icons.minus).toBe(SHARED_ICONS.minus.solid);

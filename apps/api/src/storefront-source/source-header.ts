@@ -88,8 +88,15 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
   const controls = input.controls;
   if (controls) {
     const { layout, words } = controls;
-    parts.tools = showcase ? '' : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html" aria-label="Buscar" data-ctl="search">${controlFace(controlIcon(controls, 'search'), 'Buscar', layout.account)}</a>` : ''}<a class="pyh-tool" href="#" data-pagosya-account="login" aria-label="Mi cuenta" data-ctl="account">${controlFace(controlIcon(controls, 'account'), words.account ?? 'Mi cuenta', layout.account)}</a>`;
-    if (!link) parts.cta = `<button type="button" class="pyh-cart" data-cart-open data-ctl="cart">${controlFace(controlIcon(controls, 'cart'), words.cart ?? 'Carrito', layout.cart, 'ctl-word pyh-cart-word')}<span class="ctl-sr">Carrito, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button>`;
+    // Label in Name (WCAG 2.5.3): when the face shows a word, the accessible name starts with that same word.
+    const shown = (icon: string, layout: string) => layout !== 'icon' || icon === '';
+    const cartWord = words.cart ?? 'Carrito';
+    const cartIcon = controlIcon(controls, 'cart'), accountIcon = controlIcon(controls, 'account');
+    const cartName = shown(cartIcon, layout.cart) ? cartWord : 'Carrito';
+    const accountWord = words.account ?? 'Mi cuenta';
+    const accountName = shown(accountIcon, layout.account) ? accountWord : 'Mi cuenta';
+    parts.tools = showcase ? '' : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html" aria-label="Buscar" data-ctl="search">${controlFace(controlIcon(controls, 'search'), 'Buscar', layout.account)}</a>` : ''}<a class="pyh-tool" href="#" data-pagosya-account="login" aria-label="${escape(accountName)}" data-ctl="account">${controlFace(accountIcon, accountWord, layout.account)}</a>`;
+    if (!link) parts.cta = `<button type="button" class="pyh-cart" data-cart-open data-ctl="cart">${controlFace(cartIcon, cartWord, layout.cart, 'ctl-word pyh-cart-word')}<span class="ctl-sr">${escape(cartName)}, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button>`;
     parts.toggle = `<button type="button" class="pyh-toggle" data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu" data-ctl="menu"><span class="ctl-face">${controlIcon(controls, 'menu') || '<span class="pyh-toggle-bars" aria-hidden="true"></span>'}<span class="pyh-toggle-label ctl-word">Menú</span></span></button>`;
     parts.menu = menu(`<button type="button" class="pyh-close" data-pagosya-header-close aria-label="Cerrar" data-ctl="close">${controlFace(controlIcon(controls, 'close'), 'Cerrar', 'icon+word')}</button>`);
   }

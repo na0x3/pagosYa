@@ -224,7 +224,7 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
     expect(cart).toContain('data-cart-open data-ctl="cart"');
     expect(cart).toContain(`<path fill="currentColor" fill-rule="evenodd" d="${CART_ICONS.cup.solid}"/>`);
     expect(cart).toContain('<span class="ctl-word pyh-cart-word" aria-hidden="true">Tu pedido</span>');
-    expect(cart).toContain('<span class="ctl-sr">Carrito, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span>');
+    expect(cart).toContain('<span class="ctl-sr">Tu pedido, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span>');
     expect(html.match(/data-cart-open/g)).toHaveLength(1);
     expect(html.match(/data-pagosya-header-toggle/g)).toHaveLength(1);
     expect(html).toContain('data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu" data-ctl="menu"><span class="ctl-face"><svg class="ctl-icon"');
@@ -235,6 +235,16 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
       expect(html).toContain('<a class="pyh-tool" href="buscar.html" aria-label="Buscar" data-ctl="search">');
     }
     expect(html).not.toContain('{{');
+  });
+
+  it('Label in Name: a visible cart or account word leads the accessible name; an icon-only face keeps the plain one', () => {
+    const named = (layout: StoreControls['layout']) => render('menu-button', 'shop', { controls: { ...TICKET, layout, words: { cart: 'Tu pedido', account: 'Mi mesa' } } });
+    for (const cart of ['icon+word', 'word'] as const) expect(cartButton(named({ cart, account: 'icon+word' }))).toContain('<span class="ctl-sr">Tu pedido, </span>');
+    expect(cartButton(named({ cart: 'icon', account: 'icon' }))).toContain('<span class="ctl-sr">Carrito, </span>');
+    expect(cartButton(named({ cart: 'icon', account: 'icon' }))).not.toContain('Tu pedido');
+    const withTools = render('shrinking', 'shop', { controls: { ...TICKET, layout: { cart: 'word', account: 'word' }, words: { cart: 'Tu pedido', account: 'Mi mesa' } } });
+    expect(withTools).toContain('aria-label="Mi mesa" data-ctl="account"');
+    expect(render('shrinking', 'shop', { controls: { ...TICKET, layout: { cart: 'icon', account: 'icon' }, words: { account: 'Mi mesa' } } })).toContain('aria-label="Mi cuenta" data-ctl="account"');
   });
 
   it('draws every icon with the even-odd rule the sanitizer and the library assume', () => {
@@ -262,8 +272,9 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
 
   it("shows the record's account word but keeps the plain accessible name, and Carrito without a cart word", () => {
     const html = render('shrinking', 'shop', { controls: { ...withLayout('word', 'word'), words: { account: 'Ingresar' } } });
-    expect(html).toContain('aria-label="Mi cuenta" data-ctl="account"><span class="ctl-face"><span class="ctl-word" aria-hidden="true">Ingresar</span></span></a>');
+    expect(html).toContain('aria-label="Ingresar" data-ctl="account"><span class="ctl-face"><span class="ctl-word" aria-hidden="true">Ingresar</span></span></a>');
     expect(cartButton(html)).toContain('>Carrito</span>');
+    expect(cartButton(html)).toContain('<span class="ctl-sr">Carrito, </span>');
   });
 
   it('gives a showcase header the language on its menu button and close button, never a cart', () => {
