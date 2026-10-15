@@ -8,6 +8,7 @@ const PANELS = [
   ["discounts-panel.mjs", "createDiscountsPanel"],
   ["products-panel.mjs", "createProductsPanel"],
   ["debt-links-panel.mjs", "createDebtLinksPanel"],
+  ["quick-payment-panel.mjs", "createQuickPaymentPanel"],
 ];
 
 for (const [file, factory] of PANELS) {

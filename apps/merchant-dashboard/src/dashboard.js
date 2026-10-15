@@ -1,7 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { profileInitials } from "/src/profile-initials.mjs";
 import { createStoreBody } from "/src/create-store.mjs";
-import { debtAmountInCents } from "/src/debt-csv.mjs";
 import { prepareAiInventoryRows } from "/src/inventory-import.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { isUnfinishedStore, runWalkthrough, showWalkthroughChoice, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
@@ -20,6 +19,7 @@ import { createInboxPanel } from "/src/inbox-panel.mjs";
 import { createDiscountsPanel } from "/src/discounts-panel.mjs";
 import { createProductsPanel } from "/src/products-panel.mjs";
 import { createDebtLinksPanel } from "/src/debt-links-panel.mjs";
+import { createQuickPaymentPanel } from "/src/quick-payment-panel.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -350,8 +350,14 @@ import { createDebtLinksPanel } from "/src/debt-links-panel.mjs";
   });
   const { resetDebtCollectionEntry, renderDebtCollectionLinks } = debtLinksPanel;
   debtLinksPanel.init();
-  let quickPaymentPollTimer = null;
-  let quickPaymentPollGeneration = 0;
+  // Cobro rápido (src/quick-payment-panel.mjs).
+  const quickPaymentPanel = createQuickPaymentPanel({
+    api,
+    storeId: () => currentStoreId,
+    refreshFinancesInBackground: (...args) => refreshFinancesInBackground(...args),
+  });
+  const { stopQuickPaymentPolling } = quickPaymentPanel;
+  quickPaymentPanel.init();
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
@@ -1247,56 +1253,6 @@ import { createDebtLinksPanel } from "/src/debt-links-panel.mjs";
     }
   });
 
-  document.getElementById("quickPaymentForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!currentStoreId) return;
-    const form = event.currentTarget;
-    const submit = document.getElementById("quickPaymentSubmit");
-    const formStatus = document.getElementById("quickPaymentFormStatus");
-    formStatus.textContent = "";
-    try {
-      const data = new FormData(form);
-      const amount = debtAmountInCents(data.get("amount"));
-      const description = String(data.get("description") || "").trim();
-      submit.disabled = true;
-      submit.textContent = "Generando…";
-      stopQuickPaymentPolling();
-      const payment = await api(`/stores/${currentStoreId}/quick-qr-payments`, {
-        method: "POST",
-        body: JSON.stringify({ amount, ...(description && { description }) }),
-      });
-      const result = document.getElementById("quickPaymentResult");
-      const qr = document.getElementById("quickPaymentQr");
-      document.getElementById("quickPaymentResultDescription").textContent = payment.description;
-      document.getElementById("quickPaymentResultAmount").textContent = `${(payment.amount / 100).toFixed(2)} ${payment.currency}`;
-      document.getElementById("quickPaymentResultStatus").classList.remove("success-text");
-      if (payment.qrImageDataUrl) {
-        qr.src = payment.qrImageDataUrl;
-        qr.hidden = false;
-        document.getElementById("quickPaymentResultStatus").textContent = "Esperando que el cliente escanee y confirme el pago…";
-      } else {
-        qr.removeAttribute("src");
-        qr.hidden = true;
-        document.getElementById("quickPaymentResultStatus").textContent = "El banco no devolvió una imagen QR. Crea un nuevo cobro o inténtalo nuevamente en unos segundos.";
-      }
-      result.hidden = false;
-      result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      if (!setQuickPaymentOutcome(payment.status)) pollQuickPayment(payment.paymentIntentId);
-    } catch (error) {
-      formStatus.textContent = error.message;
-    } finally {
-      submit.disabled = false;
-      submit.textContent = "Generar QR";
-    }
-  });
-
-  document.getElementById("quickPaymentNew").addEventListener("click", () => {
-    stopQuickPaymentPolling();
-    document.getElementById("quickPaymentResult").hidden = true;
-    document.getElementById("quickPaymentForm").reset();
-    document.getElementById("quickPaymentFormStatus").textContent = "";
-    document.getElementById("quickPaymentAmount").focus();
-  });
 
 
   function selectStore(storeId) {
@@ -1356,50 +1312,6 @@ import { createDebtLinksPanel } from "/src/debt-links-panel.mjs";
   }
 
 
-  function stopQuickPaymentPolling() {
-    quickPaymentPollGeneration += 1;
-    if (quickPaymentPollTimer) window.clearTimeout(quickPaymentPollTimer);
-    quickPaymentPollTimer = null;
-  }
-
-  function setQuickPaymentOutcome(status) {
-    const statusEl = document.getElementById("quickPaymentResultStatus");
-    if (status === "SUCCEEDED") {
-      statusEl.textContent = "Pago recibido y registrado correctamente.";
-      statusEl.classList.add("success-text");
-      refreshFinancesInBackground();
-      return true;
-    }
-    if (["FAILED", "CANCELED"].includes(status)) {
-      statusEl.textContent = status === "CANCELED" ? "Este cobro fue cancelado." : "El pago no se completó. Crea un nuevo QR para reintentar.";
-      statusEl.classList.remove("success-text");
-      return true;
-    }
-    return false;
-  }
-
-  function pollQuickPayment(paymentIntentId) {
-    stopQuickPaymentPolling();
-    const generation = quickPaymentPollGeneration;
-    let attempts = 0;
-    const poll = async () => {
-      if (generation !== quickPaymentPollGeneration) return;
-      attempts += 1;
-      try {
-        const payment = await api(`/payment_intents/${paymentIntentId}`);
-        if (generation !== quickPaymentPollGeneration || setQuickPaymentOutcome(payment.status)) return;
-      } catch {
-        // A temporary dashboard/network failure does not invalidate the bank
-        // QR. Keep the visible QR and try again within the bounded window.
-      }
-      if (attempts >= 60) {
-        document.getElementById("quickPaymentResultStatus").textContent = "El QR sigue visible, pero dejamos de consultar automáticamente. Revisa Pedidos y pagos para confirmar el estado.";
-        return;
-      }
-      quickPaymentPollTimer = window.setTimeout(poll, 2500);
-    };
-    quickPaymentPollTimer = window.setTimeout(poll, 2500);
-  }
 
   function renderCurrentStoreBanner() {
     const store = lastStores.find((s) => s.id === currentStoreId);
