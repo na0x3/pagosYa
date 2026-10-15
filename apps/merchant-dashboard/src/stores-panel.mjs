@@ -1,5 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
 import { isUnfinishedStore } from "./onboarding-walkthrough.mjs";
+import { assumedFactsBadge } from "./assumed-facts-badge.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "./store-import.mjs";
 import { openStoreBulkDelete } from "./store-bulk-delete.mjs";
 
@@ -22,6 +23,8 @@ export function createStoresPanel(deps) {
   const { api, emailEl, errorEl, canLeaveMerchantStudio, syncMerchantStoreWorkspace, setDashboardView, dashboardAssetUrl, openWalkthrough, openCreateStore, selectStore, currentStoreUrl, publicStoreUrl, setButtonBusy, storePublicationState, refresh } = deps;
   // The ids picked in the stores list while "Seleccionar" is on; null when it is off.
   let storeSelection = null, visibleStoreIds = [];
+  // Spec 2026-10-14 store voice: facts YAPI assumed and still waiting, by store id (GET /assumed-facts/counts).
+  let assumedFactCounts = {};
   // Each card's thumbnail runs that store's whole live site (scripts, animations, video) in its own Studio. They load
   // only near the screen, three at a time, and are unloaded when "Mi tienda" is left, so none runs behind other pages.
   const THUMBNAIL_LOADS = 3;
@@ -183,7 +186,7 @@ export function createStoresPanel(deps) {
       return `<article class="store-row ${store.id === deps.storeId() ? "active" : ""} ${picked ? "selected" : ""}" data-id="${esc(store.id)}">
         ${storeSelection ? `<input class="store-select" type="checkbox" data-id="${esc(store.id)}" aria-label="Seleccionar ${esc(store.name)}" ${picked ? "checked" : ""}>` : ""}
         <div class="store-card-preview">${preview}</div>
-        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === deps.storeId() ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store, deps.onboardingEnabled()) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
+        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === deps.storeId() ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store, deps.onboardingEnabled()) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}${assumedFactsBadge(assumedFactCounts[store.id])}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
         ${isUnfinishedStore(store, deps.onboardingEnabled()) ? `<button class="primary continue-store store-card-edit" data-id="${esc(store.id)}" type="button">Continuar</button>` : '<span class="store-card-edit">Abrir editor ↗</span>'}
       </article>`;
     }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
@@ -246,6 +249,13 @@ export function createStoresPanel(deps) {
       document.getElementById("debtNotificationEmail").value = emailEl.value;
     }
     renderCurrentStoreBanner();
+  }
+  /** Loads the counts after the store list and repaints the cards; a failed load shows no count. Never rejects. */
+  async function loadAssumedFactCounts() {
+    try {
+      assumedFactCounts = (await api("/assumed-facts/counts"))?.counts || {};
+      renderStoreRows(deps.stores());
+    } catch { /* the cards show no count */ }
   }
 
   function init() {
@@ -354,5 +364,5 @@ export function createStoresPanel(deps) {
     });
   }
 
-  return { init, watchStoreThumbnails, unloadStoreThumbnails, openShopifyImport, renderCurrentStoreBanner, renderStoreRows };
+  return { init, watchStoreThumbnails, unloadStoreThumbnails, openShopifyImport, renderCurrentStoreBanner, renderStoreRows, loadAssumedFactCounts };
 }

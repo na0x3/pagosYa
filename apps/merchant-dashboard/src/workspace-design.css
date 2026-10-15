@@ -125,6 +125,7 @@ body.is-logged-in #storeRows .store-row-name { display: block; margin: 0; font: 
 .store-card-status { color: var(--pg-text-muted); }
 .store-card-status::before { content: '●'; margin-right: 5px; font-size: 9px; }
 .store-card-status[data-status="published"] { color: var(--pg-success); }
+.store-card-status[data-status="assumed"] { color: var(--pg-accent); }
 .store-card-current { color: var(--pg-accent); }
 .store-card-edit { display: inline-block; margin: 8px 4px; font-size: 12px; font-weight: 600; }
 /* Selecting stores to delete several at once: a checkbox on each card, a bar at the bottom. */

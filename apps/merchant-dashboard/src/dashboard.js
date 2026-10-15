@@ -1226,6 +1226,7 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
       showLoggedIn();
       appEl.style.display = "block";
       renderStoreRows(stores);
+      void storesPanel.loadAssumedFactCounts();
       void checkOnboardingOnce();
 
       const selectedStoreId = currentStoreId;
