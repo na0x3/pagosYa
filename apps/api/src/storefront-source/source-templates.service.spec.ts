@@ -33,6 +33,8 @@ describe('assembleTemplateRevision', () => {
     const config = JSON.parse(assembled.files.find(f => f.path === 'config.js')!.content.match(/window\.PAGOSYA_CONFIG = ([\s\S]*);\n$/)![1]);
     expect(config).toMatchObject({ slug: 'tostado', sitePurpose: 'shop', productPage: 'product.html', checkoutPage: 'checkout.html', apiBaseUrl: 'https://api.pagosya.test/v1', data: { storeName: 'Tostado', checkoutMode: 'payment' } });
     expect(config.dna).toBeTruthy();
+    // Spec 2026-10-14 store controls: a template is a fresh design with no control language (and a Next store, out of scope).
+    expect(config).not.toHaveProperty('controls');
     expect(config.data.items[0].imageUrls[0]).toBe('https://api.pagosya.test/v1/uploads/aaaaaaaa-0000-0000-0000-000000000001.jpg');
     expect(assembled.files.find(f => f.path === 'components/store-data.tsx')!.content).toContain('"hero":"https://api.pagosya.test/v1/uploads/aaaaaaaa-0000-0000-0000-000000000001.jpg"');
     const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...assembled });

@@ -134,10 +134,11 @@ export class SketchStudioService {
   /** The sketch's product skin reaches the runtime through config.js dna, like the agent's
    * set_product_card_theme; its composition travels as config.productPageStyle. Every caller rebuilds the home, so the
    * look measured from the old home goes, and so does YAPI's touch (dna.touch = 1) drawn from it: the kit pages show the
-   * kit defaults until the next YAPI save measures and touches again (one look per store, spec 2026-10-14). */
+   * kit defaults until the next YAPI save measures and touches again (one look per store, spec 2026-10-14). The control
+   * language picked for that home goes too (store controls, spec 2026-10-14): the kit's own controls return to their defaults. */
   private async withProductTheme(source: Array<{ path: string; content: string }>, sketch: StoreSketch) {
     const theme = await resolveProductTheme(sketchProductTheme(sketch.product));
-    const files = patchConfigFile(source, ({ look: _look, ...config }) => {
+    const files = patchConfigFile(source, ({ look: _look, controls: _controls, ...config }) => {
       if (!config.dna || typeof config.dna !== 'object' || config.dna.touch !== 1) return config;
       const dna = { ...config.dna };
       for (const key of ['touch', ...Object.values(TOUCH_KEYS)]) delete dna[key];

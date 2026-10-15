@@ -1,5 +1,6 @@
 import { SketchStudioService } from './sketch-studio.service';
 import { repairSketch, assembleSketch } from './sketch';
+import { CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 
 const ctx = { storeName: 'salv', purpose: 'shop' as const, photos: ['assets/a.jpg'] };
 const baseSketch = () => repairSketch({ blocks: [{ id: 'intro', type: 'hero', headline: 'Hola' }] }, ctx).sketch;
@@ -192,6 +193,17 @@ describe('the home is rebuilt, so the measured look and YAPI touch go (one look 
     for (const key of ['touch', 'catalogCss', 'cardCss', 'cartCss']) expect(config.dna).not.toHaveProperty(key);
     expect(config.dna.productCss ?? '').not.toBe('old-product');
     expect(config.dna.swatch).toBe('pill');
+  });
+  for (const [name, act] of [
+    ['Boceto editado', (service: any, sketch: any) => service.update('m', 's', { revision: 3, sketch })],
+    ['regenerar', (service: any) => service.regenerate('m', 's', { revision: 3, designSeed: 'seed' })],
+    ['Generar sitio', (service: any) => service.build('m', 's', { revision: 3 })],
+  ] as const) it(`${name}: drops config.controls too (spec 2026-10-14 store controls)`, async () => {
+    const { service, projects, sketch } = setup();
+    withConfig(projects, `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'salv', controls: libraryRecord(CONTROL_LANGUAGES[0], 'general', 'bag'), dna: { version: 1, swatch: 'pill' } })};`);
+    await act(service, sketch);
+    expect(savedConfig(projects)).not.toHaveProperty('controls');
+    expect(savedConfig(projects).dna.swatch).toBe('pill');
   });
   it('an untouched store keeps its other dna and loses only the look', async () => {
     const { service, projects, sketch } = setup();
