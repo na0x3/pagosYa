@@ -6,6 +6,7 @@ import test from "node:test";
 const PANELS = [
   ["inbox-panel.mjs", "createInboxPanel"],
   ["discounts-panel.mjs", "createDiscountsPanel"],
+  ["products-panel.mjs", "createProductsPanel"],
 ];
 
 for (const [file, factory] of PANELS) {
