@@ -6,6 +6,7 @@
  */
 import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { sourceResponseJson } from './source-response';
+import { MERCHANT_MARKER } from './kit-touch';
 import { captureControlsShots, type ModelImage } from './store-controls-guard';
 import { ACCOUNT_LAYOUTS, CART_LAYOUTS, CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, ICON_SLOTS, sanitizeControlsReport, type IconSlot, type StoreControls } from './store-controls';
 import { pickLibraryControls } from './store-controls-library';
@@ -90,4 +91,16 @@ export async function runControlsDesign(deps: ControlsDesignDeps): Promise<Contr
   if (!report.controls) return null;
   const note = typeof answer.note === 'string' && answer.note.trim() ? answer.note.trim().slice(0, 200) : 'Diseñé los botones de tu tienda.';
   return { controls: report.controls, note, used, replacedIcons: report.replacedIcons };
+}
+
+/** Does the merchant's own request concern the store's small controls (spec 2026-10-14: «haz el carrito como una taza», «botones
+ *  más redondos», «el ícono del carrito»)? Only their words count (after MERCHANT_MARKER), accents ignored. */
+export function instructionConcernsControls(text: string): boolean {
+  const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const control = /\b(?:botones|boton|iconos|icono)\b/.test(own)
+    && /\b(?:carrito|cuenta|menu|buscar|busqueda|lupa|redond\w*|cuadrad\w*|esquinas?|bordes?|forma|pildoras?|boletos?|tickets?|etiquetas?|sellos?|stickers?|pegatinas?|contador)\b/.test(own);
+  const cartAs = /\bcarrito\s+(?:como|en\s+forma\s+de|con\s+forma\s+de|con\s+(?:un|una)\s+icono)\b/.test(own);
+  const iconOf = /\b(?:icono|simbolo|dibujo)\s+(?:del?|de\s+la|para\s+el)\s+(?:carrito|cuenta|menu|buscador|busqueda)\b/.test(own);
+  const badge = /\b(?:contador|numerito|burbuja|insignia)\s+del?\s+carrito\b/.test(own);
+  return control || cartAs || iconOf || badge;
 }

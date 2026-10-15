@@ -168,6 +168,11 @@ export function emptySourceHeaders<F extends { path: string; content: string; en
   });
 }
 
+/** Does a saved store carry the platform header (spec 2026-10-13)? Its controls are then the platform's to draw (spec 2026-10-14). */
+export function hasPlatformHeader(files: ReadonlyArray<{ path: string; content: string; encoding?: string }>): boolean {
+  return files.some(file => file.encoding !== 'base64' && /\.html$/i.test(file.path) && SLOT.test(file.content));
+}
+
 export type SourceHeaderInput = {
   /** The drawn shape (frame-draw.json `header`); anything else falls back to FALLBACK_HEADER_SHAPE. */
   shape?: string; purpose: SourceSitePurpose; storeName: string; logoPath?: string; action?: PrimaryAction; fact?: string;

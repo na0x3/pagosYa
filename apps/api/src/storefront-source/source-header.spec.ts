@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 import { FRAME_CATALOGUE } from './design-engine/frame-draw';
 import { CONVENTIONAL_HEADERS } from './design-engine/playbook';
-import { emptySourceHeaders, FALLBACK_HEADER_SHAPE, headerFact, HEADER_SHAPES, renderSourceHeader, withSourceHeader, type HeaderShape } from './source-header';
+import { emptySourceHeaders, FALLBACK_HEADER_SHAPE, hasPlatformHeader, headerFact, HEADER_SHAPES, renderSourceHeader, withSourceHeader, type HeaderShape } from './source-header';
 import { createHash } from 'node:crypto';
 import { CART_ICONS, CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 import postcss from 'postcss';
@@ -311,5 +311,10 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
   it('carries the controls stylesheet only with a record', () => {
     expect(render('menu-button', 'shop', { controls: TICKET }).match(/<style data-pagosya-controls-style>/g)).toHaveLength(1);
     expect(render('menu-button', 'shop')).not.toContain('data-pagosya-controls-style');
+  });
+
+  it('tells a saved store with the platform header from one without', () => {
+    expect(hasPlatformHeader([{ path: 'index.html', content: render('menu-button', 'shop') }])).toBe(true);
+    expect(hasPlatformHeader([{ path: 'index.html', content: '<header class="site"></header>' }, { path: 'assets/a.png', content: '<header data-pagosya-header>', encoding: 'base64' }])).toBe(false);
   });
 });

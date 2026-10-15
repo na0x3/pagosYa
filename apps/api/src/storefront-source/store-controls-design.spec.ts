@@ -1,6 +1,6 @@
 import type { StoreControls } from './store-controls';
 import { CART_ICONS, SHARED_ICONS } from './store-controls-library';
-import { CONTROLS_SCHEMA, runControlsDesign, storeTokens } from './store-controls-design';
+import { CONTROLS_SCHEMA, instructionConcernsControls, runControlsDesign, storeTokens } from './store-controls-design';
 
 const ANSWER = {
   shape: { outline: 'stamp', corner: 0, notch: 8, tilt: 2, border: 'dashed', weight: 2, fill: 'solid', colour: 'ink' },
@@ -55,5 +55,19 @@ describe('runControlsDesign (spec 2026-10-14, part 4)', () => {
 
   it('reads the store tokens from brand.css and styles.css', () => {
     expect(storeTokens(files)).toBe('background: #f7f4ef; accent: #2f4bb8');
+  });
+});
+
+describe('instructionConcernsControls', () => {
+  it.each([
+    ['haz el carrito como una taza', true], ['botones más redondos', true], ['Cambia el ícono del carrito por una canasta', true],
+    ['quiero los botones con forma de etiqueta', true], ['el contador del carrito en rojo', true], ['Un botón del carrito más grande', true],
+    ['El carrito en forma de bolsa', true],
+    ['Pon las fotos de los productos inclinadas', false], ['Cambia el título del inicio', false], ['Agrega un botón de WhatsApp', false],
+    ['El carrito con un sello como en la portada', false],
+  ])('%s → %s', (text, expected) => expect(instructionConcernsControls(text)).toBe(expected));
+
+  it("reads only the merchant's own words after the marker", () => {
+    expect(instructionConcernsControls('Resumen: botones redondos.\nPedido actual del comercio: cambia el título')).toBe(false);
   });
 });

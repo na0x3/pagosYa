@@ -132,7 +132,8 @@ export const MERCHANT_MARKER = 'Pedido actual del comercio:';
 export function instructionConcernsKitSurfaces(text: string): boolean {
   const own = (text.split(MERCHANT_MARKER).at(-1) ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   // The cart's icon, button or header placement is the header's business, not the cart page's.
-  const cart = own.replace(/\b(?:icono|boton|simbolo|logo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
+  // «carrito como una taza» / «carrito en forma de canasta» is about the header cart's look: a controls request (store-controls-design.ts).
+  const cart = own.replace(/\b(?:icono|boton|simbolo|logo)(?:es|s)?\s+(?:del?\s+|de\s+la\s+)?carrito\b|\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b|\bcarrito\s+(?:como|en\s+forma\s+de|con\s+forma\s+de)\b[^.,;!?]*/g, ' ');
   return /\bcarrito\b/.test(cart) || /\bcatalogo\b|\bfotos?\s+de\s+(?:los\s+)?productos?\b|\btarjetas?\s+de(?:l)?\s+productos?\b|\bpagina\s+de(?:l)?\s+productos?\b|\bficha\b|\bproduct\s+(?:page|card)s?\b/.test(own);
 }
 

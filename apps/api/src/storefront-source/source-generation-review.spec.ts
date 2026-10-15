@@ -684,3 +684,73 @@ describe('store controls: YAPI designs N+1 in the review stage (spec 2026-10-14,
     expect(prompt).toContain('"outline":"stamp"');
   });
 });
+
+describe('store controls: a chat request about the controls (spec 2026-10-14, part 4)', () => {
+  let service: SourceGenerationService, projects: any, config: any;
+  const configOf = (call: any[]) => JSON.parse(call[2].files.find((f: any) => f.path === 'config.js').content.replace(/^window\.PAGOSYA_CONFIG = /, '').replace(/;\s*$/, ''));
+  const DESIGNED = {
+    shape: { outline: 'stamp', corner: 0, notch: 8, tilt: 2, border: 'dashed', weight: 2, fill: 'solid', colour: 'ink' },
+    layout: { cart: 'icon+word', account: 'icon' },
+    icons: { cart: CART_ICONS.cup.solid, account: '', menu: '', search: '', plus: '', minus: '', close: '' },
+    words: { cart: 'Tu taza', account: '' }, badge: 'stamp', note: 'Puse una taza en el carrito.',
+  };
+  const SAVED = { version: 1, shape: DESIGNED.shape, layout: DESIGNED.layout, icons: { cart: CART_ICONS.cup.solid }, words: { cart: 'Tu taza' }, badge: 'stamp', source: 'yapi' };
+  const EDIT = { label: 'Carrito', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] };
+  const NO_CHANGE = { label: 'Carrito', edits: [], files: [] };
+  const schemaOf = (init: any) => JSON.parse(init.body).text.format.name;
+  const storeWithControls = async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(authorWithBody(REVIEW) as any);
+    await service.generate('m1', 's1', dto, new SourceRequestBudget(25), []);
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...projects.save.mock.calls[0][2], revision: 1 }) });
+    config.set('app.yapiControlsDesign', true);
+    config.set('app.yapiKitTouch', true);
+  };
+  const request = (instruction: string) => service.generate('m1', 's1', { ...dto, revision: 1, instruction: `Resumen de YAPI.\nPedido actual del comercio: ${instruction}` }, new SourceRequestBudget(500), []);
+  beforeEach(() => {
+    ({ service, projects, config } = setup());
+    jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
+    jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
+    config.set('app.sep5SelfReview', false);
+    config.set('app.yapiControls', true);
+    (guardControlsOnSnapshot as jest.Mock).mockReset().mockResolvedValue([]);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("runs the controls call with the merchant's words and saves the result with the edit, billed, and no kit touch", async () => {
+    await storeWithControls();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation((async (_url: unknown, init: any) => answer(schemaOf(init) === 'storefront_controls' ? DESIGNED : EDIT)) as any);
+    const result: any = await request('haz el carrito como una taza');
+    const calls = fetchMock.mock.calls.map(call => call[1] as any).filter(init => schemaOf(init) === 'storefront_controls');
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(calls[0].body).input[0].content[0].text).toContain('«haz el carrito como una taza»');
+    expect(fetchMock.mock.calls.some(call => schemaOf(call[1]) === 'storefront_kit_touch')).toBe(false);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(SAVED);
+    expect(result.generation.attempts.find((attempt: any) => attempt.phase === 'controls')).toMatchObject({ status: 'COMPLETED' });
+  });
+
+  it('a request only about the controls may leave the authored files unchanged', async () => {
+    await storeWithControls();
+    jest.spyOn(globalThis, 'fetch').mockImplementation((async (_url: unknown, init: any) => answer(schemaOf(init) === 'storefront_controls' ? DESIGNED : NO_CHANGE)) as any);
+    await request('botones más redondos');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(SAVED);
+  });
+
+  it("a result the guard drops keeps the store's language and still saves the edit, unbilled", async () => {
+    await storeWithControls();
+    const before = configOf(projects.save.mock.calls[0]).controls;
+    (guardControlsOnSnapshot as jest.Mock).mockResolvedValueOnce([{ width: 1440, slot: 'cart', check: 'covered', detail: 'covered by div.promo' }]);
+    jest.spyOn(globalThis, 'fetch').mockImplementation((async (_url: unknown, init: any) => answer(schemaOf(init) === 'storefront_controls' ? DESIGNED : EDIT)) as any);
+    const result: any = await request('haz el carrito como una taza');
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(before);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('#333');
+    expect(result.generation.attempts.find((attempt: any) => attempt.phase === 'controls')).toMatchObject({ status: 'FAILED' });
+  });
+
+  it('a request that is not about the controls makes no controls call', async () => {
+    await storeWithControls();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation((async () => answer(EDIT)) as any);
+    await request('cambia el color del texto');
+    expect(fetchMock.mock.calls.some(call => schemaOf(call[1]) === 'storefront_controls')).toBe(false);
+  });
+});
