@@ -6,7 +6,7 @@
  */
 import { CART_WORDS } from './design-engine/commerce-draw';
 import type { PlaybookKind } from './design-engine/playbook';
-import { ICON_SLOTS, WORD_MAX_CHARS, type ControlBadge, type IconSlot, type StoreControls } from './store-controls';
+import { ICON_SLOTS, sanitizeControls, WORD_MAX_CHARS, type ControlBadge, type IconSlot, type StoreControls } from './store-controls';
 import type { StoreLook } from './store-look';
 
 export type IconStyle = 'line' | 'solid';
@@ -210,4 +210,19 @@ export function controlsToAvoid(rows: RecentControls[], kind: string, limit = 6)
     if (out.length === limit) break;
   }
   return out;
+}
+
+/** Spec 2026-10-14 live-check criterion 2 over a set of stores: two stores with the same outline and cart icon are duplicates (the
+ *  later store named first). A store without a record has nothing to compare and is reported apart. */
+export function controlsUniqueness(stores: ReadonlyArray<{ slug: string; controls?: unknown }>): { unique: boolean; duplicates: Array<[string, string]>; without: string[] } {
+  const seen = new Map<string, string>();
+  const duplicates: Array<[string, string]> = [], without: string[] = [];
+  for (const { slug, controls: raw } of stores) {
+    const controls = sanitizeControls(raw);
+    if (!controls) { without.push(slug); continue; }
+    const key = controlsKey(controls);
+    const first = seen.get(key);
+    if (first) duplicates.push([slug, first]); else seen.set(key, slug);
+  }
+  return { unique: duplicates.length === 0, duplicates, without };
 }

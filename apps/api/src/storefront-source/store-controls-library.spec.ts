@@ -1,7 +1,7 @@
 import { CART_WORDS } from './design-engine/commerce-draw';
 import type { PlaybookKind } from './design-engine/playbook';
 import { CONTROL_OUTLINES, parseIconPath, sanitizeControls } from './store-controls';
-import { CART_ICONS, CONTROL_LANGUAGES, KIND_CART_ICON, SHARED_ICONS, cartIconFor, cartIconName, controlsKey, controlsToAvoid, hexContrast, languageReadable, libraryIconFallback, libraryRecord, pickLibraryControls, storePalette } from './store-controls-library';
+import { CART_ICONS, CONTROL_LANGUAGES, KIND_CART_ICON, SHARED_ICONS, cartIconFor, cartIconName, controlsKey, controlsToAvoid, controlsUniqueness, hexContrast, languageReadable, libraryIconFallback, libraryRecord, pickLibraryControls, storePalette } from './store-controls-library';
 
 describe('the controls library (spec 2026-10-14, part 5)', () => {
   it('draws every icon as valid path data inside the 24×24 box, in both styles', () => {
@@ -94,5 +94,15 @@ describe('controlsToAvoid', () => {
     const records = CONTROL_LANGUAGES.map(language => libraryRecord(language, 'cafe-food', 'cup'));
     const rows = [{ kind: 'clothing', controls: records[0] }, { kind: 'cafe-food', controls: records[1] }, { controls: records[2] }, { kind: 'cafe-food', controls: records[1] }, ...records.slice(3, 9).map(controls => ({ kind: 'beauty', controls }))];
     expect(controlsToAvoid(rows, 'cafe-food')).toEqual([records[1], records[0], records[2], records[3], records[4], records[5]]);
+  });
+});
+
+describe('controlsUniqueness', () => {
+  it('names stores that share an outline and cart icon, whatever the drawing style, and sets record-less stores apart', () => {
+    const cup = libraryRecord(CONTROL_LANGUAGES[0], 'cafe-food', 'cup');
+    const solidCup = { ...cup, icons: { ...cup.icons, cart: CART_ICONS.cup.solid } };
+    const bag = libraryRecord(CONTROL_LANGUAGES[0], 'clothing', 'bag');
+    expect(controlsUniqueness([{ slug: 'a', controls: cup }, { slug: 'b', controls: bag }, { slug: 'c', controls: solidCup }, { slug: 'd' }]))
+      .toEqual({ unique: false, duplicates: [['c', 'a']], without: ['d'] });
   });
 });
