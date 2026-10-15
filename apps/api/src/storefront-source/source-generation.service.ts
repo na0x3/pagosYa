@@ -1,6 +1,6 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { sourceSignatureTaskLine } from './source-signature';
-import { describeNewPhotos, startVoiceRun, writeVoiceSheet } from './store-voice-run';
+import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, writeVoiceSheet } from './store-voice-run';
 import { voiceEditDirection } from './store-voice-prompt';
 import type { LegendEntry } from './photo-descriptions';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
@@ -1387,6 +1387,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);
     revisionControls = readControls(saveInput.files);
     revisionFiles = saveInput.files;
+    // Store voice (spec 2026-10-14, part 4): with no background review to rewrite them, revision N's copy findings are logged now.
+    if (voice.on && sep5Author && !sep5Review) this.logger.log(copyFindingsLog(run.id, voiceCopyInput(voice, { data, assetLegend, brief: dto.brief }, saveInput.files), []));
     signal.throwIfAborted();
     // Validate the assembled result, including final asset rewrites and runtime configuration.
     // Draft evidence alone cannot certify a different saved snapshot.

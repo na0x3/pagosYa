@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { describeNewPhotos, startVoiceRun, writeVoiceSheet, type VoiceRunInput } from './store-voice-run';
+import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, writeVoiceSheet, type VoiceRunInput } from './store-voice-run';
 import { voiceFile, type StoreVoice } from './store-voice';
 
 const bytes = Buffer.from('una foto');
@@ -103,5 +103,19 @@ describe('writeVoiceSheet (spec 2026-10-14, part 2)', () => {
     expect(await writeVoiceSheet(await deps(jest.fn(async () => ({ attempt, body: reply('no') }))))).toBeNull();
     expect(await writeVoiceSheet(await deps(jest.fn(async () => { throw new Error('bridge'); })))).toBeNull();
     expect(attempt.status).toBe('FAILED');
+  });
+});
+
+describe('the copy check in a run (spec 2026-10-14, part 4)', () => {
+  it('reads the merchant’s words, the brief, the sources, the prices and the siblings from the run', async () => {
+    const voice = await startVoiceRun(input());
+    const page = { path: 'index.html', content: '<main><p>Un lugar calmo para leer, trabajar y conversar sin apuro.</p><p>La promo cuesta Bs 30.</p></main>' };
+    const copy = voiceCopyInput(voice, { data: { items: [{ name: 'Espresso doble', amount: 1800 }] }, assetLegend: [{ original: 'x', path: 'assets/a.jpg', description: 'latte azul' }], brief: { visualDirection: 'Un lugar calmo para leer, trabajar y conversar sin apuro.' } }, [page]);
+    expect(copy.prices).toEqual([18]);
+    expect(copy.sources.join(' ')).toContain('latte azul');
+    expect(copy.siblings).toEqual(['café', 'ropa']);
+    const line = JSON.parse(copyFindingsLog('run-1', copy, ['Reescribí la bienvenida.']));
+    expect(line).toMatchObject({ event: 'copy_findings', generationId: 'run-1', counts: { echo: 1, avoid: 1, unsourced: 1 }, notes: ['Reescribí la bienvenida.'] });
+    expect(line.findings[0]).toContain('línea: «Un lugar calmo para leer, trabajar y conversar sin apuro.»');
   });
 });

@@ -9,7 +9,8 @@ import type { PlaybookKind } from './design-engine/playbook';
 import { SHOWN_CARDS_TIMEOUT_MS, withinOr } from './design-engine/style-draws';
 import { applyPhotoDescriptions, describePhotos, legendPhotos, PHOTO_DESCRIPTION_MAX_OUTPUT_TOKENS, PHOTO_DESCRIPTION_SCHEMA, PHOTO_DESCRIPTION_TIMEOUT_MS, type LegendEntry, type LegendPhoto } from './photo-descriptions';
 import type { Sep5Caller } from './source-sep5-call';
-import { merchantMessagesText, merchantSpecificCount, readOnboardingMaterial, readVoice, sanitizeVoice, voicesToDiffer, withOnboardingAnswers, type OnboardingMaterial, type RecentVoice, type StoreVoice } from './store-voice';
+import { checkCopy, copyFindingCounts, copyFindingLines, storePrices, type CopyCheckInput } from './copy-check';
+import { merchantMessagesText, merchantSpecificCount, merchantTextOf, readOnboardingMaterial, readVoice, sanitizeVoice, voicesToDiffer, withOnboardingAnswers, type OnboardingMaterial, type RecentVoice, type StoreVoice } from './store-voice';
 import { runVoiceSheet, voiceDeadlineMs, VOICE_MAX_OUTPUT_TOKENS, VOICE_SCHEMA } from './store-voice-design';
 
 export type VoiceRun = {
@@ -144,4 +145,23 @@ export async function writeVoiceSheet(deps: VoiceSheetDeps): Promise<StoreVoice 
     if (!deps.signal.aborted) deps.logger.warn(JSON.stringify({ event: 'voice_sheet_dropped', generationId: deps.runId, reason: voiceSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
     return null;
   }
+}
+
+/** What the copy check reads in this run (spec part 4): the merchant's words and the brief that repeats them, every other source
+ *  of fact (the public store data, the Store Brain, photo descriptions), the real prices and the sibling stores' sentences. */
+export function voiceCopyInput(voice: VoiceRun, run: { data: { items: ReadonlyArray<unknown> }; assetLegend: readonly LegendEntry[]; brief: unknown }, files: CopyCheckInput['files']): CopyCheckInput {
+  const brief = (run.brief && typeof run.brief === 'object' ? run.brief : {}) as { businessInformation?: unknown; visualDirection?: unknown };
+  const text = (value: unknown) => (typeof value === 'string' ? value : '');
+  return {
+    files, voice: voice.sheet, kind: voice.kind,
+    merchantText: [...merchantTextOf(voice.merchantMessages, voice.onboarding), text(brief.businessInformation), text(brief.visualDirection)].filter(Boolean),
+    sources: [JSON.stringify({ ...run.data, items: run.data.items.slice(0, 60) }), ...(voice.brain ? [JSON.stringify(voice.brain)] : []), ...run.assetLegend.flatMap(entry => (entry.description ? [entry.description] : []))],
+    prices: storePrices(run.data.items),
+    siblings: voice.siblings.flatMap(row => row.sentences),
+  };
+}
+/** One log line (event copy_findings): the findings still on the pages, counted by kind, with the review's notes beside them. */
+export function copyFindingsLog(runId: string, input: CopyCheckInput, notes: readonly string[]): string {
+  const found = checkCopy(input);
+  return JSON.stringify({ event: 'copy_findings', generationId: runId, counts: copyFindingCounts(found), findings: copyFindingLines(found, 12), notes });
 }

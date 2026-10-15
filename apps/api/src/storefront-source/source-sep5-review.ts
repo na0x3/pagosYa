@@ -14,6 +14,8 @@ import type { Sep5Caller } from './source-sep5-call';
 import type { GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
 import type { StoreControls } from './store-controls';
 import { reviewControlsGuardBudgetMs, type ControlsDesign } from './store-controls-design';
+import { copyFindingLines, checkCopy } from './copy-check';
+import { copyFindingsLog, voiceCopyInput } from './store-voice-run';
 
 /** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
 export const REVIEW_SAVE_MARGIN_MS = 90_000;
@@ -33,7 +35,7 @@ export type ReviewControls = {
 };
 
 export type Sep5ReviewContext = {
-  facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'apiUrl' | 'data' | 'sitePurpose' | 'scrollFeel'>;
+  facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'apiUrl' | 'data' | 'sitePurpose' | 'scrollFeel' | 'voice' | 'assetLegend'>;
   live: GenerationLive;
   sep5SelfReview: boolean; kitTouchOn: boolean;
   playbookEntry: PlaybookEntry | undefined; playbookEvidence: Record<Evidence, boolean>;
@@ -53,6 +55,10 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
   const { facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, controls, assembleSave } = context;
   // The ConfigService is `appConfig` here: the review builds its own `config` (the draft's config.js object).
   const { config: appConfig, logger, runId, slug, dto, apiUrl, data, sitePurpose, scrollFeel } = facts;
+  // Store voice (spec 2026-10-14, part 4): the copy check reads the pages against the sheet, the merchant's words, every source
+  // and the sibling stores. Pure and cheap; it never blocks the review or the save.
+  const runFacts = facts;
+  const copyInput = (files: Array<{ path: string; content: string; encoding?: string }>) => voiceCopyInput(facts.voice, { data, assetLegend: facts.assetLegend, brief: dto.brief }, files);
   return async review => {
     const notes: string[] = [];
     let changed = false;
@@ -70,7 +76,10 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
       // Playbook facts: type sizes against the kind's craft profile, and contract sections missing from the page.
       const playbookFacts = playbookEntry ? facts.flatMap(fact => [...(live.boldAsked ? [] : craftFacts(playbookEntry.profile, fact.width, fact.h1Size ?? 0, fact.bodySize ?? 0)), ...(fact.width === 1280 && fact.pageText ? contractMisses(playbookEntry, fact.pageText, playbookEvidence).map(label => `Falta en la página: ${label} (solo con datos reales del brief; nunca lo inventes).`) : [])]) : [];
       const measured = [...sep5MeasuredFacts(facts), ...playbookFacts];
-      const reviewed = await sep5Call('review', sep5ReviewPrompt({ ...authorInput, draft: draftFiles, measured }), shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_CLIENT_TIMEOUT_MS, review);
+      // Revision N's copy findings go to the review, which rewrites those lines (spec part 4). `facts` here is the captured draft's;
+      // the run's voice is read through `runFacts`.
+      const copyFindings = runFacts.voice.on ? copyFindingLines(checkCopy(copyInput(draftFiles))) : [];
+      const reviewed = await sep5Call('review', sep5ReviewPrompt({ ...authorInput, draft: draftFiles, measured, ...(copyFindings.length ? { copyFindings } : {}) }), shots.map(shot => ({ type: 'input_image' as const, image_url: shot.image, detail: 'auto' as const })), 'storefront_self_review', SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_CLIENT_TIMEOUT_MS, review);
       const result = sep5ReviewSchema.safeParse(sourceResponseJson(reviewed.body));
       if (!result.success) throw new Error(`la revisión no devolvió un resultado válido (${reviewed.attempt.responseStatus || 'sin estado'}${reviewed.attempt.incompleteReason ? `: ${reviewed.attempt.incompleteReason}` : ''})`);
       logger.log(JSON.stringify({ event: 'sep5_self_review', generationId: runId, measured, changed: result.data.edits.length > 0, edits: result.data.edits.length, notes: result.data.notes.length }));
@@ -116,6 +125,7 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
     const designed = controlsJob ? await controlsJob : null;
     review.signal.throwIfAborted();
     // Nothing changed: revision N stays the store and no empty «Revisión de YAPI» is saved.
+    if (facts.voice.on && !changed && !designed) logger.log(copyFindingsLog(runId, copyInput(draftFiles), notes));
     if (!changed && !designed) return null;
     let saveInput = await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: live.revisionLook }, { use: live.revisionControls });
     if (designed && controls) {
@@ -134,8 +144,12 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
           logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: runId, source: 'yapi', reason: guardSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
         }
       }
-      if (!kept && !changed) return null;
+      if (!kept && !changed) {
+        if (facts.voice.on) logger.log(copyFindingsLog(runId, copyInput(draftFiles), notes));
+        return null;
+      }
     }
+    if (facts.voice.on) logger.log(copyFindingsLog(runId, copyInput(saveInput.files), notes));
     return { saveInput, notes };
   };
 }

@@ -324,3 +324,37 @@ describe('the writing rules in the prompts (spec 2026-10-14, part 3)', () => {
     expect(promptOf(calls('independent_storefront')[0])).not.toContain('WRITING RULES:');
   });
 });
+
+describe('the copy check and the review (spec 2026-10-14, part 4)', () => {
+  const ECHO = '<h1>Menú</h1><p>Un lugar calmo para leer, trabajar y conversar sin apuro, con luz suave.</p><p>La sucursal todavía debe confirmarse.</p>';
+  const copyLog = () => JSON.parse(logLines().find(line => line.includes('"event":"copy_findings"'))!);
+
+  it('gives the review the copy findings and logs what is left as copy_findings, with the review notes', async () => {
+    config.set('app.sep5SelfReview', true);
+    fetchMock.mockImplementation(respond({
+      store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(ECHO),
+      storefront_self_review: () => ({ label: 'Café', notes: ['Quité el aviso de la sucursal.'], edits: [{ path: 'index.html', find: '<p>La sucursal todavía debe confirmarse.</p>', replace: '' }] }),
+    }) as any);
+    await build();
+    await service.reviewSettled('s1');
+    const review = promptOf(calls('storefront_self_review')[0]);
+    expect(review).toContain('Copy check');
+    expect(review).toContain('línea: «Un lugar calmo para leer, trabajar y conversar sin apuro, con luz suave.» (index.html); problema: copia 7 o más palabras seguidas del texto del comercio');
+    expect(review).toContain('línea: «La sucursal todavía debe confirmarse.» (index.html); problema: narra un dato que falta');
+    expect(copyLog()).toMatchObject({ counts: { echo: 1, missing: 0 }, notes: ['Quité el aviso de la sucursal.'] });
+  });
+
+  it('a review that changes nothing logs revision N’s findings', async () => {
+    config.set('app.sep5SelfReview', true);
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(ECHO), storefront_self_review: () => ({ label: 'Café', notes: [], edits: [] }) }) as any);
+    await build();
+    await service.reviewSettled('s1');
+    expect(copyLog()).toMatchObject({ counts: { echo: 1, missing: 1 }, notes: [] });
+  });
+
+  it('without a review stage, revision N’s findings are logged at its save', async () => {
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(ECHO) }) as any);
+    await build();
+    expect(copyLog()).toMatchObject({ counts: { echo: 1, missing: 1 } });
+  });
+});
