@@ -9,6 +9,7 @@ import { kitPath } from '@pagosya/storefront-kit';
 import { primaryActionLink, type PrimaryAction } from './source-primary-action';
 import type { SourceSitePurpose } from './source-site-purpose';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
+import type { IconSlot, StoreControls } from './store-controls';
 
 export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'bottom-pill', 'overlay', 'reveal'] as const;
 export type HeaderShape = typeof HEADER_SHAPES[number];
@@ -22,6 +23,8 @@ export type RenderHeaderInput = {
   search?: boolean;
   /** '../' per folder level of the page the header goes on. */
   prefix?: string;
+  /** The store's control language (spec 2026-10-14 store controls); without one the header is drawn exactly as before. */
+  controls?: StoreControls;
 };
 
 const kitFiles = new Map<string, string>();
@@ -33,6 +36,22 @@ const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&l
 /** A page-relative link gets the folder prefix; an anchor, an absolute URL, tel: or mailto: stays as it is. */
 const local = (href: string, prefix: string) => /^(?:[a-z][a-z\d+.-]*:|#|\/)/i.test(href) ? href : prefix + href;
 
+/** One record icon as inline SVG: path data only (sanitizeControls checked it), filled with the control's own colour. */
+const controlIcon = (controls: StoreControls, slot: IconSlot) => {
+  const d = controls.icons[slot];
+  return d ? `<svg class="ctl-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="${escape(d)}"/></svg>` : '';
+};
+/** The inner layer that carries the shape: the icon and/or the word as the layout says; a word whenever the icon is missing. */
+const controlFace = (icon: string, word: string, layout: string, wordClass = 'ctl-word') => {
+  const drawIcon = layout !== 'word' && icon !== '', drawWord = layout !== 'icon' || !drawIcon;
+  return `<span class="ctl-face">${drawIcon ? icon : ''}${drawWord ? `<span class="${wordClass}" aria-hidden="true">${escape(word)}</span>` : ''}</span>`;
+};
+/** The record on the header element: enums as attributes, numbers as the --ctl-* variables controls.css reads. */
+const controlAttributes = (controls: StoreControls) => {
+  const { shape } = controls;
+  return ` data-controls-outline="${shape.outline}" data-controls-border="${shape.border}" data-controls-fill="${shape.fill}" data-controls-colour="${shape.colour}" data-controls-badge="${controls.badge}" style="--ctl-corner:${shape.corner}px;--ctl-notch:${shape.notch}px;--ctl-tilt:${shape.tilt}deg;--ctl-weight:${shape.weight}px"`;
+};
+
 export function renderSourceHeader(input: RenderHeaderInput): string {
   const prefix = input.prefix ?? '';
   const showcase = input.purpose !== 'shop';
@@ -42,6 +61,10 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
   const search = !showcase && input.search !== false;
   const link = showcase ? primaryActionLink(input.action ?? { kind: 'form' }) : null;
   const actionHref = link ? escape(local(link.href, prefix)) : '';
+  const menuTools = link
+    ? `<a class="pyh-menu-link pyh-menu-action" href="${actionHref}"${link.attributes}>${link.label}</a>`
+    : `${search ? `<a class="pyh-menu-link" href="${escape(prefix)}buscar.html">Buscar</a>` : ''}<a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a>`;
+  const menu = (close: string) => `<div class="pyh-menu" id="pyh-menu" data-pagosya-header-menu hidden><div class="pyh-menu-panel" role="dialog" aria-modal="true" aria-label="Menú">${close}${input.links.length ? `<nav class="pyh-menu-nav" aria-label="Menú">${input.links.map(anchor).join('')}</nav>` : ''}<div class="pyh-menu-tools">${menuTools}</div></div></div>`;
   const parts: Record<string, string> = {
     brand: `<a class="pyh-brand" href="${escape(prefix)}index.html">${input.logoPath ? `<img class="pyh-logo" src="${escape(local(input.logoPath, prefix))}" alt="">` : ''}<span data-store-name>${escape(input.storeName)}</span></a>`,
     nav: nav(input.links, 'Principal'),
@@ -52,14 +75,23 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
       ? `<a class="pyh-action" href="${actionHref}"${link.attributes}>${link.label}</a>`
       : '<button type="button" class="pyh-cart" data-cart-open><span class="pyh-cart-word">Carrito</span> <span class="pyh-cart-count" data-cart-count>0</span></button>',
     toggle: '<button type="button" class="pyh-toggle" data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu"><span class="pyh-toggle-bars" aria-hidden="true"></span><span class="pyh-toggle-label">Menú</span></button>',
-    menu: `<div class="pyh-menu" id="pyh-menu" data-pagosya-header-menu hidden><div class="pyh-menu-panel" role="dialog" aria-modal="true" aria-label="Menú"><button type="button" class="pyh-close" data-pagosya-header-close>Cerrar</button>${input.links.length ? `<nav class="pyh-menu-nav" aria-label="Menú">${input.links.map(anchor).join('')}</nav>` : ''}<div class="pyh-menu-tools">${link
-      ? `<a class="pyh-menu-link pyh-menu-action" href="${actionHref}"${link.attributes}>${link.label}</a>`
-      : `${search ? `<a class="pyh-menu-link" href="${escape(prefix)}buscar.html">Buscar</a>` : ''}<a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a>`}</div></div></div>`,
+    menu: menu('<button type="button" class="pyh-close" data-pagosya-header-close>Cerrar</button>'),
     fact: input.fact?.trim() ? `<p class="pyh-fact">${escape(input.fact.trim())}</p>` : '',
   };
+  // Spec 2026-10-14 store controls: the record's icons, words and layout on the cart, account, search, menu and close controls.
+  // The hooks the kit and shoppers rely on (data-cart-open, data-cart-count, data-pagosya-account, the menu's toggle and close,
+  // accessible names) stay exactly as they are; screen readers hear «Carrito, N productos» and «Mi cuenta», never the record's words.
+  const controls = input.controls;
+  if (controls) {
+    const { layout, words } = controls;
+    parts.tools = showcase ? '' : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html" aria-label="Buscar" data-ctl="search">${controlFace(controlIcon(controls, 'search'), 'Buscar', layout.account)}</a>` : ''}<a class="pyh-tool" href="#" data-pagosya-account="login" aria-label="Mi cuenta" data-ctl="account">${controlFace(controlIcon(controls, 'account'), words.account ?? 'Mi cuenta', layout.account)}</a>`;
+    if (!link) parts.cta = `<button type="button" class="pyh-cart" data-cart-open data-ctl="cart">${controlFace(controlIcon(controls, 'cart'), words.cart ?? 'Carrito', layout.cart, 'ctl-word pyh-cart-word')}<span class="ctl-sr">Carrito, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button>`;
+    parts.toggle = `<button type="button" class="pyh-toggle" data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu" data-ctl="menu"><span class="ctl-face">${controlIcon(controls, 'menu') || '<span class="pyh-toggle-bars" aria-hidden="true"></span>'}<span class="pyh-toggle-label ctl-word">Menú</span></span></button>`;
+    parts.menu = menu(`<button type="button" class="pyh-close" data-pagosya-header-close aria-label="Cerrar" data-ctl="close">${controlFace(controlIcon(controls, 'close'), 'Cerrar', 'icon+word')}</button>`);
+  }
   // A callback, never a replacement string: a store name containing "$&" must stay literal.
   const body = kitText(`${input.shape}.html`).replace(/\{\{(\w+)\}\}/g, (_match, key: string) => parts[key] ?? '');
-  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"><style data-pagosya-header-style>${kitText('headers.css')}</style>${body}</header>`;
+  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}</style>${body}</header>`;
 }
 
 const SLOT = /<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])[^>]*>/i;
@@ -135,6 +167,8 @@ export type SourceHeaderInput = {
   previous?: Array<{ path: string; content: string }>;
   /** This build owns the header (a Sep-5 author run): a page the author gave its own header, or none, gets the slot. */
   claim?: boolean;
+  /** The store's control language (spec 2026-10-14); drawn into every page's header. */
+  controls?: StoreControls;
 };
 
 /** The slot in place of the page's own top header (the first <header> before <main>), or first in <body> when it has none. */
@@ -178,7 +212,7 @@ export function withSourceHeader<F extends { path: string; content: string; enco
     }
     const home = file.path === 'index.html';
     const links = sections.length ? sections.map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label })) : pageLinks;
-    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1) });
+    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}) });
     const drawn = replaceElement(content, SLOT, header);
     if (drawn === null) { missing.push(file.path); return file; }
     return drawn === file.content ? file : { ...file, content: drawn };

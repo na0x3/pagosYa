@@ -3,6 +3,9 @@ import { kitPath } from '@pagosya/storefront-kit';
 import { FRAME_CATALOGUE } from './design-engine/frame-draw';
 import { CONVENTIONAL_HEADERS } from './design-engine/playbook';
 import { emptySourceHeaders, FALLBACK_HEADER_SHAPE, headerFact, HEADER_SHAPES, renderSourceHeader, withSourceHeader, type HeaderShape } from './source-header';
+import { createHash } from 'node:crypto';
+import { CART_ICONS, CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
+import type { StoreControls } from './store-controls';
 
 const links = [{ href: '#servicios', label: 'Servicios' }, { href: 'nosotros.html', label: 'Nosotros' }];
 const render = (shape: HeaderShape, purpose: 'shop' | 'service', extra: Partial<Parameters<typeof renderSourceHeader>[0]> = {}) =>
@@ -197,5 +200,74 @@ describe('the platform keeps the header it owns (final review, 2026-10-13)', () 
     const again = withSourceHeader(emptySourceHeaders(withLogo), { ...input, previous: withLogo });
     expect(file(again.files, 'index.html')).toContain('<img class="pyh-logo" src="assets/logo.png" alt="">');
     expect(file(again.files, 'nosotros.html')).toContain('<img class="pyh-logo" src="assets/logo.png" alt="">');
+  });
+});
+
+describe('store controls in the header (spec 2026-10-14, part 3)', () => {
+  const TICKET: StoreControls = libraryRecord(CONTROL_LANGUAGES.find(language => language.id === 'ticket-stub')!, 'cafe-food', 'cup');
+  const withLayout = (cart: StoreControls['layout']['cart'], account: StoreControls['layout']['account']): StoreControls => ({ ...TICKET, layout: { cart, account } });
+  const cartButton = (html: string) => html.match(/<button type="button" class="pyh-cart"[\s\S]*?<\/button>/)![0];
+  const hasTools = (shape: HeaderShape) => readFileSync(kitPath('headers', `${shape}.html`), 'utf8').includes('{{tools}}');
+
+  // Computed on 2026-10-14 from the unmodified renderSourceHeader. If it fails before your change, recompute it on the
+  // unmodified code (git stash) with the same 20 headers and pin that value: it guards "no record, no change".
+  it("draws today's header byte for byte when the store has no record", () => {
+    const all = HEADER_SHAPES.flatMap(shape => (['shop', 'service'] as const).map(purpose => render(shape, purpose)));
+    expect(createHash('sha256').update(all.join('\n')).digest('hex')).toBe('5617e18c2b27a30604a6f008efd4edb0aef8226b1eb5699344bb329db027f480');
+  });
+
+  it.each([...HEADER_SHAPES])('«%s» shop: the record on the header, icons and words on the controls, the locked hooks kept', shape => {
+    const html = render(shape, 'shop', { controls: TICKET });
+    expect(html).toContain(`class="pyh pyh--${shape}" data-controls-outline="ticket" data-controls-border="none" data-controls-fill="solid" data-controls-colour="accent" data-controls-badge="stamp" style="--ctl-corner:4px;--ctl-notch:5px;--ctl-tilt:0deg;--ctl-weight:2px">`);
+    const cart = cartButton(html);
+    expect(cart).toContain('data-cart-open data-ctl="cart"');
+    expect(cart).toContain(`<path fill="currentColor" fill-rule="evenodd" d="${CART_ICONS.cup.solid}"/>`);
+    expect(cart).toContain('<span class="ctl-word pyh-cart-word" aria-hidden="true">Tu pedido</span>');
+    expect(cart).toContain('<span class="ctl-sr">Carrito, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span>');
+    expect(html.match(/data-cart-open/g)).toHaveLength(1);
+    expect(html.match(/data-pagosya-header-toggle/g)).toHaveLength(1);
+    expect(html).toContain('data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu" data-ctl="menu"><span class="ctl-face"><svg class="ctl-icon"');
+    expect(html).toContain('<button type="button" class="pyh-close" data-pagosya-header-close aria-label="Cerrar" data-ctl="close">');
+    expect(html).toContain('<a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a>');
+    if (hasTools(shape)) {
+      expect(html).toContain('<a class="pyh-tool" href="#" data-pagosya-account="login" aria-label="Mi cuenta" data-ctl="account">');
+      expect(html).toContain('<a class="pyh-tool" href="buscar.html" aria-label="Buscar" data-ctl="search">');
+    }
+    expect(html).not.toContain('{{');
+  });
+
+  it('follows the layout: icon only keeps the plain label, word only draws no icon, a missing icon falls back to the word', () => {
+    const iconOnly = cartButton(render('menu-button', 'shop', { controls: withLayout('icon', 'icon') }));
+    expect(iconOnly).toContain('<svg class="ctl-icon"');
+    expect(iconOnly).not.toContain('ctl-word');
+    expect(iconOnly).toContain('<span class="ctl-sr">Carrito, </span>');
+    const wordOnly = cartButton(render('menu-button', 'shop', { controls: withLayout('word', 'word') }));
+    expect(wordOnly).not.toContain('<svg');
+    expect(wordOnly).toContain('>Tu pedido</span>');
+    const noIcon = cartButton(render('menu-button', 'shop', { controls: { ...withLayout('icon', 'icon'), icons: {} } }));
+    expect(noIcon).toContain('>Tu pedido</span>');
+    expect(render('menu-button', 'shop', { controls: { ...TICKET, icons: { ...TICKET.icons, menu: undefined } } })).toContain('<span class="ctl-face"><span class="pyh-toggle-bars" aria-hidden="true"></span>');
+  });
+
+  it("shows the record's account word but keeps the plain accessible name, and Carrito without a cart word", () => {
+    const html = render('shrinking', 'shop', { controls: { ...withLayout('word', 'word'), words: { account: 'Ingresar' } } });
+    expect(html).toContain('aria-label="Mi cuenta" data-ctl="account"><span class="ctl-face"><span class="ctl-word" aria-hidden="true">Ingresar</span></span></a>');
+    expect(cartButton(html)).toContain('>Carrito</span>');
+  });
+
+  it('gives a showcase header the language on its menu button and close button, never a cart', () => {
+    const html = render('menu-button', 'service', { controls: TICKET });
+    expect(html).toContain('data-controls-outline="ticket"');
+    expect(html).not.toContain('data-cart-open');
+    expect(html).not.toContain('data-ctl="cart"');
+    expect(html).toContain('data-ctl="menu"');
+    expect(html).toContain('data-ctl="close"');
+    expect(html).toContain('href="https://wa.me/59170012345" target="_blank" rel="noopener">Escríbenos</a>');
+  });
+
+  it('withSourceHeader passes the record to every page', () => {
+    const files = [{ path: 'index.html', content: '<body><header data-pagosya-header></header><main><section id="a" data-nav-label="Inicio"></section></main></body>' }, { path: 'nosotros.html', content: '<body><header data-pagosya-header></header><main></main></body>' }];
+    const result = withSourceHeader(files, { shape: 'menu-button', purpose: 'shop', storeName: 'Café', controls: TICKET });
+    for (const file of result.files) expect(file.content).toContain('data-controls-outline="ticket"');
   });
 });
