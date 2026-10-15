@@ -214,12 +214,13 @@ test('list badge only for non-null, unfinished onboarding', () => {
 });
 
 test('dashboard wiring: Salir refreshes the data, the list shows Sin terminar + Continuar, create offers the choice', () => {
-  const src = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
+  // The stores list moved to stores-panel.mjs (2026-10-15): the wiring is read across both files.
+  const src = ['./dashboard.js', './stores-panel.mjs'].map(file => readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
   assert.match(src, /onExit: \(\) => \{ root\.hidden = true; root\.innerHTML = ""; void refresh\(\); \}/);
-  assert.match(src, /isUnfinishedStore\(store, onboardingEnabled\) \? '<span class="store-card-status" data-status="draft">Sin terminar<\/span>'/);
+  assert.match(src, /isUnfinishedStore\(store, deps\.onboardingEnabled\(\)\) \? '<span class="store-card-status" data-status="draft">Sin terminar<\/span>'/);
   assert.match(src, /continue-store/);
   assert.match(src, /\/stores\/onboarding\?storeId=/);
-  assert.match(src, /isUnfinishedStore\(store, onboardingEnabled\)/);
+  assert.match(src, /isUnfinishedStore\(store, deps\.onboardingEnabled\(\)\)/);
   assert.match(src, /showWalkthroughChoice\(root/);
 });
 
