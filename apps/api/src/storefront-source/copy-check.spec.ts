@@ -1,4 +1,4 @@
-import { avoidPhrases, checkCopy, copyFindingCounts, copyFindingLines, storePrices, visibleSentences, type CopyCheckInput } from './copy-check';
+import { avoidPhrases, checkCopy, moneyIn, copyFindingCounts, copyFindingLines, storePrices, visibleSentences, type CopyCheckInput } from './copy-check';
 import { PLAYBOOK } from './design-engine/playbook';
 import { SOURCE_TELLS_SELF_CHECK } from './source-signature';
 import { foldText, sanitizeVoice } from './store-voice';
@@ -118,5 +118,19 @@ describe('the avoid list and the visible text', () => {
 
   it('collects the store prices: products, variants, extras and membership periods', () => {
     expect(storePrices([{ amount: 1800, variants: [{ amount: 2200 }], extras: [{ amount: 500 }], membershipPeriods: [{ amount: 90000 }] }, null, { amount: 'x' }]).sort((a, b) => a - b)).toEqual([5, 18, 22, 900]);
+  });
+});
+
+describe('money amounts', () => {
+  it('reads dot and comma decimals, keeps three-digit groups as thousands, never a space', () => {
+    expect(moneyIn('Taza a Bs 35.50')).toEqual([35.5]);
+    expect(moneyIn('Taza a Bs 35,50')).toEqual([35.5]);
+    expect(moneyIn('Bs 1.200')).toEqual([1200]);
+    expect(moneyIn('Bs 1.200,50')).toEqual([1200.5]);
+    expect(moneyIn('Bs 25 200 ml')).toEqual([25]);
+    const run = (text: string, prices: number[]) => checkCopy(input([{ path: 'index.html', content: page(`<p>${text}</p>`) }], { prices })).filter(finding => finding.kind === 'unsourced');
+    expect(run('Taza a Bs 35.50.', [35.5])).toEqual([]);
+    expect(run('Taza a Bs 35,50.', [35.5])).toEqual([]);
+    expect(run('El lote cuesta Bs 1.200.', [1200])).toEqual([]);
   });
 });

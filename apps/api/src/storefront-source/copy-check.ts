@@ -103,10 +103,10 @@ export function visibleSentences(html: string): string[] {
 const wordsOf = (text: string) => foldText(text).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 const grams = (list: string[], size: number) => list.length < size ? [] : Array.from({ length: list.length - size + 1 }, (_, index) => list.slice(index, index + size).join(' '));
 const normalized = (sentence: string) => wordsOf(sentence).join(' ');
-const MONEY = /(?:\bBs\.?|\bBOB\b|\bUSD\b|\$)\s?(\d{1,3}(?:[.\s]\d{3})+|\d+)(?:,(\d{1,2}))?/gi;
-/** Money amounts written in a text, in bolivianos or dollars as written: «Bs 3.500» is 3500, «Bs 18,00» is 18. */
+const MONEY = /(?:\bBs\.?|\bBOB\b|\bUSD\b|\$)\s?(\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,](\d{1,2})(?!\d))?/gi;
+/** Money amounts written in a text, in bolivianos or dollars as written: «Bs 3.500» is 3500, «Bs 18,00» and «Bs 35.50» are 18 and 35.5; a three-digit group after . or , is thousands, a space never is. */
 export function moneyIn(text: string): number[] {
-  return [...text.matchAll(MONEY)].map(match => Number(match[1].replace(/[.\s]/g, '')) + (match[2] ? Number(match[2].padEnd(2, '0')) / 100 : 0));
+  return [...text.matchAll(MONEY)].map(match => Number(match[1].replace(/[.,]/g, '')) + (match[2] ? Number(match[2].padEnd(2, '0')) / 100 : 0));
 }
 const UNIT = '(?:km|kilometros?|metros?|m|msnm|cuadras?|minutos?|min|horas?|h|dias?|anos?|kg|kilos?|g|gramos?|ml|litros?|l|%|hectareas?|ha)';
 const ORIGIN = /(?:origen|proveniente|traíd[oa]s?|cultivad[oa]s?|cosechad[oa]s?|criad[oa]s?|tostad[oa]s?|hech[oa]s?|tejid[oa]s?|nacid[oa]s?)\s+(?:en|de|del|desde)\s+(?:la |el |los |las )?(\p{Lu}[\p{L}]+(?:\s\p{Lu}[\p{L}]+)*)/gu;
