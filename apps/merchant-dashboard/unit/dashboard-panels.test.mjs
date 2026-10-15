@@ -5,6 +5,7 @@ import test from "node:test";
 // import under Node, with no DOM at all, and export its factory. One row per panel.
 const PANELS = [
   ["inbox-panel.mjs", "createInboxPanel"],
+  ["discounts-panel.mjs", "createDiscountsPanel"],
 ];
 
 for (const [file, factory] of PANELS) {
