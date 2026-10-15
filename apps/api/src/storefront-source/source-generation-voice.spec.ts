@@ -358,3 +358,16 @@ describe('the copy check and the review (spec 2026-10-14, part 4)', () => {
     expect(copyLog()).toMatchObject({ counts: { echo: 1, missing: 1 } });
   });
 });
+
+describe('the kit reads the voice line (spec 2026-10-14, part 3)', () => {
+  it('a save with a sheet writes its voice line into config.js; without one there is none', async () => {
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER }) as any);
+    await build();
+    expect(configOf(0).voiceLine).toBe(SHEET_ANSWER.voice);
+    config.set('app.yapiVoice', false);
+    asPrevious(0);
+    fetchMock.mockImplementation(respond({ independent_storefront: () => EDIT }) as any);
+    await build({ revision: 1, instruction: 'Oscurece un poco el texto' });
+    expect(configOf(1).voiceLine).toBeUndefined();
+  });
+});

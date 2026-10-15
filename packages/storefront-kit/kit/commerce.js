@@ -1513,6 +1513,8 @@
     if (link && hosted && /^https?:/i.test(link.getAttribute('href') || '')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
   });
   const infoText = value => (typeof value === 'string' ? value.trim() : '');
+  // Spec 2026-10-14 store voice: the sentence of the store's own voice a page with nothing to show says, instead of placeholder text.
+  const VOICE_LINE = typeof config.voiceLine === 'string' && config.voiceLine.trim() && config.voiceLine.trim().length <= 200 ? config.voiceLine.trim() : '';
   const infoParagraphs = text => text.split(/\n{2,}/).map(paragraph => `<p>${escape(paragraph).replace(/\n/g, '<br>')}</p>`).join('');
   const policyText = key => infoText(storePolicies()[key]);
   const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -1523,7 +1525,11 @@
     return rows.map(row => `${WEEKDAYS[row.day]}: ${row.closed ? 'cerrado' : `${escape(row.open)} a ${escape(row.close)}`}`).join(' · ');
   }
   function placeList(keep = () => true) {
-    const items = infoLocations().filter(keep).map(place => `<li><strong>${escape(place.name)}</strong>${place.address ? `<br>${escape(place.address)}` : ''}${placeHours(place) ? `<br>${placeHours(place)}` : ''}<br>${[place.pickupEnabled && 'Retiro en tienda', place.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ') || 'Sin métodos de entrega disponibles'}</li>`);
+    // An empty block is left out (spec 2026-10-14 store voice): a place without pickup or delivery says nothing about them.
+    const items = infoLocations().filter(keep).map(place => {
+      const methods = [place.pickupEnabled && 'Retiro en tienda', place.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ');
+      return `<li><strong>${escape(place.name)}</strong>${place.address ? `<br>${escape(place.address)}` : ''}${placeHours(place) ? `<br>${placeHours(place)}` : ''}${methods ? `<br>${methods}` : ''}</li>`;
+    });
     return items.length ? `<ul class="pagosya-info__list">${items.join('')}</ul>` : '';
   }
   const phoneLink = () => { const phone = infoText(store.contactPhone); return /^\+?[0-9][0-9 ()-]{5,24}$/.test(phone) ? `<a href="tel:${escape(phone.replace(/[^0-9+]/g, ''))}">${escape(phone)}</a>` : ''; };
@@ -1532,9 +1538,11 @@
     const places = infoLocations(), delivering = places.filter(place => place.deliveryEnabled), pickup = places.filter(place => place.pickupEnabled);
     const entries = [];
     if (store.shippingEnabled || delivering.length) entries.push(['¿Hacen envíos?', delivering.length ? `Sí, entregamos a domicilio desde: ${placeNames(delivering)}.` : 'Sí, hacemos envíos.']);
-    if (pickup.length || store.shippingPickupEnabled) entries.push(['¿Puedo retirar mi pedido?', pickup.length ? `Sí, puedes retirarlo en: ${placeNames(pickup)}.` : 'Sí, puedes retirar tu pedido.']);
+    // Only questions the store can answer (spec 2026-10-14): pickup needs a place that offers it, not only the switch.
+    if (pickup.length) entries.push(['¿Puedo retirar mi pedido?', `Sí, puedes retirarlo en: ${placeNames(pickup)}.`]);
     if (places.length) entries.push(['¿Dónde están?', `<ul class="pagosya-info__list">${places.map(place => `<li><strong>${escape(place.name)}</strong>${place.address ? ` — ${escape(place.address)}` : ''}</li>`).join('')}</ul>`]);
-    if (store.checkoutMode === 'payment') entries.push(['¿Cómo pago?', 'Pagas con QR o tarjeta desde la tienda, con pago seguro procesado por pagosYa.']);
+    // How to pay is always answerable.
+    entries.push(['¿Cómo pago?', store.checkoutMode === 'payment' ? 'Pagas con QR o tarjeta desde la tienda, con pago seguro procesado por pagosYa.' : store.checkoutMode === 'whatsapp' ? 'Confirmas tu pedido por WhatsApp y acuerdas el pago con la tienda.' : 'Acuerdas el pago con la tienda al confirmar tu pedido.']);
     const contact = [phoneLink(), emailLink()].filter(Boolean);
     if (contact.length) entries.push(['¿Cómo los contacto?', contact.join(' · ')]);
     return entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
@@ -1602,7 +1610,8 @@
       if (kind === 'cookies') { mount.innerHTML = `<div class="pagosya-info">${COOKIES_BODY}</div>`; return; }
       if (!live) return;
       const html = infoBody(kind);
-      mount.innerHTML = html ? `<div class="pagosya-info">${html}</div>` : '<p>Esta información aún no está disponible.</p><p><a href="index.html">Volver al inicio</a></p>';
+      // A page with nothing to show says one sentence of the store's voice and links home, never a placeholder (spec 2026-10-14).
+      mount.innerHTML = html ? `<div class="pagosya-info">${html}</div>` : `${VOICE_LINE ? `<p class="pagosya-info__voice">${escape(VOICE_LINE)}</p>` : ''}<p><a href="index.html">Volver al inicio</a></p>`;
       if (!html) unavailable = true;
     });
     // A failed live fetch (`force`) says nothing about the page, so it never asks search engines to drop it.

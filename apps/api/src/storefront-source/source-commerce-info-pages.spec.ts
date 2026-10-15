@@ -7,7 +7,7 @@ const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checko
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 
 const base = { storeName: 'Marca', items: [{ id: 'p1', name: 'Café', amount: 2000, currency: 'BOB', stock: null, imageUrls: [] }] };
-async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Record<string, unknown>, fetchImpl?: () => Promise<unknown>, query = '', hosted = false) {
+async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Record<string, unknown>, fetchImpl?: () => Promise<unknown>, query = '', hosted = false, runtime: Record<string, unknown> = {}) {
   const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido</button><section data-pagosya-catalog></section><section data-pagosya-cart></section><main><div data-pagosya-page="${kind}"></div></main><footer><nav data-pagosya-pages></nav></footer><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
   const w = dom.window;
   w.HTMLElement.prototype.scrollIntoView = () => {};
@@ -18,7 +18,7 @@ async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Re
   w.PAGOSYA_PREVIEW = !live;
   if (query) w.PAGOSYA_PREVIEW_QUERY = query;
   if (hosted) { w.PAGOSYA_HOSTED = true; w.PAGOSYA_HOSTED_REQUEST = jest.fn(async () => ({ ok: true, body: {} })); w.__messages = []; w.addEventListener('message', (event: any) => w.__messages.push(event.data)); }
-  w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data };
+  w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...runtime };
   w.fetch = jest.fn(fetchImpl ?? (async () => ({ ok: true, json: async () => ({ ...data, ...live }) })));
   w.eval(commerce);
   await new Promise(resolve => setTimeout(resolve, 60));
@@ -26,6 +26,8 @@ async function shop(kind: string, extra: Record<string, unknown> = {}, live?: Re
 }
 const mount = (w: any) => w.document.querySelector('[data-pagosya-page]') as HTMLElement;
 const noindex = (w: any) => w.document.querySelector('meta[name="robots"][content="noindex"]');
+/** Spec 2026-10-14 store voice: a page with nothing to show links home and never narrates the missing information. */
+const emptyPage = (w: any) => !mount(w).querySelector('.pagosya-info') && !mount(w).textContent!.includes(UNAVAILABLE) && Boolean(mount(w).querySelector('a[href="index.html"]'));
 const UNAVAILABLE = 'Esta información aún no está disponible.';
 const HOSTILE = 'Hola <script>alert(1)</script> `x` ${y} "z"';
 
@@ -40,9 +42,9 @@ describe('information pages in the storefront runtime', () => {
     w.close();
   });
 
-  it('says the page is unavailable, links home and asks not to be indexed when there is nothing to show', async () => {
+  it('says nothing about missing information, links home and asks not to be indexed when there is nothing to show', async () => {
     const w = await shop('about', {});
-    expect(mount(w).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(w)).toBe(true);
     expect(mount(w).querySelector('a[href="index.html"]')).not.toBeNull();
     expect(noindex(w)).not.toBeNull();
     w.close();
@@ -53,13 +55,13 @@ describe('information pages in the storefront runtime', () => {
     expect(mount(w).innerHTML).toContain('&lt;script&gt;');
     expect(mount(w).querySelector('script')).toBeNull();
     const empty = await shop(kind, { policies: { returns: '', privacy: '  ', terms: undefined } });
-    expect(mount(empty).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(empty)).toBe(true);
     w.close(); empty.close();
   });
 
   it.each([null, [], 'texto', 7, { returns: 5, privacy: null, terms: [] }])('treats malformed policies %j as not written', async policies => {
     const w = await shop('refund', { policies });
-    expect(mount(w).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(w)).toBe(true);
     w.close();
   });
 
@@ -84,13 +86,13 @@ describe('information pages in the storefront runtime', () => {
     expect(mount(w).textContent).toContain('Entregamos en 48 horas.');
     expect(mount(w).textContent).toContain('Retiro en tienda · Entrega a domicilio');
     const none = await shop('shipping', {});
-    expect(mount(none).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(none)).toBe(true);
     w.close(); none.close();
   });
 
   it('builds the FAQ only from stated facts, and needs at least two answers', async () => {
-    const one = await shop('faq', { contactEmail: 'hola@marca.bo' });
-    expect(mount(one).textContent).toContain(UNAVAILABLE);
+    const one = await shop('faq', {});
+    expect(emptyPage(one)).toBe(true);
     const w = await shop('faq', { checkoutMode: 'payment', shippingEnabled: true, contactEmail: 'hola@marca.bo', locations: [{ id: 'l1', name: 'Centro', address: 'Av. 6', pickupEnabled: true, deliveryEnabled: false, openingHours: [] }] });
     const text = mount(w).textContent!;
     for (const question of ['¿Hacen envíos?', '¿Puedo retirar mi pedido?', '¿Dónde están?', '¿Cómo pago?', '¿Cómo los contacto?']) expect(text).toContain(question);
@@ -121,6 +123,35 @@ describe('information pages in the storefront runtime', () => {
     expect(noindex(w)).toBeNull();
     w.close();
   });
+
+  it('with nothing to show, says one sentence of the store voice and links home (spec 2026-10-14)', async () => {
+    const w = await shop('about', {}, undefined, undefined, '', false, { voiceLine: 'Hablamos de tú, <despacio>.' });
+    expect(mount(w).querySelector('.pagosya-info__voice')!.textContent).toBe('Hablamos de tú, <despacio>.');
+    expect(mount(w).innerHTML).toContain('&lt;despacio&gt;');
+    expect(emptyPage(w)).toBe(true);
+    expect(noindex(w)).not.toBeNull();
+    const long = await shop('about', {}, undefined, undefined, '', false, { voiceLine: 'x'.repeat(201) });
+    expect(long.document.querySelector('.pagosya-info__voice')).toBeNull();
+    w.close(); long.close();
+  });
+
+  it('asks about pickup only when a place offers it, and always says how to pay', async () => {
+    const enabledOnly = await shop('faq', { shippingPickupEnabled: true, checkoutMode: 'payment', contactEmail: 'hola@marca.bo' });
+    expect(mount(enabledOnly).textContent).not.toContain('¿Puedo retirar mi pedido?');
+    expect(mount(enabledOnly).textContent).toContain('¿Cómo pago?');
+    const whatsapp = await shop('faq', { checkoutMode: 'whatsapp', contactEmail: 'hola@marca.bo' });
+    expect(mount(whatsapp).textContent).toContain('Confirmas tu pedido por WhatsApp');
+    const other = await shop('faq', { checkoutMode: 'external', contactEmail: 'hola@marca.bo' });
+    expect(mount(other).textContent).toContain('Acuerdas el pago con la tienda');
+    enabledOnly.close(); whatsapp.close(); other.close();
+  });
+
+  it('lists a place without delivery methods without saying so', async () => {
+    const w = await shop('contact', { contactEmail: 'hola@marca.bo', locations: [{ id: 'l1', name: 'Centro', pickupEnabled: false, deliveryEnabled: false, openingHours: [] }] });
+    expect(mount(w).textContent).toContain('Centro');
+    expect(mount(w).textContent).not.toContain('Sin métodos de entrega disponibles');
+    w.close();
+  });
 });
 
 describe('information pages while the live store is slow or unavailable', () => {
@@ -146,7 +177,7 @@ describe('information pages while the live store is slow or unavailable', () => 
     expect(mount(w).textContent).toContain('Cambios en 7 días.');
     expect(noindex(w)).toBeNull();
     const empty = await shop('refund', {}, {}, down);
-    expect(mount(empty).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(empty)).toBe(true);
     expect(noindex(empty)).toBeNull();
     w.close(); empty.close();
   });
@@ -175,7 +206,7 @@ describe('catalog pages in the storefront runtime', () => {
     expect(mount(w).textContent).toContain('Cafés');
     expect(mount(w).textContent).toContain('2 productos');
     const none = await shop('collections', { items, collections: [] });
-    expect(mount(none).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(none)).toBe(true);
     w.close(); none.close();
   });
 
@@ -227,9 +258,9 @@ describe('catalog pages in the storefront runtime', () => {
     w.close(); long.close();
   });
 
-  it('is unavailable while the store has no products', async () => {
+  it('links home while the store has no products', async () => {
     const w = await shop('search', { items: [] });
-    expect(mount(w).textContent).toContain(UNAVAILABLE);
+    expect(emptyPage(w)).toBe(true);
     w.close();
   });
 
