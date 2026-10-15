@@ -11,6 +11,7 @@ const PANELS = [
   ["quick-payment-panel.mjs", "createQuickPaymentPanel"],
   ["finances-panel.mjs", "createFinancesPanel"],
   ["orders-panel.mjs", "createOrdersPanel"],
+  ["inventory-import-panel.mjs", "createInventoryImportPanel"],
   ["stores-panel.mjs", "createStoresPanel"],
 ];
 
