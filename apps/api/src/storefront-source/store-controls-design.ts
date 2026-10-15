@@ -8,7 +8,7 @@ import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { sourceResponseJson } from './source-response';
 import { merchantOwnWords, namesHeaderCart } from './kit-touch';
 import { captureControlsShots, CONTROLS_GUARD_TIMEOUT_MS, type ModelImage } from './store-controls-guard';
-import { ACCOUNT_LAYOUTS, CART_LAYOUTS, CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, ICON_SLOTS, sanitizeControlsReport, type IconSlot, type StoreControls } from './store-controls';
+import { ACCOUNT_LAYOUTS, CART_LAYOUTS, CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, ICON_SLOTS, cleanControlWord, sanitizeControlsReport, type IconSlot, type StoreControls } from './store-controls';
 import { languageReadable, pickLibraryControls, storePalette } from './store-controls-library';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import type { SourceProjectSnapshot } from './source-project';
@@ -59,7 +59,7 @@ export function storeTokens(files: ReadonlyArray<{ path: string; content: string
 }
 
 const languageOf = (controls: StoreControls) => ({ outline: controls.shape.outline, fill: controls.shape.fill, colour: controls.shape.colour, badge: controls.badge, cart: controls.icons.cart ?? '' });
-export type ControlsPromptInput = { storeName: string; kind: PlaybookKind; brief: unknown; products: string[]; tokens: string; look?: StoreLook; avoid: StoreControls[]; previous?: StoreControls; current?: StoreControls; instruction?: string };
+export type ControlsPromptInput = { storeName: string; kind: PlaybookKind; brief: unknown; products: string[]; tokens: string; look?: StoreLook; avoid: StoreControls[]; previous?: StoreControls; current?: StoreControls; instruction?: string; cartWord?: string };
 export function controlsPrompt(input: ControlsPromptInput): string {
   const { version: _version, source: _source, ...example } = pickLibraryControls({ kind: input.kind, mode: 'calm', seed: 'example' });
   return [
@@ -71,6 +71,7 @@ export function controlsPrompt(input: ControlsPromptInput): string {
     input.previous ? `This is a redesign: move away from the store's previous controls: ${JSON.stringify(languageOf(input.previous))}` : '',
     input.current ? `The store's current controls (change them as the merchant asks; keep what they did not mention): ${JSON.stringify(languageOf(input.current))}` : '',
     input.instruction ? `The merchant asked now: «${input.instruction}». Follow it for the controls.` : '',
+    input.cartWord ? `This store calls an order «${input.cartWord}» (its voice sheet): that is the cart word.` : '',
     'Rules:',
     '- shape: outline is one of the listed outlines; corner 0-24 px; notch 0-10 px (ticket notches, tag cut, stamp scallop depth); tilt -6 to 6 degrees (drawn on the face, never the tap target); weight 1-3 px. fill: solid, outline, ghost (no fill, the header text colour) or inverted. colour: accent, ink or paper.',
     '- icons: SVG path data only (the d attribute) for a 24x24 box, every point between 0 and 24, at most 1,500 characters each. They are FILLED with the text colour using fill-rule evenodd, so a line icon must be drawn as its outline (an outer shape and an inner shape). No other SVG elements, attributes, URLs or text. The cart icon shows what this store sells (a cup, a bag, a basket, a frame, a scoop, a briefcase, a leaf, a paw, or anything that fits it better); the others are account, menu, search, plus, minus and close. An empty string keeps the platform icon.',
@@ -84,7 +85,7 @@ export function controlsPrompt(input: ControlsPromptInput): string {
 
 export type ControlsDesignDeps = {
   files: SourceProjectFileDto[]; brief: unknown; storeName: string; kind: PlaybookKind; products: string[]; avoid: StoreControls[];
-  previous?: StoreControls; current?: StoreControls; instruction?: string; signal: AbortSignal;
+  previous?: StoreControls; current?: StoreControls; instruction?: string; cartWord?: string; signal: AbortSignal;
   call: (text: string, images: ModelImage[]) => Promise<{ body: unknown; used: () => void }>;
   fallbackIcon: (slot: IconSlot) => string | undefined;
   capture?: (snapshot: SourceProjectSnapshot, signal: AbortSignal) => Promise<ModelImage[]>;
@@ -100,7 +101,7 @@ export type ControlsDesign = { controls: StoreControls; note: string; used: () =
 export async function runControlsDesign(deps: ControlsDesignDeps): Promise<ControlsDesign | null> {
   const snapshot = { brief: deps.brief, files: deps.files } as unknown as SourceProjectSnapshot;
   const images = await (deps.capture ?? captureControlsShots)(snapshot, deps.signal);
-  const text = controlsPrompt({ storeName: deps.storeName, kind: deps.kind, brief: deps.brief, products: deps.products, tokens: storeTokens(deps.files), look: sanitizeLook(readConfigFile(deps.files).look), avoid: deps.avoid, previous: deps.previous, current: deps.current, instruction: deps.instruction });
+  const text = controlsPrompt({ storeName: deps.storeName, kind: deps.kind, brief: deps.brief, products: deps.products, tokens: storeTokens(deps.files), look: sanitizeLook(readConfigFile(deps.files).look), avoid: deps.avoid, previous: deps.previous, current: deps.current, instruction: deps.instruction, cartWord: deps.cartWord });
   const { body, used } = await deps.call(text, images);
   let raw: unknown;
   const drop = (reason: ControlsDropReason) => { deps.onDropped?.(reason); return null; };
@@ -111,7 +112,10 @@ export async function runControlsDesign(deps: ControlsDesignDeps): Promise<Contr
   if (!report.controls) return drop('unusable answer');
   if (!languageReadable(report.controls, storePalette(deps.files))) return drop('contrast');
   const note = typeof answer.note === 'string' && answer.note.trim() ? answer.note.trim().slice(0, 200) : 'Diseñé los botones de tu tienda.';
-  return { controls: report.controls, note, used, replacedIcons: report.replacedIcons };
+  // Spec 2026-10-14 store voice: the sheet's order word is the cart word whenever it fits a control word.
+  const cart = cleanControlWord(deps.cartWord);
+  const controls = cart ? { ...report.controls, words: { ...report.controls.words, cart } } : report.controls;
+  return { controls, note, used, replacedIcons: report.replacedIcons };
 }
 
 /** The header's other controls by name: the icon or button of the menu, the search or the account («el ícono de mi cuenta»,

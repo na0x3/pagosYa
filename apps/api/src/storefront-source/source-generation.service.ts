@@ -1,7 +1,7 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { sourceSignatureTaskLine } from './source-signature';
 import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, writeVoiceSheet } from './store-voice-run';
-import { voiceEditDirection } from './store-voice-prompt';
+import { voiceCartWord, voiceEditDirection, withVoiceCartWord } from './store-voice-prompt';
 import type { LegendEntry } from './photo-descriptions';
 import { DESIGN_CRITIC_PROMPT, DESIGN_CRITIC_SCHEMA, designCritiqueSchema, applyDesignCritique } from './design-engine/design-critic';
 import { z } from 'zod';
@@ -996,7 +996,7 @@ export class SourceGenerationService {
         const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(controlsDeadlineMs())]);
         try {
           return await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords),
-            onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason })) });
+            onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason })), cartWord: voiceCartWord(voice.sheet) });
         } catch (error) {
           if (!review.signal.aborted) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: controlsSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
           return null;
@@ -1348,7 +1348,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // otherwise a new store or a redesign takes the seeded library pick and an edit carries its own.
     const withControls = <T extends { files: SourceProjectFileDto[] }>(input: T, controlsChoice: { use?: StoreControls }): T => storeControlsInto(input, !controlsOn ? undefined
       : 'use' in controlsChoice ? controlsChoice.use
-      : requestedControls ?? (controlsFresh ? pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) })
+      : requestedControls ?? (controlsFresh ? withVoiceCartWord(pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) }), voice.sheet)
       : previousControls));
     const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice);
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
@@ -1365,7 +1365,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       try {
         const base = await assembleSave(controlsSignal);
         const designed = await runControlsDesign({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: [], ...(previousControls ? { current: previousControls } : {}), instruction: (dto.instruction.split(MERCHANT_MARKER).at(-1) ?? dto.instruction).trim().slice(0, 400), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords),
-          onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'request', reason })) });
+          onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'request', reason })), cartWord: voiceCartWord(voice.sheet) });
         if (designed) {
           const guarded = await keepGuardedControls(storeControlsInto(base, designed.controls), previousControls, 'request', signal);
           if (guarded.kept) { requestedControls = readControls(guarded.input.files); designed.used(); controlsNote = designed.note; }

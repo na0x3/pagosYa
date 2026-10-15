@@ -54,6 +54,7 @@ describe('review state on the service', () => {
     // Nothing runs in this process (the review's process restarted): the row is still retired.
     expect(await service.cancelReview('s1')).toBe(false);
     expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith({ where: { storeId: 's1', status: 'REVIEWING' }, data: { status: 'CANCELLED', completedAt: expect.any(Date) } });
+  expect(reviewMessage(['Agrandé el título.'], 'Café pulido', 2)).toBe('Pulí tu tienda: Agrandé el título. Supuse 2 datos de tu negocio: confírmalos, corrígelos o quítalos en «Datos que YAPI supuso» antes de publicar.');
   });
 
   it('aborts the review running in this process, and never throws when the database is unavailable', async () => {

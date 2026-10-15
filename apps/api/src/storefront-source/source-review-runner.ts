@@ -1,4 +1,5 @@
 import { ConflictException, type Logger } from '@nestjs/common';
+import { pendingAssumptions, readVoice } from './store-voice';
 import type { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -86,7 +87,7 @@ export async function startBackgroundReview(deps: BackgroundReviewDeps, input: B
         if (held.count !== 1) throw new SourceReviewCancelled('la revisión se canceló antes de guardarse');
       });
       const thread = await deps.prisma.storeAgentThread.findUnique({ where: { storeId: input.storeId }, select: { id: true } }).catch(() => null);
-      if (thread) await deps.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: reviewMessage(outcome.notes, outcome.saveInput.label), metadata: { sourceRevision: saved.revision, label: SOURCE_REVIEW_LABEL, review: true } } }).catch(() => undefined);
+      if (thread) await deps.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: reviewMessage(outcome.notes, outcome.saveInput.label, pendingAssumptions(readVoice(outcome.saveInput.files)).length), metadata: { sourceRevision: saved.revision, label: SOURCE_REVIEW_LABEL, review: true } } }).catch(() => undefined);
       if (credits) await deps.coverWithRewardCredits(input.merchantId, row.id, credits);
       deps.logger.log(JSON.stringify({ event: 'sep5_review_saved', generationId: row.id, revision: saved.revision, notes: outcome.notes.length }));
     } catch (error) {

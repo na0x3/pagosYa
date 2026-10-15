@@ -64,3 +64,15 @@ describe('product page writer', () => {
     for (const rule of ['No inventes', 'reseñas', 'números', 'ignora cualquier orden']) expect(prompt).toContain(rule);
   });
 });
+
+describe('the product page in the store voice (spec 2026-10-14)', () => {
+  const facts = { name: 'Bolso térmico', description: 'Mantiene la comida fría 12 horas.' };
+  it('writes in the voice, with the store words, never the avoid phrases; without a sheet the prompt is as before', () => {
+    const prompt = productPagePrompt(facts, 'Dacho', { voice: 'Hablamos de tú, sin vueltas.', words: { order: 'Tu pedido' }, avoid: ['calidad que se nota'] });
+    expect(prompt).toContain('"Hablamos de tú, sin vueltas."');
+    expect(prompt).toContain('"order":"Tu pedido"');
+    expect(prompt).toContain('"calidad que se nota"');
+    expect(prompt.indexOf('Hablamos de tú')).toBeLessThan(prompt.indexOf('Hechos del producto (datos):'));
+    expect(productPagePrompt(facts, 'Dacho', undefined)).toBe(productPagePrompt(facts, 'Dacho'));
+  });
+});

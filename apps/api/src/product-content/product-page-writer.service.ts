@@ -1,4 +1,6 @@
 import { BadGatewayException, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
+import { avoidPhrases } from '../storefront-source/copy-check';
+import { loadStoreVoice } from '../storefront-source/store-voice-load';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -31,11 +33,14 @@ export class ProductPageWriterService {
       const bytes = await this.uploads.getBuffer(filename).catch(() => null);
       return bytes ? [{ type: 'input_text', text: `Foto ${index + 1}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'low' }] : [];
     }))).flat();
+    // Spec 2026-10-14 store voice: the long page is written in the store's own voice when the store has a sheet.
+    const sheet = await loadStoreVoice(this.prisma, storeId);
+    const voice = sheet ? { voice: sheet.voice, words: sheet.words, avoid: avoidPhrases(undefined, sheet) } : undefined;
     const started = Date.now();
     // Photos travel in a user message: the API answers invalid_value to an image inside a developer message.
     const response = await fetch(plan?.endpoint ?? 'https://api.openai.com/v1/responses', {
       method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input: [{ role: 'developer', content: [{ type: 'input_text', text: productPagePrompt(facts, product.store.name) }] }, ...(images.length ? [{ role: 'user', content: images }] : [])], text: { format: { type: 'json_schema', name: 'pagosya_product_page', strict: true, schema: PRODUCT_PAGE_SCHEMA } }, max_output_tokens: 4000 }),
+      body: JSON.stringify({ model, input: [{ role: 'developer', content: [{ type: 'input_text', text: productPagePrompt(facts, product.store.name, voice) }] }, ...(images.length ? [{ role: 'user', content: images }] : [])], text: { format: { type: 'json_schema', name: 'pagosya_product_page', strict: true, schema: PRODUCT_PAGE_SCHEMA } }, max_output_tokens: 4000 }),
       signal: AbortSignal.timeout(90_000),
     });
     const body = await response.json().catch(() => ({})) as { output?: Array<{ content?: Array<{ type?: string; text?: string }> }>; usage?: unknown };

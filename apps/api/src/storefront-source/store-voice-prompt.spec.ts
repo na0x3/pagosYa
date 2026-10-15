@@ -1,5 +1,6 @@
 import { PLAYBOOK } from './design-engine/playbook';
-import { storeBrainDirection, storeVoiceDirection, voiceAuthorInput, voiceEditDirection, WRITING_RULES } from './store-voice-prompt';
+import { storeBrainDirection, storeVoiceDirection, voiceAuthorInput, voiceCartWord, voiceEditDirection, withVoiceCartWord, WRITING_RULES } from './store-voice-prompt';
+import { CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 import type { StoreVoice } from './store-voice';
 import type { VoiceRun } from './store-voice-run';
 
@@ -56,5 +57,15 @@ describe('the voice and the writing rules as the writers read them (spec 2026-10
     const on = voiceAuthorInput({ ...run, on: true });
     expect(on.voice).toContain('STORE VOICE');
     expect(on.brain).toContain('Store Brain');
+  });
+});
+
+describe('the controls read the order word (spec 2026-10-14; store controls read words.order)', () => {
+  it('makes words.order the cart word when it fits a control word, and leaves the record alone otherwise', () => {
+    const record = libraryRecord(CONTROL_LANGUAGES[0], 'cafe-food', 'cup');
+    expect(voiceCartWord(SHEET)).toBe('Tu pedido');
+    expect(withVoiceCartWord(record, SHEET).words.cart).toBe('Tu pedido');
+    expect(withVoiceCartWord(record, { ...SHEET, words: { order: 'Tu canasta grande y linda' } })).toBe(record);
+    expect(withVoiceCartWord(record, undefined)).toBe(record);
   });
 });

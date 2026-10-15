@@ -112,3 +112,14 @@ describe('reviewControlsGuardBudgetMs (review CD fix 5)', () => {
     expect(reviewControlsGuardBudgetMs(89_000)).toBe(0);
   });
 });
+
+describe('the cart word comes from the store voice (spec 2026-10-14 store voice)', () => {
+  it("makes the sheet's order word the cart word, and tells the model", async () => {
+    const { deps: input, call } = deps(reply(ANSWER), { cartWord: 'Tu canasta' });
+    const designed = await runControlsDesign(input);
+    expect(designed!.controls.words.cart).toBe('Tu canasta');
+    expect(call.mock.calls[0][0]).toContain('«Tu canasta»');
+    const tooLong = await runControlsDesign(deps(reply(ANSWER), { cartWord: 'Tu canasta grande' }).deps);
+    expect(tooLong!.controls.words.cart).toBe('Tu taza');
+  });
+});

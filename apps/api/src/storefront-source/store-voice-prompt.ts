@@ -1,4 +1,5 @@
 /** Store voice (spec 2026-10-14, part 3): the sheet and the writing rules as every writer reads them. Pure. */
+import { cleanControlWord, type StoreControls } from './store-controls';
 import { avoidPhrases } from './copy-check';
 import type { PlaybookKind } from './design-engine/playbook';
 import { merchantTextOf, type StoreVoice } from './store-voice';
@@ -54,4 +55,14 @@ export function voiceAuthorInput(voice: VoiceRun): { voice?: string; brain?: str
     voice: storeVoiceDirection({ voice: voice.sheet, kind: voice.kind, merchantText: merchantTextOf(voice.merchantMessages, voice.onboarding) }),
     ...(voice.brain ? { brain: storeBrainDirection(voice.brain) } : {}),
   };
+}
+
+/** The store's word for an order (spec 2026-10-14: «tu pedido», «tu canasta») as a control word: 1–14 letters, or nothing. */
+export function voiceCartWord(voice: StoreVoice | undefined): string | undefined {
+  return cleanControlWord(voice?.words.order);
+}
+/** A control language carrying the store's own cart word (store controls read words.order from the sheet). */
+export function withVoiceCartWord(controls: StoreControls, voice: StoreVoice | undefined): StoreControls {
+  const cart = voiceCartWord(voice);
+  return cart ? { ...controls, words: { ...controls.words, cart } } : controls;
 }

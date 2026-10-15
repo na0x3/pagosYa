@@ -5,6 +5,7 @@
  * CHECK constraint: these statuses are allowed by migration 20261014220000_source_review_statuses (spec 2026-10-14 store
  * controls, part 1; before it every review row insert failed).
  */
+import { pendingFactsNote } from './store-voice';
 export const SOURCE_REVIEW_STATUS = 'REVIEWING';
 export const SOURCE_REVIEW_LABEL = 'Revisión de YAPI';
 /** A review whose process stopped beating this long ago (an API restart) is gone: Studio stops waiting for it. */
@@ -22,9 +23,10 @@ export function reviewPendingWhere(storeId: string, revision: number, now = Date
 }
 
 /** The chat line posted with revision N+1: the review's own notes (short Spanish sentences), else its version name. */
-export function reviewMessage(notes: string[], label: string): string {
+export function reviewMessage(notes: string[], label: string, pending = 0): string {
   const said = notes.map(note => note.trim()).filter(Boolean).slice(0, 6).join(' ');
-  return `Pulí tu tienda: ${said || `«${label}».`}`;
+  // Spec 2026-10-14 store voice: the facts YAPI assumed, still waiting for the merchant, are named in the same message.
+  return `Pulí tu tienda: ${said || `«${label}».`}${pending ? ` ${pendingFactsNote(pending)}` : ''}`;
 }
 
 /** One background review per store in this process; a new one, or cancel, aborts the one before. */

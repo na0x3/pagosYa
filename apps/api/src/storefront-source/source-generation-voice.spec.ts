@@ -371,3 +371,20 @@ describe('the kit reads the voice line (spec 2026-10-14, part 3)', () => {
     expect(configOf(1).voiceLine).toBeUndefined();
   });
 });
+
+describe('the controls and the review read the sheet (spec 2026-10-14)', () => {
+  it("revision N's library controls take the sheet's order word as the cart word", async () => {
+    config.set('app.yapiControls', true);
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER }) as any);
+    await build();
+    expect(configOf(0).controls.words.cart).toBe('Tu pedido');
+  });
+
+  it("the review's chat line names the facts YAPI assumed", async () => {
+    config.set('app.sep5SelfReview', true);
+    fetchMock.mockImplementation(respond({ store_voice: () => SHEET_ANSWER, independent_storefront: authorWith(SPAN), storefront_self_review: () => ({ label: 'Café', notes: ['Oscurecí el texto.'], edits: [{ path: 'styles.css', find: 'color: #222', replace: 'color: #111' }] }) }) as any);
+    await build();
+    await service.reviewSettled('s1');
+    expect(prisma.storeAgentMessage.create.mock.calls.at(-1)[0].data.content).toBe('Pulí tu tienda: Oscurecí el texto. Supuse 1 dato de tu negocio: confírmalo, corrígelo o quítalo en «Datos que YAPI supuso» antes de publicar.');
+  });
+});

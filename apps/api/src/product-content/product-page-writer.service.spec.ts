@@ -69,4 +69,12 @@ describe('ProductPageWriterService', () => {
     await service.fillStore('s1');
     expect(fill.mock.calls.map(call => call[1])).toEqual(['p1', 'p2']);
   });
+
+  it("writes in the store's voice when the store has a sheet (spec 2026-10-14)", async () => {
+    const { service, prisma, fetchMock } = setup();
+    prisma.$queryRaw = jest.fn().mockResolvedValue([{ content: JSON.stringify({ version: 1, voice: 'Hablamos de tú, sin vueltas.', specifics: [], texture: [], assumed: [], words: { order: 'Tu pedido' }, avoid: [] }) }]);
+    await service.fill('s1', 'p1', 'auto');
+    const developer = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text;
+    expect(developer).toContain('Hablamos de tú, sin vueltas.');
+  });
 });
