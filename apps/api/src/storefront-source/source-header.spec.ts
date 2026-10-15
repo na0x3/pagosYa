@@ -112,6 +112,18 @@ describe('withSourceHeader: the save step that draws the header on every page (s
     expect(file(out.files, 'styles.css')).toBe('body{}');
   });
 
+  // Owner, 2026-10-15 (Raíz Viva): «theres no button from going page from each page». A home page that marked its sections
+  // got a menu of home anchors only; Productos, Nosotros and Contacto were never in the header.
+  it('puts the standard pages in the menu before the home sections, without repeating a page as a section, six at most', () => {
+    const marked = page(['tu-ruta|Tu ruta', 'elegir|Elegir', 'productos|Productos', 'ambiente|Ambiente', 'respuestas|Respuestas', 'contacto|Contacto']
+      .map(entry => entry.split('|')).map(([id, label]) => `<section id="${id}" data-nav-label="${label}"></section>`).join(''));
+    const files = [{ path: 'index.html', content: marked }, ...['productos.html', 'nosotros.html', 'contacto.html'].map(path => ({ path, content: page('<h1>x</h1>') }))];
+    const out = withSourceHeader(files, input);
+    const menu = (path: string) => [...file(out.files, path).split('<div class="pyh-menu"')[0].matchAll(/<nav class="pyh-nav"[^>]*>(.*?)<\/nav>/g)].map(nav => [...nav[1].matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(link => `${link[2]}=${link[1]}`)).flat();
+    expect(menu('index.html')).toEqual(['Productos=productos.html', 'Nosotros=nosotros.html', 'Contacto=contacto.html', 'Tu ruta=#tu-ruta', 'Elegir=#elegir', 'Ambiente=#ambiente']);
+    expect(menu('nosotros.html')).toEqual(['Productos=productos.html', 'Nosotros=nosotros.html', 'Contacto=contacto.html', 'Tu ruta=index.html#tu-ruta', 'Elegir=index.html#elegir', 'Ambiente=index.html#ambiente']);
+  });
+
   it('renders the same bytes on every save', () => {
     const once = withSourceHeader(site(), input).files;
     expect(withSourceHeader(once, input).files).toEqual(once);

@@ -137,6 +137,9 @@ function replaceElement(html: string, pattern: RegExp, replacement: string): str
   return match && whole ? html.slice(0, match.index) + replacement + html.slice(match.index + whole.length) : null;
 }
 
+/** A menu label compared without case or accents («Contáctanos» is not «Contacto», but «CONTACTO» is). */
+const menuKey = (label: string) => label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
 /** The sections index.html marks for the menu: data-nav-label with an id, in page order, at most six. */
 function navSections(html: string): Array<{ id: string; label: string }> {
   const sections: Array<{ id: string; label: string }> = [];
@@ -227,7 +230,10 @@ export function withSourceHeader<F extends { path: string; content: string; enco
       content = content.slice(0, panel.index) + content.slice(panel.index + whole.length);
     }
     const home = file.path === 'index.html';
-    const links = sections.length ? sections.map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label })) : pageLinks;
+    // The standard pages come first so every page reaches them; a home section named like one of them is not repeated.
+    const pageLabels = new Set(pageLinks.map(link => menuKey(link.label)));
+    const sectionLinks = sections.filter(section => !pageLabels.has(menuKey(section.label))).map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label }));
+    const links = [...pageLinks, ...sectionLinks].slice(0, 6);
     const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}) });
     const drawn = replaceElement(content, SLOT, header);
     if (drawn === null) { missing.push(file.path); return file; }
