@@ -17,6 +17,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 import { mountContractsPanel } from "/src/contracts-panel.mjs";
 import { nextLevelSentence, nextPayoutLabel, releaseDateLabel, settlementPolicySentence } from "/src/settlement.mjs";
 import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSetupSteps, setupSteps } from "/src/overview.mjs";
+import { createInboxPanel } from "/src/inbox-panel.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -2763,74 +2764,14 @@ import { greetingFor, kycStatusLabel, overviewKpis, renderOverviewKpis, renderSe
     renderPaymentRows();
   });
 
-  let inboxThreadId = null;
-  let inboxDomainVerified = false;
-
-  // A store can accumulate threads before it ever verifies an email domain:
-  // reading is fine, but a reply would be rejected server-side. Disable the
-  // form instead of letting the merchant type a reply and hit a Spanish error.
-  function setInboxReplyEnabled(enabled, domain) {
-    document.getElementById("inboxDomainNotice").hidden = enabled;
-    document.getElementById("inboxReplyBody").disabled = !enabled;
-    document.getElementById("inboxReplySubmit").disabled = !enabled;
-    // El aviso lleva al paso que falta de verdad: conectar el dominio o confirmar sus registros.
-    document.getElementById("inboxDomainStep").textContent = domain
-      ? `Ya conectaste ${domain.name}: solo falta confirmar sus registros DNS.`
-      : "Conecta el dominio desde el que responderás y confirma sus registros DNS.";
-    document.getElementById("inboxDomainLink").textContent = domain
-      ? `Verificar los registros de ${domain.name} →`
-      : "Conectar mi dominio de correo →";
-  }
-
-  document.getElementById("inboxDomainLink").addEventListener("click", (event) => {
-    event.preventDefault();
-    if (!canLeaveMerchantStudio()) return;
-    selectMarketingTab("domain");
-    history.pushState(null, "", "#dashboard-marketing");
-    setDashboardView("marketing");
+  // Bandeja (src/inbox-panel.mjs).
+  const inboxPanel = createInboxPanel({
+    api, canLeaveMerchantStudio, selectMarketingTab, setDashboardView,
+    storeId: () => currentStoreId,
+    stores: () => lastStores,
   });
-
-  async function refreshInbox() {
-    if (!currentStoreId) return;
-    const storeId = currentStoreId;
-    const [threads, workspace] = await Promise.all([
-      api(`/stores/${storeId}/inbox`),
-      api(`/stores/${storeId}/email-workspace`),
-    ]);
-    if (storeId !== currentStoreId) return;
-    document.getElementById("inboxScopeLabel").textContent =
-      lastStores.find((store) => store.id === currentStoreId)?.name || "Sin tienda seleccionada";
-    inboxDomainVerified = workspace?.domain?.status === "verified";
-    setInboxReplyEnabled(inboxDomainVerified, workspace?.domain);
-    document.getElementById("inboxThreads").innerHTML = threads.length
-      ? threads.map((thread) => `<li><button type="button" data-thread-id="${esc(thread.id)}" class="${thread.unreadForMerchant ? "is-unread" : ""}"><strong>${esc(thread.customerName || thread.customerEmail)}</strong><span>${esc(thread.subject)}</span></button></li>`).join("")
-      : `<li class="muted">Todavía no hay conversaciones.</li>`;
-  }
-
-  async function openInboxThread(threadId) {
-    inboxThreadId = threadId;
-    const { messages } = await api(`/stores/${currentStoreId}/inbox/${threadId}`);
-    // Inbound bodies are already plain text; esc() keeps them that way on screen.
-    document.getElementById("inboxMessages").innerHTML = messages
-      .map((message) => `<article class="inbox-message ${message.direction === "INBOUND" ? "is-from-customer" : "is-from-store"}"><p>${esc(message.body)}</p><time>${esc(new Date(message.createdAt).toLocaleString())}</time></article>`)
-      .join("");
-  }
-
-  document.getElementById("inboxThreads").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-thread-id]");
-    if (button) void openInboxThread(button.dataset.threadId);
-  });
-
-  document.getElementById("inboxReplyForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!inboxDomainVerified || !inboxThreadId) return;
-    const field = document.getElementById("inboxReplyBody");
-    await api(`/stores/${currentStoreId}/inbox/${inboxThreadId}/reply`, {
-      method: "POST", body: JSON.stringify({ body: field.value }),
-    });
-    field.value = "";
-    await openInboxThread(inboxThreadId);
-  });
+  const { refreshInbox } = inboxPanel;
+  inboxPanel.init();
 
   function csvCell(value) {
     let text = String(value ?? "");
