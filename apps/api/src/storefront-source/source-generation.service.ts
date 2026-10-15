@@ -20,7 +20,7 @@ import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
 import { controlsToAvoid, libraryIconFallback, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
 import { CONTROLS_GUARD_TIMEOUT_MS, guardControlsOnSnapshot, judgeControls } from './store-controls-guard';
-import { controlsDeadlineMs, instructionConcernsControls, runControlsDesign, type ControlsDesign } from './store-controls-design';
+import { controlsDeadlineMs, controlsRequestBudgetMs, CONTROLS_REQUEST_DROPPED_NOTE, instructionConcernsControls, runControlsDesign, type ControlsDesign } from './store-controls-design';
 import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
 import { sourceRequestContext } from './source-request-context';
@@ -975,9 +975,8 @@ export class SourceGenerationService {
       const designReviewControls = async (review: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }): Promise<ControlsDesign | null> => {
         const controlsSignal = AbortSignal.any([review.signal, AbortSignal.timeout(controlsDeadlineMs())]);
         try {
-          const designed = await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords) });
-          if (!designed) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: 'unusable answer' }));
-          return designed;
+          return await runControlsDesign({ files: revisionFiles, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: controlsAvoid, ...(redesign && previousControls ? { previous: previousControls } : {}), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts: review.attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords),
+            onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason })) });
         } catch (error) {
           if (!review.signal.aborted) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'yapi', reason: controlsSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
           return null;
@@ -1333,17 +1332,20 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     await runChatKitTouch({ facts, live, touchCall, assembleSave });
     // A chat request about the controls (spec 2026-10-14: «haz el carrito como una taza», «botones más redondos») runs the controls
     // call with the merchant's words, on its own deadline; a result the guard keeps is saved with this edit. It never fails the
-    // edit, and a dropped result keeps the store's language.
-    const controlsBudget = Math.min(controlsDeadlineMs(), started + runTimeout - Date.now() - 60_000);
-    if (controlsRequest && controlsBudget >= 20_000) {
+    // edit, and a dropped result keeps the store's language. The edit's chat reply says which (review CD fix 4).
+    let controlsNote: string | undefined;
+    const controlsBudget = controlsRequest ? controlsRequestBudgetMs(started + runTimeout - Date.now()) : 0;
+    if (controlsRequest) controlsNote = CONTROLS_REQUEST_DROPPED_NOTE;
+    if (controlsRequest && !controlsBudget) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'request', reason: 'deadline', skipped: true }));
+    if (controlsRequest && controlsBudget > 0) {
       const controlsSignal = AbortSignal.any([signal, AbortSignal.timeout(controlsBudget)]);
       try {
         const base = await assembleSave(controlsSignal);
-        const designed = await runControlsDesign({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: [], ...(previousControls ? { current: previousControls } : {}), instruction: (dto.instruction.split(MERCHANT_MARKER).at(-1) ?? dto.instruction).trim().slice(0, 400), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords) });
-        if (!designed) this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'request', reason: 'unusable answer' }));
-        else {
+        const designed = await runControlsDesign({ files: base.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: controlsKind, products: data.items.map(item => item.name).slice(0, 12), avoid: [], ...(previousControls ? { current: previousControls } : {}), instruction: (dto.instruction.split(MERCHANT_MARKER).at(-1) ?? dto.instruction).trim().slice(0, 400), signal: controlsSignal, call: controlsCall({ signal: controlsSignal, attempts }), fallbackIcon: libraryIconFallback(controlsKind, merchantWords),
+          onDropped: reason => this.logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: run.id, source: 'request', reason })) });
+        if (designed) {
           const guarded = await keepGuardedControls(storeControlsInto(base, designed.controls), previousControls, 'request', signal);
-          if (guarded.kept) { requestedControls = readControls(guarded.input.files); designed.used(); }
+          if (guarded.kept) { requestedControls = readControls(guarded.input.files); designed.used(); controlsNote = designed.note; }
         }
       } catch (error) {
         signal.throwIfAborted();
@@ -1353,7 +1355,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
     let saveInput = await assembleSave();
     // Revision N's library language passes the same browser guard as YAPI's (spec 2026-10-14, part 5): a failing one is not saved

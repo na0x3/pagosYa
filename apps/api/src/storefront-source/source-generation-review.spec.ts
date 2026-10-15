@@ -19,6 +19,7 @@ jest.mock('./kit-surface-check', () => ({ checkKitSurfacesOnSnapshot: jest.fn().
 import { checkKitSurfacesOnSnapshot } from './kit-surface-check';
 import * as kitTouchModule from './kit-touch';
 import * as controlsDesignModule from './store-controls-design';
+import { CONTROLS_REQUEST_DROPPED_NOTE } from './store-controls-design';
 const realTouchBudget = kitTouchModule.touchBudgetMs;
 
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
@@ -670,6 +671,35 @@ describe('store controls: YAPI designs N+1 in the review stage (spec 2026-10-14,
     expect(warn.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_dropped"') && line.includes('"reason":"deadline"'))).toBe(true);
   });
 
+  it("a review stage without time for the guard drops only YAPI's controls; the review's edits still save (review CD fix 5)", async () => {
+    jest.spyOn(controlsDesignModule, 'reviewControlsGuardBudgetMs').mockReturnValue(0);
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, async () => answer(DESIGNED)) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(configOf(projects.save.mock.calls[0]).controls);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
+    expect(guardControlsOnSnapshot).toHaveBeenCalledTimes(1);
+    expect(ended('COMPLETED').data.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'controls', status: 'FAILED' })]));
+  });
+
+  it("a guard that runs past the review's time drops only YAPI's controls; the review's edits still save (review CD fix 5)", async () => {
+    jest.spyOn(controlsDesignModule, 'reviewControlsGuardBudgetMs').mockReturnValue(50);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const begun = Date.now();
+    (guardControlsOnSnapshot as jest.Mock).mockResolvedValueOnce([]).mockImplementationOnce((_snapshot: unknown, options: { signal: AbortSignal }) => new Promise((_ok, fail) => options.signal.addEventListener('abort', () => fail(options.signal.reason))));
+    jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, async () => answer(DESIGNED)) as any);
+    await run();
+    await service.reviewSettled('s1');
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(configOf(projects.save.mock.calls[1]).controls).toEqual(configOf(projects.save.mock.calls[0]).controls);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('color: #111');
+    expect(ended('COMPLETED').data.attempts).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'controls', status: 'FAILED' })]));
+    // Stopped by the stage's own budget, not by the guard's 30 s.
+    expect(warn.mock.calls.map(call => String(call[0])).some(line => line.includes('"event":"controls_dropped"') && line.includes('"source":"yapi"') && line.includes('"reason":"deadline"'))).toBe(true);
+    expect(Date.now() - begun).toBeLessThan(20_000);
+  });
+
   it("a redesign tells YAPI to move away from the store's previous controls", async () => {
     jest.spyOn(globalThis, 'fetch').mockImplementation(respondWith(REVIEW, async () => answer(DESIGNED)) as any);
     await run();
@@ -726,6 +756,7 @@ describe('store controls: a chat request about the controls (spec 2026-10-14, pa
     expect(fetchMock.mock.calls.some(call => schemaOf(call[1]) === 'storefront_kit_touch')).toBe(false);
     expect(configOf(projects.save.mock.calls[1]).controls).toEqual(SAVED);
     expect(result.generation.attempts.find((attempt: any) => attempt.phase === 'controls')).toMatchObject({ status: 'COMPLETED' });
+    expect(result.generation.controlsNote).toBe(DESIGNED.note);
   });
 
   it('a request only about the controls may leave the authored files unchanged', async () => {
@@ -745,12 +776,26 @@ describe('store controls: a chat request about the controls (spec 2026-10-14, pa
     expect(configOf(projects.save.mock.calls[1]).controls).toEqual(before);
     expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('#333');
     expect(result.generation.attempts.find((attempt: any) => attempt.phase === 'controls')).toMatchObject({ status: 'FAILED' });
+    expect(result.generation.controlsNote).toBe(CONTROLS_REQUEST_DROPPED_NOTE);
+  });
+
+  it('a run without time left for the call and its guard skips it and still saves the edit (review CD fix 2)', async () => {
+    await storeWithControls();
+    const budget = jest.spyOn(controlsDesignModule, 'controlsRequestBudgetMs').mockReturnValue(0);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation((async (_url: unknown, init: any) => answer(schemaOf(init) === 'storefront_controls' ? DESIGNED : EDIT)) as any);
+    const result: any = await request('haz el carrito como una taza');
+    expect(result.generation.controlsNote).toBe(CONTROLS_REQUEST_DROPPED_NOTE);
+    expect(budget).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.some(call => schemaOf(call[1]) === 'storefront_controls')).toBe(false);
+    expect(projects.save).toHaveBeenCalledTimes(2);
+    expect(projects.save.mock.calls[1][2].files.find((f: any) => f.path === 'styles.css').content).toContain('#333');
   });
 
   it('a request that is not about the controls makes no controls call', async () => {
     await storeWithControls();
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation((async () => answer(EDIT)) as any);
-    await request('cambia el color del texto');
+    const result: any = await request('cambia el color del texto');
     expect(fetchMock.mock.calls.some(call => schemaOf(call[1]) === 'storefront_controls')).toBe(false);
+    expect(result.generation.controlsNote).toBeUndefined();
   });
 });

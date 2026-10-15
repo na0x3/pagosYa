@@ -1,6 +1,6 @@
 import type { StoreControls } from './store-controls';
 import { CART_ICONS, SHARED_ICONS } from './store-controls-library';
-import { CONTROLS_SCHEMA, instructionConcernsControls, runControlsDesign, storeTokens } from './store-controls-design';
+import { CONTROLS_SCHEMA, controlsRequestBudgetMs, instructionConcernsControls, reviewControlsGuardBudgetMs, runControlsDesign, storeTokens } from './store-controls-design';
 
 const ANSWER = {
   shape: { outline: 'stamp', corner: 0, notch: 8, tilt: 2, border: 'dashed', weight: 2, fill: 'solid', colour: 'ink' },
@@ -48,6 +48,22 @@ describe('runControlsDesign (spec 2026-10-14, part 4)', () => {
     }
   });
 
+  it("drops a record the store cannot read on its own tokens, unbilled, as the library's languages are filtered (review CD fix 3)", async () => {
+    const palette = [{ path: 'styles.css', content: ':root{--store-background:#ffffff;--store-foreground:#111111;--store-accent:#f5d90a;--store-accent-foreground:#111111}' }, files[1]];
+    const onDropped = jest.fn();
+    const { deps: input, used } = deps(reply({ ...ANSWER, shape: { ...ANSWER.shape, fill: 'outline', colour: 'accent' } }), { files: palette, onDropped });
+    expect(await runControlsDesign(input)).toBeNull();
+    expect(onDropped).toHaveBeenCalledWith('contrast');
+    expect(used).not.toHaveBeenCalled();
+    expect(await runControlsDesign(deps(reply(ANSWER), { files: palette }).deps)).not.toBeNull();
+  });
+
+  it('says why an unusable answer was dropped', async () => {
+    const onDropped = jest.fn();
+    expect(await runControlsDesign(deps(reply('esto no es JSON'), { onDropped }).deps)).toBeNull();
+    expect(onDropped).toHaveBeenCalledWith('unusable answer');
+  });
+
   it('asks for strict JSON with every slot', () => {
     expect(CONTROLS_SCHEMA.required).toEqual(['shape', 'layout', 'icons', 'words', 'badge', 'note']);
     expect(CONTROLS_SCHEMA.properties.icons.required).toEqual(['cart', 'account', 'menu', 'search', 'plus', 'minus', 'close']);
@@ -78,5 +94,21 @@ describe('instructionConcernsControls', () => {
 
   it("reads only the merchant's own words after the marker", () => {
     expect(instructionConcernsControls('Resumen: botones redondos.\nPedido actual del comercio: cambia el título')).toBe(false);
+  });
+});
+
+describe('controlsRequestBudgetMs (review CD fix 2)', () => {
+  it("keeps the guard's 30 s and the 60 s save margin out of the call's time, and skips under 20 s", () => {
+    expect(controlsRequestBudgetMs(300_000)).toBe(60_000);
+    expect(controlsRequestBudgetMs(110_000)).toBe(20_000);
+    expect(controlsRequestBudgetMs(100_000)).toBe(0);
+  });
+});
+
+describe('reviewControlsGuardBudgetMs (review CD fix 5)', () => {
+  it("leaves 60 s for the N+1 save and skips when the guard's 30 s would not fit", () => {
+    expect(reviewControlsGuardBudgetMs(200_000)).toBe(140_000);
+    expect(reviewControlsGuardBudgetMs(90_000)).toBe(30_000);
+    expect(reviewControlsGuardBudgetMs(89_000)).toBe(0);
   });
 });

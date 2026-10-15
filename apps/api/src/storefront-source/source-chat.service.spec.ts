@@ -158,6 +158,12 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     expect(result.assistantMessage.content).toContain('Guardé los cambios de tu tienda');
     expect(result.assistantMessage.content).toContain('comprobará');
   });
+  it("opens the reply with what YAPI did to the store's controls on a request about them (review CD fix 4)", async () => {
+    const { service, generation } = setup();
+    generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Carrito', generation: { controlsNote: 'Puse una taza en el carrito.' } });
+    const result = await service.send('m', 's', request);
+    expect(result.assistantMessage.content).toMatch(/^Puse una taza en el carrito\.\n\nGuardé los cambios de tu tienda «Carrito»/);
+  });
   it('opens the reply with the agent summary and the sections it built', async () => {
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Portada nueva', agent: { summary: 'Construí tu portada nueva.', sections: ['Portada', 'Productos'], steps: [] } });

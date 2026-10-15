@@ -7,9 +7,9 @@
 import { PLAYBOOK, type PlaybookKind } from './design-engine/playbook';
 import { sourceResponseJson } from './source-response';
 import { merchantOwnWords, namesHeaderCart } from './kit-touch';
-import { captureControlsShots, type ModelImage } from './store-controls-guard';
+import { captureControlsShots, CONTROLS_GUARD_TIMEOUT_MS, type ModelImage } from './store-controls-guard';
 import { ACCOUNT_LAYOUTS, CART_LAYOUTS, CONTROL_BADGES, CONTROL_BORDERS, CONTROL_COLOURS, CONTROL_FILLS, CONTROL_OUTLINES, ICON_SLOTS, sanitizeControlsReport, type IconSlot, type StoreControls } from './store-controls';
-import { pickLibraryControls } from './store-controls-library';
+import { languageReadable, pickLibraryControls, storePalette } from './store-controls-library';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import type { SourceProjectSnapshot } from './source-project';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
@@ -18,6 +18,20 @@ export const CONTROLS_TIMEOUT_MS = 60_000;
 export const CONTROLS_MAX_OUTPUT_TOKENS = 4_000;
 /** The controls call's own deadline (spec: about 60 s, like the kit touch); a function so a test can shorten it. */
 export function controlsDeadlineMs(): number { return CONTROLS_TIMEOUT_MS; }
+/** A chat request's controls call (review CD fix 2): its own deadline, but always leaving the browser guard's own time
+ *  (CONTROLS_GUARD_TIMEOUT_MS) and 60 s of the run for saving; 0 (skip it) when less than 20 s would be left to the call. */
+export function controlsRequestBudgetMs(remainingMs: number): number {
+  const budget = Math.min(controlsDeadlineMs(), remainingMs - 60_000 - CONTROLS_GUARD_TIMEOUT_MS);
+  return budget >= 20_000 ? budget : 0;
+}
+/** The review stage's guard on YAPI's record (review CD fix 5): the time left before the stage's deadline minus 60 s for the header
+ *  check and the N+1 save; 0 (skip the guard and keep revision N's language) when the guard's own time would not fit. */
+export function reviewControlsGuardBudgetMs(remainingMs: number): number {
+  const budget = remainingMs - 60_000;
+  return budget >= CONTROLS_GUARD_TIMEOUT_MS ? budget : 0;
+}
+/** The edit's chat reply when a request about the controls kept the store's language (review CD fix 4). */
+export const CONTROLS_REQUEST_DROPPED_NOTE = 'No pude cambiar los botones esta vez; el resto de tu pedido quedó guardado.';
 
 export const CONTROLS_SCHEMA = {
   type: 'object', additionalProperties: false, required: ['shape', 'layout', 'icons', 'words', 'badge', 'note'],
@@ -74,21 +88,28 @@ export type ControlsDesignDeps = {
   call: (text: string, images: ModelImage[]) => Promise<{ body: unknown; used: () => void }>;
   fallbackIcon: (slot: IconSlot) => string | undefined;
   capture?: (snapshot: SourceProjectSnapshot, signal: AbortSignal) => Promise<ModelImage[]>;
+  /** Why an answer was dropped before the guard: not usable, or unreadable on the store's tokens. */
+  onDropped?: (reason: ControlsDropReason) => void;
 };
+export type ControlsDropReason = 'unusable answer' | 'contrast';
 export type ControlsDesign = { controls: StoreControls; note: string; used: () => void; replacedIcons: IconSlot[] };
-/** One controls call. Null for an unusable answer (not JSON, an unknown enum, a missing number); `used` bills the attempt and is
- *  called by the caller only when the guard keeps the record. */
+/** One controls call. Null for an unusable answer (not JSON, an unknown enum, a missing number) and for a record the store
+ *  cannot read on its own hex tokens, the same filter the library's languages pass (review CD fix 3: the guard measures one
+ *  colour and misses translucent or gradient headers); `used` bills the attempt and is called by the caller only when the
+ *  guard keeps the record. */
 export async function runControlsDesign(deps: ControlsDesignDeps): Promise<ControlsDesign | null> {
   const snapshot = { brief: deps.brief, files: deps.files } as unknown as SourceProjectSnapshot;
   const images = await (deps.capture ?? captureControlsShots)(snapshot, deps.signal);
   const text = controlsPrompt({ storeName: deps.storeName, kind: deps.kind, brief: deps.brief, products: deps.products, tokens: storeTokens(deps.files), look: sanitizeLook(readConfigFile(deps.files).look), avoid: deps.avoid, previous: deps.previous, current: deps.current, instruction: deps.instruction });
   const { body, used } = await deps.call(text, images);
   let raw: unknown;
-  try { raw = sourceResponseJson(body); } catch { return null; }
-  if (!raw || typeof raw !== 'object') return null;
+  const drop = (reason: ControlsDropReason) => { deps.onDropped?.(reason); return null; };
+  try { raw = sourceResponseJson(body); } catch { return drop('unusable answer'); }
+  if (!raw || typeof raw !== 'object') return drop('unusable answer');
   const answer = raw as Record<string, unknown>;
   const report = sanitizeControlsReport({ ...answer, version: 1, source: 'yapi' }, { fallbackIcon: deps.fallbackIcon });
-  if (!report.controls) return null;
+  if (!report.controls) return drop('unusable answer');
+  if (!languageReadable(report.controls, storePalette(deps.files))) return drop('contrast');
   const note = typeof answer.note === 'string' && answer.note.trim() ? answer.note.trim().slice(0, 200) : 'Diseñé los botones de tu tienda.';
   return { controls: report.controls, note, used, replacedIcons: report.replacedIcons };
 }

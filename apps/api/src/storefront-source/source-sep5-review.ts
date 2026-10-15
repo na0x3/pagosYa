@@ -13,7 +13,7 @@ import type { assembleSourceSave, LookChoice } from './source-save-assembly';
 import type { Sep5Caller } from './source-sep5-call';
 import type { GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
 import type { StoreControls } from './store-controls';
-import type { ControlsDesign } from './store-controls-design';
+import { reviewControlsGuardBudgetMs, type ControlsDesign } from './store-controls-design';
 
 /** The review stage keeps this much of its time for assembling and saving N+1 after a touch. */
 export const REVIEW_SAVE_MARGIN_MS = 90_000;
@@ -119,9 +119,22 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
     if (!changed && !designed) return null;
     let saveInput = await assembleSave(review.signal, touchedLook ? { reuse: touchedLook } : { fallback: live.revisionLook }, { use: live.revisionControls });
     if (designed && controls) {
-      const guarded = await controls.keep(saveInput, designed, review.signal);
-      if (guarded.kept) { designed.used(); notes.push(designed.note); saveInput = guarded.input; }
-      else if (!changed) return null;
+      // The guard runs only with time for it and the N+1 save before the stage's deadline, on its own signal: a guard that runs out
+      // of time drops only YAPI's record (review CD fix 5), never the review's edits or touch.
+      const guardBudget = reviewControlsGuardBudgetMs(review.deadline - Date.now());
+      let kept = false;
+      if (!guardBudget) logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: runId, source: 'yapi', reason: 'deadline', skipped: true }));
+      else {
+        const guardSignal = AbortSignal.any([review.signal, AbortSignal.timeout(guardBudget)]);
+        try {
+          const guarded = await controls.keep(saveInput, designed, guardSignal);
+          if (guarded.kept) { designed.used(); notes.push(designed.note); saveInput = guarded.input; kept = true; }
+        } catch (error) {
+          review.signal.throwIfAborted();
+          logger.warn(JSON.stringify({ event: 'controls_dropped', generationId: runId, source: 'yapi', reason: guardSignal.aborted ? 'deadline' : ((error as Error)?.message || '').slice(0, 300) }));
+        }
+      }
+      if (!kept && !changed) return null;
     }
     return { saveInput, notes };
   };

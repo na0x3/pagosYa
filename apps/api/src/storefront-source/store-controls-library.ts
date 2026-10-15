@@ -108,8 +108,9 @@ export function hexContrast(a: string, b: string): number {
   const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (light + 0.05) / (dark + 0.05);
 }
-/** Can the store read this language on its header? Words need 4.5:1, an icon-only language 3:1 (controls.css's fill rules). */
-export function languageReadable(language: ControlLanguage, palette?: StorePalette): boolean {
+/** Can the store read this language (or a YAPI record) on its header? Words need 4.5:1, an icon-only language 3:1 (controls.css's
+ *  fill rules). */
+export function languageReadable(language: Pick<ControlLanguage, 'shape' | 'layout'>, palette?: StorePalette): boolean {
   if (!palette) return true;
   const colour = { accent: palette.accent, ink: palette.ink, paper: palette.paper }[language.shape.colour];
   const on = { accent: palette.onAccent, ink: palette.paper, paper: palette.ink }[language.shape.colour];
