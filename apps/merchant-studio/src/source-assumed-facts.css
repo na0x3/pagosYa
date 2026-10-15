@@ -1,0 +1,13 @@
+/* «Datos que YAPI supuso» (spec 2026-10-14 store voice) in the sidebar, above the conversation. */
+.assumed-facts { margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--studio-border, #e5e5e5); border-radius: 10px; background: var(--studio-surface, #fff); }
+.assumed-facts h2 { margin: 0 0 6px; font-size: 14px; }
+.assumed-facts h2 span { font-weight: 500; opacity: .7; }
+.assumed-facts > p { margin: 0 0 10px; font-size: 13px; }
+.assumed-facts ol { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.assumed-facts__text { margin: 0; font-weight: 600; }
+.assumed-facts__pages, .assumed-facts__loose { margin: 2px 0 0; font-size: 12px; opacity: .75; }
+.assumed-facts__actions { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
+.assumed-facts__actions .text-button { min-height: 44px; }
+.assumed-facts__edit { display: grid; gap: 6px; margin-top: 6px; }
+.assumed-facts__edit input { min-height: 44px; }
+.assumed-facts__done { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 600; }

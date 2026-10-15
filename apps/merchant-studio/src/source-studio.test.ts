@@ -15,6 +15,7 @@ const version: SourceVersion = { revision: 2, label: 'Diseño', digest: 'stored'
 const passed = [{ label: 'Escritorio y móvil', status: 'passed' as const }];
 let app: HTMLDivElement;
 beforeEach(() => {
+  vi.spyOn(MerchantStudioApi.prototype, 'assumedFacts').mockResolvedValue({ revision: 2, facts: [] });
   sessionStorage.setItem(SESSION_STORAGE_KEY, 'owner-session');
   app = document.createElement('div'); document.body.replaceChildren(app);
   vi.spyOn(MerchantStudioApi.prototype, 'listStores').mockResolvedValue([{ id: 's1', name: 'Café', slug: 'cafe' }] as any);
@@ -632,4 +633,35 @@ it('shows choosable cards whose heroes are still drawing after the request ended
   app.querySelector<HTMLButtonElement>('[data-style-use="0"]')!.click();
   await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
   expect(sent.mock.calls[0].at(-1)).toEqual({ stylePick: { generationId: 'g1', index: 0 } });
+});
+
+const FACT = { id: 'a1', text: 'tostado en Caranavi', kind: 'origin', status: 'assumed' as const, pages: ['index.html'], unwrapped: [] };
+it('lists the facts YAPI assumed in the sidebar and blocks publishing until they are settled (spec 2026-10-14)', async () => {
+  vi.mocked(MerchantStudioApi.prototype.assumedFacts).mockResolvedValue({ revision: 2, facts: [FACT] });
+  const record = vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-assumed-fact="a1"]')?.textContent).toContain('tostado en Caranavi'));
+  await vi.waitFor(() => expect(record).toHaveBeenCalledWith('s1', 2, expect.objectContaining({ passed: false, findings: expect.arrayContaining([expect.objectContaining({ label: 'Datos que YAPI supuso', blocking: true })]) }), expect.any(AbortSignal)));
+  expect(publish().disabled).toBe(true);
+});
+it('Confirmar, Editar and Quitar call the API and load the new revision', async () => {
+  vi.mocked(MerchantStudioApi.prototype.assumedFacts).mockResolvedValue({ revision: 2, facts: [FACT] });
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  const saved = { revision: 2, label: 'Dato', digest: 'd', restoredFrom: null, createdAt: '' };
+  const confirm = vi.spyOn(MerchantStudioApi.prototype, 'confirmAssumedFact').mockResolvedValue(saved);
+  const edit = vi.spyOn(MerchantStudioApi.prototype, 'editAssumedFact').mockResolvedValue({ ...saved, replaced: 1, unwrapped: [] });
+  const remove = vi.spyOn(MerchantStudioApi.prototype, 'removeAssumedFact').mockResolvedValue({ revision: 2, label: 'Dato', removed: true });
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-fact-confirm="a1"]:not([disabled])')).not.toBeNull());
+  app.querySelector<HTMLButtonElement>('[data-fact-confirm="a1"]')!.click();
+  await vi.waitFor(() => expect(confirm).toHaveBeenCalledWith('s1', 'a1', 2));
+  await vi.waitFor(() => expect(app.querySelector('[data-fact-edit="a1"]:not([disabled])')).not.toBeNull());
+  app.querySelector<HTMLButtonElement>('[data-fact-edit="a1"]')!.click();
+  const form = app.querySelector<HTMLFormElement>('[data-fact-form="a1"]')!;
+  form.querySelector('input')!.value = 'tostado en Coroico';
+  form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+  await vi.waitFor(() => expect(edit).toHaveBeenCalledWith('s1', 'a1', 2, 'tostado en Coroico'));
+  await vi.waitFor(() => expect(app.querySelector('[data-fact-remove="a1"]:not([disabled])')).not.toBeNull());
+  app.querySelector<HTMLButtonElement>('[data-fact-remove="a1"]')!.click();
+  await vi.waitFor(() => expect(remove).toHaveBeenCalledWith('s1', 'a1', 2));
 });

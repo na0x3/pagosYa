@@ -1,4 +1,5 @@
 import { buildIsActive, sourceBuildTransition, type SourceBuildSession, type SourceBuildEvent } from './source-build-session';
+import { assumedFactsCheck, pageLabel, renderAssumedFacts, type AssumedFactView } from './source-assumed-facts';
 import { renderPagePicker, bindPagePicker } from './source-page-picker';
 import { mountCodeHighlight } from './source-code-highlight';
 import { mountSourceAccountDemo } from './source-account-demo';
@@ -59,6 +60,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const embedded = params.get('embedded') === '1' && window.parent !== window;
   const notifyParent = (data: JsonRecord) => { if (embedded) window.parent.postMessage(data, location.origin); };
   let checks: SourceCheck[] | null = null, checksKey = '', checking = false;
+  /** Spec 2026-10-14 store voice: «Datos que YAPI supuso» for the shown revision, and the fact being edited. */
+  let assumedFacts: AssumedFactView[] | null = null, factEditing: string | null = null;
   let checkAbort: AbortController | null = null;
   let setup: SourceSetup | null = null;
   const generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 200, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
@@ -390,6 +393,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     liveCatalog = catalog;
     state = project; messages = conversation.messages; setup = conversation.setup || null;
     version = state.revision ? await api.sourceVersion(storeId, state.revision) : null;
+    assumedFacts = version ? await api.assumedFacts(storeId, version.revision).then(result => result.facts).catch(() => null) : null;
+    factEditing = null;
     generationSettings.sitePurpose = version?.snapshot.brief.sitePurpose || setup?.sitePurpose || 'shop';
     if (version) {
       try {
@@ -664,6 +669,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         rows = [{ label: 'Comprobación', status: 'failed', detail: merchantSafeText(error instanceof Error ? error.message : '', 'No se pudo comprobar.') }];
       }
       if (controller.signal.aborted) return;
+      // Facts YAPI assumed and the merchant has not settled block publishing, never the preview (spec 2026-10-14 store voice).
+      const factsRow = assumedFactsCheck(assumedFacts);
+      if (factsRow) rows = [...rows, factsRow];
       await api.recordSourceChecks(checkedStoreId, checkedRevision, sourceCheckResult(rows), controller.signal);
       if (!controller.signal.aborted) checks = rows;
     }
@@ -821,7 +829,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       <div class="studio-workspace${inBoceto ? ' is-boceto is-boceto-left-yapi' : ''}">
         <aside class="agent-panel ${chatExpanded || building() || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
           <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || building() || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
-          <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div>
+          <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div><div data-assumed-facts>${renderAssumedFacts({ facts: assumedFacts, editing: factEditing, locked })}</div>
             ${messages.length ? messages.map(chatMessage).join('') : `<section class="conversation-welcome">${renderFaceMark({ size: 30 })}<strong>Tu sitio empieza con una conversación.</strong><p data-setup-prompt>${escape(setup?.prompt || `Antes de crear el sitio de ${store?.name || 'tu negocio'}, aclaremos tu negocio y el estilo que buscas. ¿Qué vendes y a quién quieres llegar?`)}</p></section>`}
             ${building() ? `${pendingSubmission ? `<article class="message message--remote-user" data-pending-request>${attachmentGallery(pendingSubmission.files)}<p>${escape(pendingSubmission.text)}</p>${pendingSubmission.imageCount && !pendingSubmission.files.length ? `<small>${pendingSubmission.imageCount} ${pendingSubmission.imageCount === 1 ? 'archivo adjunto' : 'archivos adjuntos'}</small>` : ''}</article>` : ''}<article class="agent-note remote-agent-note"><div class="agent-note__meta"><strong>YAPI</strong></div><div data-build-progress aria-label="Proceso de YAPI">${buildProgress ? renderBuildProgress(buildProgress, true) : `<p class="build-waiting" role="status">${escape(buildStatus)}</p>`}</div></article>` : ''}
             ${dirty() ? '<p class="source-chat-hint">Guarda o descarta la edición de código antes de pedir otro cambio.</p>' : ''}
@@ -923,6 +931,30 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
   function bind() {
     app.querySelectorAll<HTMLButtonElement>('[data-style-card]').forEach(button => button.addEventListener('click', () => { styleOpen = Number(button.dataset.styleCard); render(); }));
     app.querySelector('[data-style-close]')?.addEventListener('click', () => { styleOpen = null; render(); });
+    // «Datos que YAPI supuso» (spec 2026-10-14): Confirmar and Editar save at once; Quitar asks YAPI for a short edit.
+    app.querySelectorAll<HTMLButtonElement>('[data-fact-confirm]').forEach(button => button.addEventListener('click', () => void action(async () => {
+      const saved = await api.confirmAssumedFact(storeId, button.dataset.factConfirm!, state.revision);
+      await load(saved.revision);
+      toast = 'Dato confirmado.';
+    })));
+    app.querySelectorAll<HTMLButtonElement>('[data-fact-edit]').forEach(button => button.addEventListener('click', () => { factEditing = button.dataset.factEdit!; render(); }));
+    app.querySelector('[data-fact-cancel]')?.addEventListener('click', () => { factEditing = null; render(); });
+    app.querySelector<HTMLFormElement>('[data-fact-form]')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const form = event.currentTarget as HTMLFormElement;
+      const text = String(new FormData(form).get('text') || '').trim();
+      if (!text) return;
+      void action(async () => {
+        const saved = await api.editAssumedFact(storeId, form.dataset.factForm!, state.revision, text);
+        await load(saved.revision);
+        toast = saved.unwrapped.length ? `Dato corregido. También aparece sin marcar en ${saved.unwrapped.map(pageLabel).join(', ')}: pídele a YAPI que lo cambie ahí.` : 'Dato corregido en toda la tienda.';
+      });
+    });
+    app.querySelectorAll<HTMLButtonElement>('[data-fact-remove]').forEach(button => button.addEventListener('click', () => void action(async () => {
+      const result = await api.removeAssumedFact(storeId, button.dataset.factRemove!, state.revision);
+      await load(result.revision);
+      toast = result.removed ? 'YAPI quitó el dato y reescribió esas frases.' : 'YAPI no pudo quitar el dato en todas las páginas. Vuelve a intentarlo o corrígelo.';
+    })));
     app.querySelectorAll<HTMLButtonElement>('[data-style-device]').forEach(button => button.addEventListener('click', () => { styleDevice = button.dataset.styleDevice as 'desktop' | 'phone'; render(); }));
     app.querySelector<HTMLButtonElement>('[data-style-use]')?.addEventListener('click', event => void pickStyle({ index: Number((event.currentTarget as HTMLButtonElement).dataset.styleUse) }));
     app.querySelector('[data-style-auto]')?.addEventListener('click', () => void pickStyle({ auto: true }));

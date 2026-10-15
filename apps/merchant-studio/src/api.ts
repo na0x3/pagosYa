@@ -385,6 +385,18 @@ export class MerchantStudioApi {
   recordSourceChecks(storeId: string, revision: number, result: { passed: boolean; findings: import('./source-checks').SourceCheck[] }, signal?: AbortSignal): Promise<JsonRecord> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}/checks`, { method: 'POST', body: JSON.stringify(result), signal });
   }
+  assumedFacts(storeId: string, revision: number): Promise<{ revision: number; facts: import('./source-assumed-facts').AssumedFactView[] }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/assumed-facts?revision=${revision}`);
+  }
+  confirmAssumedFact(storeId: string, id: string, revision: number): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/assumed-facts/${encodeURIComponent(id)}/confirm`, { method: 'POST', body: JSON.stringify({ revision }) });
+  }
+  editAssumedFact(storeId: string, id: string, revision: number, text: string): Promise<SourceRevision & { replaced: number; unwrapped: string[] }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/assumed-facts/${encodeURIComponent(id)}/edit`, { method: 'POST', body: JSON.stringify({ revision, text }) });
+  }
+  removeAssumedFact(storeId: string, id: string, revision: number): Promise<{ revision: number; label: string; removed: boolean }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/assumed-facts/${encodeURIComponent(id)}/remove`, { method: 'POST', body: JSON.stringify({ revision }) });
+  }
   publishSource(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/publish`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
   }
