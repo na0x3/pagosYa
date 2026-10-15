@@ -27,6 +27,9 @@ export const PARTS = [
   'shared/state.js',
   'catalog/offers.js',
   'cart/lines.js',
+  'product/dialog-style.js',
+  'product/setup.js',
+  'product/bundles-related.js',
   'rest.js',
 ];
 
