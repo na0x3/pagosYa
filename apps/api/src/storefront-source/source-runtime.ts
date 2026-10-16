@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { withCommerceTemplates } from './commerce-surfaces/surface-inject';
 import { createHash } from 'node:crypto';
 import { withSourceSeo } from './source-seo';
 import { readFile } from 'node:fs/promises';
@@ -61,5 +62,6 @@ export async function withSourceRuntime(snapshot: SourceProjectSnapshot, bundle:
     .filter(path => !substituted.some(f => f.path === path))
     .map(path => ({ path, encoding: 'utf8' as const, content: content(path) }));
   const files = await withSourceMotion(await withSourceCommerceDesign([...substituted, ...catalogPages], content('product.html')), sourceMotionMode(snapshot.files), ['video.js', 'motion.js'].map(content).join('\n'));
-  return withSourceSeo({ ...snapshot, files: files.map(f => ({ ...f, encoding: f.encoding || 'utf8' })) });
+  // Spec 2026-10-15 free commerce surfaces: the store's commerce templates reach every served page, the kit pages included.
+  return withSourceSeo({ ...snapshot, files: withCommerceTemplates(files.map(f => ({ ...f, encoding: f.encoding || 'utf8' }))) });
 }
