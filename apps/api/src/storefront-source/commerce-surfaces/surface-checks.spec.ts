@@ -104,6 +104,28 @@ describe('surface purchase check (spec 2026-10-15)', () => {
     const result = await onShop(GOOD, 390);
     expect(result.failures).toEqual([]);
   });
+  // Live 2026-10-15 (Estudio Arco Pilates): the card's price box was narrower than «Bs 60,00» and cut it to «Bs 60,0».
+  it('fails a part whose text is cut off by its own box', async () => {
+    const cut = GOOD.replace('<p data-product-field="price"></p>', '<p data-product-field="price" style="width:40px;overflow:hidden;white-space:nowrap"></p>');
+    const result = await onShop(cut, 1280);
+    expect(result.failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'card', check: 'cut-off' })]));
+    // A name shortened on purpose with an ellipsis is a design choice, not a cut.
+    const ellipsis = GOOD.replace('<h3 data-product-field="name"></h3>', '<h3 data-product-field="name" style="width:60px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></h3>');
+    expect((await onShop(ellipsis, 1280)).failures.filter(f => f.check === 'cut-off')).toEqual([]);
+  });
+  // The same store's real case: the price text spilled out of its narrow box and the add button's pill was painted over it.
+  it('fails a card whose button is painted over its price text', async () => {
+    const covered = GOOD.replace('<p data-product-field="price"></p><a data-product-link href="#">Ver</a><button data-product-add>Agregar</button>',
+      '<div style="display:flex;align-items:center;gap:4px"><p data-product-field="price" style="width:40px;margin:0;flex:none;white-space:nowrap"></p><button data-product-add style="padding:8px 12px;background:#123;color:#fff;border:0;position:relative">Agregar</button></div><a data-product-link href="#">Ver</a>');
+    expect((await onShop(covered, 1280)).failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'card', check: 'overlap' })]));
+    const roomy = covered.replace('width:40px;', '');
+    expect((await onShop(roomy, 1280)).failures.filter(f => f.check === 'overlap' || f.check === 'cut-off')).toEqual([]);
+  });
+  // Live check of the same store: a screen-reader-only «5 de 5» (1px box) was reported as cut.
+  it('never reports visually hidden text as cut', async () => {
+    const hidden = GOOD.replace('<h3 data-product-field="name"></h3>', '<h3 data-product-field="name"></h3><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">5 de 5 estrellas</span>');
+    expect((await onShop(hidden, 1280)).failures.filter(f => f.check === 'cut-off' || f.check === 'overlap')).toEqual([]);
+  });
   it('never judges contrast over a gradient or image background it cannot measure (live run 2)', async () => {
     const result = await onShop(GOOD.replace('<div class="caja">', '<div class="caja" style="background:linear-gradient(#1d1b18,#2a2420);color:#f4ede4">'), 1280);
     expect(result.failures.filter(f => f.check === 'contrast')).toEqual([]);

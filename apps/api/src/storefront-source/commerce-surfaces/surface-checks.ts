@@ -21,8 +21,9 @@ function readPart(selector: string) {
   // A part inside its own scroller (the checkout overlay) overflows that scroller, not the document: measure the part too.
   // The part's own box, never the page's width: an overflow the main design caused is not this part's (review minor, live run).
   const overflow = roots.some(el => { const r = el.getBoundingClientRect(); return r.right > innerWidth + 2 || r.left < -2; });
-  const texts: Array<{ el: HTMLElement; r: DOMRect }> = [];
+  const texts: Array<{ el: HTMLElement; r: DOMRect; t: DOMRect }> = [];
   const low: string[] = [];
+  const cut: string[] = [];
   const lum = (c: string) => { const m = c.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 1]; const f = (v: number) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return { l: 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]), a: m[3] ?? 1 }; };
   /** The colour behind an element, or null when a gradient or image sits in front of any solid colour: not measurable here. */
   const background = (el: HTMLElement | null): string | null => {
@@ -36,7 +37,19 @@ function readPart(selector: string) {
   for (const root of roots) for (const el of [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]) {
     const own = Array.from(el.childNodes).some(n => n.nodeType === 3 && (n.textContent || '').trim());
     if (!own || !el.getClientRects().length) continue;
-    const r = el.getBoundingClientRect(); texts.push({ el, r });
+    const r = el.getBoundingClientRect();
+    // Screen-reader-only text (a 1px clipped box) is not on screen to be cut or covered.
+    if (r.width <= 2 || r.height <= 2) continue;
+    const range = document.createRange(); range.selectNodeContents(el); const t = range.getBoundingClientRect();
+    texts.push({ el, r, t });
+    // Text a box hides part of (live 2026-10-15: «Bs 60,00» shown as «Bs 60,0»); an ellipsis is a deliberate shortening.
+    if (getComputedStyle(el).textOverflow !== 'ellipsis') {
+      for (let n: HTMLElement | null = el; n; n = n === root ? null : n.parentElement) {
+        if (getComputedStyle(n).overflowX === 'visible') continue;
+        const box = n.getBoundingClientRect();
+        if (t.right > box.right + 1 || t.left < box.left - 1) { cut.push((el.textContent || '').trim().slice(0, 40)); break; }
+      }
+    }
     const behind = background(el);
     if (behind === null) continue;
     const fg = lum(getComputedStyle(el).color).l, bg = lum(behind).l;
@@ -49,13 +62,22 @@ function readPart(selector: string) {
     const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
     if (w > 4 && h > 4 && w * h > 0.3 * Math.min(a.r.width * a.r.height, b.r.width * b.r.height)) overlaps++;
   }
-  return { present: roots.length > 0, overflow, low: low.slice(0, 3), overlaps };
+  // A button or link painted over text that spilled out of its own box (live 2026-10-15: the add button over «Bs 60,00»):
+  // the text's ink against the control's whole box, which the box-to-box test above never sees.
+  const controls = roots.flatMap(root => Array.from(root.querySelectorAll<HTMLElement>('button,a,[role=button]')).concat(root.matches('button,a,[role=button]') ? [root] : []));
+  for (const { el, t } of texts) {
+    if (el.closest('button,a,[role=button]')) continue;
+    const hit = controls.some(c => { if (c.contains(el)) return false; const b = c.getBoundingClientRect(); return Math.min(t.right, b.right) - Math.max(t.left, b.left) > 4 && Math.min(t.bottom, b.bottom) - Math.max(t.top, b.top) > 4; });
+    if (hit) overlaps++;
+  }
+  return { present: roots.length > 0, overflow, low: low.slice(0, 3), overlaps, cut: cut.slice(0, 3) };
 }
 async function layout(page: Page, part: SurfacePart, failures: SurfaceFailure[]) {
   const read = await page.evaluate(readPart, ROOTS[part]);
   if (!read.present) return;
   if (read.overflow) failures.push({ part, check: 'overflow', detail: 'La página se desplaza hacia el costado.' });
   if (read.overlaps) failures.push({ part, check: 'overlap', detail: `${read.overlaps} textos se superponen.` });
+  if (read.cut.length) failures.push({ part, check: 'cut-off', detail: `Texto cortado: «${read.cut.join('», «')}».` });
   if (read.low.length) failures.push({ part, check: 'contrast', detail: `Texto difícil de leer: «${read.low.join('», «')}».` });
 }
 const flagFailures = (flags: Record<string, string | undefined>): SurfaceFailure[] =>
