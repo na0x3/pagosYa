@@ -1,4 +1,8 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
+import { COMMERCE_TEMPLATES_FILE, SURFACE_LABELS, SURFACE_PARTS, readTemplatesFile, type SurfacePart } from './commerce-surfaces/surface-parts';
+import { runCommerceSurfaces, SURFACES_FAILED_NOTE, type SurfacesOutcome } from './commerce-surfaces/surface-stage';
+import { requestedSurfaceParts, surfacesAfterStage } from './commerce-surfaces/surface-request';
+import { checkSurfacesOnSnapshot } from './commerce-surfaces/surface-checks';
 import { sideCallDeadlineMs } from './source-side-deadlines';
 import { sourceSignatureTaskLine } from './source-signature';
 import { copyFindingsLog, describeNewPhotos, startVoiceRun, voiceCopyInput, voiceReceipt, writeVoiceSheet } from './store-voice-run';
@@ -25,7 +29,7 @@ import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, pars
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
 import { controlsToAvoid, libraryIconFallback, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
-import { CONTROLS_GUARD_TIMEOUT_MS, guardControlsOnSnapshot, judgeControls } from './store-controls-guard';
+import { CONTROLS_GUARD_TIMEOUT_MS, captureControlsShots, guardControlsOnSnapshot, judgeControls } from './store-controls-guard';
 import { controlsDeadlineMs, controlsRequestBudgetMs, CONTROLS_REQUEST_DROPPED_NOTE, instructionConcernsControls, runControlsDesign, type ControlsDesign } from './store-controls-design';
 import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
@@ -498,6 +502,10 @@ export class SourceGenerationService {
     const controlsDesignOn = controlsOn && this.config.get<boolean>('app.yapiControlsDesign') === true;
     /** A chat edit of a store with the platform header whose merchant asked about its controls (spec 2026-10-14, part 4). */
     const controlsRequest = controlsDesignOn && !creative && !claude && hasPlatformHeader(previousFiles) && instructionConcernsControls(dto.instruction);
+    // Spec 2026-10-15 free commerce surfaces: YAPI designs the six shopping parts on new stores and redesigns, one part on request.
+    const surfacesOn = this.config.get<boolean>('app.yapiCommerceSurfaces') === true && !useNext && sitePurpose === 'shop' && !claude;
+    const surfacesRequest = surfacesOn && !creative ? requestedSurfaceParts(dto.instruction) : [];
+    const surfacesParts: SurfacePart[] = surfacesOn && creative ? [...SURFACE_PARTS] : surfacesRequest;
     const storeData = data as { locations?: unknown[]; shippingEnabled?: boolean; shippingPickupEnabled?: boolean };
     // Store voice (spec 2026-10-14): the run's voice state (store-voice-run.ts), handed to every stage as facts.voice. It writes
     // cached photo descriptions onto the legend now, before any prompt reads it. YAPI_VOICE=off keeps today's prompts.
@@ -699,7 +707,7 @@ export class SourceGenerationService {
       const retainedDesign = resumable && checkpoint?.design ? savedSourceDesign([{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(checkpoint.design) }]) || undefined : undefined;
       // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
       // the single-call repair may switch it before the chat touch runs.
-      const { sep5Call, touchCall, controlsCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering, chatgptPlan });
+      const { sep5Call, touchCall, controlsCall, surfacesCall } = sep5Caller({ provider, apiKey, budget, model: () => model, signal, attempts, storeId, metering: this.metering, chatgptPlan });
       if (exploration) {
         await progress?.('design');
         // Store voice (spec 2026-10-14, part 1): new photos are described beside the planner or the style cards (store-voice-run.ts).
@@ -1373,7 +1381,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       : previousControls));
     const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice);
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
-    await runChatKitTouch({ facts, live, touchCall, assembleSave });
+    await runChatKitTouch({ facts, live, touchCall, assembleSave, skip: surfacesRequest.length > 0 });
     // A chat request about the controls (spec 2026-10-14: «haz el carrito como una taza», «botones más redondos») runs the controls
     // call with the merchant's words, on its own deadline; a result the guard keeps is saved with this edit. It never fails the
     // edit, and a dropped result keeps the store's language. The edit's chat reply says which (review CD fix 4).
@@ -1399,12 +1407,40 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number; voice?: VoiceReceipt }) };
-    await progress?.('saving');
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number; voice?: VoiceReceipt; surfacesNote?: string; surfacesRetry?: Array<{ label: string; value: string }> }) };
+    await progress?.(surfacesParts.length ? 'commerce' : 'saving');
     let saveInput = await assembleSave();
     // Revision N's library language passes the same browser guard as YAPI's (spec 2026-10-14, part 5): a failing one is not saved
     // (today's header), a failing icon takes the library line icon, and a guard that cannot run keeps the language.
     if (controlsFresh && readControls(saveInput.files)) saveInput = (await keepGuardedControls(saveInput, undefined, 'library', signal)).input;
+    let surfacesOutcome: SurfacesOutcome | null = null;
+    if (surfacesParts.length) {
+      const remaining = started + runTimeout - Date.now() - 60_000;
+      if (remaining >= 60_000) {
+        const surfacesSignal = AbortSignal.any([signal, AbortSignal.timeout(remaining)]);
+        const keep = creative ? [] : readTemplatesFile(previousFiles.find(f => f.path === COMMERCE_TEMPLATES_FILE)?.content ?? '');
+        surfacesOutcome = await runCommerceSurfaces({
+          files: saveInput.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: kind ?? 'general', cartWord: voiceCartWord(voice.sheet),
+          parts: surfacesParts, keep, ...(creative ? {} : { instruction: merchantWords }), signal: surfacesSignal, call: surfacesCall({ signal: surfacesSignal, attempts }),
+          check: (files, checkSignal) => checkSurfacesOnSnapshot({ brief: dto.brief, files } as unknown as SourceProjectSnapshot, checkSignal),
+          capture: (files, captureSignal) => captureControlsShots({ brief: dto.brief, files } as unknown as SourceProjectSnapshot, captureSignal),
+        });
+        const surfacesAttempt = attempts.filter(a => a.phase === 'surfaces').at(-1);
+        if (surfacesAttempt) (surfacesAttempt.diagnostics ??= []).push({ tool: 'commerce_surfaces', digest: '', durationMs: surfacesAttempt.durationMs, output: JSON.stringify({ report: surfacesOutcome.report, failed: surfacesOutcome.failed }) });
+        this.logger.log(JSON.stringify({ event: 'commerce_surfaces', generationId: run.id, parts: surfacesParts, report: surfacesOutcome.report, failed: surfacesOutcome.failed }));
+        // The progress step ticks each part (spec: «Diseñando carrito, productos y pago», per-part tick).
+        for (const result of surfacesOutcome.report) await progress?.detail?.({ label: `${SURFACE_LABELS[result.part]}: ${result.status === 'fallback' ? 'diseño estándar' : 'listo'}` });
+      } else {
+        surfacesOutcome = { report: [], note: SURFACES_FAILED_NOTE, retry: [], failed: 'deadline' };
+      }
+      await progress?.('saving');
+    }
+    {
+      const chosen = surfacesAfterStage({ previousFiles, outcome: surfacesOutcome, fresh: creative });
+      const rest = saveInput.files.filter(f => f.path !== COMMERCE_TEMPLATES_FILE);
+      saveInput = { ...saveInput, files: chosen.file ? [...rest, { path: COMMERCE_TEMPLATES_FILE, content: chosen.file }] : rest };
+    }
+    if (surfacesOutcome) { receipt.surfacesNote = surfacesOutcome.note; if (surfacesOutcome.retry.length) receipt.surfacesRetry = surfacesOutcome.retry; }
     revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);
     revisionControls = readControls(saveInput.files);
     revisionFiles = saveInput.files;

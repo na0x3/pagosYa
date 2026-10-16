@@ -164,6 +164,13 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     const result = await service.send('m', 's', request);
     expect(result.assistantMessage.content).toMatch(/^Puse una taza en el carrito\.\n\nGuardé los cambios de tu tienda «Carrito»/);
   });
+  it('says which commerce part fell back and offers a retry button for it (spec 2026-10-15)', async () => {
+    const { service, generation } = setup();
+    generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Carrito', generation: { surfacesNote: 'El carrito no pasó la prueba de compra, así que usa el diseño estándar por ahora.', surfacesRetry: [{ label: 'Reintentar el carrito', value: 'Rediseña el carrito de mi tienda.' }] } });
+    const result = await service.send('m', 's', request);
+    expect(result.assistantMessage.content).toMatch(/^El carrito no pasó la prueba de compra, así que usa el diseño estándar por ahora\.\n\nGuardé los cambios de tu tienda «Carrito»/);
+    expect(result.assistantMessage.metadata).toMatchObject({ clarification: { options: [{ label: 'Reintentar el carrito', value: 'Rediseña el carrito de mi tienda.' }] } });
+  });
   it('opens the reply with the agent summary and the sections it built', async () => {
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Portada nueva', agent: { summary: 'Construí tu portada nueva.', sections: ['Portada', 'Productos'], steps: [] } });

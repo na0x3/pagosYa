@@ -157,6 +157,8 @@ export function createSep5Review(context: Sep5ReviewContext): Sep5Review {
 export type ChatKitTouchContext = {
   facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'claude' | 'data' | 'sitePurpose' | 'creative' | 'started' | 'runTimeout' | 'signal' | 'attempts'>;
   live: Pick<GenerationLive, 'agentTheme' | 'kitTouch'>;
+  /** A commerce surfaces request (spec 2026-10-15) redesigns those parts instead of touching the kit pages' CSS. */
+  skip?: boolean;
   touchCall: Sep5Caller['touchCall'];
   assembleSave: AssembleSave;
 };
@@ -169,7 +171,7 @@ export async function runChatKitTouch(context: ChatKitTouchContext): Promise<voi
   const { facts, live, touchCall, assembleSave } = context;
   const { config, logger, runId, slug, dto, claude, data, sitePurpose, creative, started, runTimeout, signal, attempts } = facts;
   const touchBudget = touchBudgetMs(started + runTimeout - Date.now());
-  if (!creative && !claude && sitePurpose === 'shop' && config.get<boolean>('app.yapiKitTouch') === true && instructionConcernsKitSurfaces(dto.instruction) && touchBudget > 0) {
+  if (!context.skip && !creative && !claude && sitePurpose === 'shop' && config.get<boolean>('app.yapiKitTouch') === true && instructionConcernsKitSurfaces(dto.instruction) && touchBudget > 0) {
     const touchSignal = AbortSignal.any([signal, AbortSignal.timeout(touchBudget)]);
     try {
       const base = await assembleSave(touchSignal);
