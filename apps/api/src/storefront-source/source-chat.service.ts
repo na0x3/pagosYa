@@ -1,4 +1,5 @@
 import { sourceRequestContext } from './source-request-context';
+import { styleReleaseWaitMs } from './source-style-release';
 import { sourceMerchantRequest, type SourceMerchantRequest } from './source-merchant-request';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { DESIGN_DIRECTIONS, directionBrief, type DesignDirection } from './source-directions';
@@ -121,7 +122,8 @@ const answersKindQuestion = (text: string) => !STORE_EDIT_REQUEST.test(text.norm
 export class SourceChatService {
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
-  protected styleReleaseWaitMs = 20_000;
+  /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
+  protected styleReleaseWaitMs?: number;
   protected styleReleasePollMs = 500;
 
   private async owner(merchantId: string, storeId: string) {
@@ -618,7 +620,7 @@ export class SourceChatService {
 
   /** Waits up to styleReleaseWaitMs for a style run that is stopping to let go of the store, and returns the proposal it left. */
   private async awaitStyleRelease(generationId: string, storeId: string): Promise<StyleProposal | null> {
-    const deadline = Date.now() + this.styleReleaseWaitMs;
+    const deadline = Date.now() + (this.styleReleaseWaitMs ??= styleReleaseWaitMs(Boolean(this.config.get('app.chatgptPlan'))));
     let row: { status: string; proposal: unknown } | null = null;
     for (;;) {
       row = await this.prisma.storeSourceGeneration.findFirst({ where: { id: generationId, storeId }, select: { status: true, proposal: true } });

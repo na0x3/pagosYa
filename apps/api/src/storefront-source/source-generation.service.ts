@@ -1,4 +1,5 @@
 import { EmailKitService } from '../store-emails/email-kit.service';
+import { PICK_HERO_WAIT_MS } from './source-style-release';
 import { COMMERCE_TEMPLATES_FILE, SURFACE_LABELS, SURFACE_PARTS, readTemplatesFile, type SurfacePart } from './commerce-surfaces/surface-parts';
 import { runCommerceSurfaces, SURFACES_FAILED_NOTE, type SurfacesOutcome } from './commerce-surfaces/surface-stage';
 import { requestedSurfaceParts, surfacesAfterStage } from './commerce-surfaces/surface-request';
@@ -144,7 +145,7 @@ export class SourceGenerationService {
   /** Spec 2026-10-12 faster generation: how often a style run with choosable cards reads its row for the merchant's pick. */
   protected stylePickPollMs = 1_000;
   /** How long a picked card's model hero may still land before the build goes on without it. */
-  protected pickHeroWaitMs = 15_000;
+  protected pickHeroWaitMs = PICK_HERO_WAIT_MS;
   /** Background reviews of this process, by store (spec 2026-10-12): a new request aborts its store's review. */
   private readonly reviews = new SourceReviewRegistry();
   protected reviewHeartbeatMs = SOURCE_REVIEW_HEARTBEAT_MS;
