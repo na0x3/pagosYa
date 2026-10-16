@@ -3,6 +3,7 @@ import { sideCallDeadlineMs } from './source-side-deadlines';
 import { KIT_TOUCH_MAX_OUTPUT_TOKENS, KIT_TOUCH_SCHEMA, KIT_TOUCH_TIMEOUT_MS } from './kit-touch';
 import { SEP5_MAX_OUTPUT_TOKENS } from './source-generation-run';
 import { controlsDeadlineMs, CONTROLS_MAX_OUTPUT_TOKENS, CONTROLS_SCHEMA } from './store-controls-design';
+import { SURFACES_MAX_OUTPUT_TOKENS, SURFACES_SCHEMA, SURFACES_TIMEOUT_MS } from './commerce-surfaces/surface-design';
 import { sourceUsage, type SourceModel } from './source-generation-policy';
 import type { sourceProvider } from './source-provider';
 import type { SourceRequestBudget } from './source-request-budget';
@@ -28,7 +29,7 @@ export type Sep5Caller = ReturnType<typeof sep5Caller>;
 /** One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike. */
 export function sep5Caller(context: Sep5CallContext) {
   const { provider, apiKey, budget, signal, attempts, storeId, metering } = context;
-  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls' | 'photo' | 'voice' | 'tone', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
+  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls' | 'photo' | 'voice' | 'tone' | 'surfaces', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
     const callSignal = options.signal ?? signal;
     const attempt: SourceGenerationAttempt = { model: context.model(), phase, durationMs: 0, status: 'FAILED', usage: null };
     (options.attempts ?? attempts).push(attempt);
@@ -73,5 +74,10 @@ export function sep5Caller(context: Sep5CallContext) {
     const { attempt, body } = await sep5Call('controls', text, attached, 'storefront_controls', CONTROLS_SCHEMA, sideCallDeadlineMs(controlsDeadlineMs(), context.chatgptPlan), { signal: run.signal, attempts: run.attempts, maxOutputTokens: CONTROLS_MAX_OUTPUT_TOKENS, effort: 'medium' });
     return { body, used: () => { attempt.status = 'COMPLETED'; } };
   };
-  return { sep5Call, touchCall, controlsCall };
+  /** The commerce surfaces call (spec 2026-10-15): the same metered client; charged only when at least one part is kept (`used`). */
+  const surfacesCall = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[] }) => async (text: string, attached: SourceInputImage[]) => {
+    const { attempt, body } = await sep5Call('surfaces', text, attached, 'storefront_commerce_surfaces', SURFACES_SCHEMA, sideCallDeadlineMs(SURFACES_TIMEOUT_MS, context.chatgptPlan), { signal: run.signal, attempts: run.attempts, maxOutputTokens: SURFACES_MAX_OUTPUT_TOKENS, effort: 'medium' });
+    return { body, used: () => { attempt.status = 'COMPLETED'; } };
+  };
+  return { sep5Call, touchCall, controlsCall, surfacesCall };
 }
