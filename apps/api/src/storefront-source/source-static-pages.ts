@@ -110,6 +110,30 @@ export function withStaticNavSlot(html: string): string | null {
   return `${html.slice(0, close)}  ${NAV_SLOT}\n  ${html.slice(close)}`;
 }
 
+/** Sections between `</main>` and the footer are home content an author left outside its main, not page chrome: a standard
+ *  page drops them (live 2026-10-15, a video section repeated on every page). Everything else there (cart, scripts) stays. */
+function withoutStraySections(tail: string): string {
+  const footer = tail.search(/<footer\b/i);
+  const end = footer < 0 ? tail.search(/<\/body>/i) : footer;
+  if (end < 0) return tail;
+  let gap = tail.slice(0, end);
+  for (;;) {
+    const open = gap.search(/<section\b/i);
+    if (open < 0) break;
+    let depth = 0, at = open, stop = -1;
+    const tag = /<(\/?)section\b[^>]*>/gi;
+    tag.lastIndex = open;
+    for (let m = tag.exec(gap); m; m = tag.exec(gap)) {
+      depth += m[1] ? -1 : 1;
+      at = m.index + m[0].length;
+      if (depth === 0) { stop = at; break; }
+    }
+    if (stop < 0) break;
+    gap = gap.slice(0, open) + gap.slice(stop);
+  }
+  return gap + tail.slice(end);
+}
+
 /** Everything inside `<main …>` replaced by `content`, keeping the element's own attributes so the page keeps
  *  the store's layout and spacing. Null when there is no single unambiguous main to stand in for. */
 function withPageMount(html: string, content: string, label: string): string | null {
@@ -118,7 +142,7 @@ function withPageMount(html: string, content: string, label: string): string | n
   if (open < 0 || close < 0 || close < open) return null;
   const openEnd = html.indexOf('>', open);
   if (openEnd < 0 || openEnd > close) return null;
-  const page = `${html.slice(0, openEnd + 1)}\n    ${content}\n  ${html.slice(close)}`;
+  const page = `${html.slice(0, openEnd + 1)}\n    ${content}\n  ${withoutStraySections(html.slice(close))}`;
   // The authored title describes the homepage, and this is a different page. The platform still owns the
   // rest of the head and rewrites the SEO block on publication.
   return page.replace(/<title>[\s\S]*?<\/title>/, `<title>${label}</title>`);

@@ -226,3 +226,17 @@ describe('a showcase gets only the pages a business that does not sell needs (sp
     expect(staticStandardPagePaths()).toEqual(staticStandardPagePaths('shop'));
   });
 });
+
+// Live 2026-10-15 (store pz2zcl3k): the home closed <main> after its hero, so its classes, video and location sections sat
+// between </main> and the footer, and every standard page (404, login, privacy…) repeated them, autoplaying videos included.
+it('never copies home sections that sit between </main> and the footer onto the standard pages', () => {
+  const stray = authored.replace('</main>\n  <footer', '</main>\n  <section id="ritual" data-nav-label="Primera clase"><video data-ambient-video></video><section id="dentro"></section></section>\n  <div data-pagosya-cart-outside></div>\n  <footer');
+  const { files } = withStaticStandardPages([{ path: 'index.html', content: stray }, { path: 'styles.css', content: '' }]);
+  const privacy = files.find(file => file.path === 'privacidad.html')!.content;
+  expect(privacy).not.toContain('id="ritual"');
+  expect(privacy).not.toContain('<video');
+  expect(privacy).toContain('data-pagosya-cart-outside');
+  expect(privacy).toContain('<footer class="site-footer">');
+  // The home itself keeps what it authored.
+  expect(files.find(file => file.path === 'index.html')!.content).toContain('id="ritual"');
+});
