@@ -6,13 +6,14 @@
 import { COMMERCE_LEAN, cartWordFor, drawCommerce, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
 import { CONVENTIONAL_HEADERS, PLAYBOOK, type StyleFamily } from './playbook';
 import { merchantAsksForPhotoGroup } from '../source-media-design';
+import { drawProduct, parseProductDraw, productDirection, productOverrides, type ProductDraw } from './product-draw';
 
 export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'photoGroup' | 'product' | 'facts';
 export type FrameEntry = { id: string; bold: boolean; desktop: string; phone: string; needs?: FrameNeed };
 export type FramePart = 'header' | 'cart' | 'footer' | 'hero';
 export type FrameDraw = Record<FramePart, string>;
 /** photoGroups: the merchant's own words asked for a gallery, collage or lookbook (merchantAsksForPhotoGroup). */
-export type FrameAvailable = { photos: number; products: number; facts: boolean; photoGroups?: boolean };
+export type FrameAvailable = { photos: number; products: number; facts: boolean; photoGroups?: boolean; /** product-draw.ts: what the catalog card may use. */ variants?: boolean; altPhotos?: boolean };
 
 export const FRAME_DRAW_FILE = 'frame-draw.json';
 const PARTS: FramePart[] = ['header', 'cart', 'footer', 'hero'];
@@ -134,11 +135,11 @@ export function frameOverrides(text: string): { header: boolean; hero: boolean }
   return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }
 
-export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw & CommerceDraw> & { category?: string; kind?: string; family?: string } {
+export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string; kind?: string; family?: string } {
   let value: unknown;
   try { value = typeof content === 'string' ? JSON.parse(content) : undefined; } catch { return {}; }
   if (!value || typeof value !== 'object') return {};
-  const out: Partial<FrameDraw & DesignDraw & CommerceDraw> & { category?: string; kind?: string; family?: string } = {};
+  const out: Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string; kind?: string; family?: string } = {};
   for (const part of PARTS) {
     const id = (value as Record<string, unknown>)[part];
     if (typeof id === 'string' && FRAME_CATALOGUE[part].some(entry => entry.id === id)) out[part] = id;
@@ -153,13 +154,13 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
     if (typeof text === 'string' && text.trim()) (out as Record<string, string>)[key] = text.trim().slice(0, 40);
   }
   // Account, checkout and the cart path a style card drew (spec 2026-10-11 commerce surfaces).
-  Object.assign(out, parseCommerceDraw(value));
+  Object.assign(out, parseCommerceDraw(value), parseProductDraw(value));
   return out;
 }
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself (style cards). */ commerce?: false }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string } } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -197,12 +198,22 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const cartWord = cartWordFor(input.playbook?.kind);
   const commerce = commerceDrawn ? { commerce: { draw: commerceDrawn, fresh: true, ...(cartWord ? { cartWord } : {}) } } : {};
   const cartLine = commerceDrawn && cartWord ? `\n- Cart label: the header's cart reads «${cartWord}» followed by the count in [data-cart-count]; never another word for the cart.` : '';
-  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields, ...commerceDrawn }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) + cartLine, ...commerce };
+  // Product page style, catalog card and preset (sub-project 2): drawn from what fits the kind, unless the merchant named them.
+  const productOmit = productOverrides(input.request);
+  const productFull = input.commerce === false ? undefined : drawProduct(input.random ?? Math.random, recent.map(parseProductDraw), input.playbook?.kind, input.available);
+  const productDrawn: Partial<ProductDraw> | undefined = productFull && {
+    ...(productOmit.productPage ? {} : { productPage: productFull.productPage, preset: productFull.preset }),
+    ...(productOmit.card ? {} : { card: productFull.card }),
+  };
+  const product = productDrawn && Object.keys(productDrawn).length ? { product: { draw: productDrawn, fresh: true as const } } : {};
+  const productLine = productDrawn ? productDirection(productDrawn) : '';
+  const extraLines = [cartLine, productLine ? `\n${productLine}` : ''].join('');
+  if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields, ...commerceDrawn, ...productDrawn }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) + extraLines, ...commerce, ...product };
   const category = input.playbook?.kind ?? input.category ?? '';
   const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) }, input.spread ?? 0);
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
-  const draw = { ...frame, ...design, category, ...playbookFields, ...commerceDrawn };
+  const draw = { ...frame, ...design, category, ...playbookFields, ...commerceDrawn, ...productDrawn };
   // Parts the merchant decided are not saved: they were never built, so they must not count in other stores' history.
   const savedDraw: Record<string, string> = { ...draw };
   if (designOmit.palette) delete savedDraw.palette;
@@ -211,11 +222,12 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const palette = designOmit.palette ? undefined : allPalettes().find(entry => entry.id === design.palette);
   return {
     file: { path: FRAME_DRAW_FILE, content: JSON.stringify(savedDraw, null, 2) + '\n' },
-    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }, Boolean(input.playbook)) + cartLine,
-    planner: plannerDirection(draw, { palette: designOmit.palette }, Boolean(input.playbook)),
+    paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }, Boolean(input.playbook)) + extraLines,
+    planner: [plannerDirection(draw, { palette: designOmit.palette }, Boolean(input.playbook)), productLine].filter(Boolean).join('\n'),
     ...(designOmit.button ? {} : { dna: { button: design.button, hover: design.hover } }),
     ...(palette ? { palette } : {}),
     ...commerce,
+    ...product,
   };
 }
 
@@ -229,7 +241,7 @@ const FACT = /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]b
 export function frameInputs(input: {
   composedInstruction: string; merchantInstruction?: string;
   assetLegend: Array<{ original: string; path: string }>; imageUses: Array<{ url: string; role?: string }>; logoUrl?: string | null;
-  items: Array<{ imageUrls?: string[] }>; locations?: unknown[]; businessInformation?: unknown;
+  items: Array<{ imageUrls?: string[]; variants?: unknown[] }>; locations?: unknown[]; businessInformation?: unknown;
 }): { request: string; available: FrameAvailable } {
   const request = input.merchantInstruction?.trim() || input.composedInstruction.split(MERCHANT_MARKER).at(-1) || '';
 
@@ -241,6 +253,8 @@ export function frameInputs(input: {
       products: input.items.filter(item => item.imageUrls?.length).length,
       facts: Boolean(input.locations?.length) || FACT.test(info),
       photoGroups: merchantAsksForPhotoGroup(request),
+      variants: input.items.some(item => (item.variants?.length ?? 0) > 1),
+      altPhotos: input.items.length > 0 && input.items.every(item => (item.imageUrls?.length ?? 0) >= 2),
     },
   };
 }

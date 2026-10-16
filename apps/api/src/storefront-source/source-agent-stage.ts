@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { productRuntimeDna } from './design-engine/product-draw';
 import { BadGatewayException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -71,8 +72,9 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
     previewBase.files = previewBase.files.map(file => {
       if (file.path !== 'config.js') return file;
       const stored = JSON.parse(file.content.replace(/^\s*window\.PAGOSYA_CONFIG\s*=\s*/, '').replace(/;\s*$/, ''));
-      const productPageStyle = sourceProductPageStyle(live.visualSystem, stored);
-      const dna = sourceRuntimeDna(live.committedDesign?.concepts[live.committedDesign.selected]?.dna, storeId, productPageStyle);
+      // The agent previews the product surfaces the save will apply (product-draw.ts), not the planner's own pick.
+      const productPageStyle = live.frame.product?.draw.productPage ?? sourceProductPageStyle(live.visualSystem, stored);
+      const dna = { ...sourceRuntimeDna(live.committedDesign?.concepts[live.committedDesign.selected]?.dna, storeId, productPageStyle), ...productRuntimeDna(live.frame.product?.draw ?? {}) };
       return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...stored, ...(productPageStyle ? { productPageStyle } : {}), dna })};\n` };
     });
     previewBase.files = previewBase.files.filter(file => ![SOURCE_DESIGN_FILE, SOURCE_VISUAL_SYSTEM_FILE].includes(file.path));

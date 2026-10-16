@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { productRuntimeDna } from './design-engine/product-draw';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { patchConfigFile, type StoreLook } from './store-look';
@@ -77,7 +78,8 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
   const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
   const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
   const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
-  let productPageStyle = sourceProductPageStyle(live.visualSystem, previousConfig);
+  // A fresh build's drawn product page (design-engine/product-draw.ts) wins over the planner's; a sketch still wins below.
+  let productPageStyle = live.frame.product?.draw.productPage ?? sourceProductPageStyle(live.visualSystem, previousConfig);
   // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
   // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
   // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
@@ -100,7 +102,7 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
   // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
   const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
   const drawnCommerce = commerceConfig({ commerce: live.frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
-  const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...carriedTouch(previousConfig.dna, creative), ...(live.agentTheme ? productThemeRuntime(live.agentTheme) : sketchTheme ?? {}), ...(live.frame.dna ?? {}), ...drawnCommerce.dna, ...(live.kitTouch && Object.keys(live.kitTouch).length ? { ...live.kitTouch, touch: 1 } : {}) };
+  const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...carriedTouch(previousConfig.dna, creative), ...productRuntimeDna(live.frame.product?.draw ?? {}), ...(live.agentTheme ? productThemeRuntime(live.agentTheme) : sketchTheme ?? {}), ...(live.frame.dna ?? {}), ...drawnCommerce.dna, ...(live.kitTouch && Object.keys(live.kitTouch).length ? { ...live.kitTouch, touch: 1 } : {}) };
   // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
   const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
   const acceptedMotifFiles = live.motifFiles.filter(file => acceptedMotifPaths.includes(file.path));

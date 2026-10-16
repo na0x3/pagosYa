@@ -437,3 +437,30 @@ describe('commerce draw on every fresh build', () => {
     expect(parseFrameDraw(card.file!.content).checkout).toBeUndefined();
   });
 });
+
+describe('product surfaces on every fresh build (sub-project 2)', () => {
+  const run = (extra: Partial<Parameters<typeof frameForRun>[0]> = {}) => frameForRun({ enabled: true, designEnabled: true, category: 'café', fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(4), playbook: { kind: 'cafe-food', family: PLAYBOOK['cafe-food'].families[0], bold: false }, ...extra });
+  it('draws, saves and tells the planner and the builder', () => {
+    const fresh = run();
+    expect(Object.keys(fresh.product!.draw).sort()).toEqual(['card', 'preset', 'productPage']);
+    expect(parseFrameDraw(fresh.file!.content)).toMatchObject(fresh.product!.draw);
+    expect(fresh.planner).toContain(`«${fresh.product!.draw.productPage}»`);
+    expect(fresh.paragraph).toContain(`«${fresh.product!.draw.card}»`);
+  });
+  it('avoids what recent stores of the kind got, and respects what the products support', () => {
+    const recent = [{ productPage: 'conversion' as const }, { productPage: 'story-led' as const }, { productPage: 'editorial' as const }];
+    expect(run({ recent }).product!.draw.productPage).toBe('image-led');
+    expect(['swatch-swap', 'second-photo']).not.toContain(run({ available: { ...rich, variants: false, altPhotos: false } }).product!.draw.card);
+  });
+  it('leaves named parts to the planner, and draws nothing for a style card or an edit', () => {
+    expect(run({ request: 'quiero la página de producto con mi historia' }).product!.draw).toEqual({ card: expect.any(String) });
+    expect(run({ commerce: false }).product).toBeUndefined();
+    const saved = { path: FRAME_DRAW_FILE, content: JSON.stringify({ header: 'classic', productPage: 'dense' }) };
+    expect(frameForRun({ enabled: true, designEnabled: true, fresh: false, previous: [saved], recent: [], available: rich, request: 'cambia el título' }).product).toBeUndefined();
+  });
+  it('reads whether the products have variants and second photos', () => {
+    const base = { composedInstruction: 'x', assetLegend: [], imageUses: [] };
+    expect(frameInputs({ ...base, items: [{ imageUrls: ['a', 'b'], variants: [{}, {}] }] }).available).toMatchObject({ variants: true, altPhotos: true });
+    expect(frameInputs({ ...base, items: [{ imageUrls: ['a', 'b'] }, { imageUrls: ['c'] }] }).available).toMatchObject({ variants: false, altPhotos: false });
+  });
+});
