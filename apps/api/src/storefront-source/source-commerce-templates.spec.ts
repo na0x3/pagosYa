@@ -184,6 +184,21 @@ describe('added notice template', () => {
     expect(shop.$('.cart-drawer').hasAttribute('open')).toBe(true);
   });
 
+  // Live 2026-10-15 (Estudio Arco Pilates, cart word «Tu reserva»): the header and drawer said «tu reserva» but every
+  // added message still said «añadido a tu pedido».
+  it('says the store\'s own cart word in the added message, and today\'s words without one', async () => {
+    const shop = boot(ADDED, { beforeKit: w => { w.PAGOSYA_CONFIG.cartWord = 'Tu reserva'; } });
+    await shop.tick();
+    shop.$('[data-pagosya-catalog] [data-add="lamp"]').click();
+    expect(shop.$('.cart-added [data-added-field="message"]').textContent).toBe('Lámpara Luna añadido a tu reserva.');
+    expect(shop.$('[data-pagosya-status]').textContent).toBe('Lámpara Luna añadido a tu reserva.');
+    // A word without «tu»/«mi» («Canasta») reads as «a tu canasta».
+    const other = boot(ADDED, { beforeKit: w => { w.PAGOSYA_CONFIG.cartWord = 'Canasta'; } });
+    await other.tick();
+    other.$('[data-pagosya-catalog] [data-add="lamp"]').click();
+    expect(other.$('.cart-added [data-added-field="message"]').textContent).toBe('Lámpara Luna añadido a tu canasta.');
+  });
+
   it('keeps the kit notice when the template has no cart button', async () => {
     const shop = boot(ADDED.replace('<button data-cart-open>Ver mi canasta</button>', ''));
     await shop.tick();

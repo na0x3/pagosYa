@@ -151,6 +151,8 @@
   // The cart's own word (Tu bolsa, Tu ramo…): short plain words only, else today's label.
   // The record's cart word wins (spec 2026-10-14: the store's cart word reaches the header, the drawer and the order panel alike).
   const CART_WORD = [CONTROLS ? CONTROLS.cartWord : '', config.cartWord].map(value => typeof value === 'string' ? value.trim() : '').find(value => /^[\p{L} ]{2,24}$/u.test(value)) || '';
+  // The words the added messages close on: «añadido a tu reserva», «a tu canasta»; «tu pedido» without a word of its own.
+  const ADDED_TO = CART_WORD ? `tu ${CART_WORD.toLowerCase().replace(/^(?:tu|mi)\s+/, '')}` : 'tu pedido';
   // The kit pages' header says "Mi pedido (n)"; with a word of its own the store says "Tu bolsa (n)". The count element stays.
   if (CART_WORD) document.querySelectorAll('a[href="checkout.html"]').forEach(link => {
     const first = link.firstChild;

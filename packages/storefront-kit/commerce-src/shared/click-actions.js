@@ -71,8 +71,8 @@
       track('add_to_cart', undefined, { value: entries.reduce((sum, entry) => sum + price(entry.p) * entry.quantity, 0), currency: entries[0].p.currency });
       for (const entry of entries) analytics('add_to_cart', { productId: entry.p.id });
       for (const entry of entries) cart.set(lineKey(entry.p.id), (cart.get(lineKey(entry.p.id)) || 0) + entry.quantity);
-      renderCart(); message(`${bundle.name} añadido a tu pedido.`);
-      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a tu pedido.`;
+      renderCart(); message(`${bundle.name} añadido a ${ADDED_TO}.`);
+      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a ${ADDED_TO}.`;
       return;
     }
     if (button.hasAttribute("data-add") && ready) {
@@ -93,9 +93,9 @@
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       analytics('add_to_cart', { productId: p.id });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
-      cart.set(key, quantity + units); renderCart(); message(`${name} añadido a tu pedido.`); addedFeedback({ ...p, name }, button, event.detail === 0);
+      cart.set(key, quantity + units); renderCart(); message(`${name} añadido a ${ADDED_TO}.`); addedFeedback({ ...p, name }, button, event.detail === 0);
       if (MOTIFS.length) playMotifs(p);
-      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a tu pedido.`;
+      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a ${ADDED_TO}.`;
     }
     if (button.hasAttribute("data-remove-line")) { cart.delete(button.dataset.removeLine); renderCart(); message("Pedido actualizado."); return; }
     if (button.hasAttribute("data-remove")) { const id = button.dataset.remove; const quantity = cart.get(id) || 0; if (quantity > 1) cart.set(id, quantity - 1); else cart.delete(id); renderCart(); message("Pedido actualizado."); }

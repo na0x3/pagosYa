@@ -122,7 +122,7 @@
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
     const template = addedTemplate();
     if (template && !addedNotice.hasAttribute('data-template')) { addedNotice.replaceChildren(template.make()); addedNotice.setAttribute('data-template', ''); }
-    const text = `${product.name} añadido a tu pedido.`;
+    const text = `${product.name} añadido a ${ADDED_TO}.`;
     if (addedNotice.hasAttribute('data-template')) {
       addedNotice.querySelector('[data-added-field="message"]').textContent = text;
       const name = addedNotice.querySelector('[data-added-field="name"]');

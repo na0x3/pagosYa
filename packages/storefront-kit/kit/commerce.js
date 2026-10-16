@@ -151,6 +151,8 @@
   // The cart's own word (Tu bolsa, Tu ramo…): short plain words only, else today's label.
   // The record's cart word wins (spec 2026-10-14: the store's cart word reaches the header, the drawer and the order panel alike).
   const CART_WORD = [CONTROLS ? CONTROLS.cartWord : '', config.cartWord].map(value => typeof value === 'string' ? value.trim() : '').find(value => /^[\p{L} ]{2,24}$/u.test(value)) || '';
+  // The words the added messages close on: «añadido a tu reserva», «a tu canasta»; «tu pedido» without a word of its own.
+  const ADDED_TO = CART_WORD ? `tu ${CART_WORD.toLowerCase().replace(/^(?:tu|mi)\s+/, '')}` : 'tu pedido';
   // The kit pages' header says "Mi pedido (n)"; with a word of its own the store says "Tu bolsa (n)". The count element stays.
   if (CART_WORD) document.querySelectorAll('a[href="checkout.html"]').forEach(link => {
     const first = link.firstChild;
@@ -2206,7 +2208,7 @@
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
     const template = addedTemplate();
     if (template && !addedNotice.hasAttribute('data-template')) { addedNotice.replaceChildren(template.make()); addedNotice.setAttribute('data-template', ''); }
-    const text = `${product.name} añadido a tu pedido.`;
+    const text = `${product.name} añadido a ${ADDED_TO}.`;
     if (addedNotice.hasAttribute('data-template')) {
       addedNotice.querySelector('[data-added-field="message"]').textContent = text;
       const name = addedNotice.querySelector('[data-added-field="name"]');
@@ -4408,8 +4410,8 @@
       track('add_to_cart', undefined, { value: entries.reduce((sum, entry) => sum + price(entry.p) * entry.quantity, 0), currency: entries[0].p.currency });
       for (const entry of entries) analytics('add_to_cart', { productId: entry.p.id });
       for (const entry of entries) cart.set(lineKey(entry.p.id), (cart.get(lineKey(entry.p.id)) || 0) + entry.quantity);
-      renderCart(); message(`${bundle.name} añadido a tu pedido.`);
-      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a tu pedido.`;
+      renderCart(); message(`${bundle.name} añadido a ${ADDED_TO}.`);
+      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a ${ADDED_TO}.`;
       return;
     }
     if (button.hasAttribute("data-add") && ready) {
@@ -4430,9 +4432,9 @@
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       analytics('add_to_cart', { productId: p.id });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
-      cart.set(key, quantity + units); renderCart(); message(`${name} añadido a tu pedido.`); addedFeedback({ ...p, name }, button, event.detail === 0);
+      cart.set(key, quantity + units); renderCart(); message(`${name} añadido a ${ADDED_TO}.`); addedFeedback({ ...p, name }, button, event.detail === 0);
       if (MOTIFS.length) playMotifs(p);
-      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a tu pedido.`;
+      if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a ${ADDED_TO}.`;
     }
     if (button.hasAttribute("data-remove-line")) { cart.delete(button.dataset.removeLine); renderCart(); message("Pedido actualizado."); return; }
     if (button.hasAttribute("data-remove")) { const id = button.dataset.remove; const quantity = cart.get(id) || 0; if (quantity > 1) cart.set(id, quantity - 1); else cart.delete(id); renderCart(); message("Pedido actualizado."); }
