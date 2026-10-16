@@ -8,16 +8,19 @@ import type { SurfacePart } from './surface-parts';
 
 /** Spec 2026-10-15 free commerce surfaces: a real purchase through the store's templated parts, per part. */
 export type SurfaceFailure = { part: SurfacePart; check: string; detail: string };
-export type SurfaceCheckResult = { failures: SurfaceFailure[]; skipped?: 'empty catalog' };
+/** `reached`: the parts the purchase actually exercised. A part that is not reached has not passed (review I4). */
+export type SurfaceCheckResult = { failures: SurfaceFailure[]; reached: SurfacePart[]; skipped?: 'empty catalog' };
 
 const FLAGS: Record<string, SurfacePart> = { productTemplateInvalid: 'card', productPageTemplateInvalid: 'productPage', cartTemplateInvalid: 'cart', cartLineTemplateInvalid: 'cartLine', addedTemplateInvalid: 'added', checkoutTemplateInvalid: 'checkout' };
+const TEMPLATES: Record<SurfacePart, string> = { card: 'template[data-pagosya-product-template]', productPage: 'template[data-pagosya-product-page-template]', cart: 'template[data-pagosya-cart-template]', cartLine: 'template[data-pagosya-cart-line-template]', added: 'template[data-pagosya-added-template]', checkout: 'template[data-pagosya-checkout-template]' };
 const ROOTS: Record<SurfacePart, string> = { card: '[data-custom-product]', productPage: '[data-product-page-root]', cart: '[data-cart-panel]', cartLine: '[data-cart-line]', added: '[data-added-field="message"]', checkout: '[data-checkout-root]' };
 
 /** One part's layout in the page: sideways scroll, text over text, unreadable text. Runs in the browser. */
 function readPart(selector: string) {
   const roots = Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(el => el.getClientRects().length);
   // A part inside its own scroller (the checkout overlay) overflows that scroller, not the document: measure the part too.
-  const overflow = document.documentElement.scrollWidth > innerWidth + 2 || roots.some(el => { const r = el.getBoundingClientRect(); return r.right > innerWidth + 2 || r.left < -2; });
+  // The part's own box, never the page's width: an overflow the main design caused is not this part's (review minor, live run).
+  const overflow = roots.some(el => { const r = el.getBoundingClientRect(); return r.right > innerWidth + 2 || r.left < -2; });
   const texts: Array<{ el: HTMLElement; r: DOMRect }> = [];
   const low: string[] = [];
   const lum = (c: string) => { const m = c.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 1]; const f = (v: number) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return { l: 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]), a: m[3] ?? 1 }; };
@@ -49,14 +52,23 @@ const flagFailures = (flags: Record<string, string | undefined>): SurfaceFailure
   Object.entries(FLAGS).filter(([key]) => flags[key] === 'true').map(([, part]) => ({ part, check: 'template', detail: 'El runtime rechazó la plantilla (faltan espacios obligatorios).' }));
 const visible = (page: Page, selector: string, timeout = 2500) => page.locator(selector).first().waitFor({ state: 'visible', timeout }).then(() => true, () => false);
 const cartCount = (page: Page) => page.locator('[data-cart-count]').first().innerText().then(t => Number(t.replace(/\D/g, '')) || 0, () => 0);
+/** A part whose template is on the page but whose root never rendered at its step fails (review I4). */
+async function shown(page: Page, part: SurfacePart, failures: SurfaceFailure[]) {
+  if (!await page.locator(TEMPLATES[part]).count()) return;
+  if (!await visible(page, ROOTS[part], 1500)) failures.push({ part, check: 'not-shown', detail: 'La plantilla está en la página pero no se mostró.' });
+}
+const amount = (text: string) => (text.match(/\d[\d.]*,\d{2}|\d+(?:\.\d{2})?/g) ?? []).at(-1) ?? '';
 const OPEN_CART = '[data-cart-panel], [data-pagosya-cart]:not([hidden]) .order-items';
 
 export async function inspectShopPage(page: Page, width: number): Promise<SurfaceCheckResult> {
   void width;
   const failures: SurfaceFailure[] = [...flagFailures(await page.evaluate(() => ({ ...document.documentElement.dataset })))];
+  const reached: SurfacePart[] = [];
   // The runtime renders the catalog after load; give it a moment before calling the catalog empty.
   await page.locator('[data-pagosya-catalog] .menu-item').first().waitFor({ state: 'attached', timeout: 4000 }).catch(() => {});
-  if (!await page.locator('[data-pagosya-catalog] .menu-item').count()) return failures.length ? { failures } : { failures, skipped: 'empty catalog' };
+  if (!await page.locator('[data-pagosya-catalog] .menu-item').count()) return failures.length ? { failures, reached } : { failures, reached, skipped: 'empty catalog' };
+  reached.push('card');
+  await shown(page, 'card', failures);
   const custom = await page.locator(ROOTS.card).count();
   if (custom) {
     const name = await page.locator(`${ROOTS.card} [data-product-field="name"]`).first().innerText().catch(() => '');
@@ -72,44 +84,63 @@ export async function inspectShopPage(page: Page, width: number): Promise<Surfac
     await page.locator('.product-detail [role=radiogroup] button, .product-detail [data-option-value]').first().click({ timeout: 1000 }).catch(() => {});
     await page.locator('.product-detail__buy, [data-product-page-root] [data-add], .product-detail [data-add]').first().click({ timeout: 3000 }).catch(() => {});
   }
-  if (await cartCount(page) === before) { failures.push({ part: 'card', check: 'add', detail: 'Agregar al pedido no funcionó desde la tarjeta.' }); return { failures }; }
+  if (await cartCount(page) === before) { failures.push({ part: 'card', check: 'add', detail: 'Agregar al pedido no funcionó desde la tarjeta.' }); return { failures, reached }; }
   // The added notice appears and its button opens the cart.
-  if (await visible(page, ROOTS.added)) {
+  reached.push('added');
+  await shown(page, 'added', failures);
+  if (await visible(page, ROOTS.added, 500)) {
     await layout(page, 'added', failures);
     const notice = page.locator(ROOTS.added).first().locator('xpath=ancestor-or-self::*[.//button[@data-cart-open]][1]');
     await notice.locator('button[data-cart-open]').first().click({ timeout: 2000 }).catch(() => {});
     if (!await visible(page, OPEN_CART, 2000)) failures.push({ part: 'added', check: 'open', detail: 'El botón del aviso no abrió el carrito.' });
   }
   if (!await visible(page, OPEN_CART, 500)) await page.locator('header [data-cart-open]').first().click({ timeout: 2000 }).catch(() => {});
-  if (!await visible(page, OPEN_CART)) { failures.push({ part: 'cart', check: 'open', detail: 'El carrito no se abrió.' }); return { failures }; }
+  if (!await visible(page, OPEN_CART)) { failures.push({ part: 'cart', check: 'open', detail: 'El carrito no se abrió.' }); return { failures, reached }; }
+  reached.push('cart', 'cartLine');
+  await shown(page, 'cart', failures); await shown(page, 'cartLine', failures);
   await layout(page, 'cart', failures); await layout(page, 'cartLine', failures);
-  // The line's + changes the total.
+  // + and − change the total and bring it back, so checkout opens on the cart as it was (a preview keeps no cart between pages).
   const total = () => page.locator('[data-cart-panel] .order-total, [data-pagosya-cart]:not([hidden]) .order-total').first().innerText().catch(() => '');
   const first = await total();
   await page.locator('[data-cart-panel] .quantity button[data-add], [data-pagosya-cart]:not([hidden]) .quantity button[data-add]').first().click({ timeout: 2000 }).catch(() => {});
   await page.waitForTimeout(150);
   if (await total() === first) failures.push({ part: 'cartLine', check: 'quantity', detail: 'El botón + no cambió el total.' });
+  else {
+    await page.locator('[data-cart-panel] .quantity button[data-remove], [data-pagosya-cart]:not([hidden]) .quantity button[data-remove]').first().click({ timeout: 2000 }).catch(() => {});
+    await page.waitForTimeout(150);
+    if (amount(await total()) !== amount(first)) failures.push({ part: 'cartLine', check: 'quantity-down', detail: 'El botón − no devolvió el total.' });
+  }
   // The cart's action reaches checkout.
-  const cartTotal = (await total()).replace(/\s+/g, ' ').trim();
+  const cartTotal = amount(await total());
   const action = page.locator('[data-cart-panel] [data-checkout], [data-pagosya-cart]:not([hidden]) [data-checkout]').first();
-  if (!await action.isVisible().catch(() => false)) { failures.push({ part: 'cart', check: 'checkout-action', detail: 'No se ve el botón para continuar al pago.' }); return { failures }; }
+  if (!await action.isVisible().catch(() => false)) { failures.push({ part: 'cart', check: 'checkout-action', detail: 'No se ve el botón para continuar al pago.' }); return { failures, reached }; }
   await action.click({ timeout: 3000 }).catch(() => {});
-  if (!await visible(page, '[data-pagosya-checkout]:not([hidden])', 3000)) { failures.push({ part: 'cart', check: 'checkout-action', detail: 'El botón del carrito no llevó al pago.' }); return { failures }; }
-  // Checkout: totals match, the payment button is there, the preview payment completes.
+  if (!await visible(page, '[data-pagosya-checkout]:not([hidden])', 3000)) { failures.push({ part: 'cart', check: 'checkout-action', detail: 'El botón del carrito no llevó al pago.' }); return { failures, reached }; }
+  // Checkout: totals match, the fields take text, the payment button is there, the preview payment completes.
+  reached.push('checkout');
+  await shown(page, 'checkout', failures);
   await layout(page, 'checkout', failures);
-  const reviewTotal = (await page.locator('[data-pagosya-checkout] .order-total').first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
-  if (reviewTotal !== cartTotal) failures.push({ part: 'checkout', check: 'total', detail: `El total del pago (${reviewTotal}) no coincide con el del carrito (${cartTotal}).` });
+  const reviewTotal = amount(await page.locator('[data-pagosya-checkout] .order-total').first().innerText().catch(() => ''));
+  if (reviewTotal !== cartTotal) failures.push({ part: 'checkout', check: 'total', detail: `El total del pago (Bs ${reviewTotal}) no coincide con el del carrito (Bs ${cartTotal}).` });
+  for (const field of await page.locator('[data-pagosya-checkout] input[type=text]:visible, [data-pagosya-checkout] input[type=email]:visible, [data-pagosya-checkout] input[type=tel]:visible, [data-pagosya-checkout] input:not([type]):visible').all()) {
+    const ok = await field.fill('Prueba', { timeout: 1500 }).then(() => true, () => false);
+    if (!ok) { failures.push({ part: 'checkout', check: 'fields', detail: 'Un campo del pago no acepta texto.' }); break; }
+  }
   const pay = page.locator('[data-pagosya-checkout] [data-pay]').first();
-  if (!await pay.isVisible().catch(() => false)) { failures.push({ part: 'checkout', check: 'pay', detail: 'No se ve el botón de pago.' }); return { failures }; }
+  if (!await pay.isVisible().catch(() => false)) { failures.push({ part: 'checkout', check: 'pay', detail: 'No se ve el botón de pago.' }); return { failures, reached }; }
   await pay.click({ timeout: 3000 }).catch(() => {});
   await page.locator('[data-pagosya-checkout] [data-finish-demo]').first().click({ timeout: 3000 }).catch(() => {});
   if (!await visible(page, '[data-pagosya-status]:has-text("Prueba completada")', 4000)) failures.push({ part: 'checkout', check: 'complete', detail: 'El pago de prueba no se completó.' });
-  return { failures };
+  return { failures, reached };
 }
 
-export async function inspectProductPage(page: Page, width: number): Promise<SurfaceFailure[]> {
-  await page.locator('#pagosya-product-title').first().waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+/** The product page; `reached` is true once the product rendered. */
+export async function inspectProductPage(page: Page, width: number, reached?: SurfacePart[]): Promise<SurfaceFailure[]> {
+  const rendered = await page.locator('#pagosya-product-title').first().waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false);
   const failures = flagFailures(await page.evaluate(() => ({ ...document.documentElement.dataset }))).filter(f => f.part === 'productPage');
+  if (!rendered) return failures;
+  reached?.push('productPage');
+  await shown(page, 'productPage', failures);
   if (!await page.locator(ROOTS.productPage).count()) return failures;
   await layout(page, 'productPage', failures);
   if (width >= 1024) {
@@ -126,28 +157,35 @@ export async function inspectProductPage(page: Page, width: number): Promise<Sur
 export async function checkSurfacesOnSnapshot(snapshot: SourceProjectSnapshot, signal: AbortSignal): Promise<SurfaceCheckResult> {
   const runtime = await currentSourceRuntime(snapshot);
   const all: SurfaceFailure[] = []; let skipped: SurfaceCheckResult['skipped'];
+  const perWidth: SurfacePart[][] = [];
   const product = sourceVisualState(runtime, 'product.html', undefined, true);
   for (const width of [1280, 390] as const) {
     signal.throwIfAborted();
+    const reached: SurfacePart[] = [];
     await withVisualSandbox(runtime, sourceVisualState(runtime, 'index.html', undefined, true).query, signal, false, async context => {
       const page = await context.newPage();
       page.setDefaultTimeout(7000);
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await page.goto('https://preview.invalid/index.html', { waitUntil: 'load', timeout: 12_000 });
       const result = await inspectShopPage(page, width);
-      all.push(...result.failures); skipped = skipped ?? result.skipped;
+      all.push(...result.failures); reached.push(...result.reached); skipped = skipped ?? result.skipped;
       await page.close();
     }, 'reduce');
-    if (product.productId && runtime.files.some(f => f.path === 'product.html')) await withVisualSandbox(runtime, product.query, signal, true, async context => {
+    // The product reaches product.html through the preview query, as the agent's captures do: a probe document is not a
+    // preview, so its runtime waits for the live catalog the sandbox blocks and the buy button stays disabled (live run).
+    if (product.productId && runtime.files.some(f => f.path === 'product.html')) await withVisualSandbox(runtime, product.query, signal, false, async context => {
       const page = await context.newPage();
       page.setDefaultTimeout(7000);
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-      await page.goto(`https://preview.invalid/product.html?id=${encodeURIComponent(product.productId!)}`, { waitUntil: 'load', timeout: 12_000 });
-      all.push(...await inspectProductPage(page, width));
+      await page.goto('https://preview.invalid/product.html', { waitUntil: 'load', timeout: 12_000 });
+      all.push(...await inspectProductPage(page, width, reached));
       await page.close();
     }, 'reduce');
+    perWidth.push(reached);
   }
   const seen = new Set<string>();
   const failures = all.filter(f => { const key = `${f.part}:${f.check}`; if (seen.has(key)) return false; seen.add(key); return true; });
-  return skipped && !failures.length ? { failures, skipped } : { failures };
+  // A part counts as reached only when both widths exercised it.
+  const reached = perWidth[0].filter(part => perWidth.every(list => list.includes(part)));
+  return skipped && !failures.length ? { failures, reached, skipped } : { failures, reached };
 }

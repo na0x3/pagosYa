@@ -220,6 +220,22 @@ describe('store kit CSS on save', () => {
   });
 });
 
+describe('commerce templates on save (spec 2026-10-15, review I7)', () => {
+  it('stores the templates file but never the injected blocks: only served pages carry them', async () => {
+    const { service } = setup();
+    const json = JSON.stringify({ version: 1, parts: [{ part: 'added', css: '', html: '<template data-pagosya-added-template><div><span data-added-field="message"></span><button data-cart-open>Ver</button></div></template>' }] });
+    const prepared = await service.prepare({ revision: 0, label: 'Static', brief: nextBrief, files: [
+      { path: 'index.html', content: '<!doctype html><html><head></head><body><main></main><!--pagosya:commerce-templates-->viejo<!--/pagosya:commerce-templates--></body></html>' },
+      { path: 'commerce-templates.json', content: json },
+      { path: 'package.json', content: JSON.stringify({ name: 'x', private: true, type: 'module', scripts: { build: 'node build.mjs', start: 'node server.mjs' } }) }, { path: 'README.md', content: '# x' },
+    ] } as any);
+    const file = (path: string) => prepared.files.find((f: any) => f.path === path)?.content;
+    expect(file('commerce-templates.json')).toBe(json);
+    expect(file('index.html')).not.toContain('pagosya:commerce-templates');
+    expect(file('index.html')).not.toContain('data-pagosya-added-template');
+  });
+});
+
 describe('DNA motifs on save (sub-project 3)', () => {
   it("re-sanitises a merchant's hand-edited config.js motifs and motif files", async () => {
     const { service } = setup();

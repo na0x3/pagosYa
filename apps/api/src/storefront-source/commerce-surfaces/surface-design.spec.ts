@@ -13,6 +13,11 @@ describe('surfaces call (spec 2026-10-15)', () => {
     expect(text).toContain('«Tu pedido»');
     expect(text).toContain('--store-accent:#b5462a');
     expect(text).toContain('never type a price');
+    // The rules the static check enforces are in the prompt, so a design is not lost to them (live run, review I8/I9).
+    expect(text).toContain('photo and image slots on an <img>');
+    expect(text).toContain("every CSS selector uses one of your template's own classes");
+    expect(text).toContain('under 14,000 characters');
+    expect(text).toContain('no <form>, <input>, <iframe> or <style> inside the template');
   });
   it('gives a repair the failed checks and the previous template, and lists frozen parts as context only', () => {
     const text = surfacesPrompt({ storeName: 'x', kind: 'general', tokens: '', dna: {}, parts: ['cart'], keep: [{ part: 'card', html: '<template data-pagosya-product-template><i></i></template>', css: '' }], repair: { previous: [cart as any], failures: [{ part: 'cart', check: 'checkout-action', detail: 'No se ve el botón para continuar al pago.' }] } });

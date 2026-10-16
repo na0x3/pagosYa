@@ -114,7 +114,7 @@ import { agentLimits, agentRunHeadroom } from './agent/agent-loop';
 import { sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
 import { agentPreviewSnapshot } from './agent/agent-capture';
 import { snapshotWithProductTheme } from './product-theme';
-import { CLAUDE_COMPANION_MODEL, brandPalette, fillsProductPagesAfterSave } from './source-generation-run';
+import { CLAUDE_COMPANION_MODEL, brandPalette, completedCredits, fillsProductPagesAfterSave } from './source-generation-run';
 import { outputSchema, sourceStablePrompt } from './source-generation-prompt';
 import { sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation-checks';
 import type { AgentOutcome, GenerateExecution, GeneratedSource, GenerationLive, GenerationRunFacts, Sep5Review, SourceGenerationAttempt } from './source-generation-types';
@@ -1406,7 +1406,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     }
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
-    const credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
+    let credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
     const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number; voice?: VoiceReceipt; surfacesNote?: string; surfacesRetry?: Array<{ label: string; value: string }> }) };
     await progress?.(surfacesParts.length ? 'commerce' : 'saving');
     let saveInput = await assembleSave();
@@ -1421,12 +1421,12 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
         const keep = creative ? [] : readTemplatesFile(previousFiles.find(f => f.path === COMMERCE_TEMPLATES_FILE)?.content ?? '');
         surfacesOutcome = await runCommerceSurfaces({
           files: saveInput.files, brief: dto.brief, storeName: (data as { storeName?: string }).storeName || owner.slug, kind: kind ?? 'general', cartWord: voiceCartWord(voice.sheet),
-          parts: surfacesParts, keep, ...(creative ? {} : { instruction: merchantWords }), signal: surfacesSignal, call: surfacesCall({ signal: surfacesSignal, attempts }),
+          parts: surfacesParts, keep, ...(creative ? {} : { instruction: merchantWords }), signal: surfacesSignal, cancel: signal, call: surfacesCall({ signal: surfacesSignal, attempts }),
           check: (files, checkSignal) => checkSurfacesOnSnapshot({ brief: dto.brief, files } as unknown as SourceProjectSnapshot, checkSignal),
           capture: (files, captureSignal) => captureControlsShots({ brief: dto.brief, files } as unknown as SourceProjectSnapshot, captureSignal),
         });
         const surfacesAttempt = attempts.filter(a => a.phase === 'surfaces').at(-1);
-        if (surfacesAttempt) (surfacesAttempt.diagnostics ??= []).push({ tool: 'commerce_surfaces', digest: '', durationMs: surfacesAttempt.durationMs, output: JSON.stringify({ report: surfacesOutcome.report, failed: surfacesOutcome.failed }) });
+        if (surfacesAttempt) (surfacesAttempt.diagnostics ??= []).push({ tool: 'commerce_surfaces', digest: '', durationMs: surfacesAttempt.durationMs, output: JSON.stringify({ report: surfacesOutcome.report, failed: surfacesOutcome.failed, rounds: surfacesOutcome.rounds }).slice(0, 20_000) });
         this.logger.log(JSON.stringify({ event: 'commerce_surfaces', generationId: run.id, parts: surfacesParts, report: surfacesOutcome.report, failed: surfacesOutcome.failed }));
         // The progress step ticks each part (spec: «Diseñando carrito, productos y pago», per-part tick).
         for (const result of surfacesOutcome.report) await progress?.detail?.({ label: `${SURFACE_LABELS[result.part]}: ${result.status === 'fallback' ? 'diseño estándar' : 'listo'}` });
@@ -1441,6 +1441,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       saveInput = { ...saveInput, files: chosen.file ? [...rest, { path: COMMERCE_TEMPLATES_FILE, content: chosen.file }] : rest };
     }
     if (surfacesOutcome) { receipt.surfacesNote = surfacesOutcome.note; if (surfacesOutcome.retry.length) receipt.surfacesRetry = surfacesOutcome.retry; }
+    // The stage's calls are charged like any other (spec): credits were counted before it ran (review C3).
+    if (surfacesOutcome) { credits = completedCredits(attempts, maxCredits, freeRun); receipt.credits = credits; }
     revisionLook = sanitizeLook(readConfigFile(saveInput.files).look);
     revisionControls = readControls(saveInput.files);
     revisionFiles = saveInput.files;

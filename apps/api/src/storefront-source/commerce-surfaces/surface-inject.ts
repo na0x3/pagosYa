@@ -17,3 +17,9 @@ export function withCommerceTemplates<F extends { path: string; content: string;
     return { ...file, content: at === -1 ? clean + injected : clean.slice(0, at) + injected + clean.slice(at) };
   });
 }
+
+/** Saved pages never keep an injected block (review I7): served pages get it from withSourceRuntime, and stored HTML stays what
+ *  the store authored, so substring sniffers (data-pagosya-product-page, data-pagosya-cart …) never see template attributes. */
+export function withoutCommerceTemplates<F extends { path: string; content: string; encoding?: string }>(files: F[]): F[] {
+  return files.map(file => file.path.endsWith('.html') && file.content.includes(START) ? { ...file, content: file.content.replace(BLOCK, '') } : file);
+}

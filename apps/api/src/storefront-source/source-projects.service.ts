@@ -1,4 +1,5 @@
 import { sourceRequestContext } from './source-request-context';
+import { withoutCommerceTemplates } from './commerce-surfaces/surface-inject';
 import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
 import { visibleSentences } from './copy-check';
 import { readVoice, VOICE_FILE, type RecentVoice } from './store-voice';
@@ -258,7 +259,7 @@ export class SourceProjectsService {
     if (system?.version === 3) snapshot = { ...snapshot, files: snapshot.files.map(file => file.path === SOURCE_VISUAL_SYSTEM_FILE ? { ...file, content: JSON.stringify(withSourceStyleTokens(system, snapshot.files), null, 2) + '\n' } : file) };
     // Draft inspection and final saves share the same commerce presentation.
     const runtime = await currentSourceRuntime(snapshot);
-    return sourceProjectSnapshot({ ...input, files: runtime.files });
+    return sourceProjectSnapshot({ ...input, files: withoutCommerceTemplates(runtime.files) });
   }
 
   /** True when every page component (`nextSourceFile`) of the save is byte-identical to the base revision's. */
@@ -305,7 +306,7 @@ export class SourceProjectsService {
     }
     const previous = await this.version(merchantId, storeId, revision);
     const snapshot = await currentSourceRuntime(previous.snapshot as unknown as SourceProjectSnapshot);
-    const files = snapshot.files.map(file => {
+    const files = withoutCommerceTemplates(snapshot.files).map(file => {
       if (file.path === 'config.js') {
         const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
         if (!match) throw new BadRequestException('No se pudo leer la configuración del formulario.');

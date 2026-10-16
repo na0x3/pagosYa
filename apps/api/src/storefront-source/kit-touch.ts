@@ -140,6 +140,10 @@ const HEADER_CART = String.raw`\b(?:icono|boton|simbolo|logo|dibujo)(?:es|s)?\s+
 export function namesHeaderCart(own: string): boolean {
   return new RegExp(HEADER_CART).test(own);
 }
+/** The merchant's own words without the phrases about the header cart (its look, badge, drawing or header placement). */
+export function withoutHeaderCart(own: string): string {
+  return own.replace(new RegExp(HEADER_CART, 'g'), ' ').replace(/\bcarrito\s+(?:del?\s+|de\s+la\s+|en\s+(?:el|la)\s+)?(?:encabezado|header|menu|barra|navegacion|cabecera)\b/g, ' ');
+}
 /** Does the merchant's own request concern the kit pages (product page, catalog, cards, cart)? Only their words count. */
 export function instructionConcernsKitSurfaces(text: string): boolean {
   const own = merchantOwnWords(text);

@@ -1,4 +1,5 @@
 import { ConflictException, type Logger } from '@nestjs/common';
+import { carryCommerceTemplates } from './commerce-surfaces/surface-request';
 import { pendingAssumptions, readVoice } from './store-voice';
 import type { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
@@ -81,7 +82,8 @@ export async function startBackgroundReview(deps: BackgroundReviewDeps, input: B
       }
       // N's save rewrote config.js with the catalog this run created (append); the review assembled its config from the
       // run's start, before those products existed, so N+1 carries N's catalog instead of an empty one.
-      const files = await withSavedCatalog(deps, input.merchantId, input.storeId, input.revision, outcome.saveInput.files);
+      // Spec 2026-10-15 free commerce surfaces: N's commerce templates stay on N+1 (review C2).
+      const files = carryCommerceTemplates(input.savedFiles, await withSavedCatalog(deps, input.merchantId, input.storeId, input.revision, outcome.saveInput.files));
       const saved = await deps.projects.save(input.merchantId, input.storeId, { ...outcome.saveInput, files, revision: input.revision, label: SOURCE_REVIEW_LABEL }, undefined, async tx => {
         const held = await tx.storeSourceGeneration.updateMany({ where: { id: row.id, status: SOURCE_REVIEW_STATUS }, data: { status: 'COMPLETED', revision: input.revision + 1, credits, ...record() } });
         if (held.count !== 1) throw new SourceReviewCancelled('la revisión se canceló antes de guardarse');

@@ -38,7 +38,7 @@ let seen = { card: 0, checkout: 0, done: 0 };
 describe('surface purchase check (spec 2026-10-15)', () => {
   it('passes a fully templated store at both widths', async () => {
     for (const width of [1280, 390]) {
-      expect(await onShop(GOOD, width)).toEqual({ failures: [] });
+      expect(await onShop(GOOD, width)).toEqual({ failures: [], reached: ['card', 'added', 'cart', 'cartLine', 'checkout'] });
       // Not vacuous: the templated card was there and the templated checkout completed the preview payment.
       expect(seen.card).toBeGreaterThan(0);
       expect(seen.done).toBeGreaterThan(0);
@@ -58,7 +58,7 @@ describe('surface purchase check (spec 2026-10-15)', () => {
     expect(result.failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'checkout', check: 'overflow' })]));
   });
   it('skips the purchase on an empty catalog and keeps the parts (Review Focus 1)', async () => {
-    expect(await onShop(GOOD, 1280, [])).toEqual({ failures: [], skipped: 'empty catalog' });
+    expect(await onShop(GOOD, 1280, [])).toEqual({ failures: [], reached: [], skipped: 'empty catalog' });
   });
   it('follows a product that needs an option to its page instead of failing the card (Review Focus 2)', async () => {
     const withOptions = { ...ITEM, id: 'collar', name: 'Collar', variants: [{ id: 'v1', amount: 3590, stock: 3, options: [{ name: 'Talla', value: 'S' }] }, { id: 'v2', amount: 3990, stock: 3, options: [{ name: 'Talla', value: 'M' }] }] };
@@ -77,15 +77,31 @@ describe('surface purchase check (spec 2026-10-15)', () => {
     } finally { await page.close(); }
   });
   it('runs the whole check on a stored snapshot in the sandbox, templates injected from commerce-templates.json', async () => {
-    const parts = [...GOOD.matchAll(/<template (data-pagosya-[a-z-]+-template)>[\s\S]*?<\/template>/g)].map(m => ({
-      part: ({ 'data-pagosya-product-template': 'card', 'data-pagosya-added-template': 'added', 'data-pagosya-cart-template': 'cart', 'data-pagosya-cart-line-template': 'cartLine', 'data-pagosya-checkout-template': 'checkout' } as Record<string, SurfacePart>)[m[1]], html: m[0], css: '' }));
+    const PAGE = '<template data-pagosya-product-page-template><article class="ficha"><div data-product-slot="gallery"></div><div data-product-slot="title"></div><div data-product-slot="pricing"></div><div data-product-slot="buy"></div></article></template>';
+    const parts = [...(GOOD + PAGE).matchAll(/<template (data-pagosya-[a-z-]+-template)>[\s\S]*?<\/template>/g)].map(m => ({
+      part: ({ 'data-pagosya-product-template': 'card', 'data-pagosya-added-template': 'added', 'data-pagosya-cart-template': 'cart', 'data-pagosya-cart-line-template': 'cartLine', 'data-pagosya-checkout-template': 'checkout', 'data-pagosya-product-page-template': 'productPage' } as Record<string, SurfacePart>)[m[1]], html: m[0], css: '' }));
     const index = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><header><button type="button" data-cart-open>Mi canasta <b data-cart-count>0</b></button></header><main><section data-pagosya-catalog></section></main><div data-pagosya-cart hidden></div><p data-pagosya-status></p></body></html>`;
     const snapshot = { brief: { sitePurpose: 'shop' }, files: [
       { path: 'index.html', content: index },
       { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'huellitas', demo: true, sitePurpose: 'shop', data: { storeName: 'Huellitas', locations: [], categories: [], items: [ITEM] } })};` },
       { path: 'commerce.js', content: '' },
+      { path: 'product.html', content: productHtml },
       { path: COMMERCE_TEMPLATES_FILE, content: composeTemplatesFile(parts) },
     ] } as any;
-    expect(await checkSurfacesOnSnapshot(snapshot, new AbortController().signal)).toEqual({ failures: [] });
+    // The product page is reached through the preview query (a probe document is not in preview: its buy stays disabled).
+    expect(await checkSurfacesOnSnapshot(snapshot, new AbortController().signal)).toEqual({ failures: [], reached: ['card', 'added', 'cart', 'cartLine', 'checkout', 'productPage'] });
+  });
+  it('reports only the parts it reached when an earlier step breaks (review I4)', async () => {
+    const result = await onShop(GOOD.replace('<button data-product-add>Agregar</button>', '<button data-product-add style="pointer-events:none">Agregar</button>'), 1280);
+    expect(result.failures).toEqual([expect.objectContaining({ part: 'card', check: 'add' })]);
+    expect(result.reached).toEqual(['card']);
+  });
+  it('fails a templated added notice that never shows (review I4)', async () => {
+    const result = await onShop(GOOD.replace('<div class="aviso">', '<div class="aviso" style="display:none">'), 1280);
+    expect(result.failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'added', check: 'not-shown' })]));
+  });
+  it('checks that − brings the total back and the checkout total matches the cart (review I12)', async () => {
+    const result = await onShop(GOOD, 390);
+    expect(result.failures).toEqual([]);
   });
 });
