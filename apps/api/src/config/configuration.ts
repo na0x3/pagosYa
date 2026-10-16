@@ -103,6 +103,8 @@ export interface AppConfig {
   yapiPlaybook: boolean;
   /** "Elige tu estilo" (spec 2026-10-11): four drawn concepts shown as heroes before a new store or full redesign. Default off; YAPI_STYLE_PICK=1. */
   yapiStylePick: boolean;
+  /** Spec 2026-10-15 free commerce surfaces: YAPI designs the catalog card, product page, cart, added notice and checkout. */
+  yapiCommerceSurfaces: boolean;
   /** First-store walkthrough in the dashboard (spec 2026-10-11, C1). Default off; ONBOARDING_WALKTHROUGH=1. */
   onboardingWalkthrough: boolean;
   sourceDesignJobsEnabled: boolean;
@@ -447,6 +449,7 @@ export default (): { app: AppConfig } => {
     yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',
     yapiPlaybook: process.env.YAPI_PLAYBOOK !== 'off',
     yapiStylePick: process.env.YAPI_STYLE_PICK === '1',
+    yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',
     onboardingWalkthrough: process.env.ONBOARDING_WALKTHROUGH === '1',
     sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     chatgptPlan,

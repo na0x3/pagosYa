@@ -6,6 +6,7 @@ export const SOURCE_PROGRESS_LABELS = {
   building: 'Construyendo los cambios',
   validating: 'Comprobando el código y los recursos',
   repairing: 'Corrigiendo los problemas detectados',
+  commerce: 'Diseñando carrito, productos y pago',
   saving: 'Guardando la nueva versión',
 } as const;
 export type SourceProgressStage = keyof typeof SOURCE_PROGRESS_LABELS;

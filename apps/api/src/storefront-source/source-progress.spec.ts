@@ -1,4 +1,4 @@
-import { createSourceProgress } from './source-progress';
+import { SOURCE_PROGRESS_LABELS, createSourceProgress } from './source-progress';
 
 it('records real milestones, preserves a failed check on repair and stops after completion', async () => {
   const persist = jest.fn().mockResolvedValue(undefined);
@@ -43,4 +43,8 @@ describe('agent step details', () => {
     await progress.report.detail!({ label: 'tarde' });
     expect(progress.value.steps[0].details).toBeUndefined();
   });
+});
+
+it('labels the commerce surfaces stage (spec 2026-10-15)', () => {
+  expect((SOURCE_PROGRESS_LABELS as Record<string, string>).commerce).toBe('Diseñando carrito, productos y pago');
 });
