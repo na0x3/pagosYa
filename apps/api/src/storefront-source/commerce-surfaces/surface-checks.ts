@@ -70,13 +70,17 @@ function readPart(selector: string) {
     const hit = controls.some(c => { if (c.contains(el)) return false; const b = c.getBoundingClientRect(); return Math.min(t.right, b.right) - Math.max(t.left, b.left) > 4 && Math.min(t.bottom, b.bottom) - Math.max(t.top, b.top) > 4; });
     if (hit) overlaps++;
   }
-  return { present: roots.length > 0, overflow, low: low.slice(0, 3), overlaps, cut: cut.slice(0, 3) };
+  // A button or link on screen with nothing in it (live 2026-10-15: blank pills where «Ver» and «Sumar» belonged).
+  const drawn = (c: HTMLElement) => ['::before', '::after'].some(p => !['none', 'normal', '""', "''"].includes(getComputedStyle(c, p).content));
+  const empty = controls.filter(c => { const b = c.getBoundingClientRect(); return b.width > 2 && b.height > 2 && !(c.innerText || '').trim() && !c.querySelector('img,svg,picture,video') && !drawn(c); }).length;
+  return { present: roots.length > 0, overflow, low: low.slice(0, 3), overlaps, cut: cut.slice(0, 3), empty };
 }
 async function layout(page: Page, part: SurfacePart, failures: SurfaceFailure[]) {
   const read = await page.evaluate(readPart, ROOTS[part]);
   if (!read.present) return;
   if (read.overflow) failures.push({ part, check: 'overflow', detail: 'La página se desplaza hacia el costado.' });
   if (read.overlaps) failures.push({ part, check: 'overlap', detail: `${read.overlaps} textos se superponen.` });
+  if (read.empty) failures.push({ part, check: 'empty-control', detail: `${read.empty} botones o enlaces sin texto ni ícono.` });
   if (read.cut.length) failures.push({ part, check: 'cut-off', detail: `Texto cortado: «${read.cut.join('», «')}».` });
   if (read.low.length) failures.push({ part, check: 'contrast', detail: `Texto difícil de leer: «${read.low.join('», «')}».` });
 }

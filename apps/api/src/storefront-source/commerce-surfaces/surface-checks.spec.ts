@@ -126,6 +126,14 @@ describe('surface purchase check (spec 2026-10-15)', () => {
     const hidden = GOOD.replace('<h3 data-product-field="name"></h3>', '<h3 data-product-field="name"></h3><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">5 de 5 estrellas</span>');
     expect((await onShop(hidden, 1280)).failures.filter(f => f.check === 'cut-off' || f.check === 'overlap')).toEqual([]);
   });
+  // Live 2026-10-15 (Estudio Arco Pilates, card redesign): YAPI left the card's link and add button empty — two blank pills.
+  it('fails a part whose button or link shows nothing', async () => {
+    const blank = GOOD.replace('<a data-product-link href="#">Ver</a><button data-product-add>Agregar</button>', '<a data-product-link href="#"></a><button data-product-add style="min-width:120px;min-height:40px"></button>');
+    expect((await onShop(blank, 1280)).failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'card', check: 'empty-control' })]));
+    // An icon button (an svg inside, or a drawn ::before symbol) shows something.
+    const icon = GOOD.replace('<button data-product-add>Agregar</button>', '<button data-product-add aria-label="Agregar"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor"/></svg></button>');
+    expect((await onShop(icon, 1280)).failures.filter(f => f.check === 'empty-control')).toEqual([]);
+  });
   it('never judges contrast over a gradient or image background it cannot measure (live run 2)', async () => {
     const result = await onShop(GOOD.replace('<div class="caja">', '<div class="caja" style="background:linear-gradient(#1d1b18,#2a2420);color:#f4ede4">'), 1280);
     expect(result.failures.filter(f => f.check === 'contrast')).toEqual([]);

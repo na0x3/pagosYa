@@ -19,6 +19,15 @@ describe('surfaces call (spec 2026-10-15)', () => {
     expect(text).toContain('under 14,000 characters');
     expect(text).toContain('no <form>, <input>, <iframe> or <style> inside the template');
   });
+  // Live 2026-10-15: told the platform fills «buy and pay buttons» and every slot stays empty, YAPI left the card's link and
+  // add button empty. The controls are not slots: the template writes their words.
+  it('tells the designer to write the words of the controls it owns', () => {
+    const text = surfacesPrompt({ storeName: 'x', kind: 'general', tokens: '', dna: {}, parts: ['card', 'cart', 'added'] });
+    expect(text).toMatch(/data-product-add[^.]*data-product-link|data-product-link[^.]*data-product-add/);
+    expect(text).toContain('data-cart-close');
+    expect(text).toContain('data-cart-open');
+    expect(text).toMatch(/never leave a control empty/i);
+  });
   it('gives a repair the failed checks and the previous template, and lists frozen parts as context only', () => {
     const text = surfacesPrompt({ storeName: 'x', kind: 'general', tokens: '', dna: {}, parts: ['cart'], keep: [{ part: 'card', html: '<template data-pagosya-product-template><i></i></template>', css: '' }], repair: { previous: [cart as any], failures: [{ part: 'cart', check: 'checkout-action', detail: 'No se ve el botón para continuar al pago.' }] } });
     expect(text).toContain('No se ve el botón para continuar al pago.');
