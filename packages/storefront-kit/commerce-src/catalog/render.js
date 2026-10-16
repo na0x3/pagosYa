@@ -138,6 +138,6 @@
     // shopper adds to cart, opens checkout or opens a product, which is too late for Studio's
     // publishing check to catch a broken one. This is validation only — each reader just sets or
     // clears its flag and discards the clone; their lazy use at the real render site is unchanged.
-    cartLineTemplate(); cartTemplate(); addedTemplate(); reviewTemplate(); productPageTemplate();
+    cartLineTemplate(); cartTemplate(); addedTemplate(); reviewTemplate(); productPageTemplate(); checkoutTemplate();
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
   }

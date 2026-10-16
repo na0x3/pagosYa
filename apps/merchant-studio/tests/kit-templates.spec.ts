@@ -146,3 +146,46 @@ test('a cart-line template with photo not on an <img> fails the checks and menti
   const results = await checkBroken(browserPage, broken);
   expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('<img>') })]));
 });
+
+// Spec 2026-10-15 free commerce surfaces: the whole checkout page as a template.
+const CHECKOUT = `<template data-pagosya-checkout-template><div class="caja"><nav data-checkout-slot="back"></nav><header class="caja__head" data-checkout-slot="heading"></header><p data-checkout-slot="status"></p><section class="caja__cuerpo" data-checkout-slot="review"></section></div></template>`;
+
+for (const width of [1280, 390]) test(`the checkout page template owns the page and the purchase completes at ${width}px`, async ({ page: browserPage }) => {
+  await browserPage.setViewportSize({ width, height: 900 });
+  await browserPage.emulateMedia({ reducedMotion: 'reduce' });
+  const shop = await mount(browserPage, TEMPLATES + CHECKOUT);
+  await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
+  await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  const root = shop.locator('[data-pagosya-checkout] [data-checkout-root]');
+  await expect(root).toBeVisible();
+  await expect(root.locator('[data-checkout-slot="heading"] h1')).toHaveText('Revisa tu pedido');
+  await expect(root.locator('[data-checkout-slot="review"] [data-checkout-review] .order-total')).toBeVisible();
+  await expect(root.locator('[data-checkout-slot="status"] [data-pagosya-status]')).toHaveCount(1);
+  expect(await shop.locator('html').evaluate(() => document.documentElement.dataset.checkoutTemplateInvalid)).toBeUndefined();
+  await root.locator('.checkout-button').click();
+  await expect(shop.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();
+  await expect(shop.locator('[data-checkout-root] [data-checkout-slot="heading"] h1')).toHaveText('Pago de prueba');
+  await shop.locator('[data-checkout-root] .checkout-button').click();
+  await expect(shop.locator('[data-pagosya-status]').filter({ hasText: 'Prueba completada' }).first()).toBeVisible();
+  expect(await shop.locator('html').evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await browserPage.screenshot({ path: `${SHOTS}/checkout-template-${width}.png` });
+});
+
+test('a checkout template without its review slot falls back to the kit checkout and raises its flag', async ({ page: browserPage }) => {
+  const shop = await mount(browserPage, TEMPLATES + CHECKOUT.replace('<section class="caja__cuerpo" data-checkout-slot="review"></section>', ''));
+  await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
+  await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await expect(shop.locator('[data-pagosya-checkout] .checkout-page__summary .order-total')).toBeVisible();
+  await expect(shop.locator('[data-checkout-root]')).toHaveCount(0);
+  expect(await shop.locator('html').evaluate(() => document.documentElement.dataset.checkoutTemplateInvalid)).toBe('true');
+});
+
+test('each part falls back alone: a broken cart line keeps the templated cart panel', async ({ page: browserPage }) => {
+  const broken = TEMPLATES.replace('<strong data-cart-field="line-total"></strong>', '');
+  const shop = await mount(browserPage, broken + CHECKOUT);
+  await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
+  await expect(shop.getByRole('heading', { name: 'Tu canasta 🐾' })).toBeVisible();
+  await expect(shop.locator('.linea')).toHaveCount(0);
+  await expect(shop.locator('[data-cart-slot="lines"] .order-item')).toHaveCount(1);
+  expect(await shop.locator('html').evaluate(() => document.documentElement.dataset.cartLineTemplateInvalid)).toBe('true');
+});

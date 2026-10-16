@@ -70,6 +70,29 @@
   }
   const reviewTemplate = () => kitTemplate('review', 'reviewTemplateInvalid', root =>
     root.querySelector('[data-review-slot="summary"]') && root.querySelector('[data-review-slot="fields"]'));
+  // Spec 2026-10-15 free commerce surfaces: the whole checkout page. The kit still builds every piece (back, heading, status,
+  // the review with the payment box) and only moves them into the template's slots.
+  const checkoutTemplate = () => kitTemplate('checkout', 'checkoutTemplateInvalid', root =>
+    root.querySelector('[data-checkout-slot="heading"]') && root.querySelector('[data-checkout-slot="review"]'));
+  function applyCheckoutTemplate() {
+    const layout = checkoutTemplate();
+    const inner = checkoutPage.querySelector(':scope > .checkout-page__inner');
+    if (!layout || !inner) return;
+    const root = layout.make();
+    const slot = name => root.querySelector(`[data-checkout-slot="${name}"]`);
+    root.querySelectorAll('[data-checkout-slot]').forEach(node => node.replaceChildren());
+    const back = inner.querySelector(':scope > .checkout-page__back');
+    const intro = inner.querySelector(':scope > div:not(.checkout-page__summary)');
+    const status = intro?.querySelector('[data-pagosya-status]');
+    const review = inner.querySelector(':scope > .checkout-page__summary > [data-pagosya-cart]');
+    if (status) (slot('status') || slot('heading')).append(status);
+    if (intro) slot('heading').prepend(...intro.childNodes);
+    if (back) (slot('back') || slot('heading')).prepend(back);
+    slot('review').append(review);
+    root.setAttribute('data-checkout-root', '');
+    inner.replaceChildren(root);
+    checkoutPage.setAttribute('data-checkout-template', '');
+  }
   const productPageTemplate = () => kitTemplate('product-page', 'productPageTemplateInvalid', root =>
     ['gallery', 'title', 'pricing', 'buy'].every(slot => root.querySelector(`[data-product-slot="${slot}"]`)));
   // A piece goes to the first slot whose selector it matches; "buy" is last because its "p" catches the sold-out note.
