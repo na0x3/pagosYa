@@ -57,4 +57,8 @@ describe('surface parts (spec 2026-10-15)', () => {
     expect(css('.a{}</st</styleyle><img src=x onerror=alert(1)>')).toContain('El CSS no puede llevar «<».');
     expect(templatesMarkup([{ ...CART, css: '.canasta{}</style><img>' }])).not.toContain('</style><img');
   });
+  it('reads the rules inside @starting-style like @media (live run 2: round 0 lost five parts to it)', () => {
+    expect(validateSurfaceTemplate({ ...CART, css: '@starting-style{.canasta{opacity:0}}.canasta{transition:opacity .3s}' })).toEqual([]);
+    expect(validateSurfaceTemplate({ ...CART, css: '@starting-style{body{opacity:0}}' })).toContain('El CSS de carrito solo puede usar las clases de su plantilla: «body».');
+  });
 });

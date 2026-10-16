@@ -104,4 +104,8 @@ describe('surface purchase check (spec 2026-10-15)', () => {
     const result = await onShop(GOOD, 390);
     expect(result.failures).toEqual([]);
   });
+  it('never judges contrast over a gradient or image background it cannot measure (live run 2)', async () => {
+    const result = await onShop(GOOD.replace('<div class="caja">', '<div class="caja" style="background:linear-gradient(#1d1b18,#2a2420);color:#f4ede4">'), 1280);
+    expect(result.failures.filter(f => f.check === 'contrast')).toEqual([]);
+  });
 });

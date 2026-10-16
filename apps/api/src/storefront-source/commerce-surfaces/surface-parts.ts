@@ -56,7 +56,7 @@ function unscopedSelectors(css: string, classes: Set<string>): string[] {
         depth--;
         if (depth === 0) {
           const body = block.slice(start, i);
-          if (/^@(?:media|supports|container|layer)\b/i.test(head)) visit(body);
+          if (/^@(?:media|supports|container|layer|starting-style|scope)\b/i.test(head)) visit(body);
           else if (!/^@(?:keyframes|-webkit-keyframes|font-face|property)\b/i.test(head)) {
             for (const selector of head.split(',').map(x => x.trim()).filter(Boolean)) {
               const own = [...selector.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].some(m => classes.has(m[1]));

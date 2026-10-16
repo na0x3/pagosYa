@@ -24,12 +24,22 @@ function readPart(selector: string) {
   const texts: Array<{ el: HTMLElement; r: DOMRect }> = [];
   const low: string[] = [];
   const lum = (c: string) => { const m = c.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 1]; const f = (v: number) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return { l: 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]), a: m[3] ?? 1 }; };
-  const background = (el: HTMLElement | null): string => { for (let n = el; n; n = n.parentElement) { const bg = getComputedStyle(n).backgroundColor; if (lum(bg).a > 0.5) return bg; } return 'rgb(255, 255, 255)'; };
+  /** The colour behind an element, or null when a gradient or image sits in front of any solid colour: not measurable here. */
+  const background = (el: HTMLElement | null): string | null => {
+    for (let n = el; n; n = n.parentElement) {
+      const style = getComputedStyle(n);
+      if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+      if (lum(style.backgroundColor).a > 0.5) return style.backgroundColor;
+    }
+    return 'rgb(255, 255, 255)';
+  };
   for (const root of roots) for (const el of [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]) {
     const own = Array.from(el.childNodes).some(n => n.nodeType === 3 && (n.textContent || '').trim());
     if (!own || !el.getClientRects().length) continue;
     const r = el.getBoundingClientRect(); texts.push({ el, r });
-    const fg = lum(getComputedStyle(el).color).l, bg = lum(background(el)).l;
+    const behind = background(el);
+    if (behind === null) continue;
+    const fg = lum(getComputedStyle(el).color).l, bg = lum(behind).l;
     if ((Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05) < 3) low.push((el.textContent || '').trim().slice(0, 40));
   }
   let overlaps = 0;
