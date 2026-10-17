@@ -33,8 +33,11 @@
   function fitHeadlines() {
     Array.from(document.querySelectorAll('h1,h2')).slice(0, 80).forEach(fitHeadline);
   }
+  // Some embedded browsers (and jsdom) have no animation frames: a timer stands in rather than throwing on every page.
+  const nextFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => setTimeout(callback, 16);
+  const cancelFrame = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
   let fitFrame = 0;
-  const scheduleFit = () => { cancelAnimationFrame(fitFrame); fitFrame = requestAnimationFrame(fitHeadlines); };
+  const scheduleFit = () => { cancelFrame(fitFrame); fitFrame = nextFrame(fitHeadlines); };
   addEventListener('resize', scheduleFit, { passive: true });
   document.addEventListener('pagosya:ready', scheduleFit);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleFit, scheduleFit);
