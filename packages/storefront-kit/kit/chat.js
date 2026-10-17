@@ -124,7 +124,29 @@
     if (!count && existing) existing.remove();
   }
 
+  /* A Studio preview (baek 2026-10-17: the owner of a published store could not talk to the bot there): Studio answers
+   * through the merchant's test chat. Studio acknowledges at once; without that, an older Studio or a demo page, the
+   * caller says where to try the bot. Only the message and the conversation go up: the test chat takes nothing else. */
+  let studioSeq = 0;
+  function studioRequest(body) {
+    return new Promise(resolve => {
+      const id = 'pya-' + (++studioSeq) + '-' + Date.now();
+      let ackTimer = 0, replyTimer = 0;
+      const done = value => { window.removeEventListener('message', onMessage); clearTimeout(ackTimer); clearTimeout(replyTimer); resolve(value); };
+      const onMessage = event => {
+        if (event.source !== window.parent || !event.data || event.data.id !== id) return;
+        if (event.data.type === 'pagosya:assistant-test-ack') clearTimeout(ackTimer);
+        else if (event.data.type === 'pagosya:assistant-test-reply') done({ ok: event.data.ok === true, status: Number(event.data.status) || 0, json: event.data.json || {} });
+      };
+      window.addEventListener('message', onMessage);
+      ackTimer = setTimeout(() => done({ studioMissing: true }), 1500);
+      replyTimer = setTimeout(() => done(null), 45000);
+      window.parent.postMessage({ type: 'pagosya:assistant-test', id, body: { message: body.message, ...(body.conversationId ? { conversationId: body.conversationId } : {}) } }, '*');
+    });
+  }
+
   async function request(body) {
+    if (studio) return studioRequest(body);
     // The parent page relays the API's body; Nest puts the HTTP status in it as statusCode.
     if (hosted) { const result = await window.PAGOSYA_HOSTED_REQUEST('assistant', body); const json = result.body || {}; return { ok: result.ok, status: typeof json.statusCode === 'number' ? json.statusCode : 0, json: json }; }
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
@@ -142,7 +164,6 @@
   async function send(message, retried) {
     const submit = root.querySelector('.pya-form button[type=submit]');
     if (busy || !message) return;
-    if (studio) { say(message, 'buyer'); say('Vista previa: el asistente responde en tu tienda publicada.', 'bot'); return; }
     busy = true; submit.disabled = true; lastMessage = message;
     if (!retried) say(message, 'buyer');
     const typing = h('p', 'pya-typing', 'Escribiendo…'); log().append(typing); scroll();
@@ -155,9 +176,10 @@
     try {
       try { result = await request(body); } catch (error) { result = null; }
       typing.remove();
-      if (!result) {
-        // Hosted stores never re-send: the parent allows one in-flight assistant request.
-        if (!hosted && !retried) retry = true;
+      if (result && result.studioMissing) say('Vista previa: prueba el asistente en Crecer › Asistente. En tu tienda publicada responde a tus clientes.', 'bot');
+      else if (!result) {
+        // Hosted stores and Studio previews never re-send: one in-flight assistant request at a time.
+        if (!hosted && !studio && !retried) retry = true;
         else {
           say('Se cortó la conexión.', 'bot');
           const row = h('div', 'pya-row'); row.append(button('pya-btn', 'Reintentar', { 'data-assistant-retry': '' })); log().append(row);
@@ -168,7 +190,8 @@
           if (json.conversationId) { conversationId = json.conversationId; write(conversationId); }
           if (result.ok && json.reply) { added = false; render(json.reply); }
           else if (result.ok && json.fallback) { say('Ahora no puedo responder. Escríbele a la tienda 👉', 'bot'); handoff(null); }
-          else say(refusal(result.status), 'bot');
+          // In Studio the test chat's own Spanish message (the monthly test allowance…) is for the merchant: say it.
+          else say(studio && typeof json.message === 'string' && json.message ? json.message.slice(0, 200) : refusal(result.status), 'bot');
         } catch (error) { say('No pude mostrar la respuesta.', 'bot'); }
       }
     } finally { busy = false; submit.disabled = false; }

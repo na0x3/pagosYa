@@ -62,6 +62,42 @@ describe('kit chat.js', () => {
     expect(doc.querySelector('.pya-head .pya-face img')?.getAttribute('src')).toBe('https://api.test/v1/uploads/logo.png');
   });
 
+  // baek 2026-10-17: in Studio the bot only said «responde en tu tienda publicada», so the owner of a published store could
+  // never talk to it there. A Studio preview now asks Studio, which answers through the merchant's test chat.
+  const askInStudio = async (message: string) => {
+    const opened = open({ assistant: ASSISTANT }, undefined, w => { w.PAGOSYA_HOSTED = false; });
+    (opened.doc.querySelector('[data-assistant-toggle]') as HTMLButtonElement).click();
+    (opened.doc.querySelector('#pya-input') as HTMLTextAreaElement).value = message;
+    opened.doc.querySelector('.pya-form')!.dispatchEvent(new opened.w.Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    return opened;
+  };
+  it('in a Studio preview asks Studio, which answers through the merchant test chat', async () => {
+    const { w, doc, posted } = await askInStudio('¿Tienen croissants?');
+    const asked = posted.find((m: any) => m?.type === 'pagosya:assistant-test');
+    expect(asked.body).toEqual(expect.objectContaining({ message: '¿Tienen croissants?' }));
+    w.dispatchEvent(new w.MessageEvent('message', { source: w, data: { type: 'pagosya:assistant-test-ack', id: asked.id } }));
+    w.dispatchEvent(new w.MessageEvent('message', { source: w, data: { type: 'pagosya:assistant-test-reply', id: asked.id, ok: true, status: 200, json: { conversationId: 'cabcdefghijklmnopqrstuvw', reply: { text: 'Sí, hay croissants.', blocks: [] } } } }));
+    await flush();
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('Sí, hay croissants.');
+    expect(doc.querySelector('.pya-log')!.textContent).not.toContain('Vista previa');
+  });
+
+  it('in a Studio preview shows the test chat\'s own refusal, such as the monthly test allowance', async () => {
+    const { w, doc, posted } = await askInStudio('Hola');
+    const asked = posted.find((m: any) => m?.type === 'pagosya:assistant-test');
+    w.dispatchEvent(new w.MessageEvent('message', { source: w, data: { type: 'pagosya:assistant-test-ack', id: asked.id } }));
+    w.dispatchEvent(new w.MessageEvent('message', { source: w, data: { type: 'pagosya:assistant-test-reply', id: asked.id, ok: false, status: 400, json: { message: 'Usaste las 50 pruebas de este mes.' } } }));
+    await flush();
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('Usaste las 50 pruebas de este mes.');
+  });
+
+  it('a preview no Studio answers says where to try the bot', async () => {
+    const { doc } = await askInStudio('Hola');
+    await new Promise(resolve => setTimeout(resolve, 1700));
+    expect(doc.querySelector('.pya-log')!.textContent).toContain('Crecer › Asistente');
+  });
+
   it('shows the chat icon and no badge on the launcher without an avatar', () => {
     const toggle = open({ assistant: ASSISTANT }).doc.querySelector('[data-assistant-toggle]')!;
     expect(toggle.querySelector(':scope > .pya-launcher-icon svg')).not.toBeNull();

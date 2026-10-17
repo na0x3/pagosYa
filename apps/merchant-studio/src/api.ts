@@ -293,6 +293,10 @@ export class MerchantStudioApi {
     return this.request(`/siat/catalogs/products?${params}`);
   }
 
+  /** The store bot's merchant test chat (Crecer › Asistente), also what the bot in the Studio preview answers through. */
+  assistantTest(storeId: string, body: { message: string; conversationId?: string }): Promise<JsonRecord> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/assistant/test`, { method: 'POST', body: JSON.stringify(body) });
+  }
   sourceCatalog(storeId: string): Promise<JsonRecord> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
   }

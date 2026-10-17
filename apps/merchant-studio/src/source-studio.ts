@@ -41,6 +41,7 @@ import './source-studio.css';
 import './source-browser.css';
 import './source-workspace-design.css';
 import { bindSourcePaymentPreview } from './source-payment-preview';
+import { bindAssistantPreview } from './source-assistant-preview';
 import { focusDebugEnabled, recordFocusLoss, watchComposerFocus } from './source-focus-debug';
 
 const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 · económico'], ['claude-sonnet-5', 'Claude Sonnet 5 · equilibrado'], ['claude-opus-5-5', 'Claude Opus 5.5 · avanzado']] as const;
@@ -197,6 +198,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
   let previewNavigation: Partial<PreviewNavigation> = {};
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
+  // The store bot in the preview answers through the merchant's test chat (baek 2026-10-17).
+  bindAssistantPreview(() => app.querySelector('iframe'), body => api.assistantTest(storeId, body));
   window.addEventListener('message', event => {
     const previewFrame = app.querySelector('iframe');
     // The store's WhatsApp, phone and email links open for the merchant, like on the published store.
