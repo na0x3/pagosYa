@@ -4,6 +4,13 @@ const card = (id: string, name: string) => ({ id, name, price: 'Bs 255,00', orig
 const box = (patch: Record<string, any> = {}) => ({ evidence: ['[{"precio":"Bs 255,00"}]'], cards: new Map([['p1', card('p1', 'Chompa')], ['p2', card('p2', 'Polera')]]), searched: ['p1', 'p2'], addBlocks: [], handoff: null, ...patch }) as any;
 
 describe('reply assembly', () => {
+  it('sends plain text, never the Markdown a model writes, and still finds the products it names', () => {
+    const { reply, guarded } = assembleReply({ text: 'La **Chompa** cuesta **Bs 255,00**.', box: box(), evidence: [], contactPhone: null });
+    expect(guarded).toBe(false);
+    expect(reply.text).toBe('La Chompa cuesta Bs 255,00.');
+    expect(reply.blocks).toEqual([{ type: 'products', items: [card('p1', 'Chompa')] }]);
+  });
+
   it('shows cards for the products the reply names', () => {
     const { reply, guarded } = assembleReply({ text: 'La Chompa cuesta Bs 255,00.', box: box(), evidence: [], contactPhone: null });
     expect(guarded).toBe(false);

@@ -1,4 +1,4 @@
-import { foldText, laPazMonthStart, maskContact, normaliseQuestion, parseMoney, readReplyNumbers, stripContact } from './assistant-text';
+import { foldText, laPazMonthStart, maskContact, normaliseQuestion, parseMoney, plainReplyText, readReplyNumbers, stripContact } from './assistant-text';
 
 describe('assistant text helpers', () => {
   it('folds accents and case', () => {
@@ -84,5 +84,23 @@ describe('assistant text helpers', () => {
   it('starts a month at midnight in La Paz', () => {
     expect(laPazMonthStart(new Date('2026-11-01T02:00:00Z')).toISOString()).toBe('2026-10-01T04:00:00.000Z');
     expect(laPazMonthStart(new Date('2026-11-01T05:00:00Z')).toISOString()).toBe('2026-11-01T04:00:00.000Z');
+  });
+});
+
+// baek (tholhejh), 2026-10-16: the chat bubble prints text, so a model's Markdown showed as «**croissant de mantequilla**».
+describe('plainReplyText', () => {
+  it('drops Markdown emphasis, headings and links, keeping the words', () => {
+    expect(plainReplyText('¡Hola! El **croissant de mantequilla** cuesta **Bs 10,00**.')).toBe('¡Hola! El croissant de mantequilla cuesta Bs 10,00.');
+    expect(plainReplyText('__Pan__ y *cuñapé* y _empanada_')).toBe('Pan y cuñapé y empanada');
+    expect(plainReplyText('## Nuestra carta\nVer [la carta](https://baek.bo/carta) hoy')).toBe('Nuestra carta\nVer la carta hoy');
+    expect(plainReplyText('`Bs 2,50`')).toBe('Bs 2,50');
+  });
+
+  it('turns list markers into bullets and keeps numbered lists', () => {
+    expect(plainReplyText('Tenemos:\n- Marraqueta\n* Cuñapé\n+ Croissant\n1. Torta')).toBe('Tenemos:\n• Marraqueta\n• Cuñapé\n• Croissant\n1. Torta');
+  });
+
+  it('leaves ordinary text alone: a lone asterisk, snake_case, multiplication and prices', () => {
+    for (const text of ['Precio en Bs 2,50 * unidad', 'Pedido 3 x 2', 'Usa el código PAN_10', 'Horario: 8:00 a 20:00.', '5 * 3 = 15']) expect(plainReplyText(text)).toBe(text);
   });
 });

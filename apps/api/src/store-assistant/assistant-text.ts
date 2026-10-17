@@ -14,6 +14,21 @@ export const maskContact = (value: string) => value
   .replace(EMAIL, (email) => `${email.slice(0, 1)}***${email.slice(email.indexOf('@'))}`)
   .replace(PHONE, (phone) => `•••${phone.replace(/\D/g, '').slice(-2)}`);
 
+/**
+ * The chat bubble prints text (textContent), so Markdown a model writes would show its marks (baek, 2026-10-16:
+ * «**croissant de mantequilla**»). Emphasis, code, headings and links lose their marks; list markers become «•».
+ * A lone «*» between spaces (5 * 3) and snake_case words stay as they are.
+ */
+export const plainReplyText = (value: string) => value
+  .replace(/\[([^\]\n]+)\]\((?:https?:\/\/|\/)[^)\s]*\)/g, '$1')
+  .replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g, '$1')
+  .replace(/__(?=\S)([^_\n]*?\S)__/g, '$1')
+  .replace(/(^|[^\p{L}\p{N}*])\*(?=\S)([^*\n]*?\S)\*(?![\p{L}\p{N}*])/gu, '$1$2')
+  .replace(/(^|[^\p{L}\p{N}_])_(?=\S)([^_\n]*?\S)_(?![\p{L}\p{N}_])/gu, '$1$2')
+  .replace(/`([^`\n]+)`/g, '$1')
+  .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, '')
+  .replace(/^[ \t]*[-*+][ \t]+/gm, '• ');
+
 export const normaliseQuestion = (value: string) =>
   foldText(stripContact(value)).replace(/[¿?¡!.,;:"]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 300);
 

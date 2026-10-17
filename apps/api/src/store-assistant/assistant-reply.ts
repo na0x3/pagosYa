@@ -1,5 +1,5 @@
 import { allowedFrom, checkReply } from './assistant-guard';
-import { foldText } from './assistant-text';
+import { foldText, plainReplyText } from './assistant-text';
 import type { AssistantToolbox } from './assistant-tools';
 import type { AssistantBlock, AssistantReply, ProductCard } from './assistant-types';
 
@@ -19,7 +19,9 @@ type BoxState = Pick<AssistantToolbox, 'evidence' | 'cards' | 'searched' | 'addB
 const wordsOf = (value: string) => ` ${foldText(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
 
 /** Cards, buttons and links come only from the toolbox; the model's text only chooses which products to name. */
-export function assembleReply(input: { text: string; box: BoxState; evidence: string[]; contactPhone: string | null }): { reply: AssistantReply; guarded: boolean; offending: string[] } {
+export function assembleReply(raw: { text: string; box: BoxState; evidence: string[]; contactPhone: string | null }): { reply: AssistantReply; guarded: boolean; offending: string[] } {
+  // Checked, matched and sent as the plain text the bubble prints.
+  const input = { ...raw, text: plainReplyText(raw.text) };
   const { box } = input;
   const cards = [...box.cards.values()];
   const allowed = allowedFrom([...input.evidence, ...box.evidence]);
