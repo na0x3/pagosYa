@@ -580,6 +580,7 @@
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
+      .menu-item__original{margin-inline-start:.45em;font-size:.82em;font-weight:400;opacity:.7;white-space:nowrap}
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
       [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
@@ -2858,7 +2859,9 @@
   const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
   // Swatch thumbnails are 22px: the smallest rendition is enough.
   const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
-  const cardChipMarkup = p => `<button type="button" class="menu-item__quick-look" data-product="${escape(p.id)}" aria-label="Vista rápida de ${escape(p.name)}">Vista rápida</button>`;
+  // A sale's old price sits inside the price element, so an authored card layout gains no new item to place.
+  const cardOriginalMarkup = p => !isMembership(p) && price(p) < p.amount ? `<del class="menu-item__original" aria-label="Precio anterior">${money(p.amount, p.currency)}</del>` : '';
+  const cardChipMarkup = p =>`<button type="button" class="menu-item__quick-look" data-product="${escape(p.id)}" aria-label="Vista rápida de ${escape(p.name)}">Vista rápida</button>`;
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
     if (!template || !template.content) return null;
@@ -2886,6 +2889,7 @@
     fill('options', groups ? groups.map(g => plural[g.name.toLowerCase()] ? `${g.values.length} ${plural[g.name.toLowerCase()]}` : `${g.name}: ${g.values.length}`).join(' · ') : '', 'menu-item__options');
     fill('name', p.name, 'menu-item__name');
     fill('price', isMembership(p) ? membershipPriceText(p) : money(price(p), p.currency), 'menu-item__price');
+    field('price').insertAdjacentHTML('beforeend', cardOriginalMarkup(p));
     fill('description', p.description && p.description.trim() !== p.name.trim() ? p.description : '', 'menu-item__description');
     const photo = field('image');
     if (photo) {
@@ -3002,7 +3006,7 @@
     const custom = customProductCard(p, image, complex);
     if (custom) return custom;
     const cardExtras = cardPreview(p, image);
-    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : ""}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}</strong>${cardExtras.swatches ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
+    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : ""}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${cardExtras.swatches ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
@@ -3617,8 +3621,13 @@
   }
   function renderContact() {
     let slot = document.querySelector('[data-pagosya-contact]');
-    // The store assistant takes this corner while it is on (spec 2026-10-13-store-assistant-design).
-    if (!store.contactFormEnabled || store.assistant) { if (slot) slot.hidden = true; return; }
+    // The store assistant takes the corner while it is on (spec 2026-10-13-store-assistant-design); a form the page placed in
+    // its content stays, shown inline where it was put (2026-10-16: baek's quote page card stood empty with the bot on).
+    const inline = Boolean(store.assistant) && Boolean(slot);
+    if (!store.contactFormEnabled || (store.assistant && !slot)) { if (slot) slot.hidden = true; return; }
+    // A slot hidden in the markup is a placeholder (every showcase home has one): with the assistant on it stays hidden;
+    // only a form the page shows in its content goes inline (final review 2026-10-16, I4).
+    if (inline && slot.hidden && !slot.hasAttribute('data-contact-inline')) return;
     // Only an enabled store setting permits the legacy fallback; new stores default off.
     if (!slot && store.contactFormEnabled === true && !fullProductPage && !fullCheckoutPage && (!window.PAGOSYA_PREVIEW_PAGE || window.PAGOSYA_PREVIEW_PAGE === 'index.html')) {
       slot = document.createElement('section'); slot.setAttribute('data-pagosya-contact', '');
@@ -3635,7 +3644,14 @@
     const toggle = slot.querySelector('[data-contact-toggle]');
     const panel = slot.querySelector('[data-contact-panel]');
     const close = slot.querySelector('[data-contact-close]');
+    if (inline) {
+      slot.setAttribute('data-contact-inline', '');
+      // The page's own heading already introduces the form: the panel's heading would say it twice.
+      if (slot.parentElement && slot.parentElement.querySelector(':scope > :is(h1,h2,h3)')) slot.setAttribute('data-contact-headed', '');
+      panel.hidden = false;
+    }
     const setOpen = (open, returnFocus = false) => {
+      if (inline) return;
       slot.dataset.contactOpen = String(open);
       toggle.setAttribute('aria-expanded', String(open));
       panel.hidden = !open;
@@ -3674,6 +3690,11 @@
   }
   const contactStyle = document.createElement('style');
   contactStyle.textContent = `[data-pagosya-contact]{position:fixed;right:24px;bottom:24px;z-index:1000;width:auto;max-width:none;margin:0;padding:0;color:inherit;font:inherit;pointer-events:none}[data-pagosya-contact][hidden]{display:none}[data-pagosya-contact] button{font:inherit;cursor:pointer}[data-pagosya-contact] svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}[data-pagosya-contact] .pagosya-contact-launcher{display:grid;place-items:center;width:56px;height:56px;padding:0;border:1px solid currentColor!important;border-radius:14px;background:var(--ink,#20211d)!important;color:var(--paper,#fffaf0)!important;pointer-events:auto}[data-pagosya-contact] .pagosya-contact-launcher span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[data-pagosya-contact] .pagosya-contact-panel{position:absolute;right:0;bottom:68px;width:min(380px,calc(100vw - 32px));max-height:min(720px,calc(100dvh - 104px));overflow:auto;padding:24px;border:1px solid currentColor!important;border-radius:16px;background:var(--paper,#fffaf0)!important;color:var(--ink,#20211d)!important;pointer-events:auto}[data-pagosya-contact] .pagosya-contact-panel[hidden]{display:none}[data-pagosya-contact] .pagosya-contact-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}[data-pagosya-contact] h2{font:inherit;font-size:clamp(24px,4vw,32px);font-weight:700;margin:0 0 10px}[data-pagosya-contact] p{line-height:1.6}[data-pagosya-contact] .pagosya-contact-heading p{margin:0}[data-pagosya-contact] .pagosya-contact-close{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;padding:0;border:1px solid currentColor;border-radius:50%;background:transparent;color:inherit}[data-pagosya-contact] form{display:grid;gap:16px;margin-top:24px}[data-pagosya-contact] label{display:grid;gap:8px;font-size:15px}[data-pagosya-contact] input,[data-pagosya-contact] textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid currentColor;border-radius:4px;background:transparent;color:inherit;font:inherit}[data-pagosya-contact] form>button[type="submit"]{min-height:48px;padding:12px 24px;background:var(--ink,#20211d);color:var(--paper,#fffaf0);border:1px solid currentColor;font:inherit}[data-pagosya-contact] button:disabled{opacity:.6}[data-pagosya-contact] :focus-visible{outline:3px solid currentColor;outline-offset:4px}[data-contact-status]{min-height:24px;overflow-wrap:anywhere}@media(max-width:560px){[data-pagosya-contact]{right:16px;bottom:16px}[data-pagosya-contact] .pagosya-contact-panel{bottom:68px;width:calc(100vw - 32px);padding:20px}}@media(prefers-reduced-motion:reduce){[data-pagosya-contact] *{transition:none!important;animation:none!important}}`;
+  // Inline (the store assistant owns the corner): the panel sits in the page where the slot is, with no launcher or close.
+  contactStyle.textContent += '[data-pagosya-contact][data-contact-inline]{position:static;right:auto;bottom:auto;z-index:auto;width:100%;margin:16px 0 0;pointer-events:auto}'
+    + '[data-pagosya-contact][data-contact-inline] :is(.pagosya-contact-launcher,.pagosya-contact-close){display:none}'
+    + '[data-pagosya-contact][data-contact-inline] .pagosya-contact-panel{position:static;width:100%;max-height:none;box-shadow:none}'
+    + '[data-pagosya-contact][data-contact-inline][data-contact-headed] .pagosya-contact-heading{display:none}';
   // DNA stores: the launcher and panel take the store's tokens and DNA shape (inside the same layer, so its !important colours yield).
   contactStyle.textContent += ':root[data-dna-button] [data-pagosya-contact] .pagosya-contact-launcher{border-radius:var(--kit-radius-panel);border:var(--kit-border) solid var(--kit-line)!important;background:var(--kit-accent)!important;color:var(--kit-on-accent)!important;box-shadow:0 12px 30px -14px #0009}'
     + ':root[data-dna-button] [data-pagosya-contact] .pagosya-contact-panel{border-radius:var(--kit-radius-panel);border:max(var(--kit-border),1px) solid var(--kit-line)!important;background:var(--kit-paper)!important;color:var(--kit-ink)!important;box-shadow:0 24px 60px -24px #0009}'
@@ -4571,10 +4592,60 @@
     // A page that is going away (its document torn down under the observer) must not throw from the microtask.
     new MutationObserver(() => { if (queued) return; queued = true; queueMicrotask(() => { queued = false; try { decorateControls(); } catch { /* the page is going away */ } }); }).observe(document.body, { childList: true, subtree: true });
   }
+  // A headline never splits a word (2026-10-16, baek's Nosotros: «NUESTR / A HISTORI / A»). The layout baseline lets h1/h2
+  // break inside a word rather than spill sideways, and a model that sets 11rem in a narrow column gets exactly that. When a
+  // word does not fit its line, the headline steps down in size until every word is whole, never below 55% of its authored
+  // size: a single word wider than a phone still breaks, as the baseline intends. A size the store set inline is never touched.
+  const FIT_MIN = .55;
+  const fitWords = /[^\s\-‐–—/]{2,}/g;
+  function splitsWord(heading) {
+    const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const match of node.data.matchAll(fitWords)) {
+        range.setStart(node, match.index); range.setEnd(node, match.index + match[0].length);
+        const lines = new Set(Array.from(range.getClientRects()).filter(rect => rect.width > 0).map(rect => Math.round(rect.top)));
+        if (lines.size > 1) return true;
+      }
+    }
+    return false;
+  }
+  function fitHeadline(heading) {
+    if (heading.closest('[data-pagosya-fit="off"]')) return;
+    // A size this left behind is taken back first, so a wider window gets the authored size again.
+    if (heading.hasAttribute('data-pagosya-fit') && heading.style.fontSize === heading.getAttribute('data-pagosya-fit')) heading.style.removeProperty('font-size');
+    heading.removeAttribute('data-pagosya-fit');
+    if (heading.style.fontSize || !heading.getClientRects().length || !splitsWord(heading)) return;
+    const authored = parseFloat(getComputedStyle(heading).fontSize);
+    if (!authored) return;
+    for (let size = authored * .94; size >= authored * FIT_MIN; size *= .94) {
+      heading.style.fontSize = `${size.toFixed(2)}px`;
+      heading.setAttribute('data-pagosya-fit', heading.style.fontSize);
+      if (!splitsWord(heading)) return;
+    }
+  }
+  function fitHeadlines() {
+    Array.from(document.querySelectorAll('h1,h2')).slice(0, 80).forEach(fitHeadline);
+  }
+  let fitFrame = 0;
+  const scheduleFit = () => { cancelAnimationFrame(fitFrame); fitFrame = requestAnimationFrame(fitHeadlines); };
+  addEventListener('resize', scheduleFit, { passive: true });
+  document.addEventListener('pagosya:ready', scheduleFit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleFit, scheduleFit);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleFit, { once: true }); else scheduleFit();
   // «Pide una cotización» in the header, and any call to action marked data-pagosya-contact-open, opens the platform contact
   // form; a store without the form keeps the link, which goes to its Contacto page.
   document.addEventListener('click', event => {
     const trigger = event.target.closest && event.target.closest('[data-pagosya-contact-open]');
+    // A form shown inline on this page (the store assistant owns the corner): go to it instead of opening a panel.
+    const inlineForm = trigger && document.querySelector('[data-pagosya-contact][data-contact-inline]:not([hidden])');
+    if (inlineForm) {
+      event.preventDefault();
+      inlineForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const field = inlineForm.querySelector('input:not([type=hidden]), textarea');
+      if (field) field.focus({ preventScroll: true });
+      return;
+    }
     const launcher = trigger && document.querySelector('[data-pagosya-contact]:not([hidden]) [data-contact-toggle]');
     if (!launcher) return;
     event.preventDefault();

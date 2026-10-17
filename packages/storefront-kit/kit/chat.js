@@ -280,7 +280,12 @@
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });
     document.addEventListener('pagosya:cart-updated', () => { if (!panel.hidden) showCheckout(); });
-    document.addEventListener('click', event => { if (event.target.closest && event.target.closest('[data-pagosya-contact-open]')) { event.preventDefault(); setOpen(true); } });
+    // «Pide una cotización» belongs to the store's contact form when it has one (inline on this page, or on its contact
+    // page); the bot answers it only for a store without a contact form (2026-10-16).
+    document.addEventListener('click', event => {
+      if (!(event.target.closest && event.target.closest('[data-pagosya-contact-open]')) || store.contactFormEnabled) return;
+      event.preventDefault(); setOpen(true);
+    });
     liftAboveStickyBar();
     // Hosted (sandboxed) frames have no storage and are rebuilt per page, so there the hint can return on the next
     // page; within a page it never shows once a reply carried a conversation.

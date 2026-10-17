@@ -52,6 +52,7 @@ export const PARTS = [
   'content/load.js',
   'header/platform-header.js',
   'controls/decorate.js',
+  'look/fit-headlines.js',
   'shared/start.js',
 ];
 
