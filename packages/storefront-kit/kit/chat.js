@@ -36,7 +36,9 @@
 
   const CSS = '@layer pagosya-assistant-base{'
     + '[data-pagosya-assistant]{position:fixed;right:24px;bottom:calc(24px + var(--pya-lift,0px));z-index:1000;color:var(--kit-ink,var(--ink,#20211d));font-family:var(--store-body-font,var(--brand-body-font,inherit))}'
-    + '.pya-launcher{width:56px;height:56px;border-radius:999px;border:0;padding:0;overflow:hidden;display:grid;place-items:center;cursor:pointer;background:var(--kit-accent,var(--accent,#20211d));color:var(--kit-on-accent,var(--paper,#fff));box-shadow:0 8px 24px rgba(0,0,0,.18)}'
+    + '.pya-launcher{position:relative;width:56px;height:56px;border-radius:999px;border:0;padding:0;display:grid;place-items:center;cursor:pointer;background:var(--kit-accent,var(--accent,#20211d));color:var(--kit-on-accent,var(--paper,#fff));box-shadow:0 8px 24px rgba(0,0,0,.18)}'
+    + '.pya-launcher-icon{display:grid;place-items:center}'
+    + '.pya-badge{position:absolute;top:-3px;right:-3px;width:24px;height:24px;border-radius:999px;overflow:hidden;border:2px solid var(--kit-paper,#fff);background:var(--kit-paper,#fff)}.pya-badge img{display:block;width:100%;height:100%;object-fit:cover}'
     + '.pya-launcher img,.pya-avatar{width:100%;height:100%;object-fit:cover}'
     + '.pya-hint{position:absolute;right:64px;bottom:12px;margin:0;white-space:nowrap;padding:8px 12px;border-radius:999px;font-size:14px;background:var(--kit-paper,var(--paper,#fff));border:1px solid var(--kit-line,rgba(0,0,0,.12));box-shadow:0 4px 14px rgba(0,0,0,.1)}'
     + '.pya-panel{position:absolute;right:0;bottom:68px;width:380px;height:min(600px,calc(100vh - 120px));display:flex;flex-direction:column;overflow:hidden;background:var(--kit-paper,var(--paper,#fff));border:1px solid var(--kit-line,rgba(0,0,0,.12));border-radius:var(--kit-radius-panel,16px);box-shadow:0 18px 48px rgba(0,0,0,.2)}'
@@ -239,7 +241,11 @@
     root = h('section'); root.setAttribute('data-pagosya-assistant', ''); root.setAttribute('aria-label', 'Asistente de la tienda');
     const storeName = store.storeName || 'la tienda';
     const toggle = button('pya-launcher', undefined, { 'data-assistant-toggle': '', 'aria-expanded': 'false', 'aria-controls': 'pya-panel', 'aria-label': 'Abrir asistente de ' + storeName });
-    toggle.append(face(''));
+    // Always the chat icon on the accent, so a shopper sees a chat (baek 2026-10-16: an avatar filling the circle, a logo on a
+    // light background, read as a beige blob). The avatar is a small badge here and stays in the panel's head.
+    const launcherIcon = h('span', 'pya-launcher-icon'); launcherIcon.innerHTML = ICON; toggle.append(launcherIcon);
+    const avatar = asset(settings.avatarUrl);
+    if (avatar) { const badge = h('span', 'pya-badge'), img = h('img'); img.src = avatar; img.alt = ''; badge.append(img); toggle.append(badge); }
     const hint = h('p', 'pya-hint', '¿Dudas sobre este producto?'); hint.hidden = true;
     const panel = h('div', 'pya-panel'); panel.id = 'pya-panel'; panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-labelledby', 'pya-title');
     const head = h('div', 'pya-head'); head.append(face('pya-face'));

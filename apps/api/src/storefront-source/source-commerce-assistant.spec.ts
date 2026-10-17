@@ -52,6 +52,22 @@ describe('kit chat.js', () => {
     expect([...doc.querySelectorAll('.pya-suggestions button')].map((b: any) => b.textContent)).toEqual(['¿Qué me recomiendas?']);
   });
 
+  // baek 2026-10-16: an avatar filling the whole launcher (a logo on a light background) read as a beige blob, so the owner
+  // could not find the bot. The launcher is always the chat icon on the accent; the avatar is a badge and stays in the panel.
+  it('keeps the chat icon on the launcher when the bot has an avatar, which shows as a badge and in the panel', () => {
+    const { doc } = open({ assistant: { ...ASSISTANT, avatarUrl: 'https://api.test/v1/uploads/logo.png' } });
+    const toggle = doc.querySelector('[data-assistant-toggle]')!;
+    expect(toggle.querySelector(':scope > .pya-launcher-icon svg')).not.toBeNull();
+    expect(toggle.querySelector('.pya-badge img')?.getAttribute('src')).toBe('https://api.test/v1/uploads/logo.png');
+    expect(doc.querySelector('.pya-head .pya-face img')?.getAttribute('src')).toBe('https://api.test/v1/uploads/logo.png');
+  });
+
+  it('shows the chat icon and no badge on the launcher without an avatar', () => {
+    const toggle = open({ assistant: ASSISTANT }).doc.querySelector('[data-assistant-toggle]')!;
+    expect(toggle.querySelector(':scope > .pya-launcher-icon svg')).not.toBeNull();
+    expect(toggle.querySelector('.pya-badge')).toBeNull();
+  });
+
   it('sends through the hosted bridge, renders reply text as text, and adds to the cart with the kit button', async () => {
     const { w, doc } = open({ assistant: ASSISTANT }, (action) => action === 'assistant'
       ? { ok: true, body: { conversationId: 'cabcdefghijklmnopqrstuvw', reply: { text: 'Mira <img src=x onerror="window.__xss=1"> esto', blocks: [{ type: 'products', items: [{ id: 'p1', name: 'Café', price: 'Bs 10,00', originalPrice: null, inStock: true, image: null, addKey: 'p1' }] }] } } }
