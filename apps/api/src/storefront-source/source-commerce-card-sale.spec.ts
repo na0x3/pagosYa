@@ -35,6 +35,8 @@ describe('catalog card sale price', () => {
     expect(original?.textContent).toContain('50');
     expect(original?.getAttribute('aria-label')).toBe('Precio anterior');
     expect(query('.menu-item__price')?.firstChild?.textContent).toContain('40');
+    // A space before it lets the old price drop to its own line on a narrow card instead of running into the add button.
+    expect(query('.menu-item__price')?.innerHTML).toMatch(/\s<del class="menu-item__original"/);
   });
 
   it('strikes through the old price inside a store-authored card price', async () => {

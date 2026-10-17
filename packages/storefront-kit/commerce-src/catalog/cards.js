@@ -27,8 +27,9 @@
   const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
   // Swatch thumbnails are 22px: the smallest rendition is enough.
   const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
-  // A sale's old price sits inside the price element, so an authored card layout gains no new item to place.
-  const cardOriginalMarkup = p => !isMembership(p) && price(p) < p.amount ? `<del class="menu-item__original" aria-label="Precio anterior">${money(p.amount, p.currency)}</del>` : '';
+  // A sale's old price sits inside the price element, so an authored card layout gains no new item to place. The space before
+  // it lets it drop to its own line on a narrow card instead of running into the add button.
+  const cardOriginalMarkup = p => !isMembership(p) && price(p) < p.amount ? ` <del class="menu-item__original" aria-label="Precio anterior">${money(p.amount, p.currency)}</del>` : '';
   const cardChipMarkup = p =>`<button type="button" class="menu-item__quick-look" data-product="${escape(p.id)}" aria-label="Vista rápida de ${escape(p.name)}">Vista rápida</button>`;
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
