@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 import { FRAME_CATALOGUE } from './design-engine/frame-draw';
 import { CONVENTIONAL_HEADERS } from './design-engine/playbook';
-import { emptySourceHeaders, FALLBACK_HEADER_SHAPE, hasPlatformHeader, headerFact, HEADER_SHAPES, renderSourceHeader, withSourceHeader, type HeaderShape } from './source-header';
+import { emptySourceHeaders, FALLBACK_HEADER_SHAPE, hasPlatformHeader, headerAccountOn, headerFact, HEADER_SHAPES, instructionAsksHeaderAccount, renderSourceHeader, SOURCE_PLATFORM_HEADER_EDIT, withHeaderAccountConfig, withSourceHeader, type HeaderShape } from './source-header';
 import { createHash } from 'node:crypto';
 import { CART_ICONS, CONTROL_LANGUAGES, libraryRecord } from './store-controls-library';
 import postcss from 'postcss';
@@ -328,5 +328,83 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
   it('tells a saved store with the platform header from one without', () => {
     expect(hasPlatformHeader([{ path: 'index.html', content: render('menu-button', 'shop') }])).toBe(true);
     expect(hasPlatformHeader([{ path: 'index.html', content: '<header class="site"></header>' }, { path: 'assets/a.png', content: '<header data-pagosya-header>', encoding: 'base64' }])).toBe(false);
+  });
+});
+
+// baek (tholhejh), 2026-10-16: «pon el icono del login en el sidebar» on a showcase, whose header had no account control, so
+// YAPI drew a sidebar of its own under the platform rail. The platform now draws the account button when the merchant asks.
+describe('the account button a showcase merchant asks for (2026-10-16)', () => {
+  const TICKET: StoreControls = libraryRecord(CONTROL_LANGUAGES.find(language => language.id === 'ticket-stub')!, 'cafe-food', 'cup');
+  const hasTools = (shape: HeaderShape) => readFileSync(kitPath('headers', `${shape}.html`), 'utf8').includes('{{tools}}');
+  const config = (value: object) => ({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(value)};\n` });
+
+  it.each([...HEADER_SHAPES])('«%s» showcase header with the account on keeps its main action and adds Mi cuenta to its menu, never shop controls', shape => {
+    const html = render(shape, 'service', { account: true });
+    expect(html).toContain('<div class="pyh-menu-tools"><a class="pyh-menu-link pyh-menu-action" href="https://wa.me/59170012345" target="_blank" rel="noopener">Escríbenos</a><a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a></div>');
+    expect(html).not.toContain('data-cart-open');
+    expect(html).not.toContain('buscar.html');
+    expect(html).not.toContain('{{');
+  });
+
+  it('shows it in the bar of the shapes that have tools and on the side rail, and nowhere else', () => {
+    for (const shape of HEADER_SHAPES) {
+      const html = render(shape, 'service', { account: true });
+      const inBar = html.includes('<a class="pyh-tool" href="#" data-pagosya-account="login">Mi cuenta</a>');
+      expect(inBar).toBe(hasTools(shape));
+      expect(html.includes('pyh-rail-account')).toBe(shape === 'side-rail');
+      expect(html.includes('data-pagosya-header-account-style')).toBe(shape === 'side-rail');
+    }
+    expect(render('side-rail', 'service', { account: true })).toContain('<div class="pyh-right"><a class="pyh-tool pyh-rail-account" href="#" data-pagosya-account="login" aria-label="Mi cuenta"><span class="pyh-rail-word">Mi cuenta</span></a>');
+  });
+
+  it("draws the rail button with the store's account icon and the plain accessible name", () => {
+    const html = render('side-rail', 'service', { account: true, controls: TICKET });
+    const button = html.match(/<a class="pyh-tool pyh-rail-account"[\s\S]*?<\/a>/)![0];
+    expect(button).toContain('aria-label="Mi cuenta" data-ctl="account"');
+    expect(button).toContain('<svg class="ctl-icon"');
+    expect(button).not.toContain('ctl-word');
+  });
+
+  it('changes nothing on a shop header or without the account on', () => {
+    for (const shape of HEADER_SHAPES) {
+      expect(render(shape, 'shop', { account: true })).toBe(render(shape, 'shop'));
+      expect(render(shape, 'service', { account: false })).toBe(render(shape, 'service'));
+    }
+  });
+
+  it('withSourceHeader follows config.js header.account, or the saved one when this save carries no config.js', () => {
+    const index = { path: 'index.html', content: '<body><header data-pagosya-header></header><main></main></body>' };
+    const drawn = (files: Array<{ path: string; content: string }>, previous?: Array<{ path: string; content: string }>) =>
+      withSourceHeader(files, { shape: 'side-rail', purpose: 'service', storeName: 'baek', ...(previous ? { previous } : {}) }).files.find(file => file.path === 'index.html')!.content;
+    expect(drawn([index, config({ header: { account: true } })])).toContain('data-pagosya-account="login"');
+    expect(drawn([index], [index, config({ header: { account: true } })])).toContain('data-pagosya-account="login"');
+    expect(drawn([index, config({ header: { account: false } })], [index, config({ header: { account: true } })])).not.toContain('data-pagosya-account');
+    expect(drawn([index])).not.toContain('data-pagosya-account');
+  });
+
+  it('withHeaderAccountConfig writes the choice into config.js, bringing the saved config.js when the save has none', () => {
+    const saved = [config({ slug: 'baek', data: { storeName: 'baek' } })];
+    const on = withHeaderAccountConfig([{ path: 'index.html', content: '<body></body>' }], saved, true);
+    expect(headerAccountOn(on)).toBe(true);
+    expect(on.find(file => file.path === 'config.js')!.content).toContain('"slug":"baek"');
+    expect(headerAccountOn(withHeaderAccountConfig(on, saved, false))).toBe(false);
+    expect(headerAccountOn([{ path: 'index.html', content: '' }])).toBeUndefined();
+    // No config.js anywhere: nothing to write into.
+    expect(withHeaderAccountConfig([{ path: 'index.html', content: '' }], [], true)).toEqual([{ path: 'index.html', content: '' }]);
+  });
+
+  it('tells a request for the account button, and one to remove it, from everything else', () => {
+    expect(instructionAsksHeaderAccount('haz una pagina de nostros y pon el icono del login en el sidebar, y si puedes en el sidebar usa otros botones para las opciones')).toBe(true);
+    expect(instructionAsksHeaderAccount('agrega un botón para iniciar sesión en el menú')).toBe(true);
+    expect(instructionAsksHeaderAccount('quiero que mis clientes puedan entrar a su cuenta desde el encabezado')).toBe(true);
+    expect(instructionAsksHeaderAccount('quita el botón de Mi cuenta del menú')).toBe(false);
+    expect(instructionAsksHeaderAccount('cambia el color del botón de WhatsApp')).toBeUndefined();
+    expect(instructionAsksHeaderAccount('ingresa los precios nuevos en la carta')).toBeUndefined();
+    expect(instructionAsksHeaderAccount('haz que esta parte sea mas bonita')).toBeUndefined();
+  });
+
+  it('tells YAPI the header is the only menu and the account button is the platform\'s', () => {
+    expect(SOURCE_PLATFORM_HEADER_EDIT).toMatch(/never build a header, top bar, sidebar or menu of your own/);
+    expect(SOURCE_PLATFORM_HEADER_EDIT).toMatch(/Mi cuenta/);
   });
 });

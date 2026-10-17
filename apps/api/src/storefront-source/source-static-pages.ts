@@ -1,5 +1,6 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { headerAccountOn } from './source-header';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
 
 /**
@@ -29,10 +30,12 @@ const ACCOUNT_PAGES = STOREFRONT_PAGES.filter(page => page.owner === 'account').
 export const STATIC_STANDARD_PAGE_PATHS: readonly string[] = [...PAGES, ...ACCOUNT_PAGES].map(page => page.url);
 
 /** A showcase (spec 2026-10-13) has nothing to search, collect, ship, refund or sign in to: it keeps Nosotros, Contacto,
- *  Preguntas frecuentes, the three policies and 404. Every purpose that is not a shop gets this set. */
+ *  Preguntas frecuentes, the three policies and 404. Every purpose that is not a shop gets this set, plus the account pages
+ *  when its merchant turned the header's account button on (`account`, config.js header.account, 2026-10-16). */
 const SHOWCASE_PAGE_KINDS = new Set(['about', 'contact', 'faq', 'privacy', 'terms', 'cookies', 'notfound']);
-export function staticStandardPagePaths(purpose: string = 'shop'): string[] {
-  return purpose === 'shop' ? [...STATIC_STANDARD_PAGE_PATHS] : PAGES.filter(page => SHOWCASE_PAGE_KINDS.has(page.kind)).map(page => page.url);
+export function staticStandardPagePaths(purpose: string = 'shop', account = false): string[] {
+  if (purpose === 'shop') return [...STATIC_STANDARD_PAGE_PATHS];
+  return [...PAGES.filter(page => SHOWCASE_PAGE_KINDS.has(page.kind)).map(page => page.url), ...(account ? ACCOUNT_PAGES.map(page => page.url) : [])];
 }
 
 /** The copy and gate rules of the kit's AccountGatePage (packages/storefront-kit/kit/ui.tsx), which an authored store
@@ -111,7 +114,26 @@ export function withStaticNavSlot(html: string): string | null {
 }
 
 /** Sections between `</main>` and the footer are home content an author left outside its main, not page chrome: a standard
- *  page drops them (live 2026-10-15, a video section repeated on every page). Everything else there (cart, scripts) stays. */
+ *  page drops them (live 2026-10-15, a video section repeated on every page). Everything else there (cart, scripts) stays,
+ *  including a cart authored inside a dropped section (live 2026-10-16, the store's drawer was lost with its catalog). */
+function cartsIn(section: string): string {
+  const carts: string[] = [];
+  const open = /<([a-z][a-z0-9-]*)\b[^>]*\sdata-pagosya-cart(?=[\s>=\/])[^>]*>/gi;
+  for (let m = open.exec(section); m; m = open.exec(section)) {
+    const tag = new RegExp(`<(\\/?)${m[1]}\\b[^>]*>`, 'gi');
+    tag.lastIndex = m.index;
+    let depth = 0, stop = -1;
+    for (let t = tag.exec(section); t; t = tag.exec(section)) {
+      depth += t[1] ? -1 : 1;
+      if (depth === 0) { stop = t.index + t[0].length; break; }
+    }
+    if (stop < 0) break;
+    carts.push(section.slice(m.index, stop));
+    open.lastIndex = stop;
+  }
+  return carts.join('\n  ');
+}
+
 function withoutStraySections(tail: string): string {
   const footer = tail.search(/<footer\b/i);
   const end = footer < 0 ? tail.search(/<\/body>/i) : footer;
@@ -129,7 +151,7 @@ function withoutStraySections(tail: string): string {
       if (depth === 0) { stop = at; break; }
     }
     if (stop < 0) break;
-    gap = gap.slice(0, open) + gap.slice(stop);
+    gap = gap.slice(0, open) + cartsIn(gap.slice(open, stop)) + gap.slice(stop);
   }
   return gap + tail.slice(end);
 }
@@ -185,7 +207,7 @@ export function withStaticStandardPages(files: SourceProjectFileDto[], purpose: 
     ...PAGES.map(page => ({ url: page.url, label: page.label, mount: `<div data-pagosya-page="${page.kind}"></div>` })),
     ...ACCOUNT_PAGES.filter(page => GATE_COPY[page.view]).map(page => ({ url: page.url, label: page.label, mount: gateMarkup(page.view) })),
   ];
-  const allowed = new Set(staticStandardPagePaths(purpose));
+  const allowed = new Set(staticStandardPagePaths(purpose, headerAccountOn(files) === true));
   for (const page of standard.filter(entry => allowed.has(entry.url))) {
     const existing = files.find(file => file.path === page.url);
     if (existing && (existing.encoding === 'base64' || mainInner(existing.content) !== page.mount.trim())) continue;
@@ -210,4 +232,24 @@ export function withStaticStandardPages(files: SourceProjectFileDto[], purpose: 
   });
 
   return { files: [...patched, ...added], added: added.map(page => page.path), refreshed: [...refreshed.keys()], slotAdded };
+}
+
+/** Every save of an authored store: the standard pages that are still the platform's copy are rebuilt from the current
+ *  index.html, so a fix to the home or to page building reaches them (live 2026-10-16, pages built before the stray-section
+ *  fix kept a video section). Unlike withStaticStandardPages it never adds a page or a footer slot. */
+export function withRefreshedStaticStandardPages(files: SourceProjectFileDto[], purpose: string = 'shop'): SourceProjectFileDto[] {
+  const { files: rebuilt, refreshed } = withStaticStandardPages(files, purpose);
+  if (!refreshed.length) return files;
+  const pages = new Map(rebuilt.filter(file => refreshed.includes(file.path)).map(file => [file.path, file.content]));
+  return files.map(file => pages.has(file.path) ? { ...file, content: pages.get(file.path)! } : file);
+}
+
+/** Every save of a showcase whose merchant turned the header's account button on (2026-10-16): the account pages a shop has
+ *  are added, so «Mi cuenta» opens the store's own sign-in. Nothing else is added or changed; a page already there stays. */
+export function withShowcaseAccountPages(files: SourceProjectFileDto[], purpose: string): SourceProjectFileDto[] {
+  if (purpose === 'shop' || headerAccountOn(files) !== true) return files;
+  const accountPaths = new Set(ACCOUNT_PAGES.map(page => page.url));
+  const { files: built, added } = withStaticStandardPages(files, purpose);
+  const pages = built.filter(file => accountPaths.has(file.path) && added.includes(file.path));
+  return pages.length ? [...files, ...pages] : files;
 }

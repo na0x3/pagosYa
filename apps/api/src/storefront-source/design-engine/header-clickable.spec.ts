@@ -91,3 +91,43 @@ it('keeps only the covers a save brings in, judged per control and width', () =>
   expect(introducedHeaderCovers(next, saved)).toEqual([cover({ width: 1440, control: 'Tu bolsa', cover: 'aside.cart-drawer' })]);
   expect(introducedHeaderCovers(next, [])).toEqual(next);
 });
+
+// baek (tholhejh), 2026-10-16: asked for a login icon "en el sidebar", YAPI drew a fixed sidebar of its own at the same left edge,
+// under the platform's side rail (z-index 1000), so the rail hid the left half of every link.
+const rail = '<header data-pagosya-header class="pyh pyh--side-rail"><a class="pyh-brand" href="index.html">baek</a><button type="button" class="pyh-toggle">Menú</button></header>';
+const railCss = 'body{margin:0;font:16px sans-serif;padding-left:88px}.pyh--side-rail{position:fixed;top:0;bottom:0;left:0;width:88px;z-index:1000;display:flex;flex-direction:column;justify-content:space-between;background:#7a2e1f;color:#fff}.pyh--side-rail a,.pyh--side-rail button{min-height:44px}';
+const sideNav = '<aside class="service-rail"><nav><a href="index.html">Inicio</a><a href="nosotros.html">Nosotros</a><a href="#" data-pagosya-account="login">Ingresar</a></nav></aside>';
+const sideNavCss = (left: string) => `.service-rail{position:fixed;z-index:18;left:${left};top:120px;width:156px;padding:12px;background:#111}.service-rail a{display:block;min-height:44px;padding:8px;color:#fff}@media(max-width:1000px){.service-rail{position:relative;left:auto;top:auto;width:auto}}`;
+
+it('reports store links the platform header hides when the store draws a fixed sidebar of its own under it', async () => {
+  const snapshot = await store(`${rail}${sideNav}<main><section class="hero" style="height:1800px">BAEK</section></main>`, railCss + sideNavCss('16px'));
+  const covers = await captureHeaderCovers(snapshot);
+  expect(covers).toEqual(expect.arrayContaining([
+    expect.objectContaining({ width: 1440, control: 'Inicio', cover: 'header.pyh.pyh--side-rail', section: 'aside.service-rail', under: true, platform: true, atTop: true }),
+    expect.objectContaining({ width: 1440, control: 'Ingresar', under: true }),
+  ]));
+  // At phone width the sidebar flows in the page and the rail is not beside it.
+  expect(covers.some(cover => cover.width === 390)).toBe(false);
+  const problems = headerCoverProblems(covers);
+  expect(problems).toHaveLength(1);
+  expect(problems[0]).toMatch(/^1440px: el encabezado de la plataforma tapa «Inicio», «Nosotros» y «Ingresar» de aside\.service-rail arriba de la página\./);
+  expect(problems[0]).toContain('no hagas un encabezado, barra lateral ni menú propio');
+});
+
+it('says nothing about a fixed panel that sits beside the side rail, or content scrolling under a sticky top header', async () => {
+  const beside = await store(`${rail}${sideNav}<main><section class="hero" style="height:1800px">BAEK</section></main>`, railCss + sideNavCss('100px'));
+  expect(await captureHeaderCovers(beside)).toEqual([]);
+  const links = Array.from({ length: 12 }, (_, i) => `<p><a href="#p${i}">Producto ${i + 1}</a></p>`).join('');
+  const sticky = await store(`<header class="bar">${controls}</header><main><section class="list">${links}</section><section style="height:2400px"></section></main>`,
+    'body{margin:0;font:16px sans-serif}.bar{position:sticky;top:0;z-index:10;height:64px;display:flex;justify-content:space-between;align-items:center;background:#fff}.tools{display:flex;gap:16px}.list p{margin:0;padding:24px 0}');
+  expect(await captureHeaderCovers(sticky)).toEqual([]);
+});
+
+it('keeps store links hidden under the header apart from header controls something else covers', () => {
+  const saved = [cover({ control: 'Inicio' })];
+  const under = cover({ control: 'Inicio', cover: 'header.pyh', section: 'aside.service-rail', under: true, platform: true, atTop: true });
+  expect(introducedHeaderCovers([under], saved)).toEqual([under]);
+  expect(introducedHeaderCovers([under], [under])).toEqual([]);
+  expect(headerCoverProblems([{ ...under, platform: false, section: '' }])[0]).toBe(
+    '1440px: el encabezado tapa «Inicio» arriba de la página. Ese contenido queda debajo del encabezado y no se puede pulsar: déjale espacio al encabezado (por ejemplo padding-top o margin-left del tamaño del encabezado) o muévelo fuera de su zona; nunca dibujes un encabezado, barra lateral ni menú propio.');
+});

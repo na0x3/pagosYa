@@ -15,7 +15,8 @@ export type SourceReferenceResourceKind = 'html' | 'css' | 'script' | 'image' | 
 const resourceTypes: Record<SourceReferenceResourceKind, RegExp> = { html: /^text\/html\b/i, css: /^text\/css\b/i, script: /^(?:text|application)\/(?:javascript|ecmascript)\b/i, image: /^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)\b/i, font: /^(?:font\/(?:woff2?|ttf|otf)|application\/(?:font-woff|x-font-ttf|vnd.ms-fontobject|octet-stream))\b/i };
 const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 3_000_000, css: 600_000, script: 1_000_000, image: 2_000_000, font: 500_000 };
 
-export async function readSourceReferenceResource(raw: string, kind: SourceReferenceResourceKind, signal: AbortSignal, consume?: (bytes: number) => void): Promise<{ url: string; body: Buffer; contentType: string }> {
+/** `maxBytes` overrides the kind's limit for one caller (the brand-source photo import takes full-size photos). */
+export async function readSourceReferenceResource(raw: string, kind: SourceReferenceResourceKind, signal: AbortSignal, consume?: (bytes: number) => void, maxBytes = resourceLimits[kind]): Promise<{ url: string; body: Buffer; contentType: string }> {
   let url = publicBrandUrl(raw);
   for (let redirects = 0; redirects <= 3; redirects++) {
     if (signal.aborted) throw new Error('Reference timeout');
@@ -36,7 +37,7 @@ export async function readSourceReferenceResource(raw: string, kind: SourceRefer
         res.on('data', (chunk: Buffer) => {
           try { consume?.(chunk.length); } catch { reject(fail()); req.destroy(); return; }
           size += chunk.length;
-          if (size > resourceLimits[kind]) { reject(fail()); req.destroy(); }
+          if (size > maxBytes) { reject(fail()); req.destroy(); }
           else parts.push(chunk);
         });
         res.on('error', () => reject(fail()));

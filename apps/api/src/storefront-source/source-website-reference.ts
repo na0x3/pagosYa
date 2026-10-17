@@ -1,6 +1,7 @@
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { readSourceWebsite } from './source-website-fetch';
 import { captureSourceReference, type SourceRenderedReference } from './source-reference-capture';
+import { brandSourceOwnSite } from './brand-source-intent';
 
 export type SourceWebsiteReference = { url: string; status: 'inspected' | 'unavailable'; evidence: string; rendered?: SourceRenderedReference };
 
@@ -22,7 +23,8 @@ export function sourceWebsiteReferenceUrls(instruction: string, previousReply = 
   const text = instruction.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
   const withoutUrls = text.replace(/https?:\/\/[^\s<>"'`]+|www\.[^\s<>"'`]+/gi, '').trim();
   const referenceIntent = /\b(like|similar|match|inspir\w*|referenc\w*|parec\w*|como|igual|estilo)\b/i;
-  if (withoutUrls && !referenceIntent.test(withoutUrls) && !referenceIntent.test(previousReply)) return [];
+  // A merchant's own old site (spec 2026-10-16 brand source) is inspected too: «mi página anterior https://…».
+  if (withoutUrls && !referenceIntent.test(withoutUrls) && !referenceIntent.test(previousReply) && !brandSourceOwnSite(withoutUrls)) return [];
   if (/\b(?:do not|don't|no)\s+(?:use|us[ae]s?|anal\w*|inspec\w*)\b/i.test(withoutUrls)) return [];
   const urls = text.match(/https?:\/\/[^\s<>"'`]+|\bwww\.[^\s<>"'`]+/gi) || [];
   return [...new Set(urls.map(value => value.replace(/[.,;!?\])}]+$/, '')).map(value => /^www\./i.test(value) ? `https://${value}` : value))].filter(value => {

@@ -32,3 +32,12 @@ it('keeps scripts and styles for an explicit page edit while omitting unrelated 
 it('retains full context for global, ambiguous, and nonexistent page requests', () => {
   for (const text of ['Cambia los colores en todas las páginas, empezando con index.html', 'Make every page match checkout.html', 'Mejora el checkout', 'Edit unknown.html']) expect(sourceTaskContext(files, text).files).toBe(files);
 });
+it('restructuring the whole site is a redesign, restructuring one part is not', () => {
+  // The owner's words on 2026-10-16 (store baek): treated as a palette-and-photo touch-up, the point edits could not land.
+  for (const text of [
+    'haz que el sitio tenga estas fotos y videos estructura el sitio con los colores de las fotos y pon los videos en partes estrategicas',
+    'Reestructura la página entera', 'reorganiza todo el sitio', 'Restructure my website around these photos', 'cambia la estructura del sitio',
+  ]) expect(sourceRedesignRequested(text)).toBe(true);
+  for (const text of ['estructura el menú en dos columnas', 'reorganiza las tarjetas del catálogo', 'no cambies la estructura del sitio, solo los colores', 'Restructure the footer links'])
+    expect(sourceRedesignRequested(text)).toBe(false);
+});

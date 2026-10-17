@@ -43,10 +43,10 @@ export type SourceGenerationAttempt = { model: SourceModel; phase?: 'design' | '
  * the stage's own signal times out (epoch ms), so a step inside it can keep time for the N+1 save. */
 export type Sep5Review = (run: { signal: AbortSignal; attempts: SourceGenerationAttempt[]; deadline: number }) => Promise<{ saveInput: SaveSourceProjectDto; notes: string[] } | null>;
 /** One image input of a Responses API request, as generate() builds them. */
-export type SourceInputImage = { type: 'input_image'; image_url: string; detail: 'auto' };
+export type SourceInputImage = { type: 'input_image'; image_url: string; detail: 'auto' | 'high' };
 
 /** generate()'s `execution` argument (unchanged; named so the stages can refer to it). */
-export type GenerateExecution = { candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: called once both cards are planned and choosable, before their heroes finish (spec 2026-10-12). */ onPickable?: (result: StyleProposalResult) => void; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } };
+export type GenerateExecution = { /** Spec 2026-10-16: the merchant's own brand material for this request. */ brandSource?: import('./brand-source-types').BrandSourceInput; candidate?: boolean; free?: boolean; /** Who pays instead of the merchant (spec 2026-09-27 §3); recorded on the run. */ sponsor?: 'shopify-import'; redesign?: boolean; /** The chat kept the store on its template: the agent may rewrite whole components, not the stylesheet. */ keepTemplate?: boolean; /** "Guardar borrador": continue the preserved draft of this revision's latest unfinished run, whatever the chat said since. */ resumeDraft?: boolean; /** Evaluation script only: a candidate that keeps the merchant instruction and may use the agent. */ evaluate?: boolean; snapshot?: SourceProjectSnapshot; findings?: unknown; referenceCaptures?: Array<{ image: string; viewport: string; y: number; url?: string }>; signal?: AbortSignal; onDispatch?: () => void; onAttempts?: (attempts: unknown[]) => void; /** Elige tu estilo: a fresh design saves two style cards (one calm, one bold) on the run and returns before building. */ styleProposal?: boolean; /** Elige tu estilo: called once both cards are planned and choosable, before their heroes finish (spec 2026-10-12). */ onPickable?: (result: StyleProposalResult) => void; /** Elige tu estilo: build the card the merchant picked from a saved proposal. */ style?: { proposal: StyleProposal; index: number } };
 
 /** The run's generated files as the acceptance chain sees them. */
 export type GeneratedSource = { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
@@ -107,5 +107,7 @@ export type GenerationLive = {
   agentOutcome: AgentOutcome | undefined;
   unfinishedStatus: 'PARTIAL' | 'BLOCKED' | null;
   taskPrompt: string;
+  /** Spec 2026-10-16 brand source: the BRAND SOURCE block for the Sep-5 author, '' without brand material. */
+  readonly brandBlock: string;
   readonly model: SourceModel;
 };

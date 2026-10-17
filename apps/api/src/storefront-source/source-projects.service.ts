@@ -19,7 +19,7 @@ import { applyVariantOperations } from './source-product-options';
 import { applyProductSubscriptionOperations, validateProductSubscriptions } from '../payment-links/product-subscriptions';
 import { readFile } from 'node:fs/promises';
 import { withStandardPages } from './source-content-pages';
-import { withStaticStandardPages } from './source-static-pages';
+import { withRefreshedStaticStandardPages, withShowcaseAccountPages, withStaticStandardPages } from './source-static-pages';
 import { currentSourceRuntime } from './source-runtime';
 import { publicationState } from './source-publishing.service';
 import { withSourceMotionSettings, type SourceMotionMode, type SourceScrollFeel } from './source-motion';
@@ -244,6 +244,10 @@ export class SourceProjectsService {
   async prepare(input: SaveSourceProjectDto) {
     // DNA motifs are inlined into kit slots, so every save re-sanitises them, the merchant's own edits included.
     input = { ...input, files: withSanitizedMotifs(input.files).files };
+    // The standard pages still owned by the platform follow the home on every save, generations included.
+    if (!isNextSource(input.files)) input = { ...input, files: withRefreshedStaticStandardPages(input.files, sourceSitePurpose(input.brief)) };
+    // A showcase whose merchant asked for the header's account button gets the account pages it opens (2026-10-16).
+    if (!isNextSource(input.files)) input = { ...input, files: withShowcaseAccountPages(input.files, sourceSitePurpose(input.brief)) };
     let snapshot = sourceProjectSnapshot({ ...input, files: applySourceLayoutBaseline(await withSourceFonts(input.files)) });
     if (isNextSource(snapshot.files)) {
       const compiled = await compileNextPreview(snapshot.files.filter(f => nextSourceFile(f.path)), sourceSitePurpose(snapshot.brief));

@@ -98,6 +98,8 @@ export function sep5AuthorPrompt(input: {
   /** The drawn frame and hero (frameDirection, spec 2026-10-10). With it, the shell lists requirements only, not
    *  an order, so headers stop repeating. Absent or blank, the prompt stays byte-identical. */
   frame?: string;
+  /** The merchant's own brand material (spec 2026-10-16 brand source): the BRAND SOURCE block. Absent, byte-identical. */
+  brand?: string;
   /** The business playbook paragraph (playbookDirection, spec 2026-10-11). Absent or blank, the prompt stays byte-identical. */
   playbook?: string;
   /** Appends SEP5_PRODUCTS; the response schema must then be sep5ResponseSchema(true). */
@@ -133,6 +135,7 @@ export function sep5AuthorPrompt(input: {
     ...(input.playbook?.trim() ? [input.playbook.trim()] : []),
     ...(input.brain?.trim() ? [input.brain.trim()] : []),
     ...(input.voice?.trim() ? [input.voice.trim()] : []),
+    ...(input.brand?.trim() ? [input.brand.trim()] : []),
     ...(input.products ? [SEP5_PRODUCTS] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),

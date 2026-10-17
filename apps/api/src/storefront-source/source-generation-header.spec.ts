@@ -139,6 +139,24 @@ describe('a showcase store (spec 2026-10-13)', () => {
     expect(config).toMatchObject({ sitePurpose: 'service', primaryAction: { kind: 'booking', value: 'https://cal.com/estudio-deff' } });
   });
 
+  // baek (tholhejh), 2026-10-16: the account button's choice first went into the model's files as config.js, and the reserved-file
+  // check failed every attempt («La generación intentó cambiar un archivo reservado»). It belongs to the save.
+  it('a chat edit asking for the login icon saves header.account and draws «Mi cuenta» on every page', async () => {
+    await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    const first = projects.save.mock.calls[0][2];
+    projects.current.mockResolvedValue({ revision: 1, slug: 'deff' });
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...first, revision: 1, label: 'deff' }) });
+    projects.save.mockClear();
+    fetchMock.mockImplementation(async () => answer({ label: 'Acceso de cuenta', edits: [{ path: 'styles.css', search: 'body { color: #222; }', replacement: 'body { color: #1f1f1f; }' }], files: [] }));
+    const result: any = await service.generate('m1', 's1', { ...showcaseDto, revision: 1, instruction: 'pon el icono del login en el sidebar, y si puedes en el sidebar usa otros botones para las opciones' }, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    expect(result.revision).toBe(1);
+    const config = JSON.parse(file('config.js')!.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+    expect(config.header).toEqual({ account: true });
+    expect(config.sitePurpose).toBe('service');
+    for (const path of ['index.html', 'nosotros.html']) expect(file(path)).toContain('<a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a>');
+    expect(file('index.html')).not.toContain('data-cart-open');
+  });
+
   it('falls back to the contact form when the setup answer is unusable', async () => {
     prisma.store.findFirst.mockResolvedValue({ slug: 'deff', onboarding: { version: 1, primaryAction: { kind: 'booking', value: 'http://inseguro.test' } } });
     await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));

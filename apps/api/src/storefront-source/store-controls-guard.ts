@@ -101,7 +101,8 @@ export async function inspectControlsPage(page: Page, width: number): Promise<Co
   }
   const labels = new Map(reading.controls.filter(control => control.visible).map(control => [control.label, control.slot]));
   for (const cover of await measureHeaderCovers(page, { maxPositions: 2 })) {
-    const slot = labels.get(cover.control);
+    // A page link the header hides (`under`) is the page's problem, not a header control's, even when it reads «Mi cuenta» too.
+    const slot = cover.under ? undefined : labels.get(cover.control);
     if (slot) add(slot, 'covered', `covered by ${cover.cover}`);
   }
   const toggle = page.locator('header[data-pagosya-header] [data-pagosya-header-toggle]').first();

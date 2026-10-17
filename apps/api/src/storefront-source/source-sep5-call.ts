@@ -29,7 +29,7 @@ export type Sep5Caller = ReturnType<typeof sep5Caller>;
 /** One whole-project call, shared by the author and its self-review so both are budgeted, metered and recorded alike. */
 export function sep5Caller(context: Sep5CallContext) {
   const { provider, apiKey, budget, signal, attempts, storeId, metering } = context;
-  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls' | 'photo' | 'voice' | 'tone' | 'surfaces', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
+  const sep5Call = async (phase: 'author' | 'review' | 'touch' | 'controls' | 'photo' | 'voice' | 'tone' | 'surfaces' | 'brand', text: string, attached: SourceInputImage[], schemaName: string, schema: object, timeoutMs: number, options: Sep5CallOptions = {}) => {
     const callSignal = options.signal ?? signal;
     const attempt: SourceGenerationAttempt = { model: context.model(), phase, durationMs: 0, status: 'FAILED', usage: null };
     (options.attempts ?? attempts).push(attempt);

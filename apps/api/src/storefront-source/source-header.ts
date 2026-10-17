@@ -10,6 +10,7 @@ import { primaryActionLink, type PrimaryAction } from './source-primary-action';
 import type { SourceSitePurpose } from './source-site-purpose';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import type { IconSlot, StoreControls } from './store-controls';
+import { patchConfigFile, readConfigFile } from './store-look';
 
 export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'bottom-pill', 'overlay', 'reveal'] as const;
 export type HeaderShape = typeof HEADER_SHAPES[number];
@@ -25,7 +26,14 @@ export type RenderHeaderInput = {
   prefix?: string;
   /** The store's control language (spec 2026-10-14 store controls); without one the header is drawn exactly as before. */
   controls?: StoreControls;
+  /** A showcase whose merchant asked for the account button (config.js header.account, 2026-10-16): «Mi cuenta» in the menu,
+   *  in the bar of the shapes that have tools and on the side rail. A shop always has it; without it a showcase is as before. */
+  account?: boolean;
 };
+
+/** The side rail's account button, upright like the rail's main action when it is a word. Only on a rail that has one, so
+ *  every other header keeps its bytes. */
+const RAIL_ACCOUNT_CSS = '@media (min-width:861px){.pyh--side-rail .pyh-rail-account{justify-content:center;width:44px;min-height:44px}.pyh--side-rail .pyh-rail-account:not(:has(svg)){writing-mode:vertical-rl;transform:rotate(180deg);padding:12px 0;font-size:14px}}';
 
 const kitFiles = new Map<string, string>();
 const kitText = (file: string) => {
@@ -59,6 +67,8 @@ const controlAttributes = (controls: StoreControls) => {
 export function renderSourceHeader(input: RenderHeaderInput): string {
   const prefix = input.prefix ?? '';
   const showcase = input.purpose !== 'shop';
+  const account = showcase && input.account === true;
+  const accountLink = (className: string) => `<a class="${className}" href="#" data-pagosya-account="login">Mi cuenta</a>`;
   const anchor = (link: HeaderLink) => `<a href="${escape(local(link.href, prefix))}">${escape(link.label)}</a>`;
   const nav = (items: HeaderLink[], label: string) => items.length ? `<nav class="pyh-nav" aria-label="${label}">${items.map(anchor).join('')}</nav>` : '';
   const half = Math.ceil(input.links.length / 2);
@@ -66,7 +76,7 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
   const link = showcase ? primaryActionLink(input.action ?? { kind: 'form' }) : null;
   const actionHref = link ? escape(local(link.href, prefix)) : '';
   const menuTools = link
-    ? `<a class="pyh-menu-link pyh-menu-action" href="${actionHref}"${link.attributes}>${link.label}</a>`
+    ? `<a class="pyh-menu-link pyh-menu-action" href="${actionHref}"${link.attributes}>${link.label}</a>${account ? accountLink('pyh-menu-link') : ''}`
     : `${search ? `<a class="pyh-menu-link" href="${escape(prefix)}buscar.html">Buscar</a>` : ''}<a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a>`;
   const menu = (close: string) => `<div class="pyh-menu" id="pyh-menu" data-pagosya-header-menu hidden><div class="pyh-menu-panel" role="dialog" aria-modal="true" aria-label="Menú">${close}${input.links.length ? `<nav class="pyh-menu-nav" aria-label="Menú">${input.links.map(anchor).join('')}</nav>` : ''}<div class="pyh-menu-tools">${menuTools}</div></div></div>`;
   const parts: Record<string, string> = {
@@ -74,13 +84,14 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
     nav: nav(input.links, 'Principal'),
     navStart: nav(input.links.slice(0, half), 'Principal'),
     navEnd: nav(input.links.slice(half), 'Más secciones'),
-    tools: showcase ? '' : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html">Buscar</a>` : ''}<a class="pyh-tool" href="#" data-pagosya-account="login">Mi cuenta</a>`,
+    tools: showcase ? (account ? accountLink('pyh-tool') : '') : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html">Buscar</a>` : ''}<a class="pyh-tool" href="#" data-pagosya-account="login">Mi cuenta</a>`,
     cta: link
       ? `<a class="pyh-action" href="${actionHref}"${link.attributes}>${link.label}</a>`
       : '<button type="button" class="pyh-cart" data-cart-open><span class="pyh-cart-word">Carrito</span> <span class="pyh-cart-count" data-cart-count>0</span></button>',
     toggle: '<button type="button" class="pyh-toggle" data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu"><span class="pyh-toggle-bars" aria-hidden="true"></span><span class="pyh-toggle-label">Menú</span></button>',
     menu: menu('<button type="button" class="pyh-close" data-pagosya-header-close>Cerrar</button>'),
     fact: input.fact?.trim() ? `<p class="pyh-fact">${escape(input.fact.trim())}</p>` : '',
+    account: account ? '<a class="pyh-tool pyh-rail-account" href="#" data-pagosya-account="login" aria-label="Mi cuenta"><span class="pyh-rail-word">Mi cuenta</span></a>' : '',
   };
   // Spec 2026-10-14 store controls: the record's icons, words and layout on the cart, account, search, menu and close controls.
   // The hooks the kit and shoppers rely on (data-cart-open, data-cart-count, data-pagosya-account, the menu's toggle and close,
@@ -95,14 +106,18 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
     const cartName = shown(cartIcon, layout.cart) ? cartWord : 'Carrito';
     const accountWord = words.account ?? 'Mi cuenta';
     const accountName = shown(accountIcon, layout.account) ? accountWord : 'Mi cuenta';
-    parts.tools = showcase ? '' : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html" aria-label="Buscar" data-ctl="search">${controlFace(controlIcon(controls, 'search'), 'Buscar', layout.account)}</a>` : ''}<a class="pyh-tool" href="#" data-pagosya-account="login" aria-label="${escape(accountName)}" data-ctl="account">${controlFace(accountIcon, accountWord, layout.account)}</a>`;
+    const accountTool = `<a class="pyh-tool" href="#" data-pagosya-account="login" aria-label="${escape(accountName)}" data-ctl="account">${controlFace(accountIcon, accountWord, layout.account)}</a>`;
+    parts.tools = showcase ? (account ? accountTool : '') : `${search ? `<a class="pyh-tool" href="${escape(prefix)}buscar.html" aria-label="Buscar" data-ctl="search">${controlFace(controlIcon(controls, 'search'), 'Buscar', layout.account)}</a>` : ''}${accountTool}`;
+    // The rail is 88px wide: its account button is the icon alone, or the word when the record has no account icon.
+    if (account) parts.account = `<a class="pyh-tool pyh-rail-account" href="#" data-pagosya-account="login" aria-label="Mi cuenta" data-ctl="account">${controlFace(accountIcon, accountWord, 'icon')}</a>`;
     if (!link) parts.cta = `<button type="button" class="pyh-cart" data-cart-open data-ctl="cart">${controlFace(cartIcon, cartWord, layout.cart, 'ctl-word pyh-cart-word')}<span class="ctl-sr">${escape(cartName)}, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button>`;
     parts.toggle = `<button type="button" class="pyh-toggle" data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu" data-ctl="menu"><span class="ctl-face">${controlIcon(controls, 'menu') || '<span class="pyh-toggle-bars" aria-hidden="true"></span>'}<span class="pyh-toggle-label ctl-word">Menú</span></span></button>`;
     parts.menu = menu(`<button type="button" class="pyh-close" data-pagosya-header-close aria-label="Cerrar" data-ctl="close">${controlFace(controlIcon(controls, 'close'), 'Cerrar', 'icon+word')}</button>`);
   }
   // A callback, never a replacement string: a store name containing "$&" must stay literal.
   const body = kitText(`${input.shape}.html`).replace(/\{\{(\w+)\}\}/g, (_match, key: string) => parts[key] ?? '');
-  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}</style>${controls ? `<style data-pagosya-controls-style>${controlsStyle()}</style>` : ''}${body}</header>`;
+  const railAccount = account && input.shape === 'side-rail' ? `<style data-pagosya-header-account-style>${RAIL_ACCOUNT_CSS}</style>` : '';
+  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}</style>${controls ? `<style data-pagosya-controls-style>${controlsStyle()}</style>` : ''}${railAccount}${body}</header>`;
 }
 
 const SLOT = /<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])[^>]*>/i;
@@ -188,6 +203,8 @@ export type SourceHeaderInput = {
   claim?: boolean;
   /** The store's control language (spec 2026-10-14); drawn into every page's header. */
   controls?: StoreControls;
+  /** The showcase account button; by default config.js header.account, this save's or else the saved one. */
+  account?: boolean;
 };
 
 /** The slot in place of the page's own top header (the first <header> before <main>), or first in <body> when it has none. */
@@ -219,6 +236,7 @@ export function withSourceHeader<F extends { path: string; content: string; enco
   const exists = new Set([...files.map(file => file.path), ...(input.platformPages ?? [])]);
   const pages: Array<[string, string]> = input.purpose === 'shop' ? [['productos.html', 'Productos'], ['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']] : [['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']];
   const pageLinks = pages.filter(([path]) => exists.has(path)).map(([href, label]) => ({ href, label }));
+  const account = input.account ?? headerAccountOn(files) ?? headerAccountOn(input.previous ?? []) ?? false;
   const missing: string[] = [];
   const out = files.map(file => {
     if (file.encoding === 'base64' || !/\.html$/i.test(file.path) || file.path === ORDER_EMAIL_TEMPLATE_PATH) return file;
@@ -234,7 +252,7 @@ export function withSourceHeader<F extends { path: string; content: string; enco
     const pageLabels = new Set(pageLinks.map(link => menuKey(link.label)));
     const sectionLinks = sections.filter(section => !pageLabels.has(menuKey(section.label))).map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label }));
     const links = [...pageLinks, ...sectionLinks].slice(0, 6);
-    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}) });
+    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}), ...(account ? { account } : {}) });
     const drawn = replaceElement(content, SLOT, header);
     if (drawn === null) { missing.push(file.path); return file; }
     return drawn === file.content ? file : { ...file, content: drawn };
@@ -242,8 +260,32 @@ export function withSourceHeader<F extends { path: string; content: string; enco
   return { files: out, rendered: true, shape, fallback: !known, missing };
 }
 
-/** What a static edit of a store that has the slot must know: the header is the platform's, the menu comes from data-nav-label. */
-export const SOURCE_PLATFORM_HEADER_EDIT = 'PLATFORM HEADER: <header data-pagosya-header></header> on every page is filled by the platform at save time with the store name, the menu and the store\'s actions. Leave that element empty and in place; never write, restyle or remove it. To change the menu, add or remove data-nav-label="…" (with an id) on the sections of index.html; to change its colours or fonts, change --store-background, --store-foreground, --store-accent, --store-accent-foreground, --store-heading-font or --store-body-font in styles.css.';
+/** What a static edit of a store that has the slot must know: the header is the platform's, the menu comes from data-nav-label,
+ *  and it is the only menu (2026-10-16: baek got a fixed sidebar of YAPI's own, drawn under the platform's side rail). */
+export const SOURCE_PLATFORM_HEADER_EDIT = 'PLATFORM HEADER: <header data-pagosya-header></header> on every page is filled by the platform at save time with the store name, the menu and the store\'s actions. Leave that element empty and in place; never write, restyle or remove it. To change the menu, add or remove data-nav-label="…" (with an id) on the sections of index.html; to change its colours or fonts, change --store-background, --store-foreground, --store-accent, --store-accent-foreground, --store-heading-font or --store-body-font in styles.css. It is the store\'s only menu: never build a header, top bar, sidebar or menu of your own (fixed, sticky or in the page), and never place anything under or beside it to stand in for it. A login or «Mi cuenta» button in the header is the platform\'s as well: it appears when the merchant asks for it, so never draw one yourself. When the merchant asks the menu for something these levers cannot do, say so in your reply instead of building it.';
+
+/** config.js header.account (2026-10-16): the showcase account button on or off; undefined without config.js or a choice. */
+export function headerAccountOn(files: ReadonlyArray<{ path: string; content: string }>): boolean | undefined {
+  const value = readConfigFile(files).header?.account;
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+/** config.js with header.account set; a save without config.js takes the saved one first, so the choice reaches the store. */
+export function withHeaderAccountConfig<T extends { path: string; content: string }>(files: T[], previous: ReadonlyArray<{ path: string; content: string }>, show: boolean): T[] {
+  const saved = previous.find(file => file.path === 'config.js');
+  const withConfig = files.some(file => file.path === 'config.js') || !saved ? files : [...files, { ...saved } as unknown as T];
+  return patchConfigFile(withConfig, config => ({ ...config, header: { ...(config.header ?? {}), account: show } }));
+}
+
+const ACCOUNT_ASK = /(?<!\p{L})(log ?in|sign ?in|iniciar sesi[oó]n|inicio de sesi[oó]n|(?:mi|su|tu) cuenta|cuentas? de (?:clientes?|usuarios?)|acceso (?:de|para) clientes|[ií]cono de (?:usuario|cuenta))(?!\p{L})/iu;
+const ACCOUNT_PLACE = /(?<!\p{L})(sidebar|barra|men[uú]|encabezado|header|cabecera|navegaci[oó]n|arriba|bot[oó]n|botones|[ií]cono|icon)/iu;
+const ACCOUNT_REMOVE = /(?<!\p{L})(quita|qu[ií]ta(?:le|lo)|elimina|saca|oculta|borra|remueve|sin)(?!\p{L})/iu;
+/** The merchant's words ask for the header's account button (true), ask to take it away (false), or say nothing of it. */
+export function instructionAsksHeaderAccount(text: string): boolean | undefined {
+  const asked = ACCOUNT_ASK.exec(text);
+  if (!asked || !ACCOUNT_PLACE.test(text)) return undefined;
+  return !ACCOUNT_REMOVE.test(text.slice(Math.max(0, asked.index - 40), asked.index));
+}
 
 /** A style card's hero with the platform header in place of the one it was drawn with: the cards preview what will be built. */
 export function swapPreviewHeader(html: string, header: string): string {

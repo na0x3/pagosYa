@@ -1,5 +1,5 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
-import { SOURCE_STATIC_ACCOUNT_PAGES, staticAccountGateProblems, staticStandardPagePaths, withStaticStandardPages, withStaticNavSlot } from './source-static-pages';
+import { SOURCE_STATIC_ACCOUNT_PAGES, staticAccountGateProblems, staticStandardPagePaths, withShowcaseAccountPages, withStaticStandardPages, withStaticNavSlot, withRefreshedStaticStandardPages } from './source-static-pages';
 import { validateLegacySources } from './source-legacy';
 import { validateGeneratedSource } from './source-generation.service';
 
@@ -239,4 +239,71 @@ it('never copies home sections that sit between </main> and the footer onto the 
   expect(privacy).toContain('<footer class="site-footer">');
   // The home itself keeps what it authored.
   expect(files.find(file => file.path === 'index.html')!.content).toContain('id="ritual"');
+});
+
+// Live 2026-10-16 (store pz2zcl3k): its cart drawer is authored inside the stray catalog section, so dropping the section
+// took the store's own drawer (and its «Tu reserva» label) off every standard page.
+it('keeps the cart a stray home section carries when it drops the section', () => {
+  const stray = authored.replace('</main>\n  <footer', '</main>\n  <section id="clases"><h2>Clases</h2><aside data-pagosya-cart hidden aria-label="Tu reserva"><p>Vacía</p></aside></section>\n  <footer');
+  const { files } = withStaticStandardPages([{ path: 'index.html', content: stray }, { path: 'styles.css', content: '' }]);
+  const privacy = files.find(file => file.path === 'privacidad.html')!.content;
+  expect(privacy).not.toContain('id="clases"');
+  expect(privacy).not.toContain('<h2>Clases</h2>');
+  expect(privacy).toContain('<aside data-pagosya-cart hidden aria-label="Tu reserva"><p>Vacía</p></aside>');
+  expect(privacy.indexOf('data-pagosya-cart')).toBeLessThan(privacy.indexOf('<footer'));
+});
+
+// Live 2026-10-16 (store pz2zcl3k): pages built before the stray-section fix kept the copied home sections, because only a
+// generation or «Agregar páginas» rebuilt them. Every save now refreshes the copies the platform still owns, and nothing else.
+describe('refreshing the standard pages on every save', () => {
+  const stray = authored.replace('</main>\n  <footer', '</main>\n  <section id="ritual"><video></video></section>\n  <footer');
+  const built = withStaticStandardPages([{ path: 'index.html', content: stray }, { path: 'styles.css', content: '' }]).files;
+  const stale = (path: string) => built.find(file => file.path === path)!.content.replace('<footer', '<section id="ritual"><video></video></section>\n  <footer');
+
+  it('rebuilds a platform copy from the current home, leaving authored pages, missing pages and other files alone', () => {
+    const authoredPage = stale('faq.html').replace(/<div data-pagosya-page="faq"><\/div>/, '<h1>Preguntas propias</h1>');
+    const files = [
+      ...built.filter(file => !['privacidad.html', 'faq.html', 'cookies.html'].includes(file.path)),
+      { path: 'privacidad.html', content: stale('privacidad.html') },
+      { path: 'faq.html', content: authoredPage },
+    ];
+    const refreshed = withRefreshedStaticStandardPages(files, 'shop');
+    expect(refreshed.find(file => file.path === 'privacidad.html')!.content).toBe(built.find(file => file.path === 'privacidad.html')!.content);
+    expect(refreshed.find(file => file.path === 'faq.html')!.content).toBe(authoredPage);
+    expect(refreshed.some(file => file.path === 'cookies.html')).toBe(false);
+    expect(refreshed.map(file => file.path)).toEqual(files.map(file => file.path));
+  });
+
+  it('returns the same files when nothing is stale, and leaves a store without index.html alone', () => {
+    expect(withRefreshedStaticStandardPages(built, 'shop')).toEqual(built);
+    const noIndex = [{ path: 'privacidad.html', content: stale('privacidad.html') }];
+    expect(withRefreshedStaticStandardPages(noIndex, 'shop')).toEqual(noIndex);
+  });
+});
+
+// baek (tholhejh), 2026-10-16: a showcase whose merchant asked for the account button needs the sign-in pages a shop has,
+// or «Mi cuenta» leads nowhere (YAPI had written its own acceso-ingresar.html).
+describe('a showcase with the account button gets the account pages (2026-10-16)', () => {
+  const config = (header: object) => ({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'baek', header })};\n` });
+  const ACCOUNT = ['acceso-ingresar.html', 'acceso-registro.html', 'acceso-olvide-mi-contrasena.html', 'acceso-restablecer-contrasena.html'];
+
+  it('adds the account pages and nothing else at save, only when config.js turns the button on', () => {
+    const files = [...store(), config({ account: true })];
+    const saved = withShowcaseAccountPages(files, 'service');
+    expect(saved.slice(0, files.length)).toEqual(files);
+    expect(saved.slice(files.length).map(file => file.path)).toEqual(expect.arrayContaining(ACCOUNT));
+    expect(saved.some(file => file.path === 'nosotros.html' || file.path === 'buscar.html')).toBe(false);
+    expect(saved.find(file => file.path === 'acceso-ingresar.html')!.content).toContain('data-account-gate');
+    expect(withShowcaseAccountPages([...store(), config({ account: false })], 'service')).toHaveLength(store().length + 1);
+    expect(withShowcaseAccountPages(store(), 'service')).toEqual(store());
+    expect(withShowcaseAccountPages(files, 'shop')).toBe(files);
+  });
+
+  it('leaves an account page the store already has, and lists the account pages among the showcase pages', () => {
+    const own = { path: 'acceso-ingresar.html', content: '<main><section data-account-gate="login">propia</section></main>' };
+    const saved = withShowcaseAccountPages([...store(), config({ account: true }), own], 'service');
+    expect(saved.filter(file => file.path === 'acceso-ingresar.html')).toEqual([own]);
+    expect(staticStandardPagePaths('service', true)).toEqual(expect.arrayContaining([...ACCOUNT, 'nosotros.html']));
+    expect(staticStandardPagePaths('service', true)).not.toContain('buscar.html');
+  });
 });

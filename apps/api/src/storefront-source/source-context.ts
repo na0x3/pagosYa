@@ -37,6 +37,10 @@ export function sourceRedesignRequested(instruction: string) {
     || /(?:make|give)\s+(?:it|the (?:whole )?(?:site|website))\s+(?:(?:look|feel|be)\s+)?(?:a\s+)?(?:completely|totally|entirely)\s+(?:different|new)|(?:hazlo|que se vea)\s+(?:completamente|totalmente)\s+(?:distinto|diferente|nuevo)|(?:new|fresh)\s+(?:visual\s+)?(?:direction|identity)\s+(?:for|across)\s+(?:the|my)\s+(?:site|store)/.test(task)
     // The boceto (sketch) is the store's design: redoing it is a redesign, which draws a new one.
     || /(?:redisen|redesign|rebuild|rehaz|rehac|redo)\w*\s+(?:(?:todo|toda|todos|todas|all|the|my|mi|el|la|un|una|este|entero|entera|completo|completa|entire|whole|full)\s+)*(?:sitio|website|site|tienda|storefront|pagina|page|diseno|design|boceto|bosquejo|sketch|todo|everything)\b|(?:genera\w*|haz|crea\w*|disena\w*)\s+(?:lo\s+)?de\s+nuevo/.test(task)
+    // Restructuring the whole site is a redesign (owner, 2026-10-16: «estructura el sitio con los colores de las fotos»);
+    // restructuring one part (the menu, the catalog cards) stays a local edit.
+    || /\b(?:re)?(?:estructur|organiz|structur)\w*\s+(?:(?:todo|toda|el|la|mi|my|the|whole|entire)\s+)*(?:sitio|website|site|tienda|storefront|pagina|page|web)\b/.test(task)
+    || /\bcambi\w*\s+(?:la\s+)?estructura\s+(?:del?\s+)?(?:(?:la|mi|el|todo|toda)\s+)*(?:sitio|tienda|pagina|web)\b/.test(task)
     || /cambia.*colores/.test(task) && /secciones/.test(task)
     || /change.*colors/.test(task) && /sections/.test(task);
 }

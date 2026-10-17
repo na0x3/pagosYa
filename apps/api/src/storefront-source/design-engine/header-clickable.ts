@@ -10,8 +10,13 @@ import type { SourceProjectSnapshot } from '../source-project';
  * and Rampa's own never-opened cart drawer lay invisible over Buscar / Mi cuenta / Tu bolsa.
  * `trap` names the header ancestor whose stacking context holds the header's z-index down; `invisible` says why the
  * covering element is not seen (it still takes the click); `drawer` marks one that looks like a cart of the store's own.
+ *
+ * `under` turns it around (2026-10-16): the header hides one of the store's own links or buttons. baek asked for a login icon
+ * «en el sidebar» and got a fixed sidebar of YAPI's own, drawn under the platform's side rail. `control` is then the store's
+ * control, `cover` the header, `section` the fixed or sticky element holding the control ('' when the page itself holds it),
+ * and `platform` says the header is the one the platform draws.
  */
-export type HeaderCover = { width: number; control: string; cover: string; section: string; atTop: boolean; trap?: string; invisible?: string; drawer?: boolean };
+export type HeaderCover = { width: number; control: string; cover: string; section: string; atTop: boolean; trap?: string; invisible?: string; drawer?: boolean; under?: boolean; platform?: boolean };
 
 /** Desktop and phone, as the shopper has them. */
 export const HEADER_CHECK_WIDTHS = [1440, 390] as const;
@@ -120,8 +125,34 @@ export async function measureHeaderCovers(page: Page, options: { maxPositions?: 
       }
       return out;
     });
-    for (const hit of hits) {
-      const key = `${hit.control}|${hit.cover}`;
+    // The store's own controls the header hides: a quarter or more of the control lies under the header, and the header (not
+    // the control) takes a click there. Content that only scrolls under a sticky header is fine; content the header hides at
+    // the top of the page, or a fixed or sticky element (a sidebar, a bar) that stays under it, is not.
+    const under = await page.evaluate(atTop => {
+      const describe = (el: Element) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + Array.from(el.classList).slice(0, 2).map(name => '.' + name).join('');
+      const header = Array.from(document.querySelectorAll('header,[role=banner]')).find(el => !el.closest('article,footer,dialog,[data-pagosya-cart]') && el.getBoundingClientRect().height > 0);
+      if (!header) return [];
+      const visible = (el: Element) => typeof (el as any).checkVisibility === 'function' ? (el as any).checkVisibility({ opacityProperty: true, visibilityProperty: true }) : getComputedStyle(el).visibility !== 'hidden';
+      const area = header.getBoundingClientRect();
+      const out: Array<{ control: string; cover: string; section: string; under: true; platform: boolean }> = [];
+      for (const control of Array.from(document.querySelectorAll('a[href],button,[role=button],summary,input:not([type=hidden]),select,textarea'))) {
+        if (header.contains(control) || control.closest('[data-pagosya-cart],[data-pagosya-header-menu],dialog') || !visible(control)) continue;
+        const box = control.getBoundingClientRect();
+        if (box.width < 4 || box.height < 4 || box.bottom <= 0 || box.top >= innerHeight || box.right <= 0 || box.left >= innerWidth) continue;
+        const left = Math.max(box.left, area.left), right = Math.min(box.right, area.right), top = Math.max(box.top, area.top), bottom = Math.min(box.bottom, area.bottom);
+        if (right <= left || bottom <= top || (right - left) * (bottom - top) < 0.25 * box.width * box.height) continue;
+        const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+        if (!hit || !header.contains(hit)) continue;
+        let holder: Element | null = null;
+        for (let node: Element | null = control; node && node !== document.body; node = node.parentElement) if (/fixed|sticky/.test(getComputedStyle(node).position)) { holder = node; break; }
+        if (!holder && !atTop) continue;
+        const label = ((control.getAttribute('aria-label') || control.textContent || control.getAttribute('title') || control.querySelector('img')?.getAttribute('alt') || '').replace(/\s+/g, ' ').trim() || describe(control)).slice(0, 40);
+        out.push({ control: label, cover: describe(header), section: holder ? describe(holder) : '', under: true, platform: header.hasAttribute('data-pagosya-header') });
+      }
+      return out;
+    }, atTop);
+    for (const hit of [...hits, ...under] as Array<Omit<HeaderCover, 'width' | 'atTop'>>) {
+      const key = `${hit.under ? 'under|' : ''}${hit.control}|${hit.cover}`;
       if (!found.has(key)) found.set(key, { width: viewport.width, ...hit, atTop });
     }
   }
@@ -161,11 +192,19 @@ const quoted = (labels: string[]) => {
 export function headerCoverProblems(covers: HeaderCover[]): string[] {
   const groups = new Map<string, HeaderCover[]>();
   for (const cover of covers) {
-    const key = cover.trap && !cover.invisible ? [cover.width, cover.trap, cover.atTop].join('|') : [cover.width, cover.cover, cover.section, cover.invisible, cover.drawer, cover.atTop].join('|');
+    const key = cover.under ? ['under', cover.width, cover.section, cover.platform].join('|')
+      : cover.trap && !cover.invisible ? [cover.width, cover.trap, cover.atTop].join('|') : [cover.width, cover.cover, cover.section, cover.invisible, cover.drawer, cover.atTop].join('|');
     groups.set(key, [...(groups.get(key) ?? []), cover]);
   }
   return [...groups.values()].map(group => {
     const first = group[0], labels = [...new Set(group.map(cover => cover.control))], many = labels.length > 1;
+    if (first.under) {
+      const where = group.some(cover => cover.atTop) ? 'arriba de la página' : 'al bajar por la página';
+      const lead = `${first.width}px: el encabezado${first.platform ? ' de la plataforma' : ''} tapa ${quoted(labels.slice(0, 6))}${first.section ? ` de ${first.section}` : ''} ${where}.`;
+      return lead + (first.platform && first.section
+        ? ` La tienda ya tiene su menú en el encabezado de la plataforma: no hagas un encabezado, barra lateral ni menú propio. Quita ${first.section}; si son secciones de la página, se llega a ellas desde el menú de la plataforma con data-nav-label en index.html. Si es otro contenido, colócalo fuera de la zona del encabezado.`
+        : ' Ese contenido queda debajo del encabezado y no se puede pulsar: déjale espacio al encabezado (por ejemplo padding-top o margin-left del tamaño del encabezado) o muévelo fuera de su zona; nunca dibujes un encabezado, barra lateral ni menú propio.');
+    }
     const coverers = [...new Set(group.map(cover => cover.cover + (cover.section ? ` (en ${cover.section})` : '')))];
     const shown = coverers.length > 3 ? [...coverers.slice(0, 2), `${coverers.length - 2} elementos más`] : coverers;
     const named = shown.length > 1 ? `${shown.slice(0, -1).join(', ')} y ${shown.at(-1)}` : shown[0];
@@ -187,6 +226,7 @@ export function headerCoverProblems(covers: HeaderCover[]): string[] {
  * save's to fix, whatever covers it now.
  */
 export function introducedHeaderCovers(current: HeaderCover[], previous: HeaderCover[]): HeaderCover[] {
-  const saved = new Set(previous.map(cover => `${cover.width}|${cover.control}`));
-  return current.filter(cover => !saved.has(`${cover.width}|${cover.control}`));
+  const key = (cover: HeaderCover) => `${cover.width}|${cover.under ? 'under|' : ''}${cover.control}`;
+  const saved = new Set(previous.map(key));
+  return current.filter(cover => !saved.has(key(cover)));
 }

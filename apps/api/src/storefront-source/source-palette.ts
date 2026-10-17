@@ -32,8 +32,9 @@ const distance = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] -
 const chromatic = (colour: Rgb) => { const [, s, l] = toHsl(colour); return s >= .28 && l > .12 && l < .88; };
 const brightness = (colour: Rgb) => contrastRatio(colour, BLACK);
 
-/** Pure and deterministic: the same samples always give the same palette. */
-export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSample[] }): SourcePalette | undefined {
+/** Pure and deterministic: the same samples always give the same palette. `page` forces a light or a dark page (a bold
+ *  style card wants the dark one); without it a logo on a dark backdrop decides. */
+export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSample[] }, options: { page?: 'light' | 'dark' } = {}): SourcePalette | undefined {
   const logo = (input.logo?.dominant ?? []).filter(value => HEX.test(value)).map(toRgb);
   const photos = (input.photos ?? []).flatMap(sample => {
     const backdrop = sample.backdropHex && HEX.test(sample.backdropHex) ? toRgb(sample.backdropHex) : undefined;
@@ -44,7 +45,7 @@ export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSa
   const accent = logo.find(chromatic) ?? photos.find(chromatic) ?? [...logo, ...photos].find(colour => toHsl(colour)[2] < .35);
   if (!accent) return undefined;
   const backdrop = input.logo?.backdropHex && HEX.test(input.logo.backdropHex) ? toRgb(input.logo.backdropHex) : undefined;
-  const dark = !!backdrop && (input.logo?.uniformity ?? 0) >= .8 && toHsl(backdrop)[2] < .2;
+  const dark = options.page ? options.page === 'dark' : !!backdrop && (input.logo?.uniformity ?? 0) >= .8 && toHsl(backdrop)[2] < .2;
   const [hue, saturation] = toHsl(accent);
   const paper = dark ? fromHsl(hue, Math.min(saturation, .18), .08) : fromHsl(hue, Math.min(saturation, .35), .97);
   let ink = dark ? fromHsl(hue, Math.min(saturation, .15), .94) : fromHsl(hue, Math.min(saturation, .3), .13);

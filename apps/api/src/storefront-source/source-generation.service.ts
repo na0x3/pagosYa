@@ -17,7 +17,7 @@ import { compatibleCreativePlan, inferBrand, fallbackCreative, plannedStructure,
 import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
 import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, SEP5_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
-import { emptySourceHeaders, hasPlatformHeader, headerFact, SOURCE_PLATFORM_HEADER_EDIT, withSourceHeader } from './source-header';
+import { emptySourceHeaders, hasPlatformHeader, headerFact, instructionAsksHeaderAccount, SOURCE_PLATFORM_HEADER_EDIT, withHeaderAccountConfig, withSourceHeader } from './source-header';
 import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { currentSourceRuntime } from './source-runtime';
@@ -50,7 +50,11 @@ import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
 import { derivePhotoFacts } from './source-photo-facts';
 import { sketchImageRole } from './sketch/sketch-assets';
 import { BUNDLED_PHOTO, authoredUploadReferences, bundledPhotoPath, productPhotoReferences, rewriteAuthoredUploads, rewriteProductPhotos, uploadPath } from './source-product-photos';
-import { samplePhotoColours } from './source-photo-sampler';
+import { samplePhotoColours, type PhotoSample } from './source-photo-sampler';
+import { photoPalettes, withoutAppColours } from './design-engine/photo-palette';
+import { BRAND_READ_PROMPT, BRAND_READ_SCHEMA, brandSheet, brandSourcePrompt, brandSourceReceipt, parseBrandRead, type BrandSheet } from './brand-source-read';
+import { detectedMediaMime } from '../uploads/uploads.service';
+import { brandColourDrift, brandQuoteFound } from './brand-source-checks';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent, unusedPhotoDiagnostic } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
@@ -376,11 +380,12 @@ export class SourceGenerationService {
     // Measured, never asked for: a model cannot choose the better photograph of a product without
     // data saying two photographs depict the same product. Every hop degrades to "unknown".
     const bundledPhotos = assetLegend.filter(entry => !sourceVideo(entry.path)).map(entry => ({ url: entry.original, path: entry.path, bytes: assetBuffers.get(entry.original)! })).filter(photo => photo.bytes);
+    const photoSamples = bundledPhotos.length ? await samplePhotoColours(bundledPhotos, execution?.signal) : new Map<string, PhotoSample>();
     const photoFacts = bundledPhotos.length ? derivePhotoFacts({
       assets: bundledPhotos,
       lineage: new Map(ownedAssets.map(asset => [asset.url, { kind: asset.kind as string, parentUrl: asset.parentAsset?.url ?? null }])),
       productImages: data.items.map(item => ({ id: item.id, images: [...item.imageUrls, ...(item.variants || []).map(variant => variant.imageUrl).filter((url): url is string => !!url)] })),
-      samples: await samplePhotoColours(bundledPhotos, execution?.signal),
+      samples: photoSamples,
     }) : {};
     const fontPaths: Record<string, string> = {};
     for (const fact of brand?.data.confirmed || []) {
@@ -503,6 +508,9 @@ export class SourceGenerationService {
     const controlsDesignOn = controlsOn && this.config.get<boolean>('app.yapiControlsDesign') === true;
     /** A chat edit of a store with the platform header whose merchant asked about its controls (spec 2026-10-14, part 4). */
     const controlsRequest = controlsDesignOn && !creative && !claude && hasPlatformHeader(previousFiles) && instructionConcernsControls(dto.instruction);
+    /** A showcase merchant asking for the header's account button, or to take it away (2026-10-16: baek's «pon el icono del login
+     *  en el sidebar» got a sidebar of YAPI's own instead). The platform draws it from config.js header.account. */
+    const headerAccountAsk = !creative && !useNext && sitePurpose !== 'shop' && hasPlatformHeader(previousFiles) ? instructionAsksHeaderAccount(merchantWords) : undefined;
     // Spec 2026-10-15 free commerce surfaces: YAPI designs the six shopping parts on new stores and redesigns, one part on request.
     const surfacesOn = this.config.get<boolean>('app.yapiCommerceSurfaces') === true && !useNext && sitePurpose === 'shop' && !claude;
     const surfacesRequest = surfacesOn && !creative ? requestedSurfaceParts(dto.instruction) : [];
@@ -527,6 +535,18 @@ export class SourceGenerationService {
     const recentDraws = frameEnabled && frameNow ? await Promise.resolve().then(() => this.projects.recentFrameDraws(storeId, new Date(), 40)).catch(() => []) : [];
     const playbookEntry = kind ? PLAYBOOK[kind] : undefined;
     const playbookFamily = playbookEntry ? pickFamily(playbookEntry, Math.random, recentForKind(recentDraws, kind).families) : undefined;
+    // The store's own colours from its photos and logo (2026-10-16, baek: eleven warm bakery photos, a teal-and-orange build).
+    // Photos the merchant set aside (role "unused") do not count; confirmed brand colours still win inside frameForRun.
+    const logoUrl = (data as { logoUrl?: string | null }).logoUrl ?? undefined;
+    const colourPhotos = bundledPhotos.filter(photo => photo.url !== logoUrl && imageUses.find(use => use.url === photo.url)?.role !== 'unused');
+    // Brand source (spec 2026-10-16): the merchant's own screenshots/banners and old-site captures set the colours first.
+    const brandSource = execution?.brandSource;
+    const brandBuffers = (brandSource?.imageUrls ?? []).flatMap(url => { const bytes = assetBuffers.get(url); return bytes ? [{ url, path: url, bytes }] : []; });
+    const captureBuffers = (brandSource?.captureIndexes ?? []).flatMap(index => { const image = execution?.referenceCaptures?.[index]?.image; return image ? [{ url: `capture:${index}`, path: `capture-${index}.jpg`, bytes: Buffer.from(image.replace(/^data:[^,]+,/, ''), 'base64') }] : []; });
+    const brandSamples = brandBuffers.length || captureBuffers.length ? await samplePhotoColours([...brandBuffers, ...captureBuffers], execution?.signal).catch(() => new Map<string, PhotoSample>()) : new Map<string, PhotoSample>();
+    const brandSourcePalettes = brandSamples.size ? photoPalettes({ photos: [...brandSamples.values()] }, { graphics: true }) : undefined;
+    const brandColours = [...brandSamples.values()].flatMap(sample => withoutAppColours(sample).dominant);
+    const storePhotoPalettes = brandSourcePalettes ?? photoPalettes({ logo: logoUrl ? photoSamples.get(logoUrl) : undefined, photos: colourPhotos.flatMap(photo => photoSamples.get(photo.url) ?? []) });
     let frame: ReturnType<typeof frameForRun> = frameForRun({
       enabled: frameEnabled,
       designEnabled: this.config.get<boolean>('app.yapiDesignDraw') === true,
@@ -538,6 +558,8 @@ export class SourceGenerationService {
       ...(playbookEntry && playbookFamily ? { playbook: { kind: playbookEntry.kind, family: playbookFamily, bold: boldAsked } } : {}),
       available: frameFacts.available,
       request: frameFacts.request,
+      ...(storePhotoPalettes ? { photoPalettes: storePhotoPalettes } : {}),
+      ...(brandSourcePalettes && brandSource?.look ? { paletteOverride: boldAsked ? brandSourcePalettes.bold : brandSourcePalettes.calm } : {}),
     });
     let playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
@@ -553,7 +575,7 @@ export class SourceGenerationService {
     // Never blocks the run: a failed lookup only loses that history.
     // Bounded: a slow lookup costs only the history, never the proposal.
     const shownCards = styleOn ? await withinOr(() => this.projects.recentStyleCards(merchantId, styleKind, new Date(), 20), SHOWN_CARDS_TIMEOUT_MS, [] as ShownStyleCard[]).then(cards => Array.isArray(cards) ? cards : []) : [];
-    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards, briefNumbers: numbersIn(businessInfo).length })
+    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards, briefNumbers: numbersIn(businessInfo).length, ...(storePhotoPalettes ? { photoPalettes: storePhotoPalettes } : {}) })
       .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold', ...(slot.mode === 'calm' && slot.fonts ? { fonts: slot.fonts } : {}) }) })) : [];
     // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
     let styleBold = false;
@@ -831,12 +853,18 @@ export class SourceGenerationService {
         get agentOutcome() { return agentOutcome; }, set agentOutcome(value) { agentOutcome = value; },
         get unfinishedStatus() { return unfinishedStatus; }, set unfinishedStatus(value) { unfinishedStatus = value; },
         get taskPrompt() { return taskPrompt; }, set taskPrompt(value) { taskPrompt = value; },
+        get brandBlock() { return brandSourceSheet ? brandSourcePrompt(brandSourceSheet) : ''; },
         get model() { return model; },
       };
       // Header controls a static edit covers (2026-10-12: Ramo Ramón's header trapped in an isolated poster, Rampa's own invisible
       // cart drawer), judged in a browser against the saved revision, rendered once per run: only covers the edit brings in block (524dfd73).
       const headerGate = this.config.get<boolean>('app.headerClickGate') === true;
       let savedHeaderCovers: Promise<HeaderCover[]> | undefined;
+      // Brand source (spec 2026-10-16): the sheet the vision read fills, and whether the quote repair was already asked for.
+      let brandSourceSheet: BrandSheet | undefined;
+      let brandQuoteRepairTried = false;
+      let brandColourRepairTried = false;
+      let brandVerified: { colours: boolean; quote?: string } = { colours: false };
       // Spec 2026-10-13: the platform draws the header into <header data-pagosya-header> on every page of a static store, from the
       // drawn shape (frame-draw.json), the store's name and logo, the sections index.html marks with data-nav-label and the brief's
       // one fact. A Sep-5 author run owns the header outright; any other store without the slot is left alone. Each note is
@@ -844,7 +872,7 @@ export class SourceGenerationService {
       const headerNotes = new Set<string>();
       const platformHeader = (files: SourceProjectFileDto[], platformPages: string[], controls?: StoreControls) => {
         const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
-        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(controls ? { controls } : {}) });
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(controls ? { controls } : {}), ...(headerAccountAsk !== undefined ? { account: headerAccountAsk } : {}) });
         if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
         if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
         return result.files;
@@ -995,6 +1023,23 @@ export class SourceGenerationService {
           }
           if (introduced.length) throw new BadGatewayException(headerCoverProblems(introduced).join(' '));
         }
+        // Brand source checks (spec 2026-10-16 §3): colours drifted off the brand's own, or no quote placed on a look request.
+        if (brandSourceSheet) {
+          const sheet = brandSourceSheet;
+          const note = (text: string) => { if (!sheet.notes.includes(text)) sheet.notes.push(text); };
+          const drift = sheet.palette && !brandHasColours(brand?.data) ? brandColourDrift(preflightFiles, sheet.palette, brandColours) : [];
+          const found = brandQuoteFound(preflightFiles, sheet.quotes) ?? brandQuoteFound(preflightFiles, sheet.unsure);
+          // What the reply may name: only what this candidate shows (final review 2026-10-16, C2/I1).
+          brandVerified = { colours: Boolean(sheet.palette) && !drift.length, ...(found ? { quote: found.text } : {}) };
+          // One repair each, then the save goes through with a note: brand material never fails a request (spec §2). A lenient
+          // acceptance (the Sep-5 author's) is never sent back, it only notes.
+          if (drift.length && !lenient && !brandColourRepairTried) { brandColourRepairTried = true; throw new BadGatewayException(drift.join(' ')); }
+          if (drift.length) note('Algunos colores del sitio no son exactamente los de tu marca; pídeme ajustarlos si quieres.');
+          if (brandSource?.look && sheet.quotes.length && !found) {
+            if (!lenient && !brandQuoteRepairTried) { brandQuoteRepairTried = true; throw new BadGatewayException('Frases de la marca: el sitio no usa ninguna de las frases de su marca de la sección BRAND SOURCE. Pon al menos una tal cual donde encaje.'); }
+            note('No encontré dónde usar tus frases sin forzarlas; puedes pedirme que ponga una en un lugar concreto.');
+          }
+        }
         unusedImagePaths = preflight.unusedImagePaths;
         acceptedPreviewFiles = preflightFiles;
       };
@@ -1040,6 +1085,26 @@ export class SourceGenerationService {
       // Store voice (spec 2026-10-14, part 3): an edit of a store with a sheet writes any new text in its voice and keeps its
       // marked facts. The single-call edit reads taskPrompt when it runs.
       if (voice.on && !sep5Author && voice.sheet) taskPrompt += `\n${voiceEditDirection(voice.sheet)}`;
+      // Brand source (spec 2026-10-16): one vision read of the merchant's own images, then the BRAND SOURCE block.
+      if (brandSource) {
+        const dataUrl = (bytes: Buffer) => `data:${detectedMediaMime(bytes) ?? 'image/jpeg'};base64,${bytes.toString('base64')}`;
+        const images = [...brandBuffers.slice(0, 6), ...captureBuffers.slice(0, 2)].map(entry => dataUrl(entry.bytes));
+        let read: ReturnType<typeof parseBrandRead> | undefined;
+        if (images.length) {
+          const deadline = sideCallDeadlineMs(TONE_TIMEOUT_MS, chatgptPlan);
+          const readSignal = AbortSignal.any([signal, AbortSignal.timeout(deadline)]);
+          try {
+            const { attempt, body } = await sep5Call('brand', BRAND_READ_PROMPT, images.map(image_url => ({ type: 'input_image' as const, image_url, detail: 'high' as const })), 'brand_source_read', BRAND_READ_SCHEMA, deadline, { signal: readSignal, maxOutputTokens: 900, effort: 'low' });
+            // The answer is inside the response envelope: reading the envelope itself gave no quotes, voice or layout, ever
+            // (live 2026-10-16: «no verbatim quote on the ChatGPT plan» was this, not the model).
+            read = parseBrandRead(sourceResponseJson(body)); attempt.status = 'COMPLETED';
+            this.logger.log(JSON.stringify({ event: 'brand_source_read', generationId: run.id, quotes: read.quotes.length, unsure: read.unsure.length }));
+          } catch (error) { signal.throwIfAborted(); this.logger.warn(JSON.stringify({ event: 'brand_source_read_failed', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) })); }
+        }
+        const usedBrandPalette = frame.palette && brandSourcePalettes && [brandSourcePalettes.calm.id, brandSourcePalettes.bold.id].includes(frame.palette.id) ? frame.palette : undefined;
+        brandSourceSheet = brandSheet(brandSource, read, usedBrandPalette);
+        taskPrompt += `\n${brandSourcePrompt(brandSourceSheet)}`;
+      }
       if (sep5Author) {
         // Sep-5 authors the store, adds the standard pages and arms the background review (source-sep5-stage.ts).
         // assembleSave is declared after this branch: the stage gets a wrapper, called only by the review after the save.
@@ -1380,7 +1445,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       : 'use' in controlsChoice ? controlsChoice.use
       : requestedControls ?? (controlsFresh ? withVoiceCartWord(pickLibraryControls({ kind: controlsKind, mode: boldAsked ? 'bold' : 'calm', look: sanitizeLook(readConfigFile(input.files).look), seed: `${storeId}:${dto.revision}`, avoid: controlsAvoid, words: `${merchantWords}\n${businessInfo}`, palette: storePalette(input.files) }), voice.sheet)
       : previousControls));
-    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice);
+    // The showcase account button the merchant asked for (2026-10-16) lands in config.js here, at save: a model's files never
+    // carry config.js (the reserved-file check), so the header is drawn with `account` until then.
+    const withHeaderAccount = <T extends { files: SourceProjectFileDto[] }>(input: T): T => headerAccountAsk === undefined ? input : { ...input, files: withHeaderAccountConfig(input.files, previousFiles, headerAccountAsk) };
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withHeaderAccount(withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice));
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
     await runChatKitTouch({ facts, live, touchCall, assembleSave, skip: surfacesRequest.length > 0 });
     // A chat request about the controls (spec 2026-10-14: «haz el carrito como una taza», «botones más redondos») runs the controls
@@ -1408,7 +1476,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     let credits = freeRun ? 0 : successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { rewardCreditsCovered?: number; voice?: VoiceReceipt; surfacesNote?: string; surfacesRetry?: Array<{ label: string; value: string }> }) };
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...(creativeSummary ? { creativeSummary } : {}), ...(controlsNote ? { controlsNote } : {}), ...(brandSourceSheet && brandSourceReceipt(brandSourceSheet, brandVerified) ? { brandNote: brandSourceReceipt(brandSourceSheet, brandVerified) } : {}), ...(styleAttempted ? { styleAttempted: true } : {}), ...({} as { brandNote?: string; rewardCreditsCovered?: number; voice?: VoiceReceipt; surfacesNote?: string; surfacesRetry?: Array<{ label: string; value: string }> }) };
     await progress?.(surfacesParts.length ? 'commerce' : 'saving');
     let saveInput = await assembleSave();
     // Revision N's library language passes the same browser guard as YAPI's (spec 2026-10-14, part 5): a failing one is not saved

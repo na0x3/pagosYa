@@ -52,7 +52,9 @@ export type StyleDrawsInput = { kind: PlaybookKind; brandColours: boolean; categ
   /** Cards recent proposals showed: the merchant's own and the same kind's across stores, newest first. */
   shown?: ShownStyleCard[];
   /** How many real numbers the brief gives (`numbersIn`): the numbers device needs two. */
-  briefNumbers?: number };
+  briefNumbers?: number;
+  /** The store's photo colours (photo-palette.ts): the calm card takes the light one, the bold card the dark one. */
+  photoPalettes?: { calm: Palette; bold: Palette } };
 
 /** How long a proposal waits for the shown-cards history before drawing without it. */
 export const SHOWN_CARDS_TIMEOUT_MS = 1500;
@@ -98,7 +100,7 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
   const taken: ReturnType<typeof parseFrameDraw>[] = [];
   const slots: StyleSlot[] = plan.map(({ mode, family }, slot) => {
     const recent = [...Array.from({ length: TAKEN_WEIGHT }, () => taken).flat(), ...history];
-    const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false });
+    const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false, ...(input.photoPalettes ? { photoPalettes: input.photoPalettes } : {}) });
     const draw = parseFrameDraw(run.file?.content);
     taken.push(draw);
     const used = displaysShown(mode);

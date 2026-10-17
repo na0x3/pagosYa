@@ -7,9 +7,11 @@ import { COMMERCE_LEAN, cartWordFor, drawCommerce, parseCommerceDraw, type Comme
 import { CONVENTIONAL_HEADERS, PLAYBOOK, type StyleFamily } from './playbook';
 import { merchantAsksForPhotoGroup } from '../source-media-design';
 import { drawProduct, parseProductDraw, productDirection, productOverrides, type ProductDraw } from './product-draw';
+import { decodePhotoPalette, isPhotoPalette } from './photo-palette';
 
 export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'photoGroup' | 'product' | 'facts';
-export type FrameEntry = { id: string; bold: boolean; desktop: string; phone: string; needs?: FrameNeed };
+/** photoless: an opening with no photo, drawn only for a store that has none (2026-10-16: baek's 11 photos got type-only). */
+export type FrameEntry = { id: string; bold: boolean; desktop: string; phone: string; needs?: FrameNeed; photoless?: true };
 export type FramePart = 'header' | 'cart' | 'footer' | 'hero';
 export type FrameDraw = Record<FramePart, string>;
 /** photoGroups: the merchant's own words asked for a gallery, collage or lookbook (merchantAsksForPhotoGroup). */
@@ -50,20 +52,22 @@ export const FRAME_CATALOGUE: Record<FramePart, readonly FrameEntry[]> = {
   hero: [
     { id: 'full-bleed', bold: false, needs: 'photos1', desktop: 'Hero: one photo filling the first screen edge to edge with the headline set over it, with a scrim for contrast.', phone: 'On phones: the photo fills the first screen in a portrait crop and the headline stays readable.' },
     { id: 'split', bold: false, needs: 'photos1', desktop: 'Hero: the first screen divided into a photo half and a text half with the headline and the main action.', phone: 'On phones: the photo on top, the text below.' },
-    { id: 'type-only', bold: true, desktop: 'Hero: no photo at all; the first screen is typography and colour, a very large headline, one short line and the main action.', phone: 'On phones: the headline still dominates the first screen.' },
+    { id: 'type-only', bold: true, photoless: true, desktop: 'Hero: no photo at all; the first screen is typography and colour, a very large headline, one short line and the main action.', phone: 'On phones: the headline still dominates the first screen.' },
     { id: 'collage', bold: true, needs: 'photoGroup', desktop: 'Hero: three or more photos arranged as an overlapping collage with the headline set among them.', phone: 'On phones: two photos overlap above the headline and the rest are left out.' },
     { id: 'single-product', bold: false, needs: 'product', desktop: 'Hero: one real product from the catalog as the hero, its photo large with its name and a button to its product page; never type its price, which the runtime owns and may change.', phone: 'On phones: the product photo, name and button stacked.' },
     { id: 'statement-strip', bold: true, needs: 'photoGroup', desktop: 'Hero: one statement in very large type, then a horizontal strip of photos below it.', phone: 'On phones: the photo strip scrolls sideways.' },
     { id: 'offset-frame', bold: true, needs: 'photos1', desktop: "Hero: a single photo inside a visible frame or border, with the headline placed offset so it overlaps the frame's edge.", phone: 'On phones: the frame narrows and the headline overlaps its bottom edge.' },
     { id: 'slow-slideshow', bold: false, needs: 'photos2', desktop: 'Hero: two or more photos cross-fading slowly (about 6 seconds each) behind a fixed headline, paused on hover and under prefers-reduced-motion.', phone: 'On phones: the same, showing a single photo under reduced motion.' },
     // Calm openings that need no photo (night run 2026-10-11: every store without photos got the type-only hero).
-    { id: 'facts-panel', bold: false, needs: 'facts', desktop: "Hero: no photo; the headline, one line and the main action on one side, and on the other a calm panel in the palette's second colour listing the store's real facts from the brief (what it offers, hours, where, delivery or pickup) as short labelled rows.", phone: 'On phones: the headline first, the facts panel below it.' },
-    { id: 'catalog-lead', bold: false, desktop: "Hero: no photo; a compact headline band with one line and the main action, and the catalog's first product cards (the runtime catalog) already starting inside the first screen, the way a busy online shop opens.", phone: 'On phones: the headline band, then the first card peeking at the bottom of the screen.' },
-    { id: 'illustration', bold: false, desktop: 'Hero: no photo; the headline, one line and the main action beside one large, calm line drawing of what the store sells (from the illustration library), coloured in the palette.', phone: 'On phones: the drawing smaller above the headline.' },
+    { id: 'facts-panel', bold: false, needs: 'facts', photoless: true, desktop: "Hero: no photo; the headline, one line and the main action on one side, and on the other a calm panel in the palette's second colour listing the store's real facts from the brief (what it offers, hours, where, delivery or pickup) as short labelled rows.", phone: 'On phones: the headline first, the facts panel below it.' },
+    { id: 'catalog-lead', bold: false, photoless: true, desktop: "Hero: no photo; a compact headline band with one line and the main action, and the catalog's first product cards (the runtime catalog) already starting inside the first screen, the way a busy online shop opens.", phone: 'On phones: the headline band, then the first card peeking at the bottom of the screen.' },
+    { id: 'illustration', bold: false, photoless: true, desktop: 'Hero: no photo; the headline, one line and the main action beside one large, calm line drawing of what the store sells (from the illustration library), coloured in the palette.', phone: 'On phones: the drawing smaller above the headline.' },
   ],
 };
 
 const fits = (entry: FrameEntry, available: FrameAvailable) => {
+  // The merchant's photos lead the first screen; a hero without one is for a store that has none.
+  if (entry.photoless && available.photos > 0) return false;
   switch (entry.needs) {
     case 'photos1': return available.photos >= 1;
     case 'photos2': return available.photos >= 2;
@@ -99,7 +103,7 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
     const entry = !omit[part] && FRAME_CATALOGUE[part].find(item => item.id === draw[part]);
     return entry ? [`- ${entry.desktop} ${entry.phone}`] : [];
   });
-  const palette = !omit.palette && allPalettes().find(entry => entry.id === draw.palette);
+  const palette = !omit.palette && paletteById(draw.palette);
   const designLines = [
     ...(palette ? [`- ${paletteLine(palette)}`] : []),
     ...(['angle', 'structure', 'photos', 'button', 'hover'] as const).flatMap(part => {
@@ -147,7 +151,7 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
   for (const part of DESIGN_PARTS) {
     const id = (value as Record<string, unknown>)[part];
     const known = part === 'palette' ? allPalettes() : designOptions(part, { photos: 99, products: 99, facts: true });
-    if (typeof id === 'string' && known.some(option => option.id === id)) (out as Record<string, string>)[part] = id;
+    if (typeof id === 'string' && (known.some(option => option.id === id) || (part === 'palette' && decodePhotoPalette(id)))) (out as Record<string, string>)[part] = id;
   }
   for (const key of ['category', 'kind', 'family'] as const) {
     const text = (value as Record<string, unknown>)[key];
@@ -160,7 +164,7 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false; /** The store's photo colours (photo-palette.ts): they replace the drawn colour world unless brand colours are confirmed. */ photoPalettes?: { calm: Palette; bold: Palette }; /** A look edit with the merchant's own brand material (spec 2026-10-16): replaces the kept palette unless brand colours are confirmed. */ paletteOverride?: Palette }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -172,7 +176,7 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
     const commerce = Object.keys(keptCommerce).length ? { commerce: { draw: keptCommerce, fresh: false, ...(cartWord ? { cartWord } : {}) } } : {};
     if (!input.designEnabled) return { file: saved, paragraph: '', ...commerce };
     // An ordinary edit keeps what the fresh design drew: its buttons in the DNA and its colour world in brand.css.
-    const keptPalette = input.brandColours ? undefined : allPalettes().find(entry => entry.id === kept.palette);
+    const keptPalette = input.brandColours ? undefined : input.paletteOverride ?? paletteById(kept.palette);
     return { file: saved, paragraph: '', ...(kept.button && kept.hover ? { dna: { button: kept.button, hover: kept.hover } } : {}), ...(keptPalette ? { palette: keptPalette } : {}), ...commerce };
   }
   // A redesign must not get its own last header or hero back: the store's previous draw joins the history.
@@ -213,13 +217,16 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) }, input.spread ?? 0);
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
+  // The store's own photo colours replace the drawn colour world: the light one for a calm build, the dark one for a bold card.
+  const photoPalette = !designOmit.palette && input.photoPalettes ? (input.boldStyle ? input.photoPalettes.bold : input.photoPalettes.calm) : undefined;
+  if (photoPalette) design.palette = photoPalette.id;
   const draw = { ...frame, ...design, category, ...playbookFields, ...commerceDrawn, ...productDrawn };
   // Parts the merchant decided are not saved: they were never built, so they must not count in other stores' history.
   const savedDraw: Record<string, string> = { ...draw };
   if (designOmit.palette) delete savedDraw.palette;
   if (designOmit.photos) delete savedDraw.photos;
   if (designOmit.button) { delete savedDraw.button; delete savedDraw.hover; }
-  const palette = designOmit.palette ? undefined : allPalettes().find(entry => entry.id === design.palette);
+  const palette = designOmit.palette ? undefined : paletteById(design.palette);
   return {
     file: { path: FRAME_DRAW_FILE, content: JSON.stringify(savedDraw, null, 2) + '\n' },
     paragraph: frameDirection(draw, { ...frameOmit, palette: designOmit.palette, photos: designOmit.photos, button: designOmit.button, hover: designOmit.button }, Boolean(input.playbook)) + extraLines,
@@ -361,6 +368,8 @@ const designOptions = (part: DesignPart, available: FrameAvailable, allowed: Des
   return narrowed.length ? narrowed : fitting;
 };
 /** The round-2 colour worlds plus every playbook family's palettes: what a saved draw may name. */
+/** A catalogue palette by id, or the photo palette the id carries (photo-palette.ts). */
+export const paletteById = (id: string | undefined): Palette | undefined => !id ? undefined : allPalettes().find(entry => entry.id === id) ?? decodePhotoPalette(id);
 const allPalettes = (): Palette[] => [...PALETTES, ...Object.values(PLAYBOOK).flatMap(entry => entry.families.flatMap(family => family.palettes))];
 const DESIGN_AVOID = new Set<DesignPart>(['palette', 'angle', 'structure', 'button']);
 
@@ -401,11 +410,13 @@ export function designOverrides(text: string): { palette: boolean; photos: boole
   return { palette, photos, button: BUTTON.test(text) && BUTTON_SHAPE.test(text) };
 }
 
-const paletteLine = (palette: Palette) => `Colour world: ${palette.name}, ${palette.dark ? 'a dark page' : 'a light page'}: background ${palette.paper}, text ${palette.ink}, accent ${palette.accent}, second accent ${palette.accent2}. Do not take colours from the photos; style the photos to sit in this world.`;
+const paletteLine = (palette: Palette) => isPhotoPalette(palette.id)
+  ? `Colour world taken from the store's own photos, ${palette.dark ? 'a dark page' : 'a light page'}: background ${palette.paper}, text ${palette.ink}, accent ${palette.accent}, second accent ${palette.accent2}. These are the photos' own colours: keep every colour of the store in this family, let the photos lead and never recolour them.`
+  : `Colour world: ${palette.name}, ${palette.dark ? 'a dark page' : 'a light page'}: background ${palette.paper}, text ${palette.ink}, accent ${palette.accent}, second accent ${palette.accent2}. Do not take colours from the photos; style the photos to sit in this world.`;
 
 export function plannerDirection(draw: Partial<DesignDraw>, omit: Partial<Record<DesignPart, boolean>> = {}, playbook = false): string {
   const angle = !omit.angle && DESIGN_CATALOGUE.angle.find(entry => entry.id === draw.angle);
-  const palette = !omit.palette && allPalettes().find(entry => entry.id === draw.palette);
+  const palette = !omit.palette && paletteById(draw.palette);
   if (!angle && !palette) return '';
   return [`DRAWN FOR THIS STORE (build every concept on it; ${playbook ? 'fonts from the PLAYBOOK family pairings' : 'choose fonts freely'}):`, ...(angle ? [angle.desktop] : []), ...(palette ? [paletteLine(palette)] : [])].join(' ');
 }
