@@ -6,13 +6,14 @@ export const WALKTHROUGH_STEPS = [
   { id: 'what', title: '¿Qué vendes o a qué te dedicas?', optional: false },
   { id: 'sell', title: '¿Vas a vender en línea?', optional: false },
   { id: 'logo', title: '¿Tienes logo?', optional: true },
-  { id: 'photos', title: 'Sube fotos de tu negocio', optional: true },
+  { id: 'photos', title: 'Sube fotos o videos de tu negocio', optional: true },
   { id: 'products', title: 'Agrega hasta 5 productos', optional: true },
-  { id: 'story', title: 'Unas preguntas sobre tu negocio', optional: true },
+  { id: 'story', title: 'Cuéntale a YAPI sobre tu negocio', optional: true },
   { id: 'contact', title: '¿Cómo te contactan?', optional: true },
 ];
 const REQUIRED = { name: 'Escribe el nombre de tu negocio.', what: 'Cuéntanos en una frase qué vendes.' };
 const LAST = WALKTHROUGH_STEPS.length - 1;
+const STORY_MAX = 4000;
 
 // A showcase (spec 2026-10-13) shows a business instead of selling online. These words in «¿Qué vendes o a qué te dedicas?»
 // pre-select «No, solo mostrar mi negocio»: a local guess, never a model call, and the merchant confirms it on the next screen.
@@ -88,6 +89,12 @@ export function withKindQuestions(state, questions) {
   const same = JSON.stringify(state.questions || []) === JSON.stringify(questions);
   return same ? state : { ...state, questions, values: { ...state.values, a0: '', a1: '', a2: '' } };
 }
+/** What the one story box holds: the merchant's text, or, for a store resumed from the question era, its earlier answers
+ *  (one per line, after their question) so nothing typed is lost. */
+export function storyText(values, questions) {
+  if (typeof values.story === 'string') return values.story;
+  return (questions || []).map((question, index) => values[`a${index}`] ? `${question} ${values[`a${index}`]}` : '').filter(Boolean).join('\n');
+}
 export function answerValues(questions, answers) {
   const values = {};
   (questions || []).forEach((question, index) => { const saved = (answers || []).find(entry => entry?.question === question); if (saved?.answer) values[`a${index}`] = saved.answer; });
@@ -97,8 +104,11 @@ export function answerValues(questions, answers) {
 // Files chosen or dropped but not uploaded yet: shown at once, kept in state so an error repaint never loses them.
 // Every chosen or saved photo can be taken out again (owner report 2026-10-15: "no way to delete pictures").
 const removeButton = (key, label) => `<button class="wt-remove" type="button" data-wt-remove="${key}" aria-label="${escapeHtml(label)}" title="Quitar">×</button>`;
-const pendingView = (files, name = 'photos') => (files || []).map(({ file, url }, index) => `<figure class="wt-pending">${url ? `<img src="${escapeHtml(url)}" alt="">` : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption>${removeButton(`pending:${name}:${index}`, `Quitar ${file.name || 'foto'}`)}</figure>`).join('');
-const savedPhotosView = urls => (urls || []).map((url, index) => `<figure class="wt-pending"><img src="${escapeHtml(url)}" alt=""><figcaption>Foto ${index + 1}</figcaption>${removeButton(`saved:${index}`, `Quitar foto ${index + 1}`)}</figure>`).join('');
+// Videos (MP4, as the Studio chat takes them) preview as a still first frame, never autoplaying.
+const isVideoFile = file => file?.type === 'video/mp4' || (!file?.type && /\.mp4$/i.test(file?.name || ''));
+const mediaThumb = (url, video) => video ? `<video src="${escapeHtml(url)}" muted playsinline preload="metadata"></video>` : `<img src="${escapeHtml(url)}" alt="">`;
+const pendingView = (files, name = 'photos') => (files || []).map(({ file, url }, index) => `<figure class="wt-pending">${url ? mediaThumb(url, isVideoFile(file)) : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption>${removeButton(`pending:${name}:${index}`, `Quitar ${file.name || 'foto'}`)}</figure>`).join('');
+const savedPhotosView = urls => (urls || []).map((url, index) => `<figure class="wt-pending">${mediaThumb(url, /\.mp4$/i.test(url))}<figcaption>${/\.mp4$/i.test(url) ? 'Video' : 'Foto'} ${index + 1}</figcaption>${removeButton(`saved:${index}`, `Quitar foto ${index + 1}`)}</figure>`).join('');
 
 const field = (step, values, pending = {}, questions = []) => {
   const v = name => escapeHtml(String(values[name] || ''));
@@ -106,12 +116,12 @@ const field = (step, values, pending = {}, questions = []) => {
     case 'name': return `<input class="wt-input" name="name" maxlength="120" autocomplete="organization" placeholder="Café Buna" value="${v('name')}" autofocus><p class="wt-aside">¿Vienes de Shopify? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>`;
     case 'what': return `<textarea class="wt-input" name="what" maxlength="300" rows="3" placeholder="Café de especialidad tostado en Sopocachi" autofocus>${v('what')}</textarea>`;
     case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Arrastra tu logo o toca para elegir</span></label><div class="wt-thumbs">${pendingView(pending.logo, 'logo')}</div><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
-    case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple hidden><span>Arrastra tus fotos o toca para elegir</span></label><div class="wt-thumbs">${savedPhotosView(values.photos)}${pendingView(pending.photos)}</div>`;
+    case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp,video/mp4,.mp4" multiple hidden><span>Arrastra tus fotos o videos o toca para elegir</span></label><div class="wt-thumbs">${savedPhotosView(values.photos)}${pendingView(pending.photos)}</div>`;
     case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product"><input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
     case 'story': {
-      // An older API sends no questions: the free story box stays.
-      if (!questions.length) return `<textarea class="wt-input" name="story" maxlength="1200" rows="5" placeholder="Desde cuándo, dónde y qué hace único a tu negocio">${v('story')}</textarea>`;
-      return `<p class="wt-aside">Responde las que quieras: YAPI escribe tu tienda con tus palabras.</p>${questions.slice(0, 3).map((question, index) => `<label class="wt-question"><span>${escapeHtml(question)}</span><textarea class="wt-input" name="a${index}" maxlength="400" rows="2">${v(`a${index}`)}</textarea></label>`).join('')}`;
+      // Owner 2026-10-16: one box for everything the merchant wants YAPI to know, never the three kind questions.
+      const story = escapeHtml(storyText(values, questions));
+      return `<label class="wt-story"><span class="sr-only">Lo que quieres que YAPI sepa</span><textarea class="wt-input" name="story" maxlength="${STORY_MAX}" rows="8" placeholder="Desde cuándo existe tu negocio, dónde está, qué lo hace único, cómo te hablan tus clientes, colores o estilo que te gustan, lo que no quieres en tu tienda…" autofocus>${story}</textarea></label><p class="wt-story-hint">Escribe con tus palabras, todo lo que quieras. YAPI lo lee antes de crear tu tienda.</p>`;
     }
     case 'sell': {
       const chosen = values.sell || guessSitePurpose(values.what);
@@ -198,14 +208,18 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
   let brief = null;
   let jobPosted = false;
   const MAX_PHOTOS = 20;
+  const MAX_VIDEO_BYTES = 20_000_000;
   // A saved photo taken out: the next save of the photos step sends the shorter list, even when nothing new was picked.
   let photosRemoved = false;
   const objectUrl = file => { try { return URL.createObjectURL(file); } catch { return ''; } };
   const isImage = file => /^image\//.test(file?.type || '');
   // Picked or dropped files wait in state until their step saves.
   function choose(name, files) {
-    const images = [...(files || [])].filter(isImage);
-    if (!images.length) return;
+    const all = [...(files || [])].filter(file => isImage(file) || (name === 'photos' && isVideoFile(file)));
+    // The upload endpoint takes videos up to 20 MB; a bigger one is refused here instead of failing on Siguiente.
+    const images = all.filter(file => !isVideoFile(file) || !(file.size > MAX_VIDEO_BYTES));
+    if (images.length < all.length) state = { ...state, error: 'Los videos MP4 deben ocupar hasta 20 MB.' };
+    if (!images.length) { paint(); return; }
     const room = name === 'logo' ? 1 : MAX_PHOTOS - (state.values.photos || []).length;
     const kept = name === 'logo' ? images.slice(0, 1) : [...state.pending.photos.map(p => p.file), ...images].slice(0, Math.max(0, room));
     const previous = new Map(state.pending[name].map(p => [p.file, p.url]));
@@ -270,7 +284,9 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
         created[i] = { id: product?.id, name: draft.name, amount: draft.amount };
       }
     }
-    if (id === 'story') return patch({ ...mark, ...(state.questions?.length ? { answers: answersFor(state.questions, state.values) } : { story: state.values.story }) });
+    if (id === 'story') {
+      return patch({ ...mark, story: storyText(state.values, state.questions).slice(0, STORY_MAX) });
+    }
     if (id === 'contact') {
       // Order matters: the job exists before the store is marked finished, so a reload never strands a finished store.
       if (!jobPosted) {

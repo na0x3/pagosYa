@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WALKTHROUGH_STEPS, answerValues, answersFor, withKindQuestions, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
+import { WALKTHROUGH_STEPS, answerValues, answersFor, withKindQuestions, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, storyText, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
@@ -132,6 +132,31 @@ test('dropping photos keeps image files only, shows them before Siguiente, and s
   await w.submit();
   const saved = w.calls.find(c => c.method === 'PATCH' && c.body?.photos);
   assert.deepEqual(saved.body.photos, ['/v1/uploads/tienda.jpg', '/v1/uploads/equipo.jpg']);
+});
+
+// Owner 2026-10-16: "i still cant send yapi in the prewebsite questions videos" — the photos step kept images only.
+test('the photos step takes MP4 videos, previews them, and sends them to YAPI with the photos', async () => {
+  const w = await drive(4);
+  assert.match(w.root.innerHTML, /name="photos" accept="[^"]*video\/mp4/);
+  w.pick('photos', [image('tienda.jpg'), new File([new Uint8Array(16)], 'clase.mp4', { type: 'video/mp4' })]);
+  assert.match(w.root.innerHTML, /<video[^>]*src="[^"]*"[^>]*>/);
+  assert.match(w.root.innerHTML, /clase\.mp4/);
+  await w.submit();
+  assert.deepEqual(w.uploads, ['tienda.jpg', 'clase.mp4']);
+  assert.deepEqual(w.calls.find(c => c.method === 'PATCH' && c.body?.photos).body.photos, ['/v1/uploads/tienda.jpg', '/v1/uploads/clase.mp4']);
+  // Back on the step, the saved video shows as a video, not a broken image.
+  await w.back();
+  assert.match(w.root.innerHTML, /<video[^>]*src="\/v1\/uploads\/clase\.mp4"/);
+  assert.doesNotMatch(w.root.innerHTML, /<img[^>]*clase\.mp4/);
+});
+
+test('a video over 20 MB is refused with a message, the photos picked with it stay', async () => {
+  const w = await drive(4);
+  w.pick('photos', [image('tienda.jpg'), { name: 'largo.mp4', type: 'video/mp4', size: 25_000_000 }]);
+  assert.match(w.root.innerHTML, /20 MB/);
+  assert.doesNotMatch(w.root.innerHTML, /largo\.mp4<\/figcaption>/);
+  await w.submit();
+  assert.deepEqual(w.uploads, ['tienda.jpg']);
 });
 
 test('photos picked with the file input show at once; at most 20 are kept', async () => {
@@ -343,16 +368,14 @@ test('a showcase skips products, saves its main action and builds as a service s
   assert.equal(w.done(), 's1');
 });
 
-test('the story step asks the kind questions the API sent, each optional, escaped, up to 400 characters (spec 2026-10-14)', () => {
+// Owner 2026-10-16: one box for everything the merchant wants YAPI to know, instead of the three kind questions.
+test('the story step is one free box, even when the API sends kind questions', () => {
   const html = walkthroughView({ ...start, step: 6, questions: ['¿Qué pide todo el mundo?', '<b>¿Qué tiene tu local?</b>'] });
-  assert.match(html, /name="a0"/);
-  assert.match(html, /name="a1"/);
-  assert.doesNotMatch(html, /name="a2"/);
-  assert.match(html, /maxlength="400"/);
-  assert.match(html, /¿Qué pide todo el mundo\?/);
-  assert.doesNotMatch(html, /<b>¿Qué tiene/);
+  assert.match(html, /<textarea class="wt-input" name="story" maxlength="4000"/);
+  assert.doesNotMatch(html, /name="a0"/);
+  assert.doesNotMatch(html, /¿Qué pide todo el mundo\?/);
+  assert.match(html, /Cuéntale a YAPI sobre tu negocio/);
   assert.match(html, /Saltar/);
-  // An older API sends no questions: the free story box stays.
   assert.match(walkthroughView({ ...start, step: 6 }), /name="story"/);
 });
 
@@ -364,28 +387,25 @@ test('answers are sent word for word, only the ones typed, and saved ones fill t
   assert.deepEqual(answerValues(['¿A?'], undefined), {});
 });
 
-test('the questions come back with the «¿Qué vendes?» save, and the story step saves their answers', async () => {
-  const questions = ['¿Qué pide todo el mundo?', '¿Qué tiene tu local que no tenga otro?'];
-  const w = await drive(1, { questions });
+test('the story box is saved word for word as the store story, never as answers', async () => {
+  const w = await drive(1, { questions: ['¿Qué pide todo el mundo?'] });
   await w.type('what', 'Cafetería de barrio');
-  await w.submit(); // what → sell
-  await w.submit(); // sell → logo
-  await w.submit(); // logo → photos
-  await w.submit(); // photos → products
-  await w.submit(); // products → story
-  assert.match(w.root.innerHTML, /¿Qué tiene tu local que no tenga otro\?/);
-  await w.type('a0', 'El flat white con alfajor');
+  for (let i = 0; i < 5; i++) await w.submit(); // what → sell → logo → photos → products → story
+  assert.match(w.root.innerHTML, /name="story"/);
+  const text = 'Abrimos en 2019 en Sopocachi.\nNos piden el flat white con alfajor.\nNada de colores chillones.';
+  await w.type('story', text);
   await w.submit(); // story → contact
   const story = w.calls.filter(c => c.method === 'PATCH' && c.path === '/stores/s1/onboarding').map(c => c.body).find(body => body.done?.includes('story'));
-  // The unanswered question is sent blank, so an answer erased later is cleared on the server (final review 2026-10-15).
-  assert.deepEqual(story, { step: 7, done: ['story'], answers: [{ question: '¿Qué pide todo el mundo?', answer: 'El flat white con alfajor' }, { question: '¿Qué tiene tu local que no tenga otro?', answer: '' }] });
+  assert.deepEqual(story, { step: 7, done: ['story'], story: text });
 });
 
-test('a resumed store shows its questions with the answers it already gave', async () => {
+test('a store resumed from the question era opens the box with its earlier answers, and saves what is left there', async () => {
   const root = { innerHTML: '', querySelector: () => null, addEventListener: () => {} };
   const store = { id: 's1', name: 'Café', onboarding: { step: 6, answers: [{ question: '¿Qué tiene tu local?', answer: 'Una ventana a la plaza' }] }, questions: ['¿Qué pide todo el mundo?', '¿Qué tiene tu local?'] };
   await runWalkthrough(root, { api: async () => ({}), uploadFile: async () => '', onDone: () => {}, resume: store });
-  assert.match(root.innerHTML, /name="a1"[^>]*>Una ventana a la plaza</);
+  assert.match(root.innerHTML, /name="story"[^>]*>¿Qué tiene tu local\? Una ventana a la plaza</);
+  assert.equal(storyText({ a1: 'Una ventana a la plaza' }, store.questions), '¿Qué tiene tu local? Una ventana a la plaza');
+  assert.equal(storyText({ story: '', a1: 'x' }, store.questions), '');
 });
 
 test('new kind questions start with empty answers (final review 2026-10-15)', () => {

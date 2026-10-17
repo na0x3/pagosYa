@@ -37,7 +37,8 @@ export function mergeOnboarding(current: unknown, patch: StoreOnboardingPatch): 
   const photos = patch.photos ? patch.photos.filter(url => UPLOAD.test(url)).slice(0, 20) : base.photos;
   const contact = patch.contact ? { ...(text(patch.contact.whatsapp, 30) ? { whatsapp: text(patch.contact.whatsapp, 30) } : {}), ...(text(patch.contact.city, 80) ? { city: text(patch.contact.city, 80) } : {}) } : base.contact;
   const what = text(patch.what, 300) ?? base.what;
-  const story = text(patch.story, 1200) ?? base.story;
+  // Owner 2026-10-16: the story step is one free box for everything the merchant wants YAPI to know.
+  const story = text(patch.story, 4000) ?? base.story;
   const answers = patch.answers ? mergeAnswers(base.answers, patch.answers) : base.answers;
   const purpose = patch.purpose === 'shop' || patch.purpose === 'showcase' ? patch.purpose : base.purpose;
   const actionValue = text(patch.primaryAction?.value, 300);
@@ -59,7 +60,7 @@ export function onboardingBrief(storeName: string, onboarding: StoreOnboarding, 
   return [
     `Mi negocio se llama ${storeName}.`,
     onboarding.what ? `Qué hacemos: ${onboarding.what}` : '',
-    onboarding.story ? `Nuestra historia: ${onboarding.story}` : '',
+    onboarding.story ? `Lo que quiero que sepas de mi negocio:\n${onboarding.story}` : '',
     ...(onboarding.answers ?? []).map(entry => `${entry.question} ${entry.answer}`),
     onboarding.contact?.city ? `Estamos en ${onboarding.contact.city}.` : '',
     onboarding.contact?.whatsapp ? `WhatsApp: ${onboarding.contact.whatsapp}` : '',

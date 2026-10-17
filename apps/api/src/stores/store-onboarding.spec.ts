@@ -12,7 +12,7 @@ it('records steps as done or skipped, keeps the furthest step and ignores unknow
 
 it('caps text, photo count and contact fields, and stamps the finish once', () => {
   const state = mergeOnboarding(null, { story: 'x'.repeat(5000), photos: Array.from({ length: 40 }, (_, i) => `/v1/uploads/p${i}.webp`), contact: { whatsapp: '+591 70000000', city: 'La Paz' }, finished: true });
-  expect(state.story!.length).toBe(1200);
+  expect(state.story!.length).toBe(4000);
   expect(state.photos).toHaveLength(20);
   expect(state.finishedAt).toEqual(expect.any(String));
   expect(mergeOnboarding(state, { finished: true }).finishedAt).toBe(state.finishedAt);
