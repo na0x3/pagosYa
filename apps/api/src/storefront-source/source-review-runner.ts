@@ -11,6 +11,7 @@ import { reviewMessage, SOURCE_REVIEW_LABEL, SOURCE_REVIEW_STATUS, SourceReviewC
 import { sourceRequestContext } from './source-request-context';
 import { completedCredits, SEP5_CLIENT_TIMEOUT_MS } from './source-generation-run';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
+import { brokenHeadingProblems, captureBrokenHeadings, introducedBrokenHeadings, type BrokenHeading } from './design-engine/phone-layout';
 import { currentSourceRuntime } from './source-runtime';
 import type { SourceProjectSnapshot } from './source-project';
 import type { Sep5Review, SourceGenerationAttempt } from './source-generation-types';
@@ -79,6 +80,17 @@ export async function startBackgroundReview(deps: BackgroundReviewDeps, input: B
           deps.logger.warn(JSON.stringify({ event: 'header_click_check_failed', generationId: row.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
         }
         if (introduced.length) throw new SourceReviewDiscarded(headerCoverProblems(introduced).join(' '));
+        // Headlines the review leaves split mid-word on the phone, judged against N the same way (baek, 2026-10-16).
+        let broken: BrokenHeading[] = [];
+        try {
+          const headings = async (files: SourceProjectFileDto[]) => captureBrokenHeadings(await currentSourceRuntime({ brief: input.brief, files } as unknown as SourceProjectSnapshot), signal);
+          const saved = await headings(input.savedFiles);
+          broken = introducedBrokenHeadings(await headings(outcome.saveInput.files), saved);
+        } catch (error) {
+          signal.throwIfAborted();
+          deps.logger.warn(JSON.stringify({ event: 'phone_heading_check_failed', generationId: row.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
+        }
+        if (broken.length) throw new SourceReviewDiscarded(brokenHeadingProblems(broken).join(' '));
       }
       // N's save rewrote config.js with the catalog this run created (append); the review assembled its config from the
       // run's start, before those products existed, so N+1 carries N's catalog instead of an empty one.

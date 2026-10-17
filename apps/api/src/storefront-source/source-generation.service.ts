@@ -20,6 +20,7 @@ import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5FilesSchema, sep5
 import { emptySourceHeaders, hasPlatformHeader, headerFact, instructionAsksHeaderAccount, SOURCE_PLATFORM_HEADER_EDIT, withHeaderAccountConfig, withSourceHeader } from './source-header';
 import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
+import { brokenHeadingProblems, captureBrokenHeadings, introducedBrokenHeadings, type BrokenHeading } from './design-engine/phone-layout';
 import { currentSourceRuntime } from './source-runtime';
 import { MERCHANT_MARKER, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
@@ -860,6 +861,7 @@ export class SourceGenerationService {
       // cart drawer), judged in a browser against the saved revision, rendered once per run: only covers the edit brings in block (524dfd73).
       const headerGate = this.config.get<boolean>('app.headerClickGate') === true;
       let savedHeaderCovers: Promise<HeaderCover[]> | undefined;
+      let savedBrokenHeadings: Promise<BrokenHeading[]> | undefined;
       // Brand source (spec 2026-10-16): the sheet the vision read fills, and whether the quote repair was already asked for.
       let brandSourceSheet: BrandSheet | undefined;
       let brandQuoteRepairTried = false;
@@ -1022,6 +1024,17 @@ export class SourceGenerationService {
             this.logger.warn(JSON.stringify({ event: 'header_click_check_failed', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
           }
           if (introduced.length) throw new BadGatewayException(headerCoverProblems(introduced).join(' '));
+          // Headlines a chat edit leaves split mid-word on the phone (baek, 2026-10-16): the design review measures this on
+          // builds only. The same rule as the covers: only what this save brings in, and a failed render never blocks.
+          let broken: BrokenHeading[] = [];
+          try {
+            const saved = await (savedBrokenHeadings ??= headerPreview([]).then(snapshot => captureBrokenHeadings(snapshot, signal)));
+            broken = introducedBrokenHeadings(await captureBrokenHeadings(await headerPreview(preflightFiles), signal), saved);
+          } catch (error) {
+            signal.throwIfAborted();
+            this.logger.warn(JSON.stringify({ event: 'phone_heading_check_failed', generationId: run.id, reason: ((error as Error)?.message || '').slice(0, 300) }));
+          }
+          if (broken.length) throw new BadGatewayException(brokenHeadingProblems(broken).join(' '));
         }
         // Brand source checks (spec 2026-10-16 §3): colours drifted off the brand's own, or no quote placed on a look request.
         if (brandSourceSheet) {

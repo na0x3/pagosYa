@@ -6,6 +6,7 @@ import { creativeStoreFiles } from './fixtures/creative-store';
 import { SourceDesignPlanner } from './source-design-planner';
 import * as designModule from './source-design';
 import * as headerModule from './design-engine/header-clickable';
+import * as phoneModule from './design-engine/phone-layout';
 import { merchantFacingSourceFailure, SourceGenerationService, sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation.service';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
@@ -327,8 +328,11 @@ describe('Independent source generation',()=>{
       const base = context.config.get.getMockImplementation();
       context.config.get.mockImplementation((key: string) => key === 'app.headerClickGate' ? true : base(key));
       const capture = jest.spyOn(headerModule, 'captureHeaderCovers').mockImplementation(async (snapshot: any) => snapshot.files.find((f: any) => f.path === 'index.html')?.content.includes('bag-drawer') ? [covered] : []);
-      return { ...context, capture };
+      // baek 2026-10-16: a desktop rule after the phone rule; '#333' in styles.css stands for it here.
+      const phone = jest.spyOn(phoneModule, 'captureBrokenHeadings').mockImplementation(async (snapshot: any) => snapshot.files.find((f: any) => f.path === 'styles.css')?.content.includes('grid-template-columns:2fr 1fr') ? [squeezed] : []);
+      return { ...context, capture, phone };
     };
+    const squeezed: phoneModule.BrokenHeading = { width: 390, word: 'sabor', heading: 'El sabor que alegra tus días', column: 68 };
     const respond = (body: object) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(body) }] }] }));
     it('fails the attempt of an edit that covers a header control, naming the control and the cause for the repair', async () => {
       const { service, projects, prisma, capture } = gated();
@@ -357,8 +361,22 @@ describe('Independent source generation',()=>{
       // The edit's draft and the saved revision, each rendered once.
       expect(capture).toHaveBeenCalledTimes(2);
     });
+    it('fails the attempt of an edit that splits a headline on the phone, naming the words and the cause for the repair', async () => {
+      const { service, projects, prisma, phone } = gated();
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: files() }));
+      await service.generate('m', 's', input);
+      const saved = projects.save.mock.calls[0][2];
+      projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
+      fetchMock.mockResolvedValue(respond({ label: 'Hero', edits: [{ path: 'styles.css', search: '#222', replacement: '#222}.hero{display:grid;grid-template-columns:2fr 1fr' }], files: [] }));
+      await expect(service.generate('m', 's', { ...input, revision: 1, instruction: 'Pon la foto al lado del título' })).rejects.toThrow();
+      expect(projects.save).toHaveBeenCalledTimes(1);
+      expect(phone).toHaveBeenCalled();
+      const failed = prisma.storeSourceGeneration.updateMany.mock.calls.find((call: any) => call[0].data.status === 'FAILED')[0].data.attempts;
+      expect(failed.map((attempt: any) => attempt.failureReason)).toEqual(expect.arrayContaining([expect.stringContaining('corta «sabor» a mitad de palabra')]));
+    });
     it('stays off unless app.headerClickGate is on', async () => {
       const { service, projects } = setup();
+      const phone = jest.spyOn(phoneModule, 'captureBrokenHeadings').mockResolvedValue([squeezed]);
       const capture = jest.spyOn(headerModule, 'captureHeaderCovers').mockResolvedValue([covered]);
       const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'Menu', files: files() }));
       await service.generate('m', 's', input);
@@ -366,6 +384,7 @@ describe('Independent source generation',()=>{
       fetchMock.mockResolvedValue(respond({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }));
       await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
       expect(capture).not.toHaveBeenCalled();
+      expect(phone).not.toHaveBeenCalled();
     });
   });
   it('generates a presentation site without silently adding product or checkout pages', async () => {

@@ -9,6 +9,7 @@ import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { validDna } from './fixtures/dna';
 import { captureHeaderCovers } from './design-engine/header-clickable';
+import { captureBrokenHeadings } from './design-engine/phone-layout';
 import { controlsKey, pickLibraryControls, storePalette } from './store-controls-library';
 // Measuring launches Chromium; these tests exercise what the service does with a reading.
 jest.mock('./store-look-measure', () => ({ ...jest.requireActual('./store-look-measure'), measureStoreLook: jest.fn().mockResolvedValue(null) }));
@@ -27,6 +28,7 @@ jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockR
 // The review renders the draft in Chromium; unit tests exercise what the service does with the shots.
 jest.mock('./design-engine/sep5-review-capture', () => ({ ...jest.requireActual('./design-engine/sep5-review-capture'), captureSep5Draft: jest.fn().mockResolvedValue({ shots: [{ width: 1280, y: 0, image: 'data:image/png;base64,AAAA' }], facts: [] }) }));
 jest.mock('./design-engine/header-clickable', () => ({ ...jest.requireActual('./design-engine/header-clickable'), captureHeaderCovers: jest.fn().mockResolvedValue([]) }));
+jest.mock('./design-engine/phone-layout', () => ({ ...jest.requireActual('./design-engine/phone-layout'), captureBrokenHeadings: jest.fn().mockResolvedValue([]) }));
 // The controls guard launches Chromium; these tests exercise what the service does with its verdict.
 jest.mock('./store-controls-guard', () => ({ ...jest.requireActual('./store-controls-guard'), guardControlsOnSnapshot: jest.fn().mockResolvedValue([]), captureControlsShots: jest.fn().mockResolvedValue([]) }));
 import { guardControlsOnSnapshot } from './store-controls-guard';
@@ -98,6 +100,7 @@ describe('Sep-5 self-review after the save', () => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     jest.mocked(captureHeaderCovers).mockReset().mockResolvedValue([]);
+    jest.mocked(captureBrokenHeadings).mockReset().mockResolvedValue([]);
     fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(respond(async () => answer(REVIEW)) as any);
   });
   afterEach(() => jest.restoreAllMocks());
@@ -170,6 +173,16 @@ describe('Sep-5 self-review after the save', () => {
     await generateN();
     await service.reviewSettled('s1');
     expect(captureHeaderCovers).toHaveBeenCalledTimes(2);
+    expect(projects.save).toHaveBeenCalledTimes(1);
+    expect(ending('DISCARDED').data).toMatchObject({ credits: 0 });
+  });
+
+  it('discards review edits that split a headline on the phone revision N did not split', async () => {
+    config.set('app.headerClickGate', true);
+    jest.mocked(captureBrokenHeadings).mockResolvedValueOnce([]).mockResolvedValueOnce([{ width: 390, word: 'sabor', heading: 'El sabor', column: 68 }]);
+    await generateN();
+    await service.reviewSettled('s1');
+    expect(captureBrokenHeadings).toHaveBeenCalledTimes(2);
     expect(projects.save).toHaveBeenCalledTimes(1);
     expect(ending('DISCARDED').data).toMatchObject({ credits: 0 });
   });
