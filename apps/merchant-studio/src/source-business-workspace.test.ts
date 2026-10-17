@@ -215,6 +215,30 @@ describe('marketing workspaces', () => {
         expect((app.querySelector('[name=instruction]') as HTMLTextAreaElement).value).toBe('Conserva mi paleta y simplifica la portada');
         expect((app.querySelector('[data-start-experiment]') as HTMLButtonElement).disabled).toBe(true);
     });
+    // baek (tholhejh), 2026-10-16: right after publishing, B defaulted to the published design itself, so the start button stayed
+    // disabled with no word of why, and the owner read it as «the A/B tests are not working».
+    it('offers the newest other saved design as B when the current design is the published one', async () => {
+        mocks.source.mockResolvedValue({ revision: 3, versions: [{ revision: 3, label: 'Restaurada' }, { revision: 2, label: 'Atrevida' }, { revision: 1, label: 'Original' }], publication: { revision: 3, version: 3, active: true } });
+        await mount('library=experiments');
+        expect(app.querySelector<HTMLSelectElement>('[data-experiment-candidate]')!.value).toBe('2');
+        expect((app.querySelector('[data-start-experiment]') as HTMLButtonElement).disabled).toBe(false);
+        expect(app.querySelector('[data-experiment-blocked]')).toBeNull();
+    });
+    it('says why the test cannot start: no other design yet, the published design picked as B, or a hidden store', async () => {
+        mocks.source.mockResolvedValue({ revision: 1, versions: [{ revision: 1, label: 'Original' }], publication: { revision: 1, version: 3, active: true } });
+        await mount('library=experiments');
+        expect((app.querySelector('[data-start-experiment]') as HTMLButtonElement).disabled).toBe(true);
+        expect(app.querySelector('[data-experiment-blocked]')!.textContent).toContain('Crea una alternativa con YAPI');
+        mocks.source.mockResolvedValue({ ...source(), publication: { revision: 1, version: 3, active: true } });
+        await mount('library=experiments');
+        const select = app.querySelector<HTMLSelectElement>('[data-experiment-candidate]')!;
+        select.value = '1';
+        select.dispatchEvent(new Event('change'));
+        expect(app.querySelector('[data-experiment-blocked]')!.textContent).toContain('ya es el diseño publicado');
+        mocks.source.mockResolvedValue({ ...source(), publication: { revision: 1, version: 3, active: false } });
+        await mount('library=experiments');
+        expect(app.querySelector('[data-experiment-blocked]')!.textContent).toContain('Activa tu tienda');
+    });
     it('does not start a live experiment if storefront checks fail', async () => {
         mocks.checks.mockResolvedValue([{ status: 'failed' }]);
         await mount('library=experiments');
