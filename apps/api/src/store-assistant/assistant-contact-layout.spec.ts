@@ -51,6 +51,16 @@ it.each([1440, 390])('bot on (%ipx): the page\'s contact form shows inline in it
   });
 });
 
+// Deferred minor (brand source final review, 2026-10-16): a store's own CSS that pins the slot as a fixed corner panel, as
+// models write for a floating form, must not pull the inline form out of its card.
+it.each([1440, 390])('bot on (%ipx): the inline form stays in its card when the store\'s CSS pins the slot fixed', async width => {
+  const pinned = page.replace('<main>', '<style>[data-pagosya-contact]{position:fixed;right:0;bottom:0;width:320px;z-index:5}</style><main>');
+  await visit({ contactFormEnabled: true, assistant }, width, async tab => {
+    const inside = await tab.evaluate(() => { const card = document.querySelector('.card')!.getBoundingClientRect(), field = document.querySelector('[data-pagosya-contact] textarea')!.getBoundingClientRect(); return field.top >= card.top && field.bottom <= card.bottom; });
+    expect(inside).toBe(true);
+  }, pinned);
+});
+
 it('bot off: the contact form is the corner launcher, as before', async () => {
   await visit({ contactFormEnabled: true }, 1440, async tab => {
     expect(await tab.locator('.pagosya-contact-launcher').isVisible()).toBe(true);
