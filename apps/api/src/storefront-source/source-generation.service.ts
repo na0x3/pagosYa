@@ -216,7 +216,9 @@ export class SourceGenerationService {
     rewriteAuthoredUploads(files, resolved);
   }
 
-  async catalog(merchantId: string, storeId: string) {
+  /** `assistant` is for the Studio display routes only (baek 2026-10-17: the preview never showed the store bot): a draft or
+   *  design job writes this catalog into config.js, which must never carry the bot's settings. */
+  async catalog(merchantId: string, storeId: string, options: { assistant?: boolean } = {}) {
     const owner = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true } });
     if (!owner) throw new NotFoundException("Store not found");
     const data = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
@@ -225,7 +227,8 @@ export class SourceGenerationService {
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,
-      cartRecommendationsEnabled: data.cartRecommendationsEnabled, cartRecommendationProductIds: data.cartRecommendationProductIds, bundles: data.bundles };
+      cartRecommendationsEnabled: data.cartRecommendationsEnabled, cartRecommendationProductIds: data.cartRecommendationProductIds, bundles: data.bundles,
+      ...(options.assistant && data.assistant ? { assistant: data.assistant } : {}) };
   }
 
   /** The allowance of one request. On the merchant's own ChatGPT plan nothing is billed, so nothing caps the run. */

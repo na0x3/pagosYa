@@ -54,7 +54,7 @@ export class SourceProjectsController {
   @Get("catalog")
   @Header("Cache-Control", "private, no-store")
   catalog(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string) {
-    return this.generation.catalog(merchant.id, storeId);
+    return this.generation.catalog(merchant.id, storeId, { assistant: true });
   }
 
   @Get("conversation")
@@ -156,7 +156,7 @@ export class SourceProjectsController {
   async version(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Param("revision", ParseIntPipe) revision: number) {
     const saved = await this.projects.version(merchant.id, storeId, revision);
     const snapshot = await currentSourceRuntime(saved.snapshot as unknown as SourceProjectSnapshot);
-    const catalog = await this.generation.catalog(merchant.id, storeId);
+    const catalog = await this.generation.catalog(merchant.id, storeId, { assistant: true });
     return { ...saved, snapshot: { ...snapshot, files: withLiveCatalog(withSeededDna(snapshot.files, storeId), catalog) } };
 
   }

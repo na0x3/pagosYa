@@ -909,6 +909,15 @@ describe('Independent source generation',()=>{
     stores.getStorePublic.mockResolvedValueOnce({ storeName: 'Café', items: [], categories: [], cartRecommendationsEnabled: true, cartRecommendationProductIds: ['p1'], bundles: [{ id: 'b1', name: 'Dúo', kind: 'FIXED', items: [{ productId: 'p1', quantity: 2 }], minimumQuantity: 2, discountPercent: 10 }] });
     expect(await service.catalog('m', 's')).toEqual(expect.objectContaining({ cartRecommendationsEnabled: true, cartRecommendationProductIds: ['p1'], bundles: [expect.objectContaining({ id: 'b1', kind: 'FIXED' })] }));
   });
+  // baek 2026-10-17: the owner never saw the store bot in Studio. The preview's data is this catalog, which dropped the
+  // assistant; only the Studio display routes ask for it, so a saved config.js never carries the bot's settings.
+  it('carries the store assistant only when the caller asks for it (the Studio preview)', async () => {
+    const { service, stores } = setup();
+    const assistant = { name: 'Asistente de Café', greeting: '¡Hola!', avatarUrl: null, handoff: 'form', suggestions: [] };
+    stores.getStorePublic.mockResolvedValue({ storeName: 'Café', items: [], categories: [], assistant });
+    expect(await service.catalog('m', 's')).not.toHaveProperty('assistant');
+    expect(await service.catalog('m', 's', { assistant: true })).toEqual(expect.objectContaining({ assistant }));
+  });
   it('packages generated files with portable commerce without executing source or exporting secrets',async()=>{
     const fetchMock=jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({design: design(), label:'Café menu',files:files()})}]}]})));
     const {service}=setup();const result=await service.generate('m','s',input);
