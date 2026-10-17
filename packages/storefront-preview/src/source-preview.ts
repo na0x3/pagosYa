@@ -120,13 +120,15 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   doc.querySelectorAll("[style]").forEach((el) => el.setAttribute("style", substituteAssets(el.getAttribute("style") || "", page)));
   doc.querySelectorAll("img,source,video").forEach((el) => {
     el.removeAttribute("srcset");
-    const file = resolve(el.getAttribute("src") || "");
     const src = el.getAttribute("src") || "";
+    // An empty path resolves to this page: a <video> playing its <source> children would get the page as its src.
+    if (!src.trim()) { el.removeAttribute("src"); return; }
+    const file = resolve(src);
     if (file) { const value = data(file); if (value) el.setAttribute("src", value); else el.removeAttribute("src"); }
     else if (!src.startsWith("data:") && !(el.tagName === "IMG" && imageSources.some(source => src.startsWith(source)))) el.removeAttribute("src");
   });
   doc.querySelectorAll('video[poster]').forEach(el => {
-    const poster = resolve(el.getAttribute('poster') || '');
+    const poster = el.getAttribute('poster')?.trim() ? resolve(el.getAttribute('poster')!) : undefined;
     const value = poster ? data(poster) : ''; if (value) el.setAttribute('poster', value); else el.removeAttribute('poster');
   });
   doc.querySelectorAll("a").forEach((el) => {
